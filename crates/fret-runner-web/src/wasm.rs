@@ -1,1241 +1,46 @@
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Duration;
 
 use fret_core::{
-    Event, ExternalDragEvent, ExternalDragFiles, ExternalDragKind, ExternalDropDataEvent,
-    ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits, ExternalDropToken,
-    ImeEvent, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Scene,
-    Size, UiServices,
+    Event, ExternalDragFile, ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits,
+    FileDialogDataEvent, FileDialogSelection, TimerToken,
 };
-use fret_render::{ClearColor, RenderSceneParams, Renderer, SurfaceState, WgpuContext};
-use fret_runtime::{Effect, FontCatalog, FontCatalogCache, PlatformCapabilities, TimerToken};
-use js_sys::{Array, Uint8Array};
+use fret_runtime::{Effect, PlatformCapabilities};
 use wasm_bindgen::JsCast as _;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::{JsFuture, spawn_local};
-use web_sys::{
-    AddEventListenerOptions, CompositionEvent, Document, Event as WebSysEvent, EventTarget,
-    HtmlCanvasElement, HtmlElement, HtmlTextAreaElement, InputEvent, KeyboardEvent, MouseEvent,
-    Node, PointerEvent as WebPointerEvent, WheelEvent, Window,
-};
+use web_sys::{Document, Event as WebSysEvent, EventTarget, HtmlElement, HtmlInputElement, Node};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RunnerError {
-    message: String,
+type WebChangeCallback = wasm_bindgen::closure::Closure<dyn FnMut(WebSysEvent)>;
+
+fn window() -> Option<web_sys::Window> {
+    web_sys::window()
 }
 
-impl RunnerError {
-    fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-        }
-    }
-
-    fn to_js_value(&self) -> JsValue {
-        JsValue::from_str(&self.message)
-    }
+fn document() -> Option<Document> {
+    window().and_then(|w| w.document())
 }
 
-impl std::fmt::Display for RunnerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for RunnerError {}
-
-fn window() -> Result<Window, RunnerError> {
-    web_sys::window().ok_or_else(|| RunnerError::new("window is not available"))
-}
-
-fn is_web_input_focused(document: &Document, canvas_node: &Node, ime_node: &Node) -> bool {
-    let Some(active) = document.active_element() else {
-        return false;
-    };
-    let active_node: Node = active.unchecked_into();
-    active_node.is_same_node(Some(canvas_node)) || active_node.is_same_node(Some(ime_node))
-}
-
-pub fn canvas_by_id(id: &str) -> Result<HtmlCanvasElement, RunnerError> {
-    let window = window()?;
-    let document = window
-        .document()
-        .ok_or_else(|| RunnerError::new("document is not available"))?;
-    let el = document
-        .get_element_by_id(id)
-        .ok_or_else(|| RunnerError::new("canvas element not found"))?;
-    el.dyn_into::<HtmlCanvasElement>()
-        .map_err(|_| RunnerError::new("element is not a canvas"))
-}
-
-fn resize_canvas_to_display_size(
-    canvas: &HtmlCanvasElement,
-) -> Result<(u32, u32, f32), RunnerError> {
-    let window = window()?;
-    let dpr = window.device_pixel_ratio();
-    let scale = dpr as f32;
-
-    let css_w = canvas.client_width().max(0) as f64;
-    let css_h = canvas.client_height().max(0) as f64;
-
-    let mut pixel_w = (css_w * dpr).round() as u32;
-    let mut pixel_h = (css_h * dpr).round() as u32;
-
-    if pixel_w == 0 {
-        pixel_w = canvas.width().max(1);
-    }
-    if pixel_h == 0 {
-        pixel_h = canvas.height().max(1);
-    }
-
-    if canvas.width() != pixel_w {
-        canvas.set_width(pixel_w);
-    }
-    if canvas.height() != pixel_h {
-        canvas.set_height(pixel_h);
-    }
-
-    Ok((pixel_w, pixel_h, scale))
-}
-
-fn request_animation_frame(
-    window: &Window,
-    callback: &Closure<dyn FnMut(f64)>,
-) -> Result<i32, RunnerError> {
-    window
-        .request_animation_frame(callback.as_ref().unchecked_ref())
-        .map_err(|_| RunnerError::new("requestAnimationFrame failed"))
-}
-
+/// Web-specific platform services for `fret-runtime::Effect`s that require browser APIs.
+///
+/// This crate intentionally does *not* implement input/event mapping; use `winit` for that.
 #[derive(Debug, Default)]
-struct WebInputQueue {
-    events: Vec<Event>,
-}
-
-impl WebInputQueue {
-    fn push(&mut self, event: Event) {
-        self.events.push(event);
-    }
-
-    fn take(&mut self) -> Vec<Event> {
-        std::mem::take(&mut self.events)
-    }
-}
-
-fn modifiers_from_keyboard_event(event: &KeyboardEvent) -> Modifiers {
-    Modifiers {
-        shift: event.shift_key(),
-        ctrl: event.ctrl_key(),
-        alt: event.alt_key(),
-        alt_gr: event.get_modifier_state("AltGraph"),
-        meta: event.meta_key(),
-    }
-}
-
-fn modifiers_from_pointer_event(event: &WebPointerEvent) -> Modifiers {
-    Modifiers {
-        shift: event.shift_key(),
-        ctrl: event.ctrl_key(),
-        alt: event.alt_key(),
-        alt_gr: false,
-        meta: event.meta_key(),
-    }
-}
-
-fn modifiers_from_mouse_event(event: &MouseEvent) -> Modifiers {
-    Modifiers {
-        shift: event.shift_key(),
-        ctrl: event.ctrl_key(),
-        alt: event.alt_key(),
-        alt_gr: false,
-        meta: event.meta_key(),
-    }
-}
-
-fn key_code_from_dom_code(code: &str) -> KeyCode {
-    KeyCode::from_token(code).unwrap_or(KeyCode::Unknown)
-}
-
-fn mouse_buttons_from_dom_buttons(buttons: u16) -> MouseButtons {
-    let buttons_u = buttons;
-    MouseButtons {
-        left: (buttons_u & 1) != 0,
-        right: (buttons_u & 2) != 0,
-        middle: (buttons_u & 4) != 0,
-    }
-}
-
-fn mouse_button_from_dom_button(button: i16) -> MouseButton {
-    match button {
-        0 => MouseButton::Left,
-        1 => MouseButton::Middle,
-        2 => MouseButton::Right,
-        3 => MouseButton::Back,
-        4 => MouseButton::Forward,
-        other => MouseButton::Other(other.max(0) as u16),
-    }
-}
-
-fn point_from_dom_client_xy(
-    canvas: &HtmlCanvasElement,
-    client_x: i32,
-    client_y: i32,
-) -> fret_core::Point {
-    let rect = canvas.get_bounding_client_rect();
-    let x = (client_x as f64 - rect.left()).max(0.0) as f32;
-    let y = (client_y as f64 - rect.top()).max(0.0) as f32;
-    fret_core::Point::new(Px(x), Px(y))
-}
-
-fn wheel_delta_from_dom(event: &WheelEvent) -> fret_core::Point {
-    // DOM WheelEvent:
-    // - deltaMode 0: pixels
-    // - deltaMode 1: lines
-    // - deltaMode 2: pages
-    // `fret-core` wheel delta follows winit semantics: positive y means wheel up.
-    let mode = event.delta_mode();
-    let (scale_x, scale_y) = match mode {
-        0 => (1.0, 1.0),
-        1 => (16.0, 16.0),
-        2 => (800.0, 800.0),
-        _ => (1.0, 1.0),
-    };
-    let dx = (event.delta_x() as f32) * scale_x;
-    let dy = (event.delta_y() as f32) * scale_y;
-    fret_core::Point::new(Px(dx), Px(-dy))
-}
-
-pub struct WebInput {
-    queue: Rc<RefCell<WebInputQueue>>,
-    activation_callback: Rc<RefCell<Option<Rc<dyn Fn()>>>>,
-    external_drop: Rc<RefCell<WebExternalDropState>>,
-    _listeners: WebInputListeners,
-}
-
-impl WebInput {
-    pub fn new(canvas: HtmlCanvasElement, prevent_default: bool) -> Result<Self, RunnerError> {
-        let window = window()?;
-        let queue = Rc::new(RefCell::new(WebInputQueue::default()));
-        let activation_callback = Rc::new(RefCell::new(None));
-        let external_drop = Rc::new(RefCell::new(WebExternalDropState::default()));
-        let listeners = WebInputListeners::install(
-            window,
-            canvas,
-            queue.clone(),
-            prevent_default,
-            activation_callback.clone(),
-            external_drop.clone(),
-        )?;
-        Ok(Self {
-            queue,
-            activation_callback,
-            external_drop,
-            _listeners: listeners,
-        })
-    }
-
-    pub fn take_events(&mut self) -> Vec<Event> {
-        self.queue.borrow_mut().take()
-    }
-
-    pub fn set_user_activation_callback(&mut self, cb: Option<Rc<dyn Fn()>>) {
-        *self.activation_callback.borrow_mut() = cb;
-    }
-
-    fn external_drop_files(&self, token: ExternalDropToken) -> Option<Vec<web_sys::File>> {
-        self.external_drop.borrow().selections.get(&token).cloned()
-    }
-
-    fn external_drop_release(&mut self, token: ExternalDropToken) {
-        let mut st = self.external_drop.borrow_mut();
-        st.selections.remove(&token);
-        if st.current_drag_token == Some(token) {
-            st.current_drag_token = None;
-        }
-    }
-
-    pub fn set_ime_allowed(&mut self, enabled: bool) {
-        self._listeners.set_ime_allowed(enabled);
-    }
-
-    pub fn set_ime_cursor_area(&mut self, rect: Rect) {
-        self._listeners.set_ime_cursor_area(rect);
-    }
-}
-
-struct WebInputListeners {
-    window: Window,
-    canvas: HtmlCanvasElement,
-    ime_textarea: HtmlTextAreaElement,
-    ime_enabled: Rc<Cell<bool>>,
-
-    on_pointer_move: Closure<dyn FnMut(WebPointerEvent)>,
-    on_pointer_down: Closure<dyn FnMut(WebPointerEvent)>,
-    on_pointer_up: Closure<dyn FnMut(WebPointerEvent)>,
-    on_pointer_cancel: Closure<dyn FnMut(WebPointerEvent)>,
-    on_wheel: Closure<dyn FnMut(WheelEvent)>,
-
-    on_mouse_move: Closure<dyn FnMut(MouseEvent)>,
-    on_mouse_down: Closure<dyn FnMut(MouseEvent)>,
-    on_mouse_up: Closure<dyn FnMut(MouseEvent)>,
-
-    on_key_down: Closure<dyn FnMut(KeyboardEvent)>,
-    on_key_up: Closure<dyn FnMut(KeyboardEvent)>,
-    on_window_resize: Closure<dyn FnMut(WebSysEvent)>,
-
-    on_composition_start: Closure<dyn FnMut(CompositionEvent)>,
-    on_composition_update: Closure<dyn FnMut(CompositionEvent)>,
-    on_composition_end: Closure<dyn FnMut(CompositionEvent)>,
-
-    on_before_input: Closure<dyn FnMut(InputEvent)>,
-
-    on_drag_enter: Closure<dyn FnMut(web_sys::DragEvent)>,
-    on_drag_over: Closure<dyn FnMut(web_sys::DragEvent)>,
-    on_drag_leave: Closure<dyn FnMut(web_sys::DragEvent)>,
-    on_drop: Closure<dyn FnMut(web_sys::DragEvent)>,
-}
-
-impl WebInputListeners {
-    fn set_ime_allowed(&self, enabled: bool) {
-        self.ime_enabled.set(enabled);
-        let el: HtmlElement = self.ime_textarea.clone().unchecked_into();
-        if enabled {
-            let _ = el.focus();
-        } else {
-            let _ = el.blur();
-        }
-    }
-
-    fn set_ime_cursor_area(&self, rect: Rect) {
-        if !self.ime_enabled.get() {
-            return;
-        }
-
-        let dom_rect = self.canvas.get_bounding_client_rect();
-        let left = dom_rect.left() + self.window.scroll_x().unwrap_or(0.0) + rect.origin.x.0 as f64;
-        let top = dom_rect.top() + self.window.scroll_y().unwrap_or(0.0) + rect.origin.y.0 as f64;
-        let w = rect.size.width.0.max(1.0) as f64;
-        let h = rect.size.height.0.max(1.0) as f64;
-
-        let el: HtmlElement = self.ime_textarea.clone().unchecked_into();
-        let style = el.style();
-        let _ = style.set_property("left", &format!("{left}px"));
-        let _ = style.set_property("top", &format!("{top}px"));
-        let _ = style.set_property("width", &format!("{w}px"));
-        let _ = style.set_property("height", &format!("{h}px"));
-        let _ = self.ime_textarea.set_selection_range(0, 0);
-    }
-
-    fn install(
-        window: Window,
-        canvas: HtmlCanvasElement,
-        queue: Rc<RefCell<WebInputQueue>>,
-        prevent_default: bool,
-        activation_callback: Rc<RefCell<Option<Rc<dyn Fn()>>>>,
-        external_drop: Rc<RefCell<WebExternalDropState>>,
-    ) -> Result<Self, RunnerError> {
-        let canvas_el: HtmlElement = canvas.clone().unchecked_into();
-        canvas_el.set_tab_index(0);
-        if prevent_default {
-            let _ = canvas_el.style().set_property("touch-action", "none");
-        }
-
-        let document = window
-            .document()
-            .ok_or_else(|| RunnerError::new("document is not available"))?;
-        let ime_textarea: HtmlTextAreaElement = document
-            .create_element("textarea")
-            .map_err(|_| RunnerError::new("failed to create IME textarea"))?
-            .dyn_into()
-            .map_err(|_| RunnerError::new("failed to cast IME textarea"))?;
-
-        let ime_el: HtmlElement = ime_textarea.clone().unchecked_into();
-        let style = ime_el.style();
-        let _ = style.set_property("position", "absolute");
-        let _ = style.set_property("opacity", "0");
-        let _ = style.set_property("left", "0px");
-        let _ = style.set_property("top", "0px");
-        let _ = style.set_property("width", "1px");
-        let _ = style.set_property("height", "1px");
-        let _ = style.set_property("border", "0");
-        let _ = style.set_property("padding", "0");
-        let _ = style.set_property("margin", "0");
-        let _ = style.set_property("background", "transparent");
-        let _ = style.set_property("color", "transparent");
-        let _ = style.set_property("outline", "none");
-        let _ = style.set_property("resize", "none");
-        let _ = style.set_property("overflow", "hidden");
-        let _ = style.set_property("white-space", "pre");
-
-        let _ = ime_el.set_attribute("aria-hidden", "true");
-        let _ = ime_el.set_attribute("autocomplete", "off");
-        let _ = ime_el.set_attribute("autocapitalize", "off");
-        let _ = ime_el.set_attribute("spellcheck", "false");
-
-        if let Some(body) = document.body() {
-            let _ = body.append_child(&ime_el);
-        }
-
-        let ime_enabled = Rc::new(Cell::new(false));
-        let pointer_move_seen = Rc::new(Cell::new(false));
-        let pointer_button_seen = Rc::new(Cell::new(false));
-
-        let queue_move = queue.clone();
-        let canvas_for_move = canvas.clone();
-        let pointer_move_seen_for_move = pointer_move_seen.clone();
-        let on_pointer_move = Closure::wrap(Box::new(move |event: WebPointerEvent| {
-            pointer_move_seen_for_move.set(true);
-            if prevent_default {
-                event.prevent_default();
-            }
-
-            let position =
-                point_from_dom_client_xy(&canvas_for_move, event.client_x(), event.client_y());
-            let modifiers = modifiers_from_pointer_event(&event);
-            let buttons = mouse_buttons_from_dom_buttons(event.buttons());
-
-            if let Ok(mut q) = queue_move.try_borrow_mut() {
-                q.push(Event::Pointer(PointerEvent::Move {
-                    position,
-                    buttons,
-                    modifiers,
-                }));
-            }
-        }) as Box<dyn FnMut(WebPointerEvent)>);
-
-        let queue_down = queue.clone();
-        let canvas_focus: HtmlElement = canvas.clone().unchecked_into();
-        let ime_focus: HtmlElement = ime_textarea.clone().unchecked_into();
-        let ime_enabled_for_down = ime_enabled.clone();
-        let activation_for_pointer_down = activation_callback.clone();
-        let canvas_capture = canvas.clone();
-        let pointer_button_seen_for_down = pointer_button_seen.clone();
-        let on_pointer_down = Closure::wrap(Box::new(move |event: WebPointerEvent| {
-            pointer_button_seen_for_down.set(true);
-            if ime_enabled_for_down.get() {
-                let _ = ime_focus.focus();
-            } else {
-                let _ = canvas_focus.focus();
-            }
-            let _ = canvas_capture.set_pointer_capture(event.pointer_id());
-
-            if prevent_default {
-                event.prevent_default();
-            }
-
-            let position =
-                point_from_dom_client_xy(&canvas_capture, event.client_x(), event.client_y());
-            let modifiers = modifiers_from_pointer_event(&event);
-            let button = mouse_button_from_dom_button(event.button());
-
-            if let Ok(mut q) = queue_down.try_borrow_mut() {
-                q.push(Event::Pointer(PointerEvent::Down {
-                    position,
-                    button,
-                    modifiers,
-                }));
-            }
-
-            let cb = activation_for_pointer_down
-                .try_borrow()
-                .ok()
-                .and_then(|v| v.as_ref().cloned());
-            if let Some(cb) = cb {
-                cb();
-            }
-        }) as Box<dyn FnMut(WebPointerEvent)>);
-
-        let queue_up = queue.clone();
-        let canvas_release = canvas.clone();
-        let activation_for_pointer_up = activation_callback.clone();
-        let pointer_button_seen_for_up = pointer_button_seen.clone();
-        let on_pointer_up = Closure::wrap(Box::new(move |event: WebPointerEvent| {
-            pointer_button_seen_for_up.set(true);
-            let _ = canvas_release.release_pointer_capture(event.pointer_id());
-            if prevent_default {
-                event.prevent_default();
-            }
-
-            let position =
-                point_from_dom_client_xy(&canvas_release, event.client_x(), event.client_y());
-            let modifiers = modifiers_from_pointer_event(&event);
-            let button = mouse_button_from_dom_button(event.button());
-
-            if let Ok(mut q) = queue_up.try_borrow_mut() {
-                q.push(Event::Pointer(PointerEvent::Up {
-                    position,
-                    button,
-                    modifiers,
-                }));
-            }
-
-            let cb = activation_for_pointer_up
-                .try_borrow()
-                .ok()
-                .and_then(|v| v.as_ref().cloned());
-            if let Some(cb) = cb {
-                cb();
-            }
-        }) as Box<dyn FnMut(WebPointerEvent)>);
-
-        let queue_cancel = queue.clone();
-        let canvas_cancel_release = canvas.clone();
-        let on_pointer_cancel = Closure::wrap(Box::new(move |event: WebPointerEvent| {
-            let _ = canvas_cancel_release.release_pointer_capture(event.pointer_id());
-            let position = point_from_dom_client_xy(
-                &canvas_cancel_release,
-                event.client_x(),
-                event.client_y(),
-            );
-            let modifiers = modifiers_from_pointer_event(&event);
-            let buttons = mouse_buttons_from_dom_buttons(event.buttons());
-            if let Ok(mut q) = queue_cancel.try_borrow_mut() {
-                q.push(Event::Pointer(PointerEvent::Move {
-                    position,
-                    buttons,
-                    modifiers,
-                }));
-            }
-        }) as Box<dyn FnMut(WebPointerEvent)>);
-
-        let queue_wheel = queue.clone();
-        let canvas_for_wheel = canvas.clone();
-        let on_wheel = Closure::wrap(Box::new(move |event: WheelEvent| {
-            if prevent_default {
-                event.prevent_default();
-            }
-
-            let position =
-                point_from_dom_client_xy(&canvas_for_wheel, event.client_x(), event.client_y());
-            let delta = wheel_delta_from_dom(&event);
-            let modifiers = Modifiers {
-                shift: event.shift_key(),
-                ctrl: event.ctrl_key(),
-                alt: event.alt_key(),
-                alt_gr: false,
-                meta: event.meta_key(),
-            };
-
-            if let Ok(mut q) = queue_wheel.try_borrow_mut() {
-                q.push(Event::Pointer(PointerEvent::Wheel {
-                    position,
-                    delta,
-                    modifiers,
-                }));
-            }
-        }) as Box<dyn FnMut(WheelEvent)>);
-
-        let queue_mouse_move = queue.clone();
-        let canvas_for_mouse_move = canvas.clone();
-        let pointer_move_seen_for_mouse_move = pointer_move_seen.clone();
-        let on_mouse_move = Closure::wrap(Box::new(move |event: MouseEvent| {
-            if pointer_move_seen_for_mouse_move.get() {
-                return;
-            }
-            if prevent_default {
-                event.prevent_default();
-            }
-            let position = point_from_dom_client_xy(
-                &canvas_for_mouse_move,
-                event.client_x(),
-                event.client_y(),
-            );
-            let modifiers = modifiers_from_mouse_event(&event);
-            let buttons = mouse_buttons_from_dom_buttons(event.buttons().max(0) as u16);
-            let _ = queue_mouse_move.try_borrow_mut().map(|mut q| {
-                q.push(Event::Pointer(PointerEvent::Move {
-                    position,
-                    buttons,
-                    modifiers,
-                }));
-            });
-        }) as Box<dyn FnMut(MouseEvent)>);
-
-        let queue_mouse_down = queue.clone();
-        let canvas_for_mouse_down = canvas.clone();
-        let canvas_focus_mouse: HtmlElement = canvas.clone().unchecked_into();
-        let ime_focus_mouse: HtmlElement = ime_textarea.clone().unchecked_into();
-        let ime_enabled_mouse = ime_enabled.clone();
-        let activation_for_mouse_down = activation_callback.clone();
-        let pointer_button_seen_for_mouse_down = pointer_button_seen.clone();
-        let on_mouse_down = Closure::wrap(Box::new(move |event: MouseEvent| {
-            if pointer_button_seen_for_mouse_down.get() {
-                return;
-            }
-            if ime_enabled_mouse.get() {
-                let _ = ime_focus_mouse.focus();
-            } else {
-                let _ = canvas_focus_mouse.focus();
-            }
-            if prevent_default {
-                event.prevent_default();
-            }
-            let position = point_from_dom_client_xy(
-                &canvas_for_mouse_down,
-                event.client_x(),
-                event.client_y(),
-            );
-            let modifiers = modifiers_from_mouse_event(&event);
-            let button = mouse_button_from_dom_button(event.button());
-            let _ = queue_mouse_down.try_borrow_mut().map(|mut q| {
-                q.push(Event::Pointer(PointerEvent::Down {
-                    position,
-                    button,
-                    modifiers,
-                }));
-            });
-            let cb = activation_for_mouse_down
-                .try_borrow()
-                .ok()
-                .and_then(|v| v.as_ref().cloned());
-            if let Some(cb) = cb {
-                cb();
-            }
-        }) as Box<dyn FnMut(MouseEvent)>);
-
-        let queue_mouse_up = queue.clone();
-        let canvas_for_mouse_up = canvas.clone();
-        let activation_for_mouse_up = activation_callback.clone();
-        let pointer_button_seen_for_mouse_up = pointer_button_seen.clone();
-        let on_mouse_up = Closure::wrap(Box::new(move |event: MouseEvent| {
-            if pointer_button_seen_for_mouse_up.get() {
-                return;
-            }
-            if prevent_default {
-                event.prevent_default();
-            }
-            let position =
-                point_from_dom_client_xy(&canvas_for_mouse_up, event.client_x(), event.client_y());
-            let modifiers = modifiers_from_mouse_event(&event);
-            let button = mouse_button_from_dom_button(event.button());
-            let _ = queue_mouse_up.try_borrow_mut().map(|mut q| {
-                q.push(Event::Pointer(PointerEvent::Up {
-                    position,
-                    button,
-                    modifiers,
-                }));
-            });
-            let cb = activation_for_mouse_up
-                .try_borrow()
-                .ok()
-                .and_then(|v| v.as_ref().cloned());
-            if let Some(cb) = cb {
-                cb();
-            }
-        }) as Box<dyn FnMut(MouseEvent)>);
-
-        let queue_key_down = queue.clone();
-        let document_for_keys = document.clone();
-        let canvas_node_for_keys: Node = canvas.clone().unchecked_into();
-        let ime_node_for_keys: Node = ime_textarea.clone().unchecked_into();
-        let activation_for_key_down = activation_callback.clone();
-        let on_key_down = Closure::wrap(Box::new(move |event: KeyboardEvent| {
-            if !is_web_input_focused(
-                &document_for_keys,
-                &canvas_node_for_keys,
-                &ime_node_for_keys,
-            ) {
-                return;
-            }
-
-            if prevent_default {
-                event.prevent_default();
-            }
-
-            let key = key_code_from_dom_code(&event.code());
-            let modifiers = modifiers_from_keyboard_event(&event);
-            let repeat = event.repeat();
-
-            if let Ok(mut q) = queue_key_down.try_borrow_mut() {
-                q.push(Event::KeyDown {
-                    key,
-                    modifiers,
-                    repeat,
-                });
-            }
-
-            let cb = activation_for_key_down
-                .try_borrow()
-                .ok()
-                .and_then(|v| v.as_ref().cloned());
-            if let Some(cb) = cb {
-                cb();
-            }
-        }) as Box<dyn FnMut(KeyboardEvent)>);
-
-        let queue_key_up = queue.clone();
-        let document_for_keys = document.clone();
-        let canvas_node_for_keys: Node = canvas.clone().unchecked_into();
-        let ime_node_for_keys: Node = ime_textarea.clone().unchecked_into();
-        let activation_for_key_up = activation_callback.clone();
-        let on_key_up = Closure::wrap(Box::new(move |event: KeyboardEvent| {
-            if !is_web_input_focused(
-                &document_for_keys,
-                &canvas_node_for_keys,
-                &ime_node_for_keys,
-            ) {
-                return;
-            }
-
-            if prevent_default {
-                event.prevent_default();
-            }
-
-            let key = key_code_from_dom_code(&event.code());
-            let modifiers = modifiers_from_keyboard_event(&event);
-
-            if let Ok(mut q) = queue_key_up.try_borrow_mut() {
-                q.push(Event::KeyUp { key, modifiers });
-            }
-
-            let cb = activation_for_key_up
-                .try_borrow()
-                .ok()
-                .and_then(|v| v.as_ref().cloned());
-            if let Some(cb) = cb {
-                cb();
-            }
-        }) as Box<dyn FnMut(KeyboardEvent)>);
-
-        let queue_resize = queue.clone();
-        let canvas_for_resize = canvas.clone();
-        let on_window_resize = Closure::wrap(Box::new(move |_event: WebSysEvent| {
-            let dpr = web_sys::window()
-                .map(|w| w.device_pixel_ratio())
-                .unwrap_or(1.0);
-            let width = canvas_for_resize.client_width().max(0) as f32;
-            let height = canvas_for_resize.client_height().max(0) as f32;
-
-            if let Ok(mut q) = queue_resize.try_borrow_mut() {
-                q.push(Event::WindowScaleFactorChanged(dpr as f32));
-                q.push(Event::WindowResized {
-                    width: Px(width),
-                    height: Px(height),
-                });
-            }
-        }) as Box<dyn FnMut(WebSysEvent)>);
-
-        let queue_comp_start = queue.clone();
-        let on_composition_start = Closure::wrap(Box::new(move |event: CompositionEvent| {
-            if prevent_default {
-                event.prevent_default();
-            }
-
-            if let Ok(mut q) = queue_comp_start.try_borrow_mut() {
-                q.push(Event::Ime(ImeEvent::Enabled));
-                if let Some(text) = event.data() {
-                    if !text.is_empty() {
-                        q.push(Event::Ime(ImeEvent::Preedit { text, cursor: None }));
-                    }
-                }
-            }
-        }) as Box<dyn FnMut(CompositionEvent)>);
-
-        let queue_comp_update = queue.clone();
-        let on_composition_update = Closure::wrap(Box::new(move |event: CompositionEvent| {
-            if prevent_default {
-                event.prevent_default();
-            }
-
-            if let Ok(mut q) = queue_comp_update.try_borrow_mut() {
-                q.push(Event::Ime(ImeEvent::Preedit {
-                    text: event.data().unwrap_or_default(),
-                    cursor: None,
-                }));
-            }
-        }) as Box<dyn FnMut(CompositionEvent)>);
-
-        let queue_comp_end = queue.clone();
-        let on_composition_end = Closure::wrap(Box::new(move |event: CompositionEvent| {
-            if prevent_default {
-                event.prevent_default();
-            }
-
-            if let Ok(mut q) = queue_comp_end.try_borrow_mut() {
-                let text = event.data().unwrap_or_default();
-                if !text.is_empty() {
-                    q.push(Event::Ime(ImeEvent::Commit(text)));
-                }
-                q.push(Event::Ime(ImeEvent::Disabled));
-            }
-        }) as Box<dyn FnMut(CompositionEvent)>);
-
-        let queue_before_input = queue.clone();
-        let on_before_input = Closure::wrap(Box::new(move |event: InputEvent| {
-            if prevent_default {
-                event.prevent_default();
-            }
-
-            if event.is_composing() {
-                return;
-            }
-
-            let Some(text) = event.data() else {
-                return;
-            };
-            if text.is_empty() {
-                return;
-            }
-
-            if let Ok(mut q) = queue_before_input.try_borrow_mut() {
-                q.push(Event::TextInput(text));
-            }
-        }) as Box<dyn FnMut(InputEvent)>);
-
-        let canvas_for_drag = canvas.clone();
-        let queue_drag_enter = queue.clone();
-        let external_drop_for_drag = external_drop.clone();
-        let activation_for_drag_enter = activation_callback.clone();
-        let on_drag_enter = Closure::wrap(Box::new(move |event: web_sys::DragEvent| {
-            event.prevent_default();
-            let Some(dt) = event.data_transfer() else {
-                return;
-            };
-
-            let mut files_meta: Vec<fret_core::ExternalDragFile> = Vec::new();
-            let Some(files) = dt.files() else {
-                return;
-            };
-            for i in 0..files.length() {
-                if let Some(file) = files.item(i) {
-                    files_meta.push(fret_core::ExternalDragFile { name: file.name() });
-                }
-            }
-            if files_meta.is_empty() {
-                return;
-            }
-
-            let token = external_drop_for_drag
-                .borrow_mut()
-                .allocate_token_for_drag();
-            let position =
-                point_from_dom_client_xy(&canvas_for_drag, event.client_x(), event.client_y());
-            let kind = ExternalDragKind::EnterFiles(ExternalDragFiles {
-                token,
-                files: files_meta,
-            });
-            if let Ok(mut q) = queue_drag_enter.try_borrow_mut() {
-                q.push(Event::ExternalDrag(ExternalDragEvent { position, kind }));
-            }
-
-            let cb = activation_for_drag_enter
-                .try_borrow()
-                .ok()
-                .and_then(|v| v.as_ref().cloned());
-            if let Some(cb) = cb {
-                cb();
-            }
-        }) as Box<dyn FnMut(web_sys::DragEvent)>);
-
-        let canvas_for_drag = canvas.clone();
-        let queue_drag_over = queue.clone();
-        let external_drop_for_drag = external_drop.clone();
-        let activation_for_drag_over = activation_callback.clone();
-        let on_drag_over = Closure::wrap(Box::new(move |event: web_sys::DragEvent| {
-            event.prevent_default();
-            let Some(dt) = event.data_transfer() else {
-                return;
-            };
-
-            let mut files_meta: Vec<fret_core::ExternalDragFile> = Vec::new();
-            let Some(files) = dt.files() else {
-                return;
-            };
-            for i in 0..files.length() {
-                if let Some(file) = files.item(i) {
-                    files_meta.push(fret_core::ExternalDragFile { name: file.name() });
-                }
-            }
-            if files_meta.is_empty() {
-                return;
-            }
-
-            let token = external_drop_for_drag
-                .borrow_mut()
-                .allocate_token_for_drag();
-            let position =
-                point_from_dom_client_xy(&canvas_for_drag, event.client_x(), event.client_y());
-            let kind = ExternalDragKind::OverFiles(ExternalDragFiles {
-                token,
-                files: files_meta,
-            });
-            if let Ok(mut q) = queue_drag_over.try_borrow_mut() {
-                q.push(Event::ExternalDrag(ExternalDragEvent { position, kind }));
-            }
-
-            let cb = activation_for_drag_over
-                .try_borrow()
-                .ok()
-                .and_then(|v| v.as_ref().cloned());
-            if let Some(cb) = cb {
-                cb();
-            }
-        }) as Box<dyn FnMut(web_sys::DragEvent)>);
-
-        let canvas_for_drag = canvas.clone();
-        let queue_drag_leave = queue.clone();
-        let external_drop_for_drag = external_drop.clone();
-        let activation_for_drag_leave = activation_callback.clone();
-        let on_drag_leave = Closure::wrap(Box::new(move |event: web_sys::DragEvent| {
-            event.prevent_default();
-            if external_drop_for_drag.borrow().current_drag_token.is_none() {
-                return;
-            }
-            external_drop_for_drag.borrow_mut().current_drag_token = None;
-
-            let position =
-                point_from_dom_client_xy(&canvas_for_drag, event.client_x(), event.client_y());
-            if let Ok(mut q) = queue_drag_leave.try_borrow_mut() {
-                q.push(Event::ExternalDrag(ExternalDragEvent {
-                    position,
-                    kind: ExternalDragKind::Leave,
-                }));
-            }
-            let cb = activation_for_drag_leave
-                .try_borrow()
-                .ok()
-                .and_then(|v| v.as_ref().cloned());
-            if let Some(cb) = cb {
-                cb();
-            }
-        }) as Box<dyn FnMut(web_sys::DragEvent)>);
-
-        let canvas_for_drag = canvas.clone();
-        let queue_drop = queue.clone();
-        let external_drop_for_drop = external_drop.clone();
-        let activation_for_drop = activation_callback.clone();
-        let on_drop = Closure::wrap(Box::new(move |event: web_sys::DragEvent| {
-            event.prevent_default();
-            let Some(dt) = event.data_transfer() else {
-                return;
-            };
-
-            let token = external_drop_for_drop
-                .borrow_mut()
-                .allocate_token_for_drag();
-            external_drop_for_drop.borrow_mut().current_drag_token = None;
-
-            let mut files_meta: Vec<fret_core::ExternalDragFile> = Vec::new();
-            let mut files_for_read: Vec<web_sys::File> = Vec::new();
-            let Some(files) = dt.files() else {
-                return;
-            };
-            for i in 0..files.length() {
-                if let Some(file) = files.item(i) {
-                    files_meta.push(fret_core::ExternalDragFile { name: file.name() });
-                    files_for_read.push(file);
-                }
-            }
-            if files_meta.is_empty() {
-                return;
-            }
-
-            external_drop_for_drop
-                .borrow_mut()
-                .selections
-                .insert(token, files_for_read);
-
-            let position =
-                point_from_dom_client_xy(&canvas_for_drag, event.client_x(), event.client_y());
-            let kind = ExternalDragKind::DropFiles(ExternalDragFiles {
-                token,
-                files: files_meta,
-            });
-            if let Ok(mut q) = queue_drop.try_borrow_mut() {
-                q.push(Event::ExternalDrag(ExternalDragEvent { position, kind }));
-            }
-
-            let cb = activation_for_drop
-                .try_borrow()
-                .ok()
-                .and_then(|v| v.as_ref().cloned());
-            if let Some(cb) = cb {
-                cb();
-            }
-        }) as Box<dyn FnMut(web_sys::DragEvent)>);
-
-        let canvas_target: EventTarget = canvas.clone().unchecked_into();
-        let window_target: EventTarget = window.clone().unchecked_into();
-        let ime_target: EventTarget = ime_textarea.clone().unchecked_into();
-
-        if let Ok(mut q) = queue.try_borrow_mut() {
-            q.push(Event::WindowScaleFactorChanged(
-                window.device_pixel_ratio() as f32
-            ));
-            q.push(Event::WindowResized {
-                width: Px(canvas.client_width().max(0) as f32),
-                height: Px(canvas.client_height().max(0) as f32),
-            });
-        }
-
-        canvas_target
-            .add_event_listener_with_callback(
-                "pointermove",
-                on_pointer_move.as_ref().unchecked_ref(),
-            )
-            .map_err(|_| RunnerError::new("failed to register pointermove listener"))?;
-        canvas_target
-            .add_event_listener_with_callback(
-                "pointerdown",
-                on_pointer_down.as_ref().unchecked_ref(),
-            )
-            .map_err(|_| RunnerError::new("failed to register pointerdown listener"))?;
-        canvas_target
-            .add_event_listener_with_callback("pointerup", on_pointer_up.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register pointerup listener"))?;
-        canvas_target
-            .add_event_listener_with_callback(
-                "pointercancel",
-                on_pointer_cancel.as_ref().unchecked_ref(),
-            )
-            .map_err(|_| RunnerError::new("failed to register pointercancel listener"))?;
-
-        // Mouse fallback: some environments still rely on mouse events (or disable pointer events).
-        canvas_target
-            .add_event_listener_with_callback("mousemove", on_mouse_move.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register mousemove listener"))?;
-        canvas_target
-            .add_event_listener_with_callback("mousedown", on_mouse_down.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register mousedown listener"))?;
-        canvas_target
-            .add_event_listener_with_callback("mouseup", on_mouse_up.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register mouseup listener"))?;
-        let wheel_opts = AddEventListenerOptions::new();
-        wheel_opts.set_passive(false);
-        canvas_target
-            .add_event_listener_with_callback_and_add_event_listener_options(
-                "wheel",
-                on_wheel.as_ref().unchecked_ref(),
-                &wheel_opts,
-            )
-            .map_err(|_| RunnerError::new("failed to register wheel listener"))?;
-
-        window_target
-            .add_event_listener_with_callback("keydown", on_key_down.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register keydown listener"))?;
-        window_target
-            .add_event_listener_with_callback("keyup", on_key_up.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register keyup listener"))?;
-        window_target
-            .add_event_listener_with_callback("resize", on_window_resize.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register resize listener"))?;
-
-        canvas_target
-            .add_event_listener_with_callback(
-                "compositionstart",
-                on_composition_start.as_ref().unchecked_ref(),
-            )
-            .map_err(|_| RunnerError::new("failed to register compositionstart listener"))?;
-        canvas_target
-            .add_event_listener_with_callback(
-                "compositionupdate",
-                on_composition_update.as_ref().unchecked_ref(),
-            )
-            .map_err(|_| RunnerError::new("failed to register compositionupdate listener"))?;
-        canvas_target
-            .add_event_listener_with_callback(
-                "compositionend",
-                on_composition_end.as_ref().unchecked_ref(),
-            )
-            .map_err(|_| RunnerError::new("failed to register compositionend listener"))?;
-
-        canvas_target
-            .add_event_listener_with_callback(
-                "beforeinput",
-                on_before_input.as_ref().unchecked_ref(),
-            )
-            .map_err(|_| RunnerError::new("failed to register beforeinput listener"))?;
-
-        canvas_target
-            .add_event_listener_with_callback("dragenter", on_drag_enter.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register dragenter listener"))?;
-        canvas_target
-            .add_event_listener_with_callback("dragover", on_drag_over.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register dragover listener"))?;
-        canvas_target
-            .add_event_listener_with_callback("dragleave", on_drag_leave.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register dragleave listener"))?;
-        canvas_target
-            .add_event_listener_with_callback("drop", on_drop.as_ref().unchecked_ref())
-            .map_err(|_| RunnerError::new("failed to register drop listener"))?;
-
-        let _ = ime_target.add_event_listener_with_callback(
-            "compositionstart",
-            on_composition_start.as_ref().unchecked_ref(),
-        );
-        let _ = ime_target.add_event_listener_with_callback(
-            "compositionupdate",
-            on_composition_update.as_ref().unchecked_ref(),
-        );
-        let _ = ime_target.add_event_listener_with_callback(
-            "compositionend",
-            on_composition_end.as_ref().unchecked_ref(),
-        );
-        let _ = ime_target.add_event_listener_with_callback(
-            "beforeinput",
-            on_before_input.as_ref().unchecked_ref(),
-        );
-
-        Ok(Self {
-            window,
-            canvas,
-            ime_textarea,
-            ime_enabled,
-
-            on_pointer_move,
-            on_pointer_down,
-            on_pointer_up,
-            on_pointer_cancel,
-            on_wheel,
-
-            on_mouse_move,
-            on_mouse_down,
-            on_mouse_up,
-
-            on_key_down,
-            on_key_up,
-            on_window_resize,
-
-            on_composition_start,
-            on_composition_update,
-            on_composition_end,
-
-            on_before_input,
-
-            on_drag_enter,
-            on_drag_over,
-            on_drag_leave,
-            on_drop,
-        })
-    }
-
-    fn uninstall(&self) {
-        let canvas_target: EventTarget = self.canvas.clone().unchecked_into();
-        let window_target: EventTarget = self.window.clone().unchecked_into();
-        let ime_target: EventTarget = self.ime_textarea.clone().unchecked_into();
-
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "pointermove",
-            self.on_pointer_move.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "pointerdown",
-            self.on_pointer_down.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "pointerup",
-            self.on_pointer_up.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "pointercancel",
-            self.on_pointer_cancel.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "mousemove",
-            self.on_mouse_move.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "mousedown",
-            self.on_mouse_down.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "mouseup",
-            self.on_mouse_up.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target
-            .remove_event_listener_with_callback("wheel", self.on_wheel.as_ref().unchecked_ref());
-
-        let _ = window_target.remove_event_listener_with_callback(
-            "keydown",
-            self.on_key_down.as_ref().unchecked_ref(),
-        );
-        let _ = window_target
-            .remove_event_listener_with_callback("keyup", self.on_key_up.as_ref().unchecked_ref());
-        let _ = window_target.remove_event_listener_with_callback(
-            "resize",
-            self.on_window_resize.as_ref().unchecked_ref(),
-        );
-
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "compositionstart",
-            self.on_composition_start.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "compositionupdate",
-            self.on_composition_update.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "compositionend",
-            self.on_composition_end.as_ref().unchecked_ref(),
-        );
-
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "beforeinput",
-            self.on_before_input.as_ref().unchecked_ref(),
-        );
-
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "dragenter",
-            self.on_drag_enter.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "dragover",
-            self.on_drag_over.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target.remove_event_listener_with_callback(
-            "dragleave",
-            self.on_drag_leave.as_ref().unchecked_ref(),
-        );
-        let _ = canvas_target
-            .remove_event_listener_with_callback("drop", self.on_drop.as_ref().unchecked_ref());
-
-        let _ = ime_target.remove_event_listener_with_callback(
-            "compositionstart",
-            self.on_composition_start.as_ref().unchecked_ref(),
-        );
-        let _ = ime_target.remove_event_listener_with_callback(
-            "compositionupdate",
-            self.on_composition_update.as_ref().unchecked_ref(),
-        );
-        let _ = ime_target.remove_event_listener_with_callback(
-            "compositionend",
-            self.on_composition_end.as_ref().unchecked_ref(),
-        );
-        let _ = ime_target.remove_event_listener_with_callback(
-            "beforeinput",
-            self.on_before_input.as_ref().unchecked_ref(),
-        );
-
-        let ime_el: HtmlElement = self.ime_textarea.clone().unchecked_into();
-        if let Some(parent) = ime_el.parent_node() {
-            let _ = parent.remove_child(&ime_el);
-        }
-    }
-}
-
-impl Drop for WebInputListeners {
-    fn drop(&mut self) {
-        self.uninstall();
-    }
-}
-
-pub struct WebEffectPump {
-    canvas: HtmlCanvasElement,
+pub struct WebPlatformServices {
     queued_events: Rc<RefCell<Vec<Event>>>,
     fired_timeouts: Rc<RefCell<Vec<TimerToken>>>,
     timers: HashMap<TimerToken, WebTimer>,
     file_dialogs: Rc<RefCell<WebFileDialogState>>,
 }
 
+#[derive(Debug)]
 struct WebTimer {
     id: i32,
     repeat: Option<Duration>,
-    callback: Closure<dyn FnMut()>,
+    callback: wasm_bindgen::closure::Closure<dyn FnMut()>,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct WebFileDialogState {
     next_token: u64,
     selections: HashMap<fret_runtime::FileDialogToken, Vec<web_sys::File>>,
@@ -1250,37 +55,7 @@ impl WebFileDialogState {
     }
 }
 
-#[derive(Default)]
-struct WebExternalDropState {
-    next_token: u64,
-    current_drag_token: Option<ExternalDropToken>,
-    selections: HashMap<ExternalDropToken, Vec<web_sys::File>>,
-}
-
-impl WebExternalDropState {
-    fn allocate_token_for_drag(&mut self) -> ExternalDropToken {
-        if let Some(existing) = self.current_drag_token {
-            return existing;
-        }
-        let next = self.next_token.max(1);
-        let token = ExternalDropToken(next);
-        self.next_token = next.saturating_add(1);
-        self.current_drag_token = Some(token);
-        token
-    }
-}
-
-impl WebEffectPump {
-    pub fn new(canvas: HtmlCanvasElement) -> Self {
-        Self {
-            canvas,
-            queued_events: Rc::new(RefCell::new(Vec::new())),
-            fired_timeouts: Rc::new(RefCell::new(Vec::new())),
-            timers: HashMap::new(),
-            file_dialogs: Rc::new(RefCell::new(WebFileDialogState::default())),
-        }
-    }
-
+impl WebPlatformServices {
     pub fn take_events(&mut self) -> Vec<Event> {
         std::mem::take(&mut *self.queued_events.borrow_mut())
     }
@@ -1292,67 +67,54 @@ impl WebEffectPump {
     pub fn handle_effects<H>(
         &mut self,
         app: &mut H,
-        runner: &mut WebRunner,
-        input: &mut WebInput,
-        redraw_window: fret_core::AppWindowId,
         effects: impl IntoIterator<Item = Effect>,
     ) -> Vec<Effect>
     where
-        H: fret_runtime::GlobalsHost + fret_runtime::EffectSink,
+        H: fret_runtime::GlobalsHost,
     {
         let mut unhandled: Vec<Effect> = Vec::new();
         for effect in effects {
             match effect {
-                Effect::Redraw(_) | Effect::RequestAnimationFrame(_) => {}
                 Effect::SetTimer {
                     token,
                     after,
                     repeat,
                     ..
-                } => self.schedule_timer(token, after, repeat),
-                Effect::CancelTimer { token } => self.cancel_timer(token),
-                Effect::CursorSetIcon { icon, .. } => self.set_cursor_icon(icon),
-                Effect::ImeAllow { enabled, .. } => input.set_ime_allowed(enabled),
-                Effect::ImeSetCursorArea { rect, .. } => input.set_ime_cursor_area(rect),
-                Effect::TextAddFonts { fonts } => {
-                    let added = runner.add_fonts(fonts);
-                    if added == 0 {
+                } => {
+                    let Some(window) = window() else {
                         continue;
-                    }
+                    };
 
-                    let prev_rev = app.global::<FontCatalog>().map(|c| c.revision).unwrap_or(0);
-                    let revision = prev_rev.saturating_add(1);
-                    let families = runner.all_font_names();
-                    let cache = FontCatalogCache::from_families(revision, &families);
-                    app.set_global::<FontCatalog>(FontCatalog {
-                        families: families.clone(),
-                        revision,
-                    });
-                    app.set_global::<FontCatalogCache>(cache);
+                    let queue = self.fired_timeouts.clone();
+                    let callback = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+                        let _ = queue.try_borrow_mut().map(|mut q| q.push(token));
+                    })
+                        as Box<dyn FnMut()>);
 
-                    // Ensure the renderer has usable default families on platforms without system
-                    // fonts (wasm). If the config is empty, fall back to whatever we just loaded.
-                    let mut config = app
-                        .global::<fret_core::TextFontFamilyConfig>()
-                        .cloned()
-                        .unwrap_or_default();
-                    if config.ui_sans.is_empty() {
-                        config.ui_sans = families.clone();
-                    }
-                    if config.ui_serif.is_empty() {
-                        config.ui_serif = families.clone();
-                    }
-                    if config.ui_mono.is_empty() {
-                        config.ui_mono = families.clone();
-                    }
+                    let id = window
+                        .set_timeout_with_callback_and_timeout_and_arguments_0(
+                            callback.as_ref().unchecked_ref(),
+                            Self::ms(after),
+                        )
+                        .unwrap_or(0);
 
-                    let _ = runner.set_text_font_families(&config);
-
-                    // Re-setting the global forces global-change observation even if the config
-                    // value is unchanged (see desktop runner rationale).
-                    app.set_global::<fret_core::TextFontFamilyConfig>(config);
-
-                    app.request_redraw(redraw_window);
+                    self.timers.insert(
+                        token,
+                        WebTimer {
+                            id,
+                            repeat,
+                            callback,
+                        },
+                    );
+                }
+                Effect::CancelTimer { token } => {
+                    let Some(window) = window() else {
+                        continue;
+                    };
+                    let Some(timer) = self.timers.remove(&token) else {
+                        continue;
+                    };
+                    window.clear_timeout_with_handle(timer.id);
                 }
                 Effect::ClipboardSetText { text } => {
                     let caps = app
@@ -1362,7 +124,7 @@ impl WebEffectPump {
                     if !caps.clipboard.text {
                         continue;
                     }
-                    let Some(window) = web_sys::window() else {
+                    let Some(window) = window() else {
                         continue;
                     };
                     let clipboard = window.navigator().clipboard();
@@ -1382,7 +144,7 @@ impl WebEffectPump {
                         continue;
                     }
 
-                    let Some(window) = web_sys::window() else {
+                    let Some(window) = window() else {
                         self.queued_events
                             .borrow_mut()
                             .push(Event::ClipboardTextUnavailable { token });
@@ -1410,7 +172,7 @@ impl WebEffectPump {
                     if !caps.shell.open_url {
                         continue;
                     }
-                    let Some(window) = web_sys::window() else {
+                    let Some(window) = window() else {
                         continue;
                     };
                     let _ = window.open_with_url(&url);
@@ -1424,16 +186,13 @@ impl WebEffectPump {
                         continue;
                     }
 
-                    let Some(window) = web_sys::window() else {
-                        continue;
-                    };
-                    let Some(document) = window.document() else {
+                    let Some(document) = document() else {
                         continue;
                     };
                     let Ok(el) = document.create_element("input") else {
                         continue;
                     };
-                    let Ok(input) = el.dyn_into::<web_sys::HtmlInputElement>() else {
+                    let Ok(input) = el.dyn_into::<HtmlInputElement>() else {
                         continue;
                     };
 
@@ -1479,22 +238,22 @@ impl WebEffectPump {
                     let input_for_cb = input.clone();
                     let input_node_for_cb: Node = input.clone().unchecked_into();
 
-                    let callback_cell: Rc<RefCell<Option<Closure<dyn FnMut(WebSysEvent)>>>> =
+                    let callback_cell: Rc<RefCell<Option<WebChangeCallback>>> =
                         Rc::new(RefCell::new(None));
                     let callback_cell_for_cb = callback_cell.clone();
 
-                    let on_change = Closure::wrap(Box::new(move |_event: WebSysEvent| {
+                    let on_change = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e| {
                         if let Some(parent) = input_node_for_cb.parent_node() {
                             let _ = parent.remove_child(&input_node_for_cb);
                         }
 
-                        if let Ok(holder) = callback_cell_for_cb.try_borrow() {
-                            if let Some(cb) = holder.as_ref() {
-                                let _ = input_target_for_cb.remove_event_listener_with_callback(
-                                    "change",
-                                    cb.as_ref().unchecked_ref(),
-                                );
-                            }
+                        if let Ok(holder) = callback_cell_for_cb.try_borrow()
+                            && let Some(cb) = holder.as_ref()
+                        {
+                            let _ = input_target_for_cb.remove_event_listener_with_callback(
+                                "change",
+                                cb.as_ref().unchecked_ref(),
+                            );
                         }
                         callback_cell_for_cb.borrow_mut().take();
 
@@ -1519,13 +278,13 @@ impl WebEffectPump {
                             let token = st.allocate_token();
                             let files_meta = selected
                                 .iter()
-                                .map(|f| fret_core::ExternalDragFile { name: f.name() })
+                                .map(|f| ExternalDragFile { name: f.name() })
                                 .collect::<Vec<_>>();
                             st.selections.insert(token, selected);
                             (token, files_meta)
                         };
 
-                        let selection = fret_core::FileDialogSelection {
+                        let selection = FileDialogSelection {
                             token,
                             files: files_meta,
                         };
@@ -1536,48 +295,18 @@ impl WebEffectPump {
                         as Box<dyn FnMut(WebSysEvent)>);
 
                     *callback_cell.borrow_mut() = Some(on_change);
-                    if let Ok(holder) = callback_cell.try_borrow() {
-                        if let Some(cb) = holder.as_ref() {
-                            let _ = input_target.add_event_listener_with_callback(
-                                "change",
-                                cb.as_ref().unchecked_ref(),
-                            );
-                        }
+                    if let Ok(holder) = callback_cell.try_borrow() && let Some(cb) = holder.as_ref()
+                    {
+                        let _ = input_target.add_event_listener_with_callback(
+                            "change",
+                            cb.as_ref().unchecked_ref(),
+                        );
                     }
 
                     input.click();
                 }
                 Effect::FileDialogReadAll { token, .. } => {
                     self.file_dialog_read_all(
-                        token,
-                        fret_core::ExternalDropReadLimits {
-                            max_total_bytes: 64 * 1024 * 1024,
-                            max_file_bytes: 32 * 1024 * 1024,
-                            max_files: 64,
-                        },
-                    );
-                }
-                Effect::FileDialogReadAllWithLimits { token, limits, .. } => {
-                    let cap = fret_core::ExternalDropReadLimits {
-                        max_total_bytes: 64 * 1024 * 1024,
-                        max_file_bytes: 32 * 1024 * 1024,
-                        max_files: 64,
-                    };
-                    self.file_dialog_read_all(token, limits.capped_by(cap));
-                }
-                Effect::FileDialogRelease { token } => {
-                    self.file_dialogs.borrow_mut().selections.remove(&token);
-                }
-                Effect::ExternalDropReadAll { token, .. } => {
-                    let caps = app
-                        .global::<PlatformCapabilities>()
-                        .cloned()
-                        .unwrap_or_default();
-                    if !caps.dnd.external {
-                        continue;
-                    }
-                    self.external_drop_read_all(
-                        input,
                         token,
                         ExternalDropReadLimits {
                             max_total_bytes: 64 * 1024 * 1024,
@@ -1586,23 +315,16 @@ impl WebEffectPump {
                         },
                     );
                 }
-                Effect::ExternalDropReadAllWithLimits { token, limits, .. } => {
-                    let caps = app
-                        .global::<PlatformCapabilities>()
-                        .cloned()
-                        .unwrap_or_default();
-                    if !caps.dnd.external {
-                        continue;
-                    }
+                Effect::FileDialogReadAllWithLimits { token, limits, .. } => {
                     let cap = ExternalDropReadLimits {
                         max_total_bytes: 64 * 1024 * 1024,
                         max_file_bytes: 32 * 1024 * 1024,
                         max_files: 64,
                     };
-                    self.external_drop_read_all(input, token, limits.capped_by(cap));
+                    self.file_dialog_read_all(token, limits.capped_by(cap));
                 }
-                Effect::ExternalDropRelease { token } => {
-                    input.external_drop_release(token);
+                Effect::FileDialogRelease { token } => {
+                    self.file_dialogs.borrow_mut().selections.remove(&token);
                 }
                 other => unhandled.push(other),
             }
@@ -1613,103 +335,9 @@ impl WebEffectPump {
     fn file_dialog_read_all(
         &self,
         token: fret_runtime::FileDialogToken,
-        limits: fret_core::ExternalDropReadLimits,
-    ) {
-        let files = self.file_dialogs.borrow().selections.get(&token).cloned();
-        let Some(files) = files else {
-            return;
-        };
-
-        let queue = self.queued_events.clone();
-        spawn_local(async move {
-            let mut out_files: Vec<fret_core::ExternalDropFileData> = Vec::new();
-            let mut errors: Vec<fret_core::ExternalDropReadError> = Vec::new();
-            let mut total: u64 = 0;
-
-            for file in files.into_iter().take(limits.max_files) {
-                let name = file.name();
-                let reported_size = file.size() as u64;
-
-                if reported_size > limits.max_file_bytes {
-                    errors.push(fret_core::ExternalDropReadError {
-                        name,
-                        message: format!(
-                            "file too large ({} bytes > max_file_bytes {})",
-                            reported_size, limits.max_file_bytes
-                        ),
-                    });
-                    continue;
-                }
-
-                if total >= limits.max_total_bytes {
-                    errors.push(fret_core::ExternalDropReadError {
-                        name,
-                        message: format!(
-                            "selection too large (total {} >= max_total_bytes {})",
-                            total, limits.max_total_bytes
-                        ),
-                    });
-                    break;
-                }
-
-                let buf = match JsFuture::from(file.array_buffer()).await {
-                    Ok(v) => v,
-                    Err(err) => {
-                        errors.push(fret_core::ExternalDropReadError {
-                            name,
-                            message: format!("read failed: {err:?}"),
-                        });
-                        continue;
-                    }
-                };
-                let bytes = Uint8Array::new(&buf).to_vec();
-
-                if bytes.len() as u64 > limits.max_file_bytes {
-                    errors.push(fret_core::ExternalDropReadError {
-                        name,
-                        message: format!(
-                            "file too large ({} bytes > max_file_bytes {})",
-                            bytes.len(),
-                            limits.max_file_bytes
-                        ),
-                    });
-                    continue;
-                }
-
-                let next_total = total.saturating_add(bytes.len() as u64);
-                if next_total > limits.max_total_bytes {
-                    errors.push(fret_core::ExternalDropReadError {
-                        name,
-                        message: format!(
-                            "selection too large (next_total {} > max_total_bytes {})",
-                            next_total, limits.max_total_bytes
-                        ),
-                    });
-                    break;
-                }
-                total = next_total;
-
-                out_files.push(fret_core::ExternalDropFileData { name, bytes });
-            }
-
-            let data = fret_core::FileDialogDataEvent {
-                token,
-                files: out_files,
-                errors,
-            };
-            let _ = queue
-                .try_borrow_mut()
-                .map(|mut q| q.push(Event::FileDialogData(data)));
-        });
-    }
-
-    fn external_drop_read_all(
-        &self,
-        input: &WebInput,
-        token: ExternalDropToken,
         limits: ExternalDropReadLimits,
     ) {
-        let files = input.external_drop_files(token);
+        let files = self.file_dialogs.borrow().selections.get(&token).cloned();
         let Some(files) = files else {
             return;
         };
@@ -1722,145 +350,57 @@ impl WebEffectPump {
 
             for file in files.into_iter().take(limits.max_files) {
                 let name = file.name();
-                let reported_size = file.size() as u64;
-
-                if reported_size > limits.max_file_bytes {
+                if limits.max_file_bytes > 0 && (file.size() as u64) > limits.max_file_bytes {
                     errors.push(ExternalDropReadError {
                         name,
-                        message: format!(
-                            "file too large ({} bytes > max_file_bytes {})",
-                            reported_size, limits.max_file_bytes
-                        ),
+                        message: "file exceeds max_file_bytes".to_string(),
                     });
                     continue;
                 }
 
-                if total >= limits.max_total_bytes {
+                let promise = file.array_buffer();
+                let Ok(buf) = JsFuture::from(promise).await else {
                     errors.push(ExternalDropReadError {
                         name,
-                        message: format!(
-                            "selection too large (total {} >= max_total_bytes {})",
-                            total, limits.max_total_bytes
-                        ),
+                        message: "failed to read file array_buffer".to_string(),
                     });
-                    break;
-                }
-
-                let buf = match JsFuture::from(file.array_buffer()).await {
-                    Ok(v) => v,
-                    Err(err) => {
-                        errors.push(ExternalDropReadError {
-                            name,
-                            message: format!("read failed: {err:?}"),
-                        });
-                        continue;
-                    }
+                    continue;
                 };
-                let bytes = Uint8Array::new(&buf).to_vec();
+                let array = js_sys::Uint8Array::new(&buf);
+                let bytes = array.to_vec();
 
-                if bytes.len() as u64 > limits.max_file_bytes {
+                total = total.saturating_add(bytes.len() as u64);
+                if limits.max_total_bytes > 0 && total > limits.max_total_bytes {
                     errors.push(ExternalDropReadError {
                         name,
-                        message: format!(
-                            "file too large ({} bytes > max_file_bytes {})",
-                            bytes.len(),
-                            limits.max_file_bytes
-                        ),
-                    });
-                    continue;
-                }
-
-                let next_total = total.saturating_add(bytes.len() as u64);
-                if next_total > limits.max_total_bytes {
-                    errors.push(ExternalDropReadError {
-                        name,
-                        message: format!(
-                            "selection too large (next_total {} > max_total_bytes {})",
-                            next_total, limits.max_total_bytes
-                        ),
+                        message: "total exceeds max_total_bytes".to_string(),
                     });
                     break;
                 }
-                total = next_total;
 
                 out_files.push(ExternalDropFileData { name, bytes });
             }
 
-            let data = ExternalDropDataEvent {
+            let event = Event::FileDialogData(FileDialogDataEvent {
                 token,
                 files: out_files,
                 errors,
-            };
-            let _ = queue
-                .try_borrow_mut()
-                .map(|mut q| q.push(Event::ExternalDropData(data)));
+            });
+            let _ = queue.try_borrow_mut().map(|mut q| q.push(event));
         });
     }
 
-    fn ms(d: Duration) -> i32 {
-        (d.as_millis().min(i32::MAX as u128) as i32).max(0)
-    }
-
-    fn schedule_timer(&mut self, token: TimerToken, after: Duration, repeat: Option<Duration>) {
-        let Some(window) = web_sys::window() else {
-            return;
-        };
-
-        if let Some(existing) = self.timers.remove(&token) {
-            window.clear_timeout_with_handle(existing.id);
-        }
-
-        let queue = self.queued_events.clone();
-        let fired = self.fired_timeouts.clone();
-        let callback = Closure::wrap(Box::new(move || {
-            if let Ok(mut q) = queue.try_borrow_mut() {
-                q.push(Event::Timer { token });
-            }
-            let _ = fired.try_borrow_mut().map(|mut v| v.push(token));
-        }) as Box<dyn FnMut()>);
-
-        let id = window
-            .set_timeout_with_callback_and_timeout_and_arguments_0(
-                callback.as_ref().unchecked_ref(),
-                Self::ms(after),
-            )
-            .unwrap_or(0);
-
-        self.timers.insert(
-            token,
-            WebTimer {
-                id,
-                repeat,
-                callback,
-            },
-        );
-    }
-
-    fn cancel_timer(&mut self, token: TimerToken) {
-        let Some(window) = web_sys::window() else {
-            return;
-        };
-
-        if let Some(timer) = self.timers.remove(&token) {
-            window.clear_timeout_with_handle(timer.id);
-        }
-    }
-
     fn collect_fired_timeouts(&mut self) {
-        let tokens = std::mem::take(&mut *self.fired_timeouts.borrow_mut());
-        if tokens.is_empty() {
-            return;
-        }
-
         let Some(window) = web_sys::window() else {
             return;
         };
-
-        for token in tokens {
+        let fired = std::mem::take(&mut *self.fired_timeouts.borrow_mut());
+        for token in fired {
             let Some(timer) = self.timers.remove(&token) else {
                 continue;
             };
 
+            self.queued_events.borrow_mut().push(Event::Timer { token });
             window.clear_timeout_with_handle(timer.id);
 
             let Some(repeat) = timer.repeat else {
@@ -1884,386 +424,8 @@ impl WebEffectPump {
         }
     }
 
-    fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {
-        let cursor = match icon {
-            fret_core::CursorIcon::Default => "default",
-            fret_core::CursorIcon::Pointer => "pointer",
-            fret_core::CursorIcon::Text => "text",
-            fret_core::CursorIcon::ColResize => "col-resize",
-            fret_core::CursorIcon::RowResize => "row-resize",
-        };
-
-        let canvas_el: HtmlElement = self.canvas.clone().unchecked_into();
-        let _ = canvas_el.style().set_property("cursor", cursor);
+    fn ms(duration: Duration) -> i32 {
+        let ms = duration.as_millis().min(i32::MAX as u128);
+        i32::try_from(ms).unwrap_or(i32::MAX)
     }
-}
-
-pub struct WebRunner {
-    canvas: HtmlCanvasElement,
-    ctx: WgpuContext,
-    surface_state: SurfaceState<'static>,
-    renderer: Renderer,
-    clear: ClearColor,
-    scene: Scene,
-}
-
-impl WebRunner {
-    pub async fn new(canvas: HtmlCanvasElement) -> Result<Self, RunnerError> {
-        let (width, height, _scale) = resize_canvas_to_display_size(&canvas)?;
-        let (ctx, surface) =
-            WgpuContext::new_with_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))
-                .await
-                .map_err(|e| RunnerError::new(format!("{e}")))?;
-
-        let surface_state = SurfaceState::new(&ctx.adapter, &ctx.device, surface, width, height)
-            .map_err(|e| RunnerError::new(format!("{e}")))?;
-
-        let renderer = Renderer::new(&ctx.adapter, &ctx.device);
-
-        Ok(Self {
-            canvas,
-            ctx,
-            surface_state,
-            renderer,
-            clear: ClearColor::default(),
-            scene: Scene::default(),
-        })
-    }
-
-    pub async fn from_canvas_id(canvas_id: &str) -> Result<Self, RunnerError> {
-        let canvas = canvas_by_id(canvas_id)?;
-        Self::new(canvas).await
-    }
-
-    pub fn set_clear_color(&mut self, clear: ClearColor) {
-        self.clear = clear;
-    }
-
-    pub fn services_mut(&mut self) -> &mut dyn UiServices {
-        &mut self.renderer
-    }
-
-    pub fn services_and_scene_mut(&mut self) -> (&mut dyn UiServices, &mut Scene) {
-        (&mut self.renderer, &mut self.scene)
-    }
-
-    pub fn scene(&self) -> &Scene {
-        &self.scene
-    }
-
-    pub fn scene_mut(&mut self) -> &mut Scene {
-        &mut self.scene
-    }
-
-    /// Returns UI layout bounds (in CSS pixels) and device scale factor (DPR).
-    pub fn ui_bounds_and_scale(&self) -> Result<(Rect, f32), RunnerError> {
-        let window = window()?;
-        let dpr = window.device_pixel_ratio().max(1.0) as f32;
-
-        let mut w = self.canvas.client_width().max(0) as f32;
-        let mut h = self.canvas.client_height().max(0) as f32;
-
-        if w == 0.0 {
-            w = (self.canvas.width().max(1) as f32) / dpr;
-        }
-        if h == 0.0 {
-            h = (self.canvas.height().max(1) as f32) / dpr;
-        }
-
-        Ok((
-            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(w), Px(h))),
-            dpr,
-        ))
-    }
-
-    pub fn render_once(&mut self) -> Result<(), RunnerError> {
-        let (width, height, scale_factor) = resize_canvas_to_display_size(&self.canvas)?;
-        let (cur_w, cur_h) = self.surface_state.size();
-        if (width, height) != (cur_w, cur_h) {
-            self.surface_state
-                .resize(&self.ctx.device, width.max(1), height.max(1));
-        }
-
-        let (frame, view) = self
-            .surface_state
-            .get_current_frame_view()
-            .map_err(|e| RunnerError::new(format!("{e:?}")))?;
-
-        let cmd = self.renderer.render_scene(
-            &self.ctx.device,
-            &self.ctx.queue,
-            RenderSceneParams {
-                format: self.surface_state.format(),
-                target_view: &view,
-                scene: &self.scene,
-                clear: self.clear,
-                scale_factor,
-                viewport_size: self.surface_state.size(),
-            },
-        );
-        self.ctx.queue.submit([cmd]);
-        frame.present();
-        Ok(())
-    }
-
-    pub fn add_fonts(&mut self, fonts: impl IntoIterator<Item = Vec<u8>>) -> usize {
-        self.renderer.add_fonts(fonts)
-    }
-
-    pub fn all_font_names(&self) -> Vec<String> {
-        self.renderer.all_font_names()
-    }
-
-    pub fn set_text_font_families(&mut self, config: &fret_core::TextFontFamilyConfig) -> bool {
-        self.renderer.set_text_font_families(config)
-    }
-}
-
-struct RafLoopState {
-    active: bool,
-    callback: Option<Closure<dyn FnMut(f64)>>,
-    raf_id: Option<i32>,
-    window: Window,
-}
-
-pub struct RafLoop {
-    state: Rc<RefCell<RafLoopState>>,
-}
-
-impl RafLoop {
-    pub fn stop(&mut self) {
-        let mut state = self.state.borrow_mut();
-        state.active = false;
-        if let Some(id) = state.raf_id.take() {
-            let _ = state.window.cancel_animation_frame(id);
-        }
-        state.callback.take();
-    }
-}
-
-impl Drop for RafLoop {
-    fn drop(&mut self) {
-        self.stop();
-    }
-}
-
-pub fn start_raf_loop(runner: WebRunner) -> Result<RafLoop, RunnerError> {
-    start_raf_loop_shared(Rc::new(RefCell::new(runner)))
-}
-
-fn start_raf_loop_shared(runner: Rc<RefCell<WebRunner>>) -> Result<RafLoop, RunnerError> {
-    let window = window()?;
-    let window_for_cb = window.clone();
-    let window_for_first = window_for_cb.clone();
-
-    let state = Rc::new(RefCell::new(RafLoopState {
-        active: true,
-        callback: None,
-        raf_id: None,
-        window,
-    }));
-
-    let state_for_cb = state.clone();
-    let runner_for_cb = runner.clone();
-
-    let callback = Closure::wrap(Box::new(move |_ts: f64| {
-        if !state_for_cb.borrow().active {
-            return;
-        }
-
-        if let Ok(mut r) = runner_for_cb.try_borrow_mut() {
-            let _ = r.render_once();
-        }
-
-        let next_id = {
-            let state = state_for_cb.borrow();
-            state
-                .callback
-                .as_ref()
-                .and_then(|cb| request_animation_frame(&window_for_cb, cb).ok())
-        };
-        if let Some(id) = next_id {
-            state_for_cb.borrow_mut().raf_id = Some(id);
-        }
-    }) as Box<dyn FnMut(f64)>);
-
-    state.borrow_mut().callback = Some(callback);
-    let first_id = {
-        let state_ref = state.borrow();
-        state_ref
-            .callback
-            .as_ref()
-            .and_then(|cb| request_animation_frame(&window_for_first, cb).ok())
-    };
-    if let Some(id) = first_id {
-        state.borrow_mut().raf_id = Some(id);
-    }
-
-    Ok(RafLoop { state })
-}
-
-#[wasm_bindgen]
-pub async fn render_one_frame(canvas_id: &str) -> Result<(), JsValue> {
-    WebRunner::from_canvas_id(canvas_id)
-        .await
-        .and_then(|mut runner| runner.render_once())
-        .map_err(|e| e.to_js_value())
-}
-
-#[wasm_bindgen]
-pub struct WebRunnerHandle {
-    runner: Rc<RefCell<WebRunner>>,
-    loop_handle: Option<RafLoop>,
-    input: Option<WebInput>,
-}
-
-#[wasm_bindgen]
-impl WebRunnerHandle {
-    #[wasm_bindgen(js_name = create)]
-    pub async fn create(canvas_id: String) -> Result<WebRunnerHandle, JsValue> {
-        let runner = WebRunner::from_canvas_id(&canvas_id)
-            .await
-            .map_err(|e| e.to_js_value())?;
-        Ok(WebRunnerHandle {
-            runner: Rc::new(RefCell::new(runner)),
-            loop_handle: None,
-            input: None,
-        })
-    }
-
-    pub fn start(&mut self) -> Result<(), JsValue> {
-        if self.loop_handle.is_some() {
-            return Ok(());
-        }
-        let loop_handle =
-            start_raf_loop_shared(self.runner.clone()).map_err(|e| e.to_js_value())?;
-        self.loop_handle = Some(loop_handle);
-        Ok(())
-    }
-
-    pub fn stop(&mut self) {
-        if let Some(mut handle) = self.loop_handle.take() {
-            handle.stop();
-        }
-    }
-
-    #[wasm_bindgen(js_name = installInputListeners)]
-    pub fn install_input_listeners(&mut self, prevent_default: bool) -> Result<(), JsValue> {
-        if self.input.is_some() {
-            return Ok(());
-        }
-
-        let canvas = self
-            .runner
-            .try_borrow()
-            .map_err(|_| JsValue::from_str("runner is already borrowed"))?
-            .canvas
-            .clone();
-
-        let input = WebInput::new(canvas, prevent_default).map_err(|e| e.to_js_value())?;
-        self.input = Some(input);
-        Ok(())
-    }
-
-    #[wasm_bindgen(js_name = removeInputListeners)]
-    pub fn remove_input_listeners(&mut self) {
-        self.input.take();
-    }
-
-    #[wasm_bindgen(js_name = drainInputEventsDebug)]
-    pub fn drain_input_events_debug(&mut self) -> Array {
-        let events = self
-            .input
-            .as_mut()
-            .map(|i| i.take_events())
-            .unwrap_or_default();
-        events
-            .into_iter()
-            .map(|e| JsValue::from_str(&format!("{e:?}")))
-            .collect()
-    }
-
-    #[wasm_bindgen(js_name = renderOnce)]
-    pub fn render_once(&mut self) -> Result<(), JsValue> {
-        self.runner
-            .try_borrow_mut()
-            .map_err(|_| JsValue::from_str("runner is already borrowed"))?
-            .render_once()
-            .map_err(|e| e.to_js_value())
-    }
-
-    #[wasm_bindgen(js_name = addFont)]
-    pub fn add_font(&mut self, bytes: Uint8Array) -> Result<usize, JsValue> {
-        let bytes = bytes.to_vec();
-        let mut runner = self
-            .runner
-            .try_borrow_mut()
-            .map_err(|_| JsValue::from_str("runner is already borrowed"))?;
-        Ok(runner.add_fonts([bytes]))
-    }
-
-    #[wasm_bindgen(js_name = addFonts)]
-    pub fn add_fonts(&mut self, fonts: Array) -> Result<usize, JsValue> {
-        let mut bytes_vec: Vec<Vec<u8>> = Vec::with_capacity(fonts.length() as usize);
-        for value in fonts.iter() {
-            let bytes: Uint8Array = value
-                .dyn_into()
-                .map_err(|_| JsValue::from_str("fonts must be Uint8Array[]"))?;
-            bytes_vec.push(bytes.to_vec());
-        }
-
-        let mut runner = self
-            .runner
-            .try_borrow_mut()
-            .map_err(|_| JsValue::from_str("runner is already borrowed"))?;
-        Ok(runner.add_fonts(bytes_vec))
-    }
-
-    #[wasm_bindgen(js_name = allFontNames)]
-    pub fn all_font_names(&self) -> Result<Array, JsValue> {
-        let runner = self
-            .runner
-            .try_borrow()
-            .map_err(|_| JsValue::from_str("runner is already borrowed"))?;
-        let names = runner.all_font_names();
-        Ok(names.into_iter().map(JsValue::from).collect())
-    }
-
-    #[wasm_bindgen(js_name = setClearColorRgba)]
-    pub fn set_clear_color_rgba(&mut self, r: f64, g: f64, b: f64, a: f64) -> Result<(), JsValue> {
-        let mut runner = self
-            .runner
-            .try_borrow_mut()
-            .map_err(|_| JsValue::from_str("runner is already borrowed"))?;
-        runner.set_clear_color(ClearColor(wgpu::Color { r, g, b, a }));
-        Ok(())
-    }
-}
-
-impl WebRunnerHandle {
-    /// Returns queued platform events since the last call.
-    pub fn take_input_events(&mut self) -> Vec<Event> {
-        self.input
-            .as_mut()
-            .map(|i| i.take_events())
-            .unwrap_or_default()
-    }
-}
-
-#[wasm_bindgen]
-pub fn start_clear_loop(canvas_id: &str) -> Result<(), JsValue> {
-    let canvas_id = canvas_id.to_string();
-
-    spawn_local(async move {
-        let Ok(runner) = WebRunner::from_canvas_id(&canvas_id).await else {
-            return;
-        };
-
-        let Ok(handle) = start_raf_loop(runner) else {
-            return;
-        };
-        std::mem::forget(handle);
-    });
-
-    Ok(())
 }

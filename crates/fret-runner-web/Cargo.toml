@@ -4,16 +4,14 @@ version.workspace = true
 edition.workspace = true
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [dependencies]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-core = { path = "../fret-core" }
-fret-render = { path = "../fret-render" }
 fret-runtime = { path = "../fret-runtime" }
-wgpu = { workspace = true, features = ["webgl", "webgpu"] }
 js-sys = "0.3"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["AddEventListenerOptions", "Blob", "Clipboard", "CompositionEvent", "CssStyleDeclaration", "DataTransfer", "Document", "DomRect", "DragEvent", "Element", "Event", "EventTarget", "File", "FileList", "HtmlCanvasElement", "HtmlElement", "HtmlInputElement", "HtmlTextAreaElement", "InputEvent", "KeyboardEvent", "MouseEvent", "Navigator", "Node", "PointerEvent", "WheelEvent", "Window"] }
+web-sys = { version = "0.3", features = ["Blob", "Clipboard", "CssStyleDeclaration", "Document", "Event", "EventTarget", "File", "FileList", "HtmlElement", "HtmlInputElement", "Navigator", "Node", "Window"] }
