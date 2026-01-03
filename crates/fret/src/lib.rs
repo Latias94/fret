@@ -38,11 +38,6 @@ pub mod platform_web {
     pub use fret_platform_web::*;
 }
 
-#[cfg(feature = "platform-winit")]
-pub mod platform_winit {
-    pub use fret_platform_winit::*;
-}
-
 #[cfg(feature = "runner-winit")]
 pub mod runner_winit {
     pub use fret_runner_winit::*;

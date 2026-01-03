@@ -34,7 +34,7 @@ fn parent_from_synthetic_id(node: NodeId) -> Option<fret_core::NodeId> {
     from_accesskit_id(NodeId(node.0 & !SYNTHETIC_TEXT_RUN_BIT))
 }
 
-// Backend-specific adapter glue lives in crates like `fret-platform-winit`.
+// Backend-specific adapter glue lives in crates like `fret-runner-winit` (winit) or future mobile/web backends.
 
 fn map_role(role: SemanticsRole) -> Role {
     match role {

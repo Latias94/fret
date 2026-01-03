@@ -22,8 +22,7 @@ The desktop implementation is split across:
 
 - `fret-platform`: portable platform I/O contracts (clipboard, external drop payloads, file dialogs,
   open-url). This crate is intentionally backend-agnostic.
-- `fret-platform-winit`: the desktop/winit backend implementation for `fret-platform` contracts,
-   plus the AccessKit adapter glue (`accesskit_winit`).
+- `fret-runner-winit`: the winit glue (event mapping + optional AccessKit adapter).
 - `fret-runner-winit`: the reusable winit platform adapter that maps `winit` events into `fret-core`
   events (shared by desktop and wasm/web backends). The concrete mapping surface is exposed as
   `fret_runner_winit::WinitPlatform`.
@@ -50,6 +49,6 @@ Keep the runner boundary responsible for:
 
 ## Future Work
 
-- Move more logic from `fret-demo` into `fret-platform-winit` once APIs stabilize.
+- Move more logic from `fret-demo` into `fret-runner-winit` once APIs stabilize.
 - Add clipboard/IME/drag-and-drop as platform services exposed via effects.
 

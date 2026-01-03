@@ -12,6 +12,8 @@ use std::rc::Rc;
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::WindowExtWeb;
 
+pub mod accessibility;
+
 #[derive(Debug, Default, Clone)]
 pub struct WinitPlatform {
     pub input: WinitInputState,

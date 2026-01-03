@@ -17,7 +17,6 @@ members = [
     "crates/fret-platform",
     "crates/fret-platform-native",
     "crates/fret-platform-web",
-    "crates/fret-platform-winit",
     "crates/fret-render",
     "crates/fret-runner-web",
     "crates/fret-runner-winit",
@@ -37,7 +36,6 @@ rust-version = "1.92"
 anyhow = "1"
 bytemuck = { version = "1", features = ["derive"] }
 accesskit = "0.21.1"
-accesskit_winit = "0.29.2"
 cocoa = "0.26"
 objc = "0.2"
 pollster = "0.4"

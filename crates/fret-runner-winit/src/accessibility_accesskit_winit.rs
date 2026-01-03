@@ -25,7 +25,7 @@ pub struct WinitAccessibility {
 }
 
 impl WinitAccessibility {
-    pub fn new(event_loop: &ActiveEventLoop, window: &Window) -> Self {
+    pub fn new(event_loop: &dyn ActiveEventLoop, window: &dyn Window) -> Self {
         let (actions_tx, actions_rx) = mpsc::channel::<ActionRequest>();
         let pending_actions: Arc<Mutex<Vec<ActionRequest>>> = Arc::new(Mutex::new(Vec::new()));
         let activation_requested: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
@@ -98,7 +98,7 @@ impl WinitAccessibility {
         }
     }
 
-    pub fn process_event(&mut self, window: &Window, event: &WindowEvent) {
+    pub fn process_event(&mut self, window: &dyn Window, event: &WindowEvent) {
         self.adapter.process_event(window, event);
     }
 

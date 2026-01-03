@@ -24,8 +24,8 @@ We split platform concerns into:
   This is the default backend for Windows/macOS/Linux builds.
 - `crates/fret-platform-web`: wasm32/web implementations for platform services that require browser
   APIs (timers, file dialog reads, clipboard, etc).
-- `crates/fret-platform-winit`: winit-specific glue (currently Accessibility / AccessKit). It is
-  not the primary home for general platform I/O contracts.
+- `crates/fret-runner-winit`: winit-specific glue (event mapping + optional Accessibility / AccessKit adapter).
+  It is not the primary home for general platform I/O contracts.
 
 Runners remain responsible for event-loop ownership and presentation:
 
@@ -54,6 +54,5 @@ Compatibility shims may exist temporarily to reduce churn:
 ## Future Work
 
 - Consider a `fret-platform-default` facade that selects the right backend via `cfg(...)`.
-- Extend `fret-platform-winit` responsibilities only for concerns that are truly `winit`-specific
+- Keep `fret-runner-winit` responsibilities limited to concerns that are truly `winit`-specific
   (e.g. window a11y bridge), not general OS/browser I/O.
-

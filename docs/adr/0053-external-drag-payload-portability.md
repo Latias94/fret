@@ -66,7 +66,7 @@ message (similar to `ClipboardGetText -> Event::ClipboardText`).
 
 The winit desktop backend may keep a `PathBuf` mapping behind the token, but this stays within:
 
-- `fret-platform-winit` / runner state,
+- `fret-runner-winit` / runner state,
 - or an app-owned “import service”.
 
 The core contract remains portable.

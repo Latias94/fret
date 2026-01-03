@@ -109,13 +109,13 @@ The bridge consumes the window’s semantics tree and translates it to platform 
 Recommended default (P0):
 
 - Use `accesskit` as the bridge implementation where possible, to avoid per-OS bespoke trees and to keep behavior consistent.
-  - In this workspace, the AccessKit mapping logic lives in `crates/fret-a11y-accesskit`, with winit adapter glue in `crates/fret-platform-winit`.
+  - In this workspace, the AccessKit mapping logic lives in `crates/fret-a11y-accesskit`, with winit adapter glue in `crates/fret-runner-winit`.
 
 Fret’s core contracts remain OS-agnostic:
 
 - `fret-core` stores semantics data types (optional),
 - `fret-ui` produces per-window semantics snapshots/updates,
-- platform backend bridges (e.g. `fret-platform-winit`).
+- platform backend bridges (e.g. `fret-runner-winit`).
 
 Default geometry unit (P0):
 

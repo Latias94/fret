@@ -16,8 +16,8 @@ use fret_platform_native::clipboard::NativeClipboard;
 use fret_platform_native::external_drop::NativeExternalDrop;
 use fret_platform_native::file_dialog::NativeFileDialog;
 use fret_platform_native::open_url::NativeOpenUrl;
-use fret_platform_winit::accessibility;
 use fret_render::{ClearColor, Renderer, SurfaceState, WgpuContext};
+use fret_runner_winit::accessibility;
 use fret_runtime::{
     ExternalDragPayloadKind, ExternalDragPositionQuality, FrameId, PlatformCapabilities,
     PlatformCompletion, TickId,

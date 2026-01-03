@@ -36,7 +36,8 @@ Notes:
   - `fret-ui-app`
 - Backends (desktop-first now, wasm/WebGPU later):
   - `fret-platform` (portable contracts)
-  - `fret-platform-winit` (desktop backend)
+  - `fret-platform-native` (desktop backend)
+  - `fret-platform-web` (web backend)
   - `fret-runner-winit` (winit platform adapter: event mapping + input normalization)
   - `fret-render` (wgpu-based renderer)
 - Integration / wiring:

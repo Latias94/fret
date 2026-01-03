@@ -58,12 +58,12 @@ ADR or adding a new ADR) before scaling feature surface area.
 - **Active descendant semantics for composite widgets (command palette / listbox / combobox)**
   - Update: `docs/adr/0073-active-descendant-and-composite-widget-semantics.md` (Accepted)
   - Decide: minimal schema extension to support cmdk-style navigation without moving focus away from text input.
-  - Implement: semantics production in `crates/fret-ui/src/tree/mod.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-platform-winit/src/accessibility.rs`.
+  - Implement: semantics production in `crates/fret-ui/src/tree/mod.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-runner-winit/src/accessibility.rs`.
 
 - **Accessibility conformance baseline (Narrator/VoiceOver/AT-SPI)**
   - Update: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
   - Decide: minimum roles/actions/fields required for text fields (value/selection/composition), menus, tabs, and viewports.
-  - Implement: semantics production in `crates/fret-ui/src/tree/mod.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-platform-winit/src/accessibility.rs`.
+  - Implement: semantics production in `crates/fret-ui/src/tree/mod.rs`, AccessKit mapping in `crates/fret-a11y-accesskit/src/lib.rs`, backend glue in `crates/fret-runner-winit/src/accessibility.rs`.
 
 - **Cross-root focus traversal and focus scopes**
   - Update: `docs/adr/0068-focus-traversal-and-focus-scopes.md`, `docs/adr/0020-focus-and-command-routing.md`

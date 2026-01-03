@@ -72,7 +72,8 @@ In both cases, surface creation must use the same `wgpu::Instance` as the device
 - `crates/fret-runtime`: host-facing runtime boundary traits + portable value types used by `fret-ui` (ADR 0052).
 - `crates/fret-app`: app runtime (global services, models/entities, scheduling, command/action dispatch).
 - `crates/fret-platform`: portable platform I/O contracts (clipboard, external drops, file dialogs, open-url).
-- `crates/fret-platform-winit`: desktop/winit backend implementation for `fret-platform` contracts (+ AccessKit glue).
+- `crates/fret-platform-native`: native implementations for `fret-platform` contracts.
+- `crates/fret-platform-web`: wasm/browser implementations for `fret-platform`-adjacent services.
 - `crates/fret-runner-winit`: winit platform adapter (event mapping, cursor/modifiers/key normalization, canvas binding on web).
 - `crates/fret-runner-winit-wgpu`: desktop runner glue (winit event loop + `fret-runner-winit` + wgpu presentation + effect draining).
 - `crates/fret-render`: wgpu-based renderer building blocks (context/device bootstrap, rendering backends).
@@ -98,12 +99,12 @@ To keep the framework stable while allowing editor-grade components to scale, th
 
 Backend split direction (planned):
 
-- `fret-platform-winit` (desktop), `fret-platform-web` (wasm) under the core repo.
+- `fret-platform-native` (desktop), `fret-platform-web` (wasm) under the core repo.
 - `fret-render-wgpu` (wgpu/WebGPU) under the core repo.
 
 Current workspace note:
 
-- Today these backends live as `crates/fret-platform-winit` (winit) and `crates/fret-render` (wgpu).
+- Today these backends live as `crates/fret-platform-native` / `crates/fret-platform-web` and `crates/fret-render` (wgpu).
 
 See `docs/adr/0037-workspace-boundaries-and-components-repository.md`.
 
