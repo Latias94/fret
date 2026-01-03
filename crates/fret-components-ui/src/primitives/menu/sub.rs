@@ -14,9 +14,10 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{Point, Px, Rect};
+use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, KeyDownCx, PointerMoveCx, UiActionHost, UiFocusActionHost};
+use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use crate::primitives::menu::pointer_grace_intent;
@@ -42,6 +43,28 @@ impl MenuSubmenuConfig {
             focus_delay,
         }
     }
+}
+
+impl Default for MenuSubmenuConfig {
+    fn default() -> Self {
+        Self {
+            safe_hover_buffer: Px(6.0),
+            close_delay: Duration::from_millis(120),
+            focus_delay: Duration::from_millis(0),
+        }
+    }
+}
+
+/// Return the default submenu floating bounds (Radix Menu-like: side=Right, align=Start, offset=2px).
+pub fn default_submenu_bounds(outer: Rect, trigger_anchor: Rect, desired: Size) -> Rect {
+    anchored_panel_bounds_sized(
+        outer,
+        trigger_anchor,
+        desired,
+        Px(2.0),
+        Side::Right,
+        Align::Start,
+    )
 }
 
 #[derive(Debug, Clone)]

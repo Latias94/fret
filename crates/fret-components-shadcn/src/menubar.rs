@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -22,10 +21,6 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, Theme, UiHost};
-
-const SUBMENU_SAFE_HOVER_BUFFER: Px = Px(6.0);
-const SUBMENU_CLOSE_DELAY: Duration = Duration::from_millis(120);
-const SUBMENU_FOCUS_DELAY: Duration = Duration::from_millis(0);
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -440,8 +435,9 @@ impl MenubarMenuEntries {
 
                 let is_open = cx.watch_model(&open).copied().unwrap_or(false);
                 let overlay_root_name = OverlayController::popover_root_name(trigger_id);
-                cx.with_root_name(&overlay_root_name, |cx| {
-                    menu::sub::sync_root_open(cx, is_open);
+                let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
+                let submenu = cx.with_root_name(&overlay_root_name, |cx| {
+                    menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id())
                 });
                 let trigger_bg = if is_open {
                     Some(bg_open)
@@ -489,13 +485,6 @@ impl MenubarMenuEntries {
                             side_offset,
                             Side::Bottom,
                             Align::Start,
-                        );
-
-                        let submenu = menu::root::ensure_submenu(cx, cx.root_id());
-                        let submenu_cfg = menu::sub::MenuSubmenuConfig::new(
-                            SUBMENU_SAFE_HOVER_BUFFER,
-                            SUBMENU_CLOSE_DELAY,
-                            SUBMENU_FOCUS_DELAY,
                         );
 
                         let submenu_open = submenu.open_value.clone();
@@ -662,7 +651,7 @@ impl MenubarMenuEntries {
                                                                         has_submenu,
                                                                         value.clone(),
                                                                         &submenu_for_item,
-                                                                        SUBMENU_FOCUS_DELAY,
+                                                                        submenu_cfg.focus_delay,
                                                                     );
 
                                                                     if !has_submenu {
@@ -902,14 +891,8 @@ impl MenubarMenuEntries {
                                             cx,
                                             open_trigger,
                                         )?;
-                                        let placed = anchored_panel_bounds_sized(
-                                            outer,
-                                            trigger_anchor,
-                                            desired,
-                                            Px(2.0),
-                                            Side::Right,
-                                            Align::Start,
-                                        );
+                                        let placed =
+                                            menu::sub::default_submenu_bounds(outer, trigger_anchor, desired);
                                         Some(menu::sub::MenuSubmenuGeometry {
                                             reference: trigger_anchor,
                                             floating: placed,

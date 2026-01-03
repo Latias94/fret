@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
 use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -19,7 +18,6 @@ use fret_ui::element::{
 };
 use fret_ui::overlay_placement::{
     Align, AnchoredPanelOptions, ArrowOptions, LayoutDirection, Offset, Side,
-    anchored_panel_bounds_sized,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -193,10 +191,6 @@ fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuE
     }
 }
 
-const SUBMENU_SAFE_HOVER_BUFFER: Px = Px(6.0);
-const SUBMENU_CLOSE_DELAY: Duration = Duration::from_millis(120);
-const SUBMENU_FOCUS_DELAY: Duration = Duration::from_millis(0);
-
 /// shadcn/ui `Dropdown Menu` (v4).
 ///
 /// This is a dismissible popover overlay (non-modal) backed by the component-layer overlay
@@ -316,9 +310,11 @@ impl DropdownMenu {
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
             let overlay_root_name = OverlayController::popover_root_name(trigger_id);
-            cx.with_root_name(&overlay_root_name, |cx| {
-                menu::sub::sync_root_open(cx, is_open);
-            });
+            let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
+            let submenu =
+                cx.with_root_name(&overlay_root_name, |cx| {
+                    menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id())
+                });
 
             if is_open {
                 let align = self.align;
@@ -341,13 +337,6 @@ impl DropdownMenu {
                     let mut flat: Vec<DropdownMenuEntry> = Vec::new();
                     flatten_entries(&mut flat, entries(cx));
                     let entries = flat;
-
-                    let submenu = menu::root::ensure_submenu(cx, cx.root_id());
-                    let submenu_cfg = menu::sub::MenuSubmenuConfig::new(
-                        SUBMENU_SAFE_HOVER_BUFFER,
-                        SUBMENU_CLOSE_DELAY,
-                        SUBMENU_FOCUS_DELAY,
-                    );
 
                     let submenu_open = submenu.open_value.clone();
                     let submenu_trigger = submenu.trigger.clone();
@@ -683,7 +672,7 @@ impl DropdownMenu {
                                                                         has_submenu,
                                                                         value.clone(),
                                                                         &submenu_for_item,
-                                                                        SUBMENU_FOCUS_DELAY,
+                                                                        submenu_cfg.focus_delay,
                                                                     )
                                                                     .unwrap_or(false);
 
@@ -710,13 +699,10 @@ impl DropdownMenu {
                                                                         let desired =
                                                                             Size::new(Px(192.0), Px(1.0e9));
                                                                         let placed =
-                                                                            anchored_panel_bounds_sized(
+                                                                            menu::sub::default_submenu_bounds(
                                                                                 outer,
                                                                                 trigger_anchor,
                                                                                 desired,
-                                                                                Px(2.0),
-                                                                                Side::Right,
-                                                                                Align::Start,
                                                                             );
                                                                         let geometry = menu::sub::MenuSubmenuGeometry {
                                                                             reference: trigger_anchor,
@@ -907,13 +893,10 @@ impl DropdownMenu {
                                                 .flatten()?;
                                             let trigger_anchor =
                                                 overlay::anchor_bounds_for_element(cx, open_trigger)?;
-                                            let placed = anchored_panel_bounds_sized(
+                                            let placed = menu::sub::default_submenu_bounds(
                                                 outer,
                                                 trigger_anchor,
                                                 desired,
-                                                Px(2.0),
-                                                Side::Right,
-                                                Align::Start,
                                             );
                                             Some(menu::sub::MenuSubmenuGeometry {
                                                 reference: trigger_anchor,

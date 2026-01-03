@@ -27,6 +27,20 @@ pub fn ensure_submenu<H: UiHost>(
     models
 }
 
+/// Sync root open state and ensure submenu models exist.
+///
+/// This is a convenience wrapper used by menu wrappers (`DropdownMenu`, `Menubar`, etc) so they
+/// don't have to remember to call both `sub::sync_root_open` and `ensure_submenu` inside the
+/// overlay root scope.
+pub fn sync_root_open_and_ensure_submenu<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    is_open: bool,
+    timer_handler_element: GlobalElementId,
+) -> sub::MenuSubmenuModels {
+    sub::sync_root_open(cx, is_open);
+    ensure_submenu(cx, timer_handler_element)
+}
+
 /// Build a DismissableLayer pointer-move observer that drives submenu grace intent.
 pub fn submenu_pointer_move_handler(
     models: sub::MenuSubmenuModels,
