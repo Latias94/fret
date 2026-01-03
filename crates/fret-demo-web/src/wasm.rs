@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use fret_components_shadcn as shadcn;
 use fret_core::{AppWindowId, Event as FretEvent, Point, Px, Rect, Scene, Size, UiServices};
 use fret_render::{ClearColor, RenderSceneParams, Renderer, SurfaceState, WgpuContext};
 use fret_runtime::{Effect, FrameId, Model, PlatformCapabilities, TickId};
@@ -107,6 +108,7 @@ struct WebDemoApp {
     fret_window: AppWindowId,
     counter: Model<u32>,
     last_input: Model<Arc<str>>,
+    shadcn_checked: Model<bool>,
     platform: fret_runner_winit::WinitPlatform,
 }
 
@@ -125,6 +127,7 @@ impl WebDemoApp {
 
         let counter = app.models_mut().insert(0u32);
         let last_input = app.models_mut().insert(Arc::<str>::from("input: <none>"));
+        let shadcn_checked = app.models_mut().insert(false);
 
         Self {
             canvas_id,
@@ -139,6 +142,7 @@ impl WebDemoApp {
             fret_window,
             counter,
             last_input,
+            shadcn_checked,
             platform: fret_runner_winit::WinitPlatform::default(),
         }
     }
@@ -186,6 +190,7 @@ impl WebDemoApp {
     fn ensure_root(&mut self, bounds: Rect, services: &mut dyn UiServices) {
         let counter = self.counter.clone();
         let last_input = self.last_input.clone();
+        let shadcn_checked = self.shadcn_checked.clone();
         let window = self.fret_window;
 
         let root = declarative::RenderRootContext::new(
@@ -196,8 +201,9 @@ impl WebDemoApp {
             bounds,
         )
         .render_root("demo-web", move |cx| {
-            cx.observe_model(&counter, Invalidation::Paint);
-            cx.observe_model(&last_input, Invalidation::Paint);
+            cx.observe_model(&counter, Invalidation::Layout);
+            cx.observe_model(&last_input, Invalidation::Layout);
+            cx.observe_model(&shadcn_checked, Invalidation::Layout);
 
             let theme = Theme::global(&*cx.app).clone();
 
@@ -240,6 +246,9 @@ impl WebDemoApp {
                             vec![
                                 cx.text(label.clone()),
                                 cx.text(last_input_value.clone()),
+                                shadcn::Checkbox::new(shadcn_checked.clone())
+                                    .a11y_label("Enable shadcn checkbox")
+                                    .into_element(cx),
                                 cx.pressable(
                                     PressableProps {
                                         layout: button_layout,

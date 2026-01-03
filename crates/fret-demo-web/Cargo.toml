@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-core = { path = "../fret-core" }
+fret-components-shadcn = { path = "../fret-components-shadcn" }
 fret-render = { path = "../fret-render" }
 fret-runner-winit = { path = "../fret-runner-winit" }
 fret-runtime = { path = "../fret-runtime" }
