@@ -74,5 +74,4 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ## Follow-ups (recommended)
 
-- Expose an optional arrow surface backed by `anchored_panel_layout_ex(...)`.
 - Add side-based slide/zoom transitions (optional) to better match upstream motion.

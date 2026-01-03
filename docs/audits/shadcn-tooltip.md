@@ -55,5 +55,4 @@ Key upstream notes:
 ## Follow-ups (recommended)
 
 - Consider expanding `TooltipProvider` knobs (e.g. disable-hoverable-content) if parity needs it.
-- Add an optional arrow primitive for anchored overlays (tooltip/popover/hover-card).
 - Add nextest contract tests for tooltip hover timing + placement invariants.

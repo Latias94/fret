@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::popper;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
@@ -240,7 +241,7 @@ impl Popover {
                         padding: Edges::all(arrow_padding),
                     });
                     let arrow_protrusion = if arrow {
-                        Px(arrow_size.0 * 0.75)
+                        popper::default_arrow_protrusion(arrow_size)
                     } else {
                         Px(0.0)
                     };
@@ -255,7 +256,7 @@ impl Popover {
                         AnchoredPanelOptions {
                             direction: LayoutDirection::Ltr,
                             offset: Offset {
-                                main_axis: if arrow { arrow_protrusion } else { Px(0.0) },
+                                main_axis: arrow_protrusion,
                                 cross_axis: align_offset,
                                 alignment_axis: None,
                             },
@@ -264,14 +265,12 @@ impl Popover {
                     );
 
                     let placed = layout.rect;
-                    let (extra_left, extra_right, extra_top, extra_bottom) =
-                        match layout.arrow.as_ref().map(|a| a.side) {
-                            Some(Side::Top) => (Px(0.0), Px(0.0), arrow_protrusion, Px(0.0)),
-                            Some(Side::Bottom) => (Px(0.0), Px(0.0), Px(0.0), arrow_protrusion),
-                            Some(Side::Left) => (arrow_protrusion, Px(0.0), Px(0.0), Px(0.0)),
-                            Some(Side::Right) => (Px(0.0), arrow_protrusion, Px(0.0), Px(0.0)),
-                            None => (Px(0.0), Px(0.0), Px(0.0), Px(0.0)),
-                        };
+                    let wrapper_insets =
+                        popper::wrapper_insets_for_arrow(&layout, arrow_protrusion);
+                    let extra_left = wrapper_insets.left;
+                    let extra_right = wrapper_insets.right;
+                    let extra_top = wrapper_insets.top;
+                    let extra_bottom = wrapper_insets.bottom;
 
                     let bg = theme
                         .color_by_key("popover")
@@ -759,8 +758,10 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
         open: Model<bool>,
+        arrow: bool,
         underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
         popover_focus_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        popover_content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
     ) -> fret_ui::elements::GlobalElementId {
         OverlayController::begin_frame(app, window);
 
@@ -808,30 +809,37 @@ mod tests {
                     },
                 );
 
-                let popover = Popover::new(open).auto_focus(true).into_element(
-                    cx,
-                    |_cx| trigger,
-                    move |cx| {
-                        let focusable = cx.pressable_with_id(
-                            PressableProps {
-                                layout: {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Px(Px(160.0));
-                                    layout.size.height = Length::Px(Px(44.0));
-                                    layout
+                let popover_focus_id_out = popover_focus_id_out.clone();
+                let popover_content_id_out = popover_content_id_out.clone();
+                let popover = Popover::new(open.clone())
+                    .auto_focus(true)
+                    .arrow(arrow)
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let focusable = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(160.0));
+                                        layout.size.height = Length::Px(Px(44.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
                                 },
-                                enabled: true,
-                                focusable: true,
-                                ..Default::default()
-                            },
-                            |cx, _st, id| {
-                                popover_focus_id_out.set(Some(id));
-                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
-                            },
-                        );
-                        PopoverContent::new(vec![focusable]).into_element(cx)
-                    },
-                );
+                                |cx, _st, id| {
+                                    popover_focus_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+                            let content = PopoverContent::new(vec![focusable]).into_element(cx);
+                            popover_content_id_out.set(Some(content.id));
+                            content
+                        },
+                    );
 
                 vec![underlay, popover]
             });
@@ -869,8 +877,10 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            false,
             underlay_id.clone(),
             popover_focus_cell.clone(),
+            Rc::new(Cell::new(None)),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -904,8 +914,10 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            false,
             underlay_id.clone(),
             popover_focus_cell.clone(),
+            Rc::new(Cell::new(None)),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -946,8 +958,10 @@ mod tests {
             window,
             bounds,
             open.clone(),
+            false,
             underlay_id.clone(),
             popover_focus_cell.clone(),
+            Rc::new(Cell::new(None)),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -955,6 +969,114 @@ mod tests {
         let underlay_node =
             fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
         assert_eq!(ui.focus(), Some(underlay_node));
+    }
+
+    #[test]
+    fn popover_arrow_is_hit_testable_and_does_not_dismiss_on_click() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let popover_focus_cell: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let popover_content_cell: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        // Frame 1: closed, establish trigger bounds.
+        app.set_frame_id(FrameId(1));
+        let _trigger = render_popover_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            underlay_id.clone(),
+            popover_focus_cell.clone(),
+            popover_content_cell.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: open + arrow.
+        app.set_frame_id(FrameId(2));
+        let _trigger = render_popover_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+            underlay_id.clone(),
+            popover_focus_cell.clone(),
+            popover_content_cell.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_id = popover_content_cell.get().expect("popover content id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_id)
+            .expect("content node");
+        let content_bounds = ui.debug_node_bounds(content_node).expect("content bounds");
+
+        // Click just above the panel: this should land on the arrow and not trigger outside-press
+        // dismissal.
+        let click = Point::new(
+            Px(content_bounds.origin.x.0 + content_bounds.size.width.0 * 0.5),
+            Px(content_bounds.origin.y.0 - 1.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: click,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: click,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
     #[test]

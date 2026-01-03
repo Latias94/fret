@@ -40,7 +40,3 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 - `cargo check -p fret-components-shadcn`
 - `cargo nextest run -p fret-components-shadcn hover_card::tests`
-
-## Follow-ups (recommended)
-
-- Add optional arrow support shared across hover-card/tooltip/popover.

@@ -2,6 +2,7 @@ use fret_components_ui::declarative::scheduling;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::popper;
 use fret_components_ui::tooltip_provider;
 use fret_components_ui::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
@@ -320,7 +321,7 @@ impl Tooltip {
                     padding: Edges::all(arrow_padding),
                 });
                 let arrow_protrusion = if arrow {
-                    Px(arrow_size.0 * 0.75)
+                    popper::default_arrow_protrusion(arrow_size)
                 } else {
                     Px(0.0)
                 };
@@ -335,7 +336,7 @@ impl Tooltip {
                     AnchoredPanelOptions {
                         direction: LayoutDirection::Ltr,
                         offset: Offset {
-                            main_axis: if arrow { arrow_protrusion } else { Px(0.0) },
+                            main_axis: arrow_protrusion,
                             cross_axis: Px(0.0),
                             alignment_axis: None,
                         },
@@ -344,14 +345,11 @@ impl Tooltip {
                 );
 
                 let placed = layout.rect;
-                let (extra_left, extra_right, extra_top, extra_bottom) =
-                    match layout.arrow.as_ref().map(|a| a.side) {
-                        Some(Side::Top) => (Px(0.0), Px(0.0), arrow_protrusion, Px(0.0)),
-                        Some(Side::Bottom) => (Px(0.0), Px(0.0), Px(0.0), arrow_protrusion),
-                        Some(Side::Left) => (arrow_protrusion, Px(0.0), Px(0.0), Px(0.0)),
-                        Some(Side::Right) => (Px(0.0), arrow_protrusion, Px(0.0), Px(0.0)),
-                        None => (Px(0.0), Px(0.0), Px(0.0), Px(0.0)),
-                    };
+                let wrapper_insets = popper::wrapper_insets_for_arrow(&layout, arrow_protrusion);
+                let extra_left = wrapper_insets.left;
+                let extra_right = wrapper_insets.right;
+                let extra_top = wrapper_insets.top;
+                let extra_bottom = wrapper_insets.bottom;
 
                 let arrow_el = layout.arrow.map(|arrow| {
                     let (left, top) = match arrow.side {
