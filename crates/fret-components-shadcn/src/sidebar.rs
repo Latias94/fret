@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use fret_components_icons::IconId;
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::declarative::icon as decl_icon;
-use fret_components_ui::declarative::scroll as decl_scroll;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::scroll as decl_scroll;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{Color, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{
@@ -463,7 +463,7 @@ impl SidebarMenuButton {
                 chrome,
                 LayoutRefinement::default()
                     .w_full()
-                    .min_h(fret_components_ui::MetricRef::Px(Px(32.0))),
+                    .min_h(fret_ui_kit::MetricRef::Px(Px(32.0))),
             );
             props.layout.overflow = Overflow::Clip;
 

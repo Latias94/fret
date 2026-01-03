@@ -8,7 +8,7 @@ fret-app = { path = "../fret-app" }
 fret-core = { path = "../fret-core" }
 fret-ui = { path = "../fret-ui" }
 fret-ui-app = { path = "../fret-ui-app" }
-fret-components-ui = { package = "fret-ui-kit", path = "../../ecosystem/fret-ui-kit" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-runtime = { path = "../fret-runtime" }
 anyhow.workspace = true
 tracing.workspace = true

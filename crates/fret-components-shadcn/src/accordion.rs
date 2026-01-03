@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::headless::roving_focus;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{
     Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
@@ -579,8 +579,8 @@ mod tests {
     use std::sync::Arc;
 
     use fret_app::App;
-    use fret_components_ui::LayoutRefinement;
-    use fret_components_ui::MetricRef;
+    use fret_ui_kit::LayoutRefinement;
+    use fret_ui_kit::MetricRef;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{

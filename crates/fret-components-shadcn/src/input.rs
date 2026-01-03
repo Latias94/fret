@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_core::{Corners, FontId, NodeId, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
@@ -79,7 +79,7 @@ pub fn input<H: UiHost>(
 
     let resolved = resolve_input_chrome(
         &theme,
-        fret_components_ui::Size::default(),
+        fret_ui_kit::Size::default(),
         &Default::default(),
         InputTokenKeys::none(),
     );

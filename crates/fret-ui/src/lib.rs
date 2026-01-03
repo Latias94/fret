@@ -37,7 +37,7 @@ pub(crate) mod widget;
 compile_error!(
     "Feature `compat-policy-shortcuts` has been removed. \
 Use component-owned action hooks (ADR 0074) via `ElementCx::{pressable_*, dismissible_*, roving_*}` \
-or `fret-components-ui::declarative::action_hooks::ActionHooksExt`."
+or `fret-ui-kit::declarative::action_hooks::ActionHooksExt`."
 );
 
 pub use drag_route::InternalDragRouteService;

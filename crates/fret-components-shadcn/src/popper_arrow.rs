@@ -1,10 +1,10 @@
 //! Internal helpers for Radix-style popper arrows (diamond arrows).
 //!
 //! This module intentionally lives in the shadcn facade crate:
-//! - placement math is owned by `fret-components-ui::primitives::popper` (pure + testable)
+//! - placement math is owned by `fret-ui-kit::primitives::popper` (pure + testable)
 //! - arrow rendering is a styling concern and is reused across shadcn overlays
 
-use fret_components_ui::primitives::popper;
+use fret_ui_kit::primitives::popper;
 use fret_core::{Color, Corners, Edges, Point, Px, Transform2D};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,

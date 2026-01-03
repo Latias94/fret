@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::declarative::chrome::control_chrome_pressable_with_id_props;
-use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Size as ComponentSize, Space,
 };
@@ -30,7 +30,7 @@ fn default_overlay_color() -> Color {
 /// shadcn/ui `Dialog` (v4).
 ///
 /// This is a modal overlay (barrier-backed) installed via the component-layer overlay manager
-/// (`fret-components-ui/overlay_controller.rs`).
+/// (`fret-ui-kit/overlay_controller.rs`).
 ///
 /// Notes:
 /// - Dismiss on Escape is handled by the shared dismissible root (ADR 0067).
@@ -447,9 +447,9 @@ impl DialogClose {
                         overflow: TextOverflow::Clip,
                     });
 
-                    vec![fret_components_ui::declarative::stack::hstack(
+                    vec![fret_ui_kit::declarative::stack::hstack(
                         cx,
-                        fret_components_ui::declarative::stack::HStackProps::default()
+                        fret_ui_kit::declarative::stack::HStackProps::default()
                             .justify_center()
                             .items_center(),
                         |_cx| vec![icon],
@@ -600,7 +600,7 @@ mod tests {
     use std::rc::Rc;
 
     use fret_app::App;
-    use fret_components_ui::declarative::action_hooks::ActionHooksExt;
+    use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{
         KeyCode, Modifiers, Px, TextBlobId, TextConstraints, TextMetrics, TextService,

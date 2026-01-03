@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 use fret_core::geometry::Edges;
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{

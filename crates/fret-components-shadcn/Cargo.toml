@@ -12,7 +12,7 @@ datagrid = []
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 fret-ui = { path = "../fret-ui" }
-fret-components-ui = { package = "fret-ui-kit", path = "../../ecosystem/fret-ui-kit", features = ["icons"] }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["icons"] }
 fret-components-icons = { path = "../fret-components-icons" }
 
 [dev-dependencies]

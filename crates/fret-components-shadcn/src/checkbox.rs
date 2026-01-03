@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use fret_components_icons::ids;
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::declarative::chrome::control_chrome_pressable_with_id_props;
-use fret_components_ui::declarative::icon as decl_icon;
-use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{

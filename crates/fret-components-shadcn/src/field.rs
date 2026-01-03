@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
 use fret_core::{Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, MainAlign, RowProps, TextProps,
@@ -395,7 +395,7 @@ impl FieldSeparator {
                             .top(Space::N0),
                     );
                     let chrome = ChromeRefinement::default()
-                        .bg(fret_components_ui::ColorRef::Color(bg))
+                        .bg(fret_ui_kit::ColorRef::Color(bg))
                         .px(Space::N2);
                     let props =
                         decl_style::container_props(&theme, chrome, LayoutRefinement::default());

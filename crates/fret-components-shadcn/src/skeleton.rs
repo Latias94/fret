@@ -1,6 +1,6 @@
-use fret_components_ui::declarative::scheduling;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::declarative::scheduling;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 

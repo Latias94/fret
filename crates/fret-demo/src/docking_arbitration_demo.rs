@@ -8,7 +8,7 @@ use fret_ui_docking::{
 };
 use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
-use fret_components_ui::OverlayController;
+use fret_ui_kit::OverlayController;
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
     ViewportInputEvent, geometry::Px,

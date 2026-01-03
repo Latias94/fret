@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
-use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::overlay;
-use fret_components_ui::primitives::menu;
-use fret_components_ui::primitives::popper;
-use fret_components_ui::primitives::popper_content;
-use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::popper;
+use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Edges, MouseButton, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
 };

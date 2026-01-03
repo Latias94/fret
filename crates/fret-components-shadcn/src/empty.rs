@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
 };
 use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use fret_components_ui::declarative::stack;
+use fret_ui_kit::declarative::stack;
 
 #[derive(Debug, Clone)]
 pub struct Empty {

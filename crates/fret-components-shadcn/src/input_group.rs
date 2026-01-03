@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_components_ui::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 use fret_core::{Axis, Corners, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, FlexProps, Length, SizeStyle, TextInputProps};
@@ -173,7 +173,7 @@ impl InputGroup {
                             .left(Space::N0)
                             .top(Space::N0)
                             .bottom(Space::N0)
-                            .w_px(fret_components_ui::MetricRef::Px(slot_w))
+                            .w_px(fret_ui_kit::MetricRef::Px(slot_w))
                             .h_full(),
                     );
                     out.push(cx.flex(
@@ -198,7 +198,7 @@ impl InputGroup {
                             .right(Space::N0)
                             .top(Space::N0)
                             .bottom(Space::N0)
-                            .w_px(fret_components_ui::MetricRef::Px(slot_w))
+                            .w_px(fret_ui_kit::MetricRef::Px(slot_w))
                             .h_full(),
                     );
 

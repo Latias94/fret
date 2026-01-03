@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
 use fret_core::geometry::Edges;
 use fret_core::{Color, Px};
 use fret_runtime::CommandId;

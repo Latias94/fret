@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::action_hooks::ActionHooksExt;
-use fret_components_ui::tree::TreeEntry;
-use fret_components_ui::{TreeRowRenderer, TreeRowState};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+use fret_ui_kit::tree::TreeEntry;
+use fret_ui_kit::{TreeRowRenderer, TreeRowState};
 use fret_core::SemanticsRole;
 use fret_runtime::CommandId;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};

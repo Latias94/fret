@@ -2,21 +2,21 @@ use std::sync::Arc;
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_components_icons::ids;
-use fret_components_ui::declarative::action_hooks::ActionHooksExt;
-use fret_components_ui::declarative::chrome as decl_chrome;
-use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
-use fret_components_ui::declarative::icon as decl_icon;
-use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::scroll as decl_scroll;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::headless::roving_focus;
-use fret_components_ui::overlay;
-use fret_components_ui::primitives::popper;
-use fret_components_ui::primitives::popper_content;
-use fret_components_ui::recipes::input::{
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+use fret_ui_kit::declarative::chrome as decl_chrome;
+use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::scroll as decl_scroll;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::popper;
+use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
 };
-use fret_components_ui::{
+use fret_ui_kit::{
     ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Space,
 };
@@ -208,7 +208,7 @@ fn select_impl<H: UiHost>(
 
         let resolved = resolve_input_chrome(
             &theme,
-            fret_components_ui::Size::default(),
+            fret_ui_kit::Size::default(),
             &ChromeRefinement::default(),
             InputTokenKeys::none(),
         );
@@ -651,13 +651,13 @@ mod tests {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
-        fret_components_ui::OverlayController::begin_frame(app, window);
+        fret_ui_kit::OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "select", |cx| {
                 vec![Select::new(model, open).items(items).into_element(cx)]
             });
         ui.set_root(root);
-        fret_components_ui::OverlayController::render(ui, app, services, window, bounds);
+        fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
@@ -677,7 +677,7 @@ mod tests {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
-        fret_components_ui::OverlayController::begin_frame(app, window);
+        fret_ui_kit::OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "select", |cx| {
                 vec![
@@ -688,7 +688,7 @@ mod tests {
                 ]
             });
         ui.set_root(root);
-        fret_components_ui::OverlayController::render(ui, app, services, window, bounds);
+        fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root

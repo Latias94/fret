@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::{MetricRef, Space};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::{MetricRef, Space};
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, TextProps};

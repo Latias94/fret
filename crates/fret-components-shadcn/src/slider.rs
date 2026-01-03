@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret_components_ui::LayoutRefinement;
-use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::style as decl_style;
+use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_core::{Color, Corners, CursorIcon, Edges, MouseButton, Px, Rect, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};

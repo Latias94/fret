@@ -2,9 +2,9 @@
 
 use std::sync::Arc;
 
-use fret_components_ui::LayoutRefinement;
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps, SemanticsProps, StackProps};
@@ -65,7 +65,7 @@ impl Collapsible {
 
             let stack = cx.stack_props(
                 StackProps {
-                    layout: fret_components_ui::declarative::style::layout_style(
+                    layout: fret_ui_kit::declarative::style::layout_style(
                         fret_ui::Theme::global(&*cx.app),
                         layout,
                     ),
@@ -195,7 +195,7 @@ impl CollapsibleContent {
 
         cx.stack_props(
             StackProps {
-                layout: fret_components_ui::declarative::style::layout_style(
+                layout: fret_ui_kit::declarative::style::layout_style(
                     fret_ui::Theme::global(&*cx.app),
                     layout,
                 ),

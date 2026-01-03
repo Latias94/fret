@@ -5,13 +5,13 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
-use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::headless::cmdk_selection;
-use fret_components_ui::headless::roving_focus;
-use fret_components_ui::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::cmdk_selection;
+use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle,
     TextWrap,
@@ -1280,7 +1280,7 @@ mod tests {
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
-        fret_components_ui::OverlayController::begin_frame(app, window);
+        fret_ui_kit::OverlayController::begin_frame(app, window);
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "cmdk", |cx| {
                 vec![CommandPalette::new(model, items).into_element(cx)]

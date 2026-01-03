@@ -1,6 +1,6 @@
-use fret_components_ui::LayoutRefinement;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::recipes::resizable as resizable_recipe;
+use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::recipes::resizable as resizable_recipe;
 use fret_core::{Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, Length, ResizablePanelGroupProps, SizeStyle};

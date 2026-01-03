@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
 };
@@ -531,7 +531,7 @@ mod tests {
     use std::rc::Rc;
 
     use fret_app::App;
-    use fret_components_ui::declarative::action_hooks::ActionHooksExt;
+    use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{

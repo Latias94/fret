@@ -1,6 +1,6 @@
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space};
 use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::CommandId;
 use fret_ui::element::{

@@ -1,5 +1,5 @@
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{ChromeRefinement, LayoutRefinement};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement};
 use fret_ui::element::{AnyElement, Overflow};
 use fret_ui::{ElementContext, Theme, UiHost};
 

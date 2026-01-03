@@ -1,5 +1,5 @@
-use fret_components_ui::LayoutRefinement;
-use fret_components_ui::declarative::style as decl_style;
+use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_core::Px;
 use fret_ui::element::{AnyElement, ContainerProps, Length, SizeStyle};
 use fret_ui::{ElementContext, Theme, UiHost};

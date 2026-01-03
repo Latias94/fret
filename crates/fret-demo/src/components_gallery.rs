@@ -3,8 +3,8 @@ use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_components_app::tree::AppTreeRowRenderer;
 use fret_components_icons::IconRegistry;
 use fret_components_shadcn as shadcn;
-use fret_components_ui::tree::{TreeItem, TreeItemId, TreeState};
-use fret_components_ui::{LayoutRefinement, MetricRef, OverlayController};
+use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
+use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController};
 use fret_core::{
     AppWindowId, Corners, Edges, Event, FileDialogFilter, FileDialogOptions, FileDialogToken,
     FontId, KeyCode, Px, Rect, SemanticsRole, TextStyle, UiServices,
@@ -61,7 +61,7 @@ impl ComponentsGalleryDriver {
                 .child(TreeItem::new(5, "virtual_list.rs")),
             TreeItem::new(10, "crates")
                 .child(TreeItem::new(11, "fret-ui"))
-                .child(TreeItem::new(12, "fret-components-ui"))
+                .child(TreeItem::new(12, "fret-ui-kit"))
                 .child(TreeItem::new(13, "fret-demo").disabled(true)),
             TreeItem::new(20, "docs").child(TreeItem::new(21, "adr")),
         ]
@@ -924,7 +924,7 @@ impl ComponentsGalleryDriver {
                                             let score = if query.is_empty() {
                                                 1.0
                                             } else {
-                                                fret_components_ui::headless::cmdk_score::command_score(
+                                                fret_ui_kit::headless::cmdk_score::command_score(
                                                     label,
                                                     query.as_str(),
                                                     &[id],
@@ -983,11 +983,11 @@ impl ComponentsGalleryDriver {
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            vec![fret_components_ui::declarative::tree::tree_view_with_renderer(
+                                            vec![fret_ui_kit::declarative::tree::tree_view_with_renderer(
                                                 cx,
                                                 items,
                                                 tree_state,
-                                                fret_components_ui::Size::Medium,
+                                                fret_ui_kit::Size::Medium,
                                                 &mut renderer,
                                             )]
                                         },
@@ -1049,7 +1049,7 @@ impl ComponentsGalleryDriver {
 
         let items_value = app.models().get_cloned(&items).unwrap_or_default();
         let tree_state_value = app.models().get_cloned(&state).unwrap_or_default();
-        let entries = fret_components_ui::flatten_tree(&items_value, &tree_state_value.expanded);
+        let entries = fret_ui_kit::flatten_tree(&items_value, &tree_state_value.expanded);
         if entries.is_empty() {
             return false;
         }

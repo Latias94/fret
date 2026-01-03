@@ -1,12 +1,12 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_components_ui::declarative::scheduling;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
-use fret_components_ui::overlay;
-use fret_components_ui::primitives::popper;
-use fret_components_ui::primitives::popper_content;
-use fret_components_ui::tooltip_provider;
-use fret_components_ui::{
+use fret_ui_kit::declarative::scheduling;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
+use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::popper;
+use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::tooltip_provider;
+use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
 };

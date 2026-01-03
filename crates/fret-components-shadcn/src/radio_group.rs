@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::action_hooks::ActionHooksExt;
-use fret_components_ui::declarative::collection_semantics::CollectionSemanticsExt as _;
-use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::headless::roving_focus;
-use fret_components_ui::primitives::radio_group as radio_group_prim;
-use fret_components_ui::{MetricRef, Space};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::primitives::radio_group as radio_group_prim;
+use fret_ui_kit::{MetricRef, Space};
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -210,7 +210,7 @@ impl RadioGroup {
                                 let ring_style = decl_style::focus_ring(&theme, radius);
                                 let pressable_layout = decl_style::layout_style(
                                     &theme,
-                                    fret_components_ui::LayoutRefinement::default().w_full(),
+                                    fret_ui_kit::LayoutRefinement::default().w_full(),
                                 );
 
                                 let a11y_label = item.label.clone();
@@ -254,7 +254,7 @@ impl RadioGroup {
 
                                         let icon_layout = decl_style::layout_style(
                                             &theme,
-                                            fret_components_ui::LayoutRefinement::default()
+                                            fret_ui_kit::LayoutRefinement::default()
                                                 .w_px(MetricRef::Px(icon))
                                                 .h_px(MetricRef::Px(icon)),
                                         );
@@ -279,7 +279,7 @@ impl RadioGroup {
 
                                         let indicator_layout = decl_style::layout_style(
                                             &theme,
-                                            fret_components_ui::LayoutRefinement::default()
+                                            fret_ui_kit::LayoutRefinement::default()
                                                 .w_px(MetricRef::Px(indicator))
                                                 .h_px(MetricRef::Px(indicator)),
                                         );
@@ -326,7 +326,7 @@ impl RadioGroup {
                                                         FlexProps {
                                                             layout: decl_style::layout_style(
                                                                 &theme,
-                                                                fret_components_ui::LayoutRefinement::default()
+                                                                fret_ui_kit::LayoutRefinement::default()
                                                                     .size_full(),
                                                             ),
                                                             direction: fret_core::Axis::Horizontal,

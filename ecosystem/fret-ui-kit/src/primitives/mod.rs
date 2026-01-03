@@ -1,6 +1,6 @@
 //! Radix-aligned primitive facades.
 //!
-//! This module exists to keep the `fret-components-ui` foundation surface organized around
+//! This module exists to keep the `fret-ui-kit` foundation surface organized around
 //! Radix UI Primitives concepts, while remaining Rust-native and renderer-agnostic.
 //!
 //! # Where code should live (anti-duplication rules)

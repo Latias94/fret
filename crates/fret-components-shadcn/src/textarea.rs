@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_components_ui::{ChromeRefinement, LayoutRefinement, Size as ComponentSize};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize};
 use fret_core::{Color, Corners, Edges, FontId, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, Length, SizeStyle, TextAreaProps};

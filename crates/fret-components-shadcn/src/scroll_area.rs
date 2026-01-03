@@ -1,5 +1,5 @@
-use fret_components_ui::LayoutRefinement;
-use fret_components_ui::declarative::scroll;
+use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::declarative::scroll;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 

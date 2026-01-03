@@ -161,4 +161,4 @@ pub use tooltip::{
     TooltipTrigger,
 };
 
-pub use fret_components_ui::{ChromeRefinement, LayoutRefinement, Radius, Size, Space, StyledExt};
+pub use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Radius, Size, Space, StyledExt};

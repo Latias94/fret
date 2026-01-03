@@ -1,4 +1,4 @@
-use fret_components_ui::{OverlayController, OverlayRequest, ToastStore};
+use fret_ui_kit::{OverlayController, OverlayRequest, ToastStore};
 use fret_core::AppWindowId;
 use fret_runtime::Model;
 use fret_ui::action::UiActionHost;
@@ -72,4 +72,4 @@ impl Sonner {
     }
 }
 
-pub use fret_components_ui::{ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant};
+pub use fret_ui_kit::{ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant};

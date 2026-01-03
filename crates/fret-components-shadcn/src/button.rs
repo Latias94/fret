@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use fret_components_ui::declarative::action_hooks::ActionHooksExt as _;
-use fret_components_ui::declarative::chrome::control_chrome_pressable_with_id_props;
-use fret_components_ui::declarative::style as decl_style;
-use fret_components_ui::{
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
 };
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
@@ -187,7 +187,7 @@ impl Button {
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
             chrome: ChromeRefinement::default(),
-            layout: fret_components_ui::LayoutRefinement::default(),
+            layout: fret_ui_kit::LayoutRefinement::default(),
         }
     }
 
@@ -226,7 +226,7 @@ impl Button {
         self
     }
 
-    pub fn refine_layout(mut self, layout: fret_components_ui::LayoutRefinement) -> Self {
+    pub fn refine_layout(mut self, layout: fret_ui_kit::LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
     }
@@ -357,9 +357,9 @@ impl Button {
                         children.clone()
                     };
 
-                    vec![fret_components_ui::declarative::stack::hstack(
+                    vec![fret_ui_kit::declarative::stack::hstack(
                         cx,
-                        fret_components_ui::declarative::stack::HStackProps::default()
+                        fret_ui_kit::declarative::stack::HStackProps::default()
                             .justify_center()
                             .items_center()
                             .gap_x(Space::N2),
