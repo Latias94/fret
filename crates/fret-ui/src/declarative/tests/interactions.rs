@@ -1,3 +1,5 @@
+#![allow(clippy::arc_with_non_send_sync)]
+
 use super::*;
 
 #[test]
@@ -61,7 +63,7 @@ fn pressable_state_reports_focused_when_focused() {
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    assert_eq!(focused.get(), false);
+    assert!(!focused.get());
 
     let pressable_element = pressable_element_id.get().expect("pressable element id");
     let pressable_node = crate::elements::node_for_element(&mut app, window, pressable_element)
@@ -82,7 +84,7 @@ fn pressable_state_reports_focused_when_focused() {
     ui.set_root(root);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-    assert_eq!(focused.get(), true);
+    assert!(focused.get());
 }
 
 #[test]
