@@ -1,6 +1,47 @@
 use super::*;
 
 impl<H: UiHost> UiTree<H> {
+    fn active_trapped_focus_scope_root(
+        &self,
+        app: &mut H,
+        window: Option<AppWindowId>,
+    ) -> Option<NodeId> {
+        let window = window?;
+        let mut node = self.focus?;
+        loop {
+            if let Some(record) = declarative::element_record_for_node(app, window, node)
+                && matches!(
+                    record.instance,
+                    declarative::ElementInstance::FocusScope(p) if p.trap_focus
+                )
+            {
+                return Some(node);
+            }
+
+            node = self.nodes.get(node).and_then(|n| n.parent)?;
+        }
+    }
+
+    pub(super) fn focus_request_is_allowed(
+        &self,
+        app: &mut H,
+        window: Option<AppWindowId>,
+        active_roots: &[NodeId],
+        requested_focus: NodeId,
+    ) -> bool {
+        if self.focus == Some(requested_focus) {
+            return false;
+        }
+        if !self.node_in_any_layer(requested_focus, active_roots) {
+            return false;
+        }
+
+        let Some(trap_root) = self.active_trapped_focus_scope_root(app, window) else {
+            return true;
+        };
+        self.is_descendant(trap_root, requested_focus)
+    }
+
     fn dispatch_event_to_node_chain(
         &mut self,
         app: &mut H,
@@ -50,8 +91,7 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(focus) = requested_focus
-                    && self.focus != Some(focus)
-                    && self.node_in_any_layer(focus, &active_roots)
+                    && self.focus_request_is_allowed(app, self.window, &active_roots, focus)
                 {
                     if let Some(prev) = self.focus {
                         self.mark_invalidation(prev, Invalidation::Paint);
@@ -114,8 +154,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(focus) = requested_focus
-                && self.focus != Some(focus)
-                && self.node_in_any_layer(focus, &active_roots)
+                && self.focus_request_is_allowed(app, self.window, &active_roots, focus)
             {
                 if let Some(prev) = self.focus {
                     self.mark_invalidation(prev, Invalidation::Paint);

@@ -184,6 +184,7 @@ impl WebDemoApp {
                                     },
                                     |cx, _state| {
                                         let counter = counter.clone();
+                                        #[allow(clippy::arc_with_non_send_sync)]
                                         cx.pressable_on_activate(Arc::new(
                                             move |host, _acx, _reason| {
                                                 let _ = host.models_mut().update(&counter, |v| {

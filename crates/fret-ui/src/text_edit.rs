@@ -703,6 +703,7 @@ pub(crate) mod ime {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn apply_event(
         ime: &ImeEvent,
         tick: TickId,

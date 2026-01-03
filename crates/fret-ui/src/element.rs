@@ -280,19 +280,10 @@ impl Default for SemanticsProps {
 /// This is a small, mechanism-oriented primitive intended to support component-owned focus scopes
 /// (ADR 0068). It does not imply modal barriers or pointer blocking; it only affects `focus.next`
 /// / `focus.previous` command routing when focus is inside the subtree.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct FocusScopeProps {
     pub layout: LayoutStyle,
     pub trap_focus: bool,
-}
-
-impl Default for FocusScopeProps {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-            trap_focus: false,
-        }
-    }
 }
 
 /// A paint-only opacity group wrapper (ADR 0019).

@@ -61,10 +61,10 @@ pub const KNOWN_STR_CAPABILITY_KEYS: &[&str] =
     &[keys::DND_EXTERNAL_PAYLOAD, keys::DND_EXTERNAL_POSITION];
 
 pub fn capability_key_kind(key: &str) -> Option<CapabilityValueKind> {
-    if KNOWN_BOOL_CAPABILITY_KEYS.iter().any(|&k| k == key) {
+    if KNOWN_BOOL_CAPABILITY_KEYS.contains(&key) {
         return Some(CapabilityValueKind::Bool);
     }
-    if KNOWN_STR_CAPABILITY_KEYS.iter().any(|&k| k == key) {
+    if KNOWN_STR_CAPABILITY_KEYS.contains(&key) {
         return Some(CapabilityValueKind::Str);
     }
     None

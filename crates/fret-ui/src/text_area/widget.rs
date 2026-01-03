@@ -744,7 +744,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     }
 
                     let x0 = (inner.origin.x + r.origin.x).0;
-                    let y0 = (inner.origin.y.0 + r.origin.y.0 - self.offset_y.0) as f32;
+                    let y0 = inner.origin.y.0 + r.origin.y.0 - self.offset_y.0;
                     let x1 = x0 + r.size.width.0;
                     let y1 = y0 + r.size.height.0;
 
