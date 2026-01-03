@@ -1,13 +1,13 @@
 [package]
-name = "fret-components-ui"
+name = "fret-ui-kit"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-fret-core = { path = "../fret-core" }
-fret-runtime = { path = "../fret-runtime" }
-fret-ui = { path = "../fret-ui" }
-fret-components-icons = { path = "../fret-components-icons", optional = true }
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-components-icons = { path = "../../crates/fret-components-icons", optional = true }
 tracing.workspace = true
 
 [features]
@@ -24,4 +24,4 @@ icons = ["dep:fret-components-icons"]
 recipes = ["icons"]
 
 [dev-dependencies]
-fret-app = { path = "../fret-app" }
+fret-app = { path = "../../crates/fret-app" }
