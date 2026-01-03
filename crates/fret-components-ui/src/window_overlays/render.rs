@@ -10,6 +10,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{Invalidation, UiHost, UiTree};
 
+use crate::primitives::dismissable_layer as dismissable_layer_prim;
 use crate::primitives::focus_scope as focus_scope_prim;
 
 use super::state::{
@@ -144,18 +145,13 @@ pub fn render<H: UiHost>(
         // Without this, a trigger click while the popover is open can:
         // - first close the popover via the outside-press observer pass, then
         // - re-open it when the trigger toggles the open model on activate.
-        let mut dismissable_branch_nodes: Vec<NodeId> =
-            Vec::with_capacity(1 + req.dismissable_branches.len());
-        if let Some(trigger_node) = fret_ui::elements::node_for_element(app, window, req.trigger) {
-            dismissable_branch_nodes.push(trigger_node);
-        }
-        dismissable_branch_nodes.extend(
-            req.dismissable_branches
-                .iter()
-                .filter_map(|branch| fret_ui::elements::node_for_element(app, window, *branch)),
-        );
-        let mut seen: HashSet<NodeId> = HashSet::with_capacity(dismissable_branch_nodes.len());
-        dismissable_branch_nodes.retain(|id| seen.insert(*id));
+        let dismissable_branch_nodes =
+            dismissable_layer_prim::resolve_branch_nodes_for_trigger_and_elements(
+                app,
+                window,
+                req.trigger,
+                &req.dismissable_branches,
+            );
 
         let mut open_now = app.models().get_copied(&req.open).unwrap_or(false);
         let on_pointer_move = req.on_pointer_move.clone();
@@ -208,13 +204,13 @@ pub fn render<H: UiHost>(
                 && entry.last_focus != Some(focus)
                 && let Some(layer_root) = ui.layer_root(entry.layer)
             {
-                let focus_inside = ui.is_descendant(layer_root, focus)
-                    || dismissable_branch_nodes
-                        .iter()
-                        .copied()
-                        .any(|branch| ui.is_descendant(branch, focus));
-
-                if !focus_inside {
+                if dismissable_layer_prim::should_dismiss_on_focus_outside(
+                    ui,
+                    layer_root,
+                    focus_now,
+                    entry.last_focus,
+                    &dismissable_branch_nodes,
+                ) {
                     let _ = app.models_mut().update(&req.open, |v| *v = false);
                     open_now = false;
                 }
