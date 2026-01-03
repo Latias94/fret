@@ -368,6 +368,14 @@ impl WebDemoApp {
         gfx.scale_factor = scale as f32;
         let scale_factor = gfx.scale_factor;
 
+        // Web backends don't always deliver `WindowEvent::Resized` reliably when the canvas is
+        // styled via CSS. Keep the wgpu surface in sync with the current window size.
+        let physical = window.inner_size();
+        let (cur_w, cur_h) = gfx.surface_state.size();
+        if (cur_w, cur_h) != (physical.width.max(1), physical.height.max(1)) {
+            gfx.resize(physical);
+        }
+
         let bounds = gfx.ui_bounds(logical);
 
         // Some effects (notably `TextAddFonts`) must be applied before first paint.
