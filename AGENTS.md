@@ -18,6 +18,7 @@
   - `ecosystem/fret-icons-lucide`: Lucide icon pack (data-only).
   - `ecosystem/fret-icons-radix`: Radix icon pack (data-only).
 - `docs/`: documentation-driven design (start at `docs/README.md`); ADRs in `docs/adr/`.
+- `apps/`: runnable apps / experiments (in the workspace, but excluded from `default-members`).
 - `repo-ref/`: pinned upstream reference checkouts (not required to build).
 - `.fret/`: generated local state when running the demo (e.g. layout/keymap JSON).
 
