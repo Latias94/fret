@@ -3,7 +3,6 @@ members = [
     "crates/fret-a11y-accesskit",
     "crates/fret",
     "crates/fret-app",
-    "crates/fret-components-app",
     "crates/fret-core",
     "crates/fret-fonts",
     "crates/fret-demo",
@@ -22,6 +21,7 @@ members = [
     "ecosystem/fret-icons",
     "ecosystem/fret-icons-lucide",
     "ecosystem/fret-icons-radix",
+    "ecosystem/fret-app-kit",
     "ecosystem/fret-ui-kit",
     "ecosystem/fret-ui-shadcn",
 ]

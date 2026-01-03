@@ -1066,7 +1066,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fret-components-app"
+name = "fret-app-kit"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1094,7 +1094,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "fret-app",
- "fret-components-app",
+ "fret-app-kit",
  "fret-core",
  "fret-icons",
  "fret-icons-lucide",
