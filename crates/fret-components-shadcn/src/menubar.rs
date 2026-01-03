@@ -6,6 +6,7 @@ use fret_components_ui::declarative::model_watch::ModelWatchExt as _;
 use fret_components_ui::declarative::style as decl_style;
 use fret_components_ui::headless::roving_focus;
 use fret_components_ui::overlay;
+use fret_components_ui::primitives::menu;
 use fret_components_ui::primitives::roving_focus_group;
 use fret_components_ui::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
@@ -521,7 +522,7 @@ impl MenubarMenuEntries {
                                         corner_radii: Corners::all(theme.metrics.radius_sm),
                                     },
                                     move |cx| {
-                                        vec![roving_focus_group::roving_focus_group_apg(
+                                        vec![menu::content::menu_roving_group_apg_prefix_typeahead(
                                             cx,
                                             RovingFlexProps {
                                                 flex: FlexProps {
@@ -535,10 +536,8 @@ impl MenubarMenuEntries {
                                                 },
                                                 roving,
                                             },
-                                            roving_focus_group::TypeaheadPolicy::Prefix {
-                                                labels: labels_arc.clone(),
-                                                timeout_ticks: typeahead_timeout_ticks,
-                                            },
+                                            labels_arc.clone(),
+                                            typeahead_timeout_ticks,
                                             move |cx| {
                                                 let mut out: Vec<AnyElement> =
                                                     Vec::with_capacity(entries.len());
