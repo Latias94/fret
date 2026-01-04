@@ -57,6 +57,30 @@ pub fn roving_focus_group_apg<H: UiHost>(
     })
 }
 
+/// Render a `RovingFlex` container with an APG-aligned navigation policy that also supports the
+/// common "entry" behavior used by menus: when no item is currently active, Arrow/PageUp/PageDown
+/// jump to first/last enabled item.
+#[track_caller]
+pub fn roving_focus_group_apg_entry_fallback<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: RovingFlexProps,
+    typeahead: TypeaheadPolicy,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    cx.roving_flex(props, |cx| {
+        nav_apg_entry_fallback(cx);
+        match typeahead {
+            TypeaheadPolicy::None => {}
+            TypeaheadPolicy::FirstChar { labels } => typeahead_first_char_arc_str(cx, labels),
+            TypeaheadPolicy::Prefix {
+                labels,
+                timeout_ticks,
+            } => typeahead_prefix_arc_str(cx, labels, timeout_ticks),
+        }
+        f(cx)
+    })
+}
+
 /// Installs an `on_active_change` handler for the current roving container.
 pub fn on_active_change<H: UiHost>(cx: &mut ElementContext<'_, H>, handler: OnRovingActiveChange) {
     cx.roving_on_active_change(handler);
@@ -92,6 +116,69 @@ pub fn nav_apg<H: UiHost>(cx: &mut ElementContext<'_, H>) {
                 };
             }
             _ => {}
+        }
+
+        let Some(current) = it.current else {
+            return RovingNavigateResult::NotHandled;
+        };
+
+        let forward = match (it.axis, it.key) {
+            (fret_core::Axis::Vertical, KeyCode::ArrowDown) => Some(true),
+            (fret_core::Axis::Vertical, KeyCode::ArrowUp) => Some(false),
+            (fret_core::Axis::Horizontal, KeyCode::ArrowRight) => Some(true),
+            (fret_core::Axis::Horizontal, KeyCode::ArrowLeft) => Some(false),
+            _ => None,
+        };
+
+        let Some(forward) = forward else {
+            return RovingNavigateResult::NotHandled;
+        };
+
+        RovingNavigateResult::Handled {
+            target: roving_focus::next_enabled(&it.disabled, current, forward, it.wrap),
+        }
+    }));
+}
+
+/// Like `nav_apg`, but also provides a menu-friendly entry fallback:
+/// when no item is active, ArrowDown/PageUp/Home select the first enabled item and
+/// ArrowUp/PageDown/End select the last enabled item.
+pub fn nav_apg_entry_fallback<H: UiHost>(cx: &mut ElementContext<'_, H>) {
+    cx.roving_add_on_navigate(Arc::new(|_host, _cx, it| {
+        use fret_core::KeyCode;
+
+        match it.key {
+            KeyCode::Home => {
+                return RovingNavigateResult::Handled {
+                    target: roving_focus::first_enabled(&it.disabled),
+                };
+            }
+            KeyCode::End => {
+                return RovingNavigateResult::Handled {
+                    target: roving_focus::last_enabled(&it.disabled),
+                };
+            }
+            _ => {}
+        }
+
+        if it.current.is_none() {
+            let target = match (it.axis, it.key) {
+                (fret_core::Axis::Vertical, KeyCode::ArrowDown | KeyCode::PageUp) => {
+                    roving_focus::first_enabled(&it.disabled)
+                }
+                (fret_core::Axis::Vertical, KeyCode::ArrowUp | KeyCode::PageDown) => {
+                    roving_focus::last_enabled(&it.disabled)
+                }
+                (fret_core::Axis::Horizontal, KeyCode::ArrowRight) => {
+                    roving_focus::first_enabled(&it.disabled)
+                }
+                (fret_core::Axis::Horizontal, KeyCode::ArrowLeft) => {
+                    roving_focus::last_enabled(&it.disabled)
+                }
+                _ => None,
+            };
+
+            return RovingNavigateResult::Handled { target };
         }
 
         let Some(current) = it.current else {

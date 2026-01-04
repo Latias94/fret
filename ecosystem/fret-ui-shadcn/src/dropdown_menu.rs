@@ -1529,6 +1529,8 @@ mod tests {
 
     #[test]
     fn dropdown_menu_submenu_opens_on_hover_and_closes_on_leave() {
+        use std::time::Duration;
+
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -1616,7 +1618,18 @@ mod tests {
             ui.debug_layers_in_paint_order()
         );
 
-        // Third frame: hover "More" should open the submenu.
+        let effects = app.flush_effects();
+        let open_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(100) => {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(open_timer) = open_timer else {
+            panic!("expected submenu open-delay timer effect");
+        };
+
+        // Third frame: hovering does not open the submenu immediately (open-delay timer).
         let _ = render_frame(
             &mut ui,
             &mut app,
@@ -1634,15 +1647,47 @@ mod tests {
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
             .expect("More menu item after hover");
         assert!(
+            !more.flags.expanded,
+            "submenu trigger should not report expanded=true before open-delay timer fires"
+        );
+        assert!(
+            !snap
+                .nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("Sub Alpha")),
+            "submenu items should not render before the open-delay timer fires"
+        );
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: open_timer });
+
+        // Fourth frame: after open timer fires, the submenu opens.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item after open timer");
+        assert!(
             more.flags.expanded,
-            "submenu trigger should report expanded=true after hover opens the submenu"
+            "submenu trigger should report expanded=true after open-delay timer fires"
         );
         assert!(
             snap.nodes
                 .iter()
                 .any(|n| n.role == SemanticsRole::MenuItem
                     && n.label.as_deref() == Some("Sub Alpha")),
-            "submenu items should render when hovering the submenu trigger"
+            "submenu items should render after the open-delay timer fires"
         );
 
         ui.dispatch_event(
@@ -1664,7 +1709,7 @@ mod tests {
             panic!("expected submenu safe-hover close timer effect");
         };
 
-        // Fourth frame: leaving the safe corridor arms a short close delay (submenu remains visible).
+        // Fifth frame: leaving the safe corridor arms a short close delay (submenu remains visible).
         let _ = render_frame(
             &mut ui,
             &mut app,
@@ -1686,7 +1731,7 @@ mod tests {
 
         ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: timer });
 
-        // Fifth frame: after the close timer fires, the submenu closes.
+        // Sixth frame: after the close timer fires, the submenu closes.
         let _ = render_frame(
             &mut ui,
             &mut app,

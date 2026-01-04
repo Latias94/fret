@@ -45,11 +45,16 @@ pub fn wire<H: UiHost>(
     if has_submenu {
         let models_for_hover = models.clone();
         let value_for_hover = value.clone();
+        let cfg_for_hover = cfg;
         cx.pressable_add_on_hover_change(Arc::new(move |host, acx, is_hovered| {
-            if !is_hovered {
-                return;
-            }
-            sub::open_on_hover(host, acx, &models_for_hover, true, value_for_hover.clone());
+            sub::handle_sub_trigger_hover_change(
+                host,
+                acx,
+                &models_for_hover,
+                cfg_for_hover,
+                is_hovered,
+                value_for_hover.clone(),
+            );
         }));
     }
 

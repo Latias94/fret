@@ -27,7 +27,7 @@ pub fn menu_roving_group_apg<H: UiHost>(
     typeahead: TypeaheadPolicy,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
-    roving_focus_group::roving_focus_group_apg(cx, props, typeahead, f)
+    roving_focus_group::roving_focus_group_apg_entry_fallback(cx, props, typeahead, f)
 }
 
 /// Convenience helper for the most common menu behavior: prefix-buffer typeahead.

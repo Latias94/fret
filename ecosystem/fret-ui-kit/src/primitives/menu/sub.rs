@@ -32,14 +32,24 @@ pub struct MenuSubmenuGeometry {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MenuSubmenuConfig {
     pub safe_hover_buffer: Px,
+    /// Delay before opening a submenu on pointer hover.
+    ///
+    /// Radix Menu uses a small delay (~100ms) to avoid accidental opens while sweeping across items.
+    pub open_delay: Duration,
     pub close_delay: Duration,
     pub focus_delay: Duration,
 }
 
 impl MenuSubmenuConfig {
-    pub fn new(safe_hover_buffer: Px, close_delay: Duration, focus_delay: Duration) -> Self {
+    pub fn new(
+        safe_hover_buffer: Px,
+        open_delay: Duration,
+        close_delay: Duration,
+        focus_delay: Duration,
+    ) -> Self {
         Self {
             safe_hover_buffer,
+            open_delay,
             close_delay,
             focus_delay,
         }
@@ -50,6 +60,7 @@ impl Default for MenuSubmenuConfig {
     fn default() -> Self {
         Self {
             safe_hover_buffer: Px(6.0),
+            open_delay: Duration::from_millis(100),
             close_delay: Duration::from_millis(120),
             focus_delay: Duration::from_millis(0),
         }
@@ -160,6 +171,9 @@ pub struct MenuSubmenuModels {
     pub close_timer: Model<Option<TimerToken>>,
     pub focus_target: Model<Option<GlobalElementId>>,
     pub focus_timer: Model<Option<TimerToken>>,
+    pub pending_open_value: Model<Option<Arc<str>>>,
+    pub pending_open_trigger: Model<Option<GlobalElementId>>,
+    pub open_timer: Model<Option<TimerToken>>,
 }
 
 #[derive(Default)]
@@ -171,6 +185,9 @@ struct MenuSubmenuState {
     close_timer: Option<Model<Option<TimerToken>>>,
     focus_target: Option<Model<Option<GlobalElementId>>>,
     focus_timer: Option<Model<Option<TimerToken>>>,
+    pending_open_value: Option<Model<Option<Arc<str>>>>,
+    pending_open_trigger: Option<Model<Option<GlobalElementId>>>,
+    open_timer: Option<Model<Option<TimerToken>>>,
     was_open: bool,
 }
 
@@ -243,6 +260,23 @@ pub fn sync_root_open<H: UiHost>(cx: &mut ElementContext<'_, H>, is_open: bool) 
             }
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| st.open_timer.clone()) {
+            let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
+            if let Some(token) = token {
+                cx.app.push_effect(Effect::CancelTimer { token });
+            }
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| {
+            st.pending_open_value.clone()
+        }) {
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| {
+            st.pending_open_trigger.clone()
+        }) {
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
         if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| st.focus_target.clone())
         {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
@@ -261,6 +295,23 @@ pub fn sync_root_open<H: UiHost>(cx: &mut ElementContext<'_, H>, is_open: bool) 
             if let Some(token) = token {
                 cx.app.push_effect(Effect::CancelTimer { token });
             }
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| st.open_timer.clone()) {
+            let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
+            if let Some(token) = token {
+                cx.app.push_effect(Effect::CancelTimer { token });
+            }
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| {
+            st.pending_open_value.clone()
+        }) {
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| {
+            st.pending_open_trigger.clone()
+        }) {
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
         cx.with_state(MenuSubmenuState::default, |st| st.was_open = false);
@@ -345,6 +396,43 @@ pub fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> MenuSubmenuMo
         focus_timer
     };
 
+    let pending_open_value = cx.with_state(MenuSubmenuState::default, |st| {
+        st.pending_open_value.clone()
+    });
+    let pending_open_value = if let Some(pending_open_value) = pending_open_value {
+        pending_open_value
+    } else {
+        let pending_open_value = cx.app.models_mut().insert(None);
+        cx.with_state(MenuSubmenuState::default, |st| {
+            st.pending_open_value = Some(pending_open_value.clone());
+        });
+        pending_open_value
+    };
+
+    let pending_open_trigger = cx.with_state(MenuSubmenuState::default, |st| {
+        st.pending_open_trigger.clone()
+    });
+    let pending_open_trigger = if let Some(pending_open_trigger) = pending_open_trigger {
+        pending_open_trigger
+    } else {
+        let pending_open_trigger = cx.app.models_mut().insert(None);
+        cx.with_state(MenuSubmenuState::default, |st| {
+            st.pending_open_trigger = Some(pending_open_trigger.clone());
+        });
+        pending_open_trigger
+    };
+
+    let open_timer = cx.with_state(MenuSubmenuState::default, |st| st.open_timer.clone());
+    let open_timer = if let Some(open_timer) = open_timer {
+        open_timer
+    } else {
+        let open_timer = cx.app.models_mut().insert(None);
+        cx.with_state(MenuSubmenuState::default, |st| {
+            st.open_timer = Some(open_timer.clone());
+        });
+        open_timer
+    };
+
     MenuSubmenuModels {
         open_value,
         trigger,
@@ -353,6 +441,9 @@ pub fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> MenuSubmenuMo
         close_timer,
         focus_target,
         focus_timer,
+        pending_open_value,
+        pending_open_trigger,
+        open_timer,
     }
 }
 
@@ -369,8 +460,14 @@ pub fn on_timer_handler(models: MenuSubmenuModels) -> fret_ui::action::OnTimer {
             .read(&models.focus_timer, |v| *v)
             .ok()
             .flatten();
+        let open_armed = host
+            .models_mut()
+            .read(&models.open_timer, |v| *v)
+            .ok()
+            .flatten();
 
         if close_armed == Some(token) {
+            cancel_timer(host, &models.open_timer);
             cancel_timer(host, &models.focus_timer);
             let _ = host.models_mut().update(&models.open_value, |v| *v = None);
             let _ = host.models_mut().update(&models.trigger, |v| *v = None);
@@ -378,7 +475,51 @@ pub fn on_timer_handler(models: MenuSubmenuModels) -> fret_ui::action::OnTimer {
                 .models_mut()
                 .update(&models.last_pointer, |v| *v = None);
             let _ = host.models_mut().update(&models.geometry, |v| *v = None);
+            let _ = host
+                .models_mut()
+                .update(&models.pending_open_value, |v| *v = None);
+            let _ = host
+                .models_mut()
+                .update(&models.pending_open_trigger, |v| *v = None);
             cancel_timer_if_matches(host, &models.close_timer, token);
+            host.request_redraw(acx.window);
+            return true;
+        }
+
+        if open_armed == Some(token) {
+            let pending_value = host
+                .models_mut()
+                .read(&models.pending_open_value, |v| v.clone())
+                .ok()
+                .flatten();
+            let pending_trigger = host
+                .models_mut()
+                .read(&models.pending_open_trigger, |v| *v)
+                .ok()
+                .flatten();
+
+            cancel_timer_if_matches(host, &models.open_timer, token);
+            let _ = host
+                .models_mut()
+                .update(&models.pending_open_value, |v| *v = None);
+            let _ = host
+                .models_mut()
+                .update(&models.pending_open_trigger, |v| *v = None);
+
+            let Some(pending_value) = pending_value else {
+                return false;
+            };
+
+            let _ = host
+                .models_mut()
+                .update(&models.open_value, |v| *v = Some(pending_value));
+            let _ = host
+                .models_mut()
+                .update(&models.trigger, |v| *v = pending_trigger);
+            let _ = host
+                .models_mut()
+                .update(&models.last_pointer, |v| *v = None);
+            let _ = host.models_mut().update(&models.geometry, |v| *v = None);
             host.request_redraw(acx.window);
             return true;
         }
@@ -493,26 +634,31 @@ pub fn sync_while_trigger_hovered<H: UiHost>(
     cancel_timer_in_element_context(cx, &models.close_timer);
 
     if has_submenu {
-        let already_open = cx
+        let open_value = cx
             .app
             .models_mut()
-            .read(&models.open_value, |v| {
-                v.as_ref().is_some_and(|cur| cur.as_ref() == value.as_ref())
-            })
+            .read(&models.open_value, |v| v.clone())
             .ok()
-            .unwrap_or(false);
+            .flatten();
+        let already_open = open_value
+            .as_ref()
+            .is_some_and(|cur| cur.as_ref() == value.as_ref());
 
-        if !already_open {
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&models.open_value, |v| *v = Some(value));
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&models.trigger, |v| *v = Some(item_id));
-        } else {
+        if already_open {
             set_trigger_if_none(cx, item_id, &models.trigger);
+            return;
+        }
+
+        // If we're hovering a different submenu trigger while another submenu is open, close the
+        // previous submenu immediately while the new trigger's open-delay timer runs.
+        if open_value.is_some() {
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&models.open_value, |v| *v = None);
+            let _ = cx.app.models_mut().update(&models.trigger, |v| *v = None);
+            let _ = cx.app.models_mut().update(&models.geometry, |v| *v = None);
+            cancel_timer_in_element_context(cx, &models.focus_timer);
         }
     } else {
         let _ = cx
@@ -521,6 +667,16 @@ pub fn sync_while_trigger_hovered<H: UiHost>(
             .update(&models.open_value, |v| *v = None);
         let _ = cx.app.models_mut().update(&models.trigger, |v| *v = None);
         let _ = cx.app.models_mut().update(&models.geometry, |v| *v = None);
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&models.pending_open_value, |v| *v = None);
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&models.pending_open_trigger, |v| *v = None);
+        cancel_timer_in_element_context(cx, &models.open_timer);
+        cancel_timer_in_element_context(cx, &models.focus_timer);
     }
 }
 
@@ -567,35 +723,120 @@ pub fn close_if_focus_moved_without_pointer<H: UiHost>(
         .update(&models.open_value, |v| *v = None);
     let _ = cx.app.models_mut().update(&models.trigger, |v| *v = None);
     let _ = cx.app.models_mut().update(&models.geometry, |v| *v = None);
+    let _ = cx
+        .app
+        .models_mut()
+        .update(&models.pending_open_value, |v| *v = None);
+    let _ = cx
+        .app
+        .models_mut()
+        .update(&models.pending_open_trigger, |v| *v = None);
+    cancel_timer_in_element_context(cx, &models.open_timer);
     cancel_timer_in_element_context(cx, &models.close_timer);
     cancel_timer_in_element_context(cx, &models.focus_timer);
 }
 
-pub fn open_on_hover(
+/// Handle submenu trigger hover changes, applying a small open delay to avoid accidental opens.
+pub fn handle_sub_trigger_hover_change(
     host: &mut dyn UiActionHost,
     acx: ActionCx,
     models: &MenuSubmenuModels,
-    has_submenu: bool,
+    cfg: MenuSubmenuConfig,
+    is_hovered: bool,
     value: Arc<str>,
 ) {
+    if !is_hovered {
+        cancel_timer(host, &models.open_timer);
+        let _ = host
+            .models_mut()
+            .update(&models.pending_open_value, |v| *v = None);
+        let _ = host
+            .models_mut()
+            .update(&models.pending_open_trigger, |v| *v = None);
+        return;
+    }
+
     cancel_timer(host, &models.close_timer);
-    let _ = host.models_mut().update(&models.geometry, |v| *v = None);
+    cancel_timer(host, &models.focus_timer);
+
+    let current_open = host
+        .models_mut()
+        .read(&models.open_value, |v| v.clone())
+        .ok()
+        .flatten();
+    let already_open = current_open
+        .as_ref()
+        .is_some_and(|cur| cur.as_ref() == value.as_ref());
+    if already_open {
+        cancel_timer(host, &models.open_timer);
+        let _ = host
+            .models_mut()
+            .update(&models.pending_open_value, |v| *v = None);
+        let _ = host
+            .models_mut()
+            .update(&models.pending_open_trigger, |v| *v = None);
+        return;
+    }
+
+    // Close any currently open submenu while hovering a different trigger, mirroring Radix's
+    // focus-driven submenu switching behavior.
+    if current_open.is_some() {
+        let _ = host.models_mut().update(&models.open_value, |v| *v = None);
+        let _ = host.models_mut().update(&models.trigger, |v| *v = None);
+        let _ = host.models_mut().update(&models.geometry, |v| *v = None);
+    }
+
+    let _ = host
+        .models_mut()
+        .update(&models.pending_open_value, |v| *v = Some(value));
+    let _ = host
+        .models_mut()
+        .update(&models.pending_open_trigger, |v| *v = Some(acx.target));
     let _ = host
         .models_mut()
         .update(&models.last_pointer, |v| *v = None);
+    let _ = host.models_mut().update(&models.geometry, |v| *v = None);
 
-    if has_submenu {
+    if cfg.open_delay == Duration::from_millis(0) {
+        let pending_value = host
+            .models_mut()
+            .read(&models.pending_open_value, |v| v.clone())
+            .ok()
+            .flatten();
+        let pending_trigger = host
+            .models_mut()
+            .read(&models.pending_open_trigger, |v| *v)
+            .ok()
+            .flatten();
         let _ = host
             .models_mut()
-            .update(&models.open_value, |v| *v = Some(value));
+            .update(&models.pending_open_value, |v| *v = None);
         let _ = host
             .models_mut()
-            .update(&models.trigger, |v| *v = Some(acx.target));
-    } else {
-        let _ = host.models_mut().update(&models.open_value, |v| *v = None);
-        let _ = host.models_mut().update(&models.trigger, |v| *v = None);
+            .update(&models.pending_open_trigger, |v| *v = None);
+        let _ = host.models_mut().update(&models.open_timer, |v| *v = None);
+
+        let _ = host
+            .models_mut()
+            .update(&models.open_value, |v| *v = pending_value);
+        let _ = host
+            .models_mut()
+            .update(&models.trigger, |v| *v = pending_trigger);
+        host.request_redraw(acx.window);
+        return;
     }
 
+    cancel_timer(host, &models.open_timer);
+    let token = host.next_timer_token();
+    host.push_effect(Effect::SetTimer {
+        window: Some(acx.window),
+        token,
+        after: cfg.open_delay,
+        repeat: None,
+    });
+    let _ = host
+        .models_mut()
+        .update(&models.open_timer, |v| *v = Some(token));
     host.request_redraw(acx.window);
 }
 
@@ -606,6 +847,13 @@ pub fn open_on_activate(
     value: Arc<str>,
 ) {
     cancel_timer(host, &models.close_timer);
+    cancel_timer(host, &models.open_timer);
+    let _ = host
+        .models_mut()
+        .update(&models.pending_open_value, |v| *v = None);
+    let _ = host
+        .models_mut()
+        .update(&models.pending_open_trigger, |v| *v = None);
     let _ = host
         .models_mut()
         .update(&models.open_value, |v| *v = Some(value));
@@ -624,6 +872,13 @@ pub fn open_on_arrow_right(
 ) {
     cancel_timer(host, &models.focus_timer);
     cancel_timer(host, &models.close_timer);
+    cancel_timer(host, &models.open_timer);
+    let _ = host
+        .models_mut()
+        .update(&models.pending_open_value, |v| *v = None);
+    let _ = host
+        .models_mut()
+        .update(&models.pending_open_trigger, |v| *v = None);
 
     let _ = host
         .models_mut()
@@ -649,6 +904,13 @@ pub fn close_on_arrow_left(host: &mut dyn UiActionHost, acx: ActionCx, models: &
     let _ = host.models_mut().update(&models.open_value, |v| *v = None);
     let _ = host.models_mut().update(&models.trigger, |v| *v = None);
     let _ = host.models_mut().update(&models.geometry, |v| *v = None);
+    let _ = host
+        .models_mut()
+        .update(&models.pending_open_value, |v| *v = None);
+    let _ = host
+        .models_mut()
+        .update(&models.pending_open_trigger, |v| *v = None);
+    cancel_timer(host, &models.open_timer);
     cancel_timer(host, &models.close_timer);
     cancel_timer(host, &models.focus_timer);
     host.request_redraw(acx.window);
