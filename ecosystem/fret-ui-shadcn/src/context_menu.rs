@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
@@ -10,6 +12,7 @@ use fret_ui::element::{
     PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps, RovingFocusProps,
     SemanticsProps, TextProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -220,6 +223,8 @@ impl ContextMenu {
                 let window_margin = self.window_margin;
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                 let open_for_overlay = open.clone();
+                let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let content_focus_id_for_children = content_focus_id.clone();
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let trigger_bounds =
@@ -330,7 +335,9 @@ impl ContextMenu {
                                             ),
                                         },
                                         move |cx| {
-                                            vec![menu::content::menu_roving_group_apg_prefix_typeahead(
+                                            let content_focus_id_for_panel =
+                                                content_focus_id_for_children.clone();
+                                            let roving = menu::content::menu_roving_group_apg_prefix_typeahead(
                                                 cx,
                                                 RovingFlexProps {
                                                     flex: FlexProps {
@@ -475,7 +482,11 @@ impl ContextMenu {
 
                                                     out
                                                 },
-                                            )]
+                                            );
+                                            if content_focus_id_for_panel.get().is_none() {
+                                                content_focus_id_for_panel.set(Some(roving.id));
+                                            }
+                                            vec![roving]
                                         },
                                     );
 
@@ -500,7 +511,9 @@ impl ContextMenu {
                     overlay_children,
                 );
                 request.root_name = Some(overlay_root_name);
-                request.initial_focus = None;
+                if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
+                    request.initial_focus = content_focus_id.get();
+                }
                 OverlayController::request(cx, request);
             }
 

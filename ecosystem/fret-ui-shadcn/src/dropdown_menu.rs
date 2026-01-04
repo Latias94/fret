@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
@@ -10,6 +12,7 @@ use fret_ui::element::{
     PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps,
     SizeStyle, TextProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -327,6 +330,8 @@ impl DropdownMenu {
                 let open_for_overlay = open.clone();
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                 let min_width = self.min_width;
+                let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+                let content_focus_id_for_children = content_focus_id.clone();
 
                 let (overlay_children, dismissible_on_pointer_move) =
                     cx.with_root_name(&overlay_root_name, move |cx| {
@@ -487,7 +492,9 @@ impl DropdownMenu {
                                             ..Default::default()
                                         },
                                         move |cx| {
-                                            vec![menu::content::menu_roving_group_apg_prefix_typeahead(
+                                            let content_focus_id_for_scroll =
+                                                content_focus_id_for_children.clone();
+                                            let roving = menu::content::menu_roving_group_apg_prefix_typeahead(
                                                 cx,
                                                 RovingFlexProps {
                                                     flex: FlexProps {
@@ -767,7 +774,11 @@ impl DropdownMenu {
 
                                                     out
                                                 },
-                                            )]
+                                            );
+                                            if content_focus_id_for_scroll.get().is_none() {
+                                                content_focus_id_for_scroll.set(Some(roving.id));
+                                            }
+                                            vec![roving]
                                         },
                                     )]
                                         },
@@ -1094,6 +1105,9 @@ impl DropdownMenu {
                 );
                 request.dismissible_on_pointer_move = dismissible_on_pointer_move;
                 request.root_name = Some(overlay_root_name);
+                if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
+                    request.initial_focus = content_focus_id.get();
+                }
                 OverlayController::request(cx, request);
             }
 

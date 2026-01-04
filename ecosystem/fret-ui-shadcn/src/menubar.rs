@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
@@ -472,6 +474,9 @@ impl MenubarMenuEntries {
                     let open_for_overlay = open.clone();
                     let text_style = text_style.clone();
                     let entries = entries.clone();
+                    let content_focus_id: Rc<Cell<Option<GlobalElementId>>> =
+                        Rc::new(Cell::new(None));
+                    let content_focus_id_for_children = content_focus_id.clone();
 
                     let (overlay_children, dismissible_on_pointer_move) =
                         cx.with_root_name(&overlay_root_name, move |cx| {
@@ -930,7 +935,9 @@ impl MenubarMenuEntries {
                                             corner_radii: Corners::all(theme.metrics.radius_sm),
                                         },
                                         move |cx| {
-                                            vec![menu::content::menu_roving_group_apg_prefix_typeahead(
+                                            let content_focus_id_for_panel =
+                                                content_focus_id_for_children.clone();
+                                            let roving = menu::content::menu_roving_group_apg_prefix_typeahead(
                                                         cx,
                                                         RovingFlexProps {
                                                             flex: FlexProps {
@@ -1084,7 +1091,11 @@ impl MenubarMenuEntries {
 
                                                             out
                                                         },
-                                                    )]
+                                                    );
+                                            if content_focus_id_for_panel.get().is_none() {
+                                                content_focus_id_for_panel.set(Some(roving.id));
+                                            }
+                                            vec![roving]
                                         },
                                     );
 
@@ -1104,6 +1115,9 @@ impl MenubarMenuEntries {
                     );
                     request.root_name = Some(overlay_root_name);
                     request.dismissible_on_pointer_move = dismissible_on_pointer_move;
+                    if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
+                        request.initial_focus = content_focus_id.get();
+                    }
                     OverlayController::request(cx, request);
                 }
 
