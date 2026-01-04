@@ -43,13 +43,15 @@ Key bindings are stored in a versioned file:
 Each binding stores the key as a **physical key code token**, not a character.
 
 The canonical representation is a string token that maps 1:1 to the framework’s physical key enum
-(`KeyCode` / future `PhysicalKey`), e.g.:
+(`KeyCode`, aligned with `keyboard-types::Code` per ADR 0092), e.g.:
 
 - `"KeyA"`, `"KeyP"`
 - `"Digit1"`
 - `"ArrowUp"`
 - `"Enter"`, `"Escape"`, `"Tab"`, `"Space"`
 - `"F1"`, `"F12"`
+- `"MetaLeft"`, `"MetaRight"`
+- `"Unidentified"`
 
 Modifiers are stored as an explicit set:
 
@@ -194,7 +196,7 @@ Resolution rule:
 - Define the `when` expression language and available context keys.
 - Decide whether to support multi-stroke chords and how they interact with text input.
 - Lock shortcut arbitration + AltGr semantics + pending bindings (see `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`).
-- Provide a canonical list of `KeyCode` tokens and migration rules when upstream (`winit`) changes.
+- Provide a canonical list of `KeyCode` tokens and migration rules when upstream (`keyboard-types`) changes.
 
 ## Implementation Notes (Current Prototype)
 

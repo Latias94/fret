@@ -78,13 +78,14 @@ Reserved future extension:
 
 ## Future Work
 
-- Expand the concrete `KeyCode` set (recommended: align with winit physical key codes / USB HID usage set).
+- Maintain alignment with `keyboard-types::Code` as the canonical physical key universe (ADR 0092).
 - Define a canonical keymap file format (see ADR 0014) including platform-specific bindings.
 - Add optional left/right modifier locations if needed by advanced users.
 
 ## Implementation Notes
 
-Prototype implementation exists (subset of common keys, aligned with winit names):
+Current implementation aligns `fret-core::KeyCode` with `keyboard-types::Code` (ADR 0092) and forwards winit physical
+key codes directly:
 
 - `crates/fret-core/src/input.rs`
 - `crates/fret-runner-winit/src/lib.rs` (`map_physical_key`)

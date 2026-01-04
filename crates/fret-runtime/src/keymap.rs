@@ -363,7 +363,7 @@ pub struct KeymapService {
 }
 
 fn parse_keys(index: usize, keys: KeySpecV1) -> Result<KeyChord, KeymapError> {
-    let key = parse_key_token(&keys.key).ok_or_else(|| KeymapError::UnknownKeyToken {
+    let key: KeyCode = keys.key.parse().map_err(|_| KeymapError::UnknownKeyToken {
         index,
         token: keys.key.clone(),
     })?;
@@ -386,16 +386,6 @@ fn parse_keys(index: usize, keys: KeySpecV1) -> Result<KeyChord, KeymapError> {
         }
     }
     Ok(KeyChord::new(key, mods))
-}
-
-fn parse_key_token(token: &str) -> Option<KeyCode> {
-    token.parse().ok().or_else(|| match token {
-        // Legacy tokens used by older configs.
-        "Unknown" => Some(KeyCode::Unidentified),
-        "SuperLeft" => Some(KeyCode::MetaLeft),
-        "SuperRight" => Some(KeyCode::MetaRight),
-        _ => None,
-    })
 }
 
 fn parse_when(index: usize, when: &str, mode: WhenValidationMode) -> Result<WhenExpr, KeymapError> {
@@ -508,20 +498,6 @@ mod tests {
                 { "command": "test.alt", "keys": { "mods": ["Option"], "key": "KeyB" } },
                 { "command": "test.meta", "keys": { "mods": ["Command"], "key": "KeyC" } },
                 { "command": "test.alt_gr", "keys": { "mods": ["Alt_Gr"], "key": "KeyD" } }
-            ]
-        }"#;
-
-        Keymap::from_bytes(bytes).expect("keymap parses");
-    }
-
-    #[test]
-    fn keymap_accepts_legacy_keycode_aliases() {
-        let bytes = br#"{
-            "keymap_version": 1,
-            "bindings": [
-                { "command": "test.super_left", "keys": { "mods": [], "key": "SuperLeft" } },
-                { "command": "test.super_right", "keys": { "mods": [], "key": "SuperRight" } },
-                { "command": "test.unknown", "keys": { "mods": [], "key": "Unknown" } }
             ]
         }"#;
 
