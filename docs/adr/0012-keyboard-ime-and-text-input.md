@@ -161,7 +161,7 @@ Effect naming note:
 
 - `Effect::ImeSetCursorArea` / `Effect::ImeAllow` are implemented:
   - `crates/fret-app/src/app.rs`
-  - `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - `crates/fret-launch/src/runner/mod.rs`
 
 IME event ingestion note:
 
@@ -170,7 +170,7 @@ IME event ingestion note:
 Text input ingestion note:
 
 - Desktop runner filters control characters out of `KeyboardInput.text` before emitting `fret-core::Event::TextInput`:
-  - `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - `crates/fret-launch/src/runner/mod.rs`
 
 Current MVP text widget note:
 

@@ -17,7 +17,7 @@ It complements (but does not replace) ADRs:
 - **Preedit-first key arbitration end-to-end (runner + routing)**
   - Problem: composing IME sessions must not lose `Tab/Space/Enter/NumpadEnter/Escape/Arrows/Backspace/...` to focus traversal or global shortcuts.
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
-  - Code: `crates/fret-runner-winit-wgpu/src/runner.rs`, `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/text_input/mod.rs`, `crates/fret-ui/src/text_area/mod.rs`
+  - Code: `crates/fret-launch/src/runner/mod.rs`, `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/text_input/mod.rs`, `crates/fret-ui/src/text_area/mod.rs`
   - Current: `crates/fret-ui/src/tree/mod.rs` defers shortcut matching for reserved keys and only falls back if the widget does not `stop_propagation`. `crates/fret-ui/src/text_input/mod.rs` and `crates/fret-ui/src/text_area/mod.rs` stop propagation for these keys while IME is composing (treat “composing” as `preedit` non-empty **or** preedit cursor metadata present).
   - Current: regression tests exist for:
     - composing: reserved keys suppress traversal/shortcuts (`tab_focus_next_is_suppressed_during_ime_composition`, `reserved_shortcuts_are_suppressed_during_ime_composition`);
@@ -73,7 +73,7 @@ It complements (but does not replace) ADRs:
 - **Adopt the continuous frames lease contract across high-frequency subsystems**
   - Goal: use RAII `begin_continuous_frames` leases (ADR 0034) for viewport rendering, drags, and animations, and avoid ad-hoc RAF loops.
   - ADRs: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`
-  - Code: `crates/fret-ui/src/elements/mod.rs`, `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - Code: `crates/fret-ui/src/elements/mod.rs`, `crates/fret-launch/src/runner/mod.rs`
 
 - **Investigate "doesn't draw until hover" initial render regressions**
   - Symptom: some demo surfaces appear blank on startup and only render after pointer movement/hover.
@@ -112,11 +112,11 @@ It complements (but does not replace) ADRs:
   - Update: contract locked (ADR 0080). Follow-up work is conformance testing and any v2 surface expansion (joins/caps/dashes).
 
 - **Clarify the runner vs platform split in docs and code**
-  - Problem: winit glue (including optional AccessKit bridge) lives in `fret-runner-winit`, while effect draining/presentation live in `fret-runner-winit-wgpu`; keep responsibilities crisp to avoid duplicating window registries and event translation.
+  - Problem: winit glue (including optional AccessKit bridge) lives in `fret-runner-winit`, while effect draining/presentation live in `fret-launch`; keep responsibilities crisp to avoid duplicating window registries and event translation.
   - ADRs: `docs/adr/0003-platform-boundary.md`
-  - Code: `crates/fret-platform/src/*`, `crates/fret-runner-winit/src/accessibility.rs`, `crates/fret-runner-winit/src/lib.rs`, `crates/fret-runner-winit-wgpu/src/runner/*`
+  - Code: `crates/fret-platform/src/*`, `crates/fret-runner-winit/src/accessibility.rs`, `crates/fret-runner-winit/src/lib.rs`, `crates/fret-launch/src/runner/*`
 
 - **Decide whether `fret-runner-winit` grows into a broader native boundary**
-  - Problem: `crates/fret-platform` is now intentionally portable contracts-only, while the concrete native backend lives in `crates/fret-platform-native` and the event loop/effect draining live in `crates/fret-runner-winit-wgpu`; decide how much window registry/event translation should live in the runner as more backends (web/mobile) arrive.
+  - Problem: `crates/fret-platform` is now intentionally portable contracts-only, while the concrete native backend lives in `crates/fret-platform-native` and the event loop/effect draining live in `crates/fret-launch`; decide how much window registry/event translation should live in the runner as more backends (web/mobile) arrive.
   - ADRs: `docs/adr/0003-platform-boundary.md`
-  - Code: `crates/fret-platform-native/src/*`, `crates/fret-runner-winit/src/lib.rs`, `crates/fret-runner-winit-wgpu/src/runner/*`
+  - Code: `crates/fret-platform-native/src/*`, `crates/fret-runner-winit/src/lib.rs`, `crates/fret-launch/src/runner/*`

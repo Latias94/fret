@@ -60,7 +60,7 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
 
 - **Module(s):**
   - `crates/fret-runtime/src/effect.rs`
-  - `crates/fret-runner-winit-wgpu/src/runner.rs`
+  - `crates/fret-launch/src/runner/mod.rs`
   - `crates/fret-ui/src/elements/mod.rs`
 - **ADR(s):** `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - **Reference(s):**

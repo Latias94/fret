@@ -9,7 +9,7 @@ Fret currently ships as a cohesive workspace where:
 
 - `fret-ui` implements the retained UI runtime and declarative elements (ADR 0005 / ADR 0028 / ADR 0039),
 - `fret-app` provides the app runtime (models, globals, effects, scheduling, commands) (ADR 0001 / ADR 0031 / ADR 0034),
-- `fret-runner-winit-wgpu` drains effects, drives window lifecycle, and presents frames.
+- `fret-launch` drains effects, drives window lifecycle, and presents frames.
 
 This is productive for the demo and for “first-party editor apps”.
 However, the long-term project goal includes **third-party editor reuse** (GPUI-like adoption) and **wasm/WebGPU**

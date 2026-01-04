@@ -68,6 +68,8 @@ In both cases, surface creation must use the same `wgpu::Instance` as the device
 
 ## Crate Layout (Workspace)
 
+Crate boundaries are locked in ADR 0093: `docs/adr/0093-crate-structure-core-backends-apps.md`.
+
 - `crates/fret-core`: platform-agnostic core (IDs, geometry, docking model, layout/input contracts).
 - `crates/fret-runtime`: host-facing runtime boundary traits + portable value types used by `fret-ui` (ADR 0052).
 - `crates/fret-app`: app runtime (global services, models/entities, scheduling, command/action dispatch).
@@ -75,9 +77,9 @@ In both cases, surface creation must use the same `wgpu::Instance` as the device
 - `crates/fret-platform-native`: native implementations for `fret-platform` contracts.
 - `crates/fret-platform-web`: wasm/browser implementations for `fret-platform`-adjacent services.
 - `crates/fret-runner-winit`: winit platform adapter (event mapping, cursor/modifiers/key normalization, canvas binding on web).
-- `crates/fret-runner-winit-wgpu`: desktop runner glue (winit event loop + `fret-runner-winit` + wgpu presentation + effect draining).
 - `crates/fret-render`: wgpu-based renderer building blocks (context/device bootstrap, rendering backends).
 - `crates/fret-ui`: UI runtime (layout, hit-testing, focus routing, display list builder).
+- `crates/fret-launch`: integration glue (desktop now; web/mobile later) that owns presentation/effect draining and drives the frame loop.
 - `ecosystem/fret-ui-kit`: component infrastructure (policies, style composition, overlay managers) built on `fret-ui`.
 - `ecosystem/fret-ui-shadcn`: shadcn/ui v4 taxonomy surface + recipes built on `fret-ui-kit`.
 - `crates/fret-ui-app`: integration convenience layer that binds `fret-ui` to `fret-app::App` for first-party apps/demos.

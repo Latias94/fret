@@ -22,6 +22,7 @@ Recommended top-level layout:
 Notes:
 
 - `target/` and `.fret/` are generated and should remain out of VCS.
+- Crate layer boundaries (core vs backends vs apps) are locked in `docs/adr/0093-crate-structure-core-backends-apps.md`.
 
 ## `crates/` (Core Framework)
 
@@ -41,7 +42,7 @@ Notes:
   - `fret-runner-winit` (winit platform adapter: event mapping + input normalization)
   - `fret-render` (wgpu-based renderer)
 - Integration / wiring:
-  - `fret-runner-winit-wgpu`
+  - `fret-launch` (cross-platform launcher glue; depends on backend crates)
 - Public facade + demos:
   - `fret` (re-exports)
   - `fret-demo`

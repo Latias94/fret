@@ -9,7 +9,7 @@ fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-render = { path = "../../crates/fret-render" }
-fret-runner-winit-wgpu = { path = "../../crates/fret-runner-winit-wgpu" }
+fret-launch = { path = "../../crates/fret-launch" }
 pollster.workspace = true
 tracing-subscriber.workspace = true
 wgpu.workspace = true

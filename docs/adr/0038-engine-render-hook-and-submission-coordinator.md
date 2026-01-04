@@ -100,7 +100,7 @@ The engine render hook API must receive:
 
 ## Implementation Notes
 
-The current desktop runner (`crates/fret-runner-winit-wgpu`) implements the “record commands + update targets”
+The current desktop glue (`crates/fret-launch`) implements the “record commands + update targets”
 shape by extending the `WinitDriver` hook:
 
 - The driver may implement `record_engine_frame(...) -> EngineFrameUpdate`.

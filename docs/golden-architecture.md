@@ -54,7 +54,7 @@ For each module, we consider it “closed enough to scale” when:
 - `crates/fret-render` — wgpu renderer implementation for `fret-core::Scene`.
 - `crates/fret-platform` — portable platform I/O contracts (no `winit`).
 - `crates/fret-runner-winit` — winit glue (event mapping + AccessKit adapter).
-- `crates/fret-runner-winit-wgpu` — concrete desktop runner wiring winit + renderer + effect draining.
+- `crates/fret-launch` — concrete desktop glue wiring winit + renderer + effect draining.
 
 **Ergonomics + demos:**
 
@@ -283,7 +283,7 @@ flowchart LR
 - Scene validation + renderer conformance tests cover transforms/clips/layers.
 - Text caching keys include all configuration that affects glyph output (font stack, locale, etc.).
 
-### `fret-platform` + `fret-runner-winit-wgpu` (Desktop Backend)
+### `fret-platform` + `fret-launch` (Desktop Backend)
 
 **Read first**
 
@@ -293,7 +293,7 @@ flowchart LR
 
 **Code entry points**
 
-- Runner: `crates/fret-runner-winit-wgpu/src/runner.rs`
+- Runner: `crates/fret-launch/src/runner/mod.rs`
 - Accessibility bridge: `crates/fret-runner-winit/src/accessibility.rs` (winit glue) + `crates/fret-a11y-accesskit/src/lib.rs` (AccessKit mapping)
 
 **Closure checklist (P0)**

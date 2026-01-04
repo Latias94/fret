@@ -3,7 +3,7 @@ use fret_app_kit::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, ImageColorSpace, Px, Rect, SceneOp, Size,
 };
-use fret_runner_winit_wgpu::{
+use fret_launch::{
     WindowCreateSpec, WinitAppBuilder, WinitAppDriver, WinitEventContext, WinitRenderContext,
 };
 

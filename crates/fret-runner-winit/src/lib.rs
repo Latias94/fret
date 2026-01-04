@@ -1,5 +1,6 @@
 use fret_core::{
-    CursorIcon, Event, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect,
+    CursorIcon, Event, ExternalDragFile, ExternalDragFiles, ExternalDropToken, KeyCode, Modifiers,
+    MouseButton, MouseButtons, Point, PointerEvent, Px, Rect,
 };
 use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition};
 use winit::event::{
@@ -21,6 +22,40 @@ pub mod accessibility;
 pub mod windows_ime;
 
 pub mod window_registry;
+
+pub fn map_physical_position_to_point(
+    window_scale_factor: f64,
+    position: PhysicalPosition<f64>,
+) -> Point {
+    let logical: LogicalPosition<f32> = position.to_logical(window_scale_factor);
+    Point::new(Px(logical.x), Px(logical.y))
+}
+
+pub fn map_optional_physical_position_to_point(
+    window_scale_factor: f64,
+    position: Option<PhysicalPosition<f64>>,
+    fallback: Point,
+) -> Point {
+    position
+        .map(|position| map_physical_position_to_point(window_scale_factor, position))
+        .unwrap_or(fallback)
+}
+
+pub fn external_drag_files(
+    token: ExternalDropToken,
+    paths: &[std::path::PathBuf],
+) -> ExternalDragFiles {
+    let files = paths
+        .iter()
+        .map(|p| ExternalDragFile {
+            name: p
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| p.to_string_lossy().to_string()),
+        })
+        .collect();
+    ExternalDragFiles { token, files }
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct WinitPlatform {
@@ -314,6 +349,9 @@ impl WinitInputState {
         out: &mut Vec<Event>,
     ) {
         match event {
+            WindowEvent::CloseRequested => {
+                out.push(Event::WindowCloseRequested);
+            }
             WindowEvent::ModifiersChanged(mods) => {
                 self.raw_modifiers = mods.state();
                 self.modifiers = map_modifiers(self.raw_modifiers, self.alt_gr_down);
@@ -324,6 +362,19 @@ impl WinitInputState {
                     x: logical.x.round() as i32,
                     y: logical.y.round() as i32,
                 }));
+            }
+            WindowEvent::Ime(ime) => {
+                let mapped = match ime {
+                    winit::event::Ime::Enabled => fret_core::ImeEvent::Enabled,
+                    winit::event::Ime::Disabled => fret_core::ImeEvent::Disabled,
+                    winit::event::Ime::Commit(text) => fret_core::ImeEvent::Commit(text.clone()),
+                    winit::event::Ime::Preedit(text, cursor) => fret_core::ImeEvent::Preedit {
+                        text: text.clone(),
+                        cursor: *cursor,
+                    },
+                    winit::event::Ime::DeleteSurrounding { .. } => return,
+                };
+                out.push(Event::Ime(mapped));
             }
             WindowEvent::KeyboardInput { event, .. } => {
                 self.handle_key_event(event, out);

@@ -93,7 +93,7 @@ To preserve portability and avoid dependency cycles:
 - `fret-ui` depends on `fret-core` + `fret-app`.
 - `fret-render-*` depends on `fret-core` (and backend crates like `wgpu`), but must not depend on `fret-ui`.
 - `fret-platform-*` depends on `fret-core` (and backend crates like `winit`), but must not depend on `fret-ui` or `fret-render-*`.
-- A dedicated runner/integration crate (e.g. `fret-runner-winit-wgpu`) depends on `fret-platform-*` + `fret-render-*` + `fret-ui`
+- A dedicated runner/integration crate (e.g. `fret-launch`) depends on `fret-platform-*` + `fret-render-*` + `fret-ui`
   and is responsible for wiring event loop + GPU presentation together.
 - `fret-components-*` depends on `fret-ui` (and thus `fret-app`/`fret-core`), and must not depend on `fret-platform-*` or `fret-render-*`.
 
@@ -159,13 +159,13 @@ For `fret-components`:
    - `fret-components` may provide its own meta crate for convenience.
 
 4) **Runner packaging**:
-   - Introduce a dedicated runner/integration crate (e.g. `fret-runner-winit-wgpu` or `fret-desktop`)
+   - Introduce a dedicated runner/integration crate (e.g. `fret-launch` or `fret-desktop`)
      that wires platform + renderer + app/ui together.
    - Keep `fret-platform-*` focused on platform IO (windows/events/clipboard/IME/DnD) rather than GPU composition policy.
 
 Current status:
 
-- Implemented in this workspace as `crates/fret-runner-winit-wgpu`.
+- Implemented in this workspace as `crates/fret-launch`.
 - MVP45 incubation: `ecosystem/fret-ui-kit` exists in-tree to validate the component API and token wiring before
   extracting to a separate `fret-components` repository.
 

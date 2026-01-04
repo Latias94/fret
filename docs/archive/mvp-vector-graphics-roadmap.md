@@ -43,7 +43,7 @@ We mirror this split in Fret.
   - Global cache type: `crates/fret-render/src/svg_cache.rs` (`SvgImageCache`)
   - Eviction API: `clear/remove_alpha_mask/remove_rgba`
 - Demo wiring (cache stored as App global resource)
-  - Runner hook: `crates/fret-runner-winit-wgpu/src/runner.rs` (`gpu_frame_prepare`)
+  - Runner hook: `crates/fret-launch/src/runner/mod.rs` (`gpu_frame_prepare`)
   - Demo usage: `crates/fret-demo/src/bin/shadcn_gallery.rs`
 
 ## Design Boundary (Renderer vs Plot/Components)

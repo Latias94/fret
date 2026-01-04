@@ -833,7 +833,7 @@ buffers that are submitted by the runner *before* UI sampling/presentation (ADR 
 
 Status:
 
-- Prototype implemented in `fret-demo` + `fret-runner-winit-wgpu`.
+- Prototype implemented in `fret-demo` + `fret-launch`.
 
 References:
 
@@ -1233,4 +1233,4 @@ References:
 - Context menu: `ecosystem/fret-ui-kit/src/context_menu.rs`
 - Virtualized lists: `crates/fret-ui/src/primitives/virtual_list.rs`, `crates/fret-ui/src/legacy_widgets/tree_view.rs`
 - Editor shell wiring: `crates/fret-demo/src/editor_shell.rs`
-- Desktop runner: `crates/fret-runner-winit-wgpu/src/runner.rs`
+- Desktop runner: `crates/fret-launch/src/runner/mod.rs`

@@ -1,5 +1,5 @@
 [package]
-name = "fret-runner-winit-wgpu"
+name = "fret-launch"
 version.workspace = true
 edition.workspace = true
 
@@ -28,4 +28,3 @@ winit.workspace = true
 [target.'cfg(all(not(target_arch = "wasm32"), target_os = "macos"))'.dependencies]
 cocoa.workspace = true
 objc.workspace = true
-

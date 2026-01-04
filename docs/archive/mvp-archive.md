@@ -34,19 +34,19 @@ These definitions reflect the intent and “definition of done” used while lan
 Code anchors:
 
 - Effects/models: `crates/fret-app/src/app.rs`
-- Runner scheduling: `crates/fret-runner-winit-wgpu/src/runner.rs`
+- Runner scheduling: `crates/fret-launch/src/runner/mod.rs`
 - Dock identity/persistence ops: `crates/fret-core/src/panels.rs`, `crates/fret-core/src/dock_layout.rs`, `crates/fret-core/src/dock_op.rs`
 - Demo persistence: implemented in `crates/fret-demo` (entrypoints evolve; search for `.fret/` usage).
 - Declarative elements skeleton: `crates/fret-ui/src/elements/mod.rs`
 - Declarative demo widget: `crates/fret-demo/src/elements_mvp2.rs`
-- IME plumbing + cursor-area effects: `crates/fret-runner-winit-wgpu/src/runner.rs`
+- IME plumbing + cursor-area effects: `crates/fret-launch/src/runner/mod.rs`
 - Text system + atlas uploads: `crates/fret-render/src/text.rs`
 - `SceneOp::Text` rendering: `crates/fret-render/src/renderer.rs`
 - Minimal `Text` / `TextInput` widgets: `crates/fret-ui/src/text_input/mod.rs`
 - Demo property rows with labels: `crates/fret-demo/src/property_row.rs`
 - Keymap/when parsing + resolver: `crates/fret-app/src/keymap.rs`, `crates/fret-app/src/when_expr.rs`
 - KeyDown → Command resolution (window-scoped): `crates/fret-ui/src/tree/mod.rs`
-- Command dispatch (effects → runner → driver → UiTree): `crates/fret-runner-winit-wgpu/src/runner.rs`
+- Command dispatch (effects → runner → driver → UiTree): `crates/fret-launch/src/runner/mod.rs`
 - Demo command/keymap wiring: prototype lived in `crates/fret-demo` (entrypoints evolve; search for keymap loading).
 - Sample keymap file: `docs/examples/keymap.json`
 

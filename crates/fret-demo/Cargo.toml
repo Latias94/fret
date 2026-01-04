@@ -13,7 +13,7 @@ fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
-fret-runner-winit-wgpu = { path = "../fret-runner-winit-wgpu" }
+fret-launch = { path = "../fret-launch" }
 fret-render = { path = "../fret-render" }
 fret-app = { path = "../fret-app" }
 fret-ui-app = { path = "../fret-ui-app" }

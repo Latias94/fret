@@ -1,6 +1,6 @@
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Px, Rect, SceneOp, Size};
-use fret_runner_winit_wgpu::{
+use fret_launch::{
     WindowCreateSpec, WinitAppBuilder, WinitAppDriver, WinitEventContext, WinitRenderContext,
 };
 

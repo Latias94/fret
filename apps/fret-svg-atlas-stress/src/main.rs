@@ -1,10 +1,11 @@
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::SvgService as _;
-use fret_core::{
-    AppWindowId, Color, Event, KeyCode, Point, Px, Rect, Scene, Size, SvgFit, UiServices,
+use fret_core::{AppWindowId, Color, Event, KeyCode, Point, Px, Rect, Scene, Size, SvgFit};
+use fret_launch::{
+    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    run_app_with_event_loop,
 };
 use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
-use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
 use fret_runtime::PlatformCapabilities;
 use std::time::{Duration, Instant};
 use winit::event_loop::EventLoop;
@@ -471,7 +472,7 @@ fn run_headless(
     Ok(())
 }
 
-impl WinitDriver for SvgAtlasStressDriver {
+impl WinitAppDriver for SvgAtlasStressDriver {
     type WindowState = SvgAtlasStressState;
 
     fn gpu_ready(
@@ -555,14 +556,10 @@ impl WinitDriver for SvgAtlasStressDriver {
         }
     }
 
-    fn handle_event(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-        event: &Event,
-    ) {
+    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
+        let WinitEventContext {
+            app, window, state, ..
+        } = context;
         let Event::KeyDown { key, repeat, .. } = event else {
             return;
         };
@@ -602,16 +599,16 @@ impl WinitDriver for SvgAtlasStressDriver {
         app.request_redraw(window);
     }
 
-    fn render(
-        &mut self,
-        app: &mut App,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-        bounds: Rect,
-        _scale_factor: f32,
-        services: &mut dyn fret_core::UiServices,
-        scene: &mut Scene,
-    ) {
+    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
+        let WinitRenderContext {
+            app,
+            window,
+            state,
+            bounds,
+            services,
+            scene,
+            ..
+        } = context;
         let render_start = Instant::now();
 
         if state.start.is_none() {
@@ -704,7 +701,7 @@ fn main() -> anyhow::Result<()> {
             tracing_subscriber::EnvFilter::from_default_env()
                 .add_directive("fret=info".parse().unwrap())
                 .add_directive("fret_render=info".parse().unwrap())
-                .add_directive("fret_runner_winit_wgpu=info".parse().unwrap()),
+                .add_directive("fret_launch=info".parse().unwrap()),
         )
         .try_init();
 
@@ -788,8 +785,6 @@ fn main() -> anyhow::Result<()> {
     }
 
     let driver = SvgAtlasStressDriver { max_frames };
-    let mut runner = WinitRunner::new(config, app, driver);
-    runner.set_event_loop_proxy(event_loop.create_proxy());
-    event_loop.run_app(runner)?;
+    run_app_with_event_loop(event_loop, config, app, driver)?;
     Ok(())
 }

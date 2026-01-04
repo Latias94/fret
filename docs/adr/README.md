@@ -111,7 +111,7 @@ segments (see ADR 0030 and ADR 0039 for the rationale and semantics).
 These anchors are intentionally few; use `rg` to drill down from them.
 
 - App/effects/models: `crates/fret-app/src/app.rs`
-- Desktop runner (winit + wgpu): `crates/fret-runner-winit-wgpu/src/runner.rs`
+- Desktop runner (winit + wgpu): `crates/fret-launch/src/runner/mod.rs`
 - UI runtime (retained tree prototype): `crates/fret-ui/src/tree/mod.rs`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-ui-docking/src/dock/space.rs`
 - Core contracts (IDs, dock graph, scene ops): `crates/fret-core/src/lib.rs`
@@ -256,6 +256,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0008-threading-logging-errors.md`
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+- `docs/adr/0093-crate-structure-core-backends-apps.md`
 - `docs/adr/0090-radix-aligned-headless-primitives-in-fret-ui-kit.md`
 - `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
 - `docs/adr/0059-text-overflow-ellipsis-and-truncation.md`

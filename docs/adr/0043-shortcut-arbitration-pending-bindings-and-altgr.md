@@ -177,7 +177,7 @@ Cons:
 - TextInput suppression after shortcut resolution is already required by ADR 0012 and should remain true as we move to v2:
   - `docs/adr/0012-keyboard-ime-and-text-input.md`
 - AltGr is tracked explicitly at the runner boundary:
-  - `crates/fret-runner-winit-wgpu/src/runner.rs` treats `NamedKey::AltGraph` as `Modifiers.alt_gr`,
+  - `crates/fret-launch/src/runner/mod.rs` treats `NamedKey::AltGraph` as `Modifiers.alt_gr`,
     and normalizes away `ctrl/alt` while `alt_gr` is held.
 - Keymap v2 parsing is supported (single-chord and sequences):
   - `crates/fret-app/src/keymap.rs`

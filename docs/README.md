@@ -44,9 +44,10 @@ contracts early to avoid large rewrites later.
 - shadcn surface smoke test (components + overlays): `crates/fret-demo/src/components_gallery.rs` (or `cargo run -p fret-demo --bin components_gallery`)
 - Docking + viewport + overlays conformance harness (ADR 0072): `crates/fret-demo/src/docking_arbitration_demo.rs` (or `cargo run -p fret-demo --bin docking_arbitration_demo`; checklist: `docs/docking-arbitration-checklist.md`)
 - A11y manual acceptance checklist (overlays + demo): `docs/a11y-acceptance-checklist.md`
-- App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
-- Desktop runner (winit window lifecycle + scheduling): `crates/fret-runner-winit-wgpu/src/runner.rs`
-- UI runtime (retained tree prototype): `crates/fret-ui/src/tree/mod.rs`
+ - App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
+ - Desktop runner (integrated example; winit window lifecycle + scheduling): `crates/fret-launch/src/runner/mod.rs`
+   - Note: crate boundary direction is “core vs backends vs apps” (ADR 0093): `docs/adr/0093-crate-structure-core-backends-apps.md`
+ - UI runtime (retained tree prototype): `crates/fret-ui/src/tree/mod.rs`
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-ui-docking/src/dock/space.rs`
 - Renderer (display list → wgpu pipelines; SDF AA lives here): `crates/fret-render/src/renderer.rs`
 

@@ -2,7 +2,7 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
 use fret_icons::IconRegistry;
-use fret_runner_winit_wgpu::{
+use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext, run_app,
 };
@@ -336,7 +336,7 @@ pub fn run() -> anyhow::Result<()> {
             tracing_subscriber::EnvFilter::from_default_env()
                 .add_directive("fret=info".parse().unwrap())
                 .add_directive("fret_render=info".parse().unwrap())
-                .add_directive("fret_runner_winit_wgpu=info".parse().unwrap()),
+                .add_directive("fret_launch=info".parse().unwrap()),
         )
         .try_init();
 

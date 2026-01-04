@@ -26,7 +26,7 @@ The desktop implementation is split across:
 - `fret-runner-winit`: the reusable winit platform adapter that maps `winit` events into `fret-core`
   events (shared by desktop and wasm/web backends). The concrete mapping surface is exposed as
   `fret_runner_winit::WinitPlatform`.
-- `fret-runner-winit-wgpu`: the concrete desktop runner that owns the event loop, drains `App`
+- `fret-launch`: the concrete desktop glue that owns the event loop, drains `App`
   effects, and drives presentation via `fret-render`.
 
 Keep the runner boundary responsible for:

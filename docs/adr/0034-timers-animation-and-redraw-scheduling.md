@@ -153,4 +153,4 @@ MVP0 is implemented and provides the basic primitives described above.
 Code anchors:
 
 - Effects: `crates/fret-app/src/app.rs` (`Effect::{RequestAnimationFrame, SetTimer, CancelTimer}`)
-- Runner coalescing/draining: `crates/fret-runner-winit-wgpu/src/runner.rs`
+- Runner coalescing/draining: `crates/fret-launch/src/runner/mod.rs`

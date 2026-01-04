@@ -385,9 +385,9 @@ all later UI work inherits the same command/focus/clipboard semantics instead of
   - event translation,
   - platform services (clipboard, IME, drag-and-drop).
 
-### `fret-runner-winit-wgpu` (P0)
+### `fret-launch` (P0)
 
-- Desktop runner that wires `winit` + `wgpu` + `fret-render` + `fret-ui` together.
+- Desktop glue that wires `winit` + `wgpu` + `fret-render` + `fret-ui` together.
 - Owns the winit event loop and window lifecycle.
 - Drains `App::flush_effects()` and drives redraw/raf/timers deterministically across windows.
 - Owns surfaces + presentation and coordinates submission order (see ADR 0015 / ADR 0038).

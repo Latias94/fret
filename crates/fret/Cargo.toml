@@ -13,7 +13,7 @@ fret-platform = { path = "../fret-platform", optional = true }
 fret-platform-native = { path = "../fret-platform-native", optional = true }
 fret-platform-web = { path = "../fret-platform-web", optional = true }
 fret-runner-winit = { path = "../fret-runner-winit", optional = true }
-fret-runner-winit-wgpu = { path = "../fret-runner-winit-wgpu", optional = true }
+fret-launch = { path = "../fret-launch", optional = true }
 fret-fonts = { path = "../fret-fonts", optional = true }
 
 [features]
@@ -31,8 +31,8 @@ platform-native = ["dep:fret-platform-native", "platform-contracts"]
 platform-web = ["dep:fret-platform-web", "core", "runtime"]
 
 runner-winit = ["dep:fret-runner-winit"]
-runner-winit-wgpu = ["dep:fret-runner-winit-wgpu"]
+launch = ["dep:fret-launch"]
 
 # Convenience bundles (optional).
-native-wgpu = ["runner-winit-wgpu", "platform-native", "render", "runtime"]
+native-wgpu = ["launch", "platform-native", "render", "runtime"]
 web = ["runner-winit", "platform-web", "render", "runtime"]

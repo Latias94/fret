@@ -1024,12 +1024,12 @@ dependencies = [
  "fret-app",
  "fret-core",
  "fret-fonts",
+ "fret-launch",
  "fret-platform",
  "fret-platform-native",
  "fret-platform-web",
  "fret-render",
  "fret-runner-winit",
- "fret-runner-winit-wgpu",
  "fret-runtime",
  "fret-ui",
 ]
@@ -1099,8 +1099,8 @@ dependencies = [
  "fret-core",
  "fret-icons",
  "fret-icons-lucide",
+ "fret-launch",
  "fret-render",
- "fret-runner-winit-wgpu",
  "fret-runtime",
  "fret-ui",
  "fret-ui-app",
@@ -1154,6 +1154,27 @@ version = "0.1.0"
 dependencies = [
  "fret-icons",
  "rust-embed",
+]
+
+[[package]]
+name = "fret-launch"
+version = "0.1.0"
+dependencies = [
+ "cocoa",
+ "fret-app",
+ "fret-core",
+ "fret-platform",
+ "fret-platform-native",
+ "fret-render",
+ "fret-runner-winit",
+ "fret-runtime",
+ "objc",
+ "pollster",
+ "slotmap",
+ "thiserror 2.0.17",
+ "tracing",
+ "wgpu",
+ "winit",
 ]
 
 [[package]]
@@ -1228,27 +1249,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fret-runner-winit-wgpu"
-version = "0.1.0"
-dependencies = [
- "cocoa",
- "fret-app",
- "fret-core",
- "fret-platform",
- "fret-platform-native",
- "fret-render",
- "fret-runner-winit",
- "fret-runtime",
- "objc",
- "pollster",
- "slotmap",
- "thiserror 2.0.17",
- "tracing",
- "wgpu",
- "winit",
-]
-
-[[package]]
 name = "fret-runtime"
 version = "0.1.0"
 dependencies = [
@@ -1266,8 +1266,8 @@ dependencies = [
  "anyhow",
  "fret-app",
  "fret-core",
+ "fret-launch",
  "fret-render",
- "fret-runner-winit-wgpu",
  "fret-runtime",
  "pollster",
  "tracing-subscriber",

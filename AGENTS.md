@@ -7,7 +7,7 @@
   - `crates/fret-app`: app runtime (effects, commands, models).
   - `crates/fret-ui`: UI runtime and widgets (layout via `taffy`).
   - `crates/fret-render`: wgpu-based renderer building blocks.
-  - `crates/fret-runner-winit-wgpu`: desktop runner wiring winit + wgpu.
+  - `crates/fret-launch`: desktop glue wiring winit + wgpu (web/mobile later).
   - `crates/fret-demo`: runnable demo entry point (`src/main.rs`).
   - `crates/fret`: facade crate (re-exports).
 - `ecosystem/`: Policy-heavy UI kits and reusable component surfaces (Cargo workspace members).

@@ -3,7 +3,7 @@ pub struct RunnerError;
 
 impl std::fmt::Display for RunnerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("fret-runner-winit-wgpu is not available on wasm32")
+        f.write_str("fret-launch desktop backend is not available on wasm32")
     }
 }
 

@@ -34,9 +34,11 @@ Runners remain responsible for event-loop ownership and presentation:
     `prepare_frame` flush point so runners can apply pending window-side updates deterministically
     (ImGui-style backend split).
   - Owns native `WindowId` -> `AppWindowId` bookkeeping for winit-backed runners.
-- `crates/fret-runner-winit-wgpu`: owns the native event loop + surfaces + renderer, and uses
+- `crates/fret-launch`: owns the native event loop + surfaces + renderer glue, and uses
   `fret-platform-native` to execute platform effects.
-- Web targets use `winit` on wasm for input/events and `fret-platform-web` for browser APIs.
+- Web targets use `fret-platform-web` for browser APIs. Input/event translation may be implemented either via
+  `winit` (wasm) or directly via browser DOM events (`web-sys`); the default direction is a dedicated web adapter
+  crate (`fret-runner-web`) for maximum IME and keyboard fidelity.
 
 Compatibility shims may exist temporarily to reduce churn:
 

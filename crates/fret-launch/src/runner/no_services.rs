@@ -1,3 +1,5 @@
+//! No-op service implementations used when the real services are not available.
+
 pub(super) struct NoUiServices;
 
 impl fret_core::TextService for NoUiServices {

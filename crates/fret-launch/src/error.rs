@@ -1,3 +1,5 @@
+//! Errors for the desktop launcher.
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]
