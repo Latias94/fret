@@ -362,7 +362,7 @@ pub fn render<H: UiHost>(
     for req in tooltip_requests {
         seen_tooltips.insert(req.id);
 
-        let root = fret_ui::declarative::render_root(
+        let root = declarative::render_dismissible_root_with_hooks(
             ui,
             app,
             services,

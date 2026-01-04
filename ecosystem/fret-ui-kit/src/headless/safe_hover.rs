@@ -46,8 +46,8 @@ fn is_point_in_polygon(point: Point, polygon: &[Point]) -> bool {
 /// - `floating`: submenu panel bounds
 /// - `buffer`: expands both rectangles and the corridor to reduce accidental closes
 ///
-/// This implementation supports a left/right submenu topology and returns `false` for other
-/// geometries (e.g. overlapping or above/below), which keeps the behavior predictable.
+/// This implementation supports common overlay topologies (left/right/above/below) and returns
+/// `false` for overlapping geometries, which keeps the behavior predictable.
 pub fn safe_hover_contains(point: Point, reference: Rect, floating: Rect, buffer: Px) -> bool {
     let reference = rect_expand(reference, buffer);
     let floating = rect_expand(floating, buffer);
@@ -81,6 +81,26 @@ pub fn safe_hover_contains(point: Point, reference: Rect, floating: Rect, buffer
             Point::new(Px(ref_left), Px(ref_top)),
             Point::new(Px(ref_left), Px(ref_bottom)),
             Point::new(Px(float_right), Px(float_bottom)),
+        ];
+        return is_point_in_polygon(point, &poly);
+    }
+
+    if float_bottom <= ref_top {
+        let poly = [
+            Point::new(Px(ref_left), Px(ref_top)),
+            Point::new(Px(ref_right), Px(ref_top)),
+            Point::new(Px(float_right), Px(float_bottom)),
+            Point::new(Px(float_left), Px(float_bottom)),
+        ];
+        return is_point_in_polygon(point, &poly);
+    }
+
+    if float_top >= ref_bottom {
+        let poly = [
+            Point::new(Px(float_left), Px(float_top)),
+            Point::new(Px(float_right), Px(float_top)),
+            Point::new(Px(ref_right), Px(ref_bottom)),
+            Point::new(Px(ref_left), Px(ref_bottom)),
         ];
         return is_point_in_polygon(point, &poly);
     }
@@ -132,6 +152,34 @@ mod tests {
 
         assert!(!safe_hover_contains(
             Point::new(Px(12.0), Px(30.0)),
+            reference,
+            floating,
+            Px(0.0)
+        ));
+    }
+
+    #[test]
+    fn contains_point_in_trapezoid_corridor_above() {
+        let reference = Rect::new(Point::new(Px(0.0), Px(20.0)), Size::new(Px(10.0), Px(10.0)));
+        let floating = Rect::new(Point::new(Px(2.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+
+        // Roughly diagonal from the top edge of reference to the bottom edge of floating.
+        assert!(safe_hover_contains(
+            Point::new(Px(6.0), Px(15.0)),
+            reference,
+            floating,
+            Px(0.0)
+        ));
+    }
+
+    #[test]
+    fn contains_point_in_trapezoid_corridor_below() {
+        let reference = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+        let floating = Rect::new(Point::new(Px(2.0), Px(20.0)), Size::new(Px(10.0), Px(10.0)));
+
+        // Roughly diagonal from the bottom edge of reference to the top edge of floating.
+        assert!(safe_hover_contains(
+            Point::new(Px(6.0), Px(15.0)),
             reference,
             floating,
             Px(0.0)

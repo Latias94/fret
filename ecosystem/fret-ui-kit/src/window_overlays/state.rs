@@ -166,6 +166,7 @@ fn apply_overlay_layer_state<H: UiHost>(
             ui.set_layer_visible(layer, st.present);
             ui.set_layer_hit_testable(layer, false);
             ui.set_layer_wants_pointer_down_outside_events(layer, false);
+            ui.set_layer_wants_pointer_move_events(layer, st.present);
         }
         OverlayLayerKind::Hover => {
             ui.set_layer_visible(layer, st.present);

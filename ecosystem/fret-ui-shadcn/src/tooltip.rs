@@ -2,6 +2,7 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::hover_intent::{HoverIntentConfig, HoverIntentState};
+use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -12,8 +13,12 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
-use fret_core::{Px, Size, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, HoverRegionProps, LayoutStyle, Overflow, TextProps};
+use fret_core::{Edges, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::Model;
+use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
+use fret_ui::element::{
+    AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Overflow, TextProps,
+};
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -245,6 +250,22 @@ impl Tooltip {
                 was_focused: bool,
             }
 
+            #[derive(Default)]
+            struct PointerState {
+                last_pointer: Option<Model<Option<Point>>>,
+            }
+
+            let last_pointer = cx.with_state(PointerState::default, |st| st.last_pointer.clone());
+            let last_pointer = if let Some(last_pointer) = last_pointer {
+                last_pointer
+            } else {
+                let last_pointer = cx.app.models_mut().insert(None);
+                cx.with_state(PointerState::default, |st| {
+                    st.last_pointer = Some(last_pointer.clone())
+                });
+                last_pointer
+            };
+
             let now = cx.app.frame_id().0;
             let focused = cx.is_focused_element(trigger_id);
             let open_delay_ticks = if focused {
@@ -269,10 +290,82 @@ impl Tooltip {
             });
 
             let cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
-            let (was_open, update) = cx.with_state(HoverIntentState::default, |st| {
-                let was_open = st.is_open();
-                let update = st.update(hovered || focused, now, cfg);
-                (was_open, update)
+
+            let was_open = cx.with_state(HoverIntentState::default, |st| st.is_open());
+            if was_open {
+                cx.observe_model(&last_pointer, fret_ui::Invalidation::Paint);
+            }
+
+            let pointer_safe = if was_open {
+                let pointer = cx.app.models().read(&last_pointer, |v| *v).ok().flatten();
+                let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
+
+                match (pointer, anchor) {
+                    (Some(pointer), Some(anchor)) => {
+                        let last_content_size =
+                            cx.last_bounds_for_element(content_id).map(|r| r.size);
+                        let estimated_size = Size::new(Px(240.0), Px(44.0));
+                        let content_size = last_content_size.unwrap_or(estimated_size);
+
+                        let outer =
+                            overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
+
+                        let align = match align {
+                            TooltipAlign::Start => Align::Start,
+                            TooltipAlign::Center => Align::Center,
+                            TooltipAlign::End => Align::End,
+                        };
+                        let side = match side {
+                            TooltipSide::Top => Side::Top,
+                            TooltipSide::Right => Side::Right,
+                            TooltipSide::Bottom => Side::Bottom,
+                            TooltipSide::Left => Side::Left,
+                        };
+
+                        let (arrow_options, arrow_protrusion) =
+                            popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+
+                        let layout = popper::popper_content_layout_sized(
+                            outer,
+                            anchor,
+                            content_size,
+                            popper::PopperContentPlacement::new(
+                                LayoutDirection::Ltr,
+                                side,
+                                align,
+                                side_offset,
+                            )
+                            .with_arrow(arrow_options, arrow_protrusion),
+                        );
+
+                        let wrapper_insets =
+                            popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                        let wrapper_bounds = Rect::new(
+                            Point::new(
+                                layout.rect.origin.x - wrapper_insets.left,
+                                layout.rect.origin.y - wrapper_insets.top,
+                            ),
+                            Size::new(
+                                layout.rect.size.width + wrapper_insets.left + wrapper_insets.right,
+                                layout.rect.size.height
+                                    + wrapper_insets.top
+                                    + wrapper_insets.bottom,
+                            ),
+                        );
+
+                        // Radix Tooltip's "hoverable content" uses a grace polygon between
+                        // trigger/content. We approximate that with our deterministic safe-hover
+                        // corridor (plus a small buffer).
+                        safe_hover::safe_hover_contains(pointer, anchor, wrapper_bounds, Px(5.0))
+                    }
+                    _ => false,
+                }
+            } else {
+                false
+            };
+
+            let update = cx.with_state(HoverIntentState::default, |st| {
+                st.update(hovered || focused || pointer_safe, now, cfg)
             });
 
             scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
@@ -290,9 +383,35 @@ impl Tooltip {
             let overlay_root_name = OverlayController::tooltip_root_name(tooltip_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                let pointer_hook = cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle::default(),
+                        padding: Edges::all(Px(0.0)),
+                        background: None,
+                        shadow: None,
+                        border: Edges::all(Px(0.0)),
+                        border_color: None,
+                        corner_radii: Default::default(),
+                    },
+                    move |cx| {
+                        let last_pointer = last_pointer.clone();
+                        cx.dismissible_on_pointer_move(Arc::new(
+                            move |host: &mut dyn UiActionHost,
+                                  _acx: ActionCx,
+                                  mv: PointerMoveCx| {
+                                let _ = host
+                                    .models_mut()
+                                    .update(&last_pointer, |v| *v = Some(mv.position));
+                                false
+                            },
+                        ));
+                        Vec::new()
+                    },
+                );
+
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                 let Some(anchor) = anchor else {
-                    return Vec::new();
+                    return vec![pointer_hook];
                 };
 
                 let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
@@ -360,7 +479,7 @@ impl Tooltip {
                     }
                 });
 
-                vec![wrapper]
+                vec![pointer_hook, wrapper]
             });
 
             let mut request = OverlayRequest::tooltip(
@@ -1100,6 +1219,172 @@ mod tests {
         assert!(
             fret_ui::elements::node_for_element(&mut app, window, content_2_element).is_some(),
             "expected tooltip 2 to open without delay under the provider skip window"
+        );
+    }
+
+    #[test]
+    fn tooltip_remains_open_while_pointer_moves_over_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        ) {
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    TooltipProvider::new()
+                        .delay_duration_frames(0)
+                        .skip_delay_duration_frames(0)
+                        .with(cx, |cx| {
+                            let trigger = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.position = fret_ui::element::PositionStyle::Absolute;
+                                        layout.inset.left = Some(Px(320.0));
+                                        layout.inset.top = Some(Px(260.0));
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    trigger_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            let content =
+                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                    .into_element(cx);
+                            content_id_out.set(Some(content.id));
+
+                            vec![
+                                Tooltip::new(trigger, content)
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .into_element(cx),
+                            ]
+                        })
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        }
+
+        // Frame 1: establish element->node mappings and layout.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Hover trigger to open tooltip (open_delay=0).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(380.0), Px(280.0)),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Frame 2: tooltip should be open and mounted.
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("expected tooltip content to be mounted after opening");
+        let content_bounds = ui
+            .debug_node_bounds(content_node)
+            .expect("tooltip content bounds");
+
+        // Move pointer to the tooltip content bounds (trigger is no longer hovered).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: center(content_bounds),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Frame 3: tooltip stays open because hoverable content grace area considers the pointer.
+        app.set_frame_id(FrameId(3));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+            "expected tooltip content to remain mounted while pointer is over content"
         );
     }
 
