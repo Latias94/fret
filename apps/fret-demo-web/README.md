@@ -14,3 +14,9 @@ WebAssembly demo for the `fret` UI runtime.
 
 Then open the URL printed by Trunk (usually `http://127.0.0.1:8080`).
 
+## Debug teardown
+
+To stop the running demo instance without reloading the page, call this from the browser console:
+
+- `window.fret_demo_destroy()`
+

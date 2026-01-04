@@ -1104,7 +1104,9 @@ dependencies = [
  "console_error_panic_hook",
  "fret-examples",
  "fret-launch",
+ "js-sys",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
