@@ -128,6 +128,7 @@ pub fn render_root<H: UiHost>(
             .map(|e| e.node)
             .unwrap_or_else(|| {
                 let node = ui.create_node(ElementHostWidget::new(root_id));
+                ui.set_node_element(node, Some(root_id));
                 window_state.set_node_entry(
                     root_id,
                     NodeEntry {
@@ -138,6 +139,7 @@ pub fn render_root<H: UiHost>(
                 );
                 node
             });
+        ui.set_node_element(root_node, Some(root_id));
 
         window_state.set_node_entry(
             root_id,
@@ -260,6 +262,7 @@ fn render_dismissible_root_impl<
             .map(|e| e.node)
             .unwrap_or_else(|| {
                 let node = ui.create_node(ElementHostWidget::new(root_id));
+                ui.set_node_element(node, Some(root_id));
                 window_state.set_node_entry(
                     root_id,
                     NodeEntry {
@@ -270,6 +273,7 @@ fn render_dismissible_root_impl<
                 );
                 node
             });
+        ui.set_node_element(root_node, Some(root_id));
 
         window_state.set_node_entry(
             root_id,
@@ -353,6 +357,7 @@ fn mount_element<H: UiHost>(
         .map(|e| e.node)
         .unwrap_or_else(|| {
             let node = ui.create_node(ElementHostWidget::new(id));
+            ui.set_node_element(node, Some(id));
             window_state.set_node_entry(
                 id,
                 NodeEntry {
