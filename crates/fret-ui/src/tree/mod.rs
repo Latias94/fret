@@ -338,6 +338,12 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).map(|n| n.bounds)
     }
 
+    pub(crate) fn set_node_element(&mut self, node: NodeId, element: Option<GlobalElementId>) {
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.element = element;
+        }
+    }
+
     fn set_ime_allowed(&mut self, app: &mut H, enabled: bool) {
         if self.ime_allowed == enabled {
             return;

@@ -62,13 +62,17 @@ impl<H: UiHost> UiTree<H> {
         self.layout_node(app, services, root, bounds, scale_factor)
     }
 
-    fn translate_subtree_bounds(&mut self, node: NodeId, delta: Point) {
+    fn translate_subtree_bounds(&mut self, app: &mut H, node: NodeId, delta: Point) {
+        let window = self.window;
         let mut stack = vec![node];
         while let Some(id) = stack.pop() {
             let Some(n) = self.nodes.get_mut(id) else {
                 continue;
             };
             n.bounds.origin = Point::new(n.bounds.origin.x + delta.x, n.bounds.origin.y + delta.y);
+            if let (Some(window), Some(element)) = (window, n.element) {
+                crate::elements::record_bounds_for_element(app, window, element, n.bounds);
+            }
             for &child in &n.children {
                 stack.push(child);
             }
@@ -110,8 +114,13 @@ impl<H: UiHost> UiTree<H> {
                 && let Some(children) = self.nodes.get(node).map(|n| n.children.clone())
             {
                 for child in children {
-                    self.translate_subtree_bounds(child, delta);
+                    self.translate_subtree_bounds(app, child, delta);
                 }
+            }
+            if let (Some(window), Some(element)) =
+                (self.window, self.nodes.get(node).and_then(|n| n.element))
+            {
+                crate::elements::record_bounds_for_element(app, window, element, bounds);
             }
             return measured;
         }
