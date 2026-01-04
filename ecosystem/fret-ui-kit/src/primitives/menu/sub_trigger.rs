@@ -59,7 +59,7 @@ pub fn wire<H: UiHost>(
     }
 
     if st.hovered {
-        sub::sync_while_trigger_hovered(cx, models, has_submenu, value.clone(), item_id);
+        sub::sync_while_trigger_hovered(cx, models, cfg, has_submenu, value.clone(), item_id);
     }
 
     if st.focused {

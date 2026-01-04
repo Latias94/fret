@@ -315,7 +315,7 @@ impl DropdownMenu {
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
             let submenu =
                 cx.with_root_name(&overlay_root_name, |cx| {
-                    menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id())
+                    menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
                 });
 
             if is_open {

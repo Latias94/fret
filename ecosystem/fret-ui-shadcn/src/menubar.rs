@@ -440,7 +440,7 @@ impl MenubarMenuEntries {
                 let overlay_root_name = OverlayController::popover_root_name(trigger_id);
                 let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
                 let submenu = cx.with_root_name(&overlay_root_name, |cx| {
-                    menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id())
+                    menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
                 });
                 let trigger_bg = if is_open {
                     Some(bg_open)

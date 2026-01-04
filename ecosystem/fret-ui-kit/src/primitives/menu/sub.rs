@@ -20,6 +20,7 @@ use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost, UiFocusActionHost};
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
+use crate::headless::safe_hover::safe_hover_contains;
 use crate::overlay;
 use crate::primitives::menu::pointer_grace_intent;
 
@@ -208,6 +209,20 @@ fn cancel_timer_in_element_context<H: UiHost>(
         cx.app.push_effect(Effect::CancelTimer { token });
     }
     let _ = cx.app.models_mut().update(timer, |v| *v = None);
+}
+
+fn is_pointer_in_open_submenu_corridor(
+    pointer: Option<Point>,
+    geometry: Option<MenuSubmenuGeometry>,
+    buffer: Px,
+) -> bool {
+    let Some(pointer) = pointer else {
+        return false;
+    };
+    let Some(geometry) = geometry else {
+        return false;
+    };
+    safe_hover_contains(pointer, geometry.reference, geometry.floating, buffer)
 }
 
 fn cancel_timer_if_matches(
@@ -447,7 +462,10 @@ pub fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> MenuSubmenuMo
     }
 }
 
-pub fn on_timer_handler(models: MenuSubmenuModels) -> fret_ui::action::OnTimer {
+pub fn on_timer_handler(
+    models: MenuSubmenuModels,
+    cfg: MenuSubmenuConfig,
+) -> fret_ui::action::OnTimer {
     #[allow(clippy::arc_with_non_send_sync)]
     Arc::new(move |host, acx, token| {
         let close_armed = host
@@ -499,16 +517,58 @@ pub fn on_timer_handler(models: MenuSubmenuModels) -> fret_ui::action::OnTimer {
                 .flatten();
 
             cancel_timer_if_matches(host, &models.open_timer, token);
+
+            let Some(pending_value) = pending_value else {
+                return false;
+            };
+
+            let open_value = host
+                .models_mut()
+                .read(&models.open_value, |v| v.clone())
+                .ok()
+                .flatten();
+            let pointer = host
+                .models_mut()
+                .read(&models.last_pointer, |v| *v)
+                .ok()
+                .flatten();
+            let geometry = host
+                .models_mut()
+                .read(&models.geometry, |v| *v)
+                .ok()
+                .flatten();
+
+            // If the pointer is still moving through the safe-hover corridor towards the currently
+            // open submenu, do not allow a delayed "switch submenu" timer to steal focus/ownership.
+            //
+            // This handles event ordering cases where a hover-change arms the open timer before we
+            // observe the pointer position (mirrors Radix's pointer grace intent outcomes).
+            let switching_away = open_value
+                .as_ref()
+                .is_some_and(|cur| cur.as_ref() != pending_value.as_ref());
+            if switching_away
+                && is_pointer_in_open_submenu_corridor(pointer, geometry, cfg.safe_hover_buffer)
+            {
+                let token = host.next_timer_token();
+                host.push_effect(Effect::SetTimer {
+                    window: Some(acx.window),
+                    token,
+                    after: cfg.open_delay,
+                    repeat: None,
+                });
+                let _ = host
+                    .models_mut()
+                    .update(&models.open_timer, |v| *v = Some(token));
+                host.request_redraw(acx.window);
+                return true;
+            }
+
             let _ = host
                 .models_mut()
                 .update(&models.pending_open_value, |v| *v = None);
             let _ = host
                 .models_mut()
                 .update(&models.pending_open_trigger, |v| *v = None);
-
-            let Some(pending_value) = pending_value else {
-                return false;
-            };
 
             let _ = host
                 .models_mut()
@@ -546,8 +606,9 @@ pub fn install_timer_handler<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     element: GlobalElementId,
     models: MenuSubmenuModels,
+    cfg: MenuSubmenuConfig,
 ) {
-    cx.timer_on_timer_for(element, on_timer_handler(models));
+    cx.timer_on_timer_for(element, on_timer_handler(models, cfg));
 }
 
 pub fn handle_dismissible_pointer_move(
@@ -627,6 +688,7 @@ pub fn set_focus_target_if_none<H: UiHost>(
 pub fn sync_while_trigger_hovered<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     models: &MenuSubmenuModels,
+    cfg: MenuSubmenuConfig,
     has_submenu: bool,
     value: Arc<str>,
     item_id: GlobalElementId,
@@ -652,6 +714,31 @@ pub fn sync_while_trigger_hovered<H: UiHost>(
         // If we're hovering a different submenu trigger while another submenu is open, close the
         // previous submenu immediately while the new trigger's open-delay timer runs.
         if open_value.is_some() {
+            let pointer = cx
+                .app
+                .models_mut()
+                .read(&models.last_pointer, |v| *v)
+                .ok()
+                .flatten();
+            let geometry = cx
+                .app
+                .models_mut()
+                .read(&models.geometry, |v| *v)
+                .ok()
+                .flatten();
+            if is_pointer_in_open_submenu_corridor(pointer, geometry, cfg.safe_hover_buffer) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&models.pending_open_value, |v| *v = None);
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&models.pending_open_trigger, |v| *v = None);
+                cancel_timer_in_element_context(cx, &models.open_timer);
+                return;
+            }
+
             let _ = cx
                 .app
                 .models_mut()
@@ -776,6 +863,29 @@ pub fn handle_sub_trigger_hover_change(
             .models_mut()
             .update(&models.pending_open_trigger, |v| *v = None);
         return;
+    }
+
+    if current_open.is_some() {
+        let pointer = host
+            .models_mut()
+            .read(&models.last_pointer, |v| *v)
+            .ok()
+            .flatten();
+        let geometry = host
+            .models_mut()
+            .read(&models.geometry, |v| *v)
+            .ok()
+            .flatten();
+        if is_pointer_in_open_submenu_corridor(pointer, geometry, cfg.safe_hover_buffer) {
+            cancel_timer(host, &models.open_timer);
+            let _ = host
+                .models_mut()
+                .update(&models.pending_open_value, |v| *v = None);
+            let _ = host
+                .models_mut()
+                .update(&models.pending_open_trigger, |v| *v = None);
+            return;
+        }
     }
 
     // Close any currently open submenu while hovering a different trigger, mirroring Radix's

@@ -246,3 +246,40 @@ fn key_label(key: KeyCode) -> Cow<'static, str> {
         other => Cow::Owned(other.to_string()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_chord_macos_orders_modifiers_and_formats_cmd() {
+        let chord = KeyChord::new(
+            KeyCode::KeyP,
+            Modifiers {
+                meta: true,
+                shift: true,
+                ..Default::default()
+            },
+        );
+        assert_eq!(format_chord(Platform::Macos, chord), "Cmd+Shift+P");
+    }
+
+    #[test]
+    fn format_chord_windows_orders_modifiers_and_formats_ctrl() {
+        let chord = KeyChord::new(
+            KeyCode::KeyP,
+            Modifiers {
+                ctrl: true,
+                shift: true,
+                ..Default::default()
+            },
+        );
+        assert_eq!(format_chord(Platform::Windows, chord), "Ctrl+Shift+P");
+    }
+
+    #[test]
+    fn format_chord_falls_back_to_code_token_for_unhandled_keys() {
+        let chord = KeyChord::new(KeyCode::PrintScreen, Modifiers::default());
+        assert_eq!(format_chord(Platform::Windows, chord), "PrintScreen");
+    }
+}
