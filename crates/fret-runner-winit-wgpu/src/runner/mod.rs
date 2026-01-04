@@ -1485,7 +1485,7 @@ pub struct WinitRunner<D: WinitDriver> {
     no_services: NoUiServices,
 
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
-    winit_to_app: HashMap<WindowId, fret_core::AppWindowId>,
+    window_registry: fret_runner_winit::window_registry::WinitWindowRegistry,
     main_window: Option<fret_core::AppWindowId>,
     windows_pending_front: HashMap<fret_core::AppWindowId, PendingFrontRequest>,
 
@@ -1770,7 +1770,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             renderer: None,
             no_services: NoUiServices,
             windows: SlotMap::with_key(),
-            winit_to_app: HashMap::new(),
+            window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,
             windows_pending_front: HashMap::new(),
             saw_left_mouse_release_this_turn: false,
@@ -2105,12 +2105,12 @@ impl<D: WinitDriver> WinitRunner<D> {
         }
 
         let winit_id = self.windows[id].window.id();
-        self.winit_to_app.insert(winit_id, id);
+        self.window_registry.insert(winit_id, id);
 
         // Ensure the window draws at least one frame after creation.
         //
         // Important: `WindowEvent::RedrawRequested` is keyed by the winit `WindowId`, so we must
-        // install the `winit_to_app` mapping *before* requesting the redraw. Otherwise, the first
+        // install the `WindowId` -> `AppWindowId` mapping *before* requesting the redraw. Otherwise, the first
         // redraw can be dropped and the window may appear blank until another event arrives.
         if let Some(state) = self.windows.get(id) {
             state.window.request_redraw();
@@ -2135,7 +2135,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         }
 
         if let Some(state) = self.windows.remove(window) {
-            self.winit_to_app.remove(&state.window.id());
+            self.window_registry.remove(state.window.id());
         }
         self.app
             .with_global_mut(WindowMetricsService::default, |svc, _app| {

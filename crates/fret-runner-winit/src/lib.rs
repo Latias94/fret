@@ -20,6 +20,8 @@ pub mod accessibility;
 #[cfg(windows)]
 pub mod windows_ime;
 
+pub mod window_registry;
+
 #[derive(Debug, Default, Clone)]
 pub struct WinitPlatform {
     pub input: WinitInputState,

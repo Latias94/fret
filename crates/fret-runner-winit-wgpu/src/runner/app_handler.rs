@@ -220,7 +220,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         window_id: WindowId,
         event: WindowEvent,
     ) {
-        let Some(app_window) = self.winit_to_app.get(&window_id).copied() else {
+        let Some(app_window) = self.window_registry.get(window_id) else {
             return;
         };
 
