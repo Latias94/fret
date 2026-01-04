@@ -34,6 +34,7 @@ impl TextInput {
             caret_stops: Vec::new(),
             pending_release: Vec::new(),
             prepared_scale_factor_bits: None,
+            last_font_stack_key: None,
             last_bounds: Rect::default(),
             last_sent_cursor: None,
             pending_clipboard_token: None,

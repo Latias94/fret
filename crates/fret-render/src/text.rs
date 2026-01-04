@@ -181,7 +181,7 @@ fn default_serif_candidates() -> &'static [&'static str] {
     }
 }
 
-fn font_stack_cache_key(locale: &str, db: &cosmic_text::fontdb::Database) -> u64 {
+fn font_stack_cache_key(locale: &str, db: &cosmic_text::fontdb::Database, db_revision: u64) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     locale.hash(&mut hasher);
 
@@ -195,6 +195,10 @@ fn font_stack_cache_key(locale: &str, db: &cosmic_text::fontdb::Database) -> u64
         &cosmic_text::PlatformFallback,
     )
     .hash(&mut hasher);
+
+    // Ensure font-db mutations (user font loading, web font injection, etc.) participate in the
+    // cache key even when generic family names are unchanged.
+    db_revision.hash(&mut hasher);
 
     hasher.finish()
 }
@@ -416,6 +420,7 @@ pub struct TextSystem {
     swash_cache: SwashCache,
     scratch: ShapeBuffer,
     font_stack_key: u64,
+    font_db_revision: u64,
 
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
@@ -449,6 +454,10 @@ impl TextSystem {
         collect_font_names(self.font_system.db())
     }
 
+    pub fn font_stack_key(&self) -> u64 {
+        self.font_stack_key
+    }
+
     /// Adds font bytes (TTF/OTF/TTC) to the font database.
     ///
     /// Returns the number of newly loaded faces. When this returns non-zero, all cached text blobs
@@ -462,8 +471,12 @@ impl TextSystem {
         let added = after_faces.saturating_sub(before_faces);
 
         if added > 0 {
-            self.font_stack_key =
-                font_stack_cache_key(self.font_system.locale(), self.font_system.db());
+            self.font_db_revision = self.font_db_revision.saturating_add(1);
+            self.font_stack_key = font_stack_cache_key(
+                self.font_system.locale(),
+                self.font_system.db(),
+                self.font_db_revision,
+            );
             self.blobs.clear();
             self.blob_cache.clear();
             self.blob_key_by_id.clear();
@@ -589,7 +602,8 @@ impl TextSystem {
             db.set_monospace_family(mono);
         }
 
-        let font_stack_key = font_stack_cache_key(&locale, &db);
+        let font_db_revision = 0u64;
+        let font_stack_key = font_stack_cache_key(&locale, &db, font_db_revision);
         let font_system = FontSystem::new_with_locale_and_db_and_fallback(locale, db, FretFallback);
 
         Self {
@@ -597,6 +611,7 @@ impl TextSystem {
             swash_cache: SwashCache::new(),
             scratch: ShapeBuffer::default(),
             font_stack_key,
+            font_db_revision,
 
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
@@ -645,7 +660,11 @@ impl TextSystem {
             }
         }
 
-        let new_key = font_stack_cache_key(self.font_system.locale(), self.font_system.db());
+        let new_key = font_stack_cache_key(
+            self.font_system.locale(),
+            self.font_system.db(),
+            self.font_db_revision,
+        );
         if new_key == old_key {
             return false;
         }

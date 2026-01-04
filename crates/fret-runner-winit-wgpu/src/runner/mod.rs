@@ -2720,6 +2720,9 @@ impl<D: WinitDriver> WinitRunner<D> {
                             families,
                             fret_runtime::FontFamilyDefaultsPolicy::None,
                         );
+                        self.app.set_global::<fret_runtime::TextFontStackKey>(
+                            fret_runtime::TextFontStackKey(renderer.text_font_stack_key()),
+                        );
 
                         for (_id, state) in self.windows.iter() {
                             state.window.request_redraw();
@@ -3021,6 +3024,17 @@ impl<D: WinitDriver> WinitRunner<D> {
             )
             && renderer.set_text_font_families(config)
         {
+            let new_key = renderer.text_font_stack_key();
+            let old_key = self
+                .app
+                .global::<fret_runtime::TextFontStackKey>()
+                .map(|k| k.0);
+            if old_key != Some(new_key) {
+                self.app.set_global::<fret_runtime::TextFontStackKey>(
+                    fret_runtime::TextFontStackKey(new_key),
+                );
+            }
+
             for (_id, state) in self.windows.iter() {
                 state.window.request_redraw();
             }

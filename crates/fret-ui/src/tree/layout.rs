@@ -144,6 +144,12 @@ impl<H: UiHost> UiTree<H> {
             TypeId::of::<fret_core::TextFontFamilyConfig>(),
             Invalidation::Layout,
         );
+        // User font loading and font-db mutations can affect shaping/metrics without changing the
+        // configured family overrides; treat it as a default dependency as well.
+        observe_global(
+            TypeId::of::<fret_runtime::TextFontStackKey>(),
+            Invalidation::Layout,
+        );
 
         let size = self.with_widget_mut(node, |widget, tree| {
             let children: Vec<NodeId> = tree

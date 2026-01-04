@@ -23,6 +23,7 @@ struct TextCache {
     last_overflow: Option<TextOverflow>,
     last_width: Option<Px>,
     last_theme_revision: Option<u64>,
+    last_font_stack_key: Option<u64>,
 }
 
 pub(super) struct ElementHostWidget {

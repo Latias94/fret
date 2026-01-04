@@ -11,3 +11,10 @@ pub struct FontCatalog {
     /// Monotonic revision that increments when the catalog is refreshed.
     pub revision: u64,
 }
+
+/// Stable key representing the current effective text font stack / fallback configuration.
+///
+/// Runners should update this whenever the renderer text backend changes in a way that can affect
+/// shaping/metrics: font family overrides, user font loading, web font injection, etc.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TextFontStackKey(pub u64);

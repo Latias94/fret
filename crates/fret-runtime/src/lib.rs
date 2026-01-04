@@ -30,7 +30,7 @@ pub use docking_settings::{
 pub use drag::{DragKind, DragSession};
 pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 pub use font_bootstrap::{FontCatalogUpdate, FontFamilyDefaultsPolicy, apply_font_catalog_update};
-pub use font_catalog::FontCatalog;
+pub use font_catalog::{FontCatalog, TextFontStackKey};
 pub use font_catalog_cache::FontCatalogCache;
 pub use fret_core::FrameId;
 pub use fret_core::ImageColorSpace;

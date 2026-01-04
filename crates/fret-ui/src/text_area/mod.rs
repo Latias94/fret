@@ -49,6 +49,7 @@ struct PreparedKey {
     wrap: TextWrap,
     scale_bits: u32,
     show_scrollbar: bool,
+    font_stack_key: u64,
 }
 
 #[derive(Debug, Clone)]

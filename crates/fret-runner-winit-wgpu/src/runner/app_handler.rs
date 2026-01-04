@@ -160,6 +160,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         let _ = renderer.set_text_font_families(&self.config.text_font_families);
         self.app
             .set_global::<fret_core::TextFontFamilyConfig>(self.config.text_font_families.clone());
+        self.app
+            .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
+                renderer.text_font_stack_key(),
+            ));
 
         let prev_rev = self
             .app

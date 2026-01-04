@@ -33,6 +33,7 @@ pub struct TextInput {
     caret_stops: Vec<(usize, Px)>,
     pending_release: Vec<fret_core::TextBlobId>,
     prepared_scale_factor_bits: Option<u32>,
+    last_font_stack_key: Option<u64>,
     last_bounds: Rect,
     last_sent_cursor: Option<Rect>,
     pending_clipboard_token: Option<fret_runtime::ClipboardToken>,

@@ -500,6 +500,7 @@ impl<H: UiHost> Widget<H> for TextArea {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.sync_style_from_theme(cx.theme());
+        cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
         self.last_bounds = cx.bounds;
 
         self.edit_state().clamp_caret_and_anchor_to_char_boundary();
@@ -548,6 +549,12 @@ impl<H: UiHost> Widget<H> for TextArea {
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.sync_style_from_theme(cx.theme());
+        cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
+        let font_stack_key = cx
+            .app
+            .global::<fret_runtime::TextFontStackKey>()
+            .map(|k| k.0)
+            .unwrap_or(0);
         if cx.focus != Some(cx.node) && self.is_ime_composing() {
             self.clear_preedit();
         }
@@ -572,6 +579,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             wrap: self.wrap,
             scale_bits: cx.scale_factor.to_bits(),
             show_scrollbar: self.show_scrollbar,
+            font_stack_key,
         };
 
         if self.text_dirty || self.blob.is_none() || self.prepared_key != Some(key) {

@@ -154,6 +154,10 @@ impl Renderer {
         self.text_system.add_fonts(fonts)
     }
 
+    pub fn text_font_stack_key(&self) -> u64 {
+        self.text_system.font_stack_key()
+    }
+
     pub(super) fn effective_path_msaa_samples(&self, format: wgpu::TextureFormat) -> u32 {
         let requested = self.path_msaa_samples.max(1);
         if requested == 1 {

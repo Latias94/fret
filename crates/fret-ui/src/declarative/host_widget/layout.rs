@@ -330,6 +330,7 @@ impl ElementHostWidget {
             }
             ElementInstance::Text(props) => {
                 let theme_revision = cx.theme().revision();
+                cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_size = cx
                     .theme()
                     .metric_by_key("font.size")
@@ -361,12 +362,7 @@ impl ElementHostWidget {
                 let metrics = cx.services.text().measure(&props.text, &style, constraints);
 
                 self.text_cache.metrics = Some(metrics);
-                self.text_cache.last_text = Some(props.text.clone());
-                self.text_cache.last_style = Some(style);
-                self.text_cache.last_wrap = Some(props.wrap);
-                self.text_cache.last_overflow = Some(props.overflow);
-                self.text_cache.last_width = Some(measure_width);
-                self.text_cache.last_theme_revision = Some(theme_revision);
+                let _ = theme_revision;
 
                 clamp_to_constraints(metrics.size, props.layout, cx.available)
             }

@@ -169,6 +169,12 @@ impl ElementHostWidget {
             }
             ElementInstance::Text(props) => {
                 let theme_revision = cx.theme().revision();
+                cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
+                let font_stack_key = cx
+                    .app
+                    .global::<fret_runtime::TextFontStackKey>()
+                    .map(|k| k.0)
+                    .unwrap_or(0);
                 let font_size = cx
                     .theme()
                     .metric_by_key("font.size")
@@ -202,7 +208,8 @@ impl ElementHostWidget {
                     || self.text_cache.last_wrap != Some(props.wrap)
                     || self.text_cache.last_overflow != Some(props.overflow)
                     || self.text_cache.last_width != Some(cx.bounds.size.width)
-                    || self.text_cache.last_theme_revision != Some(theme_revision);
+                    || self.text_cache.last_theme_revision != Some(theme_revision)
+                    || self.text_cache.last_font_stack_key != Some(font_stack_key);
 
                 if needs_prepare {
                     if let Some(blob) = self.text_cache.blob.take() {
@@ -219,6 +226,7 @@ impl ElementHostWidget {
                     self.text_cache.last_overflow = Some(props.overflow);
                     self.text_cache.last_width = Some(cx.bounds.size.width);
                     self.text_cache.last_theme_revision = Some(theme_revision);
+                    self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
 
                 let Some(blob) = self.text_cache.blob else {

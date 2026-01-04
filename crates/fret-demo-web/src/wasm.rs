@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_ui_shadcn as shadcn;
 use fret_core::{AppWindowId, Event as FretEvent, Point, Px, Rect, Scene, Size, UiServices};
 use fret_render::{ClearColor, RenderSceneParams, Renderer, SurfaceState, WgpuContext};
 use fret_runtime::{Effect, FrameId, Model, PlatformCapabilities, TickId};
@@ -11,6 +10,7 @@ use fret_ui_app::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableProps,
 };
 use fret_ui_app::{Invalidation, Theme, UiFrameCx, UiTree};
+use fret_ui_shadcn as shadcn;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use winit::application::ApplicationHandler;
@@ -353,6 +353,9 @@ impl WebDemoApp {
                         fret_runtime::FontFamilyDefaultsPolicy::FillIfEmpty,
                     );
                     let _ = gfx.renderer.set_text_font_families(&update.config);
+                    self.app.set_global::<fret_runtime::TextFontStackKey>(
+                        fret_runtime::TextFontStackKey(gfx.renderer.text_font_stack_key()),
+                    );
                     window.request_redraw();
                 }
                 Effect::CursorSetIcon { icon, .. } => {

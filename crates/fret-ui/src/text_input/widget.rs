@@ -473,6 +473,8 @@ impl<H: UiHost> Widget<H> for TextInput {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         self.last_bounds = cx.bounds;
 
+        cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
+
         self.edit_state().clamp_caret_and_anchor_to_char_boundary();
 
         let theme = cx.theme().snapshot();
@@ -501,6 +503,18 @@ impl<H: UiHost> Widget<H> for TextInput {
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.flush_pending_releases(cx.services);
+
+        cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
+        let font_stack_key = cx
+            .app
+            .global::<fret_runtime::TextFontStackKey>()
+            .map(|k| k.0)
+            .unwrap_or(0);
+        if self.last_font_stack_key != Some(font_stack_key) {
+            self.queue_release_all_text_blobs();
+            self.flush_pending_releases(cx.services);
+            self.last_font_stack_key = Some(font_stack_key);
+        }
 
         let Some(window) = cx.window else {
             return;
