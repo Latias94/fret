@@ -41,12 +41,20 @@ impl PointerGraceIntentConfig {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GraceSide {
+pub enum GraceSide {
     Left,
     Right,
 }
 
-fn grace_side(geometry: PointerGraceIntentGeometry) -> Option<GraceSide> {
+pub type Polygon = [Point; 5];
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GraceIntent {
+    pub area: Polygon,
+    pub side: GraceSide,
+}
+
+pub fn grace_side(geometry: PointerGraceIntentGeometry) -> Option<GraceSide> {
     let reference_left = geometry.reference.origin.x.0;
     let reference_right = reference_left + geometry.reference.size.width.0;
 
@@ -62,7 +70,7 @@ fn grace_side(geometry: PointerGraceIntentGeometry) -> Option<GraceSide> {
     None
 }
 
-fn pointer_dir(prev: Point, next: Point) -> Option<GraceSide> {
+pub fn pointer_dir(prev: Point, next: Point) -> Option<GraceSide> {
     if next.x.0 > prev.x.0 {
         Some(GraceSide::Right)
     } else if next.x.0 < prev.x.0 {
@@ -70,6 +78,61 @@ fn pointer_dir(prev: Point, next: Point) -> Option<GraceSide> {
     } else {
         None
     }
+}
+
+fn is_point_in_polygon(point: Point, polygon: &Polygon) -> bool {
+    let x = point.x.0;
+    let y = point.y.0;
+    let mut inside = false;
+    let mut j = polygon.len() - 1;
+    for i in 0..polygon.len() {
+        let xi = polygon[i].x.0;
+        let yi = polygon[i].y.0;
+        let xj = polygon[j].x.0;
+        let yj = polygon[j].y.0;
+
+        let intersect = (yi > y) != (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+        if intersect {
+            inside = !inside;
+        }
+        j = i;
+    }
+
+    inside
+}
+
+pub fn is_pointer_in_grace_area(point: Point, intent: GraceIntent) -> bool {
+    is_point_in_polygon(point, &intent.area)
+}
+
+pub fn grace_intent_from_exit_point(
+    exit: Point,
+    geometry: PointerGraceIntentGeometry,
+    bleed: Px,
+) -> Option<GraceIntent> {
+    let side = grace_side(geometry)?;
+
+    let floating = geometry.floating;
+    let floating_left = floating.origin.x.0;
+    let floating_right = floating_left + floating.size.width.0;
+    let floating_top = floating.origin.y.0;
+    let floating_bottom = floating_top + floating.size.height.0;
+
+    let (near_edge, far_edge, exit_x) = match side {
+        GraceSide::Right => (floating_left, floating_right, exit.x.0 - bleed.0),
+        GraceSide::Left => (floating_right, floating_left, exit.x.0 + bleed.0),
+    };
+
+    Some(GraceIntent {
+        area: [
+            Point::new(Px(exit_x), exit.y),
+            Point::new(Px(near_edge), Px(floating_top)),
+            Point::new(Px(far_edge), Px(floating_top)),
+            Point::new(Px(far_edge), Px(floating_bottom)),
+            Point::new(Px(near_edge), Px(floating_bottom)),
+        ],
+        side,
+    })
 }
 
 fn is_pointer_moving_to_submenu(

@@ -169,6 +169,9 @@ pub struct MenuSubmenuModels {
     pub last_pointer: Model<Option<Point>>,
     pub geometry: Model<Option<MenuSubmenuGeometry>>,
     pub close_timer: Model<Option<TimerToken>>,
+    pub pointer_dir: Model<Option<pointer_grace_intent::GraceSide>>,
+    pub pointer_grace_intent: Model<Option<pointer_grace_intent::GraceIntent>>,
+    pub pointer_grace_timer: Model<Option<TimerToken>>,
     pub focus_target: Model<Option<GlobalElementId>>,
     pub focus_timer: Model<Option<TimerToken>>,
     pub pending_open_value: Model<Option<Arc<str>>>,
@@ -183,6 +186,9 @@ struct MenuSubmenuState {
     last_pointer: Option<Model<Option<Point>>>,
     geometry: Option<Model<Option<MenuSubmenuGeometry>>>,
     close_timer: Option<Model<Option<TimerToken>>>,
+    pointer_dir: Option<Model<Option<pointer_grace_intent::GraceSide>>>,
+    pointer_grace_intent: Option<Model<Option<pointer_grace_intent::GraceIntent>>>,
+    pointer_grace_timer: Option<Model<Option<TimerToken>>>,
     focus_target: Option<Model<Option<GlobalElementId>>>,
     focus_timer: Option<Model<Option<TimerToken>>>,
     pending_open_value: Option<Model<Option<Arc<str>>>>,
@@ -267,6 +273,23 @@ pub fn sync_root_open<H: UiHost>(cx: &mut ElementContext<'_, H>, is_open: bool) 
             }
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| st.pointer_dir.clone()) {
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| {
+            st.pointer_grace_intent.clone()
+        }) {
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| {
+            st.pointer_grace_timer.clone()
+        }) {
+            let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
+            if let Some(token) = token {
+                cx.app.push_effect(Effect::CancelTimer { token });
+            }
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
         if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| {
             st.pending_open_value.clone()
         }) {
@@ -298,6 +321,23 @@ pub fn sync_root_open<H: UiHost>(cx: &mut ElementContext<'_, H>, is_open: bool) 
             let _ = cx.app.models_mut().update(&model, |v| *v = None);
         }
         if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| st.open_timer.clone()) {
+            let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
+            if let Some(token) = token {
+                cx.app.push_effect(Effect::CancelTimer { token });
+            }
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| st.pointer_dir.clone()) {
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| {
+            st.pointer_grace_intent.clone()
+        }) {
+            let _ = cx.app.models_mut().update(&model, |v| *v = None);
+        }
+        if let Some(model) = cx.with_state(MenuSubmenuState::default, |st| {
+            st.pointer_grace_timer.clone()
+        }) {
             let token = cx.app.models_mut().read(&model, |v| *v).ok().flatten();
             if let Some(token) = token {
                 cx.app.push_effect(Effect::CancelTimer { token });
@@ -374,6 +414,43 @@ pub fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> MenuSubmenuMo
         close_timer
     };
 
+    let pointer_dir = cx.with_state(MenuSubmenuState::default, |st| st.pointer_dir.clone());
+    let pointer_dir = if let Some(pointer_dir) = pointer_dir {
+        pointer_dir
+    } else {
+        let pointer_dir = cx.app.models_mut().insert(None);
+        cx.with_state(MenuSubmenuState::default, |st| {
+            st.pointer_dir = Some(pointer_dir.clone());
+        });
+        pointer_dir
+    };
+
+    let pointer_grace_intent = cx.with_state(MenuSubmenuState::default, |st| {
+        st.pointer_grace_intent.clone()
+    });
+    let pointer_grace_intent = if let Some(pointer_grace_intent) = pointer_grace_intent {
+        pointer_grace_intent
+    } else {
+        let pointer_grace_intent = cx.app.models_mut().insert(None);
+        cx.with_state(MenuSubmenuState::default, |st| {
+            st.pointer_grace_intent = Some(pointer_grace_intent.clone());
+        });
+        pointer_grace_intent
+    };
+
+    let pointer_grace_timer = cx.with_state(MenuSubmenuState::default, |st| {
+        st.pointer_grace_timer.clone()
+    });
+    let pointer_grace_timer = if let Some(pointer_grace_timer) = pointer_grace_timer {
+        pointer_grace_timer
+    } else {
+        let pointer_grace_timer = cx.app.models_mut().insert(None);
+        cx.with_state(MenuSubmenuState::default, |st| {
+            st.pointer_grace_timer = Some(pointer_grace_timer.clone());
+        });
+        pointer_grace_timer
+    };
+
     let focus_target = cx.with_state(MenuSubmenuState::default, |st| st.focus_target.clone());
     let focus_target = if let Some(focus_target) = focus_target {
         focus_target
@@ -439,6 +516,9 @@ pub fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> MenuSubmenuMo
         last_pointer,
         geometry,
         close_timer,
+        pointer_dir,
+        pointer_grace_intent,
+        pointer_grace_timer,
         focus_target,
         focus_timer,
         pending_open_value,
@@ -447,7 +527,10 @@ pub fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> MenuSubmenuMo
     }
 }
 
-pub fn on_timer_handler(models: MenuSubmenuModels) -> fret_ui::action::OnTimer {
+pub fn on_timer_handler(
+    models: MenuSubmenuModels,
+    cfg: MenuSubmenuConfig,
+) -> fret_ui::action::OnTimer {
     #[allow(clippy::arc_with_non_send_sync)]
     Arc::new(move |host, acx, token| {
         let close_armed = host
@@ -465,15 +548,25 @@ pub fn on_timer_handler(models: MenuSubmenuModels) -> fret_ui::action::OnTimer {
             .read(&models.open_timer, |v| *v)
             .ok()
             .flatten();
+        let pointer_grace_armed = host
+            .models_mut()
+            .read(&models.pointer_grace_timer, |v| *v)
+            .ok()
+            .flatten();
 
         if close_armed == Some(token) {
             cancel_timer(host, &models.open_timer);
             cancel_timer(host, &models.focus_timer);
+            cancel_timer(host, &models.pointer_grace_timer);
             let _ = host.models_mut().update(&models.open_value, |v| *v = None);
             let _ = host.models_mut().update(&models.trigger, |v| *v = None);
             let _ = host
                 .models_mut()
                 .update(&models.last_pointer, |v| *v = None);
+            let _ = host.models_mut().update(&models.pointer_dir, |v| *v = None);
+            let _ = host
+                .models_mut()
+                .update(&models.pointer_grace_intent, |v| *v = None);
             let _ = host.models_mut().update(&models.geometry, |v| *v = None);
             let _ = host
                 .models_mut()
@@ -482,6 +575,15 @@ pub fn on_timer_handler(models: MenuSubmenuModels) -> fret_ui::action::OnTimer {
                 .models_mut()
                 .update(&models.pending_open_trigger, |v| *v = None);
             cancel_timer_if_matches(host, &models.close_timer, token);
+            host.request_redraw(acx.window);
+            return true;
+        }
+
+        if pointer_grace_armed == Some(token) {
+            cancel_timer_if_matches(host, &models.pointer_grace_timer, token);
+            let _ = host
+                .models_mut()
+                .update(&models.pointer_grace_intent, |v| *v = None);
             host.request_redraw(acx.window);
             return true;
         }
@@ -499,16 +601,70 @@ pub fn on_timer_handler(models: MenuSubmenuModels) -> fret_ui::action::OnTimer {
                 .flatten();
 
             cancel_timer_if_matches(host, &models.open_timer, token);
+
+            let Some(pending_value) = pending_value else {
+                return false;
+            };
+
+            let open_value = host
+                .models_mut()
+                .read(&models.open_value, |v| v.clone())
+                .ok()
+                .flatten();
+            let pointer = host
+                .models_mut()
+                .read(&models.last_pointer, |v| *v)
+                .ok()
+                .flatten();
+            let pointer_dir = host
+                .models_mut()
+                .read(&models.pointer_dir, |v| *v)
+                .ok()
+                .flatten();
+            let grace_intent = host
+                .models_mut()
+                .read(&models.pointer_grace_intent, |v| *v)
+                .ok()
+                .flatten();
+
+            let switching_away = open_value
+                .as_ref()
+                .is_some_and(|cur| cur.as_ref() != pending_value.as_ref());
+
+            let moving_towards = grace_intent
+                .as_ref()
+                .is_some_and(|intent| pointer_dir == Some(intent.side));
+            let in_grace_area = match (pointer, grace_intent) {
+                (Some(pointer), Some(intent)) => {
+                    pointer_grace_intent::is_pointer_in_grace_area(pointer, intent)
+                }
+                _ => false,
+            };
+            if switching_away && moving_towards && in_grace_area {
+                let token = host.next_timer_token();
+                host.push_effect(Effect::SetTimer {
+                    window: Some(acx.window),
+                    token,
+                    after: cfg.open_delay,
+                    repeat: None,
+                });
+                let _ = host
+                    .models_mut()
+                    .update(&models.open_timer, |v| *v = Some(token));
+                host.request_redraw(acx.window);
+                return true;
+            }
+
             let _ = host
                 .models_mut()
                 .update(&models.pending_open_value, |v| *v = None);
             let _ = host
                 .models_mut()
                 .update(&models.pending_open_trigger, |v| *v = None);
-
-            let Some(pending_value) = pending_value else {
-                return false;
-            };
+            cancel_timer(host, &models.pointer_grace_timer);
+            let _ = host
+                .models_mut()
+                .update(&models.pointer_grace_intent, |v| *v = None);
 
             let _ = host
                 .models_mut()
@@ -516,9 +672,6 @@ pub fn on_timer_handler(models: MenuSubmenuModels) -> fret_ui::action::OnTimer {
             let _ = host
                 .models_mut()
                 .update(&models.trigger, |v| *v = pending_trigger);
-            let _ = host
-                .models_mut()
-                .update(&models.last_pointer, |v| *v = None);
             let _ = host.models_mut().update(&models.geometry, |v| *v = None);
             host.request_redraw(acx.window);
             return true;
@@ -546,8 +699,9 @@ pub fn install_timer_handler<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     element: GlobalElementId,
     models: MenuSubmenuModels,
+    cfg: MenuSubmenuConfig,
 ) {
-    cx.timer_on_timer_for(element, on_timer_handler(models));
+    cx.timer_on_timer_for(element, on_timer_handler(models, cfg));
 }
 
 pub fn handle_dismissible_pointer_move(
@@ -557,6 +711,17 @@ pub fn handle_dismissible_pointer_move(
     models: &MenuSubmenuModels,
     cfg: MenuSubmenuConfig,
 ) -> bool {
+    let prev_pointer = host
+        .models_mut()
+        .read(&models.last_pointer, |v| *v)
+        .ok()
+        .flatten();
+    let prev_dir = host
+        .models_mut()
+        .read(&models.pointer_dir, |v| *v)
+        .ok()
+        .flatten();
+
     let geometry = host
         .models_mut()
         .read(&models.geometry, |v| *v)
@@ -566,7 +731,8 @@ pub fn handle_dismissible_pointer_move(
         reference: g.reference,
         floating: g.floating,
     });
-    pointer_grace_intent::drive_close_timer_on_pointer_move(
+
+    let changed = pointer_grace_intent::drive_close_timer_on_pointer_move(
         host,
         acx,
         mv,
@@ -574,7 +740,64 @@ pub fn handle_dismissible_pointer_move(
         pointer_grace_intent::PointerGraceIntentConfig::new(cfg.safe_hover_buffer, cfg.close_delay),
         &models.last_pointer,
         &models.close_timer,
-    )
+    );
+
+    let next_dir = match prev_pointer {
+        None => prev_dir,
+        Some(prev) => match pointer_grace_intent::pointer_dir(prev, mv.position) {
+            Some(dir) => Some(dir),
+            None => prev_dir,
+        },
+    };
+    let _ = host
+        .models_mut()
+        .update(&models.pointer_dir, |v| *v = next_dir);
+
+    let mut did_update_grace_intent = false;
+    if let Some(grace) = grace {
+        if grace.floating.contains(mv.position) {
+            cancel_timer(host, &models.pointer_grace_timer);
+            let _ = host
+                .models_mut()
+                .update(&models.pointer_grace_intent, |v| *v = None);
+            did_update_grace_intent = true;
+        } else if prev_pointer.is_some_and(|prev| grace.reference.contains(prev))
+            && !grace.reference.contains(mv.position)
+        {
+            let submenu_open = host
+                .models_mut()
+                .read(&models.open_value, |v| v.is_some())
+                .ok()
+                .unwrap_or(false);
+            if submenu_open {
+                if let Some(intent) =
+                    pointer_grace_intent::grace_intent_from_exit_point(mv.position, grace, Px(5.0))
+                {
+                    let _ = host
+                        .models_mut()
+                        .update(&models.pointer_grace_intent, |v| *v = Some(intent));
+                    cancel_timer(host, &models.pointer_grace_timer);
+                    let token = host.next_timer_token();
+                    host.push_effect(Effect::SetTimer {
+                        window: Some(acx.window),
+                        token,
+                        after: Duration::from_millis(300),
+                        repeat: None,
+                    });
+                    let _ = host
+                        .models_mut()
+                        .update(&models.pointer_grace_timer, |v| *v = Some(token));
+                    did_update_grace_intent = true;
+                }
+            }
+        }
+    }
+
+    if did_update_grace_intent {
+        host.request_redraw(acx.window);
+    }
+
+    changed || did_update_grace_intent
 }
 
 pub fn set_geometry_if_changed<H: UiHost>(
@@ -627,6 +850,7 @@ pub fn set_focus_target_if_none<H: UiHost>(
 pub fn sync_while_trigger_hovered<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     models: &MenuSubmenuModels,
+    _cfg: MenuSubmenuConfig,
     has_submenu: bool,
     value: Arc<str>,
     item_id: GlobalElementId,
@@ -647,18 +871,6 @@ pub fn sync_while_trigger_hovered<H: UiHost>(
         if already_open {
             set_trigger_if_none(cx, item_id, &models.trigger);
             return;
-        }
-
-        // If we're hovering a different submenu trigger while another submenu is open, close the
-        // previous submenu immediately while the new trigger's open-delay timer runs.
-        if open_value.is_some() {
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&models.open_value, |v| *v = None);
-            let _ = cx.app.models_mut().update(&models.trigger, |v| *v = None);
-            let _ = cx.app.models_mut().update(&models.geometry, |v| *v = None);
-            cancel_timer_in_element_context(cx, &models.focus_timer);
         }
     } else {
         let _ = cx
@@ -742,6 +954,7 @@ pub fn handle_sub_trigger_hover_change(
     acx: ActionCx,
     models: &MenuSubmenuModels,
     cfg: MenuSubmenuConfig,
+    trigger_id: GlobalElementId,
     is_hovered: bool,
     value: Arc<str>,
 ) {
@@ -778,12 +991,9 @@ pub fn handle_sub_trigger_hover_change(
         return;
     }
 
-    // Close any currently open submenu while hovering a different trigger, mirroring Radix's
-    // focus-driven submenu switching behavior.
     if current_open.is_some() {
-        let _ = host.models_mut().update(&models.open_value, |v| *v = None);
-        let _ = host.models_mut().update(&models.trigger, |v| *v = None);
-        let _ = host.models_mut().update(&models.geometry, |v| *v = None);
+        // While another submenu is open, avoid closing it immediately when hovering a different
+        // submenu trigger. We only switch once the hover open-delay timer fires.
     }
 
     let _ = host
@@ -791,11 +1001,7 @@ pub fn handle_sub_trigger_hover_change(
         .update(&models.pending_open_value, |v| *v = Some(value));
     let _ = host
         .models_mut()
-        .update(&models.pending_open_trigger, |v| *v = Some(acx.target));
-    let _ = host
-        .models_mut()
-        .update(&models.last_pointer, |v| *v = None);
-    let _ = host.models_mut().update(&models.geometry, |v| *v = None);
+        .update(&models.pending_open_trigger, |v| *v = Some(trigger_id));
 
     if cfg.open_delay == Duration::from_millis(0) {
         let pending_value = host
@@ -848,6 +1054,10 @@ pub fn open_on_activate(
 ) {
     cancel_timer(host, &models.close_timer);
     cancel_timer(host, &models.open_timer);
+    cancel_timer(host, &models.pointer_grace_timer);
+    let _ = host
+        .models_mut()
+        .update(&models.pointer_grace_intent, |v| *v = None);
     let _ = host
         .models_mut()
         .update(&models.pending_open_value, |v| *v = None);
@@ -873,6 +1083,10 @@ pub fn open_on_arrow_right(
     cancel_timer(host, &models.focus_timer);
     cancel_timer(host, &models.close_timer);
     cancel_timer(host, &models.open_timer);
+    cancel_timer(host, &models.pointer_grace_timer);
+    let _ = host
+        .models_mut()
+        .update(&models.pointer_grace_intent, |v| *v = None);
     let _ = host
         .models_mut()
         .update(&models.pending_open_value, |v| *v = None);
@@ -906,12 +1120,16 @@ pub fn close_on_arrow_left(host: &mut dyn UiActionHost, acx: ActionCx, models: &
     let _ = host.models_mut().update(&models.geometry, |v| *v = None);
     let _ = host
         .models_mut()
+        .update(&models.pointer_grace_intent, |v| *v = None);
+    let _ = host
+        .models_mut()
         .update(&models.pending_open_value, |v| *v = None);
     let _ = host
         .models_mut()
         .update(&models.pending_open_trigger, |v| *v = None);
     cancel_timer(host, &models.open_timer);
     cancel_timer(host, &models.close_timer);
+    cancel_timer(host, &models.pointer_grace_timer);
     cancel_timer(host, &models.focus_timer);
     host.request_redraw(acx.window);
 }

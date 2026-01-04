@@ -21,9 +21,10 @@ use crate::primitives::menu::sub;
 pub fn ensure_submenu<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     timer_handler_element: GlobalElementId,
+    cfg: sub::MenuSubmenuConfig,
 ) -> sub::MenuSubmenuModels {
     let models = sub::ensure_models(cx);
-    sub::install_timer_handler(cx, timer_handler_element, models.clone());
+    sub::install_timer_handler(cx, timer_handler_element, models.clone(), cfg);
     models
 }
 
@@ -36,9 +37,10 @@ pub fn sync_root_open_and_ensure_submenu<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     is_open: bool,
     timer_handler_element: GlobalElementId,
+    cfg: sub::MenuSubmenuConfig,
 ) -> sub::MenuSubmenuModels {
     sub::sync_root_open(cx, is_open);
-    ensure_submenu(cx, timer_handler_element)
+    ensure_submenu(cx, timer_handler_element, cfg)
 }
 
 /// Build a DismissableLayer pointer-move observer that drives submenu grace intent.
