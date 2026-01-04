@@ -43,6 +43,7 @@ usvg = { version = "0.45.0", default-features = false }
 rust-embed = { version = "8.9.0", features = ["include-exclude"] }
 windows-sys = { version = "0.61.0", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_Input_Ime", "Win32_UI_WindowsAndMessaging"] }
 virtualizer = "0.3.0"
+keyboard-types = { version = "0.8.3", features = ["serde"] }
 
 # Speed up debug builds: Taffy is layout-hot and also expensive to compile unoptimized.
 # GPUI applies a similar per-package opt-level override for Taffy.

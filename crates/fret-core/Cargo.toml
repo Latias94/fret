@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 slotmap.workspace = true
 serde.workspace = true
+keyboard-types.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 web-time.workspace = true
