@@ -127,3 +127,232 @@ pub fn should_dismiss_on_focus_outside<H: UiHost>(
     }
     !focus_is_inside_layer_or_branches(ui, layer_root, focus, branch_roots)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics,
+        TextService, TextStyle,
+    };
+    use fret_ui::element::{LayoutStyle, Length, PressableProps, SemanticsProps};
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn resolve_branch_nodes_dedupes_and_preserves_order() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let b = bounds();
+
+        let mut trigger: Option<GlobalElementId> = None;
+        let mut branch_a: Option<GlobalElementId> = None;
+        let mut branch_b: Option<GlobalElementId> = None;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "test",
+            |cx| {
+                let props = PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(10.0));
+                        layout.size.height = Length::Px(Px(10.0));
+                        layout
+                    },
+                    focusable: true,
+                    ..Default::default()
+                };
+
+                vec![
+                    cx.pressable_with_id(props.clone(), |_cx, _st, id| {
+                        trigger = Some(id);
+                        Vec::new()
+                    }),
+                    cx.pressable_with_id(props.clone(), |_cx, _st, id| {
+                        branch_a = Some(id);
+                        Vec::new()
+                    }),
+                    cx.pressable_with_id(props, |_cx, _st, id| {
+                        branch_b = Some(id);
+                        Vec::new()
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let trigger = trigger.expect("trigger id");
+        let branch_a = branch_a.expect("branch a id");
+        let branch_b = branch_b.expect("branch b id");
+
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger)
+            .expect("trigger node");
+        let branch_a_node = fret_ui::elements::node_for_element(&mut app, window, branch_a)
+            .expect("branch a node");
+        let branch_b_node = fret_ui::elements::node_for_element(&mut app, window, branch_b)
+            .expect("branch b node");
+
+        let out = resolve_branch_nodes_for_trigger_and_elements(
+            &mut app,
+            window,
+            trigger,
+            &[branch_a, trigger, branch_b, branch_a],
+        );
+
+        assert_eq!(out, vec![trigger_node, branch_a_node, branch_b_node]);
+    }
+
+    #[test]
+    fn focus_inside_layer_or_branch_is_treated_as_inside() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let b = bounds();
+
+        let mut layer_root: Option<GlobalElementId> = None;
+        let mut branch_root: Option<GlobalElementId> = None;
+        let mut in_layer: Option<GlobalElementId> = None;
+        let mut in_branch: Option<GlobalElementId> = None;
+        let mut outside: Option<GlobalElementId> = None;
+
+        let focusable = PressableProps {
+            layout: LayoutStyle::default(),
+            focusable: true,
+            ..Default::default()
+        };
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "test",
+            |cx| {
+                vec![
+                    cx.semantics_with_id(SemanticsProps::default(), |cx, id| {
+                        layer_root = Some(id);
+                        vec![cx.pressable_with_id(focusable.clone(), |_cx, _st, id| {
+                            in_layer = Some(id);
+                            Vec::new()
+                        })]
+                    }),
+                    cx.semantics_with_id(SemanticsProps::default(), |cx, id| {
+                        branch_root = Some(id);
+                        vec![cx.pressable_with_id(focusable.clone(), |_cx, _st, id| {
+                            in_branch = Some(id);
+                            Vec::new()
+                        })]
+                    }),
+                    cx.pressable_with_id(focusable, |_cx, _st, id| {
+                        outside = Some(id);
+                        Vec::new()
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let layer_root = layer_root.expect("layer root");
+        let branch_root = branch_root.expect("branch root");
+        let in_layer = in_layer.expect("in layer");
+        let in_branch = in_branch.expect("in branch");
+        let outside = outside.expect("outside");
+
+        let layer_root_node =
+            fret_ui::elements::node_for_element(&mut app, window, layer_root).expect("layer node");
+        let branch_root_node = fret_ui::elements::node_for_element(&mut app, window, branch_root)
+            .expect("branch node");
+        let in_layer_node =
+            fret_ui::elements::node_for_element(&mut app, window, in_layer).expect("in layer node");
+        let in_branch_node = fret_ui::elements::node_for_element(&mut app, window, in_branch)
+            .expect("in branch node");
+        let outside_node =
+            fret_ui::elements::node_for_element(&mut app, window, outside).expect("outside node");
+
+        assert!(focus_is_inside_layer_or_branches(
+            &ui,
+            layer_root_node,
+            in_layer_node,
+            &[branch_root_node]
+        ));
+        assert!(focus_is_inside_layer_or_branches(
+            &ui,
+            layer_root_node,
+            in_branch_node,
+            &[branch_root_node]
+        ));
+        assert!(!focus_is_inside_layer_or_branches(
+            &ui,
+            layer_root_node,
+            outside_node,
+            &[branch_root_node]
+        ));
+    }
+}

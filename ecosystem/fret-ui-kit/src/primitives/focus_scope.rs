@@ -108,3 +108,202 @@ pub fn resolve_restore_focus_node<H: UiHost>(
 
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics,
+        TextService, TextStyle,
+    };
+    use fret_ui::element::{LayoutStyle, Length, PressableProps};
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn apply_initial_focus_prefers_explicit_element() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let b = bounds();
+
+        let mut a: Option<GlobalElementId> = None;
+        let mut b_id: Option<GlobalElementId> = None;
+
+        let props = PressableProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(10.0));
+                layout.size.height = Length::Px(Px(10.0));
+                layout
+            },
+            focusable: true,
+            ..Default::default()
+        };
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "test",
+            |cx| {
+                vec![
+                    cx.pressable_with_id(props.clone(), |_cx, _st, id| {
+                        a = Some(id);
+                        Vec::new()
+                    }),
+                    cx.pressable_with_id(props, |_cx, _st, id| {
+                        b_id = Some(id);
+                        Vec::new()
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let a = a.expect("a id");
+        let b_id = b_id.expect("b id");
+        let a_node =
+            fret_ui::elements::node_for_element(&mut app, window, a).expect("a node");
+        let b_node =
+            fret_ui::elements::node_for_element(&mut app, window, b_id).expect("b node");
+
+        ui.set_focus(None);
+        assert!(apply_initial_focus_for_overlay(
+            &mut ui,
+            &mut app,
+            window,
+            root,
+            Some(b_id)
+        ));
+        assert_eq!(ui.focus(), Some(b_node));
+
+        ui.set_focus(None);
+        assert!(apply_initial_focus_for_overlay(
+            &mut ui,
+            &mut app,
+            window,
+            root,
+            None
+        ));
+        assert_eq!(ui.focus(), Some(a_node));
+    }
+
+    #[test]
+    fn resolve_restore_focus_prefers_trigger_and_falls_back_to_live_node() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let b = bounds();
+
+        let mut trigger: Option<GlobalElementId> = None;
+        let mut other: Option<GlobalElementId> = None;
+
+        let props = PressableProps {
+            layout: LayoutStyle::default(),
+            focusable: true,
+            ..Default::default()
+        };
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "test",
+            |cx| {
+                vec![
+                    cx.pressable_with_id(props.clone(), |_cx, _st, id| {
+                        trigger = Some(id);
+                        Vec::new()
+                    }),
+                    cx.pressable_with_id(props, |_cx, _st, id| {
+                        other = Some(id);
+                        Vec::new()
+                    }),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let trigger = trigger.expect("trigger id");
+        let other = other.expect("other id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger)
+            .expect("trigger node");
+        let other_node = fret_ui::elements::node_for_element(&mut app, window, other)
+            .expect("other node");
+
+        assert_eq!(
+            resolve_restore_focus_node(&ui, &mut app, window, Some(trigger), Some(other_node)),
+            Some(trigger_node)
+        );
+
+        assert_eq!(
+            resolve_restore_focus_node(&ui, &mut app, window, None, Some(other_node)),
+            Some(other_node)
+        );
+    }
+}

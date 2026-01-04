@@ -144,3 +144,81 @@ pub fn note_closed<H: UiHost>(cx: &mut ElementContext<'_, H>, now: u64) {
             svc.current_state_mut().delay_group.note_closed(now);
         });
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_runtime::{FrameId, TickId};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn provider_stack_overrides_and_restores_config() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+
+        let b = bounds();
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let outer = TooltipProviderConfig::new(10, 30);
+            with_tooltip_provider(cx, outer, |cx| {
+                assert_eq!(current_config(cx), outer);
+
+                let inner = TooltipProviderConfig::new(5, 6).disable_hoverable_content(true);
+                with_tooltip_provider(cx, inner, |cx| {
+                    assert_eq!(current_config(cx), inner);
+                });
+
+                assert_eq!(current_config(cx), outer);
+            });
+
+            assert_eq!(current_config(cx), TooltipProviderConfig::default());
+        });
+    }
+
+    #[test]
+    fn delay_group_is_scoped_to_provider() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+
+        let b = bounds();
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let cfg = TooltipProviderConfig::new(10, 30);
+            with_tooltip_provider(cx, cfg, |cx| {
+                assert_eq!(open_delay_ticks(cx, 100), 10);
+                note_closed(cx, 120);
+                assert_eq!(open_delay_ticks(cx, 121), 0);
+                assert_eq!(open_delay_ticks(cx, 151), 10);
+            });
+        });
+    }
+
+    #[test]
+    fn provider_stack_is_cleared_each_frame() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        app.set_frame_id(FrameId(1));
+        app.set_tick_id(TickId(1));
+
+        let b = bounds();
+        fret_ui::elements::with_element_cx(&mut app, window, b, "frame1", |cx| {
+            let cfg = TooltipProviderConfig::new(10, 30);
+            with_tooltip_provider(cx, cfg, |_cx| {});
+        });
+
+        app.set_frame_id(FrameId(2));
+        fret_ui::elements::with_element_cx(&mut app, window, b, "frame2", |cx| {
+            assert_eq!(current_config(cx), TooltipProviderConfig::default());
+        });
+    }
+}
