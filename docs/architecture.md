@@ -84,7 +84,9 @@ Crate boundaries are locked in ADR 0093: `docs/adr/0093-crate-structure-core-bac
 - `ecosystem/fret-ui-shadcn`: shadcn/ui v4 taxonomy surface + recipes built on `fret-ui-kit`.
 - `crates/fret-ui-app`: integration convenience layer that binds `fret-ui` to `fret-app::App` for first-party apps/demos.
 - `crates/fret`: public facade crate (re-exports).
-- `crates/fret-demo`: runnable demo app (docking + persistence + viewports prototypes).
+- `apps/fret-examples`: shared end-to-end harness code (components gallery, docking demos, smoke tests).
+- `apps/fret-demo`: native demo binaries (thin shells over `fret-examples`).
+- `apps/fret-demo-web`: wasm demo shell (Trunk + `#[wasm_bindgen(start)]`, thin shell over `fret-examples`).
 
 ## Repository Layout (Future)
 

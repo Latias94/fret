@@ -12,8 +12,9 @@ Primary goal:
 
 Recommended top-level layout:
 
-- `crates/`: **Core framework** crates (stable boundaries; framework + backends + runner + demo).
+- `crates/`: **Core framework** crates (stable boundaries; framework + backends + runner glue).
 - `ecosystem/`: **Ecosystem crates** incubated in-tree (components, icon sets, app kits). These are expected to evolve quickly and may move to another repository in the future.
+- `apps/`: Runnable apps / end-to-end harness shells (not in `default-members`).
 - `docs/`: Architecture docs + ADRs (source of truth).
 - `tools/`: Scripts and maintenance utilities (e.g. layering checks).
 - `repo-ref/`: Pinned upstream references (not build dependencies).
@@ -43,9 +44,8 @@ Notes:
   - `fret-render` (wgpu-based renderer)
 - Integration / wiring:
   - `fret-launch` (cross-platform launcher glue; depends on backend crates)
-- Public facade + demos:
+- Public facade:
   - `fret` (re-exports)
-  - `fret-demo`
 - Other core glue:
   - `fret-a11y-accesskit`
 
@@ -91,8 +91,19 @@ The workspace should include both buckets:
 
 - `crates/*`
 - `ecosystem/*`
+- `apps/*`
 
 This keeps demos and layering checks consistent while still communicating “core vs ecosystem” through the folder name.
+
+## `apps/` (Runnable Harnesses)
+
+`apps/` is for runnable apps and end-to-end harnesses that exercise the full stack.
+
+Current apps:
+
+- `fret-examples`: shared harness code (components gallery, docking demos, smoke tests).
+- `fret-demo`: native harness shells (thin wrappers over `fret-examples`).
+- `fret-demo-web`: wasm harness shell (Trunk + `#[wasm_bindgen(start)]`, thin wrapper over `fret-examples`).
 
 ## Extraction Policy (When to Move `ecosystem/` Out)
 

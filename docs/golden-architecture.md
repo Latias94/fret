@@ -59,7 +59,9 @@ For each module, we consider it “closed enough to scale” when:
 **Ergonomics + demos:**
 
 - `crates/fret-ui-app` — convenience layer binding `fret-ui` to `fret-app::App` (integrated app ergonomics).
-- `crates/fret-demo` — end-to-end harnesses.
+- `apps/fret-examples` — end-to-end harness code.
+- `apps/fret-demo` — native harness shells.
+- `apps/fret-demo-web` — wasm harness shell.
 - `crates/fret` — facade crate (re-exports).
 
 Hard rules: see `docs/dependency-policy.md` and ADR 0037.
@@ -305,9 +307,9 @@ flowchart LR
 
 **Code entry points**
 
-- Components gallery: `crates/fret-demo/src/components_gallery.rs`
-- Docking demo: `crates/fret-demo/src/docking_demo.rs`
-- Docking arbitration harness (docking + viewport + overlays): `crates/fret-demo/src/docking_arbitration_demo.rs` (validates ADR 0072; see `docs/docking-arbitration-checklist.md`)
+- Components gallery: `apps/fret-examples/src/components_gallery.rs`
+- Docking demo: `apps/fret-examples/src/docking_demo.rs`
+- Docking arbitration harness (docking + viewport + overlays): `apps/fret-examples/src/docking_arbitration_demo.rs` (validates ADR 0072; see `docs/docking-arbitration-checklist.md`)
 
 **Closure checklist**
 

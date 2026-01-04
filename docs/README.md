@@ -40,9 +40,9 @@ contracts early to avoid large rewrites later.
 
 ## Code Entry Points (After You Read The Docs)
 
-- End-to-end demo wiring (effects → runner → render): `crates/fret-demo/src/components_gallery.rs`
-- shadcn surface smoke test (components + overlays): `crates/fret-demo/src/components_gallery.rs` (or `cargo run -p fret-demo --bin components_gallery`)
-- Docking + viewport + overlays conformance harness (ADR 0072): `crates/fret-demo/src/docking_arbitration_demo.rs` (or `cargo run -p fret-demo --bin docking_arbitration_demo`; checklist: `docs/docking-arbitration-checklist.md`)
+- End-to-end demo wiring (effects → runner → render): `apps/fret-examples/src/components_gallery.rs`
+- shadcn surface smoke test (components + overlays): `apps/fret-examples/src/components_gallery.rs` (or `cargo run -p fret-demo --bin components_gallery`)
+- Docking + viewport + overlays conformance harness (ADR 0072): `apps/fret-examples/src/docking_arbitration_demo.rs` (or `cargo run -p fret-demo --bin docking_arbitration_demo`; checklist: `docs/docking-arbitration-checklist.md`)
 - A11y manual acceptance checklist (overlays + demo): `docs/a11y-acceptance-checklist.md`
  - App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
  - Desktop runner (integrated example; winit window lifecycle + scheduling): `crates/fret-launch/src/runner/mod.rs`

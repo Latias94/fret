@@ -24,7 +24,7 @@ cargo run -p fret-demo
 
 Notes:
 
-- The demo requests a semantics snapshot every frame (`crates/fret-demo/src/components_gallery.rs`).
+- The demo requests a semantics snapshot every frame (`apps/fret-examples/src/components_gallery.rs`).
 - The desktop runner enables AccessKit integration by default via `WinitRunnerConfig.accessibility_enabled`.
 
 ## What to test (high signal checks)

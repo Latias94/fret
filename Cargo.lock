@@ -1094,6 +1094,24 @@ name = "fret-demo"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "fret-examples",
+]
+
+[[package]]
+name = "fret-demo-web"
+version = "0.1.0"
+dependencies = [
+ "console_error_panic_hook",
+ "fret-examples",
+ "fret-launch",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "fret-examples"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
  "fret-app",
  "fret-app-kit",
  "fret-core",
@@ -1110,16 +1128,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "winit",
-]
-
-[[package]]
-name = "fret-demo-web"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "fret-demo",
- "fret-launch",
- "wasm-bindgen",
 ]
 
 [[package]]

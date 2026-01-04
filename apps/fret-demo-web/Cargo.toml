@@ -9,7 +9,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-fret-demo = { path = "../fret-demo" }
-fret-launch = { path = "../fret-launch" }
+fret-examples = { path = "../fret-examples" }
+fret-launch = { path = "../../crates/fret-launch" }
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"

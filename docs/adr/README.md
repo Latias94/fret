@@ -116,7 +116,7 @@ These anchors are intentionally few; use `rg` to drill down from them.
 - Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-ui-docking/src/dock/space.rs`
 - Core contracts (IDs, dock graph, scene ops): `crates/fret-core/src/lib.rs`
 - Renderer (quads/SDF/text hooks): `crates/fret-render/src/renderer.rs`
-- Demo (end-to-end wiring): `crates/fret-demo/src/components_gallery.rs`, `crates/fret-demo/src/docking_demo.rs`
+- Demo (end-to-end wiring): `apps/fret-examples/src/components_gallery.rs`, `apps/fret-examples/src/docking_demo.rs`
 
 ## Current Focus (“Decide Early”)
 

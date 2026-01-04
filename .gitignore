@@ -1,4 +1,5 @@
 /target
+/target-local
 /repo-ref
 .DS_Store
 /local
@@ -9,4 +10,4 @@
 .codex_tmp/
 .idea/
 tools/_clippy*.txt
-/crates/fret-demo-web/dist/
+/apps/fret-demo-web/dist/

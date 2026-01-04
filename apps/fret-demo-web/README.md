@@ -9,7 +9,7 @@ WebAssembly demo for the `fret` UI runtime.
    - `cargo install trunk`
 
 2. Start the dev server:
-   - `cd crates/fret-demo-web`
+   - `cd apps/fret-demo-web`
    - `trunk serve`
 
 Then open the URL printed by Trunk (usually `http://127.0.0.1:8080`).

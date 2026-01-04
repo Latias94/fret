@@ -1,5 +1,5 @@
 [package]
-name = "fret-demo"
+name = "fret-examples"
 version.workspace = true
 edition.workspace = true
 
@@ -11,13 +11,13 @@ fret-ui-docking = { path = "../../ecosystem/fret-ui-docking" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
-fret-core = { path = "../fret-core" }
-fret-runtime = { path = "../fret-runtime" }
-fret-launch = { path = "../fret-launch" }
-fret-render = { path = "../fret-render" }
-fret-app = { path = "../fret-app" }
-fret-ui-app = { path = "../fret-ui-app" }
-fret-ui = { path = "../fret-ui" }
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-launch = { path = "../../crates/fret-launch" }
+fret-render = { path = "../../crates/fret-render" }
+fret-app = { path = "../../crates/fret-app" }
+fret-ui-app = { path = "../../crates/fret-ui-app" }
+fret-ui = { path = "../../crates/fret-ui" }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 winit.workspace = true

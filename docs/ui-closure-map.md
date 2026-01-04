@@ -146,7 +146,7 @@ Validation anchors:
 
 **Demo harness**
 
-- `crates/fret-demo/src/components_gallery.rs` (popover/tooltip/hover-card/etc.)
+- `apps/fret-examples/src/components_gallery.rs` (popover/tooltip/hover-card/etc.)
 
 ### 3) Anchored Placement (Floating UI Vocabulary)
 
@@ -273,8 +273,8 @@ Validation anchors:
 **Code entry points**
 
 - Docking UI/policy: `ecosystem/fret-ui-docking/src/dock/*`
-- Docking demo (baseline): `crates/fret-demo/src/docking_demo.rs`
-- Docking arbitration harness (ADR 0072 conformance): `crates/fret-demo/src/docking_arbitration_demo.rs`
+- Docking demo (baseline): `apps/fret-examples/src/docking_demo.rs`
+- Docking arbitration harness (ADR 0072 conformance): `apps/fret-examples/src/docking_arbitration_demo.rs`
 - Conformance checklist: `docs/docking-arbitration-checklist.md`
 
 **Important portability note**
@@ -318,7 +318,7 @@ This is the “do it now or pay later” list, ordered by expected rewrite cost.
 2. **Docking + overlay + viewport capture conformance**
    - Status:
      - targeted regressions exist in `ecosystem/fret-ui-docking/src/dock/tests.rs`,
-     - end-to-end harness exists in `crates/fret-demo/src/docking_arbitration_demo.rs`,
+     - end-to-end harness exists in `apps/fret-examples/src/docking_arbitration_demo.rs`,
      - manual checklist lives in `docs/docking-arbitration-checklist.md`.
    - Remaining: expand coverage for cross-window edge cases (tear-off + drag cancel + modal barrier) and any platform-specific pointer capture quirks.
 
