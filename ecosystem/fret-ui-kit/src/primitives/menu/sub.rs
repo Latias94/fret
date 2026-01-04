@@ -991,7 +991,52 @@ pub fn handle_sub_trigger_hover_change(
         return;
     }
 
-    if current_open.is_some() {
+    if let Some(current_open) = current_open {
+        // Radix prevents switching submenus while the pointer is moving toward the already-open
+        // submenu panel (pointer grace intent). We mirror that by ignoring hover-enter on other
+        // submenu triggers while the pointer remains inside the grace polygon.
+        //
+        // This keeps us closer to Radix's `onItemEnter(event).preventDefault()` semantics and avoids
+        // repeatedly arming "switch submenu" open-delay timers while the pointer is in transit.
+        let pointer = host
+            .models_mut()
+            .read(&models.last_pointer, |v| *v)
+            .ok()
+            .flatten();
+        let pointer_dir = host
+            .models_mut()
+            .read(&models.pointer_dir, |v| *v)
+            .ok()
+            .flatten();
+        let grace_intent = host
+            .models_mut()
+            .read(&models.pointer_grace_intent, |v| *v)
+            .ok()
+            .flatten();
+
+        let switching_away = current_open.as_ref() != value.as_ref();
+        let moving_towards = grace_intent
+            .as_ref()
+            .is_some_and(|intent| pointer_dir == Some(intent.side));
+        let in_grace_area = match (pointer, grace_intent) {
+            (Some(pointer), Some(intent)) => {
+                pointer_grace_intent::is_pointer_in_grace_area(pointer, intent)
+            }
+            _ => false,
+        };
+
+        if switching_away && moving_towards && in_grace_area {
+            cancel_timer(host, &models.open_timer);
+            let _ = host
+                .models_mut()
+                .update(&models.pending_open_value, |v| *v = None);
+            let _ = host
+                .models_mut()
+                .update(&models.pending_open_trigger, |v| *v = None);
+            host.request_redraw(acx.window);
+            return;
+        }
+
         // While another submenu is open, avoid closing it immediately when hovering a different
         // submenu trigger. We only switch once the hover open-delay timer fires.
     }
