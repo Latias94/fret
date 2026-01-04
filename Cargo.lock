@@ -1058,12 +1058,22 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "fret-app",
+ "fret-asset-cache",
  "fret-core",
  "fret-runtime",
  "fret-ui",
  "fret-ui-app",
  "fret-ui-kit",
  "tracing",
+]
+
+[[package]]
+name = "fret-asset-cache"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "slotmap",
 ]
 
 [[package]]

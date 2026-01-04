@@ -2796,6 +2796,120 @@ impl<D: WinitDriver> WinitRunner<D> {
                             state.window.request_redraw();
                         }
                     }
+                    Effect::ImageRegisterRgba8 {
+                        window,
+                        token,
+                        width,
+                        height,
+                        bytes,
+                        color_space,
+                    } => {
+                        let Some(context) = self.context.as_ref() else {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::ImageRegisterFailed {
+                                    token,
+                                    message: "wgpu not initialized".to_string(),
+                                },
+                            );
+                            continue;
+                        };
+                        let Some(renderer) = self.renderer.as_mut() else {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::ImageRegisterFailed {
+                                    token,
+                                    message: "renderer not initialized".to_string(),
+                                },
+                            );
+                            continue;
+                        };
+
+                        if width == 0 || height == 0 {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::ImageRegisterFailed {
+                                    token,
+                                    message: format!("invalid image size: {width}x{height}"),
+                                },
+                            );
+                            continue;
+                        }
+
+                        let expected_len = (width as usize)
+                            .saturating_mul(height as usize)
+                            .saturating_mul(4);
+                        if bytes.len() != expected_len {
+                            self.deliver_window_event_now(
+                                window,
+                                &Event::ImageRegisterFailed {
+                                    token,
+                                    message: format!(
+                                        "invalid rgba8 byte length: got {} expected {}",
+                                        bytes.len(),
+                                        expected_len
+                                    ),
+                                },
+                            );
+                            continue;
+                        }
+
+                        let color_space = match color_space {
+                            fret_runtime::ImageColorSpace::Srgb => {
+                                fret_render::ImageColorSpace::Srgb
+                            }
+                            fret_runtime::ImageColorSpace::Linear => {
+                                fret_render::ImageColorSpace::Linear
+                            }
+                        };
+
+                        let fret_render::UploadedRgba8Image {
+                            view,
+                            size,
+                            format,
+                            color_space,
+                            ..
+                        } = fret_render::upload_rgba8_image(
+                            &context.device,
+                            &context.queue,
+                            (width, height),
+                            &bytes,
+                            color_space,
+                        );
+
+                        let image = renderer.register_image(fret_render::ImageDescriptor {
+                            view,
+                            size,
+                            format,
+                            color_space,
+                        });
+
+                        self.deliver_window_event_now(
+                            window,
+                            &Event::ImageRegistered {
+                                token,
+                                image,
+                                width,
+                                height,
+                            },
+                        );
+                        if let Some(state) = self.windows.get(window) {
+                            state.window.request_redraw();
+                        }
+                    }
+                    Effect::ImageUnregister { image } => {
+                        let Some(renderer) = self.renderer.as_mut() else {
+                            continue;
+                        };
+
+                        if !renderer.unregister_image(image) {
+                            continue;
+                        }
+
+                        for (_id, state) in self.windows.iter() {
+                            state.window.request_redraw();
+                        }
+                    }
                     Effect::ViewportInput(event) => {
                         self.driver.viewport_input(&mut self.app, event);
                     }

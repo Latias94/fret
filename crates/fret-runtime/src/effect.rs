@@ -1,8 +1,9 @@
 use std::time::Duration;
 
-use crate::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
+use crate::{ClipboardToken, ExternalDropToken, FileDialogToken, ImageUploadToken, TimerToken};
 use fret_core::{
-    AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, Rect, WindowAnchor,
+    AppWindowId, CursorIcon, ExternalDropReadLimits, FileDialogOptions, ImageColorSpace, Rect,
+    WindowAnchor,
 };
 
 use crate::CommandId;
@@ -73,6 +74,17 @@ pub enum Effect {
     CursorSetIcon {
         window: AppWindowId,
         icon: CursorIcon,
+    },
+    ImageRegisterRgba8 {
+        window: AppWindowId,
+        token: ImageUploadToken,
+        width: u32,
+        height: u32,
+        bytes: Vec<u8>,
+        color_space: ImageColorSpace,
+    },
+    ImageUnregister {
+        image: fret_core::ImageId,
     },
     RequestAnimationFrame(AppWindowId),
     SetTimer {

@@ -1,6 +1,6 @@
 use cosmic_text::SwashContent;
 use cosmic_text::{
-    Attrs, AttrsList, CacheKey, CacheKeyFlags, Family, FontSystem, Metrics, ShapeBuffer, ShapeLine,
+    Attrs, AttrsList, CacheKey, Family, FontSystem, Hinting, Metrics, ShapeBuffer, ShapeLine,
     Shaping, SwashCache, Weight,
 };
 use fret_core::{
@@ -854,9 +854,10 @@ impl TextSystem {
                 let (cache_key, _, _) = CacheKey::new(
                     g.font_id,
                     g.glyph_id,
-                    font_size_px,
-                    (0.0, 0.0),
-                    CacheKeyFlags::empty(),
+                    g.font_size,
+                    (g.x, g.y),
+                    g.font_weight,
+                    g.cache_key_flags,
                 );
 
                 let Some(image) = self
@@ -1142,6 +1143,7 @@ fn layout_text(
             None,
             &mut layout_lines,
             None,
+            Hinting::Disabled,
         );
 
         let mut ellipsis_local_end: Option<usize> = None;
@@ -1171,6 +1173,7 @@ fn layout_text(
                     None,
                     &mut ellipsis_lines,
                     None,
+                    Hinting::Disabled,
                 );
                 let w = ellipsis_lines.first().map(|l| l.w).unwrap_or(0.0);
                 let glyphs = ellipsis_lines

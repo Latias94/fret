@@ -62,3 +62,6 @@ pub struct FileDialogToken(pub u64);
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ClipboardToken(pub u64);
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ImageUploadToken(pub u64);

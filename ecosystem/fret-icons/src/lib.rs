@@ -72,6 +72,10 @@ impl IconRegistry {
         self.icons.get(id)
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = (&IconId, &IconSource)> {
+        self.icons.iter()
+    }
+
     pub fn resolve_svg(&self, id: &IconId) -> Option<ResolvedSvg<'_>> {
         let mut current = id;
         for _ in 0..32 {

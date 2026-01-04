@@ -1,0 +1,11 @@
+[package]
+name = "fret-asset-cache"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+
+[dev-dependencies]
+slotmap.workspace = true

@@ -68,6 +68,10 @@ impl TimeHost for App {
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         App::next_clipboard_token(self)
     }
+
+    fn next_image_upload_token(&mut self) -> fret_runtime::ImageUploadToken {
+        App::next_image_upload_token(self)
+    }
 }
 
 impl DragHost for App {

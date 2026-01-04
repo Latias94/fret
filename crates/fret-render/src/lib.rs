@@ -8,7 +8,8 @@ mod targets;
 mod text;
 
 pub use error::RenderError;
-pub use images::{ImageColorSpace, ImageDescriptor, ImageRegistry};
+pub use fret_core::ImageColorSpace;
+pub use images::{ImageDescriptor, ImageRegistry, UploadedRgba8Image, upload_rgba8_image};
 pub use renderer::{ClearColor, RenderSceneParams, Renderer};
 pub use surface::SurfaceState;
 pub use svg::{

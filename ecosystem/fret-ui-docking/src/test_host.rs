@@ -23,6 +23,7 @@ pub(crate) struct TestHost {
     frame_id: FrameId,
     next_timer_token: u64,
     next_clipboard_token: u64,
+    next_image_upload_token: u64,
 }
 
 #[allow(dead_code)]
@@ -245,6 +246,12 @@ impl TimeHost for TestHost {
     fn next_clipboard_token(&mut self) -> ClipboardToken {
         let token = ClipboardToken(self.next_clipboard_token);
         self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+        token
+    }
+
+    fn next_image_upload_token(&mut self) -> fret_runtime::ImageUploadToken {
+        let token = fret_runtime::ImageUploadToken(self.next_image_upload_token);
+        self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
         token
     }
 }

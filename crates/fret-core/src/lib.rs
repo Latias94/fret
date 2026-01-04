@@ -5,6 +5,7 @@ pub mod dock_op;
 pub mod file_dialog;
 pub mod geometry;
 pub mod ids;
+pub mod image;
 pub mod input;
 pub mod panels;
 pub mod scene;
@@ -33,8 +34,9 @@ pub use file_dialog::{
 pub use geometry::{Corners, Edges, Point, Px, Rect, Size, Transform2D};
 pub use ids::{
     AppWindowId, ClipboardToken, DockNodeId, ExternalDropToken, FileDialogToken, FontId, FrameId,
-    ImageId, NodeId, PathId, RenderTargetId, SvgId, TextBlobId, TimerToken,
+    ImageId, ImageUploadToken, NodeId, PathId, RenderTargetId, SvgId, TextBlobId, TimerToken,
 };
+pub use image::ImageColorSpace;
 pub use input::{
     Event, ExternalDragEvent, ExternalDragFile, ExternalDragFiles, ExternalDragKind,
     ExternalDropDataEvent, ExternalDropFileData, ExternalDropReadError, ExternalDropReadLimits,

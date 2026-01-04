@@ -107,6 +107,18 @@ Component-layer helpers (e.g. `fret-ui-kit` `Icon` / `IconButton`) render an `Ic
 
 No component code holds `ImageId` or manages raster caches directly.
 
+### Optional optimization: preload SVG ids
+
+To avoid per-frame SVG registration when rendering icons, apps may preload icon SVG bytes into
+stable `SvgId`s at the renderer boundary (for example during `WinitAppBuilder::on_gpu_ready`).
+
+In-tree helper:
+
+- `fret_ui_kit::declarative::icon::preload_icon_svgs(app, renderer_as_ui_services)` (feature `icons`)
+
+This stores `IconId -> SvgId` in an `IconSvgRegistry` global so `fret-ui-kit` icon helpers can
+emit `SvgSource::Id` directly.
+
 ## Consequences
 
 - Icon usage in components/app code becomes stable and comparable to “frontend semantics-first” practices.

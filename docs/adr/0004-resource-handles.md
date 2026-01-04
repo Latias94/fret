@@ -51,3 +51,25 @@ Expose counters suitable for debug overlays and profiling (bytes used, hit rates
 - Implement lifetime/eviction policies (atlas GC, text blob caching) using the chosen “flush point”.
 - Define resource budgets and debug counters.
 - Decide how external resources are synchronized across engine/UI submissions.
+
+## Implementation Notes (Current)
+
+### Effect-driven image registration (portable)
+
+To keep `fret-ui` and component crates backend-agnostic, raw image bytes must cross the backend boundary via
+effects and be registered by the runner/renderer at a well-defined synchronization point (the effects drain loop).
+
+Current minimal contract:
+
+- Token: `fret_core::ImageUploadToken` (allocated by the host via `UiHost::next_image_upload_token()`).
+- Request: `fret_runtime::Effect::ImageRegisterRgba8 { window, token, width, height, bytes, color_space }`.
+- Success: `fret_core::Event::ImageRegistered { token, image, width, height }`.
+- Failure: `fret_core::Event::ImageRegisterFailed { token, message }`.
+- Release: `fret_runtime::Effect::ImageUnregister { image }` (best-effort).
+
+Notes:
+
+- This matches the GPUI-style principle that resources are managed at a flush point and UI code only holds stable IDs.
+- Higher-level asset caches (key → async load → register → notify redraw) are expected to live above this minimal
+  primitive (similar to GPUI’s `use_asset`), but the core boundary stays effects-based and portable.
+- `color_space` uses the portable `fret_core::ImageColorSpace` enum (Srgb vs Linear).

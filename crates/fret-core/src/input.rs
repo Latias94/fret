@@ -1,6 +1,6 @@
 use crate::{
     AppWindowId, ClipboardToken, ExternalDropToken, FileDialogDataEvent, FileDialogSelection,
-    RenderTargetId, TimerToken, WindowLogicalPosition,
+    ImageId, ImageUploadToken, RenderTargetId, TimerToken, WindowLogicalPosition,
     geometry::{Point, Px},
 };
 
@@ -414,6 +414,18 @@ pub enum Event {
     FileDialogData(FileDialogDataEvent),
     /// A file dialog request completed without a selection (user canceled).
     FileDialogCanceled,
+    /// Image resource registration completed and produced an `ImageId`.
+    ImageRegistered {
+        token: ImageUploadToken,
+        image: ImageId,
+        width: u32,
+        height: u32,
+    },
+    /// Image resource registration failed (e.g. invalid bytes, backend error).
+    ImageRegisterFailed {
+        token: ImageUploadToken,
+        message: String,
+    },
     /// Window close button / OS close request was triggered.
     ///
     /// The runner must not close the window immediately; the app/driver may intercept the request
