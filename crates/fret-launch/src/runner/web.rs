@@ -1,6 +1,6 @@
 //! Web launcher implementation (winit + wgpu via WebGPU).
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -60,6 +60,20 @@ pub struct WinitRunner<D: WinitAppDriver> {
     web_services: WebPlatformServices,
     gpu_ready_called: bool,
     exiting: bool,
+    exit_requested: Rc<Cell<bool>>,
+}
+
+#[derive(Clone)]
+pub struct WebRunnerHandle {
+    proxy: EventLoopProxy,
+    exit_requested: Rc<Cell<bool>>,
+}
+
+impl WebRunnerHandle {
+    pub fn destroy(&self) {
+        self.exit_requested.set(true);
+        self.proxy.wake_up();
+    }
 }
 
 pub fn run_app<D: WinitAppDriver + 'static>(
@@ -68,6 +82,14 @@ pub fn run_app<D: WinitAppDriver + 'static>(
     driver: D,
 ) -> Result<(), RunnerError> {
     run_app_with_event_loop(EventLoop::new()?, config, app, driver)
+}
+
+pub fn run_app_with_handle<D: WinitAppDriver + 'static>(
+    config: WinitRunnerConfig,
+    app: App,
+    driver: D,
+) -> Result<WebRunnerHandle, RunnerError> {
+    run_app_with_event_loop_and_handle(EventLoop::new()?, config, app, driver)
 }
 
 pub fn run_app_with_event_loop<D: WinitAppDriver + 'static>(
@@ -80,6 +102,20 @@ pub fn run_app_with_event_loop<D: WinitAppDriver + 'static>(
     runner.set_event_loop_proxy(event_loop.create_proxy());
     event_loop.run_app(runner)?;
     Ok(())
+}
+
+pub fn run_app_with_event_loop_and_handle<D: WinitAppDriver + 'static>(
+    event_loop: EventLoop,
+    config: WinitRunnerConfig,
+    app: App,
+    driver: D,
+) -> Result<WebRunnerHandle, RunnerError> {
+    let mut runner = WinitRunner::new_app(config, app, driver);
+    let proxy = event_loop.create_proxy();
+    runner.set_event_loop_proxy(proxy.clone());
+    let handle = runner.handle();
+    event_loop.run_app(runner)?;
+    Ok(handle)
 }
 
 impl<D: WinitAppDriver> WinitRunner<D> {
@@ -118,6 +154,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             web_services: WebPlatformServices::default(),
             gpu_ready_called: false,
             exiting: false,
+            exit_requested: Rc::new(Cell::new(false)),
         }
     }
 
@@ -125,6 +162,32 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let wake = proxy.clone();
         self.web_services.set_waker(move || wake.wake_up());
         self.event_loop_proxy = Some(proxy);
+    }
+
+    pub fn handle(&self) -> WebRunnerHandle {
+        let proxy = self
+            .event_loop_proxy
+            .clone()
+            .expect("event loop proxy must be set before creating a WebRunnerHandle");
+        WebRunnerHandle {
+            proxy,
+            exit_requested: self.exit_requested.clone(),
+        }
+    }
+
+    fn maybe_exit(&mut self, event_loop: &dyn ActiveEventLoop) -> bool {
+        if self.exiting {
+            return true;
+        }
+
+        if !self.exit_requested.get() {
+            return false;
+        }
+
+        self.exiting = true;
+        self.web_cursor.take();
+        event_loop.exit();
+        true
     }
 
     fn effective_platform_capabilities(requested: &PlatformCapabilities) -> PlatformCapabilities {
@@ -454,6 +517,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn render_frame(&mut self, event_loop: &dyn ActiveEventLoop, window: &dyn Window) {
+        if self.maybe_exit(event_loop) {
+            return;
+        }
         if self.exiting {
             return;
         }
@@ -697,7 +763,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         }
     }
 
-    fn proxy_wake_up(&mut self, _event_loop: &dyn ActiveEventLoop) {
+    fn proxy_wake_up(&mut self, event_loop: &dyn ActiveEventLoop) {
+        if self.maybe_exit(event_loop) {
+            return;
+        }
         if self.exiting {
             return;
         }
@@ -720,6 +789,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         window_id: WindowId,
         event: WindowEvent,
     ) {
+        if self.maybe_exit(event_loop) {
+            return;
+        }
         if self.exiting {
             return;
         }
@@ -785,6 +857,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     }
 
     fn about_to_wait(&mut self, event_loop: &dyn ActiveEventLoop) {
+        if self.maybe_exit(event_loop) {
+            return;
+        }
         event_loop.set_control_flow(ControlFlow::Wait);
     }
 }

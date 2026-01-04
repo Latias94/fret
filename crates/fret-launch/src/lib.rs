@@ -11,3 +11,6 @@ pub use runner::{
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use runner::{RunnerUserEvent, WinitAppBuilder};
+
+#[cfg(target_arch = "wasm32")]
+pub use runner::{WebRunnerHandle, run_app_with_event_loop_and_handle, run_app_with_handle};
