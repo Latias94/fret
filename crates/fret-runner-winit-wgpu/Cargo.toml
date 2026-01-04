@@ -29,5 +29,3 @@ winit.workspace = true
 cocoa.workspace = true
 objc.workspace = true
 
-[target.'cfg(all(not(target_arch = "wasm32"), windows))'.dependencies]
-windows-sys.workspace = true

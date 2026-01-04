@@ -30,6 +30,10 @@ We split platform concerns into:
 Runners remain responsible for event-loop ownership and presentation:
 
 - `crates/fret-runner-winit`: maps `winit` events into `fret-core` input/events.
+  - Also owns small, `winit`-specific per-window state (IME cursor area, cursor icon) and exposes a
+    `prepare_frame` flush point so runners can apply pending window-side updates deterministically
+    (ImGui-style backend split).
+  - Owns native `WindowId` -> `AppWindowId` bookkeeping for winit-backed runners.
 - `crates/fret-runner-winit-wgpu`: owns the native event loop + surfaces + renderer, and uses
   `fret-platform-native` to execute platform effects.
 - Web targets use `winit` on wasm for input/events and `fret-platform-web` for browser APIs.

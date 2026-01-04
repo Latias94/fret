@@ -1216,8 +1216,10 @@ dependencies = [
  "accesskit",
  "fret-a11y-accesskit",
  "fret-core",
+ "tracing",
  "wasm-bindgen",
  "web-sys",
+ "windows-sys 0.61.2",
  "winit",
 ]
 
@@ -1239,7 +1241,6 @@ dependencies = [
  "thiserror 2.0.17",
  "tracing",
  "wgpu",
- "windows-sys 0.61.2",
  "winit",
 ]
 

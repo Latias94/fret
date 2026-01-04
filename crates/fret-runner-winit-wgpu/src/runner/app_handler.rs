@@ -220,7 +220,7 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
         window_id: WindowId,
         event: WindowEvent,
     ) {
-        let Some(app_window) = self.winit_to_app.get(&window_id).copied() else {
+        let Some(app_window) = self.window_registry.get(window_id) else {
             return;
         };
 
@@ -334,12 +334,15 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                         tracing::info!(
                             "IME_DEBUG winit: WindowEvent::Ime({:?}) cached_rect={}",
                             ime,
-                            state.ime_cursor_area.is_some()
+                            state.platform.ime_cursor_area().is_some()
                         );
                     }
                     #[cfg(windows)]
-                    if let Some(rect) = state.ime_cursor_area {
-                        super::windows_ime::set_ime_cursor_area(state.window.as_ref(), rect);
+                    if let Some(rect) = state.platform.ime_cursor_area() {
+                        fret_runner_winit::windows_ime::set_ime_cursor_area(
+                            state.window.as_ref(),
+                            rect,
+                        );
                     }
 
                     let mapped = match ime {
@@ -672,6 +675,10 @@ impl<D: WinitDriver> ApplicationHandler for WinitRunner<D> {
                     let Some(state) = self.windows.get_mut(app_window) else {
                         return;
                     };
+
+                    // Apply any pending window-side state (IME/cursor) once per frame, similar to
+                    // Dear ImGui's backend `prepare_frame` pattern.
+                    state.platform.prepare_frame(state.window.as_ref());
 
                     let scale_factor = state.window.scale_factor() as f32;
                     let physical = state.window.surface_size();

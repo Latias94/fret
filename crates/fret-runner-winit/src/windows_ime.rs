@@ -104,14 +104,10 @@ fn set_ime_cursor_area_via_winit(window: &dyn Window, rect: Rect) {
     let width = (rect.size.width.0 as f64 * scale_factor).round().max(1.0) as i32;
     let height = (rect.size.height.0 as f64 * scale_factor).round().max(1.0) as i32;
 
-    // Cache the most recent cursor area so our message hook can apply the composition/candidate
-    // position at WM_IME_STARTCOMPOSITION/WM_IME_COMPOSITION time (some IMEs appear to ignore or
-    // race winit's update otherwise, defaulting to the client origin).
     if let Some(hwnd) = hwnd_for_window(window) {
         if let Ok(mut map) = IME_CURSOR_AREA_BY_HWND.lock() {
             map.insert(hwnd as isize, (x, y, width, height));
         }
-        // Also apply immediately to avoid relying on WM_IME_* timing / message hook delivery.
         apply_cursor_area_for_hwnd(hwnd as isize);
     }
 
@@ -202,16 +198,12 @@ fn set_ime_cursor_area_via_imm(window: &dyn Window, rect: Rect) {
 
     let candidate_form = CANDIDATEFORM {
         dwIndex: 0,
-        // Match Zed's behavior: positioning by point tends to be more reliable than EXCLUDE on
-        // Microsoft Pinyin (EXCLUDE can cause fallback to a corner in some configurations).
         dwStyle: CFS_CANDIDATEPOS,
         ptCurrentPos: POINT { x, y: spot_y },
         rcArea: rc_area,
     };
 
     let composition_form = COMPOSITIONFORM {
-        // Force the IME to honor the point immediately on first composition. Without this, some
-        // configurations appear to ignore our requested position for the initial preedit.
         dwStyle: CFS_POINT | CFS_FORCE_POSITION,
         ptCurrentPos: POINT { x, y: spot_y },
         rcArea: rc_area,
@@ -259,17 +251,6 @@ fn apply_cursor_area_for_hwnd(hwnd: isize) {
         return;
     }
 
-    if ime_debug_enabled() {
-        tracing::info!(
-            "IME_DEBUG windows_ime: msg_hook apply hwnd={:?} origin=({}, {}) size=({}x{})",
-            hwnd,
-            x,
-            y,
-            width,
-            height
-        );
-    }
-
     let rc_area = RECT {
         left: x,
         top: y,
@@ -283,6 +264,7 @@ fn apply_cursor_area_for_hwnd(hwnd: isize) {
         ptCurrentPos: POINT { x, y: spot_y },
         rcArea: rc_area,
     };
+
     let composition_form = COMPOSITIONFORM {
         dwStyle: CFS_POINT | CFS_FORCE_POSITION,
         ptCurrentPos: POINT { x, y: spot_y },
@@ -290,15 +272,8 @@ fn apply_cursor_area_for_hwnd(hwnd: isize) {
     };
 
     unsafe {
-        let cand_ok = ImmSetCandidateWindow(himc, &candidate_form);
-        let comp_ok = ImmSetCompositionWindow(himc, &composition_form);
-        if ime_debug_enabled() {
-            tracing::info!(
-                "IME_DEBUG windows_ime: msg_hook ImmSetCandidateWindow={} ImmSetCompositionWindow={}",
-                cand_ok,
-                comp_ok
-            );
-        }
+        let _ = ImmSetCandidateWindow(himc, &candidate_form);
+        let _ = ImmSetCompositionWindow(himc, &composition_form);
         ImmReleaseContext(hwnd, himc);
     }
 }

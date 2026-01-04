@@ -42,14 +42,12 @@ type WindowAnchor = fret_core::WindowAnchor;
 
 mod app_handler;
 mod no_services;
-#[cfg(windows)]
-mod windows_ime;
 
 use no_services::NoUiServices;
 
 #[cfg(windows)]
 pub fn ime_msg_hook(msg: *const std::ffi::c_void) -> bool {
-    windows_ime::msg_hook(msg)
+    fret_runner_winit::windows_ime::msg_hook(msg)
 }
 
 #[derive(Debug, Clone)]
@@ -1461,9 +1459,6 @@ struct WindowRuntime<S> {
     scene: Scene,
     platform: fret_runner_winit::WinitPlatform,
     is_focused: bool,
-    ime_allowed: bool,
-    ime_cursor_area: Option<Rect>,
-    cursor_icon: fret_core::CursorIcon,
     external_drag_files: Vec<std::path::PathBuf>,
     external_drag_token: Option<fret_runtime::ExternalDropToken>,
     user: S,
@@ -1490,7 +1485,7 @@ pub struct WinitRunner<D: WinitDriver> {
     no_services: NoUiServices,
 
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
-    winit_to_app: HashMap<WindowId, fret_core::AppWindowId>,
+    window_registry: fret_runner_winit::window_registry::WinitWindowRegistry,
     main_window: Option<fret_core::AppWindowId>,
     windows_pending_front: HashMap<fret_core::AppWindowId, PendingFrontRequest>,
 
@@ -1775,7 +1770,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             renderer: None,
             no_services: NoUiServices,
             windows: SlotMap::with_key(),
-            winit_to_app: HashMap::new(),
+            window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,
             windows_pending_front: HashMap::new(),
             saw_left_mouse_release_this_turn: false,
@@ -2090,9 +2085,6 @@ impl<D: WinitDriver> WinitRunner<D> {
                     ..Default::default()
                 },
                 is_focused: false,
-                ime_allowed: false,
-                ime_cursor_area: None,
-                cursor_icon: fret_core::CursorIcon::Default,
                 external_drag_files: Vec::new(),
                 external_drag_token: None,
                 user,
@@ -2113,12 +2105,12 @@ impl<D: WinitDriver> WinitRunner<D> {
         }
 
         let winit_id = self.windows[id].window.id();
-        self.winit_to_app.insert(winit_id, id);
+        self.window_registry.insert(winit_id, id);
 
         // Ensure the window draws at least one frame after creation.
         //
         // Important: `WindowEvent::RedrawRequested` is keyed by the winit `WindowId`, so we must
-        // install the `winit_to_app` mapping *before* requesting the redraw. Otherwise, the first
+        // install the `WindowId -> AppWindowId` mapping *before* requesting the redraw. Otherwise, the first
         // redraw can be dropped and the window may appear blank until another event arrives.
         if let Some(state) = self.windows.get(id) {
             state.window.request_redraw();
@@ -2143,7 +2135,7 @@ impl<D: WinitDriver> WinitRunner<D> {
         }
 
         if let Some(state) = self.windows.remove(window) {
-            self.winit_to_app.remove(&state.window.id());
+            self.window_registry.remove(state.window.id());
         }
         self.app
             .with_global_mut(WindowMetricsService::default, |svc, _app| {
@@ -2451,6 +2443,7 @@ impl<D: WinitDriver> WinitRunner<D> {
             let effects = self.app.flush_effects();
 
             let mut did_work = !effects.is_empty();
+            let mut window_state_dirty: HashSet<fret_core::AppWindowId> = HashSet::new();
 
             for effect in effects {
                 match effect {
@@ -2461,48 +2454,9 @@ impl<D: WinitDriver> WinitRunner<D> {
                     }
                     Effect::ImeAllow { window, enabled } => {
                         if let Some(state) = self.windows.get_mut(window) {
-                            if enabled {
-                                let rect = state.ime_cursor_area.unwrap_or_else(|| Rect {
-                                    origin: fret_core::Point::new(
-                                        fret_core::Px(0.0),
-                                        fret_core::Px(0.0),
-                                    ),
-                                    size: fret_core::Size::new(
-                                        fret_core::Px(1.0),
-                                        fret_core::Px(1.0),
-                                    ),
-                                });
-
-                                let request_data = winit::window::ImeRequestData::default()
-                                    .with_cursor_area(
-                                        winit::dpi::LogicalPosition::new(
-                                            rect.origin.x.0,
-                                            rect.origin.y.0,
-                                        )
-                                        .into(),
-                                        winit::dpi::LogicalSize::new(
-                                            rect.size.width.0,
-                                            rect.size.height.0,
-                                        )
-                                        .into(),
-                                    );
-
-                                let caps = winit::window::ImeCapabilities::new().with_cursor_area();
-                                let Some(enable) =
-                                    winit::window::ImeEnableRequest::new(caps, request_data)
-                                else {
-                                    state.ime_allowed = enabled;
-                                    continue;
-                                };
-                                let _ = state
-                                    .window
-                                    .request_ime_update(winit::window::ImeRequest::Enable(enable));
-                            } else {
-                                let _ = state
-                                    .window
-                                    .request_ime_update(winit::window::ImeRequest::Disable);
+                            if state.platform.set_ime_allowed(enabled) {
+                                window_state_dirty.insert(window);
                             }
-                            state.ime_allowed = enabled;
                         }
                     }
                     Effect::ImeSetCursorArea { window, rect } => {
@@ -2517,29 +2471,8 @@ impl<D: WinitDriver> WinitRunner<D> {
                                     rect.size.height.0
                                 );
                             }
-                            state.ime_cursor_area = Some(rect);
-                            #[cfg(windows)]
-                            {
-                                windows_ime::set_ime_cursor_area(state.window.as_ref(), rect);
-                            }
-                            #[cfg(not(windows))]
-                            {
-                                let request_data = winit::window::ImeRequestData::default()
-                                    .with_cursor_area(
-                                        winit::dpi::LogicalPosition::new(
-                                            rect.origin.x.0,
-                                            rect.origin.y.0,
-                                        )
-                                        .into(),
-                                        winit::dpi::LogicalSize::new(
-                                            rect.size.width.0,
-                                            rect.size.height.0,
-                                        )
-                                        .into(),
-                                    );
-                                let _ = state.window.request_ime_update(
-                                    winit::window::ImeRequest::Update(request_data),
-                                );
+                            if state.platform.set_ime_cursor_area(rect) {
+                                window_state_dirty.insert(window);
                             }
                         }
                     }
@@ -2547,13 +2480,9 @@ impl<D: WinitDriver> WinitRunner<D> {
                         let Some(state) = self.windows.get_mut(window) else {
                             continue;
                         };
-                        if state.cursor_icon == icon {
-                            continue;
+                        if state.platform.set_cursor_icon(icon) {
+                            window_state_dirty.insert(window);
                         }
-                        state.cursor_icon = icon;
-                        state.window.set_cursor(winit::cursor::Cursor::Icon(
-                            fret_runner_winit::map_cursor_icon(icon),
-                        ));
                     }
                     Effect::RequestAnimationFrame(window) => {
                         self.raf_windows.insert(window);
@@ -3046,6 +2975,12 @@ impl<D: WinitDriver> WinitRunner<D> {
                             }
                         }
                     },
+                }
+            }
+
+            for window in window_state_dirty {
+                if let Some(state) = self.windows.get_mut(window) {
+                    state.platform.prepare_frame(state.window.as_ref());
                 }
             }
 
