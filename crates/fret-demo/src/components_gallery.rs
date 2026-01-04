@@ -1,3 +1,4 @@
+#[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_app_kit::tree::AppTreeRowRenderer;
@@ -6,9 +7,11 @@ use fret_core::{
     FontId, KeyCode, Px, Rect, SemanticsRole, TextStyle, UiServices,
 };
 use fret_icons::IconRegistry;
+#[cfg(not(target_arch = "wasm32"))]
+use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext, run_app,
+    WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -1580,6 +1583,28 @@ impl WinitAppDriver for ComponentsGalleryDriver {
     }
 }
 
+pub fn build_app() -> App {
+    let mut app = App::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(IconRegistry::default, |icons, _app| {
+        fret_icons_lucide::register_icons(icons);
+    });
+    app
+}
+
+pub fn build_runner_config() -> WinitRunnerConfig {
+    WinitRunnerConfig {
+        main_window_title: "fret-demo components_gallery".to_string(),
+        main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
+        ..Default::default()
+    }
+}
+
+pub fn build_driver() -> impl WinitAppDriver {
+    ComponentsGalleryDriver::default()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -1590,17 +1615,8 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let mut app = App::new();
-    app.set_global(PlatformCapabilities::default());
-    app.with_global_mut(IconRegistry::default, |icons, _app| {
-        fret_icons_lucide::register_icons(icons);
-    });
-
-    let mut config = WinitRunnerConfig {
-        main_window_title: "fret-demo components_gallery".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
-        ..Default::default()
-    };
+    let mut app = build_app();
+    let mut config = build_runner_config();
 
     if let Some(settings) = fret_app::SettingsFileV1::load_json_if_exists(".fret/settings.json")
         .context("load .fret/settings.json")?

@@ -1117,19 +1117,9 @@ name = "fret-demo-web"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
- "fret-core",
- "fret-fonts",
- "fret-platform-web",
- "fret-render",
- "fret-runner-winit",
- "fret-runtime",
- "fret-ui-app",
- "fret-ui-shadcn",
+ "fret-demo",
+ "fret-launch",
  "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "wgpu",
- "winit",
 ]
 
 [[package]]
@@ -1163,8 +1153,10 @@ dependencies = [
  "cocoa",
  "fret-app",
  "fret-core",
+ "fret-fonts",
  "fret-platform",
  "fret-platform-native",
+ "fret-platform-web",
  "fret-render",
  "fret-runner-winit",
  "fret-runtime",
@@ -1173,6 +1165,8 @@ dependencies = [
  "slotmap",
  "thiserror 2.0.17",
  "tracing",
+ "wasm-bindgen-futures",
+ "web-sys",
  "wgpu",
  "winit",
 ]
