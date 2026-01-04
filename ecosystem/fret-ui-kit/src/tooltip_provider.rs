@@ -10,6 +10,7 @@ use crate::headless::tooltip_delay_group::{TooltipDelayGroupConfig, TooltipDelay
 pub struct TooltipProviderConfig {
     pub delay_duration_ticks: u64,
     pub skip_delay_duration_ticks: u64,
+    pub disable_hoverable_content: bool,
 }
 
 impl TooltipProviderConfig {
@@ -17,7 +18,13 @@ impl TooltipProviderConfig {
         Self {
             delay_duration_ticks,
             skip_delay_duration_ticks,
+            disable_hoverable_content: false,
         }
+    }
+
+    pub fn disable_hoverable_content(mut self, disable: bool) -> Self {
+        self.disable_hoverable_content = disable;
+        self
     }
 }
 

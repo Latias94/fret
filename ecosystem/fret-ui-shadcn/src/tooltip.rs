@@ -61,6 +61,7 @@ pub enum TooltipSide {
 pub struct TooltipProvider {
     delay_duration_frames: u32,
     skip_delay_duration_frames: u32,
+    disable_hoverable_content: bool,
 }
 
 impl TooltipProvider {
@@ -78,6 +79,11 @@ impl TooltipProvider {
         self
     }
 
+    pub fn disable_hoverable_content(mut self, disable: bool) -> Self {
+        self.disable_hoverable_content = disable;
+        self
+    }
+
     pub fn with<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -88,7 +94,8 @@ impl TooltipProvider {
             tooltip_provider::TooltipProviderConfig::new(
                 self.delay_duration_frames as u64,
                 self.skip_delay_duration_frames as u64,
-            ),
+            )
+            .disable_hoverable_content(self.disable_hoverable_content),
             f,
         )
     }
@@ -116,6 +123,7 @@ pub struct Tooltip {
     arrow_padding_override: Option<Px>,
     open_delay_frames_override: Option<u32>,
     close_delay_frames_override: Option<u32>,
+    disable_hoverable_content_override: Option<bool>,
     layout: LayoutRefinement,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
 }
@@ -134,6 +142,7 @@ impl Tooltip {
             arrow_padding_override: None,
             open_delay_frames_override: None,
             close_delay_frames_override: None,
+            disable_hoverable_content_override: None,
             layout: LayoutRefinement::default(),
             anchor_override: None,
         }
@@ -161,6 +170,14 @@ impl Tooltip {
 
     pub fn close_delay_frames(mut self, frames: u32) -> Self {
         self.close_delay_frames_override = Some(frames);
+        self
+    }
+
+    /// When `true`, hovering the tooltip content does not keep it open (Radix `disableHoverableContent`).
+    ///
+    /// Default: inherited from `TooltipProvider`.
+    pub fn disable_hoverable_content(mut self, disable: bool) -> Self {
+        self.disable_hoverable_content_override = Some(disable);
         self
     }
 
@@ -237,6 +254,7 @@ impl Tooltip {
         let side = self.side;
         let open_delay_frames_override = self.open_delay_frames_override;
         let close_delay_frames_override = self.close_delay_frames_override;
+        let disable_hoverable_content_override = self.disable_hoverable_content_override;
 
         let trigger = self.trigger;
         let content = self.content;
@@ -268,6 +286,9 @@ impl Tooltip {
 
             let now = cx.app.frame_id().0;
             let focused = cx.is_focused_element(trigger_id);
+            let provider_cfg = tooltip_provider::current_config(cx);
+            let disable_hoverable_content = disable_hoverable_content_override
+                .unwrap_or(provider_cfg.disable_hoverable_content);
             let open_delay_ticks = if focused {
                 0
             } else if let Some(frames) = open_delay_frames_override {
@@ -296,7 +317,7 @@ impl Tooltip {
                 cx.observe_model(&last_pointer, fret_ui::Invalidation::Paint);
             }
 
-            let pointer_safe = if was_open {
+            let pointer_safe = if was_open && !disable_hoverable_content {
                 let pointer = cx.app.models().read(&last_pointer, |v| *v).ok().flatten();
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
 
@@ -1273,9 +1294,6 @@ mod tests {
                                 PressableProps {
                                     layout: {
                                         let mut layout = LayoutStyle::default();
-                                        layout.position = fret_ui::element::PositionStyle::Absolute;
-                                        layout.inset.left = Some(Px(320.0));
-                                        layout.inset.top = Some(Px(260.0));
                                         layout.size.width = Length::Px(Px(120.0));
                                         layout.size.height = Length::Px(Px(40.0));
                                         layout
@@ -1304,6 +1322,7 @@ mod tests {
                                 Tooltip::new(trigger, content)
                                     .open_delay_frames(0)
                                     .close_delay_frames(0)
+                                    .disable_hoverable_content(false)
                                     .into_element(cx),
                             ]
                         })
@@ -1328,11 +1347,15 @@ mod tests {
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         // Hover trigger to open tooltip (open_delay=0).
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
         ui.dispatch_event(
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
-                position: Point::new(Px(380.0), Px(280.0)),
+                position: center(trigger_bounds),
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
             }),
@@ -1385,6 +1408,212 @@ mod tests {
         assert!(
             fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
             "expected tooltip content to remain mounted while pointer is over content"
+        );
+    }
+
+    #[test]
+    fn tooltip_closes_when_hoverable_content_disabled() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        fn center(rect: Rect) -> Point {
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+            )
+        }
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+            content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        ) {
+            OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    TooltipProvider::new()
+                        .delay_duration_frames(0)
+                        .skip_delay_duration_frames(0)
+                        .with(cx, |cx| {
+                            let trigger = cx.pressable_with_id(
+                                PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Px(Px(120.0));
+                                        layout.size.height = Length::Px(Px(40.0));
+                                        layout
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(Arc::from("trigger")),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    trigger_id_out.set(Some(id));
+                                    vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                                },
+                            );
+
+                            let content =
+                                TooltipContent::new(vec![cx.text_props(TextProps::new("tip"))])
+                                    .into_element(cx);
+                            content_id_out.set(Some(content.id));
+
+                            vec![
+                                Tooltip::new(trigger, content)
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .side(TooltipSide::Top)
+                                    .side_offset(Px(120.0))
+                                    .disable_hoverable_content(true)
+                                    .into_element(cx),
+                            ]
+                        })
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+        }
+
+        // Frame 1: establish element->node mappings and layout.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Hover trigger to open tooltip (open_delay=0).
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: center(trigger_bounds),
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Frame 2: tooltip should be open and mounted.
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("expected tooltip content to be mounted after opening");
+        let content_bounds = ui
+            .debug_node_bounds(content_node)
+            .expect("tooltip content bounds");
+        let tooltip_layer_root = *ui
+            .debug_node_path(content_node)
+            .first()
+            .expect("tooltip node path root");
+
+        // Move pointer onto the tooltip content, but ensure the coordinate is outside the trigger
+        // bounds (otherwise the trigger is still "hovered" and no close is expected).
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let candidates = [
+            Point::new(
+                Px(content_bounds.origin.x.0 + 1.0),
+                Px(content_bounds.origin.y.0 + 1.0),
+            ),
+            Point::new(
+                Px(content_bounds.origin.x.0 + content_bounds.size.width.0 - 1.0),
+                Px(content_bounds.origin.y.0 + 1.0),
+            ),
+            Point::new(
+                Px(content_bounds.origin.x.0 + 1.0),
+                Px(content_bounds.origin.y.0 + content_bounds.size.height.0 - 1.0),
+            ),
+            Point::new(
+                Px(content_bounds.origin.x.0 + content_bounds.size.width.0 - 1.0),
+                Px(content_bounds.origin.y.0 + content_bounds.size.height.0 - 1.0),
+            ),
+            center(content_bounds),
+        ];
+        let content_point = candidates
+            .into_iter()
+            .find(|p| !trigger_bounds.contains(*p))
+            .unwrap_or(center(content_bounds));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: content_point,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        // Frame 3: tooltip should be closed.
+        app.set_frame_id(FrameId(3));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let tooltip_layer = ui
+            .debug_layers_in_paint_order()
+            .into_iter()
+            .find(|layer| layer.root == tooltip_layer_root);
+        assert!(
+            tooltip_layer.is_none_or(|layer| !layer.visible),
+            "expected tooltip to close when hoverable content is disabled"
         );
     }
 
