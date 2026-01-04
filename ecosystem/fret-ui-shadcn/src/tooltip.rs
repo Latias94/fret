@@ -447,25 +447,25 @@ impl Tooltip {
                 let placed = layout.rect;
                 let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
 
-                let arrow_el = popper_arrow::diamond_arrow_element(
-                    cx,
-                    &layout,
-                    wrapper_insets,
-                    arrow_size,
-                    DiamondArrowStyle {
-                        bg: arrow_bg,
-                        border: None,
-                        border_width: Px(0.0),
-                    },
-                );
-
                 let wrapper = popper_content::popper_wrapper_at_with_panel(
                     cx,
                     placed,
                     wrapper_insets,
                     Overflow::Visible,
                     move |_cx| vec![content],
-                    move |_cx, content| {
+                    move |cx, content| {
+                        let arrow_el = popper_arrow::diamond_arrow_element(
+                            cx,
+                            &layout,
+                            wrapper_insets,
+                            arrow_size,
+                            DiamondArrowStyle {
+                                bg: arrow_bg,
+                                border: None,
+                                border_width: Px(0.0),
+                            },
+                        );
+
                         if let Some(arrow_el) = arrow_el {
                             vec![arrow_el, content]
                         } else {
