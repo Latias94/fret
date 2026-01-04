@@ -272,22 +272,20 @@ impl Popover {
                         },
                     );
 
-                    let wrapper =
-                        popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
-                            let content = popper_content::popper_panel_at(
-                                cx,
-                                placed,
-                                wrapper_insets,
-                                Overflow::Visible,
-                                move |_cx| vec![content],
-                            );
-
+                    let wrapper = popper_content::popper_wrapper_at_with_panel(
+                        cx,
+                        placed,
+                        wrapper_insets,
+                        Overflow::Visible,
+                        move |_cx| vec![content],
+                        move |_cx, content| {
                             if let Some(arrow_el) = arrow_el {
                                 vec![arrow_el, content]
                             } else {
                                 vec![content]
                             }
-                        });
+                        },
+                    );
 
                     let opacity_layout = LayoutStyle {
                         size: SizeStyle {

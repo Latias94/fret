@@ -459,21 +459,20 @@ impl Tooltip {
                     },
                 );
 
-                let wrapper = popper_content::popper_wrapper_at(cx, placed, wrapper_insets, |cx| {
-                    let content = popper_content::popper_panel_at(
-                        cx,
-                        placed,
-                        wrapper_insets,
-                        Overflow::Visible,
-                        move |_cx| vec![content],
-                    );
-
-                    if let Some(arrow_el) = arrow_el {
-                        vec![arrow_el, content]
-                    } else {
-                        vec![content]
-                    }
-                });
+                let wrapper = popper_content::popper_wrapper_at_with_panel(
+                    cx,
+                    placed,
+                    wrapper_insets,
+                    Overflow::Visible,
+                    move |_cx| vec![content],
+                    move |_cx, content| {
+                        if let Some(arrow_el) = arrow_el {
+                            vec![arrow_el, content]
+                        } else {
+                            vec![content]
+                        }
+                    },
+                );
 
                 vec![wrapper]
             });

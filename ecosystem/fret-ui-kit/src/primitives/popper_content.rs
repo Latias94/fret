@@ -94,3 +94,126 @@ pub fn popper_wrapper_at<H: UiHost>(
         f,
     )
 }
+
+/// Render a popper wrapper that contains a panel, and optionally returns additional wrapper
+/// children (like an arrow element) alongside the panel.
+///
+/// This keeps the panel element *scoped under the wrapper* (correct identity), while still
+/// allowing the wrapper to render siblings like arrows.
+#[track_caller]
+pub fn popper_wrapper_at_with_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    placed: Rect,
+    wrapper_insets: Edges,
+    overflow: Overflow,
+    panel: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    wrapper_children: impl FnOnce(&mut ElementContext<'_, H>, AnyElement) -> Vec<AnyElement>,
+) -> AnyElement {
+    popper_wrapper_at(cx, placed, wrapper_insets, |cx| {
+        let panel = popper_panel_at(cx, placed, wrapper_insets, overflow, panel);
+        wrapper_children(cx, panel)
+    })
+}
+
+/// Render a Radix-style popper wrapper + inner panel in one helper.
+///
+/// This avoids repeating the common pattern:
+/// - wrapper absolute positioning + hit-test expansion (arrow insets),
+/// - panel absolute positioning inside the wrapper.
+#[track_caller]
+pub fn popper_wrapper_panel_at<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    placed: Rect,
+    wrapper_insets: Edges,
+    overflow: Overflow,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    popper_wrapper_at_with_panel(cx, placed, wrapper_insets, overflow, f, |_cx, panel| vec![panel])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_core::{Point, Px, Size};
+    use fret_ui::element::{Length, PositionStyle};
+
+    #[test]
+    fn wrapper_layout_expands_by_insets_and_offsets_origin() {
+        let placed = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(30.0), Px(40.0)),
+        );
+        let insets = Edges {
+            top: Px(1.0),
+            right: Px(2.0),
+            bottom: Px(3.0),
+            left: Px(4.0),
+        };
+
+        let layout = popper_wrapper_layout(placed, insets);
+        assert_eq!(layout.position, PositionStyle::Absolute);
+        assert_eq!(layout.inset.left, Some(Px(6.0)));
+        assert_eq!(layout.inset.top, Some(Px(19.0)));
+        match layout.size.width {
+            Length::Px(px) => assert_eq!(px, Px(36.0)),
+            _ => panic!("expected px width"),
+        }
+        match layout.size.height {
+            Length::Px(px) => assert_eq!(px, Px(44.0)),
+            _ => panic!("expected px height"),
+        }
+    }
+
+    #[test]
+    fn panel_layout_starts_at_insets_and_uses_placed_size() {
+        let placed = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(30.0), Px(40.0)),
+        );
+        let insets = Edges {
+            top: Px(1.0),
+            right: Px(2.0),
+            bottom: Px(3.0),
+            left: Px(4.0),
+        };
+
+        let layout = popper_panel_layout(placed, insets, Overflow::Clip);
+        assert_eq!(layout.position, PositionStyle::Absolute);
+        assert_eq!(layout.inset.left, Some(Px(4.0)));
+        assert_eq!(layout.inset.top, Some(Px(1.0)));
+        match layout.size.width {
+            Length::Px(px) => assert_eq!(px, Px(30.0)),
+            _ => panic!("expected px width"),
+        }
+        match layout.size.height {
+            Length::Px(px) => assert_eq!(px, Px(40.0)),
+            _ => panic!("expected px height"),
+        }
+        assert_eq!(layout.overflow, Overflow::Clip);
+    }
+
+    #[test]
+    fn wrapper_panel_helper_nests_panel_inside_wrapper() {
+        let mut app = fret_app::App::new();
+        let window = fret_core::AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let placed = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(30.0), Px(40.0)),
+        );
+        let insets = Edges::all(Px(5.0));
+
+        let wrapper = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            popper_wrapper_panel_at(cx, placed, insets, Overflow::Clip, |_cx| Vec::new())
+        });
+
+        assert_eq!(wrapper.children.len(), 1);
+        let panel = &wrapper.children[0];
+        assert!(panel.children.is_empty());
+        assert_ne!(wrapper.id, panel.id);
+    }
+}
