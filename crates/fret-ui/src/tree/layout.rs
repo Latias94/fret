@@ -147,14 +147,9 @@ impl<H: UiHost> UiTree<H> {
         // Theme changes can affect layout metrics across most of the tree; treat it as a default
         // dependency to ensure layout re-runs when the global theme is updated.
         observe_global(TypeId::of::<Theme>(), Invalidation::Layout);
-        // Font family overrides affect text measurement and can shift layout across the tree.
-        // Treat it as a default dependency so changing font configuration forces a relayout.
-        observe_global(
-            TypeId::of::<fret_core::TextFontFamilyConfig>(),
-            Invalidation::Layout,
-        );
-        // User font loading and font-db mutations can affect shaping/metrics without changing the
-        // configured family overrides; treat it as a default dependency as well.
+        // Text shaping/metrics depend on the effective font stack. Track a single stable key so
+        // changing font configuration or loading new fonts forces a relayout without directly
+        // depending on backend configuration globals.
         observe_global(
             TypeId::of::<fret_runtime::TextFontStackKey>(),
             Invalidation::Layout,
