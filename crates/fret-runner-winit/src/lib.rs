@@ -555,9 +555,32 @@ pub fn is_alt_gr_key(key: &Key) -> bool {
 
 pub fn map_physical_key(key: winit::keyboard::PhysicalKey) -> KeyCode {
     match key {
-        winit::keyboard::PhysicalKey::Code(code) => {
-            format!("{code:?}").parse().unwrap_or(KeyCode::Unidentified)
-        }
+        winit::keyboard::PhysicalKey::Code(code) => code,
         winit::keyboard::PhysicalKey::Unidentified(_) => KeyCode::Unidentified,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn physical_key_code_roundtrips() {
+        assert_eq!(
+            map_physical_key(winit::keyboard::PhysicalKey::Code(
+                winit::keyboard::KeyCode::KeyA
+            )),
+            KeyCode::KeyA
+        );
+    }
+
+    #[test]
+    fn physical_key_unidentified_maps_to_unidentified() {
+        assert_eq!(
+            map_physical_key(winit::keyboard::PhysicalKey::Unidentified(
+                winit::keyboard::NativeKeyCode::Unidentified
+            )),
+            KeyCode::Unidentified
+        );
     }
 }
