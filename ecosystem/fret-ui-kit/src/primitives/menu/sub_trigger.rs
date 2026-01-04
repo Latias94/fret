@@ -46,12 +46,14 @@ pub fn wire<H: UiHost>(
         let models_for_hover = models.clone();
         let value_for_hover = value.clone();
         let cfg_for_hover = cfg;
+        let trigger_id_for_hover = item_id;
         cx.pressable_add_on_hover_change(Arc::new(move |host, acx, is_hovered| {
             sub::handle_sub_trigger_hover_change(
                 host,
                 acx,
                 &models_for_hover,
                 cfg_for_hover,
+                trigger_id_for_hover,
                 is_hovered,
                 value_for_hover.clone(),
             );

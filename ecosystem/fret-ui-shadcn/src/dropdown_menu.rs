@@ -1212,6 +1212,69 @@ mod tests {
         root
     }
 
+    fn render_frame_capture_trigger_id(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        trigger_id_out: Model<Option<fret_ui::elements::GlobalElementId>>,
+        entries: Vec<DropdownMenuEntry>,
+    ) -> (fret_core::NodeId, fret_ui::elements::GlobalElementId) {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let trigger_id_out_for_render = trigger_id_out.clone();
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu",
+            move |cx| {
+                let trigger_id_out = trigger_id_out_for_render.clone();
+                vec![DropdownMenu::new(open).into_element(
+                    cx,
+                    move |cx| {
+                        let trigger = cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        );
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&trigger_id_out, |v| *v = Some(trigger.id));
+                        trigger
+                    },
+                    move |_cx| entries,
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+
+        let trigger_id = app
+            .models_mut()
+            .read(&trigger_id_out, |v| *v)
+            .ok()
+            .flatten()
+            .expect("captured trigger element id");
+        (root, trigger_id)
+    }
+
     fn render_frame_focusable_trigger(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -1756,6 +1819,277 @@ mod tests {
                 .any(|n| n.role == SemanticsRole::MenuItem
                     && n.label.as_deref() == Some("Sub Alpha")),
             "submenu should close after the close delay timer fires"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_submenu_does_not_switch_while_pointer_moves_through_safe_corridor() {
+        use std::time::Duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out = app.models_mut().insert(None);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(500.0), Px(260.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let many_sub_items = (0..16)
+            .map(|i| DropdownMenuEntry::Item(DropdownMenuItem::new(format!("Sub {i}"))))
+            .collect::<Vec<_>>();
+
+        let entries = vec![
+            DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(many_sub_items)),
+            DropdownMenuEntry::Item(DropdownMenuItem::new("Other").submenu(vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Other A")),
+            ])),
+        ];
+
+        // First frame: establish stable trigger bounds.
+        let (_, trigger_id) = render_frame_capture_trigger_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Second frame: open the menu.
+        let (_, trigger_id2) = render_frame_capture_trigger_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            entries.clone(),
+        );
+        assert_eq!(trigger_id2, trigger_id, "expected trigger id to be stable");
+
+        // Hover "More" to arm the open-delay timer.
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        let more_bounds = more.bounds;
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                position: rect_center(more_bounds),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let open_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(100) => {
+                Some(*token)
+            }
+            _ => None,
+        });
+        let Some(open_timer) = open_timer else {
+            panic!("expected submenu open-delay timer effect");
+        };
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: open_timer });
+
+        // Third frame: after the open timer fires, "More" submenu is open.
+        let (_, trigger_id3) = render_frame_capture_trigger_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            entries.clone(),
+        );
+        assert_eq!(trigger_id3, trigger_id, "expected trigger id to be stable");
+
+        let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+        let submenu_models = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            &overlay_root_name,
+            |cx| menu::sub::ensure_models(cx),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item after open");
+        assert!(more.flags.expanded, "expected More to be expanded");
+
+        let other = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Other"))
+            .expect("Other menu item");
+
+        // Choose a point near the "Other" item's right edge, so the pointer direction is towards
+        // the right-side submenu panel and Radix-style pointer grace intent should apply.
+        let safe_point = Point::new(
+            Px(other.bounds.origin.x.0 + other.bounds.size.width.0 - 2.0),
+            Px(other.bounds.origin.y.0 + other.bounds.size.height.0 * 0.75),
+        );
+
+        // Sanity: chosen point must actually hover the "Other" item.
+        let hit = ui.debug_hit_test(safe_point);
+        let hit_node = hit.hit.expect("expected hit at safe_point");
+        let hit_path = ui.debug_node_path(hit_node);
+        assert!(
+            hit_path.contains(&other.id),
+            "expected safe point to hit-test within Other pressable; safe_point={safe_point:?} hit={hit:?} path={hit_path:?} other_id={:?}",
+            other.id
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                position: safe_point,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let last_pointer = app
+            .models_mut()
+            .read(&submenu_models.last_pointer, |v| *v)
+            .ok()
+            .flatten();
+        let pointer_dir = app
+            .models_mut()
+            .read(&submenu_models.pointer_dir, |v| *v)
+            .ok()
+            .flatten();
+        let grace_intent = app
+            .models_mut()
+            .read(&submenu_models.pointer_grace_intent, |v| *v)
+            .ok()
+            .flatten();
+        let geometry = app
+            .models_mut()
+            .read(&submenu_models.geometry, |v| *v)
+            .ok()
+            .flatten();
+        let open_trigger = app
+            .models_mut()
+            .read(&submenu_models.trigger, |v| *v)
+            .ok()
+            .flatten();
+        let open_trigger_bounds =
+            open_trigger.and_then(|id| fret_ui::elements::bounds_for_element(&mut app, window, id));
+        let open_trigger_visual_bounds = open_trigger
+            .and_then(|id| fret_ui::elements::visual_bounds_for_element(&mut app, window, id));
+        let open_trigger_root_bounds = open_trigger
+            .and_then(|id| fret_ui::elements::root_bounds_for_element(&mut app, window, id));
+        assert_eq!(
+            last_pointer,
+            Some(safe_point),
+            "expected submenu model to observe pointer move; last_pointer={last_pointer:?} safe_point={safe_point:?}"
+        );
+        assert_eq!(
+            pointer_dir,
+            Some(menu::pointer_grace_intent::GraceSide::Right),
+            "expected pointer direction to be towards right-side submenu; pointer_dir={pointer_dir:?} geometry={geometry:?}"
+        );
+        let Some(grace_intent) = grace_intent else {
+            panic!(
+                "expected pointer grace intent to be set; geometry={geometry:?} open_trigger={open_trigger:?} open_trigger_bounds={open_trigger_bounds:?} open_trigger_visual_bounds={open_trigger_visual_bounds:?} open_trigger_root_bounds={open_trigger_root_bounds:?} more_bounds={more_bounds:?} safe_point={safe_point:?} last_pointer={last_pointer:?} pointer_dir={pointer_dir:?}",
+            );
+        };
+        assert!(
+            menu::pointer_grace_intent::is_pointer_in_grace_area(safe_point, grace_intent),
+            "expected safe point to lie inside grace area; safe_point={safe_point:?} intent={grace_intent:?} geometry={geometry:?}"
+        );
+        let maybe_switch_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(100) => {
+                Some(*token)
+            }
+            _ => None,
+        });
+        if let Some(token) = maybe_switch_timer {
+            // Even if a switch timer was armed due to event ordering, it must be canceled/ignored
+            // while the pointer is inside the safe-hover corridor.
+            ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+        }
+
+        // Fourth frame: submenu should remain open (no switch to "Other").
+        let (_, trigger_id4) = render_frame_capture_trigger_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out,
+            entries,
+        );
+        assert_eq!(trigger_id4, trigger_id, "expected trigger id to be stable");
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item after hover other");
+        let other = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Other"))
+            .expect("Other menu item after hover other");
+
+        let has_sub0 = snap
+            .nodes
+            .iter()
+            .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub 0"));
+        let has_other_a = snap
+            .nodes
+            .iter()
+            .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Other A"));
+
+        assert!(
+            more.flags.expanded,
+            "expected submenu to remain open while pointer is in safe corridor (other_expanded={} has_sub0={} has_other_a={})",
+            other.flags.expanded, has_sub0, has_other_a
+        );
+        assert!(
+            !other.flags.expanded,
+            "expected Other submenu to remain closed while pointer is in safe corridor"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub 0")),
+            "expected More submenu items to remain visible"
+        );
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Other A")
+            }),
+            "expected Other submenu items to not appear"
         );
     }
 
