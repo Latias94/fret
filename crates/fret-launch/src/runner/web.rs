@@ -7,7 +7,9 @@ use std::sync::Arc;
 use fret_app::{App, Effect};
 use fret_core::{AppWindowId, Event, Point, Px, Rect, Scene, Size};
 use fret_render::{RenderSceneParams, Renderer, SurfaceState, WgpuContext};
-use fret_runtime::{FrameId, PlatformCapabilities, TickId, apply_window_metrics_event};
+use fret_runtime::{
+    FrameId, PlatformCapabilities, TickId, WindowRequest, apply_window_metrics_event,
+};
 use wasm_bindgen_futures::spawn_local;
 use winit::application::ApplicationHandler;
 use winit::cursor::Cursor;
@@ -57,6 +59,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     web_cursor: Option<fret_runner_winit::WebCursorListener>,
     web_services: WebPlatformServices,
     gpu_ready_called: bool,
+    exiting: bool,
 }
 
 pub fn run_app<D: WinitAppDriver + 'static>(
@@ -114,6 +117,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             web_cursor: None,
             web_services: WebPlatformServices::default(),
             gpu_ready_called: false,
+            exiting: false,
         }
     }
 
@@ -239,6 +243,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
     fn drain_effects(
         &mut self,
+        event_loop: &dyn ActiveEventLoop,
         window: &dyn Window,
         gfx: &mut GfxState,
         state: &mut D::WindowState,
@@ -363,6 +368,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 Effect::Dock(op) => {
                     self.driver.dock_op(&mut self.app, op);
                 }
+                Effect::Window(req) => match req {
+                    WindowRequest::Close(target) => {
+                        if target != self.app_window {
+                            continue;
+                        }
+                        self.exiting = true;
+                        self.web_cursor.take();
+                        event_loop.exit();
+                        return;
+                    }
+                    WindowRequest::Create(_) | WindowRequest::Raise { .. } => {}
+                },
                 Effect::Command { window, command } => match window {
                     Some(target) if target == self.app_window => {
                         self.driver.handle_command(
@@ -436,7 +453,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
     }
 
-    fn render_frame(&mut self, window: &dyn Window) {
+    fn render_frame(&mut self, event_loop: &dyn ActiveEventLoop, window: &dyn Window) {
+        if self.exiting {
+            return;
+        }
         self.adopt_gfx_if_ready();
         self.ensure_gpu_ready_hook();
 
@@ -472,7 +492,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             );
         }
 
-        self.drain_effects(window, &mut gfx, &mut state);
+        self.drain_effects(event_loop, window, &mut gfx, &mut state);
         self.dispatch_events(&mut gfx, &mut state);
 
         let scale_factor = scale as f32;
@@ -554,7 +574,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         gfx.ctx.queue.submit(submit);
         frame.present();
 
-        self.drain_effects(window, &mut gfx, &mut state);
+        self.drain_effects(event_loop, window, &mut gfx, &mut state);
 
         self.window_state = Some(state);
         self.gfx = Some(gfx);
@@ -678,6 +698,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
     }
 
     fn proxy_wake_up(&mut self, _event_loop: &dyn ActiveEventLoop) {
+        if self.exiting {
+            return;
+        }
         let Some(window) = self.window.as_ref() else {
             return;
         };
@@ -693,10 +716,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
     fn window_event(
         &mut self,
-        _event_loop: &dyn ActiveEventLoop,
+        event_loop: &dyn ActiveEventLoop,
         window_id: WindowId,
         event: WindowEvent,
     ) {
+        if self.exiting {
+            return;
+        }
         if Some(window_id) != self.window_id {
             return;
         }
@@ -743,7 +769,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 window.request_redraw();
             }
             WindowEvent::RedrawRequested => {
-                self.render_frame(window);
+                self.render_frame(event_loop, window);
             }
             _ => {
                 self.platform.handle_window_event(

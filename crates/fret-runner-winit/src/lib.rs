@@ -137,8 +137,25 @@ pub fn canvas_by_id(id: &str) -> Result<web_sys::HtmlCanvasElement, RunnerError>
 
 #[cfg(target_arch = "wasm32")]
 pub struct WebCursorListener {
-    _on_move: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PointerEvent)>,
-    _on_leave: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PointerEvent)>,
+    canvas: web_sys::HtmlCanvasElement,
+    on_move: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PointerEvent)>,
+    on_leave: wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PointerEvent)>,
+}
+
+#[cfg(target_arch = "wasm32")]
+impl Drop for WebCursorListener {
+    fn drop(&mut self) {
+        use wasm_bindgen::JsCast as _;
+
+        let _ = self.canvas.remove_event_listener_with_callback(
+            "pointermove",
+            self.on_move.as_ref().unchecked_ref(),
+        );
+        let _ = self.canvas.remove_event_listener_with_callback(
+            "pointerleave",
+            self.on_leave.as_ref().unchecked_ref(),
+        );
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -214,8 +231,9 @@ pub fn install_web_cursor_listener(
         .map_err(|_| RunnerError::new("failed to add pointerleave listener"))?;
 
     Ok(WebCursorListener {
-        _on_move: on_move,
-        _on_leave: on_leave,
+        canvas,
+        on_move,
+        on_leave,
     })
 }
 
