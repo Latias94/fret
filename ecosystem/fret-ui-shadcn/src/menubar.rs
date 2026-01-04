@@ -1,14 +1,5 @@
 use std::sync::Arc;
 
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::roving_focus;
-use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::menu;
-use fret_ui_kit::primitives::roving_focus_group;
-use fret_ui_kit::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
@@ -20,6 +11,15 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::roving_focus_group;
+use fret_ui_kit::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);

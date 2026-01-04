@@ -4,7 +4,6 @@
 //! - placement math is owned by `fret-ui-kit::primitives::popper` (pure + testable)
 //! - arrow rendering is a styling concern and is reused across shadcn overlays
 
-use fret_ui_kit::primitives::popper;
 use fret_core::{Color, Corners, Edges, Point, Px, Transform2D};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
@@ -12,6 +11,7 @@ use fret_ui::element::{
 };
 use fret_ui::overlay_placement::{AnchoredPanelLayout, Side};
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::primitives::popper;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct DiamondArrowStyle {

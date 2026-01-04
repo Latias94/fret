@@ -3,11 +3,9 @@ use fret_core::SvgService as _;
 use fret_core::{
     AppWindowId, Color, Event, KeyCode, Point, Px, Rect, Scene, Size, SvgFit, UiServices,
 };
-use fret_runtime::PlatformCapabilities;
 use fret_render::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
-use fret_runner_winit_wgpu::{
-    WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig,
-};
+use fret_runner_winit_wgpu::{WindowCreateSpec, WinitDriver, WinitRunner, WinitRunnerConfig};
+use fret_runtime::PlatformCapabilities;
 use std::time::{Duration, Instant};
 use winit::event_loop::EventLoop;
 
@@ -433,13 +431,11 @@ fn run_headless(
             println!("headless progress: {frame}/{frames}");
         }
     }
-    let _ = ctx
-        .device
-        .poll(if wait_gpu {
-            wgpu::PollType::wait_indefinitely()
-        } else {
-            wgpu::PollType::Poll
-        });
+    let _ = ctx.device.poll(if wait_gpu {
+        wgpu::PollType::wait_indefinitely()
+    } else {
+        wgpu::PollType::Poll
+    });
     let elapsed = start.elapsed();
 
     if let Some(snap) = renderer.take_svg_perf_snapshot() {

@@ -1,10 +1,10 @@
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 use fret_core::{Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, Length};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 #[derive(Clone)]
 pub struct Progress {

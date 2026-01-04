@@ -1,9 +1,3 @@
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_ui_kit::{
-    ChromeRefinement, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
-};
 use fret_core::{
     Axis, Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap,
 };
@@ -13,6 +7,10 @@ use fret_ui::element::{
     PositionStyle, SizeStyle, TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Size as ComponentSize, Space};
 use std::sync::Arc;
 
 fn otp_gap(theme: &Theme) -> Px {

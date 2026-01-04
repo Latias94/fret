@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{FontId, FontWeight, ImageId, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, ImageProps, MainAlign, Overflow, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 /// shadcn/ui `Avatar` root.
 ///

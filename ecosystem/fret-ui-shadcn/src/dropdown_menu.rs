@@ -1,14 +1,5 @@
 use std::sync::Arc;
 
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::menu;
-use fret_ui_kit::primitives::popper;
-use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle,
     TextWrap,
@@ -21,6 +12,15 @@ use fret_ui::element::{
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::popper;
+use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
 
@@ -1264,6 +1264,73 @@ mod tests {
         root
     }
 
+    fn render_frame_clipped_surface(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        entries: Vec<DropdownMenuEntry>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu-clipped-surface",
+            move |cx| {
+                let clipped_surface = cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(200.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.overflow = Overflow::Clip;
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![DropdownMenu::new(open).into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(20.0));
+                                            layout.position =
+                                                fret_ui::element::PositionStyle::Absolute;
+                                            layout.inset.top = Some(Px(30.0));
+                                            layout.inset.left = Some(Px(10.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            move |_cx| entries,
+                        )]
+                    },
+                );
+                vec![clipped_surface]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
     #[test]
     fn dropdown_menu_items_have_collection_position_metadata_excluding_separators() {
         let window = AppWindowId::default();
@@ -1321,6 +1388,75 @@ mod tests {
             .expect("Beta menu item");
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(3));
+    }
+
+    #[test]
+    fn dropdown_menu_portal_escapes_overflow_clip_ancestor() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        // First frame: closed, establish trigger bounds for placement.
+        let _ = render_frame_clipped_surface(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Second frame: open and ensure the menu item is hit-testable outside the clipped surface.
+        let _ = render_frame_clipped_surface(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
+        );
+
+        let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snapshot
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha menu item");
+
+        let clip_bottom = 40.0f32;
+        let point = Point::new(
+            Px(alpha.bounds.origin.x.0 + 2.0),
+            Px(alpha.bounds.origin.y.0 + 2.0),
+        );
+        assert!(
+            point.y.0 > clip_bottom,
+            "expected menu item to be outside clipped surface; y={} clip_bottom={}",
+            point.y.0,
+            clip_bottom
+        );
+
+        let hit = ui
+            .debug_hit_test(point)
+            .hit
+            .expect("expected hit in dropdown menu outside clipped surface");
+        let path = ui.debug_node_path(hit);
+        assert!(
+            path.contains(&alpha.id),
+            "expected hit to be within Alpha menu item subtree; point={point:?} hit={hit:?} alpha={:?} path={path:?}",
+            alpha.id
+        );
     }
 
     #[test]

@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 use fret_core::{Axis, Corners, Edges, FontId, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, FlexProps, Length, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 
 #[derive(Clone)]
 pub struct InputGroup {

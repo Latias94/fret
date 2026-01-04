@@ -1,6 +1,14 @@
 use std::sync::Arc;
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::Model;
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, SemanticsProps,
+    SizeStyle, TextProps,
+};
+use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
@@ -10,14 +18,6 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
 };
-use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
-use fret_runtime::Model;
-use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, SemanticsProps,
-    SizeStyle, TextProps,
-};
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
@@ -565,9 +565,9 @@ mod tests {
     use std::rc::Rc;
 
     use fret_app::App;
-    use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_core::{
-        AppWindowId, MouseButton, PathCommand, Point, Rect, Size as CoreSize, SvgId, SvgService,
+        AppWindowId, Corners, MouseButton, PathCommand, Point, Rect, Size as CoreSize, SvgId,
+        SvgService,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{
@@ -576,6 +576,7 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
+    use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[derive(Default)]
     struct FakeServices;
@@ -720,6 +721,111 @@ mod tests {
         trigger_id.expect("trigger id")
     }
 
+    fn render_popover_in_clipped_surface_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        popover_content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) -> fret_ui::elements::GlobalElementId {
+        OverlayController::begin_frame(app, window);
+
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let clipped_surface = cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(200.0));
+                            layout.size.height = Length::Px(Px(80.0));
+                            layout.overflow = Overflow::Clip;
+                            layout
+                        },
+                        corner_radii: Corners::all(Px(12.0)),
+                        ..Default::default()
+                    },
+                    {
+                        let trigger_id_out = trigger_id_out.clone();
+                        move |cx| {
+                        let popover_content_id_out = popover_content_id_out.clone();
+                        vec![Popover::new(open.clone())
+                            .side(PopoverSide::Bottom)
+                            .into_element(
+                                cx,
+                                |cx| {
+                                    cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout.position = fret_ui::element::PositionStyle::Absolute;
+                                                layout.inset.top = Some(Px(20.0));
+                                                layout.inset.left = Some(Px(10.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        |cx, _st, id| {
+                                            cx.pressable_toggle_bool(&open);
+                                            trigger_id_out.set(Some(id));
+                                            vec![cx.container(
+                                                ContainerProps::default(),
+                                                |_cx| Vec::new(),
+                                            )]
+                                        },
+                                    )
+                                },
+                                move |cx| {
+                                    let focusable = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(220.0));
+                                                layout.size.height = Length::Px(Px(120.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            ..Default::default()
+                                        },
+                                        |cx, _st, _id| {
+                                            vec![cx.container(
+                                                ContainerProps::default(),
+                                                |_cx| Vec::new(),
+                                            )]
+                                        },
+                                    );
+                                    let content = PopoverContent::new(vec![focusable]).into_element(cx);
+                                    popover_content_id_out.set(Some(content.id));
+                                    content
+                                },
+                            )]
+                        }
+                    },
+                );
+                vec![clipped_surface]
+            },
+        );
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        trigger_id_out.get().expect("trigger id")
+    }
+
     #[test]
     fn popover_outside_press_closes_without_overriding_new_focus() {
         let window = AppWindowId::default();
@@ -840,6 +946,114 @@ mod tests {
         let underlay_node =
             fret_ui::elements::node_for_element(&mut app, window, underlay_id).expect("underlay");
         assert_eq!(ui.focus(), Some(underlay_node));
+    }
+
+    #[test]
+    fn popover_portal_escapes_overflow_clip_ancestor() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let popover_content_cell: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        // Frame 1: closed, establish trigger bounds for the placement solver.
+        app.set_frame_id(FrameId(1));
+        let trigger_id = render_popover_in_clipped_surface_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            popover_content_cell.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_id)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let click_point = Point::new(
+            Px(trigger_bounds.origin.x.0 + 2.0),
+            Px(trigger_bounds.origin.y.0 + 2.0),
+        );
+
+        let pre_hit = ui.debug_hit_test(click_point).hit.expect("pre-hit");
+        let pre_path = ui.debug_node_path(pre_hit);
+        assert!(
+            pre_path.contains(&trigger_node),
+            "expected click point to hit trigger subtree; point={click_point:?} hit={pre_hit:?} trigger={trigger_node:?} path={pre_path:?}"
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: click_point,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: click_point,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: open, compute popover bounds and hit-test outside the clipped surface.
+        app.set_frame_id(FrameId(2));
+        let _trigger = render_popover_in_clipped_surface_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            popover_content_cell.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_id = popover_content_cell.get().expect("popover content id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_id)
+            .expect("content node");
+        let content_bounds = ui.debug_node_bounds(content_node).expect("content bounds");
+
+        let clip_bottom = 80.0f32;
+        let target_y = (clip_bottom + 5.0).max(content_bounds.origin.y.0 + 2.0);
+        let point = Point::new(Px(content_bounds.origin.x.0 + 5.0), Px(target_y));
+        assert!(
+            content_bounds.contains(point),
+            "expected point inside popover bounds; point={point:?} bounds={content_bounds:?}"
+        );
+        assert!(
+            point.y.0 > clip_bottom,
+            "expected point below the clipped surface; y={} clip_bottom={}",
+            point.y.0,
+            clip_bottom
+        );
+
+        let hit = ui
+            .debug_hit_test(point)
+            .hit
+            .expect("expected hit in popover content outside clipped surface");
+        let path = ui.debug_node_path(hit);
+        assert!(
+            path.contains(&content_node),
+            "expected hit to be within popover content subtree; hit={hit:?} content={content_node:?} path={path:?}"
+        );
     }
 
     #[test]

@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
 use fret_core::geometry::Edges;
 use fret_core::{Color, Px};
 use fret_runtime::CommandId;
@@ -10,6 +8,8 @@ use fret_ui::element::{
 };
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
 
 use crate::table::{TableCell, TableHead, TableRow};
 

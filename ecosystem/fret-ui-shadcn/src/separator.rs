@@ -1,8 +1,8 @@
-use fret_ui_kit::LayoutRefinement;
-use fret_ui_kit::declarative::style as decl_style;
 use fret_core::Px;
 use fret_ui::element::{AnyElement, ContainerProps, Length, SizeStyle};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::declarative::style as decl_style;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SeparatorOrientation {

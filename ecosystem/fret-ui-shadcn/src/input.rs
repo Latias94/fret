@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_core::{Corners, FontId, NodeId, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 
 #[derive(Clone)]
 pub struct Input {

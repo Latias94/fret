@@ -1,8 +1,5 @@
 use std::sync::Arc;
 
-use fret_ui_kit::LayoutRefinement;
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::style as decl_style;
 use fret_core::{Color, Corners, CursorIcon, Edges, MouseButton, Px, Rect, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
@@ -11,6 +8,9 @@ use fret_ui::element::{
     SemanticsProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
 
 #[derive(Debug, Clone)]
 pub struct SliderStyle {

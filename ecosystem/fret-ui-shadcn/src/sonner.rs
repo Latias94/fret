@@ -1,9 +1,9 @@
-use fret_ui_kit::{OverlayController, OverlayRequest, ToastStore};
 use fret_core::AppWindowId;
 use fret_runtime::Model;
 use fret_ui::action::UiActionHost;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::{OverlayController, OverlayRequest, ToastStore};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Toaster {

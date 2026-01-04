@@ -1,14 +1,5 @@
 use std::sync::Arc;
 
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::menu;
-use fret_ui_kit::primitives::popper;
-use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 use fret_core::{
     Edges, MouseButton, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
 };
@@ -21,6 +12,15 @@ use fret_ui::element::{
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::popper;
+use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 use crate::popper_arrow::{self, DiamondArrowStyle};

@@ -2,13 +2,13 @@
 
 use std::sync::Arc;
 
-use fret_ui_kit::LayoutRefinement;
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps, SemanticsProps, StackProps};
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 
 #[derive(Clone)]
 pub struct Collapsible {

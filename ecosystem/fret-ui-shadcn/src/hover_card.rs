@@ -1,4 +1,8 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use fret_core::{Px, Size};
+use fret_ui::element::{AnyElement, HoverRegionProps, Overflow};
+use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::hover_intent::{self, HoverIntentConfig};
@@ -8,10 +12,6 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayRequest,
     Radius, Space,
 };
-use fret_core::{Px, Size};
-use fret_ui::element::{AnyElement, HoverRegionProps, Overflow};
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
 
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme

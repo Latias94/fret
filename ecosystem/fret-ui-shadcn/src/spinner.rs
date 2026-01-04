@@ -1,10 +1,10 @@
+use fret_core::{Point, Px, Transform2D};
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg};
+use fret_ui::element::{AnyElement, Length, SvgIconProps, VisualTransformProps};
+use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement, MetricRef};
-use fret_core::{Point, Px, Transform2D};
-use fret_ui::element::{AnyElement, Length, SvgIconProps, VisualTransformProps};
-use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
 
 /// shadcn/ui `Spinner` (v4).
 ///

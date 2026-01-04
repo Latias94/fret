@@ -1,6 +1,27 @@
 use fret_core::Px;
+use std::sync::Arc;
 
 use crate::scroll::ScrollStrategy;
+
+const VIRTUALIZER_PX_SCALE: f32 = 64.0;
+
+fn px_to_units_u32(px: Px) -> u32 {
+    let scaled = (px.0.max(0.0) * VIRTUALIZER_PX_SCALE).round();
+    scaled.clamp(0.0, u32::MAX as f32) as u32
+}
+
+fn px_to_units_u64(px: Px) -> u64 {
+    let scaled = (px.0.max(0.0) * VIRTUALIZER_PX_SCALE).round();
+    scaled.clamp(0.0, u64::MAX as f32) as u64
+}
+
+fn units_u32_to_px(units: u32) -> Px {
+    Px(units as f32 / VIRTUALIZER_PX_SCALE)
+}
+
+fn units_u64_to_px(units: u64) -> Px {
+    Px(units as f32 / VIRTUALIZER_PX_SCALE)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VirtualItem {
@@ -29,14 +50,24 @@ pub fn default_range_extractor(range: VirtualRange) -> Vec<usize> {
     (start..=end).collect()
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct VirtualListMetrics {
     estimate: Px,
     gap: Px,
     scroll_margin: Px,
-    heights: Vec<Px>,
-    measured: Vec<bool>,
-    fenwick: Fenwick,
+    inner: virtualizer::Virtualizer<crate::ItemKey>,
+}
+
+impl Default for VirtualListMetrics {
+    fn default() -> Self {
+        let options = virtualizer::VirtualizerOptions::new(0, |_| 0);
+        Self {
+            estimate: Px(0.0),
+            gap: Px(0.0),
+            scroll_margin: Px(0.0),
+            inner: virtualizer::Virtualizer::new(options),
+        }
+    }
 }
 
 impl VirtualListMetrics {
@@ -44,7 +75,7 @@ impl VirtualListMetrics {
         let estimate = Px(estimate.0.max(0.0));
         let gap = Px(gap.0.max(0.0));
         let scroll_margin = Px(scroll_margin.0.max(0.0));
-        if self.heights.len() == len
+        if self.inner.options().count == len
             && self.estimate == estimate
             && self.gap == gap
             && self.scroll_margin == scroll_margin
@@ -52,32 +83,26 @@ impl VirtualListMetrics {
             return;
         }
 
-        let mut heights = Vec::with_capacity(len);
-        let mut measured = Vec::with_capacity(len);
-        for i in 0..len {
-            if i < self.heights.len() && self.measured.get(i).copied().unwrap_or(false) {
-                heights.push(self.heights[i]);
-                measured.push(true);
-            } else {
-                heights.push(estimate);
-                measured.push(false);
-            }
-        }
-
         self.estimate = estimate;
         self.gap = gap;
         self.scroll_margin = scroll_margin;
-        self.heights = heights;
-        self.measured = measured;
-        self.fenwick = Fenwick::from_values(&self.step_values());
+
+        let estimate_units = px_to_units_u32(estimate);
+        let gap_units = px_to_units_u32(gap);
+        let padding_start = px_to_units_u32(scroll_margin);
+
+        let mut options = self.inner.options().clone();
+        options.count = len;
+        options.gap = gap_units;
+        options.padding_start = padding_start;
+        options.padding_end = 0;
+        options.scroll_margin = 0;
+        options.estimate_size = Arc::new(move |_| estimate_units);
+        self.inner.set_options(options);
     }
 
     pub fn total_height(&self) -> Px {
-        if self.heights.is_empty() {
-            return self.scroll_margin;
-        }
-        let sum = self.fenwick.sum(self.heights.len());
-        Px((self.scroll_margin.0 + (sum.0 - self.gap.0).max(0.0)).max(0.0))
+        units_u64_to_px(self.inner.total_size())
     }
 
     pub fn virtual_item(&self, index: usize, key: crate::ItemKey) -> VirtualItem {
@@ -106,67 +131,83 @@ impl VirtualListMetrics {
     }
 
     pub fn height_at(&self, index: usize) -> Px {
-        self.heights.get(index).copied().unwrap_or(Px(0.0))
+        self.inner
+            .item_size(index)
+            .map(units_u32_to_px)
+            .unwrap_or(Px(0.0))
     }
 
     pub fn offset_for_index(&self, index: usize) -> Px {
-        Px((self.scroll_margin.0 + self.fenwick.sum(index).0).max(0.0))
+        if index >= self.inner.options().count {
+            return self.total_height();
+        }
+        self.inner
+            .item_start(index)
+            .map(units_u64_to_px)
+            .unwrap_or(Px(0.0))
     }
 
     pub fn end_for_index(&self, index: usize) -> Px {
-        let start = self.offset_for_index(index);
-        let h = self.height_at(index);
-        Px((start.0 + h.0).max(0.0))
+        if index >= self.inner.options().count {
+            return self.total_height();
+        }
+        self.inner
+            .item_end(index)
+            .map(units_u64_to_px)
+            .unwrap_or(Px(0.0))
     }
 
     pub fn index_for_offset(&self, offset: Px) -> usize {
-        if self.heights.is_empty() {
+        if self.inner.options().count == 0 {
             return 0;
         }
-        let local = Px((offset.0 - self.scroll_margin.0).max(0.0));
-        self.fenwick.lower_bound(local.0.max(0.0))
+        if offset.0 >= self.total_height().0 {
+            return self.inner.options().count;
+        }
+        self.inner
+            .index_at_offset(px_to_units_u64(offset))
+            .unwrap_or(0)
     }
 
     pub fn end_index_for_offset(&self, offset: Px) -> usize {
-        if self.heights.is_empty() {
+        if self.inner.options().count == 0 {
             return 0;
         }
         let idx = self.index_for_offset(offset);
-        if idx >= self.heights.len() {
-            return self.heights.len();
+        if idx >= self.inner.options().count {
+            return self.inner.options().count;
         }
         let start = self.offset_for_index(idx).0;
         if start < offset.0 {
-            idx.saturating_add(1).min(self.heights.len())
+            idx.saturating_add(1).min(self.inner.options().count)
         } else {
             idx
         }
     }
 
     pub fn set_measured_height(&mut self, index: usize, height: Px) -> bool {
-        let Some(old) = self.heights.get(index).copied() else {
+        let Some(old_units) = self.inner.item_size(index) else {
             return false;
         };
 
         let height = Px(height.0.max(0.0));
-        let changed = (old.0 - height.0).abs() > 0.01;
-        if !changed && self.measured.get(index).copied().unwrap_or(false) {
+        let height_units = px_to_units_u32(height);
+        let changed = old_units != height_units;
+        if !changed && self.inner.is_measured(index) {
             return false;
         }
 
-        let delta = Px(height.0 - old.0);
-        self.heights[index] = height;
-        if let Some(measured) = self.measured.get_mut(index) {
-            *measured = true;
-        }
-        self.fenwick.add(index, delta);
+        self.inner.measure(index, height_units);
         true
     }
 
     pub fn clamp_offset(&self, mut offset_y: Px, viewport_h: Px) -> Px {
         let viewport_h = Px(viewport_h.0.max(0.0));
-        let content_h = self.total_height();
-        let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+        let max_offset_units = self
+            .inner
+            .total_size()
+            .saturating_sub(px_to_units_u64(viewport_h));
+        let max_offset = units_u64_to_px(max_offset_units);
         offset_y = Px(offset_y.0.max(0.0));
         Px(offset_y.0.min(max_offset.0))
     }
@@ -183,22 +224,19 @@ impl VirtualListMetrics {
         overscan: usize,
     ) -> Option<VirtualRange> {
         let viewport_h = Px(viewport_h.0.max(0.0));
-        let count = self.heights.len();
+        let count = self.inner.options().count;
         if viewport_h.0 <= 0.0 || count == 0 {
             return None;
         }
 
-        let start = self.index_for_offset(offset_y).min(count.saturating_sub(1));
-        let end_exclusive = self
-            .end_index_for_offset(Px(offset_y.0 + viewport_h.0))
-            .min(count);
-        if end_exclusive == 0 {
+        let offset_units = px_to_units_u64(offset_y);
+        let viewport_units = px_to_units_u32(viewport_h);
+        let visible = self.inner.visible_range_for(offset_units, viewport_units);
+        if visible.is_empty() {
             return None;
         }
-        let end = end_exclusive.saturating_sub(1);
-        if start > end {
-            return None;
-        }
+        let start = visible.start_index;
+        let end = visible.end_index.saturating_sub(1);
 
         Some(VirtualRange {
             start_index: start,
@@ -220,7 +258,7 @@ impl VirtualListMetrics {
             return current_offset_y;
         }
 
-        let count = self.heights.len();
+        let count = self.inner.options().count;
         if count == 0 {
             return current_offset_y;
         }
@@ -259,85 +297,18 @@ impl VirtualListMetrics {
         gap: Px,
         scroll_margin: Px,
     ) {
-        let estimate = Px(estimate.0.max(0.0));
-        let gap = Px(gap.0.max(0.0));
-        let scroll_margin = Px(scroll_margin.0.max(0.0));
+        let len = heights.len();
+        self.ensure(len, estimate, gap, scroll_margin);
 
-        self.estimate = estimate;
-        self.gap = gap;
-        self.scroll_margin = scroll_margin;
-        self.heights = heights;
-        self.measured = measured;
-        self.fenwick = Fenwick::from_values(&self.step_values());
-    }
-
-    fn step_values(&self) -> Vec<Px> {
-        let mut values = Vec::with_capacity(self.heights.len());
-        for h in &self.heights {
-            values.push(Px((h.0 + self.gap.0).max(0.0)));
-        }
-        values
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-struct Fenwick {
-    tree: Vec<f32>, // 1-based
-}
-
-impl Fenwick {
-    fn from_values(values: &[Px]) -> Self {
-        let mut this = Self {
-            tree: vec![0.0; values.len() + 1],
-        };
-        for (i, v) in values.iter().enumerate() {
-            this.add(i, *v);
-        }
-        this
-    }
-
-    fn add(&mut self, index: usize, delta: Px) {
-        let mut i = index + 1;
-        while i < self.tree.len() {
-            self.tree[i] += delta.0;
-            i += i & (!i + 1);
-        }
-    }
-
-    fn sum(&self, index: usize) -> Px {
-        let mut acc = 0.0;
-        let mut i = index.min(self.tree.len().saturating_sub(1));
-        while i > 0 {
-            acc += self.tree[i];
-            i &= i - 1;
-        }
-        Px(acc)
-    }
-
-    fn lower_bound(&self, target: f32) -> usize {
-        if self.tree.len() <= 1 {
-            return 0;
-        }
-
-        let target = target.max(0.0);
-        let mut idx = 0usize;
-        let mut bit = 1usize;
-        while bit < self.tree.len() {
-            bit <<= 1;
-        }
-        bit >>= 1;
-
-        let mut remaining = target;
-        while bit != 0 {
-            let next = idx + bit;
-            if next < self.tree.len() && self.tree[next] <= remaining {
-                remaining -= self.tree[next];
-                idx = next;
+        let mut entries = Vec::new();
+        for (index, height) in heights.into_iter().enumerate() {
+            let is_measured = measured.get(index).copied().unwrap_or(false);
+            if !is_measured {
+                continue;
             }
-            bit >>= 1;
+            entries.push((index as crate::ItemKey, px_to_units_u32(height)));
         }
-
-        idx
+        self.inner.import_measurement_cache(entries);
     }
 }
 

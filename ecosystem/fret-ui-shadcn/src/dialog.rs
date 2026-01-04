@@ -1,13 +1,5 @@
 use std::sync::Arc;
 
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    OverlayRequest, Radius, Size as ComponentSize, Space,
-};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
@@ -17,6 +9,14 @@ use fret_ui::element::{
     PositionStyle, PressableA11y, PressableProps, SemanticsProps, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    OverlayRequest, Radius, Size as ComponentSize, Space,
+};
 
 fn default_overlay_color() -> Color {
     Color {
@@ -600,7 +600,6 @@ mod tests {
     use std::rc::Rc;
 
     use fret_app::App;
-    use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{
         KeyCode, Modifiers, Px, TextBlobId, TextConstraints, TextMetrics, TextService,
@@ -609,6 +608,7 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::Effect;
     use fret_ui::UiTree;
+    use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[derive(Default)]
     struct FakeServices;

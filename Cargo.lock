@@ -1282,6 +1282,7 @@ dependencies = [
  "slotmap",
  "taffy",
  "tracing",
+ "virtualizer",
 ]
 
 [[package]]
@@ -3470,6 +3471,12 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "virtualizer"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1757838de449052c29f70bfe3cf85f731db30fc4dbaef9c214cb3d7e487da9d8"
 
 [[package]]
 name = "walkdir"

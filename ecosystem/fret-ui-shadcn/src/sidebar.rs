@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
-use fret_icons::IconId;
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::scroll as decl_scroll;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{Color, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_icons::IconId;
 use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, PressableProps, RingStyle, SpacerProps,
     TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::scroll as decl_scroll;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::hover_card::{HoverCard, HoverCardAlign};
 

@@ -4,7 +4,19 @@ title: "ADR 0088: Overflow and Clipping Conventions (Surfaces, Focus Rings, Port
 
 # ADR 0088: Overflow and Clipping Conventions (Surfaces, Focus Rings, Portals)
 
-Status: Proposed
+Status: Accepted
+
+## Implementation status
+
+This ADR codifies behavior that is already implemented in the repository:
+
+- Runtime `Overflow::Clip` paint + hit-test semantics: `crates/fret-ui/src/declarative/host_widget/layout.rs` and `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- Focus ring rendering that can extend outside the surface chrome: `crates/fret-ui/src/paint.rs`.
+- Component-layer surface chrome composition helper:
+  `ecosystem/fret-ui-kit/src/declarative/chrome.rs` (`Pressable (visible) -> SurfaceChrome (clip) -> content`).
+- Overlay “portal” installation via window-scoped overlay roots:
+  `ecosystem/fret-ui-kit/src/overlay_controller.rs` + `ecosystem/fret-ui-kit/src/window_overlays/`.
+- Representative shadcn overlays already use overlay roots (not in-tree escape): `ecosystem/fret-ui-shadcn/src/popover.rs`.
 
 ## Context
 
@@ -104,3 +116,10 @@ Do not rely on incidental ancestor clipping for scroll behavior.
 - Provide component-layer helpers/recipes that create a "surface chrome" container with
   `Overflow::Clip` + corner radii + border/background tokens.
 - Prefer the structure: `Pressable (visible) -> SurfaceChrome (clip) -> content`.
+
+## Conformance checklist (practical)
+
+- A rounded surface chrome that clips content must also clip hit testing for its descendants.
+- Focus-visible rings must remain visible for standard controls (unless an ancestor explicitly clips them).
+- A popover/menu rendered inside an `Overflow::Clip` ancestor must remain visible and hit-testable
+  outside that ancestor by installing content into an overlay root (“portal”).

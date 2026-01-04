@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize};
 use fret_core::{Color, Corners, Edges, FontId, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, Length, SizeStyle, TextAreaProps};
 use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
