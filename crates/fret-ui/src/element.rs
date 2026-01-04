@@ -5,7 +5,6 @@ use fret_core::{
     TextWrap, UvRect,
 };
 use fret_runtime::{CommandId, Model};
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::{ResizablePanelGroupStyle, SvgSource, TextAreaStyle, TextInputStyle};
@@ -854,7 +853,6 @@ pub struct VirtualListState {
     pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
     pub(crate) items_revision: u64,
     pub(crate) keys: Vec<crate::ItemKey>,
-    pub(crate) size_cache: HashMap<crate::ItemKey, Px>,
 }
 
 #[derive(Debug, Clone)]

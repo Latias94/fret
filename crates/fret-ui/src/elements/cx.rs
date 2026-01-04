@@ -1178,6 +1178,25 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             scroll_handle.set_items_count(len);
 
             let range = cx.with_state(VirtualListState::default, |state| {
+                let prev_anchor = if state.viewport_h.0 > 0.0 && !state.keys.is_empty() {
+                    state
+                        .metrics
+                        .visible_range(state.offset_y, state.viewport_h, 0)
+                        .map(|r| {
+                            let idx = r.start_index;
+                            let key = state
+                                .keys
+                                .get(idx)
+                                .copied()
+                                .unwrap_or(idx as crate::ItemKey);
+                            let start = state.metrics.offset_for_index(idx);
+                            let offset_in_viewport = Px((state.offset_y.0 - start.0).max(0.0));
+                            (key, offset_in_viewport)
+                        })
+                } else {
+                    None
+                };
+
                 let prev_cfg = (
                     state.metrics.estimate(),
                     state.metrics.gap(),
@@ -1205,28 +1224,24 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     state.keys.clear();
                     state.keys.reserve(len);
 
-                    let mut heights = Vec::with_capacity(len);
-                    let mut measured = Vec::with_capacity(len);
-
                     for i in 0..len {
                         let key = item_key_at(i);
                         state.keys.push(key);
-                        if let Some(h) = state.size_cache.get(&key).copied() {
-                            heights.push(h);
-                            measured.push(true);
-                        } else {
-                            heights.push(options.estimate_row_height);
-                            measured.push(false);
-                        }
                     }
 
-                    state.metrics.rebuild_from_heights(
-                        heights,
-                        measured,
-                        options.estimate_row_height,
-                        options.gap,
-                        options.scroll_margin,
-                    );
+                    state.metrics.sync_keys(&state.keys, options.items_revision);
+
+                    let has_deferred_scroll = scroll_handle.deferred_scroll_to_item().is_some();
+                    if !has_deferred_scroll && let Some((key, offset_in_viewport)) = prev_anchor {
+                        if let Some(index) = state.keys.iter().position(|&k| k == key) {
+                            let start = state.metrics.offset_for_index(index);
+                            let desired = Px(start.0 + offset_in_viewport.0);
+                            let clamped = state.metrics.clamp_offset(desired, state.viewport_h);
+                            let prev = scroll_handle.offset();
+                            scroll_handle.set_offset(fret_core::Point::new(prev.x, clamped));
+                            state.offset_y = clamped;
+                        }
+                    }
                 }
 
                 let viewport_h = Px(state.viewport_h.0.max(0.0));

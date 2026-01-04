@@ -56,6 +56,7 @@ pub struct VirtualListMetrics {
     gap: Px,
     scroll_margin: Px,
     inner: virtualizer::Virtualizer<crate::ItemKey>,
+    keys_signature: (u64, usize),
 }
 
 impl Default for VirtualListMetrics {
@@ -66,6 +67,7 @@ impl Default for VirtualListMetrics {
             gap: Px(0.0),
             scroll_margin: Px(0.0),
             inner: virtualizer::Virtualizer::new(options),
+            keys_signature: (0, 0),
         }
     }
 }
@@ -99,6 +101,22 @@ impl VirtualListMetrics {
         options.scroll_margin = 0;
         options.estimate_size = Arc::new(move |_| estimate_units);
         self.inner.set_options(options);
+    }
+
+    pub fn sync_keys(&mut self, keys: &[crate::ItemKey], items_revision: u64) {
+        let signature = (items_revision, keys.len());
+        if self.keys_signature == signature {
+            return;
+        }
+
+        let keys = Arc::new(keys.to_vec());
+        let mut options = self.inner.options().clone();
+        options.get_item_key = Arc::new({
+            let keys = Arc::clone(&keys);
+            move |i| keys.get(i).copied().unwrap_or(i as crate::ItemKey)
+        });
+        self.inner.set_options(options);
+        self.keys_signature = signature;
     }
 
     pub fn total_height(&self) -> Px {
@@ -306,7 +324,7 @@ impl VirtualListMetrics {
             if !is_measured {
                 continue;
             }
-            entries.push((index as crate::ItemKey, px_to_units_u32(height)));
+            entries.push((self.inner.key_for(index), px_to_units_u32(height)));
         }
         self.inner.import_measurement_cache(entries);
     }

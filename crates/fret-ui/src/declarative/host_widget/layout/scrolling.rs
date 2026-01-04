@@ -77,12 +77,19 @@ impl ElementHostWidget {
             .scroll_handle
             .set_content_size(Size::new(size.width, content_h));
 
-        let mut measured_updates: Vec<(usize, crate::ItemKey, Px)> =
+        let anchor = metrics
+            .visible_range(offset_y, viewport_h, 0)
+            .map(|r| r.start_index);
+        let anchor_offset_in_viewport = anchor.map(|anchor| {
+            let start = metrics.offset_for_index(anchor);
+            Px((offset_y.0 - start.0).max(0.0))
+        });
+
+        let mut measured_updates: Vec<(fret_core::NodeId, usize, Px)> =
             Vec::with_capacity(cx.children.len());
 
         for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
             let idx = item.index;
-            let key = item.key;
             let y = cx.bounds.origin.y.0 + metrics.offset_for_index(idx).0 - offset_y.0;
             let origin = fret_core::Point::new(cx.bounds.origin.x, Px(y));
 
@@ -90,13 +97,34 @@ impl ElementHostWidget {
             let measured = cx.layout_in(child, measure_bounds);
             let measured_h = Px(measured.height.0.max(0.0));
 
-            measured_updates.push((idx, key, measured_h));
-            if metrics.set_measured_height(idx, measured_h) {
-                needs_redraw = true;
-            }
+            measured_updates.push((child, idx, measured_h));
+        }
 
-            let child_bounds = Rect::new(origin, Size::new(size.width, measured_h));
-            let _ = cx.layout_in(child, child_bounds);
+        let mut any_measured_change = false;
+        for (_, idx, measured_h) in &measured_updates {
+            if metrics.set_measured_height(*idx, *measured_h) {
+                any_measured_change = true;
+            }
+        }
+
+        if any_measured_change {
+            needs_redraw = true;
+
+            if !is_probe_layout
+                && let (Some(anchor), Some(anchor_offset_in_viewport)) =
+                    (anchor, anchor_offset_in_viewport)
+            {
+                let desired = Px(metrics.offset_for_index(anchor).0 + anchor_offset_in_viewport.0);
+                offset_y = metrics.clamp_offset(desired, viewport_h);
+
+                let prev = props.scroll_handle.offset();
+                if (prev.y.0 - offset_y.0).abs() > 0.01 {
+                    needs_redraw = true;
+                }
+                props
+                    .scroll_handle
+                    .set_offset(fret_core::Point::new(prev.x, offset_y));
+            }
         }
 
         let content_h = metrics.total_height();
@@ -117,18 +145,19 @@ impl ElementHostWidget {
             .set_offset(fret_core::Point::new(prev_offset.x, clamped));
         offset_y = clamped;
 
+        for (child, idx, measured_h) in &measured_updates {
+            let y = cx.bounds.origin.y.0 + metrics.offset_for_index(*idx).0 - offset_y.0;
+            let origin = fret_core::Point::new(cx.bounds.origin.x, Px(y));
+            let child_bounds = Rect::new(origin, Size::new(size.width, *measured_h));
+            let _ = cx.layout_in(*child, child_bounds);
+        }
+
         crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
             crate::element::VirtualListState::default,
             |state| {
-                for (idx, key, h) in &measured_updates {
-                    state.size_cache.insert(*key, *h);
-                    if let Some(slot) = state.keys.get_mut(*idx) {
-                        *slot = *key;
-                    }
-                }
                 state.offset_y = offset_y;
                 if state.viewport_h != viewport_h {
                     state.viewport_h = viewport_h;
