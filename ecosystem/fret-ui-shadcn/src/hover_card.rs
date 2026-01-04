@@ -247,18 +247,6 @@ impl HoverCard {
                 let placed = layout.rect;
                 let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
 
-                let arrow_el = popper_arrow::diamond_arrow_element(
-                    cx,
-                    &layout,
-                    wrapper_insets,
-                    arrow_size,
-                    DiamondArrowStyle {
-                        bg: arrow_bg,
-                        border: Some(arrow_border),
-                        border_width: Px(1.0),
-                    },
-                );
-
                 vec![cx.hover_region(
                     HoverRegionProps {
                         layout: popper_content::popper_wrapper_layout(placed, wrapper_insets),
@@ -267,6 +255,18 @@ impl HoverCard {
                         cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                             st.overlay_hovered = hovered;
                         });
+
+                        let arrow_el = popper_arrow::diamond_arrow_element(
+                            cx,
+                            &layout,
+                            wrapper_insets,
+                            arrow_size,
+                            DiamondArrowStyle {
+                                bg: arrow_bg,
+                                border: Some(arrow_border),
+                                border_width: Px(1.0),
+                            },
+                        );
 
                         let content = if arrow_el.is_some() {
                             popper_content::popper_panel_at(

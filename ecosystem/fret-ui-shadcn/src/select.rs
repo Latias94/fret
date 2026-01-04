@@ -351,20 +351,21 @@ fn select_impl<H: UiHost>(
                         let shadow = decl_style::shadow_sm(&theme_for_overlay, radius);
                         let arrow_bg = theme_for_overlay.colors.panel_background;
                         let arrow_border = border;
-                        let arrow_el = popper_arrow::diamond_arrow_element(
-                            cx,
-                            &layout,
-                            wrapper_insets,
-                            arrow_size,
-                            DiamondArrowStyle {
-                                bg: arrow_bg,
-                                border: Some(arrow_border),
-                                border_width,
-                            },
-                        );
 
                         let wrapper =
                             popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
+                                let arrow_el = popper_arrow::diamond_arrow_element(
+                                    cx,
+                                    &layout,
+                                    wrapper_insets,
+                                    arrow_size,
+                                    DiamondArrowStyle {
+                                        bg: arrow_bg,
+                                        border: Some(arrow_border),
+                                        border_width,
+                                    },
+                                );
+
                                 let panel = cx.container(
                                     ContainerProps {
                                         layout: popper_content::popper_panel_layout(
