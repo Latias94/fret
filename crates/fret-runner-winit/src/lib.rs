@@ -1,10 +1,13 @@
-use fret_core::{Event, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px};
+use fret_core::{
+    CursorIcon, Event, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect,
+};
 use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition};
 use winit::event::{
     ButtonSource, ElementState, KeyEvent, MouseButton as WinitMouseButton, MouseScrollDelta,
     WindowEvent,
 };
 use winit::keyboard::{Key, ModifiersState, NamedKey};
+use winit::window::Window;
 
 #[cfg(target_arch = "wasm32")]
 use std::rc::Rc;
@@ -14,10 +17,14 @@ use winit::platform::web::WindowExtWeb;
 
 pub mod accessibility;
 
+#[cfg(windows)]
+pub mod windows_ime;
+
 #[derive(Debug, Default, Clone)]
 pub struct WinitPlatform {
     pub input: WinitInputState,
     pub wheel: WheelConfig,
+    pub window: WinitWindowState,
 }
 
 impl WinitPlatform {
@@ -29,6 +36,29 @@ impl WinitPlatform {
     ) {
         self.input
             .handle_window_event_with_config(window_scale_factor, event, self.wheel, out);
+    }
+
+    pub fn set_ime_allowed(&mut self, enabled: bool) -> bool {
+        self.window.set_ime_allowed(enabled)
+    }
+
+    pub fn set_ime_cursor_area(&mut self, rect: Rect) -> bool {
+        self.window.set_ime_cursor_area(rect)
+    }
+
+    pub fn ime_cursor_area(&self) -> Option<Rect> {
+        self.window.ime_cursor_area()
+    }
+
+    pub fn set_cursor_icon(&mut self, icon: CursorIcon) -> bool {
+        self.window.set_cursor_icon(icon)
+    }
+
+    /// Applies any pending window-side state (IME/cursor) before drawing a frame.
+    ///
+    /// This mirrors the backend split pattern in Dear ImGui (`prepare_frame`).
+    pub fn prepare_frame(&mut self, window: &dyn Window) {
+        self.window.prepare_frame(window);
     }
 }
 
@@ -160,6 +190,103 @@ pub struct WinitInputState {
     pub modifiers: Modifiers,
     pub raw_modifiers: ModifiersState,
     pub alt_gr_down: bool,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct WinitWindowState {
+    ime_allowed: bool,
+    ime_cursor_area: Option<Rect>,
+    cursor_icon: CursorIcon,
+    pending: WinitWindowPendingState,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct WinitWindowPendingState {
+    ime_allowed: Option<bool>,
+    ime_cursor_area: Option<Rect>,
+    cursor_icon: Option<CursorIcon>,
+}
+
+impl WinitWindowState {
+    pub fn set_ime_allowed(&mut self, enabled: bool) -> bool {
+        if self.ime_allowed == enabled {
+            return false;
+        }
+        self.ime_allowed = enabled;
+        self.pending.ime_allowed = Some(enabled);
+        true
+    }
+
+    pub fn set_ime_cursor_area(&mut self, rect: Rect) -> bool {
+        if self.ime_cursor_area == Some(rect) {
+            return false;
+        }
+        self.ime_cursor_area = Some(rect);
+        self.pending.ime_cursor_area = Some(rect);
+        true
+    }
+
+    pub fn ime_cursor_area(&self) -> Option<Rect> {
+        self.ime_cursor_area
+    }
+
+    pub fn set_cursor_icon(&mut self, icon: CursorIcon) -> bool {
+        if self.cursor_icon == icon {
+            return false;
+        }
+        self.cursor_icon = icon;
+        self.pending.cursor_icon = Some(icon);
+        true
+    }
+
+    pub fn prepare_frame(&mut self, window: &dyn Window) {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let pending_cursor_area = self.pending.ime_cursor_area.take();
+            if let Some(rect) = pending_cursor_area {
+                #[cfg(windows)]
+                {
+                    windows_ime::set_ime_cursor_area(window, rect);
+                }
+
+                #[cfg(not(windows))]
+                {
+                    let request_data = winit::window::ImeRequestData::default().with_cursor_area(
+                        winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
+                        winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0).into(),
+                    );
+                    let _ =
+                        window.request_ime_update(winit::window::ImeRequest::Update(request_data));
+                }
+            }
+
+            if let Some(enabled) = self.pending.ime_allowed.take() {
+                if enabled {
+                    let rect = self.ime_cursor_area.unwrap_or_else(|| Rect {
+                        origin: fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                        size: fret_core::Size::new(fret_core::Px(1.0), fret_core::Px(1.0)),
+                    });
+
+                    let request_data = winit::window::ImeRequestData::default().with_cursor_area(
+                        winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
+                        winit::dpi::LogicalSize::new(rect.size.width.0, rect.size.height.0).into(),
+                    );
+
+                    let caps = winit::window::ImeCapabilities::new().with_cursor_area();
+                    if let Some(enable) = winit::window::ImeEnableRequest::new(caps, request_data) {
+                        let _ =
+                            window.request_ime_update(winit::window::ImeRequest::Enable(enable));
+                    }
+                } else {
+                    let _ = window.request_ime_update(winit::window::ImeRequest::Disable);
+                }
+            }
+        }
+
+        if let Some(icon) = self.pending.cursor_icon.take() {
+            window.set_cursor(winit::cursor::Cursor::Icon(map_cursor_icon(icon)));
+        }
+    }
 }
 
 impl WinitInputState {
