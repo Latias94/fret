@@ -310,6 +310,7 @@ impl OverlayController {
                     window_overlays::TooltipRequest {
                         id: request.id,
                         root_name,
+                        on_pointer_move: request.dismissible_on_pointer_move,
                         children: request.children,
                     },
                 );

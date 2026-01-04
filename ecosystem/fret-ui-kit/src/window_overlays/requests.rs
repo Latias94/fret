@@ -80,11 +80,23 @@ impl std::fmt::Debug for HoverOverlayRequest {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TooltipRequest {
     pub id: GlobalElementId,
     pub root_name: String,
+    pub on_pointer_move: Option<OnDismissiblePointerMove>,
     pub children: Vec<AnyElement>,
+}
+
+impl std::fmt::Debug for TooltipRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TooltipRequest")
+            .field("id", &self.id)
+            .field("root_name", &self.root_name)
+            .field("on_pointer_move", &self.on_pointer_move.is_some())
+            .field("children_len", &self.children.len())
+            .finish()
+    }
 }
 
 #[derive(Clone)]

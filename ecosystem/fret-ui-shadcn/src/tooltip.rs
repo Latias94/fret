@@ -13,12 +13,10 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
-use fret_core::{Edges, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
-use fret_ui::element::{
-    AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Overflow, TextProps,
-};
+use fret_ui::element::{AnyElement, HoverRegionProps, LayoutStyle, Overflow, TextProps};
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -296,18 +294,21 @@ impl Tooltip {
             } else {
                 tooltip_provider::open_delay_ticks(cx, now)
             };
-            let close_delay_ticks = cx.with_state(FocusEdgeState::default, |st| {
+            let (close_delay_ticks, blurred) = cx.with_state(FocusEdgeState::default, |st| {
                 let was = st.was_focused;
                 st.was_focused = focused;
+                let blurred = was && !focused;
 
                 // shadcn/Radix behavior: blur closes immediately.
-                if was && !focused {
+                let close_delay_ticks = if blurred {
                     0
                 } else if focused {
                     0
                 } else {
                     close_delay_frames_override.unwrap_or(0) as u64
-                }
+                };
+
+                (close_delay_ticks, blurred)
             });
 
             let cfg = HoverIntentConfig::new(open_delay_ticks, close_delay_ticks);
@@ -317,7 +318,7 @@ impl Tooltip {
                 cx.observe_model(&last_pointer, fret_ui::Invalidation::Paint);
             }
 
-            let pointer_safe = if was_open && !disable_hoverable_content {
+            let pointer_safe = if was_open && !disable_hoverable_content && !blurred {
                 let pointer = cx.app.models().read(&last_pointer, |v| *v).ok().flatten();
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
 
@@ -404,35 +405,9 @@ impl Tooltip {
             let overlay_root_name = OverlayController::tooltip_root_name(tooltip_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                let pointer_hook = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle::default(),
-                        padding: Edges::all(Px(0.0)),
-                        background: None,
-                        shadow: None,
-                        border: Edges::all(Px(0.0)),
-                        border_color: None,
-                        corner_radii: Default::default(),
-                    },
-                    move |cx| {
-                        let last_pointer = last_pointer.clone();
-                        cx.dismissible_on_pointer_move(Arc::new(
-                            move |host: &mut dyn UiActionHost,
-                                  _acx: ActionCx,
-                                  mv: PointerMoveCx| {
-                                let _ = host
-                                    .models_mut()
-                                    .update(&last_pointer, |v| *v = Some(mv.position));
-                                false
-                            },
-                        ));
-                        Vec::new()
-                    },
-                );
-
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                 let Some(anchor) = anchor else {
-                    return vec![pointer_hook];
+                    return Vec::new();
                 };
 
                 let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
@@ -500,7 +475,7 @@ impl Tooltip {
                     }
                 });
 
-                vec![pointer_hook, wrapper]
+                vec![wrapper]
             });
 
             let mut request = OverlayRequest::tooltip(
@@ -509,6 +484,17 @@ impl Tooltip {
                 overlay_children,
             );
             request.root_name = Some(overlay_root_name);
+            if !disable_hoverable_content {
+                let last_pointer = last_pointer.clone();
+                request.dismissible_on_pointer_move = Some(Arc::new(
+                    move |host: &mut dyn UiActionHost, _acx: ActionCx, mv: PointerMoveCx| {
+                        let _ = host
+                            .models_mut()
+                            .update(&last_pointer, |v| *v = Some(mv.position));
+                        false
+                    },
+                ));
+            }
             OverlayController::request(cx, request);
 
             out
