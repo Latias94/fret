@@ -269,6 +269,16 @@ impl<H: UiHost> UiTree<H> {
                 }
                 app.request_redraw(window);
             }
+
+            let changed = crate::input_modality::update_for_event(app, window, event);
+            if changed {
+                if let Some(focus) = self.focus {
+                    self.invalidate(focus, Invalidation::Paint);
+                } else {
+                    self.invalidate(base_root, Invalidation::Paint);
+                }
+                app.request_redraw(window);
+            }
         }
 
         if !self.replaying_pending_shortcut
