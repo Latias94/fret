@@ -1,6 +1,27 @@
 use super::*;
 
 impl<H: UiHost> UiTree<H> {
+    fn update_ime_composing_for_event(&mut self, focus_is_text_input: bool, event: &Event) {
+        if !focus_is_text_input {
+            self.ime_composing = false;
+            return;
+        }
+
+        let Event::Ime(ime) = event else {
+            return;
+        };
+
+        match ime {
+            fret_core::ImeEvent::Preedit { text, cursor } => {
+                self.ime_composing = crate::text_edit::ime::is_composing(text, *cursor);
+            }
+            fret_core::ImeEvent::Commit(_) | fret_core::ImeEvent::Disabled => {
+                self.ime_composing = false;
+            }
+            fret_core::ImeEvent::Enabled => {}
+        }
+    }
+
     fn active_trapped_focus_scope_root(
         &self,
         app: &mut H,
@@ -207,6 +228,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let focus_is_text_input = self.focus_is_text_input();
+        self.update_ime_composing_for_event(focus_is_text_input, event);
         self.set_ime_allowed(app, focus_is_text_input);
 
         let caps = app
@@ -707,18 +729,27 @@ impl<H: UiHost> UiTree<H> {
                 ..input_ctx.clone()
             };
 
-            if self.handle_keydown_shortcuts(
-                app,
-                services,
-                KeydownShortcutParams {
-                    input_ctx: &input_ctx_for_shortcuts,
-                    barrier_root,
+            let ime_reserved = self.ime_composing
+                && Self::should_defer_keydown_shortcut_matching_to_text_input(
+                    *key,
+                    *modifiers,
                     focus_is_text_input,
-                    key: *key,
-                    modifiers: *modifiers,
-                    repeat: *repeat,
-                },
-            ) {
+                );
+
+            if !ime_reserved
+                && self.handle_keydown_shortcuts(
+                    app,
+                    services,
+                    KeydownShortcutParams {
+                        input_ctx: &input_ctx_for_shortcuts,
+                        barrier_root,
+                        focus_is_text_input,
+                        key: *key,
+                        modifiers: *modifiers,
+                        repeat: *repeat,
+                    },
+                )
+            {
                 if needs_redraw && let Some(window) = self.window {
                     app.request_redraw(window);
                 }

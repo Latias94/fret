@@ -1,18 +1,11 @@
 use anyhow::Context as _;
 use fret_app::CreateWindowKind;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
-use fret_ui_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
-    handle_dock_window_created, render_and_bind_dock_panels,
-};
-use fret_icons::IconRegistry;
-use fret_ui_shadcn as shadcn;
-use fret_ui_kit::OverlayController;
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
     ViewportInputEvent, geometry::Px,
 };
+use fret_icons::IconRegistry;
 use fret_runner_winit_wgpu::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext, run_app,
@@ -21,6 +14,13 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::{Invalidation, UiTree};
+use fret_ui_docking::{
+    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
+    DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
+    handle_dock_window_created, render_and_bind_dock_panels,
+};
+use fret_ui_kit::OverlayController;
+use fret_ui_shadcn as shadcn;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 #[derive(Clone)]
@@ -383,10 +383,7 @@ impl DockingArbitrationDriver {
                 .graph
                 .import_layout_for_windows(&restore.layout, &windows);
             if changed {
-                fret_ui_docking::runtime::request_dock_invalidation(
-                    app,
-                    dock.graph.windows(),
-                );
+                fret_ui_docking::runtime::request_dock_invalidation(app, dock.graph.windows());
                 for w in dock.graph.windows() {
                     app.request_redraw(w);
                 }

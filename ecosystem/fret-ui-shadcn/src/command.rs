@@ -5,13 +5,6 @@ use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
-use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::cmdk_selection;
-use fret_ui_kit::headless::roving_focus;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle,
     TextWrap,
@@ -23,6 +16,13 @@ use fret_ui::element::{
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::cmdk_selection;
+use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::{Dialog, DialogContent, Input, ScrollArea};
 
@@ -390,7 +390,7 @@ impl CommandList {
 
         cx.semantics(
             fret_ui::element::SemanticsProps {
-                role: SemanticsRole::List,
+                role: SemanticsRole::ListBox,
                 ..Default::default()
             },
             move |cx| {
@@ -435,7 +435,7 @@ impl CommandList {
                                         focusable,
                                         focus_ring: Some(ring),
                                         a11y: PressableA11y {
-                                            role: Some(SemanticsRole::ListItem),
+                                            role: Some(SemanticsRole::ListBoxOption),
                                             label: Some(label.clone()),
                                             ..Default::default()
                                         },
@@ -774,7 +774,7 @@ impl CommandPalette {
                                 focusable: false,
                                 focus_ring: None,
                                 a11y: PressableA11y {
-                                    role: Some(SemanticsRole::ListItem),
+                                    role: Some(SemanticsRole::ListBoxOption),
                                     label: Some(label.clone()),
                                     selected,
                                     ..Default::default()
@@ -1074,7 +1074,7 @@ impl CommandPalette {
                 let scroll = self.scroll;
                 cx.semantics(
                     fret_ui::element::SemanticsProps {
-                        role: SemanticsRole::List,
+                        role: SemanticsRole::ListBox,
                         ..Default::default()
                     },
                     move |cx| {
@@ -1365,7 +1365,7 @@ mod tests {
             .find(|n| n.id == active)
             .expect("active_descendant should reference a node in the snapshot");
 
-        assert_eq!(active_node.role, SemanticsRole::ListItem);
+        assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
         assert_eq!(active_node.label.as_deref(), Some("Beta"));
         assert_eq!(active_node.pos_in_set, Some(2));
         assert_eq!(active_node.set_size, Some(2));
@@ -1415,7 +1415,7 @@ mod tests {
         let beta_bounds = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::ListItem && n.label.as_deref() == Some("Beta"))
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Beta"))
             .map(|n| n.bounds)
             .expect("Beta row bounds");
 
@@ -1460,7 +1460,7 @@ mod tests {
             .find(|n| n.id == active)
             .expect("active_descendant should reference a node in the snapshot");
 
-        assert_eq!(active_node.role, SemanticsRole::ListItem);
+        assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
         assert_eq!(active_node.label.as_deref(), Some("Beta"));
         assert_eq!(active_node.pos_in_set, Some(2));
         assert_eq!(active_node.set_size, Some(3));
@@ -1559,7 +1559,7 @@ mod tests {
             .find(|n| n.id == active)
             .expect("active_descendant should reference a node in the snapshot");
 
-        assert_eq!(active_node.role, SemanticsRole::ListItem);
+        assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
         assert_eq!(active_node.label.as_deref(), Some("Gamma"));
     }
 }

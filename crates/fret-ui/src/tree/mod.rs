@@ -281,6 +281,7 @@ pub struct UiTree<H: UiHost> {
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
     ime_allowed: bool,
+    ime_composing: bool,
     suppress_text_input_until_key_up: Option<KeyCode>,
     pending_shortcut: PendingShortcut,
     replaying_pending_shortcut: bool,
@@ -313,6 +314,7 @@ impl<H: UiHost> Default for UiTree<H> {
             last_internal_drag_target: None,
             window: None,
             ime_allowed: false,
+            ime_composing: false,
             suppress_text_input_until_key_up: None,
             pending_shortcut: PendingShortcut::default(),
             replaying_pending_shortcut: false,
@@ -486,6 +488,9 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn set_focus(&mut self, focus: Option<NodeId>) {
+        if self.focus != focus {
+            self.ime_composing = false;
+        }
         self.focus = focus;
     }
 

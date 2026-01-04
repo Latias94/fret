@@ -62,6 +62,8 @@ fn map_role(role: SemanticsRole) -> Role {
         SemanticsRole::TextField => Role::TextInput,
         SemanticsRole::List => Role::List,
         SemanticsRole::ListItem => Role::ListItem,
+        SemanticsRole::ListBox => Role::ListBox,
+        SemanticsRole::ListBoxOption => Role::ListBoxOption,
         SemanticsRole::TreeItem => Role::TreeItem,
         SemanticsRole::Viewport => Role::ScrollView,
         _ => Role::GenericContainer,

@@ -1,15 +1,10 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
-use fret_ui_docking::{
-    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
-    DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
-    handle_dock_window_created, render_and_bind_dock_panels,
-};
-use fret_icons::IconRegistry;
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, Rect, Scene, SceneOp, UiServices,
     geometry::Px,
 };
+use fret_icons::IconRegistry;
 use fret_runner_winit_wgpu::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext, run_app,
@@ -18,6 +13,11 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::{Theme, UiTree};
+use fret_ui_docking::{
+    DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
+    DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
+    handle_dock_window_created, render_and_bind_dock_panels,
+};
 use std::sync::Arc;
 struct DemoDockPanelRegistry;
 

@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
-use fret_ui_kit::tree::TreeEntry;
-use fret_ui_kit::{TreeRowRenderer, TreeRowState};
 use fret_core::SemanticsRole;
 use fret_runtime::CommandId;
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+use fret_ui_kit::tree::TreeEntry;
+use fret_ui_kit::{TreeRowRenderer, TreeRowState};
 
 /// A minimal “application default” Tree row renderer.
 ///

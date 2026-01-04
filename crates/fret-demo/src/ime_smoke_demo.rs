@@ -1,6 +1,5 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect};
-use fret_ui_shadcn as shadcn;
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_runner_winit_wgpu::{
     WinitAppBuilder, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
@@ -12,6 +11,7 @@ use fret_runtime::{
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign};
 use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui_shadcn as shadcn;
 use std::sync::Arc;
 struct ImeSmokeWindowState {
     ui: UiTree<App>,

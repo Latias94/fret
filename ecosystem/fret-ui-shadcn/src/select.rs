@@ -1,7 +1,17 @@
 use std::sync::Arc;
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+};
 use fret_icons::ids;
+use fret_runtime::Model;
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
+};
+use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::chrome as decl_chrome;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -20,16 +30,6 @@ use fret_ui_kit::{
     ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Space,
 };
-use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-};
-use fret_runtime::Model;
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
-};
-use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
-use fret_ui::{ElementContext, Theme, UiHost};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -387,7 +387,7 @@ fn select_impl<H: UiHost>(
                                                 vec![cx.semantics(
                                                     SemanticsProps {
                                                         layout: LayoutStyle::default(),
-                                                        role: SemanticsRole::List,
+                                                        role: SemanticsRole::ListBox,
                                                         ..Default::default()
                                                     },
                                                     |cx| {
@@ -445,7 +445,7 @@ fn select_impl<H: UiHost>(
                                                                     focusable: tab_stop,
                                                                     focus_ring: Some(item_ring),
                                                                     a11y: PressableA11y {
-                                                                        role: Some(SemanticsRole::ListItem),
+                                                                        role: Some(SemanticsRole::ListBoxOption),
                                                                         label: Some(item.label.clone()),
                                                                          selected: is_selected,
                                                                          ..Default::default()
@@ -746,7 +746,7 @@ mod tests {
         let beta = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::ListItem && n.label.as_deref() == Some("Beta"))
+            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Beta"))
             .expect("Beta list item");
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(3));
@@ -803,7 +803,7 @@ mod tests {
         let list = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::List)
+            .find(|n| n.role == SemanticsRole::ListBox)
             .expect("list node");
         let list_bounds = ui.debug_node_bounds(list.id).expect("list bounds");
 

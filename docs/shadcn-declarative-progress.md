@@ -176,8 +176,8 @@ The goal is to keep `fret-ui-shadcn` mostly “composition + styling”, and put
   - keyboard navigation (up/down/home/end, typeahead, disabled skipping)
   - optional virtualization integration
 - Potential runtime/a11y gaps to track:
-  - We currently lack a ListBox/Option-style role pair; `List`/`ListItem` works but may not map ideally to OS AT.
-  - We do not have an "active descendant" semantics link (to announce the active result while keeping focus in the text field, as cmdk does). If we want true cmdk parity, consider adding a semantics association rather than moving focus away from the input.
+  - Listbox semantics are supported (`SemanticsRole::{ListBox, ListBoxOption}`) and mapped to AccessKit roles; prefer this for cmdk/select-style surfaces.
+  - Active-descendant semantics are supported (`SemanticsNode.active_descendant`) and used by `CommandPalette` to keep focus in the input while announcing the active result.
   - Virtualized a11y contract is still evolving; avoid virtualization for v1 unless necessary, or define an AT-facing mirror strategy.
 
 ## Planned Infra Modules (Concrete)

@@ -331,6 +331,139 @@ fn tab_focus_next_is_suppressed_during_ime_composition() {
 }
 
 #[test]
+fn tab_focus_next_is_suppressed_when_preedit_empty_but_cursor_present() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(KeymapService {
+        keymap: Keymap::from_v1(KeymapFileV1 {
+            keymap_version: 1,
+            bindings: vec![BindingV1 {
+                command: Some("focus.next".into()),
+                platform: None,
+                when: None,
+                keys: KeySpecV1 {
+                    mods: vec![],
+                    key: "Tab".into(),
+                },
+            }],
+        })
+        .expect("valid keymap"),
+    });
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let text_input = ui.create_node(crate::text_input::TextInput::new());
+    ui.add_child(root, text_input);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.set_focus(Some(text_input));
+
+    let _ = app.take_effects();
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "".into(),
+            cursor: Some((0, 0)),
+        }),
+    );
+    let _ = app.take_effects();
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Tab,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+    let effects = app.take_effects();
+    assert!(
+        !effects.iter().any(|e| matches!(
+            e,
+            Effect::Command { command, .. } if *command == CommandId::from("focus.next")
+        )),
+        "did not expect focus traversal command effect during IME composition"
+    );
+}
+
+#[test]
+fn tab_focus_next_runs_after_ime_commit_clears_composition() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(KeymapService {
+        keymap: Keymap::from_v1(KeymapFileV1 {
+            keymap_version: 1,
+            bindings: vec![BindingV1 {
+                command: Some("focus.next".into()),
+                platform: None,
+                when: None,
+                keys: KeySpecV1 {
+                    mods: vec![],
+                    key: "Tab".into(),
+                },
+            }],
+        })
+        .expect("valid keymap"),
+    });
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node(TestStack);
+    let text_input = ui.create_node(crate::text_input::TextInput::new());
+    ui.add_child(root, text_input);
+    ui.set_root(root);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(40.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.set_focus(Some(text_input));
+
+    let _ = app.take_effects();
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Ime(fret_core::ImeEvent::Preedit {
+            text: "toukyou".into(),
+            cursor: Some((0, 0)),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Ime(fret_core::ImeEvent::Commit("東京".into())),
+    );
+    let _ = app.take_effects();
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Tab,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+    let effects = app.take_effects();
+    assert!(
+        effects.iter().any(|e| matches!(
+            e,
+            Effect::Command { command, .. } if *command == CommandId::from("focus.next")
+        )),
+        "expected focus traversal command effect after IME commit"
+    );
+}
+
+#[test]
 fn reserved_shortcuts_are_suppressed_during_ime_composition() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

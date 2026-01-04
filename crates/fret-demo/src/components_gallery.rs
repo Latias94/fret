@@ -1,14 +1,11 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_app_kit::tree::AppTreeRowRenderer;
-use fret_icons::IconRegistry;
-use fret_ui_shadcn as shadcn;
-use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
-use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController};
 use fret_core::{
     AppWindowId, Corners, Edges, Event, FileDialogFilter, FileDialogOptions, FileDialogToken,
     FontId, KeyCode, Px, Rect, SemanticsRole, TextStyle, UiServices,
 };
+use fret_icons::IconRegistry;
 use fret_runner_winit_wgpu::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext, run_app,
@@ -19,6 +16,9 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, TextProps,
 };
 use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
+use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController};
+use fret_ui_shadcn as shadcn;
 use std::collections::HashSet;
 use std::sync::Arc;
 struct ComponentsGalleryWindowState {

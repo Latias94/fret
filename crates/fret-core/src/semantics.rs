@@ -27,6 +27,8 @@ pub enum SemanticsRole {
     TextField,
     List,
     ListItem,
+    ListBox,
+    ListBoxOption,
     TreeItem,
     Viewport,
 }
