@@ -409,17 +409,6 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
             WindowEvent::SurfaceResized(size) => {
                 self.resize_surface(app_window, size.width, size.height);
-                if let Some(state) = self.windows.get_mut(app_window) {
-                    let scale = state.window.scale_factor() as f32;
-                    let logical: winit::dpi::LogicalSize<f32> = size.to_logical(scale as f64);
-                    self.app
-                        .with_global_mut(WindowMetricsService::default, |svc, _app| {
-                            svc.set_inner_size(
-                                app_window,
-                                Size::new(Px(logical.width), Px(logical.height)),
-                            );
-                        });
-                }
                 // Keep delivering size/scale events for consistency with the existing runner
                 // behavior, but generate them via the backend mapping where possible.
                 let (mapped, scale_factor) = {

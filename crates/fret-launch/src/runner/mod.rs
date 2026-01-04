@@ -1705,6 +1705,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
+        fret_runtime::apply_window_metrics_event(&mut self.app, window, event);
         let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
         self.driver.handle_event(
             WinitEventContext {
@@ -1835,13 +1836,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let size_phys = state.window.surface_size();
             let size_logical: winit::dpi::LogicalSize<f32> =
                 size_phys.to_logical(state.window.scale_factor());
-            self.app
-                .with_global_mut(WindowMetricsService::default, |svc, _app| {
-                    svc.set_inner_size(
-                        id,
-                        Size::new(Px(size_logical.width), Px(size_logical.height)),
-                    );
-                });
+            fret_runtime::apply_window_metrics_event(
+                &mut self.app,
+                id,
+                &Event::WindowResized {
+                    width: Px(size_logical.width),
+                    height: Px(size_logical.height),
+                },
+            );
+            fret_runtime::apply_window_metrics_event(
+                &mut self.app,
+                id,
+                &Event::WindowScaleFactorChanged(state.window.scale_factor() as f32),
+            );
         }
 
         let winit_id = self.windows[id].window.id();

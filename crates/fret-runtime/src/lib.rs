@@ -17,6 +17,7 @@ pub mod platform_completion;
 pub mod time;
 pub mod ui_host;
 pub mod when_expr;
+pub mod window_metrics;
 
 pub use capabilities::{
     ExternalDragPayloadKind, ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
@@ -47,3 +48,4 @@ pub use platform_completion::PlatformCompletion;
 pub use time::TickId;
 pub use ui_host::{CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost, UiHost};
 pub use when_expr::WhenExpr;
+pub use window_metrics::apply_window_metrics_event;
