@@ -15,10 +15,11 @@ use crate::action::{
 };
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
-    ImageProps, LayoutStyle, OpacityProps, PointerRegionProps, PressableProps, PressableState,
-    ResizablePanelGroupProps, RowProps, ScrollProps, ScrollbarProps, SpacerProps, SpinnerProps,
-    StackProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions,
-    VirtualListProps, VirtualListState, VisualTransformProps,
+    ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps, PointerRegionProps,
+    PressableProps, PressableState, ResizablePanelGroupProps, RowProps, ScrollProps,
+    ScrollbarProps, SpacerProps, SpinnerProps, StackProps, SvgIconProps, TextAreaProps,
+    TextInputProps, TextProps, VirtualListOptions, VirtualListProps, VirtualListState,
+    VisualTransformProps,
 };
 use crate::widget::Invalidation;
 use crate::{SvgSource, Theme, UiHost};
@@ -458,6 +459,36 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let id = cx.root_id();
             let children = f(cx);
             AnyElement::new(id, ElementKind::VisualTransform(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn interactivity_gate(
+        &mut self,
+        present: bool,
+        interactive: bool,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.interactivity_gate_props(
+            InteractivityGateProps {
+                present,
+                interactive,
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn interactivity_gate_props(
+        &mut self,
+        props: InteractivityGateProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::InteractivityGate(props), children)
         })
     }
 

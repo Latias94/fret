@@ -382,6 +382,7 @@ fn mount_element<H: UiHost>(
         ElementKind::Container(p) => ElementInstance::Container(p),
         ElementKind::Semantics(p) => ElementInstance::Semantics(p),
         ElementKind::FocusScope(p) => ElementInstance::FocusScope(p),
+        ElementKind::InteractivityGate(p) => ElementInstance::InteractivityGate(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::VisualTransform(p) => ElementInstance::VisualTransform(p),
         ElementKind::Pressable(p) => ElementInstance::Pressable(p),

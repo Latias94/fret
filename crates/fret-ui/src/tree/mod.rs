@@ -627,7 +627,12 @@ impl<H: UiHost> UiTree<H> {
                 return Some(id);
             }
 
-            if let Some(node) = self.nodes.get(id) {
+            if let Some(node) = self.nodes.get(id)
+                && node
+                    .widget
+                    .as_ref()
+                    .is_some_and(|w| w.focus_traversal_children())
+            {
                 for &child in node.children.iter().rev() {
                     stack.push(child);
                 }
@@ -651,27 +656,43 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<NodeId> {
         let mut stack = vec![root];
         while let Some(id) = stack.pop() {
-            let focusable = if let Some(record) =
+            let (focusable, traverse_children) = if let Some(record) =
                 crate::declarative::element_record_for_node(app, window, id)
             {
-                match record.instance {
+                let focusable = match &record.instance {
                     crate::declarative::ElementInstance::TextInput(_) => true,
                     crate::declarative::ElementInstance::TextArea(_) => true,
                     crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
                     _ => false,
-                }
+                };
+                let traverse_children = match &record.instance {
+                    crate::declarative::ElementInstance::Pressable(p) => p.enabled,
+                    crate::declarative::ElementInstance::InteractivityGate(p) => {
+                        p.present && p.interactive
+                    }
+                    crate::declarative::ElementInstance::Spinner(_) => false,
+                    _ => true,
+                };
+                (focusable, traverse_children)
             } else {
-                self.nodes
+                let traverse_children = self
+                    .nodes
                     .get(id)
                     .and_then(|n| n.widget.as_ref())
-                    .is_some_and(|w| w.is_focusable())
+                    .is_some_and(|w| w.focus_traversal_children());
+                let focusable = self
+                    .nodes
+                    .get(id)
+                    .and_then(|n| n.widget.as_ref())
+                    .is_some_and(|w| w.is_focusable());
+                (focusable, traverse_children)
             };
 
             if focusable {
                 return Some(id);
             }
 
-            if let Some(node) = self.nodes.get(id) {
+            if traverse_children && let Some(node) = self.nodes.get(id) {
                 for &child in node.children.iter().rev() {
                     stack.push(child);
                 }
@@ -790,8 +811,14 @@ impl<H: UiHost> UiTree<H> {
         if n.widget.as_ref().is_some_and(|w| w.is_focusable()) {
             out.push(node);
         }
-        for &child in &n.children {
-            self.collect_focusables(child, active_layers, scope_bounds, out);
+
+        if n.widget
+            .as_ref()
+            .is_some_and(|w| w.focus_traversal_children())
+        {
+            for &child in &n.children {
+                self.collect_focusables(child, active_layers, scope_bounds, out);
+            }
         }
     }
 

@@ -409,6 +409,16 @@ pub trait Widget<H: UiHost> {
     fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
         true
     }
+    /// Whether focus traversal should recurse into this node's children.
+    ///
+    /// This is a mechanism-only gate used by `UiTree` to model "inert" subtrees during
+    /// transitions (e.g. `present=true` but `interactive=false`), without requiring every focusable
+    /// widget to thread an "interactive" flag into its own `is_focusable()` logic.
+    ///
+    /// Default: `true`.
+    fn focus_traversal_children(&self) -> bool {
+        true
+    }
     fn is_focusable(&self) -> bool {
         false
     }

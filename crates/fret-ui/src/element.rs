@@ -30,6 +30,13 @@ pub enum ElementKind {
     Container(ContainerProps),
     Semantics(SemanticsProps),
     FocusScope(FocusScopeProps),
+    /// A transparent wrapper that gates subtree presence and interactivity.
+    ///
+    /// This is a mechanism-oriented primitive intended to support Radix-style authoring outcomes
+    /// like `forceMount` while still being able to make a subtree non-interactive (click/keyboard)
+    /// or fully absent from layout/paint, without deleting the subtree (so per-element state can be
+    /// preserved).
+    InteractivityGate(InteractivityGateProps),
     Opacity(OpacityProps),
     VisualTransform(VisualTransformProps),
     Pressable(PressableProps),
@@ -304,6 +311,30 @@ impl Default for SemanticsProps {
 pub struct FocusScopeProps {
     pub layout: LayoutStyle,
     pub trap_focus: bool,
+}
+
+/// Gate subtree presence (layout/paint) and interactivity (hit-testing + focus traversal).
+///
+/// When `present == false`, the subtree remains mounted but is treated like `display: none`:
+/// it does not participate in layout, paint, hit-testing, or focus traversal.
+///
+/// When `present == true` and `interactive == false`, the subtree is still laid out/painted but is
+/// inert for pointer and focus traversal (useful for close animations).
+#[derive(Debug, Clone, Copy)]
+pub struct InteractivityGateProps {
+    pub layout: LayoutStyle,
+    pub present: bool,
+    pub interactive: bool,
+}
+
+impl Default for InteractivityGateProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            present: true,
+            interactive: true,
+        }
+    }
 }
 
 /// A paint-only opacity group wrapper (ADR 0019).

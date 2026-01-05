@@ -31,6 +31,7 @@ pub(super) struct ElementHostWidget {
     text_cache: TextCache,
     hit_testable: bool,
     hit_test_children: bool,
+    focus_traversal_children: bool,
     is_focusable: bool,
     is_text_input: bool,
     can_scroll_descendant: bool,
@@ -50,6 +51,7 @@ impl ElementHostWidget {
             text_cache: TextCache::default(),
             hit_testable: true,
             hit_test_children: true,
+            focus_traversal_children: true,
             is_focusable: false,
             is_text_input: false,
             can_scroll_descendant: false,
@@ -456,6 +458,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
             return false;
         }
         true
+    }
+
+    fn focus_traversal_children(&self) -> bool {
+        self.focus_traversal_children
     }
 
     fn is_focusable(&self) -> bool {
