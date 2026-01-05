@@ -19,6 +19,11 @@ use fret_ui_kit::{
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 
+// Radix default delays: open=700ms, close=300ms. We approximate with 60fps ticks.
+const HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES: u32 =
+    (overlay_motion::SHADCN_MOTION_TICKS_500 + overlay_motion::SHADCN_MOTION_TICKS_200) as u32;
+const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
+
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme
         .color_by_key("popover")
@@ -83,9 +88,8 @@ impl HoverCard {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
-            open_delay_frames: 0,
-            // Non-zero by default so the user can move from trigger to the overlay content.
-            close_delay_frames: 6,
+            open_delay_frames: HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES,
+            close_delay_frames: HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES,
             layout: LayoutRefinement::default(),
             anchor_override: None,
         }
@@ -199,7 +203,8 @@ impl HoverCard {
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     st.overlay_hovered
                 });
-            let hovered = hovered || overlay_hovered;
+            let focused = cx.is_focused_element(trigger_id);
+            let hovered = hovered || overlay_hovered || focused;
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
             let update = hover_intent::drive(cx, hovered, cfg);
@@ -570,6 +575,7 @@ mod tests {
                     HoverCard::new(trigger, content)
                         .anchor_element(anchor_id)
                         .align(HoverCardAlign::Start)
+                        .open_delay_frames(0)
                         .side_offset(Px(8.0))
                         .window_margin(Px(0.0))
                         .into_element(cx),
@@ -667,5 +673,188 @@ mod tests {
             .expect("content bounds");
 
         assert_eq!(content_bounds.origin, expected.origin);
+    }
+
+    fn render_hover_card_focus_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+        after_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>,
+    ) {
+        OverlayController::begin_frame(app, window);
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st, id| {
+                        trigger_id_out.set(Some(id));
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let content = cx.semantics(
+                    SemanticsProps {
+                        role: SemanticsRole::Panel,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![
+                            HoverCardContent::new(vec![cx.text_props(TextProps::new("card"))])
+                                .into_element(cx),
+                        ]
+                    },
+                );
+                content_id_out.set(Some(content.id));
+
+                let after = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.inset.top = Some(Px(60.0));
+                            layout.position = PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        after_id_out.set(Some(id));
+                        Vec::new()
+                    },
+                );
+
+                vec![
+                    HoverCard::new(trigger, content)
+                        .open_delay_frames(0)
+                        .close_delay_frames(0)
+                        .into_element(cx),
+                    after,
+                ]
+            });
+
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+    }
+
+    #[test]
+    fn hover_card_opens_on_focus_and_closes_on_blur() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let trigger_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let after_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+
+        // Frame 1: mount trigger/after and resolve element/node mappings.
+        app.set_frame_id(FrameId(1));
+        render_hover_card_focus_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+            after_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_element = trigger_id.get().expect("trigger element id");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger node");
+        ui.set_focus(Some(trigger_node));
+
+        // Frame 2: focus should open the overlay and mount the content.
+        app.set_frame_id(FrameId(2));
+        render_hover_card_focus_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+            after_id.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_element = content_id.get().expect("content element id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| n.id == content_node),
+            "expected hover card content to mount when trigger is focused"
+        );
+
+        // Blur by moving focus elsewhere, then wait for the exit animation to complete.
+        let after_element = after_id.get().expect("after element id");
+        let after_node = fret_ui::elements::node_for_element(&mut app, window, after_element)
+            .expect("after node");
+        ui.set_focus(Some(after_node));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: Point::new(Px(2000.0), Px(2000.0)),
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 + 1;
+        for i in 0..settle_frames {
+            app.set_frame_id(FrameId(3 + i));
+            render_hover_card_focus_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                trigger_id.clone(),
+                content_id.clone(),
+                after_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap.nodes.iter().any(|n| n.id == content_node),
+            "expected hover card content to unmount after blur"
+        );
     }
 }
