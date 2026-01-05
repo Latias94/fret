@@ -10,6 +10,7 @@
 
 use std::sync::Arc;
 
+use crate::declarative::model_watch::ModelWatchExt;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::elements::GlobalElementId;
