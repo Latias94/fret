@@ -57,6 +57,7 @@ pub struct Popover {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    consume_outside_pointer_events: bool,
     auto_focus: bool,
     initial_focus: Option<fret_ui::elements::GlobalElementId>,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
@@ -89,6 +90,7 @@ impl Popover {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
+            consume_outside_pointer_events: false,
             auto_focus: false,
             initial_focus: None,
             anchor_override: None,
@@ -135,6 +137,15 @@ impl Popover {
 
     pub fn arrow_padding(mut self, padding: Px) -> Self {
         self.arrow_padding_override = Some(padding);
+        self
+    }
+
+    /// When enabled, suppress hit-tested pointer-down dispatch to underlay widgets when this
+    /// popover receives an outside-press observer event (ADR 0069).
+    ///
+    /// Default: `false` (click-through).
+    pub fn consume_outside_pointer_events(mut self, consume: bool) -> Self {
+        self.consume_outside_pointer_events = consume;
         self
     }
 
@@ -363,6 +374,7 @@ impl Popover {
                     overlay_children,
                 );
                 request.root_name = Some(overlay_root_name);
+                request.consume_outside_pointer_events = self.consume_outside_pointer_events;
                 request.initial_focus = initial_focus;
                 OverlayController::request(cx, request);
             }
@@ -765,6 +777,117 @@ mod tests {
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         trigger_id.expect("trigger id")
+    }
+
+    #[test]
+    fn popover_can_consume_outside_pointer_down_events() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let underlay_activated = underlay_activated.clone();
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.inset.top = Some(Px(300.0));
+                            layout.inset.left = Some(Px(400.0));
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_set_bool(&underlay_activated, true);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(&open);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let popover = Popover::new(open.clone())
+                    .consume_outside_pointer_events(true)
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            PopoverContent::new(vec![
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                vec![underlay, popover]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Click "outside" the popover, on the underlay. The popover should close, but the underlay
+        // should not activate because pointer-down dispatch is suppressed.
+        let underlay_point = Point::new(Px(410.0), Px(310.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(app.models().get_copied(&underlay_activated), Some(false));
     }
 
     fn render_popover_in_clipped_surface_frame(
