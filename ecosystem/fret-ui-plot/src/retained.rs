@@ -516,6 +516,80 @@ pub struct ScatterPlotLayer {
 
 pub type ScatterPlotCanvas = PlotCanvas<ScatterPlotLayer>;
 
+#[derive(Debug, Clone)]
+pub struct BarSeries {
+    pub id: SeriesId,
+    pub label: Arc<str>,
+    pub data: Series,
+    /// Bar width in data-space units (X axis).
+    pub bar_width: f32,
+    pub fill_color: Option<Color>,
+    pub baseline: f32,
+}
+
+impl BarSeries {
+    pub fn new(label: impl Into<Arc<str>>, data: Series) -> Self {
+        let label = label.into();
+        Self {
+            id: SeriesId::from_label(&label),
+            label,
+            data,
+            bar_width: 0.8,
+            fill_color: None,
+            baseline: 0.0,
+        }
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.bar_width = width;
+        self
+    }
+
+    pub fn fill(mut self, color: Color) -> Self {
+        self.fill_color = Some(color);
+        self
+    }
+
+    pub fn baseline(mut self, y: f32) -> Self {
+        self.baseline = y;
+        self
+    }
+
+    pub fn id(mut self, id: SeriesId) -> Self {
+        self.id = id;
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BarsPlotModel {
+    pub data_bounds: DataRect,
+    pub series: Vec<BarSeries>,
+}
+
+impl BarsPlotModel {
+    pub fn from_series(series: Vec<BarSeries>) -> Self {
+        let bounds = compute_data_bounds_from_bar_series(&series).unwrap_or(DataRect {
+            x_min: 0.0,
+            x_max: 1.0,
+            y_min: 0.0,
+            y_max: 1.0,
+        });
+
+        Self {
+            data_bounds: sanitize_data_rect(bounds),
+            series,
+        }
+    }
+
+    pub fn from_series_with_bounds(series: Vec<BarSeries>, data_bounds: DataRect) -> Self {
+        Self {
+            data_bounds: sanitize_data_rect(data_bounds),
+            series,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlotHoverOutput {
     pub series_id: SeriesId,
@@ -631,6 +705,19 @@ impl PlotCanvas<LinePlotLayer> {
 impl PlotCanvas<ScatterPlotLayer> {
     pub fn new(model: Model<ScatterPlotModel>) -> Self {
         Self::with_layer(model, ScatterPlotLayer::default())
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct BarsPlotLayer {
+    cached_paths: Vec<CachedPath>,
+}
+
+pub type BarsPlotCanvas = PlotCanvas<BarsPlotLayer>;
+
+impl PlotCanvas<BarsPlotLayer> {
+    pub fn new(model: Model<BarsPlotModel>) -> Self {
+        Self::with_layer(model, BarsPlotLayer::default())
     }
 }
 
@@ -2570,6 +2657,176 @@ impl PlotLayer for ScatterPlotLayer {
     }
 }
 
+impl PlotLayer for BarsPlotLayer {
+    type Model = BarsPlotModel;
+
+    fn data_bounds(model: &Self::Model) -> DataRect {
+        model.data_bounds
+    }
+
+    fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
+        model
+            .series
+            .iter()
+            .map(|s| SeriesMeta {
+                id: s.id,
+                label: s.label.clone(),
+                stroke_color: s.fill_color,
+            })
+            .collect()
+    }
+
+    fn series_label(model: &Self::Model, series_id: SeriesId) -> Option<String> {
+        model
+            .series
+            .iter()
+            .find(|s| s.id == series_id)
+            .map(|s| s.label.to_string())
+    }
+
+    fn paint_paths<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+    ) -> Vec<(SeriesId, PathId, Color)> {
+        let PlotPaintArgs {
+            model_revision,
+            plot,
+            view_bounds,
+            style,
+            hidden,
+        } = args;
+
+        let scale_factor_bits = cx.scale_factor.to_bits();
+        let viewport_w_bits = plot.size.width.0.to_bits();
+        let viewport_h_bits = plot.size.height.0.to_bits();
+        let view_key = data_rect_key(view_bounds);
+
+        let series = &model.series;
+        let series_count = series.len();
+
+        if series_count == 0 {
+            for cached in self.cached_paths.drain(..) {
+                if let Some(id) = cached.id {
+                    cx.services.path().release(id);
+                }
+            }
+            return Vec::new();
+        }
+
+        let cached_ok = self.cached_paths.len() == series_count
+            && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                series.get(i).is_some_and(|s| s.id == c.series_id)
+                    && c.model_revision == model_revision
+                    && c.scale_factor_bits == scale_factor_bits
+                    && c.viewport_w_bits == viewport_w_bits
+                    && c.viewport_h_bits == viewport_h_bits
+                    && c.stroke_width == style.stroke_width
+                    && c.view_key == view_key
+            });
+
+        if cached_ok {
+            let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
+            for (i, s) in series.iter().enumerate() {
+                if hidden.contains(&s.id) {
+                    continue;
+                }
+                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                    continue;
+                };
+                let color = resolve_series_color(i, style, series_count, s.fill_color);
+                out.push((s.id, id, color));
+            }
+            return out;
+        }
+
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                cx.services.path().release(id);
+            }
+        }
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+        let transform = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+        };
+
+        let path_style = PathStyle::Fill(fret_core::FillStyle::default());
+        let constraints = PathConstraints {
+            scale_factor: cx.scale_factor,
+        };
+
+        let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
+        self.cached_paths = Vec::with_capacity(series_count);
+
+        for (series_index, s) in series.iter().enumerate() {
+            let series_id = s.id;
+            if hidden.contains(&series_id) {
+                self.cached_paths.push(CachedPath {
+                    id: None,
+                    series_id,
+                    model_revision,
+                    scale_factor_bits,
+                    viewport_w_bits,
+                    viewport_h_bits,
+                    stroke_width: style.stroke_width,
+                    view_key,
+                    samples: Vec::new(),
+                });
+                continue;
+            }
+
+            let samples = decimate_samples(transform, &*s.data, cx.scale_factor, series_id);
+            let commands = bars_path_commands(transform, &samples, s.bar_width, s.baseline);
+
+            let id = if commands.is_empty() {
+                None
+            } else {
+                let (id, _metrics) = cx
+                    .services
+                    .path()
+                    .prepare(&commands, path_style, constraints);
+                Some(id)
+            };
+
+            self.cached_paths.push(CachedPath {
+                id,
+                series_id,
+                model_revision,
+                scale_factor_bits,
+                viewport_w_bits,
+                viewport_h_bits,
+                stroke_width: style.stroke_width,
+                view_key,
+                samples,
+            });
+
+            if let Some(id) = id {
+                let color = resolve_series_color(series_index, style, series_count, s.fill_color);
+                out.push((series_id, id, color));
+            }
+        }
+
+        out
+    }
+
+    fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover> {
+        let series: Vec<(SeriesId, &dyn SeriesData)> =
+            model.series.iter().map(|s| (s.id, &*s.data)).collect();
+        hit_test_series_data(&self.cached_paths, &series, args)
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                services.path().release(id);
+            }
+        }
+    }
+}
+
 fn hash_value<T: Hash>(v: &T) -> u64 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     v.hash(&mut h);
@@ -2696,6 +2953,153 @@ fn compute_data_bounds_from_series_data<T>(
         };
 
         out = Some(out.map_or(bounds, |acc| acc.union(bounds)));
+    }
+
+    out
+}
+
+fn compute_data_bounds_from_bar_series(series: &[BarSeries]) -> Option<DataRect> {
+    let mut out: Option<DataRect> = None;
+
+    for s in series {
+        let half_w = (s.bar_width * 0.5).abs();
+        let data = &s.data;
+
+        let bounds = if let Some(hint) = data.bounds_hint() {
+            Some(DataRect {
+                x_min: hint.x_min - half_w,
+                x_max: hint.x_max + half_w,
+                y_min: hint.y_min.min(s.baseline),
+                y_max: hint.y_max.max(s.baseline),
+            })
+        } else if let Some(slice) = data.as_slice() {
+            let mut x_min: Option<f32> = None;
+            let mut x_max: Option<f32> = None;
+            let mut y_min: Option<f32> = Some(s.baseline);
+            let mut y_max: Option<f32> = Some(s.baseline);
+
+            for p in slice.iter().copied() {
+                if !p.x.is_finite() || !p.y.is_finite() {
+                    continue;
+                }
+                x_min = Some(x_min.map_or(p.x - half_w, |v| v.min(p.x - half_w)));
+                x_max = Some(x_max.map_or(p.x + half_w, |v| v.max(p.x + half_w)));
+                y_min = Some(y_min.map_or(p.y, |v| v.min(p.y)));
+                y_max = Some(y_max.map_or(p.y, |v| v.max(p.y)));
+            }
+
+            Some(DataRect {
+                x_min: x_min?,
+                x_max: x_max?,
+                y_min: y_min?,
+                y_max: y_max?,
+            })
+        } else {
+            let mut x_min: Option<f32> = None;
+            let mut x_max: Option<f32> = None;
+            let mut y_min: Option<f32> = Some(s.baseline);
+            let mut y_max: Option<f32> = Some(s.baseline);
+
+            for i in 0..data.len() {
+                let Some(p) = data.get(i) else {
+                    continue;
+                };
+                if !p.x.is_finite() || !p.y.is_finite() {
+                    continue;
+                }
+                x_min = Some(x_min.map_or(p.x - half_w, |v| v.min(p.x - half_w)));
+                x_max = Some(x_max.map_or(p.x + half_w, |v| v.max(p.x + half_w)));
+                y_min = Some(y_min.map_or(p.y, |v| v.min(p.y)));
+                y_max = Some(y_max.map_or(p.y, |v| v.max(p.y)));
+            }
+
+            Some(DataRect {
+                x_min: x_min?,
+                x_max: x_max?,
+                y_min: y_min?,
+                y_max: y_max?,
+            })
+        };
+
+        let Some(bounds) = bounds else {
+            continue;
+        };
+
+        out = Some(out.map_or(bounds, |acc| acc.union(bounds)));
+    }
+
+    out
+}
+
+fn bars_path_commands(
+    transform: PlotTransform,
+    samples: &[SamplePoint],
+    bar_width: f32,
+    baseline: f32,
+) -> Vec<fret_core::PathCommand> {
+    if samples.is_empty() {
+        return Vec::new();
+    }
+
+    let w = bar_width.abs();
+    if !w.is_finite() || w <= 0.0 {
+        return Vec::new();
+    }
+
+    let mut out: Vec<fret_core::PathCommand> = Vec::new();
+
+    for s in samples {
+        let x = s.data.x;
+        let y = s.data.y;
+        if !x.is_finite() || !y.is_finite() || !baseline.is_finite() {
+            continue;
+        }
+
+        let x0 = x - w * 0.5;
+        let x1 = x + w * 0.5;
+
+        let p00 = transform.data_to_px(DataPoint { x: x0, y: baseline });
+        let p10 = transform.data_to_px(DataPoint { x: x1, y: baseline });
+        let p01 = transform.data_to_px(DataPoint { x: x0, y });
+        let p11 = transform.data_to_px(DataPoint { x: x1, y });
+
+        if !p00.x.0.is_finite()
+            || !p00.y.0.is_finite()
+            || !p10.x.0.is_finite()
+            || !p10.y.0.is_finite()
+            || !p01.x.0.is_finite()
+            || !p01.y.0.is_finite()
+            || !p11.x.0.is_finite()
+            || !p11.y.0.is_finite()
+        {
+            continue;
+        }
+
+        let left = p00.x.0.min(p10.x.0).min(p01.x.0).min(p11.x.0);
+        let right = p00.x.0.max(p10.x.0).max(p01.x.0).max(p11.x.0);
+        let top = p00.y.0.min(p10.y.0).min(p01.y.0).min(p11.y.0);
+        let bottom = p00.y.0.max(p10.y.0).max(p01.y.0).max(p11.y.0);
+
+        if !left.is_finite()
+            || !right.is_finite()
+            || !top.is_finite()
+            || !bottom.is_finite()
+            || right <= left
+            || bottom <= top
+        {
+            continue;
+        }
+
+        let a = Point::new(Px(left), Px(top));
+        let b = Point::new(Px(right), Px(top));
+        let c = Point::new(Px(right), Px(bottom));
+        let d = Point::new(Px(left), Px(bottom));
+
+        out.push(fret_core::PathCommand::MoveTo(a));
+        out.push(fret_core::PathCommand::LineTo(b));
+        out.push(fret_core::PathCommand::LineTo(c));
+        out.push(fret_core::PathCommand::LineTo(d));
+        out.push(fret_core::PathCommand::Close);
     }
 
     out
