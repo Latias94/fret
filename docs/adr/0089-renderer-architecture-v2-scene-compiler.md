@@ -1,6 +1,6 @@
 # ADR 0089: Renderer Architecture v2 - Scene Compiler, Atlases, and Default Performance
 
-Status: Proposed
+Status: Accepted (scene compiler + caching landed; ongoing perf expansion)
 
 ## Context
 
@@ -20,7 +20,7 @@ Current implementation direction (summary, non-normative):
 
 - `fret-ui` builds a `Scene` and can replay ranges from a previous frame on cache hits.
 - `fret-render` encodes `SceneOp` into an internal ordered draw stream and issues wgpu draws.
-- `Quad` is already instanced; other primitives (images, svg, text, viewport surfaces) are typically "one op -> one draw".
+- `Quad` is instanced; other primitives currently encode into compact vertex streams and typically still produce one draw per op.
 
 That last point is the major scalability risk for editor-grade workloads: toolbars and lists tend to produce many
 small textured quads (icons/glyphs) where CPU-side encoding and GPU-side draw/bind churn can dominate.
@@ -46,6 +46,33 @@ References:
   - Cull/submit: `repo-ref/godot/servers/rendering/renderer_canvas_cull.cpp`
   - Command list + batching: `repo-ref/godot/servers/rendering/renderer_canvas_render.h`
   - Backend record/batch (RD): `repo-ref/godot/servers/rendering/renderer_rd/renderer_canvas_render_rd.cpp`
+
+## Implementation Status (Current)
+
+This ADR is accepted because the core “scene compiler” shape is implemented today in `fret-render`:
+
+- A dedicated encoding pass produces an ordered internal draw stream (while preserving `Scene.ops` order).
+- The encoder maintains explicit stacks (transform/opacity/scissor/clip) to match core contracts.
+- Encoded results are cached by a stable key so identical frames can skip re-encoding.
+- GPU uploads use a small ring buffer (frames-in-flight) to avoid writing into in-flight buffers.
+
+However, the performance work described here is incremental: some parts (e.g. unifying all textured draws
+into a single instanced Sprite2D path) may still be phased in as needed.
+
+### Code map (as of current implementation)
+
+- Scene encoding (compiler):
+  - `crates/fret-render/src/renderer/render_scene/encode/mod.rs`
+  - `crates/fret-render/src/renderer/render_scene/encode/state.rs`
+  - `crates/fret-render/src/renderer/types.rs` (`SceneEncoding`, `OrderedDraw`)
+- Encoding cache key and reuse:
+  - `crates/fret-render/src/renderer/render_scene/render.rs` (`SceneEncodingCacheKey`)
+  - `crates/fret-render/src/renderer/mod.rs` (cache storage)
+- Frames-in-flight buffers (ring buffers):
+  - `crates/fret-render/src/renderer/resources.rs` (`FRAMES_IN_FLIGHT = 3`)
+- Atlas + budgets + perf snapshot (SVG path today):
+  - `crates/fret-render/src/renderer/config.rs` (`SvgPerfSnapshot`, budgets, clear-cache knobs)
+  - Stress harness: `apps/fret-svg-atlas-stress/src/main.rs`
 
 ## Reference Notes: How Godot Handles Editor UI Rendering
 
@@ -303,7 +330,7 @@ This plan is structured so that each phase improves performance and observabilit
 
 ### Phase 0: Lock metrics + stress harnesses (must happen first)
 
-- Add `RenderStats` and a debug overlay output path.
+- Add `RenderStats` / perf snapshots and a debug output path.
 - Add repeatable stress harnesses:
   - icon-heavy (SVG mask icons, different sizes),
   - text-heavy (many lines, selection highlights, mixed glyph types),

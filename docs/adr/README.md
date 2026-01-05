@@ -222,6 +222,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0009-renderer-ordering-and-batching.md`
 - `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
 - `docs/adr/0089-renderer-architecture-v2-scene-compiler.md`
+- `docs/adr/0096-renderer-perf-snapshot-and-stress-harness.md`
 
 ## Platform (`fret-platform`)
 
