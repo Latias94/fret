@@ -46,21 +46,25 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
 
-        // 模拟 runner 的单调时钟。
+        // Simulate the runner's monotonic clock.
         app.set_tick_id(TickId(1));
         app.set_frame_id(FrameId(1));
 
-        // 第一次进入 opening：需要动画帧 + 重绘请求。
+        // First time entering `opening`: request an animation frame + a redraw.
         let out0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
             fade_presence(cx, true, 3)
         });
         let effects0 = app.flush_effects();
         assert!(out0.present);
         assert!(out0.animating);
-        assert!(effects0.iter().any(|e| *e == Effect::RequestAnimationFrame(window)));
+        assert!(
+            effects0
+                .iter()
+                .any(|e| *e == Effect::RequestAnimationFrame(window))
+        );
         assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
 
-        // 动画进行中：持续请求重绘，但不会重复申请新的 RAF lease。
+        // While animating: keep requesting redraws, but do not request another RAF lease.
         app.set_tick_id(TickId(2));
         app.set_frame_id(FrameId(2));
         let out1 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
@@ -69,10 +73,14 @@ mod tests {
         let effects1 = app.flush_effects();
         assert!(out1.present);
         assert!(out1.animating);
-        assert!(!effects1.iter().any(|e| *e == Effect::RequestAnimationFrame(window)));
+        assert!(
+            !effects1
+                .iter()
+                .any(|e| *e == Effect::RequestAnimationFrame(window))
+        );
         assert!(effects1.iter().any(|e| *e == Effect::Redraw(window)));
 
-        // 进入稳定 open：不再 animating，因此不再主动请求重绘。
+        // Once stable `open`: no longer animating, so no proactive redraw requests.
         app.set_tick_id(TickId(3));
         app.set_frame_id(FrameId(3));
         let out2 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
@@ -91,7 +99,7 @@ mod tests {
         app.set_tick_id(TickId(1));
         app.set_frame_id(FrameId(1));
 
-        // 先打开到稳定。
+        // Open first and reach a stable state.
         let _ = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p1", |cx| {
             fade_presence(cx, true, 1)
         });
@@ -101,7 +109,7 @@ mod tests {
         });
         let _ = app.flush_effects();
 
-        // 触发关闭动画：应重新申请 RAF 并请求重绘。
+        // Trigger a close animation: reacquire a RAF lease and request a redraw.
         app.set_tick_id(TickId(2));
         app.set_frame_id(FrameId(2));
         let out = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p1", |cx| {
@@ -110,7 +118,11 @@ mod tests {
         let effects = app.flush_effects();
         assert!(out.present);
         assert!(out.animating);
-        assert!(effects.iter().any(|e| *e == Effect::RequestAnimationFrame(window)));
+        assert!(
+            effects
+                .iter()
+                .any(|e| *e == Effect::RequestAnimationFrame(window))
+        );
         assert!(effects.iter().any(|e| *e == Effect::Redraw(window)));
     }
 }

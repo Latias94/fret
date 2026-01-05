@@ -762,7 +762,11 @@ impl CommandPalette {
                     for kw in &item.keywords {
                         kw.as_ref().hash(&mut hasher);
                     }
-                    item.shortcut.as_ref().map(|s| s.as_ref()).unwrap_or("").hash(&mut hasher);
+                    item.shortcut
+                        .as_ref()
+                        .map(|s| s.as_ref())
+                        .unwrap_or("")
+                        .hash(&mut hasher);
                     item.disabled.hash(&mut hasher);
                     item.command
                         .as_ref()
@@ -896,14 +900,14 @@ impl CommandPalette {
                         let enabled = disabled_flags.get(idx).copied() == Some(false);
                         let selected = active_idx.is_some_and(|i| i == idx);
 
-                    let label = item.label.clone();
-                    let value = item.value.clone();
-                    let checked = item.checked;
-                    let show_checkmark = item.show_checkmark;
-                    let shortcut = item.shortcut.clone();
-                    let command = item.command;
-                    let on_select = item.on_select.clone();
-                    let children = item.children;
+                        let label = item.label.clone();
+                        let value = item.value.clone();
+                        let checked = item.checked;
+                        let show_checkmark = item.show_checkmark;
+                        let shortcut = item.shortcut.clone();
+                        let command = item.command;
+                        let on_select = item.on_select.clone();
+                        let children = item.children;
                         let text_style = text_style.clone();
 
                         let row = cx.pressable(
@@ -1035,7 +1039,10 @@ impl CommandPalette {
                                             );
 
                                             if let Some(shortcut) = shortcut.clone() {
-                                                vec![left, CommandShortcut::new(shortcut).into_element(cx)]
+                                                vec![
+                                                    left,
+                                                    CommandShortcut::new(shortcut).into_element(cx),
+                                                ]
                                             } else {
                                                 vec![left]
                                             }

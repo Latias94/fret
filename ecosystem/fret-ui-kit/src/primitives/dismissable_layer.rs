@@ -247,12 +247,12 @@ mod tests {
         let branch_a = branch_a.expect("branch a id");
         let branch_b = branch_b.expect("branch b id");
 
-        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger)
-            .expect("trigger node");
-        let branch_a_node = fret_ui::elements::node_for_element(&mut app, window, branch_a)
-            .expect("branch a node");
-        let branch_b_node = fret_ui::elements::node_for_element(&mut app, window, branch_b)
-            .expect("branch b node");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+        let branch_a_node =
+            fret_ui::elements::node_for_element(&mut app, window, branch_a).expect("branch a node");
+        let branch_b_node =
+            fret_ui::elements::node_for_element(&mut app, window, branch_b).expect("branch b node");
 
         let out = resolve_branch_nodes_for_trigger_and_elements(
             &mut app,
