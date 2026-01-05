@@ -11,11 +11,16 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::layout as shadcn_layout;
 
 use crate::toggle::{ToggleSize, ToggleVariant};
+
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
 
 fn toggle_bg_hover(theme: &Theme) -> Color {
     theme
@@ -32,6 +37,27 @@ fn toggle_border(theme: &Theme) -> Color {
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
         .unwrap_or(theme.colors.panel_border)
+}
+
+fn toggle_ring_color(theme: &Theme) -> Color {
+    theme
+        .color_by_key("ring")
+        .unwrap_or(theme.colors.focus_ring)
+}
+
+fn toggle_group_item_h(theme: &Theme, size: ToggleSize) -> Px {
+    let (key, fallback) = match size {
+        ToggleSize::Default => ("component.toggle_group.item_h", Px(36.0)),
+        ToggleSize::Sm => ("component.toggle_group.item_h_sm", Px(32.0)),
+        ToggleSize::Lg => ("component.toggle_group.item_h_lg", Px(40.0)),
+    };
+    theme.metric_by_key(key).unwrap_or(fallback)
+}
+
+fn toggle_group_item_pad_x(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.toggle_group.item_pad_x")
+        .unwrap_or(Px(12.0))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -218,7 +244,7 @@ impl ToggleGroup {
         let orientation = self.orientation;
         let loop_navigation = self.loop_navigation;
         let variant = self.variant;
-        let size = self.size.component_size();
+        let size_token = self.size;
         let spacing = self.spacing;
         let chrome = self.chrome;
         let layout = self.layout;
@@ -250,16 +276,21 @@ impl ToggleGroup {
         };
 
         let gap = MetricRef::space(spacing).resolve(&theme);
-        let radius = size.control_radius(&theme);
-        let ring = decl_style::focus_ring(&theme, radius);
-        let pad_x = size.button_px(&theme);
-        let pad_y = size.button_py(&theme);
+        let radius = MetricRef::radius(Radius::Md).resolve(&theme);
+        let mut ring = decl_style::focus_ring(&theme, radius);
+        ring.color = alpha_mul(toggle_ring_color(&theme), 0.5);
+        let ring_border = toggle_ring_color(&theme);
+
+        let item_h = toggle_group_item_h(&theme, size_token);
+        let pad_x = toggle_group_item_pad_x(&theme);
+        let pad_y = Px(0.0);
 
         let bg_hover = toggle_bg_hover(&theme);
         let bg_on = toggle_bg_on(&theme);
         let border = toggle_border(&theme);
 
-        let group_props = decl_style::container_props(&theme, chrome, layout);
+        let mut group_props = decl_style::container_props(&theme, chrome, layout);
+        group_props.corner_radii = Corners::all(radius);
 
         let base_chrome = match variant {
             ToggleVariant::Default => ChromeRefinement {
@@ -373,17 +404,18 @@ impl ToggleGroup {
                         let children = item.children;
                         let model_single = model_single.clone();
                         let model_multi = model_multi.clone();
+                        let pressable_layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default()
+                                .min_h(MetricRef::Px(item_h))
+                                .min_w_0()
+                                .flex_none(),
+                        );
 
                         out.push(
                             cx.pressable(
                                 PressableProps {
-                                    layout: decl_style::layout_style(
-                                        &theme,
-                                        LayoutRefinement::default()
-                                            .min_h(MetricRef::Px(size.button_h(&theme)))
-                                            .min_w_0()
-                                            .flex_none(),
-                                    ),
+                                    layout: pressable_layout,
                                     enabled,
                                     focusable,
                                     focus_ring: Some(ring),
@@ -434,6 +466,10 @@ impl ToggleGroup {
                                     if bg.is_some() {
                                         props.background = bg;
                                     }
+                                    if state.focused && variant == ToggleVariant::Outline {
+                                        props.border_color = Some(ring_border);
+                                    }
+                                    props.layout.size = pressable_layout.size;
 
                                     vec![shadcn_layout::container_hstack_centered(
                                         cx,
