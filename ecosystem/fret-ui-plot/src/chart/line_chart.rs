@@ -2,7 +2,7 @@ use fret_runtime::Model;
 use fret_runtime::ModelHost;
 
 use crate::cartesian::{DataPoint, DataRect};
-use crate::retained::{LinePlotCanvas, LinePlotModel};
+use crate::retained::{LinePlotCanvas, LinePlotModel, LineSeries};
 use crate::series::Series;
 
 type Accessor<T> = Box<dyn Fn(&T) -> Option<f32> + 'static>;
@@ -99,7 +99,10 @@ impl<T> LineChart<T> {
 
         LinePlotModel {
             data_bounds: bounds,
-            series: vec![Series::from_points_sorted(points, sorted_by_x)],
+            series: vec![LineSeries::new(Series::from_points_sorted(
+                points,
+                sorted_by_x,
+            ))],
         }
     }
 

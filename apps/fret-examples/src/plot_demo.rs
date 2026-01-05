@@ -7,8 +7,8 @@ use fret_launch::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
-use fret_ui_plot::cartesian::{DataPoint, DataRect};
-use fret_ui_plot::retained::{LinePlotCanvas, LinePlotStyle};
+use fret_ui_plot::cartesian::DataPoint;
+use fret_ui_plot::retained::{LinePlotCanvas, LinePlotStyle, LineSeries};
 use fret_ui_plot::series::Series;
 
 struct PlotDemoWindowState {
@@ -55,30 +55,13 @@ impl PlotDemoDriver {
             );
         }
 
-        let bounds = DataRect::from_points(
-            series0
-                .iter()
-                .copied()
-                .chain(series1.iter().copied())
-                .chain(series2.iter().copied()),
-        )
-        .unwrap_or(DataRect {
-            x_min: 0.0,
-            x_max: 1.0,
-            y_min: 0.0,
-            y_max: 1.0,
-        });
-
         let plot = app
             .models_mut()
-            .insert(fret_ui_plot::retained::LinePlotModel {
-                data_bounds: bounds,
-                series: vec![
-                    Series::from_points_sorted(series0, true),
-                    Series::from_points_sorted(series1, true),
-                    Series::from_points_sorted(series2, true),
-                ],
-            });
+            .insert(fret_ui_plot::retained::LinePlotModel::from_series(vec![
+                LineSeries::new(Series::from_points_sorted(series0, true)).label("signal A"),
+                LineSeries::new(Series::from_points_sorted(series1, true)).label("signal B"),
+                LineSeries::new(Series::from_points_sorted(series2, true)).label("signal C"),
+            ]));
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
