@@ -1123,6 +1123,11 @@ impl MenubarMenuEntries {
                                     move |cx| {
                                         let content_focus_id_for_panel =
                                             content_focus_id_for_children_for_content.clone();
+                                        let group_active_for_switch =
+                                            group_active_for_content.clone();
+                                        let trigger_registry_for_switch =
+                                            trigger_registry_for_overlay.clone();
+                                        let menu_key_for_switch = menu_key_for_overlay.clone();
                                         let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
                                             cx,
                                             RovingFlexProps {
@@ -1735,6 +1740,13 @@ impl MenubarMenuEntries {
 
                                                 out
                                             },
+                                        );
+                                        menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                            cx,
+                                            roving.id,
+                                            group_active_for_switch,
+                                            trigger_registry_for_switch,
+                                            menu_key_for_switch,
                                         );
                                         if content_focus_id_for_panel.get().is_none() {
                                             content_focus_id_for_panel.set(Some(roving.id));

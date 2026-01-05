@@ -184,7 +184,6 @@ pub fn switch_open_menu_on_horizontal_arrows(
                 });
             });
 
-            host.request_focus(next.trigger);
             host.request_redraw(acx.window);
             true
         },
