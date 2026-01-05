@@ -38,6 +38,14 @@ pub enum ToggleGroupKind {
     Multiple,
 }
 
+/// Matches Radix ToggleGroup `orientation` outcome.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ToggleGroupOrientation {
+    #[default]
+    Horizontal,
+    Vertical,
+}
+
 #[derive(Clone)]
 enum ToggleGroupModel {
     Single(Model<Option<Arc<str>>>),
@@ -89,6 +97,8 @@ pub struct ToggleGroup {
     model: ToggleGroupModel,
     items: Vec<ToggleGroupItem>,
     disabled: bool,
+    orientation: ToggleGroupOrientation,
+    loop_navigation: bool,
     variant: ToggleVariant,
     size: ToggleSize,
     spacing: Space,
@@ -106,6 +116,8 @@ impl std::fmt::Debug for ToggleGroup {
             .field("kind", &kind)
             .field("items_len", &self.items.len())
             .field("disabled", &self.disabled)
+            .field("orientation", &self.orientation)
+            .field("loop_navigation", &self.loop_navigation)
             .field("variant", &self.variant)
             .field("size", &self.size)
             .field("spacing", &self.spacing)
@@ -121,6 +133,8 @@ impl ToggleGroup {
             model: ToggleGroupModel::Single(model),
             items: Vec::new(),
             disabled: false,
+            orientation: ToggleGroupOrientation::default(),
+            loop_navigation: true,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             spacing: Space::N0,
@@ -134,6 +148,8 @@ impl ToggleGroup {
             model: ToggleGroupModel::Multiple(model),
             items: Vec::new(),
             disabled: false,
+            orientation: ToggleGroupOrientation::default(),
+            loop_navigation: true,
             variant: ToggleVariant::default(),
             size: ToggleSize::default(),
             spacing: Space::N0,
@@ -144,6 +160,17 @@ impl ToggleGroup {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn orientation(mut self, orientation: ToggleGroupOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    /// When `true` (default), roving navigation loops at the ends (Radix `loop` behavior).
+    pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
+        self.loop_navigation = loop_navigation;
         self
     }
 
@@ -186,6 +213,8 @@ impl ToggleGroup {
         let model = self.model;
         let items = self.items;
         let group_disabled = self.disabled;
+        let orientation = self.orientation;
+        let loop_navigation = self.loop_navigation;
         let variant = self.variant;
         let size = self.size.component_size();
         let spacing = self.spacing;
@@ -250,7 +279,7 @@ impl ToggleGroup {
 
         let roving = RovingFocusProps {
             enabled: !group_disabled,
-            wrap: true,
+            wrap: loop_navigation,
             disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
             ..Default::default()
         };
@@ -259,7 +288,10 @@ impl ToggleGroup {
             vec![cx.roving_flex(
                 RovingFlexProps {
                     flex: FlexProps {
-                        direction: fret_core::Axis::Horizontal,
+                        direction: match orientation {
+                            ToggleGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
+                            ToggleGroupOrientation::Vertical => fret_core::Axis::Vertical,
+                        },
                         gap,
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::Start,
@@ -286,13 +318,21 @@ impl ToggleGroup {
                             });
 
                         let corners = if gap.0 <= 0.0 {
-                            let left = idx == 0;
-                            let right = idx + 1 == n;
-                            Corners {
-                                top_left: if left { radius } else { Px(0.0) },
-                                bottom_left: if left { radius } else { Px(0.0) },
-                                top_right: if right { radius } else { Px(0.0) },
-                                bottom_right: if right { radius } else { Px(0.0) },
+                            let first = idx == 0;
+                            let last = idx + 1 == n;
+                            match orientation {
+                                ToggleGroupOrientation::Horizontal => Corners {
+                                    top_left: if first { radius } else { Px(0.0) },
+                                    bottom_left: if first { radius } else { Px(0.0) },
+                                    top_right: if last { radius } else { Px(0.0) },
+                                    bottom_right: if last { radius } else { Px(0.0) },
+                                },
+                                ToggleGroupOrientation::Vertical => Corners {
+                                    top_left: if first { radius } else { Px(0.0) },
+                                    top_right: if first { radius } else { Px(0.0) },
+                                    bottom_left: if last { radius } else { Px(0.0) },
+                                    bottom_right: if last { radius } else { Px(0.0) },
+                                },
                             }
                         } else {
                             Corners::all(radius)
@@ -314,9 +354,16 @@ impl ToggleGroup {
                         if gap.0 <= 0.0
                             && variant == ToggleVariant::Outline
                             && idx > 0
-                            && base_props.border.left.0 > 0.0
+                            && (base_props.border.left.0 > 0.0 || base_props.border.top.0 > 0.0)
                         {
-                            base_props.border.left = Px(0.0);
+                            match orientation {
+                                ToggleGroupOrientation::Horizontal => {
+                                    base_props.border.left = Px(0.0);
+                                }
+                                ToggleGroupOrientation::Vertical => {
+                                    base_props.border.top = Px(0.0);
+                                }
+                            }
                         }
 
                         let value = item.value.clone();
@@ -348,7 +395,24 @@ impl ToggleGroup {
                                 },
                                 move |cx, state| {
                                     if let Some(m) = model_single.as_ref() {
-                                        cx.pressable_set_option_arc_str(m, value.clone());
+                                        let model = m.clone();
+                                        let value = value.clone();
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, _action_cx, _reason| {
+                                                let current =
+                                                    host.models_mut().get_cloned(&model).flatten();
+                                                let next = if current
+                                                    .as_ref()
+                                                    .is_some_and(|cur| cur.as_ref() == value.as_ref())
+                                                {
+                                                    None
+                                                } else {
+                                                    Some(value.clone())
+                                                };
+                                                let _ =
+                                                    host.models_mut().update(&model, |v| *v = next);
+                                            },
+                                        ));
                                     }
                                     if let Some(m) = model_multi.as_ref() {
                                         cx.pressable_toggle_vec_arc_str(m, value.clone());
@@ -397,4 +461,211 @@ pub fn toggle_group_multiple<H: UiHost>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
 ) -> AnyElement {
     ToggleGroup::multiple(model).items(f(cx)).into_element(cx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService};
+    use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_ui::tree::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_single(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+    ) -> fret_core::NodeId {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "toggle-group-single",
+            |cx| {
+                let items = vec![
+                    ToggleGroupItem::new("alpha", vec![]),
+                    ToggleGroupItem::new("beta", vec![]),
+                    ToggleGroupItem::new("gamma", vec![]),
+                ];
+                vec![ToggleGroup::single(model).items(items).into_element(cx)]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    #[test]
+    fn toggle_group_single_deactivates_when_activating_selected_item() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_single(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let _ = render_single(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected, None);
+    }
+
+    #[test]
+    fn toggle_group_single_arrow_moves_focus_without_changing_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_single(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_single(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focus = snap.focus.expect("focus");
+        let focused_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focus)
+            .expect("focused node");
+        assert_eq!(focused_node.role, SemanticsRole::Button);
+        assert_eq!(focused_node.label.as_deref(), Some("beta"));
+    }
 }
