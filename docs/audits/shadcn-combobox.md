@@ -52,8 +52,10 @@ examples in `repo-ref/ui`.
 
 ### Filtering semantics
 
-- Partial: Filtering is currently label substring match implemented in `Combobox` (app-owned), not
-  cmdk’s full `value`/ranking semantics.
+- Partial: Filtering/ranking is implemented in `CommandPalette` via the shared cmdk-style scoring
+  helper (`fret-ui-kit::headless::cmdk_score`). `CommandItem.value` participates as an alias.
+- TODO: Keywords/extra aliases are not yet first-class on `CommandItem`, so parity with cmdk’s full
+  value/keywords taxonomy is not complete yet.
 - Pass: Highlight selection tracks `CommandItem.value` (stable across list reorder/filtering).
 
 ## Validation
@@ -62,7 +64,7 @@ examples in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- Implement cmdk-style filtering/ranking (value/keywords + scoring) so query handling can move into
-  `CommandPalette` instead of per-recipe filtering in `Combobox`.
 - Consider exposing a `CommandItem` “indicator/checked” surface (and `CommandShortcut`) to better
   match upstream `cmdk` DOM patterns.
+- Add a `CommandItem` keywords/aliases surface so scoring can match cmdk’s full taxonomy without
+  recipes having to stuff extra strings into `label/value`.
