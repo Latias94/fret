@@ -35,6 +35,9 @@ struct ComponentsGalleryWindowState {
     radio: Model<Option<Arc<str>>>,
     select: Model<Option<Arc<str>>>,
     select_open: Model<bool>,
+    theme_preset: Model<Option<Arc<str>>>,
+    theme_preset_open: Model<bool>,
+    applied_theme_preset: Option<Arc<str>>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
     popover_open: Model<bool>,
@@ -88,6 +91,10 @@ impl ComponentsGalleryDriver {
             .models_mut()
             .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
         let select_open = app.models_mut().insert(false);
+        let theme_preset = app
+            .models_mut()
+            .insert(Option::<Arc<str>>::Some(Arc::from("zinc/dark")));
+        let theme_preset_open = app.models_mut().insert(false);
         let dropdown_open = app.models_mut().insert(false);
         let context_menu_open = app.models_mut().insert(false);
         let popover_open = app.models_mut().insert(false);
@@ -116,6 +123,9 @@ impl ComponentsGalleryDriver {
             radio,
             select,
             select_open,
+            theme_preset,
+            theme_preset_open,
+            applied_theme_preset: Some(Arc::from("zinc/dark")),
             dropdown_open,
             context_menu_open,
             popover_open,
@@ -132,6 +142,39 @@ impl ComponentsGalleryDriver {
             pending_font_dialog: None,
             awaiting_font_dialog: false,
         }
+    }
+
+    fn sync_gallery_shadcn_theme(app: &mut App, state: &mut ComponentsGalleryWindowState) {
+        let preset = app.models().get_cloned(&state.theme_preset).flatten();
+        if preset.as_deref() == state.applied_theme_preset.as_deref() {
+            return;
+        }
+
+        let Some(preset) = preset else {
+            return;
+        };
+
+        let Some((base, scheme)) = preset.split_once('/') else {
+            return;
+        };
+
+        let base = match base {
+            "neutral" => shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+            "zinc" => shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
+            "slate" => shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+            "stone" => shadcn::shadcn_themes::ShadcnBaseColor::Stone,
+            "gray" => shadcn::shadcn_themes::ShadcnBaseColor::Gray,
+            _ => return,
+        };
+
+        let scheme = match scheme {
+            "light" => shadcn::shadcn_themes::ShadcnColorScheme::Light,
+            "dark" => shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            _ => return,
+        };
+
+        shadcn::shadcn_themes::apply_shadcn_new_york_v4(app, base, scheme);
+        state.applied_theme_preset = Some(preset);
     }
 
     fn render_gallery(
@@ -151,6 +194,8 @@ impl ComponentsGalleryDriver {
         let radio = state.radio.clone();
         let select = state.select.clone();
         let select_open = state.select_open.clone();
+        let theme_preset = state.theme_preset.clone();
+        let theme_preset_open = state.theme_preset_open.clone();
         let ui_font_override = state.ui_font_override.clone();
         let ui_font_override_open = state.ui_font_override_open.clone();
         let emoji_font_override = state.emoji_font_override.clone();
@@ -164,6 +209,8 @@ impl ComponentsGalleryDriver {
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
+
+        Self::sync_gallery_shadcn_theme(app, state);
 
         let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
             .render_root("components-gallery", |cx| {
@@ -228,6 +275,75 @@ impl ComponentsGalleryDriver {
                                 vec![
                                     cx.text(title),
                                     cx.text(subtitle),
+                                    cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(8.0),
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: true,
+                                        },
+                                        |cx| {
+                                            vec![
+                                                cx.text(Arc::<str>::from("Theme:")),
+                                                shadcn::Select::new(theme_preset, theme_preset_open)
+                                                    .a11y_label(
+                                                        "Demo theme preset (shadcn new-york-v4)",
+                                                    )
+                                                    .placeholder("Pick a theme")
+                                                    .refine_layout(
+                                                        LayoutRefinement::default().w_px(
+                                                            MetricRef::Px(Px(260.0)),
+                                                        ),
+                                                    )
+                                                    .items([
+                                                        shadcn::SelectItem::new(
+                                                            "neutral/light",
+                                                            "Neutral (light)",
+                                                        ),
+                                                        shadcn::SelectItem::new(
+                                                            "neutral/dark",
+                                                            "Neutral (dark)",
+                                                        ),
+                                                        shadcn::SelectItem::new(
+                                                            "zinc/light",
+                                                            "Zinc (light)",
+                                                        ),
+                                                        shadcn::SelectItem::new(
+                                                            "zinc/dark",
+                                                            "Zinc (dark)",
+                                                        ),
+                                                        shadcn::SelectItem::new(
+                                                            "slate/light",
+                                                            "Slate (light)",
+                                                        ),
+                                                        shadcn::SelectItem::new(
+                                                            "slate/dark",
+                                                            "Slate (dark)",
+                                                        ),
+                                                        shadcn::SelectItem::new(
+                                                            "stone/light",
+                                                            "Stone (light)",
+                                                        ),
+                                                        shadcn::SelectItem::new(
+                                                            "stone/dark",
+                                                            "Stone (dark)",
+                                                        ),
+                                                        shadcn::SelectItem::new(
+                                                            "gray/light",
+                                                            "Gray (light)",
+                                                        ),
+                                                        shadcn::SelectItem::new(
+                                                            "gray/dark",
+                                                            "Gray (dark)",
+                                                        ),
+                                                    ])
+                                                    .into_element(cx),
+                                            ]
+                                        },
+                                    ),
                                     cx.container(
                                         ContainerProps {
                                             layout: {
@@ -1374,6 +1490,10 @@ impl WinitAppDriver for ComponentsGalleryDriver {
         let overlays_open = app.models().get_copied(&state.select_open).unwrap_or(false)
             || app
                 .models()
+                .get_copied(&state.theme_preset_open)
+                .unwrap_or(false)
+            || app
+                .models()
                 .get_copied(&state.dropdown_open)
                 .unwrap_or(false)
             || app
@@ -1589,6 +1709,11 @@ pub fn build_app() -> App {
     app.with_global_mut(IconRegistry::default, |icons, _app| {
         fret_icons_lucide::register_icons(icons);
     });
+    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
+        shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
     app
 }
 
