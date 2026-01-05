@@ -181,6 +181,7 @@ pub struct Tabs {
     loop_navigation: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    force_mount_content: bool,
 }
 
 impl std::fmt::Debug for Tabs {
@@ -194,6 +195,7 @@ impl std::fmt::Debug for Tabs {
             .field("loop_navigation", &self.loop_navigation)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
+            .field("force_mount_content", &self.force_mount_content)
             .finish()
     }
 }
@@ -209,6 +211,7 @@ impl Tabs {
             loop_navigation: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            force_mount_content: false,
         }
     }
 
@@ -243,6 +246,16 @@ impl Tabs {
         self
     }
 
+    /// When `true`, all tab panel subtrees remain mounted even when inactive.
+    ///
+    /// This approximates Radix `TabsContent forceMount` by keeping each panel subtree in the
+    /// declarative element tree while gating layout/paint/semantics and interactivity via
+    /// `InteractivityGate`.
+    pub fn force_mount_content(mut self, force_mount_content: bool) -> Self {
+        self.force_mount_content = force_mount_content;
+        self
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -262,6 +275,7 @@ impl Tabs {
         let loop_navigation = self.loop_navigation;
         let chrome = self.chrome;
         let layout = self.layout;
+        let force_mount_content = self.force_mount_content;
 
         let theme = Theme::global(&*cx.app).clone();
         let gap = tabs_gap(&theme);
@@ -305,7 +319,7 @@ impl Tabs {
             .unwrap_or_else(|| Arc::from(""));
         let active_children = active_idx
             .and_then(|active| items.get(active))
-            .map(|item| item.content.clone())
+            .and_then(|item| (!force_mount_content).then_some(item.content.clone()))
             .unwrap_or_default();
 
         let root_props = decl_style::container_props(&theme, chrome, layout);
@@ -313,6 +327,10 @@ impl Tabs {
         cx.container(root_props, move |cx| {
             let selected_tab_element: Cell<Option<u64>> = Cell::new(None);
             let selected_tab_element = &selected_tab_element;
+            let tab_trigger_elements: Vec<Cell<Option<u64>>> =
+                (0..items.len()).map(|_| Cell::new(None)).collect();
+            let tab_trigger_elements = &tab_trigger_elements;
+            let items_for_list = items.clone();
             let mut children: Vec<AnyElement> = Vec::new();
 
             children.push(cx.semantics(
@@ -364,7 +382,7 @@ impl Tabs {
 
                                 let mut out: Vec<AnyElement> =
                                     Vec::with_capacity(disabled_flags.len());
-                                for (idx, item) in items.iter().cloned().enumerate() {
+                                for (idx, item) in items_for_list.iter().cloned().enumerate() {
                                     let item_disabled =
                                         disabled_flags.get(idx).copied().unwrap_or(true);
                                     let tab_stop = active_idx.is_some_and(|a| a == idx);
@@ -394,6 +412,11 @@ impl Tabs {
                                         cx.pressable_set_option_arc_str(&model, value.clone());
                                         if active {
                                             selected_tab_element.set(Some(_id.0));
+                                        }
+                                        if force_mount_content
+                                            && let Some(cell) = tab_trigger_elements.get(idx)
+                                        {
+                                            cell.set(Some(_id.0));
                                         }
 
                                         let props = PressableProps {
@@ -474,15 +497,40 @@ impl Tabs {
                 },
             ));
 
-            children.push(cx.semantics(
-                SemanticsProps {
-                    role: SemanticsRole::TabPanel,
-                    label: (!active_label.is_empty()).then_some(active_label),
-                    labelled_by_element: selected_tab_element.get(),
-                    ..Default::default()
-                },
-                move |_cx| active_children,
-            ));
+            if !force_mount_content {
+                children.push(cx.semantics(
+                    SemanticsProps {
+                        role: SemanticsRole::TabPanel,
+                        label: (!active_label.is_empty()).then_some(active_label),
+                        labelled_by_element: selected_tab_element.get(),
+                        ..Default::default()
+                    },
+                    move |_cx| active_children,
+                ));
+            }
+
+            if force_mount_content {
+                for (idx, item) in items.iter().cloned().enumerate() {
+                    let active = active_idx.is_some_and(|a| a == idx);
+                    let labelled_by_element = tab_trigger_elements
+                        .get(idx)
+                        .and_then(|cell| cell.get());
+                    let label = item.label.clone();
+                    let content = item.content.clone();
+
+                    children.push(cx.interactivity_gate(active, active, move |cx| {
+                        vec![cx.semantics(
+                            SemanticsProps {
+                                role: SemanticsRole::TabPanel,
+                                label: (!label.is_empty()).then_some(label),
+                                labelled_by_element,
+                                ..Default::default()
+                            },
+                            move |_cx| content,
+                        )]
+                    }));
+                }
+            }
 
             vec![cx.flex(
                 FlexProps {
@@ -520,6 +568,8 @@ mod tests {
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_runtime::{FrameId, TickId};
+    use fret_ui::elements::{ElementRuntime, GlobalElementId, node_for_element};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -594,6 +644,60 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    fn bump_frame(app: &mut App) {
+        app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    fn render_force_mount_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        force_mount: bool,
+        alpha_content_id_out: &Cell<Option<GlobalElementId>>,
+    ) {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "tabs-force-mount",
+            |cx| {
+                let alpha_content = cx.pressable_with_id(
+                    PressableProps {
+                        layout: LayoutStyle::default(),
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        alpha_content_id_out.set(Some(id));
+                        Vec::new()
+                    },
+                );
+
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![alpha_content]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                ];
+
+                vec![
+                    Tabs::new(model)
+                        .force_mount_content(force_mount)
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, 1.0);
     }
 
     #[test]
@@ -698,5 +802,113 @@ mod tests {
             selected_tab.controls.iter().any(|id| *id == panel.id),
             "selected tab should control the active tabpanel"
         );
+    }
+
+    #[test]
+    fn tabs_without_force_mount_allows_inactive_panel_nodes_to_be_swept() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let alpha_content_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+
+        bump_frame(&mut app);
+        render_force_mount_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            false,
+            &alpha_content_id,
+        );
+
+        let alpha_content_id = alpha_content_id.get().expect("alpha content id");
+        assert!(node_for_element(&mut app, window, alpha_content_id).is_some());
+
+        let lag = app.with_global_mut(ElementRuntime::new, |rt, _app| rt.gc_lag_frames());
+
+        let _ = app
+            .models_mut()
+            .update(&model, |v| *v = Some(Arc::from("beta")));
+
+        for _ in 0..=lag {
+            bump_frame(&mut app);
+            render_force_mount_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                false,
+                &Cell::new(Some(alpha_content_id)),
+            );
+        }
+
+        assert!(node_for_element(&mut app, window, alpha_content_id).is_none());
+    }
+
+    #[test]
+    fn tabs_force_mount_keeps_inactive_panel_nodes_alive() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let alpha_content_id: Cell<Option<GlobalElementId>> = Cell::new(None);
+
+        bump_frame(&mut app);
+        render_force_mount_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            true,
+            &alpha_content_id,
+        );
+
+        let alpha_content_id = alpha_content_id.get().expect("alpha content id");
+        assert!(node_for_element(&mut app, window, alpha_content_id).is_some());
+
+        let lag = app.with_global_mut(ElementRuntime::new, |rt, _app| rt.gc_lag_frames());
+
+        let _ = app
+            .models_mut()
+            .update(&model, |v| *v = Some(Arc::from("beta")));
+
+        for _ in 0..=(lag + 2) {
+            bump_frame(&mut app);
+            render_force_mount_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                true,
+                &Cell::new(Some(alpha_content_id)),
+            );
+        }
+
+        assert!(node_for_element(&mut app, window, alpha_content_id).is_some());
     }
 }
