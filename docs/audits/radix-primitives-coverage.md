@@ -39,6 +39,7 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 - `roving-focus` -> `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs`
 - `scroll-area` -> `ecosystem/fret-ui-kit/src/primitives/scroll_area.rs`
 - `select` -> `ecosystem/fret-ui-kit/src/primitives/select.rs`
+- `switch` -> `ecosystem/fret-ui-kit/src/primitives/switch.rs`
 - `tabs` -> `ecosystem/fret-ui-kit/src/primitives/tabs.rs`
 - `toggle` -> `ecosystem/fret-ui-kit/src/primitives/toggle.rs`
 - `toggle-group` -> `ecosystem/fret-ui-kit/src/primitives/toggle_group.rs`

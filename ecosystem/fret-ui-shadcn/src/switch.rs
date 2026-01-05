@@ -3,14 +3,15 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableA11y,
-    PressableProps, SizeStyle,
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
+    SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::switch::switch_a11y;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -180,12 +181,7 @@ impl Switch {
                     enabled: !disabled,
                     focusable: true,
                     focus_ring: Some(ring),
-                    a11y: PressableA11y {
-                        role: Some(fret_core::SemanticsRole::Switch),
-                        label: a11y_label.clone(),
-                        checked: Some(on),
-                        ..Default::default()
-                    },
+                    a11y: switch_a11y(a11y_label.clone(), on),
                     ..Default::default()
                 };
 
