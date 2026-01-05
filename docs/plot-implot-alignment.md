@@ -43,6 +43,7 @@ This contract is documented in ADR 0099.
 
 - [x] Stable series identity (`SeriesId` derived from label or explicit ID)
 - [x] Zero-copy data adapters (slice, `Arc<[DataPoint]>`, getter-based)
+- [x] `f64` data domain (time axes / large coordinates)
 - [x] Discontinuities via `None`/NaN/Inf break segments
 
 ## Performance baseline

@@ -21,7 +21,7 @@ impl AxisLabelFormat {
         }
     }
 
-    pub fn format(self, v: f32, span: f32) -> String {
+    pub fn format(self, v: f64, span: f64) -> String {
         match self {
             Self::Number(f) => format_number(v, span, f),
             Self::TimeSeconds(f) => format_time_seconds(v, span, f),
@@ -66,7 +66,7 @@ impl AxisTicks {
     }
 }
 
-pub fn axis_ticks(min: f32, max: f32, tick_count: usize, ticks: AxisTicks) -> Vec<f32> {
+pub fn axis_ticks(min: f64, max: f64, tick_count: usize, ticks: AxisTicks) -> Vec<f64> {
     match ticks {
         AxisTicks::Nice => nice_ticks(min, max, tick_count),
         AxisTicks::Linear => linear_ticks(min, max, tick_count),
@@ -77,7 +77,7 @@ pub fn axis_ticks(min: f32, max: f32, tick_count: usize, ticks: AxisTicks) -> Ve
 #[derive(Clone)]
 pub struct AxisLabelFormatter {
     key: u64,
-    f: Arc<dyn Fn(f32, f32) -> String + Send + Sync + 'static>,
+    f: Arc<dyn Fn(f64, f64) -> String + Send + Sync + 'static>,
 }
 
 impl fmt::Debug for AxisLabelFormatter {
@@ -89,7 +89,7 @@ impl fmt::Debug for AxisLabelFormatter {
 }
 
 impl AxisLabelFormatter {
-    pub fn custom(key: u64, f: impl Fn(f32, f32) -> String + Send + Sync + 'static) -> Self {
+    pub fn custom(key: u64, f: impl Fn(f64, f64) -> String + Send + Sync + 'static) -> Self {
         Self {
             key,
             f: Arc::new(f),
@@ -113,7 +113,7 @@ impl AxisLabelFormatter {
         self.key
     }
 
-    pub fn format(&self, v: f32, span: f32) -> String {
+    pub fn format(&self, v: f64, span: f64) -> String {
         (self.f)(v, span)
     }
 }
@@ -178,7 +178,7 @@ pub enum TimeAxisPresentation {
     UnixUtc,
 }
 
-fn format_number(v: f32, span: f32, fmt: AxisNumberFormat) -> String {
+fn format_number(v: f64, span: f64, fmt: AxisNumberFormat) -> String {
     if !v.is_finite() {
         return "NA".to_string();
     }
@@ -208,21 +208,21 @@ fn format_number(v: f32, span: f32, fmt: AxisNumberFormat) -> String {
     }
 }
 
-fn format_time_seconds(v: f32, span: f32, fmt: TimeAxisFormat) -> String {
+fn format_time_seconds(v: f64, span: f64, fmt: TimeAxisFormat) -> String {
     if !v.is_finite() {
         return "NA".to_string();
     }
 
     match fmt.presentation {
-        TimeAxisPresentation::Relative => format_relative_time_seconds(v as f64, span),
+        TimeAxisPresentation::Relative => format_relative_time_seconds(v, span),
         TimeAxisPresentation::UnixUtc => {
-            let abs = fmt.base_seconds + (v as f64);
+            let abs = fmt.base_seconds + v;
             format_unix_utc_seconds(abs, span)
         }
     }
 }
 
-fn format_relative_time_seconds(t: f64, span: f32) -> String {
+fn format_relative_time_seconds(t: f64, span: f64) -> String {
     if !t.is_finite() {
         return "NA".to_string();
     }
@@ -254,7 +254,7 @@ fn format_relative_time_seconds(t: f64, span: f32) -> String {
     }
 }
 
-fn format_unix_utc_seconds(abs_seconds: f64, span: f32) -> String {
+fn format_unix_utc_seconds(abs_seconds: f64, span: f64) -> String {
     let Some((year, month, day, hour, minute, second)) = unix_seconds_to_utc_parts(abs_seconds)
     else {
         return "NA".to_string();
@@ -312,7 +312,7 @@ fn civil_from_days(days_since_epoch: i64) -> (i32, u32, u32) {
     (year, m as u32, d as u32)
 }
 
-pub fn nice_ticks(min: f32, max: f32, tick_count: usize) -> Vec<f32> {
+pub fn nice_ticks(min: f64, max: f64, tick_count: usize) -> Vec<f64> {
     if tick_count == 0 {
         return Vec::new();
     }
@@ -324,7 +324,7 @@ pub fn nice_ticks(min: f32, max: f32, tick_count: usize) -> Vec<f32> {
     }
 
     let (min, max) = if min <= max { (min, max) } else { (max, min) };
-    let span = (max - min) as f64;
+    let span = max - min;
     let target = if tick_count <= 1 {
         span
     } else {
@@ -332,8 +332,8 @@ pub fn nice_ticks(min: f32, max: f32, tick_count: usize) -> Vec<f32> {
     };
 
     let step = nice_step_125(target).max(f64::EPSILON);
-    let first = (min as f64 / step).ceil() * step;
-    let last = (max as f64 / step).floor() * step;
+    let first = (min / step).ceil() * step;
+    let last = (max / step).floor() * step;
 
     if !first.is_finite() || !last.is_finite() || first > last {
         return vec![min, max]
@@ -342,14 +342,14 @@ pub fn nice_ticks(min: f32, max: f32, tick_count: usize) -> Vec<f32> {
             .collect();
     }
 
-    let mut out: Vec<f32> = Vec::new();
+    let mut out: Vec<f64> = Vec::new();
     let mut v = first;
     let max_steps = 4096usize;
     for _ in 0..max_steps {
         if v > last + step * 0.5 {
             break;
         }
-        out.push(v as f32);
+        out.push(v);
         v += step;
     }
 
@@ -385,7 +385,7 @@ fn nice_step_125(x: f64) -> f64 {
     nf * base
 }
 
-pub fn time_ticks_seconds(min: f32, max: f32, tick_count: usize, fmt: TimeAxisFormat) -> Vec<f32> {
+pub fn time_ticks_seconds(min: f64, max: f64, tick_count: usize, fmt: TimeAxisFormat) -> Vec<f64> {
     if tick_count == 0 {
         return Vec::new();
     }
@@ -397,7 +397,7 @@ pub fn time_ticks_seconds(min: f32, max: f32, tick_count: usize, fmt: TimeAxisFo
     }
 
     let (min, max) = if min <= max { (min, max) } else { (max, min) };
-    let span = (max - min).abs() as f64;
+    let span = (max - min).abs();
     if !span.is_finite() || span <= 0.0 {
         return vec![min, max]
             .into_iter()
@@ -426,8 +426,8 @@ pub fn time_ticks_seconds(min: f32, max: f32, tick_count: usize, fmt: TimeAxisFo
     }
 
     let base = fmt.base_seconds;
-    let min_abs = (min as f64) + base;
-    let max_abs = (max as f64) + base;
+    let min_abs = min + base;
+    let max_abs = max + base;
     if !min_abs.is_finite() || !max_abs.is_finite() {
         return nice_ticks(min, max, tick_count);
     }
@@ -438,7 +438,7 @@ pub fn time_ticks_seconds(min: f32, max: f32, tick_count: usize, fmt: TimeAxisFo
         return nice_ticks(min, max, tick_count);
     }
 
-    let mut out: Vec<f32> = Vec::new();
+    let mut out: Vec<f64> = Vec::new();
     let mut k = first_k;
     let max_steps = 4096usize;
     for _ in 0..max_steps {
@@ -447,7 +447,7 @@ pub fn time_ticks_seconds(min: f32, max: f32, tick_count: usize, fmt: TimeAxisFo
         }
         let v = k * step - base;
         if v.is_finite() {
-            out.push(v as f32);
+            out.push(v);
         }
         k += 1.0;
     }
@@ -459,7 +459,7 @@ pub fn time_ticks_seconds(min: f32, max: f32, tick_count: usize, fmt: TimeAxisFo
     }
 }
 
-pub fn linear_ticks(min: f32, max: f32, tick_count: usize) -> Vec<f32> {
+pub fn linear_ticks(min: f64, max: f64, tick_count: usize) -> Vec<f64> {
     if tick_count == 0 {
         return Vec::new();
     }
@@ -470,10 +470,10 @@ pub fn linear_ticks(min: f32, max: f32, tick_count: usize) -> Vec<f32> {
     if n == 1 {
         return vec![min];
     }
-    let denom = (n - 1) as f32;
+    let denom = (n - 1) as f64;
     (0..n)
         .map(|i| {
-            let t = (i as f32) / denom;
+            let t = (i as f64) / denom;
             min + (max - min) * t
         })
         .filter(|v| v.is_finite())
@@ -492,13 +492,13 @@ mod tests {
         let step = ticks
             .windows(2)
             .map(|w| (w[1] - w[0]).abs())
-            .fold(None, |acc: Option<f32>, v| {
+            .fold(None, |acc: Option<f64>, v| {
                 Some(acc.map_or(v, |a| a.min(v)))
             })
             .unwrap_or(0.0);
 
         // For span ~1.0 and 6 ticks, target step ~0.2 => expect 0.2.
-        assert!((step - 0.2).abs() <= 1e-4, "step={step}");
+        assert!((step - 0.2).abs() <= 1e-8, "step={step}");
     }
 
     #[test]

@@ -35,7 +35,7 @@ impl StairsDemoDriver {
         let mut series1: Vec<DataPoint> = Vec::with_capacity(n);
 
         for i in 0..n {
-            let x = i as f32;
+            let x = i as f64;
             let y0 = (x * 0.06).sin() * 0.75 + (x * 0.012).cos() * 0.20;
             let y1 = (x * 0.045).sin() * 0.55 + (x * 0.018).cos() * 0.25 + 0.35;
             series0.push(DataPoint { x, y: y0 });

@@ -58,7 +58,7 @@ impl LinkedCursorDemoDriver {
         let mut series2: Vec<DataPoint> = Vec::with_capacity(n);
 
         for i in 0..n {
-            let t = i as f32 / (n - 1) as f32;
+            let t = i as f64 / (n - 1) as f64;
             let x = t * 10.0;
             series0.push(DataPoint {
                 x,

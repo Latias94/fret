@@ -256,7 +256,7 @@ fn dim_color(color: Color, factor: f32) -> Color {
     }
 }
 
-fn interpolate_y_at_x(series: &dyn SeriesData, x: f32) -> Option<f32> {
+fn interpolate_y_at_x(series: &dyn SeriesData, x: f64) -> Option<f64> {
     if !x.is_finite() || !series.is_sorted_by_x() {
         return None;
     }
@@ -303,7 +303,7 @@ fn interpolate_y_at_x(series: &dyn SeriesData, x: f32) -> Option<f32> {
     }
 }
 
-fn lower_bound_valid_by_x(series: &dyn SeriesData, x: f32) -> Option<usize> {
+fn lower_bound_valid_by_x(series: &dyn SeriesData, x: f64) -> Option<usize> {
     let len = series.len();
     if len == 0 {
         return None;
@@ -691,7 +691,7 @@ pub struct SeriesMeta {
 pub struct PlotCursorReadoutRow {
     pub series_id: SeriesId,
     pub label: Arc<str>,
-    pub y: Option<f32>,
+    pub y: Option<f64>,
 }
 
 pub trait PlotLayer {
@@ -710,7 +710,7 @@ pub trait PlotLayer {
     /// The default implementation returns no rows.
     fn cursor_readout(
         _model: &Self::Model,
-        _x: f32,
+        _x: f64,
         _hidden: &HashSet<SeriesId>,
     ) -> Vec<PlotCursorReadoutRow> {
         Vec::new()
@@ -1094,7 +1094,7 @@ pub struct PlotState {
     ///
     /// This is typically written by a plot coordinator (e.g. `LinkedPlotGroup`) so that other plots
     /// can render a synchronized cursor without requiring pointer hover in each plot.
-    pub linked_cursor_x: Option<f32>,
+    pub linked_cursor_x: Option<f64>,
     /// User-controlled series visibility.
     pub hidden_series: HashSet<SeriesId>,
     /// Optional pinned series ID for emphasis and tooltip pinning.
@@ -1502,6 +1502,10 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         Self::hash_u64(state, u64::from(v.to_bits()))
     }
 
+    fn hash_f64_bits(state: u64, v: f64) -> u64 {
+        Self::hash_u64(state, v.to_bits())
+    }
+
     fn read_data_bounds<H: UiHost>(&self, app: &mut H) -> DataRect {
         let data_bounds = self
             .model
@@ -1575,10 +1579,10 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         key = Self::hash_u64(key, font_stack_key);
         key = Self::hash_f32_bits(key, layout.plot.size.width.0);
         key = Self::hash_f32_bits(key, layout.plot.size.height.0);
-        key = Self::hash_f32_bits(key, data_bounds.x_min);
-        key = Self::hash_f32_bits(key, data_bounds.x_max);
-        key = Self::hash_f32_bits(key, data_bounds.y_min);
-        key = Self::hash_f32_bits(key, data_bounds.y_max);
+        key = Self::hash_f64_bits(key, data_bounds.x_min);
+        key = Self::hash_f64_bits(key, data_bounds.x_max);
+        key = Self::hash_f64_bits(key, data_bounds.y_min);
+        key = Self::hash_f64_bits(key, data_bounds.y_max);
         key = Self::hash_u64(key, u64::from(self.style.axis_gap.0.to_bits()));
         key = Self::hash_u64(key, u64::from(self.style.tick_count as u32));
         key = Self::hash_u64(key, self.x_axis_ticks.key());
@@ -2390,7 +2394,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     if !t.is_finite() || t < 0.0 || t > 1.0 {
                         continue;
                     }
-                    let x = layout.plot.origin.x.0 + layout.plot.size.width.0 * t;
+                    let x = layout.plot.origin.x.0 + layout.plot.size.width.0 * (t as f32);
                     let x = Px(x.round());
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(1),
@@ -2412,7 +2416,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     if !t.is_finite() || t < 0.0 || t > 1.0 {
                         continue;
                     }
-                    let y = layout.plot.origin.y.0 + layout.plot.size.height.0 * (1.0 - t);
+                    let y = layout.plot.origin.y.0 + layout.plot.size.height.0 * ((1.0 - t) as f32);
                     let y = Px(y.round());
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(1),
@@ -2799,7 +2803,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             if !t.is_finite() {
                 continue;
             }
-            let x = layout.plot.origin.x.0 + layout.plot.size.width.0 * t;
+            let x = layout.plot.origin.x.0 + layout.plot.size.width.0 * (t as f32);
             let x = Px(x.round());
 
             let top = layout.x_axis.origin.y.0 + 2.0;
@@ -2827,7 +2831,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             if !t.is_finite() {
                 continue;
             }
-            let y = layout.plot.origin.y.0 + layout.plot.size.height.0 * (1.0 - t);
+            let y = layout.plot.origin.y.0 + layout.plot.size.height.0 * ((1.0 - t) as f32);
             let y = Px(y.round());
 
             let origin_x = layout.y_axis.origin.x.0 + layout.y_axis.size.width.0
@@ -3140,7 +3144,7 @@ impl PlotLayer for LinePlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f32,
+        x: f64,
         hidden: &HashSet<SeriesId>,
     ) -> Vec<PlotCursorReadoutRow> {
         if !x.is_finite() {
@@ -3335,7 +3339,7 @@ impl PlotLayer for ScatterPlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f32,
+        x: f64,
         hidden: &HashSet<SeriesId>,
     ) -> Vec<PlotCursorReadoutRow> {
         if !x.is_finite() {
@@ -3531,7 +3535,7 @@ impl PlotLayer for StairsPlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f32,
+        x: f64,
         hidden: &HashSet<SeriesId>,
     ) -> Vec<PlotCursorReadoutRow> {
         if !x.is_finite() {
@@ -3728,7 +3732,7 @@ impl PlotLayer for BarsPlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f32,
+        x: f64,
         hidden: &HashSet<SeriesId>,
     ) -> Vec<PlotCursorReadoutRow> {
         if !x.is_finite() {
@@ -3922,7 +3926,7 @@ impl PlotLayer for AreaPlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f32,
+        x: f64,
         hidden: &HashSet<SeriesId>,
     ) -> Vec<PlotCursorReadoutRow> {
         if !x.is_finite() {
@@ -4072,7 +4076,7 @@ impl PlotLayer for AreaPlotLayer {
 
             let baseline_y = transform.data_to_px(DataPoint {
                 x: view_bounds.x_min,
-                y: s.baseline,
+                y: f64::from(s.baseline),
             });
             let fill_commands = area_fill_commands_from_polyline(&line_commands, baseline_y.y);
 
@@ -4275,7 +4279,7 @@ impl PlotLayer for ShadedPlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f32,
+        x: f64,
         hidden: &HashSet<SeriesId>,
     ) -> Vec<PlotCursorReadoutRow> {
         if !x.is_finite() {
@@ -4764,21 +4768,22 @@ fn compute_data_bounds_from_bar_series(series: &[BarSeries]) -> Option<DataRect>
     let mut out: Option<DataRect> = None;
 
     for s in series {
-        let half_w = (s.bar_width * 0.5).abs();
+        let half_w = f64::from((s.bar_width * 0.5).abs());
+        let baseline = f64::from(s.baseline);
         let data = &s.data;
 
         let bounds = if let Some(hint) = data.bounds_hint() {
             Some(DataRect {
                 x_min: hint.x_min - half_w,
                 x_max: hint.x_max + half_w,
-                y_min: hint.y_min.min(s.baseline),
-                y_max: hint.y_max.max(s.baseline),
+                y_min: hint.y_min.min(baseline),
+                y_max: hint.y_max.max(baseline),
             })
         } else if let Some(slice) = data.as_slice() {
-            let mut x_min: Option<f32> = None;
-            let mut x_max: Option<f32> = None;
-            let mut y_min: Option<f32> = Some(s.baseline);
-            let mut y_max: Option<f32> = Some(s.baseline);
+            let mut x_min: Option<f64> = None;
+            let mut x_max: Option<f64> = None;
+            let mut y_min: Option<f64> = Some(baseline);
+            let mut y_max: Option<f64> = Some(baseline);
 
             for p in slice.iter().copied() {
                 if !p.x.is_finite() || !p.y.is_finite() {
@@ -4797,10 +4802,10 @@ fn compute_data_bounds_from_bar_series(series: &[BarSeries]) -> Option<DataRect>
                 y_max: y_max?,
             })
         } else {
-            let mut x_min: Option<f32> = None;
-            let mut x_max: Option<f32> = None;
-            let mut y_min: Option<f32> = Some(s.baseline);
-            let mut y_max: Option<f32> = Some(s.baseline);
+            let mut x_min: Option<f64> = None;
+            let mut x_max: Option<f64> = None;
+            let mut y_min: Option<f64> = Some(baseline);
+            let mut y_max: Option<f64> = Some(baseline);
 
             for i in 0..data.len() {
                 let Some(p) = data.get(i) else {
@@ -4838,22 +4843,23 @@ fn compute_data_bounds_from_area_series(series: &[AreaSeries]) -> Option<DataRec
 
     for s in series {
         let data = &s.data;
+        let baseline = f64::from(s.baseline);
         let bounds = if let Some(hint) = data.bounds_hint() {
             Some(DataRect {
-                y_min: hint.y_min.min(s.baseline),
-                y_max: hint.y_max.max(s.baseline),
+                y_min: hint.y_min.min(baseline),
+                y_max: hint.y_max.max(baseline),
                 ..hint
             })
         } else if let Some(slice) = data.as_slice() {
             DataRect::from_points(slice.iter().copied()).map(|b| DataRect {
-                y_min: b.y_min.min(s.baseline),
-                y_max: b.y_max.max(s.baseline),
+                y_min: b.y_min.min(baseline),
+                y_max: b.y_max.max(baseline),
                 ..b
             })
         } else {
             DataRect::from_points((0..data.len()).filter_map(|i| data.get(i))).map(|b| DataRect {
-                y_min: b.y_min.min(s.baseline),
-                y_max: b.y_max.max(s.baseline),
+                y_min: b.y_min.min(baseline),
+                y_max: b.y_max.max(baseline),
                 ..b
             })
         };
@@ -4909,10 +4915,12 @@ fn bars_path_commands(
         return Vec::new();
     }
 
-    let w = bar_width.abs();
+    let w = f64::from(bar_width.abs());
     if !w.is_finite() || w <= 0.0 {
         return Vec::new();
     }
+
+    let baseline = f64::from(baseline);
 
     let mut out: Vec<fret_core::PathCommand> = Vec::new();
 

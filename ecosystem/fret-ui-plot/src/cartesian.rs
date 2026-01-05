@@ -3,24 +3,24 @@ use fret_core::geometry::{Point, Px, Rect};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DataPoint {
-    pub x: f32,
-    pub y: f32,
+    pub x: f64,
+    pub y: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DataRect {
-    pub x_min: f32,
-    pub x_max: f32,
-    pub y_min: f32,
-    pub y_max: f32,
+    pub x_min: f64,
+    pub x_max: f64,
+    pub y_min: f64,
+    pub y_max: f64,
 }
 
 impl DataRect {
-    pub fn width(self) -> f32 {
+    pub fn width(self) -> f64 {
         self.x_max - self.x_min
     }
 
-    pub fn height(self) -> f32 {
+    pub fn height(self) -> f64 {
         self.y_max - self.y_min
     }
 
@@ -34,10 +34,10 @@ impl DataRect {
     }
 
     pub fn from_points(points: impl IntoIterator<Item = DataPoint>) -> Option<DataRect> {
-        let mut x_min: Option<f32> = None;
-        let mut x_max: Option<f32> = None;
-        let mut y_min: Option<f32> = None;
-        let mut y_max: Option<f32> = None;
+        let mut x_min: Option<f64> = None;
+        let mut x_max: Option<f64> = None;
+        let mut y_min: Option<f64> = None;
+        let mut y_max: Option<f64> = None;
 
         for p in points {
             if !p.x.is_finite() || !p.y.is_finite() {
@@ -72,8 +72,8 @@ impl PlotTransform {
         let data_w = self.data.width();
         let data_h = self.data.height();
 
-        let viewport_w = self.viewport.size.width.0;
-        let viewport_h = self.viewport.size.height.0;
+        let viewport_w = f64::from(self.viewport.size.width.0);
+        let viewport_h = f64::from(self.viewport.size.height.0);
 
         let nx = if data_w.is_finite() && data_w != 0.0 {
             (p.x - self.data.x_min) / data_w
@@ -88,26 +88,26 @@ impl PlotTransform {
             0.0
         };
 
-        let x = self.viewport.origin.x.0 + (nx * viewport_w);
-        let y = self.viewport.origin.y.0 + (ny * viewport_h);
-        Point::new(Px(x), Px(y))
+        let x = f64::from(self.viewport.origin.x.0) + (nx * viewport_w);
+        let y = f64::from(self.viewport.origin.y.0) + (ny * viewport_h);
+        Point::new(Px(x as f32), Px(y as f32))
     }
 
     pub fn px_to_data(self, p: Point) -> DataPoint {
         let data_w = self.data.width();
         let data_h = self.data.height();
 
-        let viewport_w = self.viewport.size.width.0;
-        let viewport_h = self.viewport.size.height.0;
+        let viewport_w = f64::from(self.viewport.size.width.0);
+        let viewport_h = f64::from(self.viewport.size.height.0);
 
         let nx = if viewport_w.is_finite() && viewport_w != 0.0 {
-            (p.x.0 - self.viewport.origin.x.0) / viewport_w
+            (f64::from(p.x.0) - f64::from(self.viewport.origin.x.0)) / viewport_w
         } else {
             0.0
         };
 
         let ny = if viewport_h.is_finite() && viewport_h != 0.0 {
-            (p.y.0 - self.viewport.origin.y.0) / viewport_h
+            (f64::from(p.y.0) - f64::from(self.viewport.origin.y.0)) / viewport_h
         } else {
             0.0
         };

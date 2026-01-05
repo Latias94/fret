@@ -10,16 +10,16 @@ fn mix_u64(mut state: u64, v: u64) -> u64 {
     state
 }
 
-fn mix_f32_bits(state: u64, v: f32) -> u64 {
-    mix_u64(state, u64::from(v.to_bits()))
+fn mix_f64_bits(state: u64, v: f64) -> u64 {
+    mix_u64(state, v.to_bits())
 }
 
 pub fn data_rect_key(bounds: DataRect) -> u64 {
     let mut key = 0u64;
-    key = mix_f32_bits(key, bounds.x_min);
-    key = mix_f32_bits(key, bounds.x_max);
-    key = mix_f32_bits(key, bounds.y_min);
-    key = mix_f32_bits(key, bounds.y_max);
+    key = mix_f64_bits(key, bounds.x_min);
+    key = mix_f64_bits(key, bounds.x_max);
+    key = mix_f64_bits(key, bounds.y_min);
+    key = mix_f64_bits(key, bounds.y_max);
     key
 }
 
@@ -45,7 +45,7 @@ pub fn sanitize_data_rect(bounds: DataRect) -> DataRect {
         std::mem::swap(&mut y0, &mut y1);
     }
 
-    let min_span = 1.0e-6_f32;
+    let min_span = 1.0e-12_f64;
 
     let w = x1 - x0;
     if !w.is_finite() || w.abs() < min_span {
@@ -71,7 +71,7 @@ pub fn sanitize_data_rect(bounds: DataRect) -> DataRect {
 
 pub fn expand_data_bounds(data: DataRect, overscroll_fraction: f32) -> DataRect {
     let data = sanitize_data_rect(data);
-    let frac = overscroll_fraction.clamp(0.0, 1.0);
+    let frac = f64::from(overscroll_fraction.clamp(0.0, 1.0));
     let w = data.x_max - data.x_min;
     let h = data.y_max - data.y_min;
     if !w.is_finite() || !h.is_finite() {
@@ -131,8 +131,8 @@ pub fn clamp_view_to_data(view: DataRect, data: DataRect, overscroll_fraction: f
 pub fn pan_view_by_px(view: DataRect, viewport: Size, dx_px: f32, dy_px: f32) -> Option<DataRect> {
     let view = sanitize_data_rect(view);
 
-    let viewport_w = viewport.width.0;
-    let viewport_h = viewport.height.0;
+    let viewport_w = f64::from(viewport.width.0);
+    let viewport_h = f64::from(viewport.height.0);
     if !viewport_w.is_finite() || !viewport_h.is_finite() || viewport_w <= 0.0 || viewport_h <= 0.0
     {
         return None;
@@ -148,8 +148,8 @@ pub fn pan_view_by_px(view: DataRect, viewport: Size, dx_px: f32, dy_px: f32) ->
         return None;
     }
 
-    let dx_data = (dx_px / viewport_w) * w;
-    let dy_data = (dy_px / viewport_h) * h;
+    let dx_data = (f64::from(dx_px) / viewport_w) * w;
+    let dy_data = (f64::from(dy_px) / viewport_h) * h;
 
     Some(sanitize_data_rect(DataRect {
         x_min: view.x_min - dx_data,
@@ -168,8 +168,8 @@ pub fn zoom_view_at_px(
 ) -> Option<DataRect> {
     let view = sanitize_data_rect(view);
 
-    let viewport_w = viewport.width.0;
-    let viewport_h = viewport.height.0;
+    let viewport_w = f64::from(viewport.width.0);
+    let viewport_h = f64::from(viewport.height.0);
     if !viewport_w.is_finite() || !viewport_h.is_finite() || viewport_w <= 0.0 || viewport_h <= 0.0
     {
         return None;
@@ -185,8 +185,8 @@ pub fn zoom_view_at_px(
         return None;
     }
 
-    let nx = local_px.x.0 / viewport_w;
-    let ny = local_px.y.0 / viewport_h;
+    let nx = f64::from(local_px.x.0) / viewport_w;
+    let ny = f64::from(local_px.y.0) / viewport_h;
     if !nx.is_finite() || !ny.is_finite() {
         return None;
     }
@@ -197,8 +197,8 @@ pub fn zoom_view_at_px(
         return None;
     }
 
-    let new_w = w / zoom_x;
-    let new_h = h / zoom_y;
+    let new_w = w / f64::from(zoom_x);
+    let new_h = h / f64::from(zoom_y);
     if !new_w.is_finite() || !new_h.is_finite() {
         return None;
     }
@@ -222,8 +222,8 @@ pub fn data_rect_from_plot_points(
 ) -> Option<DataRect> {
     let view = sanitize_data_rect(view);
 
-    let viewport_w = viewport.width.0;
-    let viewport_h = viewport.height.0;
+    let viewport_w = f64::from(viewport.width.0);
+    let viewport_h = f64::from(viewport.height.0);
     if !viewport_w.is_finite() || !viewport_h.is_finite() || viewport_w <= 0.0 || viewport_h <= 0.0
     {
         return None;
@@ -235,10 +235,18 @@ pub fn data_rect_from_plot_points(
         return None;
     }
 
-    let x0 = a.x.0.min(b.x.0).clamp(0.0, viewport_w);
-    let x1 = a.x.0.max(b.x.0).clamp(0.0, viewport_w);
-    let y0 = a.y.0.min(b.y.0).clamp(0.0, viewport_h);
-    let y1 = a.y.0.max(b.y.0).clamp(0.0, viewport_h);
+    let x0 = f64::from(a.x.0)
+        .min(f64::from(b.x.0))
+        .clamp(0.0, viewport_w);
+    let x1 = f64::from(a.x.0)
+        .max(f64::from(b.x.0))
+        .clamp(0.0, viewport_w);
+    let y0 = f64::from(a.y.0)
+        .min(f64::from(b.y.0))
+        .clamp(0.0, viewport_h);
+    let y1 = f64::from(a.y.0)
+        .max(f64::from(b.y.0))
+        .clamp(0.0, viewport_h);
 
     let nx0 = x0 / viewport_w;
     let nx1 = x1 / viewport_w;

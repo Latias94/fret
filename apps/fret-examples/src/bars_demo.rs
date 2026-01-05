@@ -33,7 +33,7 @@ impl BarsDemoDriver {
 
         let mut points: Vec<DataPoint> = Vec::with_capacity(n);
         for i in 0..n {
-            let x = i as f32;
+            let x = i as f64;
             let y = (x * 0.05).sin() * 1.25 + (x * 0.015).cos() * 0.25;
             points.push(DataPoint { x, y });
         }

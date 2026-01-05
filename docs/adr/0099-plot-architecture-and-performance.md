@@ -75,6 +75,15 @@ To avoid forcing allocations/copies for large datasets, series data should be re
 This is directly inspired by ImPlot’s “stride + getter” approach and `egui_plot`’s
 `PlotPoints::{Borrowed,Owned,Generator}`.
 
+Additionally, plots should support **view-range sampling** for generator-like sources and chunked
+stores:
+
+- `SeriesData::sample_range(x_range, budget) -> Option<Vec<DataPoint>>` allows a series to provide a
+  bounded set of points for the currently visible X range without requiring the plot to iterate the
+  entire dataset.
+- `Series::from_explicit_callback(y=f(x), x_range, points)` is the ergonomic entry point for
+  function plots (mirrors `egui_plot::PlotPoints::from_explicit_callback`).
+
 ### 4) Performance baseline: CPU-driven LOD + cache reuse
 
 The default rendering path is **CPU-driven and cache-friendly**:
@@ -193,6 +202,13 @@ This matches the practical constraints highlighted by ImPlot3D (depth correctnes
 - We get a 3D path that is correct and fast without polluting UI crates with wgpu types.
 - Large dataset behavior becomes an explicit contract (LOD bounded by viewport pixels).
 - Future upgrades (dashes, gradients, GPU line strips, glyph atlases) are staged behind targeted ADRs.
+
+## Numeric Precision
+
+Plot data coordinates use **`f64`** (especially important for time axes such as Unix seconds). Screen
+space remains `f32` (`Px`) at the rendering boundary. This matches the practical precision needs
+observed in `egui_plot` and avoids a class of “time axis jitter” and “large coordinate collapse”
+issues on narrow views.
 
 ## Alternatives Considered
 

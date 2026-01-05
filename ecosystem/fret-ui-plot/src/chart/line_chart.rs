@@ -5,7 +5,7 @@ use crate::cartesian::{DataPoint, DataRect};
 use crate::retained::{LinePlotCanvas, LinePlotModel, LineSeries};
 use crate::series::Series;
 
-type Accessor<T> = Box<dyn Fn(&T) -> Option<f32> + 'static>;
+type Accessor<T> = Box<dyn Fn(&T) -> Option<f64> + 'static>;
 
 pub struct LineChart<T> {
     data: Vec<T>,
@@ -24,12 +24,12 @@ impl<T> LineChart<T> {
         }
     }
 
-    pub fn x(mut self, f: impl Fn(&T) -> Option<f32> + 'static) -> Self {
+    pub fn x(mut self, f: impl Fn(&T) -> Option<f64> + 'static) -> Self {
         self.x = Box::new(f);
         self
     }
 
-    pub fn y(mut self, f: impl Fn(&T) -> Option<f32> + 'static) -> Self {
+    pub fn y(mut self, f: impl Fn(&T) -> Option<f64> + 'static) -> Self {
         self.y = Box::new(f);
         self
     }
@@ -43,12 +43,12 @@ impl<T> LineChart<T> {
 
     pub fn build_model(self) -> LinePlotModel {
         let mut points: Vec<DataPoint> = Vec::with_capacity(self.data.len());
-        let mut x_min: Option<f32> = None;
-        let mut x_max: Option<f32> = None;
-        let mut y_min: Option<f32> = None;
-        let mut y_max: Option<f32> = None;
+        let mut x_min: Option<f64> = None;
+        let mut x_max: Option<f64> = None;
+        let mut y_min: Option<f64> = None;
+        let mut y_max: Option<f64> = None;
         let mut sorted_by_x = true;
-        let mut last_x: Option<f32> = None;
+        let mut last_x: Option<f64> = None;
 
         for item in &self.data {
             let Some(x) = (self.x)(item) else {

@@ -47,8 +47,8 @@ impl PlotStressDriver {
 
     fn build_series(points: usize, series_index: usize) -> Series {
         let dt = 1.0 / 120.0;
-        let x_max = (points.saturating_sub(1) as f32) * dt;
-        let y_amp = 1.0 + (series_index as f32) * 0.15;
+        let x_max = (points.saturating_sub(1) as f64) * dt;
+        let y_amp = 1.0 + (series_index as f64) * 0.15;
 
         let bounds = DataRect {
             x_min: 0.0,
@@ -67,9 +67,9 @@ impl PlotStressDriver {
                 return None;
             }
 
-            let x = i as f32 * dt;
-            let base = (x * (1.0 + series_index as f32 * 0.17)).sin()
-                + (x * (0.31 + series_index as f32 * 0.07)).cos() * 0.25;
+            let x = i as f64 * dt;
+            let base = (x * (1.0 + series_index as f64 * 0.17)).sin()
+                + (x * (0.31 + series_index as f64 * 0.07)).cos() * 0.25;
             let mut y = base * y_amp;
 
             // Insert deterministic spikes that should survive decimation.
@@ -103,8 +103,8 @@ impl PlotStressDriver {
 
         // Use the known analytical bounds to avoid scanning getter-backed data.
         let dt = 1.0 / 120.0;
-        let x_max = (points.saturating_sub(1) as f32) * dt;
-        let y_amp = 1.0 + ((series_count - 1) as f32) * 0.15;
+        let x_max = (points.saturating_sub(1) as f64) * dt;
+        let y_amp = 1.0 + ((series_count - 1) as f64) * 0.15;
         let bounds = DataRect {
             x_min: 0.0,
             x_max,
