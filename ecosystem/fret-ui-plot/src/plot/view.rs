@@ -69,6 +69,65 @@ pub fn sanitize_data_rect(bounds: DataRect) -> DataRect {
     }
 }
 
+pub fn expand_data_bounds(data: DataRect, overscroll_fraction: f32) -> DataRect {
+    let data = sanitize_data_rect(data);
+    let frac = overscroll_fraction.clamp(0.0, 1.0);
+    let w = data.x_max - data.x_min;
+    let h = data.y_max - data.y_min;
+    if !w.is_finite() || !h.is_finite() {
+        return data;
+    }
+
+    let dx = w * frac;
+    let dy = h * frac;
+    sanitize_data_rect(DataRect {
+        x_min: data.x_min - dx,
+        x_max: data.x_max + dx,
+        y_min: data.y_min - dy,
+        y_max: data.y_max + dy,
+    })
+}
+
+pub fn clamp_view_to_data(view: DataRect, data: DataRect, overscroll_fraction: f32) -> DataRect {
+    let allowed = expand_data_bounds(data, overscroll_fraction);
+    let allowed = sanitize_data_rect(allowed);
+    let mut out = sanitize_data_rect(view);
+
+    let allowed_w = allowed.x_max - allowed.x_min;
+    let out_w = out.x_max - out.x_min;
+    if out_w >= allowed_w {
+        out.x_min = allowed.x_min;
+        out.x_max = allowed.x_max;
+    } else {
+        if out.x_min < allowed.x_min {
+            out.x_min = allowed.x_min;
+            out.x_max = out.x_min + out_w;
+        }
+        if out.x_max > allowed.x_max {
+            out.x_max = allowed.x_max;
+            out.x_min = out.x_max - out_w;
+        }
+    }
+
+    let allowed_h = allowed.y_max - allowed.y_min;
+    let out_h = out.y_max - out.y_min;
+    if out_h >= allowed_h {
+        out.y_min = allowed.y_min;
+        out.y_max = allowed.y_max;
+    } else {
+        if out.y_min < allowed.y_min {
+            out.y_min = allowed.y_min;
+            out.y_max = out.y_min + out_h;
+        }
+        if out.y_max > allowed.y_max {
+            out.y_max = allowed.y_max;
+            out.y_min = out.y_max - out_h;
+        }
+    }
+
+    sanitize_data_rect(out)
+}
+
 pub fn pan_view_by_px(view: DataRect, viewport: Size, dx_px: f32, dy_px: f32) -> Option<DataRect> {
     let view = sanitize_data_rect(view);
 

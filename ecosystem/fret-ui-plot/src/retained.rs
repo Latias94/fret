@@ -17,8 +17,8 @@ use crate::cartesian::{DataPoint, DataRect, PlotTransform};
 use crate::plot::axis::linear_ticks;
 use crate::plot::grid::GridLines;
 use crate::plot::view::{
-    clamp_zoom_factors, data_rect_key, local_from_absolute, pan_view_by_px, sanitize_data_rect,
-    zoom_view_at_px,
+    clamp_view_to_data, clamp_zoom_factors, data_rect_key, expand_data_bounds, local_from_absolute,
+    pan_view_by_px, sanitize_data_rect, zoom_view_at_px,
 };
 use crate::series::{Series, SeriesData};
 
@@ -46,6 +46,11 @@ pub struct LinePlotStyle {
     pub tick_count: usize,
     pub stroke_color: Color,
     pub stroke_width: Px,
+    pub clamp_to_data_bounds: bool,
+    /// Extra range around `data_bounds` used by clamping and auto-fit.
+    ///
+    /// This is expressed as a fraction of the data span (e.g. `0.03` means 3%).
+    pub overscroll_fraction: f32,
 }
 
 impl Default for LinePlotStyle {
@@ -72,6 +77,8 @@ impl Default for LinePlotStyle {
                 a: 1.0,
             },
             stroke_width: Px(1.5),
+            clamp_to_data_bounds: true,
+            overscroll_fraction: 0.03,
         }
     }
 }
@@ -527,6 +534,21 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 else {
                     return;
                 };
+                let data_bounds =
+                    self.model
+                        .read(cx.app, |_app, m| m.data_bounds)
+                        .unwrap_or(DataRect {
+                            x_min: 0.0,
+                            x_max: 1.0,
+                            y_min: 0.0,
+                            y_max: 1.0,
+                        });
+                let data_bounds = sanitize_data_rect(data_bounds);
+                let next = if self.style.clamp_to_data_bounds {
+                    clamp_view_to_data(next, data_bounds, self.style.overscroll_fraction)
+                } else {
+                    next
+                };
 
                 self.view_is_auto = false;
                 self.view_bounds = Some(next);
@@ -551,6 +573,21 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     let Some(next) = pan_view_by_px(view_bounds, layout.plot.size, dx_px, dy_px)
                     else {
                         return;
+                    };
+                    let data_bounds =
+                        self.model
+                            .read(cx.app, |_app, m| m.data_bounds)
+                            .unwrap_or(DataRect {
+                                x_min: 0.0,
+                                x_max: 1.0,
+                                y_min: 0.0,
+                                y_max: 1.0,
+                            });
+                    let data_bounds = sanitize_data_rect(data_bounds);
+                    let next = if self.style.clamp_to_data_bounds {
+                        clamp_view_to_data(next, data_bounds, self.style.overscroll_fraction)
+                    } else {
+                        next
                     };
 
                     self.view_bounds = Some(next);
@@ -711,8 +748,13 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
         let data_bounds = sanitize_data_rect(data_bounds);
 
         let view_bounds = if self.view_is_auto {
-            self.view_bounds = Some(data_bounds);
-            data_bounds
+            let view = if self.style.clamp_to_data_bounds {
+                expand_data_bounds(data_bounds, self.style.overscroll_fraction)
+            } else {
+                data_bounds
+            };
+            self.view_bounds = Some(view);
+            view
         } else {
             let view = self.view_bounds.unwrap_or(data_bounds);
             let view = sanitize_data_rect(view);
