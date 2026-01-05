@@ -55,6 +55,10 @@ pub enum OverlayKind {
 pub struct ToastLayerSpec {
     pub store: Model<window_overlays::ToastStore>,
     pub position: window_overlays::ToastPosition,
+    pub margin: Option<fret_core::Px>,
+    pub gap: Option<fret_core::Px>,
+    pub toast_min_width: Option<fret_core::Px>,
+    pub toast_max_width: Option<fret_core::Px>,
 }
 
 #[derive(Clone)]
@@ -207,6 +211,10 @@ impl OverlayRequest {
             toast_layer: Some(ToastLayerSpec {
                 store,
                 position: window_overlays::ToastPosition::default(),
+                margin: None,
+                gap: None,
+                toast_min_width: None,
+                toast_max_width: None,
             }),
         }
     }
@@ -217,6 +225,42 @@ impl OverlayRequest {
             .as_mut()
             .expect("toast_position requires a ToastLayer request");
         spec.position = position;
+        self
+    }
+
+    pub fn toast_margin(mut self, margin: fret_core::Px) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_margin requires a ToastLayer request");
+        spec.margin = Some(margin);
+        self
+    }
+
+    pub fn toast_gap(mut self, gap: fret_core::Px) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_gap requires a ToastLayer request");
+        spec.gap = Some(gap);
+        self
+    }
+
+    pub fn toast_min_width(mut self, width: fret_core::Px) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_min_width requires a ToastLayer request");
+        spec.toast_min_width = Some(width);
+        self
+    }
+
+    pub fn toast_max_width(mut self, width: fret_core::Px) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_max_width requires a ToastLayer request");
+        spec.toast_max_width = Some(width);
         self
     }
 
@@ -356,13 +400,23 @@ impl OverlayController {
                 let root_name = request
                     .root_name
                     .unwrap_or_else(|| window_overlays::toast_layer_root_name(request.id));
-                window_overlays::request_toast_layer_for_window(
-                    app,
-                    window,
-                    window_overlays::ToastLayerRequest::new(request.id, spec.store)
-                        .position(spec.position)
-                        .root_name(root_name),
-                );
+
+                let mut toast_req = window_overlays::ToastLayerRequest::new(request.id, spec.store)
+                    .position(spec.position)
+                    .root_name(root_name);
+                if let Some(margin) = spec.margin {
+                    toast_req = toast_req.margin(margin);
+                }
+                if let Some(gap) = spec.gap {
+                    toast_req = toast_req.gap(gap);
+                }
+                if let Some(width) = spec.toast_min_width {
+                    toast_req = toast_req.toast_min_width(width);
+                }
+                if let Some(width) = spec.toast_max_width {
+                    toast_req = toast_req.toast_max_width(width);
+                }
+                window_overlays::request_toast_layer_for_window(app, window, toast_req);
             }
         }
     }

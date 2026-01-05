@@ -439,6 +439,10 @@ pub fn render<H: UiHost>(
         let store = req.store;
         let store_for_render = store.clone();
         let position = req.position;
+        let margin_override = req.margin;
+        let gap_override = req.gap;
+        let toast_min_width_override = req.toast_min_width;
+        let toast_max_width_override = req.toast_max_width;
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
             app,
@@ -507,8 +511,8 @@ pub fn render<H: UiHost>(
                 }
 
                 let theme = fret_ui::Theme::global(&*cx.app).clone();
-                let margin = theme.metrics.padding_md;
-                let gap = theme.metrics.padding_sm;
+                let margin = margin_override.unwrap_or(theme.metrics.padding_md);
+                let gap = gap_override.unwrap_or(theme.metrics.padding_sm);
                 let toast_padding = theme.metrics.padding_sm;
                 let radius = theme.metrics.radius_md;
                 let store_for_toasts = store_for_render.clone();
@@ -802,8 +806,10 @@ pub fn render<H: UiHost>(
                                     Transform2D::translation(Point::new(Px(dx.0 + drag_x.0), dy));
 
                                 let mut toast_layout = fret_ui::element::LayoutStyle::default();
-                                toast_layout.size.min_width = Some(Px(280.0));
-                                toast_layout.size.max_width = Some(Px(420.0));
+                                toast_layout.size.min_width =
+                                    Some(toast_min_width_override.unwrap_or(Px(280.0)));
+                                toast_layout.size.max_width =
+                                    Some(toast_max_width_override.unwrap_or(Px(420.0)));
 
                                 let toast_el = cx.container(
                                     fret_ui::element::ContainerProps {
