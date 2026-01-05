@@ -13,20 +13,17 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
+use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    OverlayRequest, Radius, Space,
+    Radius, Space,
 };
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 
 use crate::button::{Button, ButtonVariant};
-
-#[derive(Default)]
-struct AlertDialogCancelRegistry {
-    by_open: std::collections::HashMap<ModelId, GlobalElementId>,
-}
 
 fn default_overlay_color() -> Color {
     Color {
@@ -88,9 +85,16 @@ impl AlertDialog {
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
             let open_id = self.open.id();
 
+            #[derive(Default)]
+            struct AlertDialogA11yState {
+                content_element: Option<fret_ui::elements::GlobalElementId>,
+            }
+
             let trigger = trigger(cx);
             let id = trigger.id;
-            let overlay_root_name = OverlayController::modal_root_name(id);
+            let overlay_root_name = radix_dialog::dialog_root_name(id);
+            let prev_content_element =
+                cx.with_state(AlertDialogA11yState::default, |st| st.content_element);
 
             let presence = OverlayController::fade_presence_with_durations(
                 cx,
@@ -100,12 +104,12 @@ impl AlertDialog {
             );
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
 
+            let content_element_for_trigger: std::cell::Cell<Option<fret_ui::elements::GlobalElementId>> =
+                std::cell::Cell::new(None);
+
             if overlay_presence.present {
                 if is_open {
-                    cx.app
-                        .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
-                            reg.by_open.remove(&open_id);
-                        });
+                    radix_alert_dialog::clear_cancel_for_open_model(cx, open_id);
                 }
 
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
@@ -145,6 +149,7 @@ impl AlertDialog {
 
                     crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
                     let content = content(cx);
+                    content_element_for_trigger.set(Some(content.id));
                     crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
 
                     // Center like `Dialog`, but avoid full-window wrappers that can steal hit tests.
@@ -225,31 +230,29 @@ impl AlertDialog {
                     )]
                 });
 
-                let mut request = OverlayRequest::modal(
+                if let Some(content_element) = content_element_for_trigger.get() {
+                    cx.with_state(AlertDialogA11yState::default, |st| {
+                        st.content_element = Some(content_element)
+                    });
+                }
+
+                let mut request = radix_dialog::modal_dialog_request(
                     id,
-                    Some(id),
+                    id,
                     self.open.clone(),
                     overlay_presence,
                     overlay_children,
                 );
                 request.root_name = Some(overlay_root_name);
-                request.initial_focus = if is_open {
-                    cx.app
-                        .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
-                            reg.by_open.get(&open_id).copied()
-                        })
-                } else {
-                    None
-                };
-                OverlayController::request(cx, request);
+                request.initial_focus =
+                    is_open.then(|| radix_alert_dialog::cancel_element_for_open_model(cx, open_id)).flatten();
+                radix_dialog::request_modal_dialog(cx, request);
             } else {
-                cx.app
-                    .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
-                        reg.by_open.remove(&open_id);
-                    });
+                radix_alert_dialog::clear_cancel_for_open_model(cx, open_id);
             }
 
-            trigger
+            let content_element = content_element_for_trigger.get().or(prev_content_element);
+            radix_dialog::apply_dialog_trigger_a11y(trigger, is_open, content_element)
         })
     }
 }
@@ -585,10 +588,7 @@ impl AlertDialogCancel {
             .toggle_model(self.open)
             .into_element(cx);
 
-        cx.app
-            .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
-                reg.by_open.entry(open_id).or_insert(element.id);
-            });
+        radix_alert_dialog::register_cancel_for_open_model(cx, open_id, element.id);
 
         element
     }
@@ -962,16 +962,7 @@ mod tests {
         let _ = render_frame(&mut ui, &mut app, &mut services, 2);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        let registered_cancel = app
-            .with_global_mut(AlertDialogCancelRegistry::default, |reg, _| {
-                reg.by_open.get(&open.id()).copied()
-            });
         let cancel = cancel_id.get().expect("cancel id");
-        assert_eq!(
-            registered_cancel,
-            Some(cancel),
-            "AlertDialogCancel should register itself for initial focus"
-        );
         let cancel_node =
             fret_ui::elements::node_for_element(&mut app, window, cancel).expect("cancel node");
         assert_eq!(ui.focus(), Some(cancel_node));

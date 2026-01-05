@@ -15,9 +15,10 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    OverlayRequest, Radius, Size as ComponentSize, Space,
+    Radius, Size as ComponentSize, Space,
 };
 
 use crate::layout as shadcn_layout;
@@ -96,9 +97,16 @@ impl Dialog {
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
             let open_id: ModelId = self.open.id();
 
+            #[derive(Default)]
+            struct DialogA11yState {
+                content_element: Option<fret_ui::elements::GlobalElementId>,
+            }
+
             let trigger = trigger(cx);
             let id = trigger.id;
-            let overlay_root_name = OverlayController::modal_root_name(id);
+            let overlay_root_name = radix_dialog::dialog_root_name(id);
+            let prev_content_element =
+                cx.with_state(DialogA11yState::default, |st| st.content_element);
 
             let presence = OverlayController::fade_presence_with_durations(
                 cx,
@@ -107,6 +115,9 @@ impl Dialog {
                 overlay_motion::SHADCN_MOTION_TICKS_200,
             );
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
+
+            let content_element_for_trigger: std::cell::Cell<Option<fret_ui::elements::GlobalElementId>> =
+                std::cell::Cell::new(None);
 
             if overlay_presence.present {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
@@ -187,6 +198,7 @@ impl Dialog {
 
                     crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
                     let content = content(cx);
+                    content_element_for_trigger.set(Some(content.id));
                     crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
                     let last_size = cx.last_bounds_for_element(content.id).map(|r| r.size);
 
@@ -246,18 +258,22 @@ impl Dialog {
                     )]
                 });
 
-                let mut request = OverlayRequest::modal(
+                if let Some(content_element) = content_element_for_trigger.get() {
+                    cx.with_state(DialogA11yState::default, |st| st.content_element = Some(content_element));
+                }
+
+                let request = radix_dialog::modal_dialog_request(
                     id,
-                    Some(id),
+                    id,
                     self.open,
                     overlay_presence,
                     overlay_children,
                 );
-                request.root_name = Some(overlay_root_name);
-                OverlayController::request(cx, request);
+                radix_dialog::request_modal_dialog(cx, request);
             }
 
-            trigger
+            let content_element = content_element_for_trigger.get().or(prev_content_element);
+            radix_dialog::apply_dialog_trigger_a11y(trigger, is_open, content_element)
         })
     }
 }

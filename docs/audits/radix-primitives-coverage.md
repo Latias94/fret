@@ -22,9 +22,11 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 ### Implemented (direct)
 
 - `accordion` -> `ecosystem/fret-ui-kit/src/primitives/accordion.rs`
+- `alert-dialog` -> `ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs`
 - `collapsible` -> `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`
 - `collection` -> `ecosystem/fret-ui-kit/src/primitives/collection.rs`
 - `context-menu` -> `ecosystem/fret-ui-kit/src/primitives/context_menu.rs` (facade over `menu`)
+- `dialog` -> `ecosystem/fret-ui-kit/src/primitives/dialog.rs`
 - `dismissable-layer` -> `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs`
 - `dropdown-menu` -> `ecosystem/fret-ui-kit/src/primitives/dropdown_menu.rs` (facade over `menu`)
 - `focus-scope` -> `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs`
@@ -51,8 +53,6 @@ None currently tracked.
 These shadcn components exist today, but their reusable behavior/policy should be moved into
 Radix-named primitives facades so non-shadcn consumers can reuse them:
 
-- `dialog` -> `ecosystem/fret-ui-shadcn/src/dialog.rs`
-- `alert-dialog` -> `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`
 - `hover-card` -> `ecosystem/fret-ui-shadcn/src/hover_card.rs`
 - `select` -> `ecosystem/fret-ui-shadcn/src/select.rs`
 - `checkbox` -> `ecosystem/fret-ui-shadcn/src/checkbox.rs`
@@ -122,5 +122,4 @@ If we want the biggest reuse win with minimal risk:
 
 1. Add thin facades for `dropdown-menu`, `context-menu`, `menubar` (delegating to `menu`).
 2. Add `primitives/tooltip.rs` facade (compose provider + delay group + popper; keep skin out).
-3. Downshift `dialog` / `alert-dialog` (focus trap + dismiss + scroll lock policies).
-4. Downshift form controls (`checkbox`, `switch`, `slider`, `select`) as a11y + interaction policy.
+3. Downshift form controls (`checkbox`, `switch`, `slider`, `select`) as a11y + interaction policy.
