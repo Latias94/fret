@@ -27,6 +27,7 @@ pub struct LineSeries {
     pub data: Series,
     pub label: Option<Arc<str>>,
     pub stroke_color: Option<Color>,
+    pub visible: bool,
 }
 
 impl LineSeries {
@@ -35,6 +36,7 @@ impl LineSeries {
             data,
             label: None,
             stroke_color: None,
+            visible: true,
         }
     }
 
@@ -45,6 +47,11 @@ impl LineSeries {
 
     pub fn color(mut self, color: Color) -> Self {
         self.stroke_color = Some(color);
+        self
+    }
+
+    pub fn visible(mut self, visible: bool) -> Self {
+        self.visible = visible;
         self
     }
 }
@@ -171,6 +178,13 @@ fn series_style(
             series.stroke_color,
         ),
     }
+}
+
+fn contains_point(rect: Rect, p: Point) -> bool {
+    p.x.0 >= rect.origin.x.0
+        && p.y.0 >= rect.origin.y.0
+        && p.x.0 <= rect.origin.x.0 + rect.size.width.0
+        && p.y.0 <= rect.origin.y.0 + rect.size.height.0
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -400,6 +414,9 @@ impl LinePlotCanvas {
         if cached_ok {
             let mut out: Vec<(PathId, Color)> = Vec::with_capacity(series_count);
             for (i, s) in series.iter().enumerate() {
+                if !s.visible {
+                    continue;
+                }
                 let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
                     continue;
                 };
@@ -434,6 +451,20 @@ impl LinePlotCanvas {
         for (series_index, s) in series.into_iter().enumerate() {
             let (commands, samples) =
                 decimate_polyline(transform, &*s.data, cx.scale_factor, series_index);
+            if !s.visible {
+                self.cached_paths.push(CachedPath {
+                    id: None,
+                    series_index,
+                    model_revision,
+                    scale_factor_bits,
+                    viewport_w_bits,
+                    viewport_h_bits,
+                    stroke_width: self.style.stroke_width,
+                    view_key,
+                    samples: Vec::new(),
+                });
+                continue;
+            }
             let id = if commands.is_empty() {
                 None
             } else {
@@ -480,6 +511,58 @@ impl LinePlotCanvas {
             services.text().release(t.blob);
         }
         self.legend_key = None;
+    }
+
+    fn legend_layout(&self, layout: PlotLayout) -> Option<(Rect, Vec<Rect>)> {
+        if self.legend_labels.len() <= 1 {
+            return None;
+        }
+        if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+            return None;
+        }
+
+        let margin = Px(8.0);
+        let pad = Px(8.0);
+        let gap = Px(8.0);
+        let row_gap = Px(4.0);
+        let swatch_w = Px(14.0);
+        let swatch_h = Px(self.style.stroke_width.0.clamp(2.0, 6.0));
+
+        let mut max_label_w = 0.0f32;
+        let mut total_h = 0.0f32;
+        for (i, label) in self.legend_labels.iter().enumerate() {
+            if i > 0 {
+                total_h += row_gap.0;
+            }
+            max_label_w = max_label_w.max(label.metrics.size.width.0);
+            total_h += label.metrics.size.height.0.max(swatch_h.0);
+        }
+
+        let legend_w = Px(pad.0 * 2.0 + swatch_w.0 + gap.0 + max_label_w);
+        let legend_h = Px(pad.0 * 2.0 + total_h);
+
+        let mut x = Px(layout.plot.origin.x.0 + layout.plot.size.width.0 - legend_w.0 - margin.0);
+        let mut y = Px(layout.plot.origin.y.0 + margin.0);
+        x = Px(x.0.max(layout.plot.origin.x.0));
+        y = Px(y.0.max(layout.plot.origin.y.0));
+
+        let rect = Rect::new(Point::new(x, y), Size::new(legend_w, legend_h));
+
+        let mut rows: Vec<Rect> = Vec::with_capacity(self.legend_labels.len());
+        let mut cursor_y = rect.origin.y.0 + pad.0;
+        for (i, label) in self.legend_labels.iter().enumerate() {
+            let row_h = label.metrics.size.height.0.max(swatch_h.0);
+            rows.push(Rect::new(
+                Point::new(rect.origin.x, Px(cursor_y)),
+                Size::new(rect.size.width, Px(row_h)),
+            ));
+            cursor_y += row_h;
+            if i + 1 < self.legend_labels.len() {
+                cursor_y += row_gap.0;
+            }
+        }
+
+        Some((rect, rows))
     }
 
     fn hash_u64(mut state: u64, v: u64) -> u64 {
@@ -762,10 +845,56 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     return;
                 }
 
-                let inside = position.x.0 >= layout.plot.origin.x.0
-                    && position.y.0 >= layout.plot.origin.y.0
-                    && position.x.0 <= layout.plot.origin.x.0 + layout.plot.size.width.0
-                    && position.y.0 <= layout.plot.origin.y.0 + layout.plot.size.height.0;
+                if *button == MouseButton::Left
+                    && let Some((_legend, rows)) = self.legend_layout(layout)
+                    && let Some(series_index) = rows
+                        .iter()
+                        .enumerate()
+                        .find(|(_i, r)| contains_point(**r, *position))
+                        .map(|(i, _r)| i)
+                {
+                    let _ = self.model.update(cx.app, |m, _cx| {
+                        if modifiers.shift {
+                            let is_solo = m.series.iter().enumerate().all(|(i, s)| {
+                                (i == series_index && s.visible)
+                                    || (i != series_index && !s.visible)
+                            });
+                            if is_solo {
+                                for s in &mut m.series {
+                                    s.visible = true;
+                                }
+                            } else {
+                                for (i, s) in m.series.iter_mut().enumerate() {
+                                    s.visible = i == series_index;
+                                }
+                            }
+                            return;
+                        }
+
+                        let visible_count = m.series.iter().filter(|s| s.visible).count();
+                        let Some(clicked) = m.series.get_mut(series_index) else {
+                            return;
+                        };
+                        if clicked.visible && visible_count <= 1 {
+                            return;
+                        }
+                        clicked.visible = !clicked.visible;
+                    });
+
+                    self.hover = None;
+                    self.pan_last_pos = None;
+                    self.box_zoom_start = None;
+                    self.box_zoom_current = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                let inside = contains_point(layout.plot, *position);
 
                 if inside && *button == MouseButton::Left {
                     self.hover = None;
@@ -860,10 +989,7 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     return;
                 }
 
-                let inside = position.x.0 >= layout.plot.origin.x.0
-                    && position.y.0 >= layout.plot.origin.y.0
-                    && position.x.0 <= layout.plot.origin.x.0 + layout.plot.size.width.0
-                    && position.y.0 <= layout.plot.origin.y.0 + layout.plot.size.height.0;
+                let inside = contains_point(layout.plot, *position);
                 if !inside {
                     return;
                 }
@@ -1018,6 +1144,9 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                         };
 
                         for (series_index, s) in series.into_iter().enumerate() {
+                            if !s.visible {
+                                continue;
+                            }
                             for sample in
                                 decimate_samples(transform, &*s.data, scale_factor, series_index)
                             {
@@ -1209,45 +1338,22 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
         cx.scene.push(SceneOp::PopClip);
 
         // Legend (P0: shown when there is more than one series; can be moved to overlays later).
-        if !self.legend_labels.is_empty()
-            && layout.plot.size.width.0 > 0.0
-            && layout.plot.size.height.0 > 0.0
-        {
-            let series_overrides: Vec<Option<Color>> = self
+        if let Some((rect, rows)) = self.legend_layout(layout) {
+            let (series_overrides, series_visible): (Vec<Option<Color>>, Vec<bool>) = self
                 .model
                 .read(cx.app, |_app, m| {
-                    m.series.iter().map(|s| s.stroke_color).collect()
+                    (
+                        m.series.iter().map(|s| s.stroke_color).collect(),
+                        m.series.iter().map(|s| s.visible).collect(),
+                    )
                 })
-                .unwrap_or_default();
+                .unwrap_or((Vec::new(), Vec::new()));
             let series_count = self.legend_labels.len();
 
-            let margin = Px(8.0);
             let pad = Px(8.0);
             let gap = Px(8.0);
-            let row_gap = Px(4.0);
             let swatch_w = Px(14.0);
             let swatch_h = Px(self.style.stroke_width.0.clamp(2.0, 6.0));
-
-            let mut max_label_w = 0.0f32;
-            let mut total_h = 0.0f32;
-            for (i, label) in self.legend_labels.iter().enumerate() {
-                if i > 0 {
-                    total_h += row_gap.0;
-                }
-                max_label_w = max_label_w.max(label.metrics.size.width.0);
-                total_h += label.metrics.size.height.0.max(swatch_h.0);
-            }
-
-            let legend_w = Px(pad.0 * 2.0 + swatch_w.0 + gap.0 + max_label_w);
-            let legend_h = Px(pad.0 * 2.0 + total_h);
-
-            let mut x =
-                Px(layout.plot.origin.x.0 + layout.plot.size.width.0 - legend_w.0 - margin.0);
-            let mut y = Px(layout.plot.origin.y.0 + margin.0);
-            x = Px(x.0.max(layout.plot.origin.x.0));
-            y = Px(y.0.max(layout.plot.origin.y.0));
-
-            let rect = Rect::new(Point::new(x, y), Size::new(legend_w, legend_h));
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(6),
                 rect,
@@ -1257,15 +1363,33 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 corner_radii: fret_core::Corners::all(Px(6.0)),
             });
 
-            let mut cursor_y = rect.origin.y.0 + pad.0;
             for (i, label) in self.legend_labels.iter().enumerate() {
-                let row_h = Px(label.metrics.size.height.0.max(swatch_h.0));
+                let row = rows.get(i).copied().unwrap_or(rect);
+                let row_h = row.size.height;
 
                 let override_color = series_overrides.get(i).copied().flatten();
                 let color = resolve_series_color(i, self.style, series_count, override_color);
 
-                let row_mid = cursor_y + row_h.0 * 0.5;
-                let swatch_x = Px(rect.origin.x.0 + pad.0);
+                let visible = series_visible.get(i).copied().unwrap_or(true);
+                let swatch_color = if visible {
+                    color
+                } else {
+                    Color {
+                        a: (color.a * 0.20).clamp(0.05, 0.35),
+                        ..color
+                    }
+                };
+                let text_color = if visible {
+                    tooltip_text_color
+                } else {
+                    Color {
+                        a: (tooltip_text_color.a * 0.55).clamp(0.25, 0.85),
+                        ..tooltip_text_color
+                    }
+                };
+
+                let row_mid = row.origin.y.0 + row_h.0 * 0.5;
+                let swatch_x = Px(row.origin.x.0 + pad.0);
                 let swatch_y = Px(row_mid - swatch_h.0 * 0.5);
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(7),
@@ -1273,26 +1397,21 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                         Point::new(swatch_x, swatch_y),
                         Size::new(swatch_w, swatch_h),
                     ),
-                    background: color,
+                    background: swatch_color,
                     border: fret_core::Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
 
                 let text_x = Px(swatch_x.0 + swatch_w.0 + gap.0);
-                let text_top = cursor_y + (row_h.0 - label.metrics.size.height.0) * 0.5;
+                let text_top = row.origin.y.0 + (row_h.0 - label.metrics.size.height.0) * 0.5;
                 let origin = Point::new(text_x, Px(text_top + label.metrics.baseline.0));
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(7),
                     origin,
                     text: label.blob,
-                    color: tooltip_text_color,
+                    color: text_color,
                 });
-
-                cursor_y += row_h.0;
-                if i + 1 < self.legend_labels.len() {
-                    cursor_y += row_gap.0;
-                }
             }
         }
 
