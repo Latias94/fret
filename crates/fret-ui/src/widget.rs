@@ -409,6 +409,22 @@ pub trait Widget<H: UiHost> {
     fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
         true
     }
+    /// Whether this node should be included in the semantics snapshot.
+    ///
+    /// This is a mechanism-only gate used to model `present=false` (display-none) subtrees that
+    /// should not be exposed to assistive tech, while still keeping element state alive (e.g.
+    /// Radix-style `forceMount`).
+    ///
+    /// Default: `true`.
+    fn semantics_present(&self) -> bool {
+        true
+    }
+    /// Whether semantics snapshot traversal should recurse into this node's children.
+    ///
+    /// Default: `true`.
+    fn semantics_children(&self) -> bool {
+        true
+    }
     /// Whether focus traversal should recurse into this node's children.
     ///
     /// This is a mechanism-only gate used by `UiTree` to model "inert" subtrees during

@@ -627,14 +627,16 @@ impl<H: UiHost> UiTree<H> {
                 return Some(id);
             }
 
-            if let Some(node) = self.nodes.get(id)
-                && node
+            if let Some(node) = self.nodes.get(id) {
+                let traverse_children = node
                     .widget
                     .as_ref()
-                    .is_some_and(|w| w.focus_traversal_children())
-            {
-                for &child in node.children.iter().rev() {
-                    stack.push(child);
+                    .map(|w| w.focus_traversal_children())
+                    .unwrap_or(true);
+                if traverse_children {
+                    for &child in node.children.iter().rev() {
+                        stack.push(child);
+                    }
                 }
             }
         }
@@ -679,7 +681,8 @@ impl<H: UiHost> UiTree<H> {
                     .nodes
                     .get(id)
                     .and_then(|n| n.widget.as_ref())
-                    .is_some_and(|w| w.focus_traversal_children());
+                    .map(|w| w.focus_traversal_children())
+                    .unwrap_or(true);
                 let focusable = self
                     .nodes
                     .get(id)
@@ -812,10 +815,12 @@ impl<H: UiHost> UiTree<H> {
             out.push(node);
         }
 
-        if n.widget
+        let traverse_children = n
+            .widget
             .as_ref()
-            .is_some_and(|w| w.focus_traversal_children())
-        {
+            .map(|w| w.focus_traversal_children())
+            .unwrap_or(true);
+        if traverse_children {
             for &child in &n.children {
                 self.collect_focusables(child, active_layers, scope_bounds, out);
             }
@@ -1151,6 +1156,9 @@ impl<H: UiHost> UiTree<H> {
                 let Some(node) = self.nodes.get_mut(id) else {
                     continue;
                 };
+                if node.widget.as_ref().is_some_and(|w| !w.semantics_present()) {
+                    continue;
+                }
                 let parent = node.parent;
                 let bounds = node.bounds;
                 let children = node.children.as_slice();
@@ -1190,11 +1198,6 @@ impl<H: UiHost> UiTree<H> {
                     set_value: is_text_input,
                     set_text_selection: is_text_input,
                 };
-
-                // Preserve a stable-ish order: visit children in declared order.
-                for &child in children.iter().rev() {
-                    stack.push(child);
-                }
 
                 // Allow widgets to override semantics metadata.
                 if let Some(widget) = node.widget.as_mut() {
@@ -1255,6 +1258,18 @@ impl<H: UiHost> UiTree<H> {
                     described_by,
                     controls,
                 });
+
+                let traverse_children = node
+                    .widget
+                    .as_ref()
+                    .map(|w| w.semantics_children())
+                    .unwrap_or(true);
+                if traverse_children {
+                    // Preserve a stable-ish order: visit children in declared order.
+                    for &child in children.iter().rev() {
+                        stack.push(child);
+                    }
+                }
             }
         }
 

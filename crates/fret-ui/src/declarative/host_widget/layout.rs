@@ -56,6 +56,14 @@ impl ElementHostWidget {
             ElementInstance::Spinner(_) => false,
             _ => true,
         };
+        self.semantics_present = match &instance {
+            ElementInstance::InteractivityGate(p) => p.present,
+            _ => true,
+        };
+        self.semantics_children = match &instance {
+            ElementInstance::InteractivityGate(p) => p.present,
+            _ => true,
+        };
         self.focus_traversal_children = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,
