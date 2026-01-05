@@ -1230,7 +1230,7 @@ impl MenubarMenuEntries {
                                                             let submenu_for_item =
                                                                 submenu_for_content.clone();
                                                             let trigger_registry =
-                                                                trigger_registry_for_overlay.clone();
+                                                                trigger_registry_for_overlay_for_content.clone();
 
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
@@ -1360,7 +1360,7 @@ impl MenubarMenuEntries {
                                                             let submenu_for_item =
                                                                 submenu_for_content.clone();
                                                             let trigger_registry =
-                                                                trigger_registry_for_overlay.clone();
+                                                                trigger_registry_for_overlay_for_content.clone();
 
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
@@ -1506,7 +1506,7 @@ impl MenubarMenuEntries {
                                                               let submenu_for_item =
                                                                   submenu_for_content.clone();
                                                               let trigger_registry =
-                                                                  trigger_registry_for_overlay.clone();
+                                                                  trigger_registry_for_overlay_for_content.clone();
                                                              let value = item.value.clone();
                                                              let pad_left =
                                                                  if item.inset { pad_x_inset } else { pad_x };
