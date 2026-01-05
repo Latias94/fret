@@ -29,6 +29,7 @@ This contract is documented in ADR 0099.
 - [x] Zoom (mouse wheel, `Shift`/`Ctrl` axis modifiers)
 - [x] Box zoom (Shift + drag)
 - [x] Query selection (Alt + drag) stored in `PlotState.query`
+- [x] Query/zoom drag shows range readout tooltip
 - [x] Crosshair visible when cursor is inside plot
 - [x] Cursor coordinate tooltip visible when cursor is inside plot
 - [~] Series value readout (cursor X -> per-series Y; currently implemented via sorted-by-x interpolation)

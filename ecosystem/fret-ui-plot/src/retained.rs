@@ -1124,6 +1124,8 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     y_axis_ticks: AxisTicks,
     x_axis_labels: AxisLabelFormatter,
     y_axis_labels: AxisLabelFormatter,
+    tooltip_x_labels: AxisLabelFormatter,
+    tooltip_y_labels: AxisLabelFormatter,
     layer: L,
     hover: Option<PlotHover>,
     plot_state: PlotState,
@@ -1206,6 +1208,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             y_axis_ticks: AxisTicks::default(),
             x_axis_labels: AxisLabelFormatter::default(),
             y_axis_labels: AxisLabelFormatter::default(),
+            tooltip_x_labels: AxisLabelFormatter::default(),
+            tooltip_y_labels: AxisLabelFormatter::default(),
             layer,
             hover: None,
             plot_state: PlotState::default(),
@@ -1236,13 +1240,17 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
     pub fn x_axis_format(mut self, format: AxisLabelFormat) -> Self {
         self.x_axis_ticks = format.ticks();
-        self.x_axis_labels = format.labels();
+        let labels = format.labels();
+        self.x_axis_labels = labels.clone();
+        self.tooltip_x_labels = labels;
         self
     }
 
     pub fn y_axis_format(mut self, format: AxisLabelFormat) -> Self {
         self.y_axis_ticks = format.ticks();
-        self.y_axis_labels = format.labels();
+        let labels = format.labels();
+        self.y_axis_labels = labels.clone();
+        self.tooltip_y_labels = labels;
         self
     }
 
@@ -1257,12 +1265,24 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
     }
 
     pub fn x_axis_labels(mut self, labels: AxisLabelFormatter) -> Self {
-        self.x_axis_labels = labels;
+        self.x_axis_labels = labels.clone();
+        self.tooltip_x_labels = labels;
         self
     }
 
     pub fn y_axis_labels(mut self, labels: AxisLabelFormatter) -> Self {
-        self.y_axis_labels = labels;
+        self.y_axis_labels = labels.clone();
+        self.tooltip_y_labels = labels;
+        self
+    }
+
+    pub fn tooltip_x_labels(mut self, labels: AxisLabelFormatter) -> Self {
+        self.tooltip_x_labels = labels;
+        self
+    }
+
+    pub fn tooltip_y_labels(mut self, labels: AxisLabelFormatter) -> Self {
+        self.tooltip_y_labels = labels;
         self
     }
 
@@ -2831,27 +2851,48 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         //
         // Behavior: show cursor coordinates when the cursor is inside the plot. If a series is
         // hovered, show a richer tooltip for that series.
-        let is_selection_drag_active =
-            self.box_zoom_start.is_some() || self.query_drag_start.is_some();
-        if !is_selection_drag_active {
-            let x_span = (view_bounds.x_max - view_bounds.x_min).abs();
-            let y_span = (view_bounds.y_max - view_bounds.y_min).abs();
+        let x_span = (view_bounds.x_max - view_bounds.x_min).abs();
+        let y_span = (view_bounds.y_max - view_bounds.y_min).abs();
 
-            let cursor_px = self.cursor_px;
-            let cursor_data = cursor_px.and_then(|cursor_px| {
-                if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
-                    return None;
-                }
-                let transform = PlotTransform {
-                    viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
-                    data: view_bounds,
-                };
-                let data = transform.px_to_data(cursor_px);
-                (data.x.is_finite() && data.y.is_finite()).then_some(data)
-            });
+        let selection_tooltip = if let (Some(start), Some(end)) =
+            (self.query_drag_start, self.query_drag_current)
+        {
+            query_rect_from_plot_points_raw(view_bounds, layout.plot.size, start, end).map(|rect| {
+                let x0 = self.tooltip_x_labels.format(rect.x_min, x_span);
+                let x1 = self.tooltip_x_labels.format(rect.x_max, x_span);
+                let y0 = self.tooltip_y_labels.format(rect.y_min, y_span);
+                let y1 = self.tooltip_y_labels.format(rect.y_max, y_span);
+                let text = format!("query\nx=[{x0}, {x1}]\ny=[{y0}, {y1}]");
+                (end, text)
+            })
+        } else if let (Some(start), Some(end)) = (self.box_zoom_start, self.box_zoom_current) {
+            query_rect_from_plot_points_raw(view_bounds, layout.plot.size, start, end).map(|rect| {
+                let x0 = self.tooltip_x_labels.format(rect.x_min, x_span);
+                let x1 = self.tooltip_x_labels.format(rect.x_max, x_span);
+                let y0 = self.tooltip_y_labels.format(rect.y_min, y_span);
+                let y1 = self.tooltip_y_labels.format(rect.y_max, y_span);
+                let text = format!("zoom\nx=[{x0}, {x1}]\ny=[{y0}, {y1}]");
+                (end, text)
+            })
+        } else {
+            None
+        };
 
-            let tooltip = self
-                .hover
+        let cursor_px = self.cursor_px;
+        let cursor_data = cursor_px.and_then(|cursor_px| {
+            if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+                return None;
+            }
+            let transform = PlotTransform {
+                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
+                data: view_bounds,
+            };
+            let data = transform.px_to_data(cursor_px);
+            (data.x.is_finite() && data.y.is_finite()).then_some(data)
+        });
+
+        let tooltip = selection_tooltip.or_else(|| {
+            self.hover
                 .map(|hover| {
                     let (series_count, series_label) = self
                         .model
@@ -2862,8 +2903,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         })
                         .unwrap_or((0, None));
 
-                    let x_text = self.x_axis_labels.format(hover.data.x, x_span);
-                    let y_text = self.y_axis_labels.format(hover.data.y, y_span);
+                    let x_text = self.tooltip_x_labels.format(hover.data.x, x_span);
+                    let y_text = self.tooltip_y_labels.format(hover.data.y, y_span);
                     let text = if series_count > 1 {
                         if let Some(label) = series_label {
                             format!("{label}  x={x_text}  y={y_text}")
@@ -2891,16 +2932,24 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         readout_rows.retain(|r| r.series_id == pinned);
                     }
 
-                    let x_text = self.x_axis_labels.format(cursor_data.x, x_span);
-                    let y_text = self.y_axis_labels.format(cursor_data.y, y_span);
+                    let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
+                    let y_text = self.tooltip_y_labels.format(cursor_data.y, y_span);
                     let mut text = format!("x={x_text}  y={y_text}");
                     for row in readout_rows {
                         let y_text = row
                             .y
                             .filter(|y| y.is_finite())
-                            .map(|y| self.y_axis_labels.format(y, y_span))
+                            .map(|y| self.tooltip_y_labels.format(y, y_span))
                             .unwrap_or_else(|| "NA".to_string());
                         text.push_str(&format!("\n{}: y={y_text}", row.label));
+                    }
+
+                    if let Some(query) = state.query {
+                        let x0 = self.tooltip_x_labels.format(query.x_min, x_span);
+                        let x1 = self.tooltip_x_labels.format(query.x_max, x_span);
+                        let y0 = self.tooltip_y_labels.format(query.y_min, y_span);
+                        let y1 = self.tooltip_y_labels.format(query.y_max, y_span);
+                        text.push_str(&format!("\nquery: x=[{x0}, {x1}]  y=[{y0}, {y1}]"));
                     }
 
                     Some((cursor_px, text))
@@ -2938,103 +2987,111 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         readout_rows.retain(|r| r.series_id == pinned);
                     }
 
-                    let x_text = self.x_axis_labels.format(linked_x, x_span);
+                    let x_text = self.tooltip_x_labels.format(linked_x, x_span);
                     let mut text = format!("x={x_text}");
                     for row in readout_rows {
                         let y_text = row
                             .y
                             .filter(|y| y.is_finite())
-                            .map(|y| self.y_axis_labels.format(y, y_span))
+                            .map(|y| self.tooltip_y_labels.format(y, y_span))
                             .unwrap_or_else(|| "NA".to_string());
                         text.push_str(&format!("\n{}: y={y_text}", row.label));
                     }
 
+                    if let Some(query) = state.query {
+                        let x0 = self.tooltip_x_labels.format(query.x_min, x_span);
+                        let x1 = self.tooltip_x_labels.format(query.x_max, x_span);
+                        let y0 = self.tooltip_y_labels.format(query.y_min, y_span);
+                        let y1 = self.tooltip_y_labels.format(query.y_max, y_span);
+                        text.push_str(&format!("\nquery: x=[{x0}, {x1}]  y=[{y0}, {y1}]"));
+                    }
+
                     Some((anchor_local, text))
+                })
+        });
+
+        if let Some((anchor_local, text)) = tooltip {
+            let font_size = cx
+                .theme()
+                .metric_by_key("font.size")
+                .unwrap_or(cx.theme().metrics.font_size);
+            let style = TextStyle {
+                font: FontId::default(),
+                size: Px((font_size.0 * 0.90).max(10.0)),
+                weight: FontWeight::NORMAL,
+                line_height: None,
+                letter_spacing_em: None,
+            };
+            let constraints = TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor,
+            };
+
+            let mut key = 0u64;
+            key = Self::hash_u64(key, theme.revision);
+            key = Self::hash_u64(key, font_stack_key);
+            key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
+            for b in text.as_bytes() {
+                key = Self::hash_u64(key, u64::from(*b));
+            }
+            key = Self::hash_u64(key, Self::text_style_key(&style));
+
+            let needs = self.tooltip_text.as_ref().is_none_or(|t| t.key != key);
+            if needs {
+                if let Some(prev) = self.tooltip_text.take() {
+                    cx.services.text().release(prev.blob);
+                }
+                let prepared = self.prepare_text(cx.services, &text, &style, constraints);
+                self.tooltip_text = Some(PreparedText {
+                    blob: prepared.blob,
+                    metrics: prepared.metrics,
+                    key,
+                });
+            }
+
+            if let Some(tt) = self.tooltip_text {
+                let anchor = Point::new(
+                    Px(layout.plot.origin.x.0 + anchor_local.x.0),
+                    Px(layout.plot.origin.y.0 + anchor_local.y.0),
+                );
+                let pad = Px(6.0);
+                let gap = Px(10.0);
+                let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
+                let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
+
+                let mut x = Px(anchor.x.0 + gap.0);
+                let mut y = Px(anchor.y.0 + gap.0);
+                if x.0 + w.0 > cx.bounds.origin.x.0 + cx.bounds.size.width.0 {
+                    x = Px(anchor.x.0 - gap.0 - w.0);
+                }
+                if y.0 + h.0 > cx.bounds.origin.y.0 + cx.bounds.size.height.0 {
+                    y = Px(anchor.y.0 - gap.0 - h.0);
+                }
+                x = Px(x.0.max(cx.bounds.origin.x.0));
+                y = Px(y.0.max(cx.bounds.origin.y.0));
+
+                let rect = Rect::new(Point::new(x, y), Size::new(w, h));
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(20),
+                    rect,
+                    background: tooltip_background,
+                    border: fret_core::Edges::all(Px(1.0)),
+                    border_color: tooltip_border,
+                    corner_radii: fret_core::Corners::all(Px(6.0)),
                 });
 
-            if let Some((anchor_local, text)) = tooltip {
-                let font_size = cx
-                    .theme()
-                    .metric_by_key("font.size")
-                    .unwrap_or(cx.theme().metrics.font_size);
-                let style = TextStyle {
-                    font: FontId::default(),
-                    size: Px((font_size.0 * 0.90).max(10.0)),
-                    weight: FontWeight::NORMAL,
-                    line_height: None,
-                    letter_spacing_em: None,
-                };
-                let constraints = TextConstraints {
-                    max_width: None,
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    scale_factor: cx.scale_factor,
-                };
-
-                let mut key = 0u64;
-                key = Self::hash_u64(key, theme.revision);
-                key = Self::hash_u64(key, font_stack_key);
-                key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
-                for b in text.as_bytes() {
-                    key = Self::hash_u64(key, u64::from(*b));
-                }
-                key = Self::hash_u64(key, Self::text_style_key(&style));
-
-                let needs = self.tooltip_text.as_ref().is_none_or(|t| t.key != key);
-                if needs {
-                    if let Some(prev) = self.tooltip_text.take() {
-                        cx.services.text().release(prev.blob);
-                    }
-                    let prepared = self.prepare_text(cx.services, &text, &style, constraints);
-                    self.tooltip_text = Some(PreparedText {
-                        blob: prepared.blob,
-                        metrics: prepared.metrics,
-                        key,
-                    });
-                }
-
-                if let Some(tt) = self.tooltip_text {
-                    let anchor = Point::new(
-                        Px(layout.plot.origin.x.0 + anchor_local.x.0),
-                        Px(layout.plot.origin.y.0 + anchor_local.y.0),
-                    );
-                    let pad = Px(6.0);
-                    let gap = Px(10.0);
-                    let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
-                    let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
-
-                    let mut x = Px(anchor.x.0 + gap.0);
-                    let mut y = Px(anchor.y.0 + gap.0);
-                    if x.0 + w.0 > cx.bounds.origin.x.0 + cx.bounds.size.width.0 {
-                        x = Px(anchor.x.0 - gap.0 - w.0);
-                    }
-                    if y.0 + h.0 > cx.bounds.origin.y.0 + cx.bounds.size.height.0 {
-                        y = Px(anchor.y.0 - gap.0 - h.0);
-                    }
-                    x = Px(x.0.max(cx.bounds.origin.x.0));
-                    y = Px(y.0.max(cx.bounds.origin.y.0));
-
-                    let rect = Rect::new(Point::new(x, y), Size::new(w, h));
-                    cx.scene.push(SceneOp::Quad {
-                        order: DrawOrder(20),
-                        rect,
-                        background: tooltip_background,
-                        border: fret_core::Edges::all(Px(1.0)),
-                        border_color: tooltip_border,
-                        corner_radii: fret_core::Corners::all(Px(6.0)),
-                    });
-
-                    let origin = Point::new(
-                        Px(rect.origin.x.0 + pad.0),
-                        Px(rect.origin.y.0 + pad.0 + tt.metrics.baseline.0),
-                    );
-                    cx.scene.push(SceneOp::Text {
-                        order: DrawOrder(21),
-                        origin,
-                        text: tt.blob,
-                        color: tooltip_text_color,
-                    });
-                }
+                let origin = Point::new(
+                    Px(rect.origin.x.0 + pad.0),
+                    Px(rect.origin.y.0 + pad.0 + tt.metrics.baseline.0),
+                );
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(21),
+                    origin,
+                    text: tt.blob,
+                    color: tooltip_text_color,
+                });
             }
         }
     }
