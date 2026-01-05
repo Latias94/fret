@@ -11,6 +11,7 @@ pub mod first_frame_smoke_demo;
 pub mod image_upload_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ime_smoke_demo;
+pub mod linked_cursor_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot3d_demo;
 pub mod plot_demo;

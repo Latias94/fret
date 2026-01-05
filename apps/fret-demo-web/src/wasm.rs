@@ -14,6 +14,7 @@ enum Demo {
     BarsDemo,
     AreaDemo,
     StairsDemo,
+    LinkedCursorDemo,
 }
 
 fn select_demo() -> Demo {
@@ -37,6 +38,9 @@ fn select_demo() -> Demo {
     }
     if hash.contains("stairs_demo") || search.contains("demo=stairs_demo") {
         return Demo::StairsDemo;
+    }
+    if hash.contains("linked_cursor_demo") || search.contains("demo=linked_cursor_demo") {
+        return Demo::LinkedCursorDemo;
     }
 
     Demo::ComponentsGallery
@@ -82,6 +86,13 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::stairs_demo::build_runner_config();
             config.main_window_title = "fret-demo stairs_demo (web)".to_string();
             let driver = fret_examples::stairs_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::LinkedCursorDemo => {
+            let app = fret_examples::linked_cursor_demo::build_app();
+            let mut config = fret_examples::linked_cursor_demo::build_runner_config();
+            config.main_window_title = "fret-demo linked_cursor_demo (web)".to_string();
+            let driver = fret_examples::linked_cursor_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
     }

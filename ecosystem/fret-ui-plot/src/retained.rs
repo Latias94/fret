@@ -998,6 +998,11 @@ pub struct PlotState {
     pub view_bounds: Option<DataRect>,
     /// If true, the plot view is derived from `data_bounds` each frame (auto-fit).
     pub view_is_auto: bool,
+    /// An externally linked cursor position in data space.
+    ///
+    /// This is typically written by a plot coordinator (e.g. `LinkedPlotGroup`) so that other plots
+    /// can render a synchronized cursor without requiring pointer hover in each plot.
+    pub linked_cursor_x: Option<f32>,
     /// User-controlled series visibility.
     pub hidden_series: HashSet<SeriesId>,
     /// Optional pinned series ID for emphasis and tooltip pinning.
@@ -1011,6 +1016,7 @@ impl Default for PlotState {
         Self {
             view_bounds: None,
             view_is_auto: true,
+            linked_cursor_x: None,
             hidden_series: HashSet::new(),
             pinned_series: None,
             query: None,
@@ -1166,6 +1172,39 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 *s = next;
             });
         }
+    }
+
+    fn publish_current_output_snapshot<H: UiHost>(
+        &mut self,
+        app: &mut H,
+        layout: PlotLayout,
+        state: &PlotState,
+        view_bounds: DataRect,
+    ) {
+        let cursor_data = self.cursor_px.and_then(|cursor_px| {
+            if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+                return None;
+            }
+            let transform = PlotTransform {
+                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
+                data: view_bounds,
+            };
+            let data = transform.px_to_data(cursor_px);
+            (data.x.is_finite() && data.y.is_finite()).then_some(data)
+        });
+
+        self.publish_plot_output(
+            app,
+            PlotOutputSnapshot {
+                view_bounds,
+                cursor: cursor_data,
+                hover: self.hover.map(|h| PlotHoverOutput {
+                    series_id: h.series_id,
+                    data: h.data,
+                }),
+                query: state.query,
+            },
+        );
     }
 
     fn current_view_bounds<H: UiHost>(&self, app: &mut H, state: &PlotState) -> DataRect {
@@ -1522,6 +1561,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let _ = self.update_plot_state(cx.app, |s| {
                         s.view_is_auto = true;
                         s.view_bounds = None;
+                        s.linked_cursor_x = None;
                         s.hidden_series.clear();
                         s.pinned_series = None;
                         s.query = None;
@@ -2043,6 +2083,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                 }
+
+                // Publish interaction output eagerly so linked-plot coordinators can react to
+                // pointer movement without waiting for the next paint.
+                let state = self.read_plot_state(cx.app);
+                let view_bounds = self.current_view_bounds(cx.app, &state);
+                self.publish_current_output_snapshot(cx.app, layout, &state, view_bounds);
             }
             _ => {}
         }
@@ -2241,6 +2287,40 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     border_color: Color::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
+            }
+            // Linked cursor (typically driven by `LinkedPlotGroup`).
+            if self.cursor_px.is_none()
+                && let Some(linked_x) = state.linked_cursor_x
+                && linked_x.is_finite()
+            {
+                let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+                let transform = PlotTransform {
+                    viewport: local_viewport,
+                    data: view_bounds,
+                };
+                let px = transform.data_to_px(DataPoint {
+                    x: linked_x,
+                    y: view_bounds.y_min,
+                });
+                if px.x.0.is_finite() {
+                    let x0 = px.x.0.clamp(0.0, layout.plot.size.width.0);
+                    let x = Px((layout.plot.origin.x.0 + x0).round());
+                    let linked_color = Color {
+                        a: (crosshair_color.a * 0.55).clamp(0.05, 1.0),
+                        ..crosshair_color
+                    };
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(3),
+                        rect: Rect::new(
+                            Point::new(x, layout.plot.origin.y),
+                            Size::new(Px(1.0), layout.plot.size.height),
+                        ),
+                        background: linked_color,
+                        border: fret_core::Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+                }
             }
 
             if let Some(hover) = self.hover {
@@ -2622,11 +2702,57 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         {
                             text.push_str(&format!("\n{}: y={:.3}", row.label, y));
                         } else {
-                            text.push_str(&format!("\n{}: y=—", row.label));
+                            text.push_str(&format!("\n{}: y=NA", row.label));
                         }
                     }
 
                     Some((cursor_px, text))
+                })
+                .or_else(|| {
+                    let linked_x = state.linked_cursor_x?;
+                    if !linked_x.is_finite() {
+                        return None;
+                    }
+
+                    let transform = PlotTransform {
+                        viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
+                        data: view_bounds,
+                    };
+                    let linked_px = transform.data_to_px(DataPoint {
+                        x: linked_x,
+                        y: view_bounds.y_min,
+                    });
+                    if !linked_px.x.0.is_finite() {
+                        return None;
+                    }
+
+                    let anchor_local = Point::new(
+                        Px(linked_px.x.0.clamp(0.0, layout.plot.size.width.0)),
+                        Px(0.0),
+                    );
+
+                    let hidden = &state.hidden_series;
+                    let mut readout_rows = self
+                        .model
+                        .read(cx.app, |_app, m| L::cursor_readout(m, linked_x, hidden))
+                        .unwrap_or_default();
+
+                    if let Some(pinned) = state.pinned_series {
+                        readout_rows.retain(|r| r.series_id == pinned);
+                    }
+
+                    let mut text = format!("x={:.3}", linked_x);
+                    for row in readout_rows {
+                        if let Some(y) = row.y
+                            && y.is_finite()
+                        {
+                            text.push_str(&format!("\n{}: y={:.3}", row.label, y));
+                        } else {
+                            text.push_str(&format!("\n{}: y=NA", row.label));
+                        }
+                    }
+
+                    Some((anchor_local, text))
                 });
 
             if let Some((anchor_local, text)) = tooltip {

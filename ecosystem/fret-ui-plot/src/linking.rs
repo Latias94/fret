@@ -7,6 +7,7 @@ use crate::retained::{PlotOutput, PlotOutputSnapshot, PlotState};
 pub struct PlotLinkPolicy {
     pub view_bounds: bool,
     pub query: bool,
+    pub cursor_x: bool,
 }
 
 impl Default for PlotLinkPolicy {
@@ -14,6 +15,7 @@ impl Default for PlotLinkPolicy {
         Self {
             view_bounds: true,
             query: true,
+            cursor_x: true,
         }
     }
 }
@@ -108,9 +110,13 @@ impl LinkedPlotGroup {
             }
         }
 
-        // Second pass: pick the first member that changed (and is not suppressed) as the source.
+        // Second pass: pick a source member that changed (and is not suppressed).
+        //
+        // Heuristic: prefer a member that currently has a cursor (useful when the pointer moves
+        // between plots, where one plot clears cursor while another gains it in the same tick).
         let mut source_index: Option<usize> = None;
         let mut source_snapshot: Option<PlotOutputSnapshot> = None;
+        let mut source_score: i32 = -1;
         for i in 0..self.members.len() {
             let Some(out) = outputs.get(i).and_then(|o| *o) else {
                 continue;
@@ -119,9 +125,12 @@ impl LinkedPlotGroup {
             if out.revision != mem.last_output_revision {
                 mem.last_output_revision = out.revision;
                 if !mem.ignore_next_output_revision {
-                    source_index = Some(i);
-                    source_snapshot = Some(out.snapshot);
-                    break;
+                    let score = if out.snapshot.cursor.is_some() { 1 } else { 0 };
+                    if score > source_score {
+                        source_index = Some(i);
+                        source_snapshot = Some(out.snapshot);
+                        source_score = score;
+                    }
                 }
             }
         }
@@ -143,32 +152,66 @@ impl LinkedPlotGroup {
 
             let state = &self.members[i].state;
             let policy = self.policy;
+            use std::cell::Cell;
+            let did_change = Cell::new(false);
+            let should_ignore = Cell::new(false);
             let ok = state
                 .update(app, |s, _cx| {
-                    apply_snapshot_to_plot_state(s, source_snapshot, policy);
+                    let r = apply_snapshot_to_plot_state(s, source_snapshot, policy);
+                    did_change.set(r.changed);
+                    should_ignore.set(r.should_ignore_output_once);
                 })
                 .is_ok();
 
-            if ok {
+            if ok && did_change.get() {
                 let mem = &mut self.memory[i];
                 mem.last_output_revision = out.revision;
-                mem.ignore_next_output_revision = true;
+                mem.ignore_next_output_revision = should_ignore.get();
             }
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ApplyResult {
+    changed: bool,
+    should_ignore_output_once: bool,
 }
 
 fn apply_snapshot_to_plot_state(
     state: &mut PlotState,
     snapshot: PlotOutputSnapshot,
     policy: PlotLinkPolicy,
-) {
+) -> ApplyResult {
+    let mut changed = false;
+    let mut should_ignore = false;
+
     if policy.view_bounds {
-        state.view_is_auto = false;
-        state.view_bounds = Some(snapshot.view_bounds);
+        if state.view_is_auto || state.view_bounds != Some(snapshot.view_bounds) {
+            state.view_is_auto = false;
+            state.view_bounds = Some(snapshot.view_bounds);
+            changed = true;
+            should_ignore = true;
+        }
     }
     if policy.query {
-        state.query = snapshot.query;
+        if state.query != snapshot.query {
+            state.query = snapshot.query;
+            changed = true;
+            should_ignore = true;
+        }
+    }
+    if policy.cursor_x {
+        let next = snapshot.cursor.map(|c| c.x);
+        if state.linked_cursor_x != next {
+            state.linked_cursor_x = next;
+            changed = true;
+        }
+    }
+
+    ApplyResult {
+        changed,
+        should_ignore_output_once: should_ignore,
     }
 }
 

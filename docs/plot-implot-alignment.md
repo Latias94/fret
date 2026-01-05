@@ -33,8 +33,8 @@ This contract is documented in ADR 0099.
 - [x] Cursor coordinate tooltip visible when cursor is inside plot
 - [~] Series value readout (cursor X -> per-series Y; currently implemented via sorted-by-x interpolation)
 - [x] Legend interaction: hide/solo/pin (basic)
-- [ ] Cursor linking across plots (vertical cursor + per-series readout at X)
-- [ ] Selection/query linking across plots (built on top of `LinkedPlotGroup`)
+- [x] Cursor linking across plots (vertical cursor + per-series readout at X)
+- [x] Selection/query linking across plots (built on top of `LinkedPlotGroup`)
 - [ ] Keyboard shortcuts matrix (document + align with ImPlot defaults)
 
 ## Data & identity
@@ -80,8 +80,9 @@ This contract is documented in ADR 0099.
 
 - [x] `plot_demo` (desktop + web)
 - [x] `bars_demo` (desktop + web)
+- [x] `linked_cursor_demo` (desktop + web)
 - [x] Desktop-only stress harness (large datasets)
-- [ ] Linked plots demo (multiple plots with shared view/query)
+- [x] Linked plots demo (covered by `linked_cursor_demo`)
 
 ## Next steps (recommended order)
 
