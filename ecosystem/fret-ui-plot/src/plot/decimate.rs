@@ -13,6 +13,291 @@ pub(crate) struct SamplePoint {
     pub(crate) plot_px: Point,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct BandPoint {
+    index: usize,
+    upper: DataPoint,
+    lower: DataPoint,
+    upper_px: Point,
+    lower_px: Point,
+}
+
+pub(crate) fn decimate_shaded_band(
+    transform: PlotTransform,
+    upper: &dyn SeriesData,
+    lower: &dyn SeriesData,
+    scale_factor: f32,
+    series_id: SeriesId,
+) -> (
+    Vec<PathCommand>,
+    Vec<PathCommand>,
+    Vec<PathCommand>,
+    Vec<SamplePoint>,
+) {
+    let mut fill_commands: Vec<PathCommand> = Vec::new();
+    let mut upper_commands: Vec<PathCommand> = Vec::new();
+    let mut lower_commands: Vec<PathCommand> = Vec::new();
+    let mut samples: Vec<SamplePoint> = Vec::new();
+
+    let mut segment: Vec<BandPoint> = Vec::new();
+
+    let bucket_of = |x: Px| -> i32 {
+        let x = x.0 * scale_factor.max(1.0);
+        if !x.is_finite() { 0 } else { x.floor() as i32 }
+    };
+
+    let mut flush_segment = |segment: &mut Vec<BandPoint>| {
+        if segment.is_empty() {
+            return;
+        }
+
+        if segment.len() == 1 {
+            let p = segment[0];
+            upper_commands.push(PathCommand::MoveTo(p.upper_px));
+            lower_commands.push(PathCommand::MoveTo(p.lower_px));
+            samples.push(SamplePoint {
+                series_id,
+                index: p.index,
+                data: p.upper,
+                plot_px: p.upper_px,
+            });
+            samples.push(SamplePoint {
+                series_id,
+                index: p.index,
+                data: p.lower,
+                plot_px: p.lower_px,
+            });
+            segment.clear();
+            return;
+        }
+
+        let first = segment[0];
+        let last = *segment.last().expect("non-empty segment");
+
+        upper_commands.push(PathCommand::MoveTo(first.upper_px));
+        lower_commands.push(PathCommand::MoveTo(first.lower_px));
+        samples.push(SamplePoint {
+            series_id,
+            index: first.index,
+            data: first.upper,
+            plot_px: first.upper_px,
+        });
+        samples.push(SamplePoint {
+            series_id,
+            index: first.index,
+            data: first.lower,
+            plot_px: first.lower_px,
+        });
+
+        let mut band_points: Vec<BandPoint> = Vec::new();
+        band_points.push(first);
+
+        let mut last_emitted_idx = first.index;
+        let mut last_upper_px = first.upper_px;
+        let mut last_lower_px = first.lower_px;
+
+        {
+            let mut emit = |p: BandPoint| {
+                if p.index <= last_emitted_idx {
+                    return;
+                }
+
+                if p.upper_px == last_upper_px && p.lower_px == last_lower_px {
+                    last_emitted_idx = p.index;
+                    return;
+                }
+
+                upper_commands.push(PathCommand::LineTo(p.upper_px));
+                lower_commands.push(PathCommand::LineTo(p.lower_px));
+                samples.push(SamplePoint {
+                    series_id,
+                    index: p.index,
+                    data: p.upper,
+                    plot_px: p.upper_px,
+                });
+                samples.push(SamplePoint {
+                    series_id,
+                    index: p.index,
+                    data: p.lower,
+                    plot_px: p.lower_px,
+                });
+                band_points.push(p);
+
+                last_emitted_idx = p.index;
+                last_upper_px = p.upper_px;
+                last_lower_px = p.lower_px;
+            };
+
+            let mut current_bucket: Option<i32> = None;
+            let mut min_upper: Option<BandPoint> = None;
+            let mut max_upper: Option<BandPoint> = None;
+            let mut min_lower: Option<BandPoint> = None;
+            let mut max_lower: Option<BandPoint> = None;
+
+            let mut flush_bucket =
+                |min_upper: Option<BandPoint>,
+                 max_upper: Option<BandPoint>,
+                 min_lower: Option<BandPoint>,
+                 max_lower: Option<BandPoint>| {
+                    let mut candidates: Vec<BandPoint> = Vec::new();
+                    for p in [min_upper, max_upper, min_lower, max_lower] {
+                        if let Some(p) = p {
+                            candidates.push(p);
+                        }
+                    }
+
+                    candidates.sort_by_key(|p| p.index);
+                    candidates.dedup_by_key(|p| p.index);
+
+                    for p in candidates {
+                        emit(p);
+                    }
+                };
+
+            for p in segment
+                .iter()
+                .copied()
+                .skip(1)
+                .take(segment.len().saturating_sub(2))
+            {
+                let b = bucket_of(p.upper_px.x);
+                if current_bucket != Some(b) {
+                    flush_bucket(
+                        min_upper.take(),
+                        max_upper.take(),
+                        min_lower.take(),
+                        max_lower.take(),
+                    );
+                    current_bucket = Some(b);
+                    min_upper = Some(p);
+                    max_upper = Some(p);
+                    min_lower = Some(p);
+                    max_lower = Some(p);
+                    continue;
+                }
+
+                if let Some(m) = min_upper
+                    && p.upper_px.y.0.is_finite()
+                    && m.upper_px.y.0.is_finite()
+                    && p.upper_px.y.0 < m.upper_px.y.0
+                {
+                    min_upper = Some(p);
+                }
+                if let Some(m) = max_upper
+                    && p.upper_px.y.0.is_finite()
+                    && m.upper_px.y.0.is_finite()
+                    && p.upper_px.y.0 > m.upper_px.y.0
+                {
+                    max_upper = Some(p);
+                }
+                if let Some(m) = min_lower
+                    && p.lower_px.y.0.is_finite()
+                    && m.lower_px.y.0.is_finite()
+                    && p.lower_px.y.0 < m.lower_px.y.0
+                {
+                    min_lower = Some(p);
+                }
+                if let Some(m) = max_lower
+                    && p.lower_px.y.0.is_finite()
+                    && m.lower_px.y.0.is_finite()
+                    && p.lower_px.y.0 > m.lower_px.y.0
+                {
+                    max_lower = Some(p);
+                }
+            }
+
+            flush_bucket(
+                min_upper.take(),
+                max_upper.take(),
+                min_lower.take(),
+                max_lower.take(),
+            );
+        }
+
+        if last.index > last_emitted_idx {
+            if last.upper_px == last_upper_px && last.lower_px == last_lower_px {
+                // Keep hover indices monotonic even if the endpoint collapses.
+                samples.push(SamplePoint {
+                    series_id,
+                    index: last.index,
+                    data: last.upper,
+                    plot_px: last.upper_px,
+                });
+                samples.push(SamplePoint {
+                    series_id,
+                    index: last.index,
+                    data: last.lower,
+                    plot_px: last.lower_px,
+                });
+            } else {
+                upper_commands.push(PathCommand::LineTo(last.upper_px));
+                lower_commands.push(PathCommand::LineTo(last.lower_px));
+                samples.push(SamplePoint {
+                    series_id,
+                    index: last.index,
+                    data: last.upper,
+                    plot_px: last.upper_px,
+                });
+                samples.push(SamplePoint {
+                    series_id,
+                    index: last.index,
+                    data: last.lower,
+                    plot_px: last.lower_px,
+                });
+                band_points.push(last);
+            }
+        }
+
+        if band_points.len() >= 2 {
+            fill_commands.push(PathCommand::MoveTo(band_points[0].upper_px));
+            for p in band_points.iter().copied().skip(1) {
+                fill_commands.push(PathCommand::LineTo(p.upper_px));
+            }
+            for p in band_points.iter().rev().copied() {
+                fill_commands.push(PathCommand::LineTo(p.lower_px));
+            }
+            fill_commands.push(PathCommand::Close);
+        }
+
+        segment.clear();
+    };
+
+    let len = upper.len().min(lower.len());
+    for idx in 0..len {
+        let (Some(u), Some(l)) = (upper.get(idx), lower.get(idx)) else {
+            flush_segment(&mut segment);
+            continue;
+        };
+        if !u.x.is_finite() || !u.y.is_finite() || !l.x.is_finite() || !l.y.is_finite() {
+            flush_segment(&mut segment);
+            continue;
+        }
+
+        let u_px = transform.data_to_px(u);
+        let l_px = transform.data_to_px(l);
+        if !u_px.x.0.is_finite()
+            || !u_px.y.0.is_finite()
+            || !l_px.x.0.is_finite()
+            || !l_px.y.0.is_finite()
+        {
+            flush_segment(&mut segment);
+            continue;
+        }
+
+        segment.push(BandPoint {
+            index: idx,
+            upper: u,
+            lower: l,
+            upper_px: u_px,
+            lower_px: l_px,
+        });
+    }
+
+    flush_segment(&mut segment);
+
+    (fill_commands, upper_commands, lower_commands, samples)
+}
+
 pub(crate) fn decimate_samples(
     transform: PlotTransform,
     points: &dyn SeriesData,

@@ -55,7 +55,8 @@ This contract is documented in ADR 0099.
 - [x] Line plot
 - [x] Scatter plot (marker crosses)
 - [x] Bars plot (filled rectangles)
-- [x] Area / Shaded
+- [x] Area (fill to baseline)
+- [x] Shaded band (fill between upper/lower series)
 - [x] Stairs / Step
 - [ ] Heatmap
 - [ ] Error bars
@@ -80,6 +81,9 @@ This contract is documented in ADR 0099.
 
 - [x] `plot_demo` (desktop + web)
 - [x] `bars_demo` (desktop + web)
+- [x] `area_demo` (desktop + web)
+- [x] `stairs_demo` (desktop + web)
+- [x] `shaded_demo` (desktop + web)
 - [x] `linked_cursor_demo` (desktop + web)
 - [x] Desktop-only stress harness (large datasets)
 - [x] Linked plots demo (covered by `linked_cursor_demo`)
@@ -87,6 +91,5 @@ This contract is documented in ADR 0099.
 ## Next steps (recommended order)
 
 1. Cursor linking UX (vertical cursor + per-series readout at X).
-2. Add `Area/Shaded` and `Stairs/Step` plot layers.
-3. Axis formatting (time + custom formatters).
-4. Expand plot type set (heatmap, error bars, candlesticks).
+2. Axis formatting (time + custom formatters).
+3. Expand plot type set (heatmap, error bars, candlesticks).

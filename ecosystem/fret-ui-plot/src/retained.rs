@@ -16,7 +16,9 @@ use std::sync::Arc;
 
 use crate::cartesian::{DataPoint, DataRect, PlotTransform};
 use crate::plot::axis::linear_ticks;
-use crate::plot::decimate::{SamplePoint, decimate_polyline, decimate_samples};
+use crate::plot::decimate::{
+    SamplePoint, decimate_polyline, decimate_samples, decimate_shaded_band,
+};
 use crate::plot::grid::GridLines;
 use crate::plot::view::{
     clamp_view_to_data, clamp_zoom_factors, data_rect_from_plot_points, data_rect_key,
@@ -599,6 +601,22 @@ struct CachedAreaPath {
     samples: Vec<SamplePoint>,
 }
 
+#[derive(Debug)]
+struct CachedShadedPath {
+    fill_id: Option<PathId>,
+    upper_stroke_id: Option<PathId>,
+    lower_stroke_id: Option<PathId>,
+    series_id: SeriesId,
+    model_revision: u64,
+    scale_factor_bits: u32,
+    viewport_w_bits: u32,
+    viewport_h_bits: u32,
+    stroke_width: Px,
+    view_key: u64,
+    fill_alpha_bits: u32,
+    samples: Vec<SamplePoint>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlotHover {
     pub series_id: SeriesId,
@@ -938,6 +956,81 @@ impl AreaPlotModel {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ShadedSeries {
+    pub id: SeriesId,
+    pub label: Arc<str>,
+    pub upper: Series,
+    pub lower: Series,
+    pub fill_color: Option<Color>,
+    pub fill_alpha: f32,
+    pub stroke_color: Option<Color>,
+}
+
+impl ShadedSeries {
+    pub fn new(label: impl Into<Arc<str>>, upper: Series, lower: Series) -> Self {
+        let label = label.into();
+        Self {
+            id: SeriesId::from_label(&label),
+            label,
+            upper,
+            lower,
+            fill_color: None,
+            fill_alpha: 0.18,
+            stroke_color: None,
+        }
+    }
+
+    pub fn fill(mut self, color: Color) -> Self {
+        self.fill_color = Some(color);
+        self
+    }
+
+    pub fn fill_alpha(mut self, alpha: f32) -> Self {
+        self.fill_alpha = alpha;
+        self
+    }
+
+    pub fn stroke(mut self, color: Color) -> Self {
+        self.stroke_color = Some(color);
+        self
+    }
+
+    pub fn id(mut self, id: SeriesId) -> Self {
+        self.id = id;
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ShadedPlotModel {
+    pub data_bounds: DataRect,
+    pub series: Vec<ShadedSeries>,
+}
+
+impl ShadedPlotModel {
+    pub fn from_series(series: Vec<ShadedSeries>) -> Self {
+        let bounds = compute_data_bounds_from_shaded_series(&series).unwrap_or(DataRect {
+            x_min: 0.0,
+            x_max: 1.0,
+            y_min: 0.0,
+            y_max: 1.0,
+        });
+
+        Self {
+            data_bounds: sanitize_data_rect(bounds),
+            series,
+        }
+    }
+
+    pub fn from_series_with_bounds(series: Vec<ShadedSeries>, data_bounds: DataRect) -> Self {
+        Self {
+            data_bounds: sanitize_data_rect(data_bounds),
+            series,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlotHoverOutput {
     pub series_id: SeriesId,
@@ -1085,6 +1178,19 @@ pub type AreaPlotCanvas = PlotCanvas<AreaPlotLayer>;
 impl PlotCanvas<AreaPlotLayer> {
     pub fn new(model: Model<AreaPlotModel>) -> Self {
         Self::with_layer(model, AreaPlotLayer::default())
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ShadedPlotLayer {
+    cached_paths: Vec<CachedShadedPath>,
+}
+
+pub type ShadedPlotCanvas = PlotCanvas<ShadedPlotLayer>;
+
+impl PlotCanvas<ShadedPlotLayer> {
+    pub fn new(model: Model<ShadedPlotModel>) -> Self {
+        Self::with_layer(model, ShadedPlotLayer::default())
     }
 }
 
@@ -3992,6 +4098,389 @@ impl PlotLayer for AreaPlotLayer {
     }
 }
 
+impl PlotLayer for ShadedPlotLayer {
+    type Model = ShadedPlotModel;
+
+    fn data_bounds(model: &Self::Model) -> DataRect {
+        model.data_bounds
+    }
+
+    fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
+        model
+            .series
+            .iter()
+            .map(|s| SeriesMeta {
+                id: s.id,
+                label: s.label.clone(),
+                stroke_color: s.stroke_color.or(s.fill_color),
+            })
+            .collect()
+    }
+
+    fn series_label(model: &Self::Model, series_id: SeriesId) -> Option<String> {
+        model
+            .series
+            .iter()
+            .find(|s| s.id == series_id)
+            .map(|s| s.label.to_string())
+    }
+
+    fn cursor_readout(
+        model: &Self::Model,
+        x: f32,
+        hidden: &HashSet<SeriesId>,
+    ) -> Vec<PlotCursorReadoutRow> {
+        if !x.is_finite() {
+            return Vec::new();
+        }
+
+        let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
+        for s in &model.series {
+            if hidden.contains(&s.id) {
+                continue;
+            }
+
+            let upper_y = interpolate_y_at_x(&*s.upper, x);
+            let lower_y = interpolate_y_at_x(&*s.lower, x);
+
+            out.push(PlotCursorReadoutRow {
+                series_id: s.id,
+                label: Arc::from(format!("{} (upper)", s.label)),
+                y: upper_y,
+            });
+            out.push(PlotCursorReadoutRow {
+                series_id: s.id,
+                label: Arc::from(format!("{} (lower)", s.label)),
+                y: lower_y,
+            });
+        }
+        out
+    }
+
+    fn paint_paths<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+    ) -> Vec<(SeriesId, PathId, Color)> {
+        let PlotPaintArgs {
+            model_revision,
+            plot,
+            view_bounds,
+            style,
+            hidden,
+        } = args;
+
+        let scale_factor_bits = cx.scale_factor.to_bits();
+        let viewport_w_bits = plot.size.width.0.to_bits();
+        let viewport_h_bits = plot.size.height.0.to_bits();
+        let view_key = data_rect_key(view_bounds);
+
+        let series = &model.series;
+        let series_count = series.len();
+
+        if series_count == 0 {
+            for cached in self.cached_paths.drain(..) {
+                if let Some(id) = cached.fill_id {
+                    cx.services.path().release(id);
+                }
+                if let Some(id) = cached.upper_stroke_id {
+                    cx.services.path().release(id);
+                }
+                if let Some(id) = cached.lower_stroke_id {
+                    cx.services.path().release(id);
+                }
+            }
+            return Vec::new();
+        }
+
+        let cached_ok = self.cached_paths.len() == series_count
+            && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                let Some(s) = series.get(i) else {
+                    return false;
+                };
+                s.id == c.series_id
+                    && c.model_revision == model_revision
+                    && c.scale_factor_bits == scale_factor_bits
+                    && c.viewport_w_bits == viewport_w_bits
+                    && c.viewport_h_bits == viewport_h_bits
+                    && c.stroke_width == style.stroke_width
+                    && c.view_key == view_key
+                    && c.fill_alpha_bits == s.fill_alpha.to_bits()
+            });
+
+        if cached_ok {
+            let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count * 3);
+            for (i, s) in series.iter().enumerate() {
+                if hidden.contains(&s.id) {
+                    continue;
+                }
+
+                let base_fill = resolve_series_color(i, style, series_count, s.fill_color);
+                let base_stroke =
+                    resolve_series_color(i, style, series_count, s.stroke_color.or(s.fill_color));
+
+                let fill_alpha = s.fill_alpha.clamp(0.0, 1.0);
+                let fill = Color {
+                    a: (base_fill.a * fill_alpha).clamp(0.0, 1.0),
+                    ..base_fill
+                };
+
+                if let Some(id) = self.cached_paths.get(i).and_then(|c| c.fill_id) {
+                    out.push((s.id, id, fill));
+                }
+                if let Some(id) = self.cached_paths.get(i).and_then(|c| c.upper_stroke_id) {
+                    out.push((s.id, id, base_stroke));
+                }
+                if let Some(id) = self.cached_paths.get(i).and_then(|c| c.lower_stroke_id) {
+                    out.push((s.id, id, base_stroke));
+                }
+            }
+            return out;
+        }
+
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.fill_id {
+                cx.services.path().release(id);
+            }
+            if let Some(id) = cached.upper_stroke_id {
+                cx.services.path().release(id);
+            }
+            if let Some(id) = cached.lower_stroke_id {
+                cx.services.path().release(id);
+            }
+        }
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+        let transform = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+        };
+
+        let fill_style = PathStyle::Fill(fret_core::FillStyle::default());
+        let stroke_style = PathStyle::Stroke(fret_core::StrokeStyle {
+            width: style.stroke_width,
+        });
+        let constraints = PathConstraints {
+            scale_factor: cx.scale_factor,
+        };
+
+        let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count * 3);
+        self.cached_paths = Vec::with_capacity(series_count);
+
+        for (series_index, s) in series.iter().enumerate() {
+            let series_id = s.id;
+            if hidden.contains(&series_id) {
+                self.cached_paths.push(CachedShadedPath {
+                    fill_id: None,
+                    upper_stroke_id: None,
+                    lower_stroke_id: None,
+                    series_id,
+                    model_revision,
+                    scale_factor_bits,
+                    viewport_w_bits,
+                    viewport_h_bits,
+                    stroke_width: style.stroke_width,
+                    view_key,
+                    fill_alpha_bits: s.fill_alpha.to_bits(),
+                    samples: Vec::new(),
+                });
+                continue;
+            }
+
+            let (fill_commands, upper_line_commands, lower_line_commands, samples) =
+                decimate_shaded_band(transform, &*s.upper, &*s.lower, cx.scale_factor, series_id);
+
+            let fill_id = if fill_commands.is_empty() {
+                None
+            } else {
+                let (id, _metrics) =
+                    cx.services
+                        .path()
+                        .prepare(&fill_commands, fill_style, constraints);
+                Some(id)
+            };
+
+            let upper_stroke_id = if upper_line_commands.is_empty() || style.stroke_width.0 <= 0.0 {
+                None
+            } else {
+                let (id, _metrics) =
+                    cx.services
+                        .path()
+                        .prepare(&upper_line_commands, stroke_style, constraints);
+                Some(id)
+            };
+
+            let lower_stroke_id = if lower_line_commands.is_empty() || style.stroke_width.0 <= 0.0 {
+                None
+            } else {
+                let (id, _metrics) =
+                    cx.services
+                        .path()
+                        .prepare(&lower_line_commands, stroke_style, constraints);
+                Some(id)
+            };
+
+            self.cached_paths.push(CachedShadedPath {
+                fill_id,
+                upper_stroke_id,
+                lower_stroke_id,
+                series_id,
+                model_revision,
+                scale_factor_bits,
+                viewport_w_bits,
+                viewport_h_bits,
+                stroke_width: style.stroke_width,
+                view_key,
+                fill_alpha_bits: s.fill_alpha.to_bits(),
+                samples,
+            });
+
+            let base_fill = resolve_series_color(series_index, style, series_count, s.fill_color);
+            let base_stroke = resolve_series_color(
+                series_index,
+                style,
+                series_count,
+                s.stroke_color.or(s.fill_color),
+            );
+
+            let fill_alpha = s.fill_alpha.clamp(0.0, 1.0);
+            let fill = Color {
+                a: (base_fill.a * fill_alpha).clamp(0.0, 1.0),
+                ..base_fill
+            };
+
+            if let Some(id) = fill_id {
+                out.push((series_id, id, fill));
+            }
+            if let Some(id) = upper_stroke_id {
+                out.push((series_id, id, base_stroke));
+            }
+            if let Some(id) = lower_stroke_id {
+                out.push((series_id, id, base_stroke));
+            }
+        }
+
+        out
+    }
+
+    fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover> {
+        let PlotHitTestArgs {
+            model_revision,
+            plot_size,
+            view_bounds,
+            scale_factor,
+            local,
+            style,
+            hover_threshold,
+            hidden,
+            pinned,
+        } = args;
+
+        let threshold = hover_threshold.0.max(0.0);
+        let threshold2 = threshold * threshold;
+
+        let scale_factor_bits = scale_factor.to_bits();
+        let viewport_w_bits = plot_size.width.0.to_bits();
+        let viewport_h_bits = plot_size.height.0.to_bits();
+        let view_key = data_rect_key(view_bounds);
+
+        let series = &model.series;
+        let series_count = series.len();
+        if series_count == 0 {
+            return None;
+        }
+
+        let cached_ok = self.cached_paths.len() == series_count
+            && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                let Some(s) = series.get(i) else {
+                    return false;
+                };
+                s.id == c.series_id
+                    && c.model_revision == model_revision
+                    && c.scale_factor_bits == scale_factor_bits
+                    && c.viewport_w_bits == viewport_w_bits
+                    && c.viewport_h_bits == viewport_h_bits
+                    && c.stroke_width == style.stroke_width
+                    && c.view_key == view_key
+            });
+
+        let mut best: Option<(SamplePoint, f32)> = None;
+        let mut consider_sample = |s: SamplePoint| {
+            let dx = s.plot_px.x.0 - local.x.0;
+            let dy = s.plot_px.y.0 - local.y.0;
+            let d2 = dx * dx + dy * dy;
+            if !d2.is_finite() {
+                return;
+            }
+            if best.is_none_or(|b| d2 < b.1) {
+                best = Some((s, d2));
+            }
+        };
+
+        if cached_ok {
+            for cached in &self.cached_paths {
+                if hidden.contains(&cached.series_id) {
+                    continue;
+                }
+                if let Some(pinned) = pinned
+                    && cached.series_id != pinned
+                {
+                    continue;
+                }
+                for s in cached.samples.iter().copied() {
+                    consider_sample(s);
+                }
+            }
+        } else {
+            let transform = PlotTransform {
+                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+                data: view_bounds,
+            };
+
+            for s in series {
+                if hidden.contains(&s.id) {
+                    continue;
+                }
+                if let Some(pinned) = pinned
+                    && pinned != s.id
+                {
+                    continue;
+                }
+
+                let (_fill, _upper, _lower, samples) =
+                    decimate_shaded_band(transform, &*s.upper, &*s.lower, scale_factor, s.id);
+                for sample in samples {
+                    consider_sample(sample);
+                }
+            }
+        }
+
+        best.and_then(|(s, d2)| {
+            (d2 <= threshold2).then_some(PlotHover {
+                series_id: s.series_id,
+                index: s.index,
+                data: s.data,
+                plot_px: s.plot_px,
+            })
+        })
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.fill_id {
+                services.path().release(id);
+            }
+            if let Some(id) = cached.upper_stroke_id {
+                services.path().release(id);
+            }
+            if let Some(id) = cached.lower_stroke_id {
+                services.path().release(id);
+            }
+        }
+    }
+}
+
 fn hash_value<T: Hash>(v: &T) -> u64 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     v.hash(&mut h);
@@ -4219,6 +4708,37 @@ fn compute_data_bounds_from_area_series(series: &[AreaSeries]) -> Option<DataRec
                 y_max: b.y_max.max(s.baseline),
                 ..b
             })
+        };
+
+        let Some(bounds) = bounds else {
+            continue;
+        };
+
+        out = Some(out.map_or(bounds, |acc| acc.union(bounds)));
+    }
+
+    out
+}
+
+fn compute_data_bounds_from_shaded_series(series: &[ShadedSeries]) -> Option<DataRect> {
+    let mut out: Option<DataRect> = None;
+
+    let series_bounds = |data: &Series| -> Option<DataRect> {
+        if let Some(hint) = data.bounds_hint() {
+            Some(hint)
+        } else if let Some(slice) = data.as_slice() {
+            DataRect::from_points(slice.iter().copied())
+        } else {
+            DataRect::from_points((0..data.len()).filter_map(|i| data.get(i)))
+        }
+    };
+
+    for s in series {
+        let bounds = match (series_bounds(&s.upper), series_bounds(&s.lower)) {
+            (Some(a), Some(b)) => Some(a.union(b)),
+            (Some(a), None) => Some(a),
+            (None, Some(b)) => Some(b),
+            (None, None) => None,
         };
 
         let Some(bounds) = bounds else {

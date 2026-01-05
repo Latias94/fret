@@ -17,6 +17,7 @@ pub mod plot3d_demo;
 pub mod plot_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot_stress_demo;
+pub mod shaded_demo;
 pub mod stairs_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;
