@@ -9,7 +9,8 @@
 
 use fret_core::{Edges, Px, Rect};
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, SizeStyle,
+    AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
+    PositionStyle, SizeStyle,
 };
 use fret_ui::{ElementContext, UiHost};
 
@@ -113,6 +114,32 @@ pub fn popper_wrapper_at_with_panel<H: UiHost>(
         let panel = popper_panel_at(cx, placed, wrapper_insets, overflow, panel);
         wrapper_children(cx, panel)
     })
+}
+
+/// Render a popper wrapper as a hover region, nesting the panel under the wrapper while still
+/// allowing wrapper siblings (like arrows) alongside the panel.
+///
+/// This is useful for hover-driven overlays (`Tooltip` / `HoverCard`) that need a hit-testable
+/// wrapper node with expanded bounds (arrow protrusion) while still keeping the panel element
+/// scoped beneath it (correct identity).
+#[track_caller]
+pub fn popper_hover_region_at_with_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    placed: Rect,
+    wrapper_insets: Edges,
+    overflow: Overflow,
+    panel: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    wrapper_children: impl FnOnce(&mut ElementContext<'_, H>, bool, AnyElement) -> Vec<AnyElement>,
+) -> AnyElement {
+    cx.hover_region(
+        HoverRegionProps {
+            layout: popper_wrapper_layout(placed, wrapper_insets),
+        },
+        move |cx, hovered| {
+            let panel = popper_panel_at(cx, placed, wrapper_insets, overflow, panel);
+            wrapper_children(cx, hovered, panel)
+        },
+    )
 }
 
 /// Render a Radix-style popper wrapper + inner panel in one helper.

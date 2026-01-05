@@ -247,11 +247,13 @@ impl HoverCard {
                 let placed = layout.rect;
                 let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
 
-                vec![cx.hover_region(
-                    HoverRegionProps {
-                        layout: popper_content::popper_wrapper_layout(placed, wrapper_insets),
-                    },
-                    move |cx, hovered| {
+                vec![popper_content::popper_hover_region_at_with_panel(
+                    cx,
+                    placed,
+                    wrapper_insets,
+                    Overflow::Visible,
+                    move |_cx| vec![content],
+                    move |cx, hovered, panel| {
                         cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                             st.overlay_hovered = hovered;
                         });
@@ -268,22 +270,10 @@ impl HoverCard {
                             },
                         );
 
-                        let content = if arrow_el.is_some() {
-                            popper_content::popper_panel_at(
-                                cx,
-                                placed,
-                                wrapper_insets,
-                                Overflow::Visible,
-                                move |_cx| vec![content],
-                            )
-                        } else {
-                            content
-                        };
-
                         if let Some(arrow_el) = arrow_el {
-                            vec![arrow_el, content]
+                            vec![arrow_el, panel]
                         } else {
-                            vec![content]
+                            vec![panel]
                         }
                     },
                 )]
