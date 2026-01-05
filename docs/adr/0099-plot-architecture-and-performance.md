@@ -64,6 +64,15 @@ Series identity must be stable across reordering, filtering, and streaming updat
 This mirrors the ID-based state strategy in `egui_plot` and the label-ID registration model in ImPlot,
 but keeps state local to the widget rather than a global context.
 
+### 2.5) Multi-axis (Y2) is a second view, not a second plot
+
+To align with common ImPlot usage while keeping contracts portable, multi-axis support is modeled as:
+
+- A per-series axis choice (`YAxis::{Left,Right}`) rather than implicit scaling.
+- A shared X range (pan/zoom in X affects all axes).
+- Independent Y view bounds per axis (`PlotState.view_bounds` and `PlotState.view_bounds_y2`), allowing
+  different scales without distorting the primary Y axis.
+
 ### 3) Data access is adapter-based (zero-copy first)
 
 To avoid forcing allocations/copies for large datasets, series data should be representable as:

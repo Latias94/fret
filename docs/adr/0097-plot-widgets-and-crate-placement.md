@@ -74,6 +74,12 @@ Instead, `fret-ui-plot` uses stable series IDs:
 - Interaction state (hidden, pinned, hover, caches) is owned by the widget/canvas and keyed by `SeriesId`
   (model data stays “data-only”).
 
+### 6) Multi-axis is explicit, not implicit
+
+When a plot needs multiple Y scales, series must opt into a specific axis (e.g. `YAxis::Left` vs
+`YAxis::Right`). The widget owns independent view state for each axis (e.g. `PlotState.view_bounds`
+and `PlotState.view_bounds_y2`) while sharing the X range.
+
 ## Design and Performance
 
 This ADR intentionally focuses on portable primitives and crate placement.

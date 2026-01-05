@@ -97,13 +97,13 @@ impl<T> LineChart<T> {
             },
         };
 
-        LinePlotModel {
-            data_bounds: bounds,
-            series: vec![LineSeries::new(
+        LinePlotModel::from_series_with_bounds(
+            vec![LineSeries::new(
                 "Series",
                 Series::from_points_sorted(points, sorted_by_x),
             )],
-        }
+            bounds,
+        )
     }
 
     pub fn install(self, host: &mut impl ModelHost) -> Model<LinePlotModel> {

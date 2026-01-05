@@ -11,7 +11,9 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui_plot::cartesian::DataPoint;
 use fret_ui_plot::plot::axis::AxisLabelFormatter;
-use fret_ui_plot::retained::{LinePlotCanvas, LinePlotStyle, LineSeries, PlotOutput, PlotState};
+use fret_ui_plot::retained::{
+    LinePlotCanvas, LinePlotStyle, LineSeries, PlotOutput, PlotState, YAxis,
+};
 use fret_ui_plot::series::Series;
 
 struct PlotDemoWindowState {
@@ -33,6 +35,7 @@ impl PlotDemoDriver {
         let mut series0: Vec<DataPoint> = Vec::with_capacity(n);
         let mut series1: Vec<DataPoint> = Vec::with_capacity(n);
         let mut series2: Vec<DataPoint> = Vec::with_capacity(n);
+        let mut series3: Vec<DataPoint> = Vec::with_capacity(n);
 
         let push = |series: &mut Vec<DataPoint>, x: f64, y: f64| {
             if !x.is_finite() || !y.is_finite() {
@@ -59,6 +62,8 @@ impl PlotDemoDriver {
                 x,
                 (x * 0.75).sin() * 0.35 + (x * 0.15).cos() * 0.10 - 0.35,
             );
+            // A "right axis" series with a very different scale (e.g. amps vs volts).
+            push(&mut series3, x, (x * 0.22).sin() * 25.0 + 10.0);
         }
 
         let plot = app
@@ -67,6 +72,11 @@ impl PlotDemoDriver {
                 LineSeries::new("signal A", Series::from_points_sorted(series0, true)),
                 LineSeries::new("signal B", Series::from_points_sorted(series1, true)),
                 LineSeries::new("signal C", Series::from_points_sorted(series2, true)),
+                LineSeries::new(
+                    "signal D (right)",
+                    Series::from_points_sorted(series3, true),
+                )
+                .y_axis(YAxis::Right),
             ]));
         let plot_state = app.models_mut().insert(PlotState::default());
         let plot_output = app.models_mut().insert(PlotOutput::default());
@@ -170,6 +180,12 @@ impl WinitAppDriver for PlotDemoDriver {
                     } else {
                         format!("{v:.2} V")
                     }
+                }))
+                .y2_axis_labels(AxisLabelFormatter::custom(0x5941u64, |v, _span| {
+                    if !v.is_finite() {
+                        return "NA".to_string();
+                    }
+                    format!("{v:.1} A")
                 }))
                 .state(state.plot_state.clone())
                 .output(state.plot_output.clone());

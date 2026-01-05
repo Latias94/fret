@@ -14,6 +14,18 @@ WebAssembly demo for the `fret` UI runtime.
 
 Then open the URL printed by Trunk (usually `http://127.0.0.1:8080`).
 
+## Select a demo
+
+By default, the web runner starts the components gallery. To launch a specific demo, use a URL
+hash or query string:
+
+- `?demo=plot_demo` (or `#plot_demo`)
+- `?demo=bars_demo` (or `#bars_demo`)
+- `?demo=area_demo` (or `#area_demo`)
+- `?demo=shaded_demo` (or `#shaded_demo`)
+- `?demo=stairs_demo` (or `#stairs_demo`)
+- `?demo=linked_cursor_demo` (or `#linked_cursor_demo`)
+
 ## Debug teardown
 
 To stop the running demo instance without reloading the page, call this from the browser console:

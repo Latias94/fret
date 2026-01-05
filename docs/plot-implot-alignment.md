@@ -73,7 +73,7 @@ This contract is documented in ADR 0099.
 - [ ] Log axis
 - [~] Axis formatters (custom label callbacks with stable cache key)
 - [x] Axis thickness auto-fit (avoid clipped labels)
-- [ ] Multi-axes (dual Y, etc.)
+- [~] Multi-axes (Y2 supported; no Y3/Y4 yet)
 - [ ] Axis lock (lock X/Y pan/zoom)
 
 ## Styling
