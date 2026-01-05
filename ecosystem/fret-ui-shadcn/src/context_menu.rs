@@ -499,7 +499,7 @@ fn menu_row_children<H: UiHost>(
             }
 
             if let Some(l) = leading.clone() {
-                row.push(l);
+                row.push(menu_icon_slot(cx, l));
             }
 
             row.push(cx.text_props(TextProps {
@@ -537,6 +537,26 @@ fn menu_row_children<H: UiHost>(
             )]
         },
     )]
+}
+
+fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(16.0));
+                layout.size.height = Length::Px(Px(16.0));
+                layout
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        move |_cx| vec![element.clone()],
+    )
 }
 
 /// shadcn/ui `ContextMenu` root (v4).
