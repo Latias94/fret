@@ -2193,108 +2193,143 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         }
 
         // Tooltip (P0: drawn in the same scene; can be moved to overlays later).
-        if let Some(hover) = self.hover {
-            let (series_count, series_label) = self
-                .model
-                .read(cx.app, |_app, m| {
-                    let series_count = L::series_meta(m).len();
-                    let series_label = L::series_label(m, hover.series_id);
-                    (series_count, series_label)
+        //
+        // Behavior: show cursor coordinates when the cursor is inside the plot. If a series is
+        // hovered, show a richer tooltip for that series.
+        let is_selection_drag_active =
+            self.box_zoom_start.is_some() || self.query_drag_start.is_some();
+        if !is_selection_drag_active {
+            let cursor_px = self.cursor_px;
+            let cursor_data = cursor_px.and_then(|cursor_px| {
+                if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+                    return None;
+                }
+                let transform = PlotTransform {
+                    viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
+                    data: view_bounds,
+                };
+                let data = transform.px_to_data(cursor_px);
+                (data.x.is_finite() && data.y.is_finite()).then_some(data)
+            });
+
+            let tooltip = self
+                .hover
+                .map(|hover| {
+                    let (series_count, series_label) = self
+                        .model
+                        .read(cx.app, |_app, m| {
+                            let series_count = L::series_meta(m).len();
+                            let series_label = L::series_label(m, hover.series_id);
+                            (series_count, series_label)
+                        })
+                        .unwrap_or((0, None));
+
+                    let text = if series_count > 1 {
+                        if let Some(label) = series_label {
+                            format!("{label}  x={:.3}  y={:.3}", hover.data.x, hover.data.y)
+                        } else {
+                            format!(
+                                "s={}  x={:.3}  y={:.3}",
+                                hover.series_id.0, hover.data.x, hover.data.y
+                            )
+                        }
+                    } else {
+                        format!("x={:.3}  y={:.3}", hover.data.x, hover.data.y)
+                    };
+                    (hover.plot_px, text)
                 })
-                .unwrap_or((0, None));
-            let font_size = cx
-                .theme()
-                .metric_by_key("font.size")
-                .unwrap_or(cx.theme().metrics.font_size);
-            let style = TextStyle {
-                font: FontId::default(),
-                size: Px((font_size.0 * 0.90).max(10.0)),
-                weight: FontWeight::NORMAL,
-                line_height: None,
-                letter_spacing_em: None,
-            };
-            let text = if series_count > 1 {
-                if let Some(label) = series_label {
-                    format!("{label}  x={:.3}  y={:.3}", hover.data.x, hover.data.y)
-                } else {
-                    format!(
-                        "s={}  x={:.3}  y={:.3}",
-                        hover.series_id.0, hover.data.x, hover.data.y
-                    )
-                }
-            } else {
-                format!("x={:.3}  y={:.3}", hover.data.x, hover.data.y)
-            };
-            let constraints = TextConstraints {
-                max_width: None,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                scale_factor: cx.scale_factor,
-            };
-
-            let mut key = 0u64;
-            key = Self::hash_u64(key, theme.revision);
-            key = Self::hash_u64(key, font_stack_key);
-            key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
-            for b in text.as_bytes() {
-                key = Self::hash_u64(key, u64::from(*b));
-            }
-            key = Self::hash_u64(key, Self::text_style_key(&style));
-
-            let needs = self.tooltip_text.as_ref().is_none_or(|t| t.key != key);
-            if needs {
-                if let Some(prev) = self.tooltip_text.take() {
-                    cx.services.text().release(prev.blob);
-                }
-                let prepared = self.prepare_text(cx.services, &text, &style, constraints);
-                self.tooltip_text = Some(PreparedText {
-                    blob: prepared.blob,
-                    metrics: prepared.metrics,
-                    key,
-                });
-            }
-
-            if let Some(tt) = self.tooltip_text {
-                let anchor = Point::new(
-                    Px(layout.plot.origin.x.0 + hover.plot_px.x.0),
-                    Px(layout.plot.origin.y.0 + hover.plot_px.y.0),
-                );
-                let pad = Px(6.0);
-                let gap = Px(10.0);
-                let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
-                let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
-
-                let mut x = Px(anchor.x.0 + gap.0);
-                let mut y = Px(anchor.y.0 + gap.0);
-                if x.0 + w.0 > cx.bounds.origin.x.0 + cx.bounds.size.width.0 {
-                    x = Px(anchor.x.0 - gap.0 - w.0);
-                }
-                if y.0 + h.0 > cx.bounds.origin.y.0 + cx.bounds.size.height.0 {
-                    y = Px(anchor.y.0 - gap.0 - h.0);
-                }
-                x = Px(x.0.max(cx.bounds.origin.x.0));
-                y = Px(y.0.max(cx.bounds.origin.y.0));
-
-                let rect = Rect::new(Point::new(x, y), Size::new(w, h));
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(20),
-                    rect,
-                    background: tooltip_background,
-                    border: fret_core::Edges::all(Px(1.0)),
-                    border_color: tooltip_border,
-                    corner_radii: fret_core::Corners::all(Px(6.0)),
+                .or_else(|| {
+                    let cursor_px = cursor_px?;
+                    let cursor_data = cursor_data?;
+                    Some((
+                        cursor_px,
+                        format!("x={:.3}  y={:.3}", cursor_data.x, cursor_data.y),
+                    ))
                 });
 
-                let origin = Point::new(
-                    Px(rect.origin.x.0 + pad.0),
-                    Px(rect.origin.y.0 + pad.0 + tt.metrics.baseline.0),
-                );
-                cx.scene.push(SceneOp::Text {
-                    order: DrawOrder(21),
-                    origin,
-                    text: tt.blob,
-                    color: tooltip_text_color,
-                });
+            if let Some((anchor_local, text)) = tooltip {
+                let font_size = cx
+                    .theme()
+                    .metric_by_key("font.size")
+                    .unwrap_or(cx.theme().metrics.font_size);
+                let style = TextStyle {
+                    font: FontId::default(),
+                    size: Px((font_size.0 * 0.90).max(10.0)),
+                    weight: FontWeight::NORMAL,
+                    line_height: None,
+                    letter_spacing_em: None,
+                };
+                let constraints = TextConstraints {
+                    max_width: None,
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: cx.scale_factor,
+                };
+
+                let mut key = 0u64;
+                key = Self::hash_u64(key, theme.revision);
+                key = Self::hash_u64(key, font_stack_key);
+                key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
+                for b in text.as_bytes() {
+                    key = Self::hash_u64(key, u64::from(*b));
+                }
+                key = Self::hash_u64(key, Self::text_style_key(&style));
+
+                let needs = self.tooltip_text.as_ref().is_none_or(|t| t.key != key);
+                if needs {
+                    if let Some(prev) = self.tooltip_text.take() {
+                        cx.services.text().release(prev.blob);
+                    }
+                    let prepared = self.prepare_text(cx.services, &text, &style, constraints);
+                    self.tooltip_text = Some(PreparedText {
+                        blob: prepared.blob,
+                        metrics: prepared.metrics,
+                        key,
+                    });
+                }
+
+                if let Some(tt) = self.tooltip_text {
+                    let anchor = Point::new(
+                        Px(layout.plot.origin.x.0 + anchor_local.x.0),
+                        Px(layout.plot.origin.y.0 + anchor_local.y.0),
+                    );
+                    let pad = Px(6.0);
+                    let gap = Px(10.0);
+                    let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
+                    let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
+
+                    let mut x = Px(anchor.x.0 + gap.0);
+                    let mut y = Px(anchor.y.0 + gap.0);
+                    if x.0 + w.0 > cx.bounds.origin.x.0 + cx.bounds.size.width.0 {
+                        x = Px(anchor.x.0 - gap.0 - w.0);
+                    }
+                    if y.0 + h.0 > cx.bounds.origin.y.0 + cx.bounds.size.height.0 {
+                        y = Px(anchor.y.0 - gap.0 - h.0);
+                    }
+                    x = Px(x.0.max(cx.bounds.origin.x.0));
+                    y = Px(y.0.max(cx.bounds.origin.y.0));
+
+                    let rect = Rect::new(Point::new(x, y), Size::new(w, h));
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(20),
+                        rect,
+                        background: tooltip_background,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: tooltip_border,
+                        corner_radii: fret_core::Corners::all(Px(6.0)),
+                    });
+
+                    let origin = Point::new(
+                        Px(rect.origin.x.0 + pad.0),
+                        Px(rect.origin.y.0 + pad.0 + tt.metrics.baseline.0),
+                    );
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(21),
+                        origin,
+                        text: tt.blob,
+                        color: tooltip_text_color,
+                    });
+                }
             }
         }
     }
