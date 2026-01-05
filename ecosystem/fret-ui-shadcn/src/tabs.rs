@@ -71,6 +71,24 @@ fn tabs_trigger_border_active(theme: &Theme) -> Color {
         .unwrap_or(theme.colors.panel_border)
 }
 
+/// Matches Radix Tabs `orientation` outcome: horizontal (default) vs vertical layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TabsOrientation {
+    #[default]
+    Horizontal,
+    Vertical,
+}
+
+/// Matches Radix Tabs `activationMode` outcome:
+/// - `Automatic`: moving focus (arrow keys) activates the tab.
+/// - `Manual`: moving focus does not activate; activation happens on click/Enter/Space.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TabsActivationMode {
+    #[default]
+    Automatic,
+    Manual,
+}
+
 #[derive(Debug, Clone)]
 pub struct TabsItem {
     value: Arc<str>,
@@ -104,6 +122,9 @@ pub struct Tabs {
     model: Model<Option<Arc<str>>>,
     items: Vec<TabsItem>,
     disabled: bool,
+    orientation: TabsOrientation,
+    activation_mode: TabsActivationMode,
+    loop_navigation: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -114,6 +135,9 @@ impl std::fmt::Debug for Tabs {
             .field("model", &"<model>")
             .field("items_len", &self.items.len())
             .field("disabled", &self.disabled)
+            .field("orientation", &self.orientation)
+            .field("activation_mode", &self.activation_mode)
+            .field("loop_navigation", &self.loop_navigation)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .finish()
@@ -126,6 +150,9 @@ impl Tabs {
             model,
             items: Vec::new(),
             disabled: false,
+            orientation: TabsOrientation::default(),
+            activation_mode: TabsActivationMode::default(),
+            loop_navigation: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -133,6 +160,22 @@ impl Tabs {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn orientation(mut self, orientation: TabsOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    pub fn activation_mode(mut self, activation_mode: TabsActivationMode) -> Self {
+        self.activation_mode = activation_mode;
+        self
+    }
+
+    /// When `true` (default), arrow key navigation loops at the ends (Radix `loop` behavior).
+    pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
+        self.loop_navigation = loop_navigation;
         self
     }
 
@@ -160,6 +203,9 @@ impl Tabs {
         let model = self.model;
         let items = self.items;
         let tabs_disabled = self.disabled;
+        let orientation = self.orientation;
+        let activation_mode = self.activation_mode;
+        let loop_navigation = self.loop_navigation;
         let chrome = self.chrome;
         let layout = self.layout;
 
@@ -177,7 +223,7 @@ impl Tabs {
         let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
         let roving = RovingFocusProps {
             enabled: !tabs_disabled,
-            wrap: true,
+            wrap: loop_navigation,
             disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
             ..Default::default()
         };
@@ -209,10 +255,13 @@ impl Tabs {
                 vec![cx.roving_flex(
                     RovingFlexProps {
                         flex: FlexProps {
-                            direction: fret_core::Axis::Horizontal,
+                            direction: match orientation {
+                                TabsOrientation::Horizontal => fret_core::Axis::Horizontal,
+                                TabsOrientation::Vertical => fret_core::Axis::Vertical,
+                            },
                             gap: Px(0.0),
                             padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Center,
+                            justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
                             ..Default::default()
@@ -221,7 +270,9 @@ impl Tabs {
                     },
                     |cx| {
                         cx.roving_nav_apg();
-                        cx.roving_select_option_arc_str(&model, values_arc.clone());
+                        if activation_mode == TabsActivationMode::Automatic {
+                            cx.roving_select_option_arc_str(&model, values_arc.clone());
+                        }
 
                         let fg_muted = tabs_list_fg_muted(&theme);
                         let fg_disabled = theme.colors.text_disabled;
@@ -261,11 +312,13 @@ impl Tabs {
                             let model = model.clone();
                             let text_style = text_style.clone();
 
-                            out.push(cx.pressable(
-                                PressableProps {
+                            out.push(cx.pressable_with_id_props(move |cx, st, _id| {
+                                cx.pressable_set_option_arc_str(&model, value.clone());
+
+                                let props = PressableProps {
                                     layout: trigger_layout,
                                     enabled: !item_disabled,
-                                    focusable: tab_stop,
+                                    focusable: tab_stop || st.focused,
                                     focus_ring: Some(ring),
                                     a11y: PressableA11y {
                                         role: Some(SemanticsRole::Tab),
@@ -274,41 +327,40 @@ impl Tabs {
                                         ..Default::default()
                                     },
                                     ..Default::default()
-                                },
-                                move |cx, _state| {
-                                    cx.pressable_set_option_arc_str(&model, value.clone());
+                                };
 
-                                    vec![cx.container(
-                                        ContainerProps {
-                                            padding: Edges {
-                                                top: pad_y,
-                                                right: pad_x,
-                                                bottom: pad_y,
-                                                left: pad_x,
-                                            },
-                                            background: bg,
-                                            shadow,
-                                            border: border.map_or_else(
-                                                || Edges::all(Px(0.0)),
-                                                |_| Edges::all(Px(1.0)),
-                                            ),
-                                            border_color: border,
-                                            corner_radii: Corners::all(radius),
-                                            ..Default::default()
+                                let children = vec![cx.container(
+                                    ContainerProps {
+                                        padding: Edges {
+                                            top: pad_y,
+                                            right: pad_x,
+                                            bottom: pad_y,
+                                            left: pad_x,
                                         },
-                                        move |cx| {
-                                            vec![cx.text_props(TextProps {
-                                                layout: Default::default(),
-                                                text: label,
-                                                style: Some(text_style.clone()),
-                                                color: Some(fg),
-                                                wrap: TextWrap::None,
-                                                overflow: TextOverflow::Clip,
-                                            })]
-                                        },
-                                    )]
-                                },
-                            ));
+                                        background: bg,
+                                        shadow,
+                                        border: border.map_or_else(
+                                            || Edges::all(Px(0.0)),
+                                            |_| Edges::all(Px(1.0)),
+                                        ),
+                                        border_color: border,
+                                        corner_radii: Corners::all(radius),
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        vec![cx.text_props(TextProps {
+                                            layout: Default::default(),
+                                            text: label,
+                                            style: Some(text_style.clone()),
+                                            color: Some(fg),
+                                            wrap: TextWrap::None,
+                                            overflow: TextOverflow::Clip,
+                                        })]
+                                    },
+                                )];
+
+                                (props, children)
+                            }));
                         }
                         out
                     },
@@ -326,7 +378,10 @@ impl Tabs {
 
             vec![cx.flex(
                 FlexProps {
-                    direction: fret_core::Axis::Vertical,
+                    direction: match orientation {
+                        TabsOrientation::Horizontal => fret_core::Axis::Vertical,
+                        TabsOrientation::Vertical => fret_core::Axis::Horizontal,
+                    },
                     gap,
                     padding: Edges::all(Px(0.0)),
                     justify: MainAlign::Start,
@@ -346,4 +401,152 @@ pub fn tabs<H: UiHost>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<TabsItem>,
 ) -> AnyElement {
     Tabs::new(model).items(f(cx)).into_element(cx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, Modifiers, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService,
+    };
+    use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_ui::tree::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        activation_mode: TabsActivationMode,
+    ) -> fret_core::NodeId {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "tabs", |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![Tabs::new(model)
+                    .activation_mode(activation_mode)
+                    .items(items)
+                    .into_element(cx)]
+            });
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    #[test]
+    fn tabs_manual_activation_does_not_change_model_on_arrow_navigation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            TabsActivationMode::Manual,
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable tab");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            TabsActivationMode::Manual,
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focus = snap.focus.expect("focus");
+        let focused_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focus)
+            .expect("focused node");
+        assert_eq!(focused_node.role, SemanticsRole::Tab);
+        assert_eq!(focused_node.label.as_deref(), Some("Beta"));
+    }
 }
