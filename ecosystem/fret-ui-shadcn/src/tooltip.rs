@@ -9,7 +9,7 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
 };
 use std::sync::Arc;
@@ -21,6 +21,31 @@ use fret_ui::element::{AnyElement, HoverRegionProps, LayoutStyle, Overflow, Text
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
+fn tooltip_text_fg(theme: &Theme) -> fret_core::Color {
+    theme
+        .color_by_key("background")
+        .unwrap_or(theme.colors.surface_background)
+}
+
+fn tooltip_text_style(theme: &Theme) -> TextStyle {
+    let px = theme
+        .metric_by_key("component.tooltip.text_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or(Px(12.0));
+    let line_height = theme
+        .metric_by_key("component.tooltip.line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or(Px(16.0));
+
+    TextStyle {
+        font: fret_core::FontId::default(),
+        size: px,
+        weight: fret_core::FontWeight::NORMAL,
+        line_height: Some(line_height),
+        letter_spacing_em: None,
+    }
+}
+
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
     // shadcn/ui v4 (2025-09-22): tooltip uses `bg-foreground text-background`.
     let bg = theme
@@ -28,10 +53,10 @@ fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
         .unwrap_or(theme.colors.text_primary);
 
     ChromeRefinement::default()
-        .rounded(Radius::Sm)
+        .rounded(Radius::Md)
         .bg(ColorRef::Color(bg))
         .px(Space::N3)
-        .py(Space::N2)
+        .py(Space::N1p5)
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -564,25 +589,16 @@ impl TooltipContent {
         let theme = Theme::global(&*cx.app).clone();
         let text = text.into();
 
-        let text_style = TextStyle {
-            font: fret_core::FontId::default(),
-            size: theme.metrics.font_size,
-            weight: fret_core::FontWeight::NORMAL,
-            line_height: Some(theme.metrics.font_line_height),
-            letter_spacing_em: None,
-        };
-
-        let fg = theme
-            .color_by_key("background")
-            .unwrap_or(theme.colors.surface_background);
+        let text_style = tooltip_text_style(&theme);
+        let fg = tooltip_text_fg(&theme);
 
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text,
             style: Some(text_style),
             color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
         })
     }
 
@@ -601,10 +617,7 @@ impl TooltipContent {
 
         let base_layout = LayoutRefinement::default().flex_shrink_0();
         let chrome = tooltip_content_chrome(&theme).merge(self.chrome);
-        let mut props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
-
-        let radius = MetricRef::radius(Radius::Md).resolve(&theme);
-        props.shadow = Some(decl_style::shadow_sm(&theme, radius));
+        let props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
         let children = self.children;
         shadcn_layout::container_flow(cx, props, children)
     }
@@ -627,7 +640,7 @@ mod tests {
         ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
         TextProps,
     };
-    use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
+    use fret_ui::overlay_placement::{anchored_panel_bounds_sized, Align, Side};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -715,12 +728,10 @@ mod tests {
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
 
-                vec![
-                    Tooltip::new(trigger, content)
-                        .open_delay_frames(30)
-                        .close_delay_frames(30)
-                        .into_element(cx),
-                ]
+                vec![Tooltip::new(trigger, content)
+                    .open_delay_frames(30)
+                    .close_delay_frames(30)
+                    .into_element(cx)]
             });
 
         ui.set_root(root);
@@ -852,11 +863,9 @@ mod tests {
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
-                            vec![
-                                Tooltip::new(trigger, content)
-                                    .close_delay_frames(2)
-                                    .into_element(cx),
-                            ]
+                            vec![Tooltip::new(trigger, content)
+                                .close_delay_frames(2)
+                                .into_element(cx)]
                         })
                 },
             );
@@ -1041,88 +1050,85 @@ mod tests {
         ) {
             OverlayController::begin_frame(app, window);
 
-            let root =
-                fret_ui::declarative::render_root(
-                    ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                    "test",
-                    |cx| {
-                        TooltipProvider::new()
-                            .delay_duration_frames(10)
-                            .skip_delay_duration_frames(30)
-                            .with(cx, |cx| {
-                                vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
-                                    let trigger_1 = cx.pressable_with_id(
-                                        PressableProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Px(Px(120.0));
-                                                layout.size.height = Length::Px(Px(40.0));
-                                                layout
-                                            },
-                                            enabled: true,
-                                            focusable: true,
-                                            a11y: PressableA11y {
-                                                role: Some(SemanticsRole::Button),
-                                                label: Some(Arc::from("trigger_1")),
-                                                ..Default::default()
-                                            },
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "test",
+                |cx| {
+                    TooltipProvider::new()
+                        .delay_duration_frames(10)
+                        .skip_delay_duration_frames(30)
+                        .with(cx, |cx| {
+                            vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                                let trigger_1 = cx.pressable_with_id(
+                                    PressableProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        enabled: true,
+                                        focusable: true,
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: Some(Arc::from("trigger_1")),
                                             ..Default::default()
                                         },
-                                        |cx, _st, _id| {
-                                            vec![cx.container(ContainerProps::default(), |_cx| {
-                                                Vec::new()
-                                            })]
-                                        },
-                                    );
+                                        ..Default::default()
+                                    },
+                                    |cx, _st, _id| {
+                                        vec![cx
+                                            .container(ContainerProps::default(), |_cx| Vec::new())]
+                                    },
+                                );
 
-                                    let trigger_2 = cx.pressable_with_id(
-                                        PressableProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Px(Px(120.0));
-                                                layout.size.height = Length::Px(Px(40.0));
-                                                layout
-                                            },
-                                            enabled: true,
-                                            focusable: true,
-                                            a11y: PressableA11y {
-                                                role: Some(SemanticsRole::Button),
-                                                label: Some(Arc::from("trigger_2")),
-                                                ..Default::default()
-                                            },
+                                let trigger_2 = cx.pressable_with_id(
+                                    PressableProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        enabled: true,
+                                        focusable: true,
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: Some(Arc::from("trigger_2")),
                                             ..Default::default()
                                         },
-                                        |cx, _st, _id| {
-                                            vec![cx.container(ContainerProps::default(), |_cx| {
-                                                Vec::new()
-                                            })]
-                                        },
-                                    );
+                                        ..Default::default()
+                                    },
+                                    |cx, _st, _id| {
+                                        vec![cx
+                                            .container(ContainerProps::default(), |_cx| Vec::new())]
+                                    },
+                                );
 
-                                    let content_1 = TooltipContent::new(vec![
-                                        cx.text_props(TextProps::new("tip_1")),
-                                    ])
-                                    .into_element(cx);
-                                    content_1_id_out.set(Some(content_1.id));
+                                let content_1 = TooltipContent::new(vec![
+                                    cx.text_props(TextProps::new("tip_1"))
+                                ])
+                                .into_element(cx);
+                                content_1_id_out.set(Some(content_1.id));
 
-                                    let content_2 = TooltipContent::new(vec![
-                                        cx.text_props(TextProps::new("tip_2")),
-                                    ])
-                                    .into_element(cx);
-                                    content_2_id_out.set(Some(content_2.id));
+                                let content_2 = TooltipContent::new(vec![
+                                    cx.text_props(TextProps::new("tip_2"))
+                                ])
+                                .into_element(cx);
+                                content_2_id_out.set(Some(content_2.id));
 
-                                    vec![
-                                        Tooltip::new(trigger_1, content_1).into_element(cx),
-                                        Tooltip::new(trigger_2, content_2).into_element(cx),
-                                    ]
-                                })]
-                            })
-                    },
-                );
+                                vec![
+                                    Tooltip::new(trigger_1, content_1).into_element(cx),
+                                    Tooltip::new(trigger_2, content_2).into_element(cx),
+                                ]
+                            })]
+                        })
+                },
+            );
 
             ui.set_root(root);
             OverlayController::render(ui, app, services, window, bounds);
@@ -1304,13 +1310,11 @@ mod tests {
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
-                            vec![
-                                Tooltip::new(trigger, content)
-                                    .open_delay_frames(0)
-                                    .close_delay_frames(0)
-                                    .disable_hoverable_content(false)
-                                    .into_element(cx),
-                            ]
+                            vec![Tooltip::new(trigger, content)
+                                .open_delay_frames(0)
+                                .close_delay_frames(0)
+                                .disable_hoverable_content(false)
+                                .into_element(cx)]
                         })
                 },
             );
@@ -1472,15 +1476,13 @@ mod tests {
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
-                            vec![
-                                Tooltip::new(trigger, content)
-                                    .open_delay_frames(0)
-                                    .close_delay_frames(0)
-                                    .side(TooltipSide::Top)
-                                    .side_offset(Px(120.0))
-                                    .disable_hoverable_content(true)
-                                    .into_element(cx),
-                            ]
+                            vec![Tooltip::new(trigger, content)
+                                .open_delay_frames(0)
+                                .close_delay_frames(0)
+                                .side(TooltipSide::Top)
+                                .side_offset(Px(120.0))
+                                .disable_hoverable_content(true)
+                                .into_element(cx)]
                         })
                 },
             );

@@ -6,8 +6,8 @@ examples in `repo-ref/ui`.
 ## Upstream references (source of truth)
 
 - Docs page: `repo-ref/ui/apps/v4/content/docs/components/tooltip.mdx`
-- Reference implementation (Radix base): `repo-ref/ui/apps/v4/registry/bases/radix/ui/tooltip.tsx`
-- Reference examples: `repo-ref/ui/apps/v4/registry/bases/radix/examples/tooltip-example.tsx`
+- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx`
+- Underlying primitive: Radix `@radix-ui/react-tooltip`
 
 Key upstream notes:
 
@@ -48,9 +48,14 @@ Key upstream notes:
 ### Visual defaults (shadcn parity)
 
 - Pass: Default tooltip background aligns with upstream (`foreground`).
+- Pass: Default rounding and padding match the wrapper (`rounded-md`, `px-3`, `py-1.5`).
+- Pass: `TooltipContent::text(...)` defaults to `text-xs`-like sizing via `component.tooltip.text_px`
+  (fallback `12px`) and a `16px` line height.
 - Partial: Default “text color inheritance” is not a first-class concept; `TooltipContent::text(...)`
   sets `background` as the text color, but rich children must set colors explicitly for now.
 - Pass: Arrow is implemented and enabled by default (can be disabled via `Tooltip::arrow(false)`).
+- Partial: Upstream includes zoom/slide animations keyed off `data-state` and `data-side`; Fret uses
+  deterministic hover intent timing without animation (by design).
 
 ## Follow-ups (recommended)
 
