@@ -67,8 +67,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Popover title text defaults to `popover.foreground` / `popover-foreground` (best-effort),
   matching `text-popover-foreground` semantics.
 - Partial: Upstream content has open/close + side-based slide/zoom animations; Fret includes
-  fade + zoom (best-effort), including a geometry-driven transform origin aligned to the
-  anchor/arrow, but does not yet model side-based slide.
+  fade + zoom + side-based slide (best-effort), including a geometry-driven transform origin
+  aligned to the anchor/arrow.
 
 ## Validation
 

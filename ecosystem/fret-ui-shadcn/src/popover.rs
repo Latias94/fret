@@ -24,6 +24,19 @@ use fret_ui_kit::{
 
 use crate::layout as shadcn_layout;
 
+fn popover_slide_delta(side: Side, opacity: f32) -> (Px, Px) {
+    // shadcn/ui v4 uses `slide-in-from-*-2` (8px) keyed off `data-side`.
+    // We model this by shifting the wrapper layout, keeping interactive hit-testing aligned.
+    let slide = Px(8.0);
+    let t = 1.0 - opacity.clamp(0.0, 1.0);
+    match side {
+        Side::Top => (Px(0.0), Px(slide.0 * t)),
+        Side::Bottom => (Px(0.0), Px(-slide.0 * t)),
+        Side::Left => (Px(slide.0 * t), Px(0.0)),
+        Side::Right => (Px(-slide.0 * t), Px(0.0)),
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
     Start,
@@ -262,6 +275,9 @@ impl Popover {
                         anchor,
                         arrow.then_some(arrow_size),
                     );
+                    let (slide_dx, slide_dy) = popover_slide_delta(layout.side, opacity);
+                    let origin =
+                        Point::new(Px(origin.x.0 + slide_dx.0), Px(origin.y.0 + slide_dy.0));
 
                     // shadcn/ui v4 uses a small zoom-in (95% -> 100%) plus opacity transitions.
                     // We approximate that with a fade-driven zoom transform around a popper-style
@@ -279,13 +295,26 @@ impl Popover {
                         .color_by_key("border")
                         .unwrap_or(theme.colors.panel_border);
 
-                    let wrapper = popper_content::popper_wrapper_at_with_panel(
-                        cx,
-                        placed,
-                        wrapper_insets,
-                        Overflow::Visible,
-                        move |_cx| vec![content],
-                        move |cx, content| {
+                    let mut wrapper_layout =
+                        popper_content::popper_wrapper_layout(placed, wrapper_insets);
+                    wrapper_layout.inset.left =
+                        wrapper_layout.inset.left.map(|v| Px(v.0 + slide_dx.0));
+                    wrapper_layout.inset.top =
+                        wrapper_layout.inset.top.map(|v| Px(v.0 + slide_dy.0));
+
+                    let wrapper = cx.container(
+                        ContainerProps {
+                            layout: wrapper_layout,
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let panel = popper_content::popper_panel_at(
+                                cx,
+                                placed,
+                                wrapper_insets,
+                                Overflow::Visible,
+                                move |_cx| vec![content],
+                            );
                             let arrow_el = popper_arrow::diamond_arrow_element(
                                 cx,
                                 &layout,
@@ -299,9 +328,9 @@ impl Popover {
                             );
 
                             if let Some(arrow_el) = arrow_el {
-                                vec![arrow_el, content]
+                                vec![arrow_el, panel]
                             } else {
-                                vec![content]
+                                vec![panel]
                             }
                         },
                     );
