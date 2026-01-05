@@ -1,0 +1,10 @@
+[package]
+name = "fret-ui-plot3d"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
+

@@ -128,7 +128,8 @@ This keeps the model as "data only" and makes interaction memory resilient to st
 This ADR covers 2D plots rendered via portable scene primitives.
 
 If we want "real 3D" (depth-correct, GPU-friendly), we should treat Plot3D as an embedded viewport surface
-and follow the existing engine viewport architecture. See ADR 0098.
+and follow the existing engine viewport architecture. The UI-facing crate lives in
+`ecosystem/fret-ui-plot3d`; see ADR 0098.
 
 ## Alternatives
 

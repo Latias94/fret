@@ -41,8 +41,8 @@ This yields:
 
 - `fret-ui-plot` remains focused on 2D primitives.
 - Plot3D becomes either:
-  - a separate ecosystem crate (e.g. `fret-ui-plot3d`) that is data-only and UI-facing, plus a runner/host
-    integration crate that is wgpu-facing, or
+  - a separate ecosystem crate (`ecosystem/fret-ui-plot3d`) that is UI-facing and data-only, plus a runner/host
+    integration layer that is wgpu-facing, or
   - an app-owned integration using existing viewport APIs (no additional framework code), with optional
     helper glue provided later.
 

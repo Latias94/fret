@@ -1337,6 +1337,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-ui-plot3d"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+]
+
+[[package]]
 name = "fret-ui-shadcn"
 version = "0.1.0"
 dependencies = [
