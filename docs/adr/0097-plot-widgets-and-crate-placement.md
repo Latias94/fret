@@ -106,6 +106,13 @@ Prefer a split between a generic substrate and small chart wrappers:
 
 This mirrors GPUI component's design and keeps high-entropy features isolated per chart type.
 
+## 3D Scope
+
+This ADR covers 2D plots rendered via portable scene primitives.
+
+If we want "real 3D" (depth-correct, GPU-friendly), we should treat Plot3D as an embedded viewport surface
+and follow the existing engine viewport architecture. See ADR 0098.
+
 ## Alternatives
 
 ### A) Implement plots in `fret-ui-shadcn`
@@ -161,3 +168,4 @@ should remain retained and cache-driven.
 - `egui_plot` reference (vendored): `repo-ref/egui_plot`
 - ImPlot reference (vendored): `repo-ref/implot`
 - ImPlot3D reference (vendored): `repo-ref/implot3d`
+- Plot3D rendering strategy: `docs/adr/0098-plot3d-rendering-strategy.md`
