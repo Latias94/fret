@@ -603,6 +603,7 @@ pub struct CommandList {
     items: Vec<CommandItem>,
     disabled: bool,
     empty_text: Arc<str>,
+    highlight_query: Option<Model<String>>,
     scroll: LayoutRefinement,
 }
 
@@ -623,6 +624,7 @@ impl CommandList {
             items,
             disabled: false,
             empty_text: Arc::from("No results."),
+            highlight_query: None,
             scroll: LayoutRefinement::default()
                 .max_h(MetricRef::Px(Px(300.0)))
                 .w_full()
@@ -640,180 +642,204 @@ impl CommandList {
         self
     }
 
+    /// Provide an optional query model to render cmdk-style match highlighting for default rows.
+    ///
+    /// This is intended for legacy/roving lists that want cmdk-like visuals without adopting the
+    /// full `CommandPalette` surface.
+    pub fn highlight_query_model(mut self, model: Model<String>) -> Self {
+        self.highlight_query = Some(model);
+        self
+    }
+
     pub fn refine_scroll_layout(mut self, layout: LayoutRefinement) -> Self {
         self.scroll = self.scroll.merge(layout);
         self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let disabled = self.disabled;
-        let items = self.items;
+        cx.scope(|cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let disabled = self.disabled;
+            let items = self.items;
+            let highlight_query = self.highlight_query;
 
-        // Note: `CommandList` is a simple list rendering helper (legacy roving-style semantics).
-        // `CommandPalette` is the cmdk-style implementation that keeps focus in the input and
-        // drives highlight via `active_descendant` (ADR 0073).
-        if items.is_empty() {
-            let empty = self.empty_text;
-            let fg = theme.colors.text_muted;
-            let text_style = item_text_style(&theme);
-            return cx.container(ContainerProps::default(), move |cx| {
-                vec![cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: empty,
-                    style: Some(text_style),
-                    color: Some(fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                })]
-            });
-        }
+            // Note: `CommandList` is a simple list rendering helper (legacy roving-style semantics).
+            // `CommandPalette` is the cmdk-style implementation that keeps focus in the input and
+            // drives highlight via `active_descendant` (ADR 0073).
+            if items.is_empty() {
+                let empty = self.empty_text;
+                let fg = theme.colors.text_muted;
+                let text_style = item_text_style(&theme);
+                return cx.container(ContainerProps::default(), move |cx| {
+                    vec![cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: empty,
+                        style: Some(text_style),
+                        color: Some(fg),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    })]
+                });
+            }
 
-        let disabled_flags: Vec<bool> = items.iter().map(|i| disabled || i.disabled).collect();
-        let tab_stop = roving_focus::first_enabled(&disabled_flags);
+            let query_for_render: Arc<str> = highlight_query
+                .as_ref()
+                .and_then(|model| {
+                    cx.watch_model(model)
+                        .layout()
+                        .read_ref(|s| s.trim().to_ascii_lowercase())
+                        .ok()
+                })
+                .and_then(|trimmed| (!trimmed.is_empty()).then(|| Arc::<str>::from(trimmed)))
+                .unwrap_or_else(|| Arc::from(""));
 
-        let roving = RovingFocusProps {
-            enabled: !disabled,
-            wrap: true,
-            disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
-            ..Default::default()
-        };
+            let disabled_flags: Vec<bool> = items.iter().map(|i| disabled || i.disabled).collect();
+            let tab_stop = roving_focus::first_enabled(&disabled_flags);
 
-        let row_h = MetricRef::space(Space::N8).resolve(&theme);
-        let row_gap = MetricRef::space(Space::N2).resolve(&theme);
-        let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-        let pad_y = MetricRef::space(Space::N1).resolve(&theme);
-        let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
-        let ring = decl_style::focus_ring(&theme, radius);
-        let bg_hover = item_bg_hover(&theme);
-        let fg = theme
-            .color_by_key("foreground")
-            .unwrap_or(theme.colors.text_primary);
-        let text_style = item_text_style(&theme);
-        let item_layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default()
-                .w_full()
-                .min_h(MetricRef::Px(row_h))
-                .min_w_0(),
-        );
-
-        let scroll = self.scroll;
-
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::ListBox,
+            let roving = RovingFocusProps {
+                enabled: !disabled,
+                wrap: true,
+                disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
                 ..Default::default()
-            },
-            move |cx| {
-                vec![
-                    ScrollArea::new(vec![cx.roving_flex(
-                        RovingFlexProps {
-                            flex: FlexProps {
-                                layout: {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
-                                    layout.size.min_height = Some(Px(0.0));
-                                    layout
+            };
+
+            let row_h = MetricRef::space(Space::N8).resolve(&theme);
+            let row_gap = MetricRef::space(Space::N2).resolve(&theme);
+            let pad_x = MetricRef::space(Space::N2).resolve(&theme);
+            let pad_y = MetricRef::space(Space::N1).resolve(&theme);
+            let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
+            let ring = decl_style::focus_ring(&theme, radius);
+            let bg_hover = item_bg_hover(&theme);
+            let fg = theme
+                .color_by_key("foreground")
+                .unwrap_or(theme.colors.text_primary);
+            let text_style = item_text_style(&theme);
+            let item_layout = decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_h(MetricRef::Px(row_h))
+                    .min_w_0(),
+            );
+
+            let scroll = self.scroll;
+
+            cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::ListBox,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        ScrollArea::new(vec![cx.roving_flex(
+                            RovingFlexProps {
+                                flex: FlexProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.min_height = Some(Px(0.0));
+                                        layout
+                                    },
+                                    direction: fret_core::Axis::Vertical,
+                                    gap: Px(0.0),
+                                    padding: Edges::all(Px(0.0)),
+                                    justify: MainAlign::Start,
+                                    align: CrossAlign::Stretch,
+                                    wrap: false,
+                                    ..Default::default()
                                 },
-                                direction: fret_core::Axis::Vertical,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Stretch,
-                                wrap: false,
-                                ..Default::default()
+                                roving,
                             },
-                            roving,
-                        },
                             move |cx| {
                                 cx.roving_nav_apg();
                                 let mut out = Vec::with_capacity(items.len());
 
                                 for (idx, item) in items.into_iter().enumerate() {
-                                let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                                let focusable = tab_stop.is_some_and(|i| i == idx);
+                                    let enabled =
+                                        !disabled_flags.get(idx).copied().unwrap_or(true);
+                                    let focusable = tab_stop.is_some_and(|i| i == idx);
 
-                                let label = item.label.clone();
-                                let command = item.command;
-                                let on_select = item.on_select.clone();
-                                let children = item.children;
-                                let text_style = text_style.clone();
+                                    let query_for_row = query_for_render.clone();
+                                    let label = item.label.clone();
+                                    let command = item.command;
+                                    let on_select = item.on_select.clone();
+                                    let children = item.children;
+                                    let text_style = text_style.clone();
 
-                                out.push(cx.pressable(
-                                    PressableProps {
-                                        layout: item_layout,
-                                        enabled,
-                                        focusable,
-                                        focus_ring: Some(ring),
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::ListBoxOption),
-                                            label: Some(label.clone()),
+                                    out.push(cx.pressable(
+                                        PressableProps {
+                                            layout: item_layout,
+                                            enabled,
+                                            focusable,
+                                            focus_ring: Some(ring),
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::ListBoxOption),
+                                                label: Some(label.clone()),
+                                                ..Default::default()
+                                            },
                                             ..Default::default()
                                         },
-                                        ..Default::default()
-                                    },
-                                    move |cx, st| {
-                                        cx.pressable_dispatch_command_opt(command);
-                                        if let Some(on_select) = on_select.clone() {
-                                            cx.pressable_add_on_activate(on_select);
-                                        }
-                                        let hovered = st.hovered && !st.pressed;
-                                        let pressed = st.pressed;
+                                        move |cx, st| {
+                                            cx.pressable_dispatch_command_opt(command);
+                                            if let Some(on_select) = on_select.clone() {
+                                                cx.pressable_add_on_activate(on_select);
+                                            }
+                                            let hovered = st.hovered && !st.pressed;
+                                            let pressed = st.pressed;
 
-                                        let bg = (hovered || pressed).then_some(bg_hover);
-                                        let props = ContainerProps {
-                                            layout: LayoutStyle::default(),
-                                            padding: Edges {
-                                                top: pad_y,
-                                                right: pad_x,
-                                                bottom: pad_y,
-                                                left: pad_x,
-                                            },
-                                            background: bg,
-                                            shadow: None,
-                                            border: Edges::all(Px(0.0)),
-                                            border_color: None,
-                                            corner_radii: Corners::all(radius),
-                                        };
+                                            let bg = (hovered || pressed).then_some(bg_hover);
+                                            let props = ContainerProps {
+                                                layout: LayoutStyle::default(),
+                                                padding: Edges {
+                                                    top: pad_y,
+                                                    right: pad_x,
+                                                    bottom: pad_y,
+                                                    left: pad_x,
+                                                },
+                                                background: bg,
+                                                shadow: None,
+                                                border: Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: Corners::all(radius),
+                                            };
 
-                                        vec![cx.container(props, move |cx| {
-                                            vec![cx.row(
-                                                RowProps {
-                                                    layout: LayoutStyle::default(),
-                                                    gap: row_gap,
-                                                    padding: Edges::all(Px(0.0)),
-                                                    justify: MainAlign::SpaceBetween,
-                                                    align: CrossAlign::Center,
-                                                },
-                                                move |cx| {
-                                                    if children.is_empty() {
-                                                        vec![cx.text_props(TextProps {
-                                                            layout: LayoutStyle::default(),
-                                                            text: label.clone(),
-                                                            style: Some(text_style.clone()),
-                                                            color: Some(fg),
-                                                            wrap: TextWrap::None,
-                                                            overflow: TextOverflow::Clip,
-                                                        })]
-                                                    } else {
-                                                        children
-                                                    }
-                                                },
-                                            )]
-                                        })]
-                                    },
-                                ));
+                                            vec![cx.container(props, move |cx| {
+                                                vec![cx.row(
+                                                    RowProps {
+                                                        layout: LayoutStyle::default(),
+                                                        gap: row_gap,
+                                                        padding: Edges::all(Px(0.0)),
+                                                        justify: MainAlign::SpaceBetween,
+                                                        align: CrossAlign::Center,
+                                                    },
+                                                    move |cx| {
+                                                        if children.is_empty() {
+                                                            vec![cmdk_highlighted_label(
+                                                                cx,
+                                                                label.clone(),
+                                                                query_for_row.as_ref(),
+                                                                fg,
+                                                                text_style.clone(),
+                                                            )]
+                                                        } else {
+                                                            children
+                                                        }
+                                                    },
+                                                )]
+                                            })]
+                                        },
+                                    ));
+                                }
+
+                                out
                             }
-
-                            out
-                        },
-                    )])
-                    .refine_layout(scroll)
-                    .into_element(cx),
-                ]
-            },
-        )
+                        )])
+                        .refine_layout(scroll)
+                        .into_element(cx),
+                    ]
+                },
+            )
+        })
     }
 }
 
