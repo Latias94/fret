@@ -493,16 +493,30 @@ impl ElementHostWidget {
                     |state| (state.hovered, state.dragging_thumb),
                 );
 
-                let offset_y = handle.offset().y;
-                let viewport_h = handle.viewport_size().height;
-                let content_h = handle.content_size().height;
-                let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
-                if max_offset.0 <= 0.0 {
-                    return;
-                }
+                let is_horizontal = cx.bounds.size.width.0 > cx.bounds.size.height.0;
+                let thumb = if is_horizontal {
+                    let offset_x = handle.offset().x;
+                    let viewport_w = handle.viewport_size().width;
+                    let content_w = handle.content_size().width;
+                    let max_offset = Px((content_w.0 - viewport_w.0).max(0.0));
+                    if max_offset.0 <= 0.0 {
+                        return;
+                    }
 
-                let Some(thumb) = scrollbar_thumb_rect(cx.bounds, viewport_h, content_h, offset_y)
-                else {
+                    scrollbar_thumb_rect_horizontal(cx.bounds, viewport_w, content_w, offset_x)
+                } else {
+                    let offset_y = handle.offset().y;
+                    let viewport_h = handle.viewport_size().height;
+                    let content_h = handle.content_size().height;
+                    let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+                    if max_offset.0 <= 0.0 {
+                        return;
+                    }
+
+                    scrollbar_thumb_rect(cx.bounds, viewport_h, content_h, offset_y)
+                };
+
+                let Some(thumb) = thumb else {
                     return;
                 };
 
@@ -515,14 +529,25 @@ impl ElementHostWidget {
                     bg.a *= props.style.thumb_idle_alpha.clamp(0.0, 1.0);
                 }
 
-                let inset = 1.0f32.min(thumb.size.width.0 * 0.25);
-                let rect = Rect::new(
-                    fret_core::Point::new(Px(thumb.origin.x.0 + inset), thumb.origin.y),
-                    Size::new(
-                        Px((thumb.size.width.0 - inset * 2.0).max(0.0)),
-                        thumb.size.height,
-                    ),
-                );
+                let rect = if is_horizontal {
+                    let inset = 1.0f32.min(thumb.size.height.0 * 0.25);
+                    Rect::new(
+                        fret_core::Point::new(thumb.origin.x, Px(thumb.origin.y.0 + inset)),
+                        Size::new(
+                            thumb.size.width,
+                            Px((thumb.size.height.0 - inset * 2.0).max(0.0)),
+                        ),
+                    )
+                } else {
+                    let inset = 1.0f32.min(thumb.size.width.0 * 0.25);
+                    Rect::new(
+                        fret_core::Point::new(Px(thumb.origin.x.0 + inset), thumb.origin.y),
+                        Size::new(
+                            Px((thumb.size.width.0 - inset * 2.0).max(0.0)),
+                            thumb.size.height,
+                        ),
+                    )
+                };
 
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(20_000),

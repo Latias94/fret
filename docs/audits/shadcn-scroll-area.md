@@ -28,6 +28,8 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 - Pass: Supports Radix `type="auto|always|scroll|hover"` outcomes via the primitives facade.
 - Pass: Models delayed hide via `scrollHideDelay` (Fret exposes this as `scroll_hide_delay_ticks`).
+- Pass: Supports horizontal overflow with an X scrollbar and renders a corner element when both
+  scrollbars are present.
 
 ### Visual parity (new-york)
 

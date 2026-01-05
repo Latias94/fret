@@ -28,6 +28,34 @@ pub(super) fn scrollbar_thumb_rect(
     ))
 }
 
+pub(super) fn scrollbar_thumb_rect_horizontal(
+    track: Rect,
+    viewport_w: Px,
+    content_w: Px,
+    offset_x: Px,
+) -> Option<Rect> {
+    let viewport_w = Px(viewport_w.0.max(0.0));
+    let content_w = Px(content_w.0.max(0.0));
+    let max_offset = Px((content_w.0 - viewport_w.0).max(0.0));
+    if max_offset.0 <= 0.0 || track.size.width.0 <= 0.0 {
+        return None;
+    }
+
+    let track_w = track.size.width.0;
+    let min_thumb_w = 16.0f32.min(track_w);
+    let ratio = (viewport_w.0 / content_w.0).clamp(0.0, 1.0);
+    let thumb_w = (track_w * ratio).max(min_thumb_w).min(track_w);
+    let max_thumb_x = (track_w - thumb_w).max(0.0);
+
+    let t = (offset_x.0.max(0.0).min(max_offset.0)) / max_offset.0;
+    let x = track.origin.x.0 + max_thumb_x * t;
+
+    Some(Rect::new(
+        fret_core::Point::new(Px(x), track.origin.y),
+        Size::new(Px(thumb_w), track.size.height),
+    ))
+}
+
 pub(super) fn paint_children_clipped_if<H: UiHost>(
     cx: &mut PaintCx<'_, H>,
     clip: bool,

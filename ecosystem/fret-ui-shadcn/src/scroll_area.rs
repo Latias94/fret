@@ -70,7 +70,7 @@ impl ScrollArea {
             let handle = scroll_handle
                 .unwrap_or_else(|| cx.with_state(ScrollHandle::default, |h| h.clone()));
 
-            let show_scrollbar_now = show_scrollbar
+            let visible = show_scrollbar
                 && fret_ui_kit::primitives::scroll_area::scrollbar_visibility(
                     cx,
                     scrollbar_type,
@@ -80,10 +80,15 @@ impl ScrollArea {
                 )
                 .visible;
 
-            vec![scroll::overflow_scroll_with_handle(
+            let max_offset = handle.max_offset();
+            let show_scrollbar_x = visible && max_offset.x.0 > 0.01;
+            let show_scrollbar_y = visible && max_offset.y.0 > 0.01;
+
+            vec![scroll::overflow_scroll_with_handle_xy(
                 cx,
                 layout,
-                show_scrollbar_now,
+                show_scrollbar_x,
+                show_scrollbar_y,
                 handle,
                 move |_cx| children,
             )]
@@ -108,7 +113,7 @@ mod tests {
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
     use fret_runtime::TickId;
-    use fret_ui::element::ColumnProps;
+    use fret_ui::element::{ColumnProps, ContainerProps, LayoutStyle, Length};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -163,6 +168,23 @@ mod tests {
         )
     }
 
+    fn render_with(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        ty: ScrollAreaType,
+        content: impl FnOnce(&mut ElementContext<'_, App>) -> Vec<AnyElement>,
+    ) -> fret_core::NodeId {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds(), "sa", |cx| {
+                vec![ScrollArea::new(content(cx)).type_(ty).into_element(cx)]
+            });
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds(), 1.0);
+        root
+    }
+
     fn render(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -170,19 +192,11 @@ mod tests {
         window: AppWindowId,
         ty: ScrollAreaType,
     ) -> fret_core::NodeId {
-        let root =
-            fret_ui::declarative::render_root(ui, app, services, window, bounds(), "sa", |cx| {
-                vec![
-                    ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                        (0..50).map(|_| cx.text("Row")).collect()
-                    })])
-                    .type_(ty)
-                    .into_element(cx),
-                ]
-            });
-        ui.set_root(root);
-        ui.layout_all(app, services, bounds(), 1.0);
-        root
+        render_with(ui, app, services, window, ty, |cx| {
+            vec![cx.column(ColumnProps::default(), |cx| {
+                (0..50).map(|_| cx.text("Row")).collect()
+            })]
+        })
     }
 
     #[test]
@@ -400,6 +414,104 @@ mod tests {
             ui.children(stack).len(),
             1,
             "expected scrollbar to hide after scroll ends"
+        );
+    }
+
+    #[test]
+    fn scroll_area_auto_type_mounts_horizontal_scrollbar_when_overflowing_x() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+
+        let wide = |cx: &mut ElementContext<'_, App>| {
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Px(Px(800.0));
+            layout.size.height = Length::Px(Px(10.0));
+            vec![cx.container(
+                ContainerProps {
+                    layout,
+                    ..Default::default()
+                },
+                |_cx| vec![],
+            )]
+        };
+
+        let _ = render_with(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            ScrollAreaType::Auto,
+            wide,
+        );
+        let root = render_with(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            ScrollAreaType::Auto,
+            wide,
+        );
+
+        // Root -> HoverRegion -> Stack -> Scroll + Horizontal Scrollbar.
+        let hover_region = ui.children(root)[0];
+        let stack = ui.children(hover_region)[0];
+        assert_eq!(
+            ui.children(stack).len(),
+            2,
+            "expected horizontal scrollbar to mount for overflow-x"
+        );
+    }
+
+    #[test]
+    fn scroll_area_auto_type_mounts_two_scrollbars_and_corner_for_both_overflow() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+
+        let large = |cx: &mut ElementContext<'_, App>| {
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Px(Px(800.0));
+            layout.size.height = Length::Px(Px(800.0));
+            vec![cx.container(
+                ContainerProps {
+                    layout,
+                    ..Default::default()
+                },
+                |_cx| vec![],
+            )]
+        };
+
+        let _ = render_with(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            ScrollAreaType::Auto,
+            large,
+        );
+        let root = render_with(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            ScrollAreaType::Auto,
+            large,
+        );
+
+        // Root -> HoverRegion -> Stack -> Scroll + Vertical Scrollbar + Horizontal Scrollbar + Corner.
+        let hover_region = ui.children(root)[0];
+        let stack = ui.children(hover_region)[0];
+        assert_eq!(
+            ui.children(stack).len(),
+            4,
+            "expected both scrollbars and a corner element"
         );
     }
 }

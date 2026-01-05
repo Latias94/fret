@@ -1,4 +1,4 @@
-use fret_core::Px;
+use fret_core::Point;
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
@@ -15,7 +15,7 @@ struct ScrollAreaVisibilityDriverState {
     last_frame_tick: u64,
     tick: u64,
     last_ty: Option<ScrollAreaType>,
-    last_offset_y: Px,
+    last_offset: Point,
     visibility: ScrollAreaVisibility,
     lease: Option<ContinuousFrames>,
 }
@@ -44,16 +44,18 @@ pub fn scrollbar_visibility<H: UiHost>(
                 st.tick = st.tick.saturating_add(1);
             }
 
-            let offset_y = handle.offset().y;
-            let has_overflow = handle.max_offset().y.0 > 0.01;
+            let offset = handle.offset();
+            let max_offset = handle.max_offset();
+            let has_overflow = max_offset.x.0 > 0.01 || max_offset.y.0 > 0.01;
 
             let scrolled = if st.last_ty != Some(ty) {
                 st.last_ty = Some(ty);
-                st.last_offset_y = offset_y;
+                st.last_offset = offset;
                 false
             } else {
-                let scrolled = (offset_y.0 - st.last_offset_y.0).abs() > 0.01;
-                st.last_offset_y = offset_y;
+                let scrolled = (offset.x.0 - st.last_offset.x.0).abs() > 0.01
+                    || (offset.y.0 - st.last_offset.y.0).abs() > 0.01;
+                st.last_offset = offset;
                 scrolled
             };
 

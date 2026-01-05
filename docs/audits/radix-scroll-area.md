@@ -34,8 +34,9 @@ Fret does not use the DOM or native scroll containers. Scrolling is an explicit 
   - `scroll` shows scrollbars while scrolling and hides after `scrollHideDelay` (after a short
     scroll-end debounce).
   - `always` shows scrollbars when overflowing.
-- Missing: Separate X/Y scrollbars, thumb sizing parity, and corner rendering.
+- Pass: Supports separate X/Y scrollbars and a corner element when both overflow.
+- Partial: Thumb sizing and minimum sizes do not exactly match Radix (best-effort).
 
 ## Follow-ups (recommended)
 
-- Add horizontal scrollbar + corner support to match Radix's full surface.
+- Consider matching Radix's exact thumb sizing and minimums if strict parity is required.
