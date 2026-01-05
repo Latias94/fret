@@ -16,6 +16,10 @@ use std::hash::{Hash, Hasher};
 use crate::cartesian::{DataPoint, DataRect, PlotTransform};
 use crate::plot::axis::linear_ticks;
 use crate::plot::grid::GridLines;
+use crate::plot::view::{
+    clamp_zoom_factors, data_rect_key, local_from_absolute, pan_view_by_px, sanitize_data_rect,
+    zoom_view_at_px,
+};
 use crate::series::{Series, SeriesData};
 
 #[derive(Debug, Clone)]
@@ -202,7 +206,7 @@ impl LinePlotCanvas {
         let scale_factor_bits = cx.scale_factor.to_bits();
         let viewport_w_bits = plot.size.width.0.to_bits();
         let viewport_h_bits = plot.size.height.0.to_bits();
-        let view_key = Self::data_rect_key(view_bounds);
+        let view_key = data_rect_key(view_bounds);
 
         let needs_rebuild = self.cached_path.as_ref().is_none_or(|c| {
             c.model_revision != model_revision
@@ -282,64 +286,9 @@ impl LinePlotCanvas {
         Self::hash_u64(state, u64::from(v.to_bits()))
     }
 
-    fn data_rect_key(bounds: DataRect) -> u64 {
-        let mut key = 0u64;
-        key = Self::hash_f32_bits(key, bounds.x_min);
-        key = Self::hash_f32_bits(key, bounds.x_max);
-        key = Self::hash_f32_bits(key, bounds.y_min);
-        key = Self::hash_f32_bits(key, bounds.y_max);
-        key
-    }
-
-    fn sanitize_data_rect(bounds: DataRect) -> DataRect {
-        let mut x0 = bounds.x_min;
-        let mut x1 = bounds.x_max;
-        let mut y0 = bounds.y_min;
-        let mut y1 = bounds.y_max;
-
-        if !x0.is_finite() || !x1.is_finite() || !y0.is_finite() || !y1.is_finite() {
-            return DataRect {
-                x_min: 0.0,
-                x_max: 1.0,
-                y_min: 0.0,
-                y_max: 1.0,
-            };
-        }
-
-        if x0 > x1 {
-            std::mem::swap(&mut x0, &mut x1);
-        }
-        if y0 > y1 {
-            std::mem::swap(&mut y0, &mut y1);
-        }
-
-        let min_span = 1.0e-6_f32;
-
-        let w = x1 - x0;
-        if !w.is_finite() || w.abs() < min_span {
-            let cx = (x0 + x1) * 0.5;
-            x0 = cx - 0.5;
-            x1 = cx + 0.5;
-        }
-
-        let h = y1 - y0;
-        if !h.is_finite() || h.abs() < min_span {
-            let cy = (y0 + y1) * 0.5;
-            y0 = cy - 0.5;
-            y1 = cy + 0.5;
-        }
-
-        DataRect {
-            x_min: x0,
-            x_max: x1,
-            y_min: y0,
-            y_max: y1,
-        }
-    }
-
     fn ensure_view_bounds<H: UiHost>(&mut self, app: &mut H) -> DataRect {
         if let Some(view) = self.view_bounds {
-            let view = Self::sanitize_data_rect(view);
+            let view = sanitize_data_rect(view);
             self.view_bounds = Some(view);
             return view;
         }
@@ -353,7 +302,7 @@ impl LinePlotCanvas {
                 y_min: 0.0,
                 y_max: 1.0,
             });
-        let data_bounds = Self::sanitize_data_rect(data_bounds);
+        let data_bounds = sanitize_data_rect(data_bounds);
         self.view_bounds = Some(data_bounds);
         data_bounds
     }
@@ -561,7 +510,7 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     return;
                 }
 
-                let zoom = 2.0_f32.powf(delta_y * 0.0025).clamp(0.05, 20.0);
+                let zoom = clamp_zoom_factors(2.0_f32.powf(delta_y * 0.0025));
                 let (zoom_x, zoom_y) = if modifiers.shift {
                     (zoom, 1.0)
                 } else if modifiers.ctrl {
@@ -571,55 +520,13 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 };
 
                 let view_bounds = self.ensure_view_bounds(cx.app);
-                let view_bounds = Self::sanitize_data_rect(view_bounds);
-
-                let viewport_w = layout.plot.size.width.0;
-                let viewport_h = layout.plot.size.height.0;
-                if !viewport_w.is_finite()
-                    || !viewport_h.is_finite()
-                    || viewport_w <= 0.0
-                    || viewport_h <= 0.0
-                {
+                let view_bounds = sanitize_data_rect(view_bounds);
+                let local = local_from_absolute(layout.plot.origin, *position);
+                let Some(next) =
+                    zoom_view_at_px(view_bounds, layout.plot.size, local, zoom_x, zoom_y)
+                else {
                     return;
-                }
-
-                let local = Point::new(
-                    Px(position.x.0 - layout.plot.origin.x.0),
-                    Px(position.y.0 - layout.plot.origin.y.0),
-                );
-
-                let transform = PlotTransform {
-                    viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
-                    data: view_bounds,
                 };
-                let anchor = transform.px_to_data(local);
-
-                let w = view_bounds.x_max - view_bounds.x_min;
-                let h = view_bounds.y_max - view_bounds.y_min;
-                if !w.is_finite() || !h.is_finite() || w == 0.0 || h == 0.0 {
-                    return;
-                }
-
-                let rx = (anchor.x - view_bounds.x_min) / w;
-                let ry = (anchor.y - view_bounds.y_min) / h;
-                if !rx.is_finite() || !ry.is_finite() {
-                    return;
-                }
-
-                let new_w = w / zoom_x;
-                let new_h = h / zoom_y;
-                if !new_w.is_finite() || !new_h.is_finite() {
-                    return;
-                }
-
-                let x_min = anchor.x - rx * new_w;
-                let y_min = anchor.y - ry * new_h;
-                let next = Self::sanitize_data_rect(DataRect {
-                    x_min,
-                    x_max: x_min + new_w,
-                    y_min,
-                    y_max: y_min + new_h,
-                });
 
                 self.view_is_auto = false;
                 self.view_bounds = Some(next);
@@ -636,42 +543,23 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 }
 
                 if let Some(last) = self.pan_last_pos {
-                    let viewport_w = layout.plot.size.width.0;
-                    let viewport_h = layout.plot.size.height.0;
-                    if viewport_w.is_finite()
-                        && viewport_h.is_finite()
-                        && viewport_w > 0.0
-                        && viewport_h > 0.0
-                    {
-                        let dx_px = position.x.0 - last.x.0;
-                        let dy_px = position.y.0 - last.y.0;
+                    let dx_px = position.x.0 - last.x.0;
+                    let dy_px = position.y.0 - last.y.0;
 
-                        let view_bounds = self.ensure_view_bounds(cx.app);
-                        let view_bounds = Self::sanitize_data_rect(view_bounds);
-                        let w = view_bounds.x_max - view_bounds.x_min;
-                        let h = view_bounds.y_max - view_bounds.y_min;
+                    let view_bounds = self.ensure_view_bounds(cx.app);
+                    let view_bounds = sanitize_data_rect(view_bounds);
+                    let Some(next) = pan_view_by_px(view_bounds, layout.plot.size, dx_px, dy_px)
+                    else {
+                        return;
+                    };
 
-                        if dx_px.is_finite() && dy_px.is_finite() && w.is_finite() && h.is_finite()
-                        {
-                            let dx_data = (dx_px / viewport_w) * w;
-                            let dy_data = (dy_px / viewport_h) * h;
-
-                            let next = Self::sanitize_data_rect(DataRect {
-                                x_min: view_bounds.x_min - dx_data,
-                                x_max: view_bounds.x_max - dx_data,
-                                y_min: view_bounds.y_min + dy_data,
-                                y_max: view_bounds.y_max + dy_data,
-                            });
-
-                            self.view_bounds = Some(next);
-                            self.view_is_auto = false;
-                            self.pan_last_pos = Some(*position);
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
-                            cx.stop_propagation();
-                            return;
-                        }
-                    }
+                    self.view_bounds = Some(next);
+                    self.view_is_auto = false;
+                    self.pan_last_pos = Some(*position);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
                 }
 
                 let inside = position.x.0 >= layout.plot.origin.x.0
@@ -687,13 +575,10 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     let viewport_h_bits = layout.plot.size.height.0.to_bits();
 
                     let view_bounds = self.ensure_view_bounds(cx.app);
-                    let view_bounds = Self::sanitize_data_rect(view_bounds);
-                    let view_key = Self::data_rect_key(view_bounds);
+                    let view_bounds = sanitize_data_rect(view_bounds);
+                    let view_key = data_rect_key(view_bounds);
 
-                    let local = Point::new(
-                        Px(position.x.0 - layout.plot.origin.x.0),
-                        Px(position.y.0 - layout.plot.origin.y.0),
-                    );
+                    let local = local_from_absolute(layout.plot.origin, *position);
 
                     let threshold = self.style.hover_threshold.0.max(0.0);
                     let threshold2 = threshold * threshold;
@@ -823,14 +708,14 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 y_min: 0.0,
                 y_max: 1.0,
             });
-        let data_bounds = Self::sanitize_data_rect(data_bounds);
+        let data_bounds = sanitize_data_rect(data_bounds);
 
         let view_bounds = if self.view_is_auto {
             self.view_bounds = Some(data_bounds);
             data_bounds
         } else {
             let view = self.view_bounds.unwrap_or(data_bounds);
-            let view = Self::sanitize_data_rect(view);
+            let view = sanitize_data_rect(view);
             self.view_bounds = Some(view);
             view
         };
