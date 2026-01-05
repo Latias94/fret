@@ -5,7 +5,7 @@
 
 use fret_core::{Edges, Point, Px, Rect, Size};
 use fret_ui::overlay_placement::{
-    anchored_panel_layout_sized_ex, AnchoredPanelLayout, AnchoredPanelOptions, Side,
+    AnchoredPanelLayout, AnchoredPanelOptions, Side, anchored_panel_layout_sized_ex,
 };
 
 pub use fret_ui::overlay_placement::{Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset};

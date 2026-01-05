@@ -728,7 +728,7 @@ mod tests {
         ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
         TextProps,
     };
-    use fret_ui::overlay_placement::{anchored_panel_bounds_sized, Align, Side};
+    use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -816,10 +816,12 @@ mod tests {
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
 
-                vec![Tooltip::new(trigger, content)
-                    .open_delay_frames(30)
-                    .close_delay_frames(30)
-                    .into_element(cx)]
+                vec![
+                    Tooltip::new(trigger, content)
+                        .open_delay_frames(30)
+                        .close_delay_frames(30)
+                        .into_element(cx),
+                ]
             });
 
         ui.set_root(root);
@@ -951,9 +953,11 @@ mod tests {
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
-                            vec![Tooltip::new(trigger, content)
-                                .close_delay_frames(2)
-                                .into_element(cx)]
+                            vec![
+                                Tooltip::new(trigger, content)
+                                    .close_delay_frames(2)
+                                    .into_element(cx),
+                            ]
                         })
                 },
             );
@@ -1092,13 +1096,40 @@ mod tests {
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
+        // Closing begins after the close delay, but we keep the tooltip mounted during the fade-out
+        // transition (Radix Presence-style behavior).
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+            "expected tooltip to remain mounted during fade-out"
+        );
+        assert!(
+            ui.debug_layers_in_paint_order()
+                .iter()
+                .find(|layer| layer.root == tooltip_layer_root)
+                .is_some_and(|layer| layer.visible),
+            "expected tooltip layer to remain visible during fade-out"
+        );
+
+        // Frame 9: close delay (2) + fade ticks (4) elapsed -> hidden.
+        app.set_frame_id(FrameId(9));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
         let tooltip_layer = ui
             .debug_layers_in_paint_order()
             .into_iter()
             .find(|layer| layer.root == tooltip_layer_root);
         assert!(
             tooltip_layer.is_none_or(|layer| !layer.visible),
-            "expected tooltip layer to be hidden after close delay elapses"
+            "expected tooltip layer to be hidden after close delay + fade-out elapses"
         );
     }
 
@@ -1138,85 +1169,88 @@ mod tests {
         ) {
             OverlayController::begin_frame(app, window);
 
-            let root = fret_ui::declarative::render_root(
-                ui,
-                app,
-                services,
-                window,
-                bounds,
-                "test",
-                |cx| {
-                    TooltipProvider::new()
-                        .delay_duration_frames(10)
-                        .skip_delay_duration_frames(30)
-                        .with(cx, |cx| {
-                            vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
-                                let trigger_1 = cx.pressable_with_id(
-                                    PressableProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Px(Px(120.0));
-                                            layout.size.height = Length::Px(Px(40.0));
-                                            layout
-                                        },
-                                        enabled: true,
-                                        focusable: true,
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::Button),
-                                            label: Some(Arc::from("trigger_1")),
+            let root =
+                fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "test",
+                    |cx| {
+                        TooltipProvider::new()
+                            .delay_duration_frames(10)
+                            .skip_delay_duration_frames(30)
+                            .with(cx, |cx| {
+                                vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                                    let trigger_1 = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(Arc::from("trigger_1")),
+                                                ..Default::default()
+                                            },
                                             ..Default::default()
                                         },
-                                        ..Default::default()
-                                    },
-                                    |cx, _st, _id| {
-                                        vec![cx
-                                            .container(ContainerProps::default(), |_cx| Vec::new())]
-                                    },
-                                );
-
-                                let trigger_2 = cx.pressable_with_id(
-                                    PressableProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Px(Px(120.0));
-                                            layout.size.height = Length::Px(Px(40.0));
-                                            layout
+                                        |cx, _st, _id| {
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
                                         },
-                                        enabled: true,
-                                        focusable: true,
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::Button),
-                                            label: Some(Arc::from("trigger_2")),
+                                    );
+
+                                    let trigger_2 = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(Arc::from("trigger_2")),
+                                                ..Default::default()
+                                            },
                                             ..Default::default()
                                         },
-                                        ..Default::default()
-                                    },
-                                    |cx, _st, _id| {
-                                        vec![cx
-                                            .container(ContainerProps::default(), |_cx| Vec::new())]
-                                    },
-                                );
+                                        |cx, _st, _id| {
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
 
-                                let content_1 = TooltipContent::new(vec![
-                                    cx.text_props(TextProps::new("tip_1"))
-                                ])
-                                .into_element(cx);
-                                content_1_id_out.set(Some(content_1.id));
+                                    let content_1 = TooltipContent::new(vec![
+                                        cx.text_props(TextProps::new("tip_1")),
+                                    ])
+                                    .into_element(cx);
+                                    content_1_id_out.set(Some(content_1.id));
 
-                                let content_2 = TooltipContent::new(vec![
-                                    cx.text_props(TextProps::new("tip_2"))
-                                ])
-                                .into_element(cx);
-                                content_2_id_out.set(Some(content_2.id));
+                                    let content_2 = TooltipContent::new(vec![
+                                        cx.text_props(TextProps::new("tip_2")),
+                                    ])
+                                    .into_element(cx);
+                                    content_2_id_out.set(Some(content_2.id));
 
-                                vec![
-                                    Tooltip::new(trigger_1, content_1).into_element(cx),
-                                    Tooltip::new(trigger_2, content_2).into_element(cx),
-                                ]
-                            })]
-                        })
-                },
-            );
+                                    vec![
+                                        Tooltip::new(trigger_1, content_1).into_element(cx),
+                                        Tooltip::new(trigger_2, content_2).into_element(cx),
+                                    ]
+                                })]
+                            })
+                    },
+                );
 
             ui.set_root(root);
             OverlayController::render(ui, app, services, window, bounds);
@@ -1398,11 +1432,13 @@ mod tests {
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
-                            vec![Tooltip::new(trigger, content)
-                                .open_delay_frames(0)
-                                .close_delay_frames(0)
-                                .disable_hoverable_content(false)
-                                .into_element(cx)]
+                            vec![
+                                Tooltip::new(trigger, content)
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .disable_hoverable_content(false)
+                                    .into_element(cx),
+                            ]
                         })
                 },
             );
@@ -1564,13 +1600,15 @@ mod tests {
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
-                            vec![Tooltip::new(trigger, content)
-                                .open_delay_frames(0)
-                                .close_delay_frames(0)
-                                .side(TooltipSide::Top)
-                                .side_offset(Px(120.0))
-                                .disable_hoverable_content(true)
-                                .into_element(cx)]
+                            vec![
+                                Tooltip::new(trigger, content)
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .side(TooltipSide::Top)
+                                    .side_offset(Px(120.0))
+                                    .disable_hoverable_content(true)
+                                    .into_element(cx),
+                            ]
                         })
                 },
             );
@@ -1670,18 +1708,21 @@ mod tests {
             }),
         );
 
-        // Frame 3: tooltip should be closed.
-        app.set_frame_id(FrameId(3));
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            trigger_id.clone(),
-            content_id.clone(),
-        );
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        // Frame 3: close begins immediately (close_delay=0), but Presence keeps the layer mounted
+        // while fading out. Assert that it becomes hidden by the end of the fade-out.
+        for frame in 3..=6 {
+            app.set_frame_id(FrameId(frame));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                trigger_id.clone(),
+                content_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
 
         let tooltip_layer = ui
             .debug_layers_in_paint_order()
@@ -1689,7 +1730,7 @@ mod tests {
             .find(|layer| layer.root == tooltip_layer_root);
         assert!(
             tooltip_layer.is_none_or(|layer| !layer.visible),
-            "expected tooltip to close when hoverable content is disabled"
+            "expected tooltip to become hidden after hoverable content is disabled"
         );
     }
 
