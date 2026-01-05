@@ -28,12 +28,12 @@ use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::select as radix_select;
 use fret_ui_kit::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
 };
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    OverlayRequest, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -920,7 +920,7 @@ fn select_impl<H: UiHost>(
                 border
             };
 
-            let props = PressableProps {
+            let mut props = PressableProps {
                 layout: trigger_layout,
                 enabled,
                 focusable: enabled,
@@ -929,6 +929,7 @@ fn select_impl<H: UiHost>(
                     role: Some(SemanticsRole::ComboBox),
                     label: a11y_label.clone(),
                     expanded: Some(is_open),
+                    controls_element: None,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -938,7 +939,9 @@ fn select_impl<H: UiHost>(
             // pointer events while open. In Fret we approximate that by installing a modal barrier
             // layer (blocks underlay input + gates accessibility roots) even though the content
             // itself remains `role=listbox` (not a dialog).
-            let overlay_root_name = OverlayController::modal_root_name(trigger_id);
+            let overlay_root_name = radix_select::select_root_name(trigger_id);
+            let listbox_controls_element: Cell<Option<u64>> = Cell::new(None);
+            let listbox_controls_element = &listbox_controls_element;
 
             if is_open
                 && enabled
@@ -1164,6 +1167,7 @@ fn select_impl<H: UiHost>(
 
                                             vec![cx.pressable_with_id_props(move |cx, _st, listbox_id| {
                                                 list_focus_id_out.set(Some(listbox_id));
+                                                listbox_controls_element.set(Some(listbox_id.0));
 
                                                 cx.key_on_key_down_for(
                                                     listbox_id,
@@ -1599,18 +1603,18 @@ fn select_impl<H: UiHost>(
                         vec![barrier, wrapper]
                     });
 
-                    let mut request = OverlayRequest::modal(
+                    let mut request = radix_select::modal_select_request(
                         trigger_id,
-                        Some(trigger_id),
+                        trigger_id,
                         open,
                         OverlayPresence::instant(true),
                         overlay_children,
                     );
-                    request.root_name = Some(overlay_root_name);
                     request.initial_focus = list_focus_id_out.get();
-                    OverlayController::request(cx, request);
+                    radix_select::request_select(cx, request);
             }
 
+            props.a11y.controls_element = listbox_controls_element.get();
             let chrome = input_chrome_container_props(
                 {
                     let mut layout = LayoutStyle::default();
