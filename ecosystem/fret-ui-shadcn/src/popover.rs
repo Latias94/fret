@@ -19,6 +19,8 @@ use fret_ui_kit::{
     OverlayRequest, Radius, Space,
 };
 
+use crate::layout as shadcn_layout;
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
     Start,
@@ -426,19 +428,16 @@ impl PopoverContent {
         let chrome = popover_content_chrome(&theme).merge(self.chrome);
         let props = decl_style::container_props(&theme, chrome, self.layout);
         let children = self.children;
-        let stack = fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default().gap(Space::N4),
-            move |_cx| children,
-        );
         let label = self.a11y_label;
 
-        let container = cx.container(
+        let container = shadcn_layout::container_vstack_gap(
+            cx,
             ContainerProps {
                 shadow: Some(shadow),
                 ..props
             },
-            move |_cx| vec![stack],
+            Space::N4,
+            children,
         );
 
         cx.semantics(
@@ -470,12 +469,7 @@ impl PopoverHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        let stack = fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default().gap(Space::N1p5),
-            move |_cx| children,
-        );
-        cx.container(props, move |_cx| vec![stack])
+        shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
     }
 }
 

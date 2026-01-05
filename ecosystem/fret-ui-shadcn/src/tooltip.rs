@@ -1,3 +1,4 @@
+use crate::layout as shadcn_layout;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
@@ -605,7 +606,7 @@ impl TooltipContent {
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
         props.shadow = Some(decl_style::shadow_sm(&theme, radius));
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 

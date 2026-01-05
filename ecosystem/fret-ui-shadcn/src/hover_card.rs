@@ -13,6 +13,8 @@ use fret_ui_kit::{
     Radius, Space,
 };
 
+use crate::layout as shadcn_layout;
+
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme
         .color_by_key("popover")
@@ -368,7 +370,7 @@ impl HoverCardContent {
         let mut props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
         props.shadow = Some(decl_style::shadow_md(&theme, radius));
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 

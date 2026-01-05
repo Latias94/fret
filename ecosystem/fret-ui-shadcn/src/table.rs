@@ -10,6 +10,8 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 
+use crate::layout as shadcn_layout;
+
 fn table_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.table.text_px")
@@ -102,7 +104,7 @@ impl Table {
         props.layout.overflow = Overflow::Visible;
 
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -125,7 +127,7 @@ impl TableHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -148,7 +150,7 @@ impl TableBody {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -183,7 +185,7 @@ impl TableFooter {
         };
 
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 

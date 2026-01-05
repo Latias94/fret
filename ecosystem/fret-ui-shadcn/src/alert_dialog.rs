@@ -17,6 +17,8 @@ use fret_ui_kit::{
     OverlayRequest, Radius, Space,
 };
 
+use crate::layout as shadcn_layout;
+
 use crate::button::{Button, ButtonVariant};
 
 #[derive(Default)]
@@ -273,17 +275,14 @@ impl AlertDialogContent {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
-        let stack = fret_ui_kit::declarative::stack::vstack(
+        let container = shadcn_layout::container_vstack_gap(
             cx,
-            fret_ui_kit::declarative::stack::VStackProps::default().gap(Space::N4),
-            move |_cx| children,
-        );
-        let container = cx.container(
             ContainerProps {
                 shadow: Some(shadow),
                 ..props
             },
-            move |_cx| vec![stack],
+            Space::N4,
+            children,
         );
 
         cx.semantics(
@@ -314,12 +313,7 @@ impl AlertDialogHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        let stack = fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default().gap(Space::N1p5),
-            move |_cx| children,
-        );
-        cx.container(props, move |_cx| vec![stack])
+        shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
     }
 }
 
@@ -341,15 +335,15 @@ impl AlertDialogFooter {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        let stack = fret_ui_kit::declarative::stack::hstack(
+        shadcn_layout::container_hstack(
             cx,
+            props,
             fret_ui_kit::declarative::stack::HStackProps::default()
                 .gap(Space::N2)
                 .justify_end()
                 .items_center(),
-            move |_cx| children,
-        );
-        cx.container(props, move |_cx| vec![stack])
+            children,
+        )
     }
 }
 

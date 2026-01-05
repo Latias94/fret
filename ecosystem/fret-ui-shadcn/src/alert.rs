@@ -6,6 +6,8 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
+use crate::layout as shadcn_layout;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AlertVariant {
     #[default]
@@ -71,7 +73,7 @@ pub fn alert<H: UiHost>(
         LayoutRefinement::default(),
     );
 
-    cx.container(props, move |_cx| children)
+    shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
 }
 
 #[derive(Debug, Clone)]

@@ -13,6 +13,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 
+use crate::layout as shadcn_layout;
+
 use crate::toggle::{ToggleSize, ToggleVariant};
 
 fn toggle_bg_hover(theme: &Theme) -> Color {
@@ -401,10 +403,9 @@ impl ToggleGroup {
                                             move |host, _action_cx, _reason| {
                                                 let current =
                                                     host.models_mut().get_cloned(&model).flatten();
-                                                let next = if current
-                                                    .as_ref()
-                                                    .is_some_and(|cur| cur.as_ref() == value.as_ref())
-                                                {
+                                                let next = if current.as_ref().is_some_and(|cur| {
+                                                    cur.as_ref() == value.as_ref()
+                                                }) {
                                                     None
                                                 } else {
                                                     Some(value.clone())
@@ -434,7 +435,12 @@ impl ToggleGroup {
                                         props.background = bg;
                                     }
 
-                                    vec![cx.container(props, move |_cx| children)]
+                                    vec![shadcn_layout::container_hstack_centered(
+                                        cx,
+                                        props,
+                                        Space::N1,
+                                        children,
+                                    )]
                                 },
                             ),
                         );
@@ -467,7 +473,9 @@ pub fn toggle_group_multiple<H: UiHost>(
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService};
+    use fret_core::{
+        AppWindowId, Modifiers, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService,
+    };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
     use fret_ui::tree::UiTree;

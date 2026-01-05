@@ -37,6 +37,7 @@ pub mod input_otp;
 pub mod item;
 pub mod kbd;
 pub mod label;
+mod layout;
 pub mod menubar;
 pub mod pagination;
 pub mod popover;

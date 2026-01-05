@@ -6,6 +6,8 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
+use crate::layout as shadcn_layout;
+
 fn card_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme
         .color_by_key("card")
@@ -51,7 +53,7 @@ impl Card {
         let chrome = card_chrome(&theme).merge(self.chrome);
         let props = decl_style::container_props(&theme, chrome, self.layout);
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -80,7 +82,7 @@ impl CardHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
     }
 }
 
@@ -102,7 +104,7 @@ impl CardContent {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -124,7 +126,12 @@ impl CardFooter {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_hstack(
+            cx,
+            props,
+            fret_ui_kit::declarative::stack::HStackProps::default().items_center(),
+            children,
+        )
     }
 }
 

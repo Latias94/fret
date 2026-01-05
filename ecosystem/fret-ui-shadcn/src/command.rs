@@ -27,6 +27,7 @@ use fret_ui_kit::headless::cmdk_selection;
 use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
+use crate::layout as shadcn_layout;
 use crate::{Dialog, DialogContent, Input, ScrollArea};
 
 fn border(theme: &Theme) -> Color {
@@ -179,7 +180,7 @@ impl Command {
 
         let props = decl_style::container_props(&theme, base, self.layout);
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -802,15 +803,19 @@ fn command_palette_render_rows_for_query(
                 if let Some(heading) = group.heading {
                     pending_rows.push(PendingRow::Heading(heading));
                 }
-                pending_rows.extend(scored.into_iter().map(|(_, _, item)| PendingRow::Item(item)));
+                pending_rows.extend(
+                    scored
+                        .into_iter()
+                        .map(|(_, _, item)| PendingRow::Item(item)),
+                );
             }
         }
     }
 
     let mut has_item_from: Vec<bool> = vec![false; pending_rows.len() + 1];
     for idx in (0..pending_rows.len()).rev() {
-        has_item_from[idx] = has_item_from[idx + 1]
-            || matches!(pending_rows[idx], PendingRow::Item(_));
+        has_item_from[idx] =
+            has_item_from[idx + 1] || matches!(pending_rows[idx], PendingRow::Item(_));
     }
 
     let mut filtered_rows: Vec<PendingRow> = Vec::with_capacity(pending_rows.len());
@@ -2174,11 +2179,7 @@ mod tests {
         let (rows, items) = command_palette_render_rows_for_query(entries, "");
         assert_eq!(
             row_signatures(&rows, &items),
-            vec![
-                "I:Alpha".to_string(),
-                "S".to_string(),
-                "I:Beta".to_string()
-            ]
+            vec!["I:Alpha".to_string(), "S".to_string(), "I:Beta".to_string()]
         );
     }
 
