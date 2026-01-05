@@ -19,12 +19,28 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
 use fret_ui::element::{
     AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow,
-    SizeStyle, SpinnerProps, SvgIconProps, TextProps, VisualTransformProps,
+    SemanticsProps, SizeStyle, SpinnerProps, SvgIconProps, TextProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::overlay_motion;
+
+fn apply_tooltip_described_by(
+    mut trigger: AnyElement,
+    tooltip_element: fret_ui::elements::GlobalElementId,
+) -> AnyElement {
+    match &mut trigger.kind {
+        ElementKind::Pressable(props) => {
+            props.a11y.described_by_element = Some(tooltip_element.0);
+        }
+        ElementKind::Semantics(props) => {
+            props.described_by_element = Some(tooltip_element.0);
+        }
+        _ => {}
+    }
+    trigger
+}
 
 fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> AnyElement {
     match &mut element.kind {
@@ -318,7 +334,7 @@ impl Tooltip {
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
 
-        let trigger = self.trigger;
+        let trigger = apply_tooltip_described_by(self.trigger, self.content.id);
         let content = self.content;
         let trigger_id = trigger.id;
         let content_id = content.id;
@@ -716,7 +732,14 @@ impl TooltipContent {
             .into_iter()
             .map(|child| apply_tooltip_inherited_fg(child, fg))
             .collect();
-        shadcn_layout::container_flow(cx, props, children)
+        let container = shadcn_layout::container_flow(cx, props, children);
+        cx.semantics(
+            SemanticsProps {
+                role: fret_core::SemanticsRole::Tooltip,
+                ..Default::default()
+            },
+            move |_cx| vec![container],
+        )
     }
 }
 
@@ -936,6 +959,7 @@ mod tests {
             trigger_id.clone(),
             content_id.clone(),
         );
+        ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let content_element = content_id.get().expect("content element id");
@@ -943,6 +967,29 @@ mod tests {
         assert!(
             content_node.is_some(),
             "expected tooltip content to be mounted when focused"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let content_node = content_node.expect("content node");
+
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("trigger"))
+            .expect("trigger semantics node");
+        let tooltip_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_node)
+            .expect("tooltip semantics node");
+
+        assert_eq!(tooltip_node.role, SemanticsRole::Tooltip);
+        assert!(
+            trigger_node
+                .described_by
+                .iter()
+                .any(|id| *id == tooltip_node.id),
+            "trigger should be described by the tooltip content"
         );
     }
 
