@@ -34,268 +34,427 @@ pub(crate) fn decimate_shaded_band(
     Vec<PathCommand>,
     Vec<SamplePoint>,
 ) {
-    let mut fill_commands: Vec<PathCommand> = Vec::new();
-    let mut upper_commands: Vec<PathCommand> = Vec::new();
-    let mut lower_commands: Vec<PathCommand> = Vec::new();
-    let mut samples: Vec<SamplePoint> = Vec::new();
+    #[derive(Clone, Copy)]
+    struct Cursor {
+        idx: usize,
+        prev: Option<DataPoint>,
+        next: Option<DataPoint>,
+    }
 
-    let mut segment: Vec<BandPoint> = Vec::new();
-
-    let bucket_of = |x: Px| -> i32 {
-        let x = x.0 * scale_factor.max(1.0);
-        if !x.is_finite() { 0 } else { x.floor() as i32 }
-    };
-
-    let mut flush_segment = |segment: &mut Vec<BandPoint>| {
-        if segment.is_empty() {
-            return;
+    impl Cursor {
+        fn new() -> Self {
+            Self {
+                idx: 0,
+                prev: None,
+                next: None,
+            }
         }
 
-        if segment.len() == 1 {
-            let p = segment[0];
-            upper_commands.push(PathCommand::MoveTo(p.upper_px));
-            lower_commands.push(PathCommand::MoveTo(p.lower_px));
-            samples.push(SamplePoint {
-                series_id,
-                index: p.index,
-                data: p.upper,
-                plot_px: p.upper_px,
-            });
-            samples.push(SamplePoint {
-                series_id,
-                index: p.index,
-                data: p.lower,
-                plot_px: p.lower_px,
-            });
-            segment.clear();
-            return;
+        fn next_x(&self) -> Option<f32> {
+            self.next.map(|p| p.x)
         }
 
-        let first = segment[0];
-        let last = *segment.last().expect("non-empty segment");
+        fn is_segment_start_at_x(&self, x: f32) -> bool {
+            self.prev.is_none() && self.next_x().is_some_and(|nx| nx == x)
+        }
 
-        upper_commands.push(PathCommand::MoveTo(first.upper_px));
-        lower_commands.push(PathCommand::MoveTo(first.lower_px));
-        samples.push(SamplePoint {
-            series_id,
-            index: first.index,
-            data: first.upper,
-            plot_px: first.upper_px,
-        });
-        samples.push(SamplePoint {
-            series_id,
-            index: first.index,
-            data: first.lower,
-            plot_px: first.lower_px,
-        });
+        fn fetch_next(&mut self, series: &dyn SeriesData) -> Option<DataPoint> {
+            while self.idx < series.len() {
+                let idx = self.idx;
+                self.idx += 1;
 
-        let mut band_points: Vec<BandPoint> = Vec::new();
-        band_points.push(first);
-
-        let mut last_emitted_idx = first.index;
-        let mut last_upper_px = first.upper_px;
-        let mut last_lower_px = first.lower_px;
-
-        {
-            let mut emit = |p: BandPoint| {
-                if p.index <= last_emitted_idx {
-                    return;
+                let Some(p) = series.get(idx) else {
+                    self.prev = None;
+                    continue;
+                };
+                if !p.x.is_finite() || !p.y.is_finite() {
+                    self.prev = None;
+                    continue;
                 }
+                return Some(p);
+            }
+            None
+        }
 
-                if p.upper_px == last_upper_px && p.lower_px == last_lower_px {
-                    last_emitted_idx = p.index;
-                    return;
+        fn ensure_next(&mut self, series: &dyn SeriesData) {
+            if self.next.is_none() {
+                self.next = self.fetch_next(series);
+            }
+        }
+
+        fn advance_if_at_x(&mut self, series: &dyn SeriesData, x: f32) {
+            if self.next_x().is_some_and(|nx| nx == x) {
+                self.prev = self.next;
+                self.next = self.fetch_next(series);
+            }
+        }
+
+        fn sample_y(&self, x: f32) -> Option<f32> {
+            if !x.is_finite() {
+                return None;
+            }
+
+            if let Some(next) = self.next
+                && next.x == x
+            {
+                return Some(next.y);
+            }
+
+            match (self.prev, self.next) {
+                (Some(a), Some(b)) => {
+                    if x < a.x || x > b.x {
+                        return None;
+                    }
+                    let dx = b.x - a.x;
+                    if dx == 0.0 || !dx.is_finite() {
+                        return Some(b.y);
+                    }
+                    let t = (x - a.x) / dx;
+                    if !t.is_finite() {
+                        return None;
+                    }
+                    let y = a.y + (b.y - a.y) * t;
+                    y.is_finite().then_some(y)
                 }
+                (Some(a), None) => (a.x == x).then_some(a.y),
+                (None, Some(b)) => (b.x == x).then_some(b.y),
+                (None, None) => None,
+            }
+        }
+    }
 
-                upper_commands.push(PathCommand::LineTo(p.upper_px));
-                lower_commands.push(PathCommand::LineTo(p.lower_px));
-                samples.push(SamplePoint {
-                    series_id,
+    struct BandDecimator {
+        series_id: SeriesId,
+        scale_factor: f32,
+        fill_commands: Vec<PathCommand>,
+        upper_commands: Vec<PathCommand>,
+        lower_commands: Vec<PathCommand>,
+        samples: Vec<SamplePoint>,
+        decimated: Vec<BandPoint>,
+        current_bucket: Option<i32>,
+        min_upper: Option<BandPoint>,
+        max_upper: Option<BandPoint>,
+        min_lower: Option<BandPoint>,
+        max_lower: Option<BandPoint>,
+        last_emitted_idx: Option<usize>,
+        last_emitted_upper_px: Option<Point>,
+        last_emitted_lower_px: Option<Point>,
+    }
+
+    impl BandDecimator {
+        fn new(series_id: SeriesId, scale_factor: f32) -> Self {
+            Self {
+                series_id,
+                scale_factor,
+                fill_commands: Vec::new(),
+                upper_commands: Vec::new(),
+                lower_commands: Vec::new(),
+                samples: Vec::new(),
+                decimated: Vec::new(),
+                current_bucket: None,
+                min_upper: None,
+                max_upper: None,
+                min_lower: None,
+                max_lower: None,
+                last_emitted_idx: None,
+                last_emitted_upper_px: None,
+                last_emitted_lower_px: None,
+            }
+        }
+
+        fn bucket_of(&self, x: Px) -> i32 {
+            let x = x.0 * self.scale_factor.max(1.0);
+            if !x.is_finite() { 0 } else { x.floor() as i32 }
+        }
+
+        fn emit_segment(&mut self) {
+            if self.decimated.len() < 2 {
+                self.decimated.clear();
+                return;
+            }
+
+            let first = self.decimated[0];
+            self.upper_commands
+                .push(PathCommand::MoveTo(first.upper_px));
+            self.lower_commands
+                .push(PathCommand::MoveTo(first.lower_px));
+
+            for p in self.decimated.iter().copied().skip(1) {
+                self.upper_commands.push(PathCommand::LineTo(p.upper_px));
+                self.lower_commands.push(PathCommand::LineTo(p.lower_px));
+            }
+
+            self.fill_commands
+                .push(PathCommand::MoveTo(self.decimated[0].upper_px));
+            for p in self.decimated.iter().copied().skip(1) {
+                self.fill_commands.push(PathCommand::LineTo(p.upper_px));
+            }
+            for p in self.decimated.iter().rev().copied() {
+                self.fill_commands.push(PathCommand::LineTo(p.lower_px));
+            }
+            self.fill_commands.push(PathCommand::Close);
+
+            for p in self.decimated.iter().copied() {
+                self.samples.push(SamplePoint {
+                    series_id: self.series_id,
                     index: p.index,
                     data: p.upper,
                     plot_px: p.upper_px,
                 });
-                samples.push(SamplePoint {
-                    series_id,
+                self.samples.push(SamplePoint {
+                    series_id: self.series_id,
                     index: p.index,
                     data: p.lower,
                     plot_px: p.lower_px,
                 });
-                band_points.push(p);
+            }
 
-                last_emitted_idx = p.index;
-                last_upper_px = p.upper_px;
-                last_lower_px = p.lower_px;
-            };
+            self.decimated.clear();
+        }
 
-            let mut current_bucket: Option<i32> = None;
-            let mut min_upper: Option<BandPoint> = None;
-            let mut max_upper: Option<BandPoint> = None;
-            let mut min_lower: Option<BandPoint> = None;
-            let mut max_lower: Option<BandPoint> = None;
-
-            let mut flush_bucket =
-                |min_upper: Option<BandPoint>,
-                 max_upper: Option<BandPoint>,
-                 min_lower: Option<BandPoint>,
-                 max_lower: Option<BandPoint>| {
-                    let mut candidates: Vec<BandPoint> = Vec::new();
-                    for p in [min_upper, max_upper, min_lower, max_lower] {
-                        if let Some(p) = p {
-                            candidates.push(p);
-                        }
-                    }
-
-                    candidates.sort_by_key(|p| p.index);
-                    candidates.dedup_by_key(|p| p.index);
-
-                    for p in candidates {
-                        emit(p);
-                    }
-                };
-
-            for p in segment
-                .iter()
-                .copied()
-                .skip(1)
-                .take(segment.len().saturating_sub(2))
+        fn emit_decimated_point(&mut self, p: BandPoint) {
+            if self.last_emitted_idx.is_some_and(|idx| p.index <= idx) {
+                return;
+            }
+            if self
+                .last_emitted_upper_px
+                .is_some_and(|px| px == p.upper_px)
+                && self
+                    .last_emitted_lower_px
+                    .is_some_and(|px| px == p.lower_px)
             {
-                let b = bucket_of(p.upper_px.x);
-                if current_bucket != Some(b) {
-                    flush_bucket(
-                        min_upper.take(),
-                        max_upper.take(),
-                        min_lower.take(),
-                        max_lower.take(),
-                    );
-                    current_bucket = Some(b);
-                    min_upper = Some(p);
-                    max_upper = Some(p);
-                    min_lower = Some(p);
-                    max_lower = Some(p);
-                    continue;
-                }
+                self.last_emitted_idx = Some(p.index);
+                return;
+            }
 
-                if let Some(m) = min_upper
-                    && p.upper_px.y.0.is_finite()
-                    && m.upper_px.y.0.is_finite()
-                    && p.upper_px.y.0 < m.upper_px.y.0
-                {
-                    min_upper = Some(p);
-                }
-                if let Some(m) = max_upper
-                    && p.upper_px.y.0.is_finite()
-                    && m.upper_px.y.0.is_finite()
-                    && p.upper_px.y.0 > m.upper_px.y.0
-                {
-                    max_upper = Some(p);
-                }
-                if let Some(m) = min_lower
-                    && p.lower_px.y.0.is_finite()
-                    && m.lower_px.y.0.is_finite()
-                    && p.lower_px.y.0 < m.lower_px.y.0
-                {
-                    min_lower = Some(p);
-                }
-                if let Some(m) = max_lower
-                    && p.lower_px.y.0.is_finite()
-                    && m.lower_px.y.0.is_finite()
-                    && p.lower_px.y.0 > m.lower_px.y.0
-                {
-                    max_lower = Some(p);
+            self.decimated.push(p);
+            self.last_emitted_idx = Some(p.index);
+            self.last_emitted_upper_px = Some(p.upper_px);
+            self.last_emitted_lower_px = Some(p.lower_px);
+        }
+
+        fn flush_bucket(&mut self) {
+            let mut candidates: Vec<BandPoint> = Vec::new();
+            for p in [
+                self.min_upper,
+                self.max_upper,
+                self.min_lower,
+                self.max_lower,
+            ] {
+                if let Some(p) = p {
+                    candidates.push(p);
                 }
             }
 
-            flush_bucket(
-                min_upper.take(),
-                max_upper.take(),
-                min_lower.take(),
-                max_lower.take(),
-            );
+            candidates.sort_by_key(|p| p.index);
+            candidates.dedup_by_key(|p| p.index);
+
+            for p in candidates {
+                self.emit_decimated_point(p);
+            }
+
+            self.min_upper = None;
+            self.max_upper = None;
+            self.min_lower = None;
+            self.max_lower = None;
         }
 
-        if last.index > last_emitted_idx {
-            if last.upper_px == last_upper_px && last.lower_px == last_lower_px {
-                // Keep hover indices monotonic even if the endpoint collapses.
-                samples.push(SamplePoint {
-                    series_id,
-                    index: last.index,
-                    data: last.upper,
-                    plot_px: last.upper_px,
-                });
-                samples.push(SamplePoint {
-                    series_id,
-                    index: last.index,
-                    data: last.lower,
-                    plot_px: last.lower_px,
-                });
-            } else {
-                upper_commands.push(PathCommand::LineTo(last.upper_px));
-                lower_commands.push(PathCommand::LineTo(last.lower_px));
-                samples.push(SamplePoint {
-                    series_id,
-                    index: last.index,
-                    data: last.upper,
-                    plot_px: last.upper_px,
-                });
-                samples.push(SamplePoint {
-                    series_id,
-                    index: last.index,
-                    data: last.lower,
-                    plot_px: last.lower_px,
-                });
-                band_points.push(last);
+        fn flush_current_segment(&mut self) {
+            if self.current_bucket.is_some() {
+                self.flush_bucket();
+            }
+            self.current_bucket = None;
+            self.emit_segment();
+            self.last_emitted_idx = None;
+            self.last_emitted_upper_px = None;
+            self.last_emitted_lower_px = None;
+        }
+
+        fn push_point(&mut self, p: BandPoint) {
+            let b = self.bucket_of(p.upper_px.x);
+            if self.current_bucket != Some(b) {
+                if self.current_bucket.is_some() {
+                    self.flush_bucket();
+                }
+                self.current_bucket = Some(b);
+                self.min_upper = Some(p);
+                self.max_upper = Some(p);
+                self.min_lower = Some(p);
+                self.max_lower = Some(p);
+                self.emit_decimated_point(p);
+                return;
+            }
+
+            if let Some(m) = self.min_upper
+                && p.upper_px.y.0.is_finite()
+                && m.upper_px.y.0.is_finite()
+                && p.upper_px.y.0 < m.upper_px.y.0
+            {
+                self.min_upper = Some(p);
+            }
+            if let Some(m) = self.max_upper
+                && p.upper_px.y.0.is_finite()
+                && m.upper_px.y.0.is_finite()
+                && p.upper_px.y.0 > m.upper_px.y.0
+            {
+                self.max_upper = Some(p);
+            }
+            if let Some(m) = self.min_lower
+                && p.lower_px.y.0.is_finite()
+                && m.lower_px.y.0.is_finite()
+                && p.lower_px.y.0 < m.lower_px.y.0
+            {
+                self.min_lower = Some(p);
+            }
+            if let Some(m) = self.max_lower
+                && p.lower_px.y.0.is_finite()
+                && m.lower_px.y.0.is_finite()
+                && p.lower_px.y.0 > m.lower_px.y.0
+            {
+                self.max_lower = Some(p);
             }
         }
 
-        if band_points.len() >= 2 {
-            fill_commands.push(PathCommand::MoveTo(band_points[0].upper_px));
-            for p in band_points.iter().copied().skip(1) {
-                fill_commands.push(PathCommand::LineTo(p.upper_px));
-            }
-            for p in band_points.iter().rev().copied() {
-                fill_commands.push(PathCommand::LineTo(p.lower_px));
-            }
-            fill_commands.push(PathCommand::Close);
+        fn finish(
+            mut self,
+        ) -> (
+            Vec<PathCommand>,
+            Vec<PathCommand>,
+            Vec<PathCommand>,
+            Vec<SamplePoint>,
+        ) {
+            self.flush_current_segment();
+            (
+                self.fill_commands,
+                self.upper_commands,
+                self.lower_commands,
+                self.samples,
+            )
         }
-
-        segment.clear();
-    };
-
-    let len = upper.len().min(lower.len());
-    for idx in 0..len {
-        let (Some(u), Some(l)) = (upper.get(idx), lower.get(idx)) else {
-            flush_segment(&mut segment);
-            continue;
-        };
-        if !u.x.is_finite() || !u.y.is_finite() || !l.x.is_finite() || !l.y.is_finite() {
-            flush_segment(&mut segment);
-            continue;
-        }
-
-        let u_px = transform.data_to_px(u);
-        let l_px = transform.data_to_px(l);
-        if !u_px.x.0.is_finite()
-            || !u_px.y.0.is_finite()
-            || !l_px.x.0.is_finite()
-            || !l_px.y.0.is_finite()
-        {
-            flush_segment(&mut segment);
-            continue;
-        }
-
-        segment.push(BandPoint {
-            index: idx,
-            upper: u,
-            lower: l,
-            upper_px: u_px,
-            lower_px: l_px,
-        });
     }
 
-    flush_segment(&mut segment);
+    let mut decimator = BandDecimator::new(series_id, scale_factor);
 
-    (fill_commands, upper_commands, lower_commands, samples)
+    if !(upper.is_sorted_by_x() && lower.is_sorted_by_x()) {
+        // Fallback: index-aligned shaded band. This expects both series to share X values at each
+        // index. Callers should prefer sorted-by-x series for correct interpolation + resampling.
+        let len = upper.len().min(lower.len());
+        let mut sample_index: usize = 0;
+
+        for idx in 0..len {
+            let (Some(upper_dp), Some(lower_dp)) = (upper.get(idx), lower.get(idx)) else {
+                decimator.flush_current_segment();
+                continue;
+            };
+            if !upper_dp.x.is_finite()
+                || !upper_dp.y.is_finite()
+                || !lower_dp.x.is_finite()
+                || !lower_dp.y.is_finite()
+            {
+                decimator.flush_current_segment();
+                continue;
+            }
+            if upper_dp.x != lower_dp.x {
+                decimator.flush_current_segment();
+                continue;
+            }
+
+            let upper_px = transform.data_to_px(upper_dp);
+            let lower_px = transform.data_to_px(lower_dp);
+            if !upper_px.x.0.is_finite()
+                || !upper_px.y.0.is_finite()
+                || !lower_px.x.0.is_finite()
+                || !lower_px.y.0.is_finite()
+            {
+                decimator.flush_current_segment();
+                continue;
+            }
+
+            decimator.push_point(BandPoint {
+                index: sample_index,
+                upper: upper_dp,
+                lower: lower_dp,
+                upper_px,
+                lower_px,
+            });
+            sample_index = sample_index.wrapping_add(1);
+        }
+
+        return decimator.finish();
+    }
+
+    let mut upper_cursor = Cursor::new();
+    let mut lower_cursor = Cursor::new();
+    upper_cursor.ensure_next(upper);
+    lower_cursor.ensure_next(lower);
+
+    let mut sample_index: usize = 0;
+
+    loop {
+        let x = match (upper_cursor.next_x(), lower_cursor.next_x()) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (None, None) => break,
+        };
+
+        if !x.is_finite() {
+            decimator.flush_current_segment();
+            break;
+        }
+
+        if x < transform.data.x_min || x > transform.data.x_max {
+            upper_cursor.advance_if_at_x(upper, x);
+            lower_cursor.advance_if_at_x(lower, x);
+            continue;
+        }
+
+        let starts_new_segment =
+            upper_cursor.is_segment_start_at_x(x) || lower_cursor.is_segment_start_at_x(x);
+        if starts_new_segment && !decimator.decimated.is_empty() {
+            decimator.flush_current_segment();
+        }
+
+        let (Some(upper_y), Some(lower_y)) = (upper_cursor.sample_y(x), lower_cursor.sample_y(x))
+        else {
+            decimator.flush_current_segment();
+            upper_cursor.advance_if_at_x(upper, x);
+            lower_cursor.advance_if_at_x(lower, x);
+            continue;
+        };
+
+        let upper_dp = DataPoint { x, y: upper_y };
+        let lower_dp = DataPoint { x, y: lower_y };
+
+        let upper_px = transform.data_to_px(upper_dp);
+        let lower_px = transform.data_to_px(lower_dp);
+        if !upper_px.x.0.is_finite()
+            || !upper_px.y.0.is_finite()
+            || !lower_px.x.0.is_finite()
+            || !lower_px.y.0.is_finite()
+        {
+            decimator.flush_current_segment();
+            upper_cursor.advance_if_at_x(upper, x);
+            lower_cursor.advance_if_at_x(lower, x);
+            continue;
+        }
+
+        decimator.push_point(BandPoint {
+            index: sample_index,
+            upper: upper_dp,
+            lower: lower_dp,
+            upper_px,
+            lower_px,
+        });
+        sample_index = sample_index.wrapping_add(1);
+
+        upper_cursor.advance_if_at_x(upper, x);
+        lower_cursor.advance_if_at_x(lower, x);
+        upper_cursor.ensure_next(upper);
+        lower_cursor.ensure_next(lower);
+    }
+
+    decimator.finish()
 }
 
 pub(crate) fn decimate_samples(
@@ -476,6 +635,8 @@ pub(crate) fn decimate_polyline(
 mod tests {
     use super::*;
 
+    use std::sync::Arc;
+
     use fret_core::geometry::{Rect, Size};
 
     use crate::cartesian::DataRect;
@@ -585,5 +746,96 @@ mod tests {
             move_tos, 2,
             "expected two subpaths due to missing getter point"
         );
+    }
+
+    #[test]
+    fn shaded_band_resamples_by_x_for_sorted_series() {
+        let upper_points = Arc::new(vec![
+            DataPoint { x: 0.0, y: 0.0 },
+            DataPoint { x: 1.0, y: 1.0 },
+            DataPoint { x: 2.0, y: 0.0 },
+        ]);
+        let lower_points = Arc::new(vec![
+            DataPoint { x: 0.0, y: -1.0 },
+            DataPoint { x: 0.5, y: -0.5 },
+            DataPoint { x: 2.0, y: -1.0 },
+        ]);
+
+        let upper = GetterSeriesData::new(upper_points.len(), {
+            let points = upper_points.clone();
+            move |i| points.get(i).copied()
+        })
+        .sorted_by_x(true);
+        let lower = GetterSeriesData::new(lower_points.len(), {
+            let points = lower_points.clone();
+            move |i| points.get(i).copied()
+        })
+        .sorted_by_x(true);
+
+        let data_bounds = DataRect {
+            x_min: 0.0,
+            x_max: 2.0,
+            y_min: -2.0,
+            y_max: 2.0,
+        };
+        let transform = transform(1000.0, 100.0, data_bounds);
+
+        let (fill, _upper_cmds, _lower_cmds, samples) =
+            decimate_shaded_band(transform, &upper, &lower, 1.0, SeriesId(7));
+
+        assert!(!fill.is_empty(), "expected a filled band path");
+        assert!(
+            samples.iter().any(|s| s.data.x == 0.5),
+            "expected the union X grid to include x=0.5"
+        );
+
+        let mut found_upper_interpolated = false;
+        for s in &samples {
+            if s.data.x == 0.5 && (s.data.y - 0.5).abs() <= 1e-4 {
+                found_upper_interpolated = true;
+                break;
+            }
+        }
+        assert!(
+            found_upper_interpolated,
+            "expected upper Y to be interpolated at x=0.5"
+        );
+    }
+
+    #[test]
+    fn shaded_band_breaks_segments_on_missing_points() {
+        let upper = GetterSeriesData::new(5, |i| match i {
+            0 => Some(DataPoint { x: 0.0, y: 0.0 }),
+            1 => Some(DataPoint { x: 1.0, y: 1.0 }),
+            2 => None,
+            3 => Some(DataPoint { x: 3.0, y: 0.0 }),
+            _ => Some(DataPoint { x: 4.0, y: 1.0 }),
+        })
+        .sorted_by_x(true);
+
+        let lower = GetterSeriesData::new(5, |i| match i {
+            0 => Some(DataPoint { x: 0.0, y: -1.0 }),
+            1 => Some(DataPoint { x: 1.0, y: -1.0 }),
+            2 => Some(DataPoint { x: 2.0, y: -1.0 }),
+            3 => Some(DataPoint { x: 3.0, y: -1.0 }),
+            _ => Some(DataPoint { x: 4.0, y: -1.0 }),
+        })
+        .sorted_by_x(true);
+
+        let data_bounds = DataRect {
+            x_min: 0.0,
+            x_max: 4.0,
+            y_min: -2.0,
+            y_max: 2.0,
+        };
+        let transform = transform(1000.0, 100.0, data_bounds);
+
+        let (fill, _upper_cmds, _lower_cmds, _samples) =
+            decimate_shaded_band(transform, &upper, &lower, 1.0, SeriesId(9));
+        let move_tos = fill
+            .iter()
+            .filter(|c| matches!(c, PathCommand::MoveTo(_)))
+            .count();
+        assert_eq!(move_tos, 2, "expected two shaded band segments");
     }
 }
