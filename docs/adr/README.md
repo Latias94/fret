@@ -258,6 +258,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0008-threading-logging-errors.md`
 - `docs/adr/0027-framework-scope-and-responsibilities.md`
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+- `docs/adr/0097-plot-widgets-and-crate-placement.md`
 - `docs/adr/0093-crate-structure-core-backends-apps.md`
 - `docs/adr/0090-radix-aligned-headless-primitives-in-fret-ui-kit.md`
 - `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`

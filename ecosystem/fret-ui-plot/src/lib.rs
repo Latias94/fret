@@ -1,0 +1,9 @@
+#![deny(deprecated)]
+//! Plot/chart components (data → geometry + interaction policy) built on top of `fret-ui`.
+//!
+//! This crate must stay portable: no `wgpu`/`winit` and no dependency on `fret-render`.
+
+pub mod cartesian;
+pub mod chart;
+pub mod plot;
+pub mod retained;

@@ -1126,6 +1126,7 @@ dependencies = [
  "fret-ui-app",
  "fret-ui-docking",
  "fret-ui-kit",
+ "fret-ui-plot",
  "fret-ui-shadcn",
  "tracing",
  "tracing-subscriber",
@@ -1323,6 +1324,16 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "tracing",
+]
+
+[[package]]
+name = "fret-ui-plot"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
 ]
 
 [[package]]

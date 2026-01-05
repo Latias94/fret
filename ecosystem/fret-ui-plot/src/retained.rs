@@ -1,0 +1,985 @@
+use fret_core::geometry::{Point, Px, Rect, Size};
+use fret_core::scene::{Color, DrawOrder, SceneOp};
+use fret_core::{
+    Event, FontId, FontWeight, PathConstraints, PathId, PathStyle, PointerEvent, SemanticsRole,
+    TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap, UiServices,
+};
+use fret_runtime::{Model, TextFontStackKey};
+use fret_ui::UiHost;
+use fret_ui::retained_bridge::{
+    Invalidation, LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt, Widget,
+};
+use std::borrow::Cow;
+use std::hash::{Hash, Hasher};
+
+use crate::cartesian::{DataPoint, DataRect, PlotTransform};
+use crate::plot::axis::linear_ticks;
+use crate::plot::grid::GridLines;
+
+#[derive(Debug, Clone)]
+pub struct LinePlotModel {
+    pub data_bounds: DataRect,
+    pub points: Vec<DataPoint>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct LinePlotStyle {
+    pub background: Option<Color>,
+    pub border: Option<Color>,
+    pub border_width: Px,
+    pub padding: Px,
+    pub axis_gap: Px,
+    pub axis_color: Option<Color>,
+    pub grid_color: Option<Color>,
+    pub label_color: Option<Color>,
+    pub crosshair_color: Option<Color>,
+    pub tooltip_background: Option<Color>,
+    pub tooltip_border: Option<Color>,
+    pub tooltip_text_color: Option<Color>,
+    pub hover_threshold: Px,
+    pub tick_count: usize,
+    pub stroke_color: Color,
+    pub stroke_width: Px,
+}
+
+impl Default for LinePlotStyle {
+    fn default() -> Self {
+        Self {
+            background: None,
+            border: None,
+            border_width: Px(1.0),
+            padding: Px(8.0),
+            axis_gap: Px(18.0),
+            axis_color: None,
+            grid_color: None,
+            label_color: None,
+            crosshair_color: None,
+            tooltip_background: None,
+            tooltip_border: None,
+            tooltip_text_color: None,
+            hover_threshold: Px(10.0),
+            tick_count: 5,
+            stroke_color: Color {
+                r: 0.35,
+                g: 0.65,
+                b: 0.95,
+                a: 1.0,
+            },
+            stroke_width: Px(1.5),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct CachedPath {
+    id: PathId,
+    model_revision: u64,
+    scale_factor_bits: u32,
+    viewport_w_bits: u32,
+    viewport_h_bits: u32,
+    stroke_width: Px,
+    samples: Vec<SamplePoint>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct SamplePoint {
+    index: usize,
+    data: DataPoint,
+    /// Point in plot-local logical pixels (origin at plot rect origin).
+    plot_px: Point,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct HoverState {
+    index: usize,
+    data: DataPoint,
+    plot_px: Point,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PreparedText {
+    blob: TextBlobId,
+    metrics: TextMetrics,
+    key: u64,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PlotLayout {
+    plot: Rect,
+    y_axis: Rect,
+    x_axis: Rect,
+}
+
+impl PlotLayout {
+    fn from_bounds(bounds: Rect, padding: Px, axis_gap: Px) -> Self {
+        let pad = padding.0.max(0.0);
+        let axis_gap = axis_gap.0.max(0.0);
+
+        let content = Rect::new(
+            Point::new(Px(bounds.origin.x.0 + pad), Px(bounds.origin.y.0 + pad)),
+            Size::new(
+                Px((bounds.size.width.0 - pad * 2.0).max(0.0)),
+                Px((bounds.size.height.0 - pad * 2.0).max(0.0)),
+            ),
+        );
+
+        let plot_w = (content.size.width.0 - axis_gap).max(0.0);
+        let plot_h = (content.size.height.0 - axis_gap).max(0.0);
+
+        let plot = Rect::new(
+            Point::new(Px(content.origin.x.0 + axis_gap), content.origin.y),
+            Size::new(Px(plot_w), Px(plot_h)),
+        );
+
+        let y_axis = Rect::new(content.origin, Size::new(Px(axis_gap), Px(plot_h)));
+
+        let x_axis = Rect::new(
+            Point::new(plot.origin.x, Px(plot.origin.y.0 + plot.size.height.0)),
+            Size::new(Px(plot_w), Px(axis_gap)),
+        );
+
+        Self {
+            plot,
+            y_axis,
+            x_axis,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct LinePlotCanvas {
+    model: Model<LinePlotModel>,
+    style: LinePlotStyle,
+    cached_path: Option<CachedPath>,
+    hover: Option<HoverState>,
+    last_scale_factor: f32,
+    axis_label_key: Option<u64>,
+    axis_labels_x: Vec<PreparedText>,
+    axis_labels_y: Vec<PreparedText>,
+    tooltip_text: Option<PreparedText>,
+}
+
+impl LinePlotCanvas {
+    pub fn new(model: Model<LinePlotModel>) -> Self {
+        Self {
+            model,
+            style: LinePlotStyle::default(),
+            cached_path: None,
+            hover: None,
+            last_scale_factor: 1.0,
+            axis_label_key: None,
+            axis_labels_x: Vec::new(),
+            axis_labels_y: Vec::new(),
+            tooltip_text: None,
+        }
+    }
+
+    pub fn style(mut self, style: LinePlotStyle) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn create_node<H: UiHost>(ui: &mut fret_ui::UiTree<H>, canvas: Self) -> fret_core::NodeId {
+        ui.create_node_retained(canvas)
+    }
+
+    fn rebuild_path_if_needed<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        plot: Rect,
+        data_bounds: DataRect,
+    ) -> Option<PathId> {
+        let model_revision = self.model.revision(cx.app).unwrap_or(0);
+        let scale_factor_bits = cx.scale_factor.to_bits();
+        let viewport_w_bits = plot.size.width.0.to_bits();
+        let viewport_h_bits = plot.size.height.0.to_bits();
+
+        let needs_rebuild = self.cached_path.as_ref().is_none_or(|c| {
+            c.model_revision != model_revision
+                || c.scale_factor_bits != scale_factor_bits
+                || c.viewport_w_bits != viewport_w_bits
+                || c.viewport_h_bits != viewport_h_bits
+                || c.stroke_width != self.style.stroke_width
+        });
+
+        if !needs_rebuild {
+            return self.cached_path.as_ref().map(|c| c.id);
+        }
+
+        if let Some(prev) = self.cached_path.take() {
+            cx.services.path().release(prev.id);
+        }
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+        let transform = PlotTransform {
+            viewport: local_viewport,
+            data: data_bounds,
+        };
+
+        let (commands, samples) = self
+            .model
+            .read(cx.app, |_app, m| {
+                decimate_polyline(transform, &m.points, cx.scale_factor)
+            })
+            .ok()?;
+
+        if commands.is_empty() {
+            self.cached_path = None;
+            return None;
+        }
+
+        let style = PathStyle::Stroke(fret_core::StrokeStyle {
+            width: self.style.stroke_width,
+        });
+        let constraints = PathConstraints {
+            scale_factor: cx.scale_factor,
+        };
+
+        let (id, _metrics) = cx.services.path().prepare(&commands, style, constraints);
+        self.cached_path = Some(CachedPath {
+            id,
+            model_revision,
+            scale_factor_bits,
+            viewport_w_bits,
+            viewport_h_bits,
+            stroke_width: self.style.stroke_width,
+            samples,
+        });
+        Some(id)
+    }
+
+    fn clear_axis_label_cache(&mut self, services: &mut dyn UiServices) {
+        for t in self.axis_labels_x.drain(..) {
+            services.text().release(t.blob);
+        }
+        for t in self.axis_labels_y.drain(..) {
+            services.text().release(t.blob);
+        }
+        self.axis_label_key = None;
+    }
+
+    fn hash_u64(mut state: u64, v: u64) -> u64 {
+        state ^= v
+            .wrapping_add(0x9e3779b97f4a7c15)
+            .wrapping_add(state << 6)
+            .wrapping_add(state >> 2);
+        state
+    }
+
+    fn hash_f32_bits(state: u64, v: f32) -> u64 {
+        Self::hash_u64(state, u64::from(v.to_bits()))
+    }
+
+    fn text_style_key(style: &TextStyle) -> u64 {
+        let mut state = 0u64;
+        state = Self::hash_u64(state, hash_value(&style.font));
+        state = Self::hash_u64(state, u64::from(style.weight.0));
+        state = Self::hash_f32_bits(state, style.size.0);
+        state = Self::hash_u64(
+            state,
+            u64::from(style.line_height.map(|v| v.0.to_bits()).unwrap_or(0)),
+        );
+        state = Self::hash_u64(
+            state,
+            u64::from(style.letter_spacing_em.map(|v| v.to_bits()).unwrap_or(0)),
+        );
+        state
+    }
+
+    fn prepare_text(
+        &mut self,
+        services: &mut dyn UiServices,
+        text: &str,
+        style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> PreparedText {
+        let mut state = 0u64;
+        for b in text.as_bytes() {
+            state = Self::hash_u64(state, u64::from(*b));
+        }
+        state = Self::hash_u64(state, Self::text_style_key(style));
+        state = Self::hash_u64(state, u64::from(constraints.scale_factor.to_bits()));
+        state = Self::hash_u64(
+            state,
+            u64::from(constraints.max_width.map(|v| v.0.to_bits()).unwrap_or(0)),
+        );
+        state = Self::hash_u64(state, hash_value(&constraints.wrap));
+        state = Self::hash_u64(state, hash_value(&constraints.overflow));
+
+        let (blob, metrics) = services.text().prepare(text, style, constraints);
+        PreparedText {
+            blob,
+            metrics,
+            key: state,
+        }
+    }
+
+    fn rebuild_axis_labels_if_needed<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        layout: PlotLayout,
+        data_bounds: DataRect,
+        theme_revision: u64,
+        font_stack_key: u64,
+    ) {
+        let scale_bits = cx.scale_factor.to_bits();
+
+        let mut key = 0u64;
+        key = Self::hash_u64(key, u64::from(scale_bits));
+        key = Self::hash_u64(key, theme_revision);
+        key = Self::hash_u64(key, font_stack_key);
+        key = Self::hash_f32_bits(key, layout.plot.size.width.0);
+        key = Self::hash_f32_bits(key, layout.plot.size.height.0);
+        key = Self::hash_f32_bits(key, data_bounds.x_min);
+        key = Self::hash_f32_bits(key, data_bounds.x_max);
+        key = Self::hash_f32_bits(key, data_bounds.y_min);
+        key = Self::hash_f32_bits(key, data_bounds.y_max);
+        key = Self::hash_u64(key, u64::from(self.style.axis_gap.0.to_bits()));
+        key = Self::hash_u64(key, u64::from(self.style.tick_count as u32));
+
+        if self.axis_label_key == Some(key) {
+            return;
+        }
+
+        self.clear_axis_label_cache(cx.services);
+
+        let font_size = cx
+            .theme()
+            .metric_by_key("font.size")
+            .unwrap_or(cx.theme().metrics.font_size);
+        let style = TextStyle {
+            font: FontId::default(),
+            size: Px((font_size.0 * 0.90).max(10.0)),
+            weight: FontWeight::NORMAL,
+            line_height: None,
+            letter_spacing_em: None,
+        };
+
+        let x_ticks = linear_ticks(data_bounds.x_min, data_bounds.x_max, self.style.tick_count);
+        let y_ticks = linear_ticks(data_bounds.y_min, data_bounds.y_max, self.style.tick_count);
+
+        let fmt = |v: f32| -> String {
+            let abs = v.abs();
+            if abs < 1.0 {
+                format!("{v:.3}")
+            } else if abs < 10.0 {
+                format!("{v:.2}")
+            } else {
+                format!("{v:.1}")
+            }
+        };
+
+        for v in x_ticks {
+            let constraints = TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor,
+            };
+            let prepared = self.prepare_text(cx.services, &fmt(v), &style, constraints);
+            self.axis_labels_x.push(prepared);
+        }
+
+        for v in y_ticks {
+            let constraints = TextConstraints {
+                max_width: Some(layout.y_axis.size.width),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor,
+            };
+            let prepared = self.prepare_text(cx.services, &fmt(v), &style, constraints);
+            self.axis_labels_y.push(prepared);
+        }
+
+        self.axis_label_key = Some(key);
+    }
+}
+
+impl<H: UiHost> Widget<H> for LinePlotCanvas {
+    fn event(&mut self, cx: &mut fret_ui::retained_bridge::EventCx<'_, H>, event: &Event) {
+        let Event::Pointer(PointerEvent::Move { position, .. }) = event else {
+            return;
+        };
+
+        let layout = PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
+        if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+            return;
+        }
+
+        let model_revision = self.model.revision(cx.app).unwrap_or(0);
+        let scale_factor = self.last_scale_factor;
+        let scale_factor_bits = scale_factor.to_bits();
+        let viewport_w_bits = layout.plot.size.width.0.to_bits();
+        let viewport_h_bits = layout.plot.size.height.0.to_bits();
+
+        let inside = position.x.0 >= layout.plot.origin.x.0
+            && position.y.0 >= layout.plot.origin.y.0
+            && position.x.0 <= layout.plot.origin.x.0 + layout.plot.size.width.0
+            && position.y.0 <= layout.plot.origin.y.0 + layout.plot.size.height.0;
+
+        let next_hover = if inside {
+            let local = Point::new(
+                Px(position.x.0 - layout.plot.origin.x.0),
+                Px(position.y.0 - layout.plot.origin.y.0),
+            );
+
+            let threshold = self.style.hover_threshold.0.max(0.0);
+            let threshold2 = threshold * threshold;
+
+            let samples: Cow<'_, [SamplePoint]> = if let Some(cached) = self.cached_path.as_ref()
+                && cached.model_revision == model_revision
+                && cached.scale_factor_bits == scale_factor_bits
+                && cached.viewport_w_bits == viewport_w_bits
+                && cached.viewport_h_bits == viewport_h_bits
+            {
+                Cow::Borrowed(cached.samples.as_slice())
+            } else {
+                Cow::Owned(
+                    self.model
+                        .read(cx.app, |_app, m| {
+                            let transform = PlotTransform {
+                                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
+                                data: m.data_bounds,
+                            };
+                            decimate_samples(transform, &m.points, scale_factor)
+                        })
+                        .unwrap_or_default(),
+                )
+            };
+
+            let mut best: Option<(SamplePoint, f32)> = None;
+            for s in samples.iter().copied() {
+                let dx = s.plot_px.x.0 - local.x.0;
+                let dy = s.plot_px.y.0 - local.y.0;
+                let d2 = dx * dx + dy * dy;
+                if !d2.is_finite() {
+                    continue;
+                }
+                if best.map_or(true, |b| d2 < b.1) {
+                    best = Some((s, d2));
+                }
+            }
+
+            best.and_then(|(s, d2)| {
+                (d2 <= threshold2).then_some(HoverState {
+                    index: s.index,
+                    data: s.data,
+                    plot_px: s.plot_px,
+                })
+            })
+        } else {
+            None
+        };
+
+        if self.hover != next_hover {
+            self.hover = next_hover;
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.observe_model(&self.model, Invalidation::Paint);
+        cx.available
+    }
+
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        cx.observe_model(&self.model, Invalidation::Paint);
+        cx.observe_global::<TextFontStackKey>(Invalidation::Paint);
+        self.last_scale_factor = cx.scale_factor;
+
+        let theme = cx.theme().snapshot();
+        let font_stack_key = cx
+            .app
+            .global::<TextFontStackKey>()
+            .map(|k| k.0)
+            .unwrap_or(0);
+        let background = self
+            .style
+            .background
+            .unwrap_or(theme.colors.panel_background);
+        let border = self.style.border.unwrap_or(theme.colors.panel_border);
+
+        let axis_color = self.style.axis_color.unwrap_or(theme.colors.panel_border);
+        let grid_color = self.style.grid_color.unwrap_or(Color {
+            a: 0.35,
+            ..theme.colors.panel_border
+        });
+        let label_color = self.style.label_color.unwrap_or(theme.colors.text_muted);
+        let crosshair_color = self.style.crosshair_color.unwrap_or(Color {
+            a: 0.65,
+            ..theme.colors.accent
+        });
+        let tooltip_background = self
+            .style
+            .tooltip_background
+            .unwrap_or(theme.colors.menu_background);
+        let tooltip_border = self
+            .style
+            .tooltip_border
+            .unwrap_or(theme.colors.menu_border);
+        let tooltip_text_color = self
+            .style
+            .tooltip_text_color
+            .unwrap_or(theme.colors.text_primary);
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: cx.bounds,
+            background,
+            border: fret_core::Edges::all(self.style.border_width),
+            border_color: border,
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        });
+
+        let layout = PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
+
+        let data_bounds = self
+            .model
+            .read(cx.app, |_app, m| m.data_bounds)
+            .unwrap_or(DataRect {
+                x_min: 0.0,
+                x_max: 1.0,
+                y_min: 0.0,
+                y_max: 1.0,
+            });
+
+        self.rebuild_axis_labels_if_needed(cx, layout, data_bounds, theme.revision, font_stack_key);
+
+        // Grid + series + hover are clipped to the plot area.
+        cx.scene.push(SceneOp::PushClipRect { rect: layout.plot });
+
+        if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
+            for (a, _) in GridLines::default().x_lines(layout.plot) {
+                let x = Px(a.x.0.round());
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(1),
+                    rect: Rect::new(
+                        Point::new(x, layout.plot.origin.y),
+                        Size::new(Px(1.0), layout.plot.size.height),
+                    ),
+                    background: grid_color,
+                    border: fret_core::Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                });
+            }
+            for (a, _) in GridLines::default().y_lines(layout.plot) {
+                let y = Px(a.y.0.round());
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(1),
+                    rect: Rect::new(
+                        Point::new(layout.plot.origin.x, y),
+                        Size::new(layout.plot.size.width, Px(1.0)),
+                    ),
+                    background: grid_color,
+                    border: fret_core::Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                });
+            }
+
+            if let Some(path) = self.rebuild_path_if_needed(cx, layout.plot, data_bounds) {
+                cx.scene.push(SceneOp::Path {
+                    order: DrawOrder(2),
+                    origin: layout.plot.origin,
+                    path,
+                    color: self.style.stroke_color,
+                });
+            }
+
+            if let Some(hover) = self.hover {
+                let x = Px((layout.plot.origin.x.0 + hover.plot_px.x.0).round());
+                let y = Px((layout.plot.origin.y.0 + hover.plot_px.y.0).round());
+
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(3),
+                    rect: Rect::new(
+                        Point::new(x, layout.plot.origin.y),
+                        Size::new(Px(1.0), layout.plot.size.height),
+                    ),
+                    background: crosshair_color,
+                    border: fret_core::Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                });
+
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(3),
+                    rect: Rect::new(
+                        Point::new(layout.plot.origin.x, y),
+                        Size::new(layout.plot.size.width, Px(1.0)),
+                    ),
+                    background: crosshair_color,
+                    border: fret_core::Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                });
+
+                let dot_size = Px(6.0);
+                let dot_origin = Point::new(Px(x.0 - dot_size.0 * 0.5), Px(y.0 - dot_size.0 * 0.5));
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(4),
+                    rect: Rect::new(dot_origin, Size::new(dot_size, dot_size)),
+                    background: crosshair_color,
+                    border: fret_core::Edges::all(Px(1.0)),
+                    border_color: tooltip_border,
+                    corner_radii: fret_core::Corners::all(Px(dot_size.0 * 0.5)),
+                });
+            }
+        }
+
+        cx.scene.push(SceneOp::PopClip);
+
+        // Axes.
+        if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
+            // Y axis line.
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(10),
+                rect: Rect::new(
+                    layout.plot.origin,
+                    Size::new(Px(1.0), layout.plot.size.height),
+                ),
+                background: axis_color,
+                border: fret_core::Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            });
+
+            // X axis line.
+            let y = Px(layout.plot.origin.y.0 + layout.plot.size.height.0 - 1.0);
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(10),
+                rect: Rect::new(
+                    Point::new(layout.plot.origin.x, y),
+                    Size::new(layout.plot.size.width, Px(1.0)),
+                ),
+                background: axis_color,
+                border: fret_core::Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: fret_core::Corners::all(Px(0.0)),
+            });
+        }
+
+        // Axis labels (P0: evenly spaced ticks).
+        let x_ticks = linear_ticks(data_bounds.x_min, data_bounds.x_max, self.style.tick_count);
+        let y_ticks = linear_ticks(data_bounds.y_min, data_bounds.y_max, self.style.tick_count);
+
+        let x_den = data_bounds.x_max - data_bounds.x_min;
+        let y_den = data_bounds.y_max - data_bounds.y_min;
+
+        for (i, label) in self.axis_labels_x.iter().enumerate() {
+            let Some(v) = x_ticks.get(i).copied() else {
+                continue;
+            };
+            if x_den == 0.0 || !x_den.is_finite() {
+                continue;
+            }
+            let t = (v - data_bounds.x_min) / x_den;
+            if !t.is_finite() {
+                continue;
+            }
+            let x = layout.plot.origin.x.0 + layout.plot.size.width.0 * t;
+            let x = Px(x.round());
+
+            let top = layout.x_axis.origin.y.0 + 2.0;
+            let origin = Point::new(
+                Px(x.0 - (label.metrics.size.width.0 * 0.5)),
+                Px(top + label.metrics.baseline.0),
+            );
+
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(11),
+                origin,
+                text: label.blob,
+                color: label_color,
+            });
+        }
+
+        for (i, label) in self.axis_labels_y.iter().enumerate() {
+            let Some(v) = y_ticks.get(i).copied() else {
+                continue;
+            };
+            if y_den == 0.0 || !y_den.is_finite() {
+                continue;
+            }
+            let t = (v - data_bounds.y_min) / y_den;
+            if !t.is_finite() {
+                continue;
+            }
+            let y = layout.plot.origin.y.0 + layout.plot.size.height.0 * (1.0 - t);
+            let y = Px(y.round());
+
+            let origin_x = layout.y_axis.origin.x.0 + layout.y_axis.size.width.0
+                - label.metrics.size.width.0
+                - 4.0;
+            let top = y.0 - (label.metrics.size.height.0 * 0.5);
+            let origin = Point::new(
+                Px(origin_x.max(layout.y_axis.origin.x.0)),
+                Px(top + label.metrics.baseline.0),
+            );
+
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(11),
+                origin,
+                text: label.blob,
+                color: label_color,
+            });
+        }
+
+        // Tooltip (P0: drawn in the same scene; can be moved to overlays later).
+        if let Some(hover) = self.hover {
+            let font_size = cx
+                .theme()
+                .metric_by_key("font.size")
+                .unwrap_or(cx.theme().metrics.font_size);
+            let style = TextStyle {
+                font: FontId::default(),
+                size: Px((font_size.0 * 0.90).max(10.0)),
+                weight: FontWeight::NORMAL,
+                line_height: None,
+                letter_spacing_em: None,
+            };
+            let text = format!("x={:.3}  y={:.3}", hover.data.x, hover.data.y);
+            let constraints = TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor,
+            };
+
+            let mut key = 0u64;
+            key = Self::hash_u64(key, theme.revision);
+            key = Self::hash_u64(key, font_stack_key);
+            key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
+            for b in text.as_bytes() {
+                key = Self::hash_u64(key, u64::from(*b));
+            }
+            key = Self::hash_u64(key, Self::text_style_key(&style));
+
+            let needs = self.tooltip_text.as_ref().is_none_or(|t| t.key != key);
+            if needs {
+                if let Some(prev) = self.tooltip_text.take() {
+                    cx.services.text().release(prev.blob);
+                }
+                let prepared = self.prepare_text(cx.services, &text, &style, constraints);
+                self.tooltip_text = Some(PreparedText {
+                    blob: prepared.blob,
+                    metrics: prepared.metrics,
+                    key,
+                });
+            }
+
+            if let Some(tt) = self.tooltip_text {
+                let anchor = Point::new(
+                    Px(layout.plot.origin.x.0 + hover.plot_px.x.0),
+                    Px(layout.plot.origin.y.0 + hover.plot_px.y.0),
+                );
+                let pad = Px(6.0);
+                let gap = Px(10.0);
+                let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
+                let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
+
+                let mut x = Px(anchor.x.0 + gap.0);
+                let mut y = Px(anchor.y.0 + gap.0);
+                if x.0 + w.0 > cx.bounds.origin.x.0 + cx.bounds.size.width.0 {
+                    x = Px(anchor.x.0 - gap.0 - w.0);
+                }
+                if y.0 + h.0 > cx.bounds.origin.y.0 + cx.bounds.size.height.0 {
+                    y = Px(anchor.y.0 - gap.0 - h.0);
+                }
+                x = Px(x.0.max(cx.bounds.origin.x.0));
+                y = Px(y.0.max(cx.bounds.origin.y.0));
+
+                let rect = Rect::new(Point::new(x, y), Size::new(w, h));
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(20),
+                    rect,
+                    background: tooltip_background,
+                    border: fret_core::Edges::all(Px(1.0)),
+                    border_color: tooltip_border,
+                    corner_radii: fret_core::Corners::all(Px(6.0)),
+                });
+
+                let origin = Point::new(
+                    Px(rect.origin.x.0 + pad.0),
+                    Px(rect.origin.y.0 + pad.0 + tt.metrics.baseline.0),
+                );
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(21),
+                    origin,
+                    text: tt.blob,
+                    color: tooltip_text_color,
+                });
+            }
+        }
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        cx.set_role(SemanticsRole::Viewport);
+        cx.set_label("Plot");
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
+        if let Some(cached) = self.cached_path.take() {
+            services.path().release(cached.id);
+        }
+        self.clear_axis_label_cache(services);
+        if let Some(t) = self.tooltip_text.take() {
+            services.text().release(t.blob);
+        }
+    }
+}
+
+fn hash_value<T: Hash>(v: &T) -> u64 {
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    v.hash(&mut h);
+    h.finish()
+}
+
+fn decimate_samples(
+    transform: PlotTransform,
+    points: &[DataPoint],
+    scale_factor: f32,
+) -> Vec<SamplePoint> {
+    let (_commands, samples) = decimate_polyline(transform, points, scale_factor);
+    samples
+}
+
+/// Produces a decimated polyline suitable for large datasets.
+///
+/// Strategy: bucket by device-pixel X (plot-local), then emit min/max Y points per bucket to
+/// preserve spikes while bounding the output size to O(plot_width_px).
+fn decimate_polyline(
+    transform: PlotTransform,
+    points: &[DataPoint],
+    scale_factor: f32,
+) -> (Vec<fret_core::PathCommand>, Vec<SamplePoint>) {
+    let mut commands: Vec<fret_core::PathCommand> = Vec::new();
+    let mut samples: Vec<SamplePoint> = Vec::new();
+
+    let mut segment: Vec<SamplePoint> = Vec::new();
+
+    let mut flush_segment = |segment: &mut Vec<SamplePoint>| {
+        if segment.is_empty() {
+            return;
+        }
+
+        if segment.len() == 1 {
+            let p = segment[0];
+            commands.push(fret_core::PathCommand::MoveTo(p.plot_px));
+            samples.push(p);
+            segment.clear();
+            return;
+        }
+
+        let first = segment[0];
+        let last = *segment.last().expect("non-empty segment");
+
+        commands.push(fret_core::PathCommand::MoveTo(first.plot_px));
+        samples.push(first);
+
+        let mut last_emitted_idx = first.index;
+        let mut last_emitted_point = first.plot_px;
+
+        let bucket_of = |x: Px| -> i32 {
+            let x = x.0 * scale_factor.max(1.0);
+            if !x.is_finite() { 0 } else { x.floor() as i32 }
+        };
+
+        let mut current_bucket: Option<i32> = None;
+        let mut min: Option<SamplePoint> = None;
+        let mut max: Option<SamplePoint> = None;
+
+        let mut flush_bucket = |min: Option<SamplePoint>, max: Option<SamplePoint>| {
+            let (Some(min), Some(max)) = (min, max) else {
+                return;
+            };
+
+            let mut a = min;
+            let mut b = max;
+            if a.index > b.index {
+                std::mem::swap(&mut a, &mut b);
+            }
+
+            for p in [a, b] {
+                if p.index <= last_emitted_idx {
+                    continue;
+                }
+                if p.plot_px == last_emitted_point {
+                    last_emitted_idx = p.index;
+                    continue;
+                }
+                commands.push(fret_core::PathCommand::LineTo(p.plot_px));
+                samples.push(p);
+                last_emitted_idx = p.index;
+                last_emitted_point = p.plot_px;
+            }
+        };
+
+        // Exclude endpoints from bucketing (they are emitted explicitly).
+        for p in segment
+            .iter()
+            .copied()
+            .skip(1)
+            .take(segment.len().saturating_sub(2))
+        {
+            let b = bucket_of(p.plot_px.x);
+            if current_bucket != Some(b) {
+                flush_bucket(min.take(), max.take());
+                current_bucket = Some(b);
+                min = Some(p);
+                max = Some(p);
+                continue;
+            }
+
+            if let Some(m) = min
+                && p.plot_px.y.0.is_finite()
+                && m.plot_px.y.0.is_finite()
+                && p.plot_px.y.0 < m.plot_px.y.0
+            {
+                min = Some(p);
+            }
+            if let Some(m) = max
+                && p.plot_px.y.0.is_finite()
+                && m.plot_px.y.0.is_finite()
+                && p.plot_px.y.0 > m.plot_px.y.0
+            {
+                max = Some(p);
+            }
+        }
+
+        flush_bucket(min.take(), max.take());
+
+        if last.index > last_emitted_idx && last.plot_px != last_emitted_point {
+            commands.push(fret_core::PathCommand::LineTo(last.plot_px));
+            samples.push(last);
+        } else if last.index > last_emitted_idx && last.plot_px == last_emitted_point {
+            // Keep sample indices monotonic for hover even if the point collapses.
+            samples.push(last);
+        }
+
+        segment.clear();
+    };
+
+    for (idx, p) in points.iter().copied().enumerate() {
+        if !p.x.is_finite() || !p.y.is_finite() {
+            flush_segment(&mut segment);
+            continue;
+        }
+        let px = transform.data_to_px(p);
+        if !px.x.0.is_finite() || !px.y.0.is_finite() {
+            flush_segment(&mut segment);
+            continue;
+        }
+        segment.push(SamplePoint {
+            index: idx,
+            data: p,
+            plot_px: px,
+        });
+    }
+
+    flush_segment(&mut segment);
+
+    (commands, samples)
+}
