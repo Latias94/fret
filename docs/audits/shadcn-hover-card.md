@@ -11,6 +11,7 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/hover_card.rs`
+- Radix facade: `ecosystem/fret-ui-kit/src/primitives/hover_card.rs`
 - Hover intent state machine: `ecosystem/fret-ui-kit/src/headless/hover_intent.rs`
 - Placement helpers: `ecosystem/fret-ui-kit/src/overlay.rs`
 - Per-window hover overlay policy: `ecosystem/fret-ui-kit/src/window_overlays/mod.rs`

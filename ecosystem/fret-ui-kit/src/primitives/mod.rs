@@ -35,6 +35,7 @@ pub mod dismissable_layer;
 pub mod dropdown_menu;
 pub mod focus_scope;
 pub mod hover_intent;
+pub mod hover_card;
 pub mod menu;
 pub mod menubar;
 pub mod popover;

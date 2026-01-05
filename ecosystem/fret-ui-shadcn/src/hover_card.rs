@@ -8,12 +8,12 @@ use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::hover_card as radix_hover_card;
 use fret_ui_kit::primitives::hover_intent::{self, HoverIntentConfig};
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayRequest,
-    Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, Radius, Space,
 };
 
 use crate::layout as shadcn_layout;
@@ -199,12 +199,11 @@ impl HoverCard {
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let hover_card_id = cx.root_id();
 
-            let overlay_hovered =
-                cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
-                    st.overlay_hovered
-                });
+            let overlay_hovered = cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
+                st.overlay_hovered
+            });
             let focused = cx.is_focused_element(trigger_id);
-            let hovered = hovered || overlay_hovered || focused;
+            let hovered = radix_hover_card::hover_card_hovered(hovered, overlay_hovered, focused);
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
             let update = hover_intent::drive(cx, hovered, cfg);
@@ -225,7 +224,7 @@ impl HoverCard {
                 return out;
             }
 
-            let overlay_root_name = OverlayController::hover_overlay_root_name(hover_card_id);
+            let overlay_root_name = radix_hover_card::hover_card_root_name(hover_card_id);
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
@@ -343,9 +342,8 @@ impl HoverCard {
                 )]
             });
 
-            let mut request = OverlayRequest::hover(hover_card_id, trigger_id, overlay_children);
-            request.root_name = Some(overlay_root_name);
-            OverlayController::request(cx, request);
+            let request = radix_hover_card::hover_card_request(hover_card_id, trigger_id, overlay_children);
+            radix_hover_card::request_hover_card(cx, request);
 
             out
         })

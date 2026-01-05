@@ -31,6 +31,7 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 - `dismissable-layer` -> `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs`
 - `dropdown-menu` -> `ecosystem/fret-ui-kit/src/primitives/dropdown_menu.rs` (facade over `menu`)
 - `focus-scope` -> `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs`
+- `hover-card` -> `ecosystem/fret-ui-kit/src/primitives/hover_card.rs`
 - `menu` -> `ecosystem/fret-ui-kit/src/primitives/menu/*`
 - `menubar` -> `ecosystem/fret-ui-kit/src/primitives/menubar.rs` (facade over `menu`, plus trigger-row + ArrowLeft/Right switching policy in `primitives/menubar/trigger_row.rs`)
 - `popover` -> `ecosystem/fret-ui-kit/src/primitives/popover.rs` (facade over window overlays + popper)
@@ -57,7 +58,6 @@ None currently tracked.
 These shadcn components exist today, but their reusable behavior/policy should be moved into
 Radix-named primitives facades so non-shadcn consumers can reuse them:
 
-- `hover-card` -> `ecosystem/fret-ui-shadcn/src/hover_card.rs`
 - `checkbox` -> `ecosystem/fret-ui-shadcn/src/checkbox.rs`
 - `switch` -> `ecosystem/fret-ui-shadcn/src/switch.rs`
 - `progress` -> `ecosystem/fret-ui-shadcn/src/progress.rs`
