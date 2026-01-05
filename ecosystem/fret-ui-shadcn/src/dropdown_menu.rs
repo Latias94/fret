@@ -47,6 +47,9 @@ pub enum DropdownMenuSide {
 #[derive(Debug, Clone)]
 pub enum DropdownMenuEntry {
     Item(DropdownMenuItem),
+    CheckboxItem(DropdownMenuCheckboxItem),
+    RadioGroup(DropdownMenuRadioGroup),
+    RadioItem(DropdownMenuRadioItem),
     Label(DropdownMenuLabel),
     Group(DropdownMenuGroup),
     Separator,
@@ -57,6 +60,7 @@ pub struct DropdownMenuItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub disabled: bool,
+    pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
@@ -71,6 +75,7 @@ impl DropdownMenuItem {
             label: label.clone(),
             value: label,
             disabled: false,
+            close_on_select: true,
             command: None,
             a11y_label: None,
             trailing: None,
@@ -89,6 +94,11 @@ impl DropdownMenuItem {
         self
     }
 
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
     pub fn variant(mut self, variant: DropdownMenuItemVariant) -> Self {
         self.variant = variant;
         self
@@ -101,6 +111,210 @@ impl DropdownMenuItem {
 
     pub fn submenu(mut self, entries: Vec<DropdownMenuEntry>) -> Self {
         self.submenu = Some(entries);
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.trailing = Some(element);
+        self
+    }
+}
+
+/// shadcn/ui `DropdownMenuCheckboxItem` (v4).
+#[derive(Debug, Clone)]
+pub struct DropdownMenuCheckboxItem {
+    pub label: Arc<str>,
+    pub value: Arc<str>,
+    pub checked: Model<bool>,
+    pub disabled: bool,
+    pub close_on_select: bool,
+    pub command: Option<CommandId>,
+    pub a11y_label: Option<Arc<str>>,
+    pub trailing: Option<AnyElement>,
+}
+
+impl DropdownMenuCheckboxItem {
+    pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self {
+        let label = label.into();
+        Self {
+            label: label.clone(),
+            value: label,
+            checked,
+            disabled: false,
+            close_on_select: false,
+            command: None,
+            a11y_label: None,
+            trailing: None,
+        }
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.value = value.into();
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
+    pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.trailing = Some(element);
+        self
+    }
+}
+
+/// shadcn/ui `DropdownMenuRadioGroup` (v4).
+#[derive(Debug, Clone)]
+pub struct DropdownMenuRadioGroup {
+    pub value: Model<Option<Arc<str>>>,
+    pub items: Vec<DropdownMenuRadioItemSpec>,
+}
+
+impl DropdownMenuRadioGroup {
+    pub fn new(value: Model<Option<Arc<str>>>) -> Self {
+        Self {
+            value,
+            items: Vec::new(),
+        }
+    }
+
+    pub fn item(mut self, item: DropdownMenuRadioItemSpec) -> Self {
+        self.items.push(item);
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DropdownMenuRadioItemSpec {
+    pub label: Arc<str>,
+    pub value: Arc<str>,
+    pub disabled: bool,
+    pub close_on_select: bool,
+    pub command: Option<CommandId>,
+    pub a11y_label: Option<Arc<str>>,
+    pub trailing: Option<AnyElement>,
+}
+
+impl DropdownMenuRadioItemSpec {
+    pub fn new(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        let value = value.into();
+        let label = label.into();
+        Self {
+            label,
+            value,
+            disabled: false,
+            close_on_select: true,
+            command: None,
+            a11y_label: None,
+            trailing: None,
+        }
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
+    pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.trailing = Some(element);
+        self
+    }
+
+    fn into_item(self, group_value: Model<Option<Arc<str>>>) -> DropdownMenuRadioItem {
+        DropdownMenuRadioItem {
+            label: self.label,
+            value: self.value,
+            group_value,
+            disabled: self.disabled,
+            close_on_select: self.close_on_select,
+            command: self.command,
+            a11y_label: self.a11y_label,
+            trailing: self.trailing,
+        }
+    }
+}
+
+/// shadcn/ui `DropdownMenuRadioItem` (v4).
+#[derive(Debug, Clone)]
+pub struct DropdownMenuRadioItem {
+    pub label: Arc<str>,
+    pub value: Arc<str>,
+    pub group_value: Model<Option<Arc<str>>>,
+    pub disabled: bool,
+    pub close_on_select: bool,
+    pub command: Option<CommandId>,
+    pub a11y_label: Option<Arc<str>>,
+    pub trailing: Option<AnyElement>,
+}
+
+impl DropdownMenuRadioItem {
+    pub fn new(
+        group_value: Model<Option<Arc<str>>>,
+        value: impl Into<Arc<str>>,
+        label: impl Into<Arc<str>>,
+    ) -> Self {
+        let value = value.into();
+        let label = label.into();
+        Self {
+            label,
+            value,
+            group_value,
+            disabled: false,
+            close_on_select: true,
+            command: None,
+            a11y_label: None,
+            trailing: None,
+        }
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
+    pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
         self
     }
 
@@ -190,9 +404,123 @@ fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuE
     for entry in entries {
         match entry {
             DropdownMenuEntry::Group(group) => flatten_entries(into, group.entries),
+            DropdownMenuEntry::RadioGroup(group) => {
+                for item in group.items {
+                    into.push(DropdownMenuEntry::RadioItem(
+                        item.into_item(group.value.clone()),
+                    ));
+                }
+            }
             other => into.push(other),
         }
     }
+}
+
+fn checkable_menu_row_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    trailing: Option<AnyElement>,
+    indicator_on: bool,
+    disabled: bool,
+    row_bg: fret_core::Color,
+    row_fg: fret_core::Color,
+    text_style: TextStyle,
+    font_size: Px,
+    font_line_height: Px,
+    pad_x: Px,
+    pad_y: Px,
+    radius_sm: Px,
+    text_disabled: fret_core::Color,
+) -> Vec<AnyElement> {
+    vec![cx.container(
+        ContainerProps {
+            layout: LayoutStyle::default(),
+            padding: Edges {
+                top: pad_y,
+                right: pad_x,
+                bottom: pad_y,
+                left: pad_x,
+            },
+            background: Some(row_bg),
+            corner_radii: fret_core::Corners::all(radius_sm),
+            ..Default::default()
+        },
+        move |cx| {
+            let mut row: Vec<AnyElement> = Vec::with_capacity(3 + usize::from(trailing.is_some()));
+
+            let indicator_fg = if disabled { text_disabled } else { row_fg };
+            row.push(cx.flex(
+                FlexProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(16.0));
+                        layout.size.height = Length::Px(Px(16.0));
+                        layout
+                    },
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    if !indicator_on {
+                        return Vec::new();
+                    }
+
+                    vec![cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: Arc::from("✓"),
+                        style: Some(TextStyle {
+                            font: FontId::default(),
+                            size: font_size,
+                            weight: FontWeight::MEDIUM,
+                            line_height: Some(font_line_height),
+                            letter_spacing_em: None,
+                        }),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        color: Some(indicator_fg),
+                    })]
+                },
+            ));
+
+            row.push(cx.text_props(TextProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
+                text: label.clone(),
+                style: Some(text_style.clone()),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
+                color: Some(if disabled { text_disabled } else { row_fg }),
+            }));
+
+            if let Some(t) = trailing.clone() {
+                row.push(t);
+            }
+
+            vec![cx.flex(
+                FlexProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(8.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| row.clone(),
+            )]
+        },
+    )]
 }
 
 /// shadcn/ui `Dropdown Menu` (v4).
@@ -347,16 +675,29 @@ impl DropdownMenu {
 
                     let item_count = entries
                         .iter()
-                        .filter(|e| matches!(e, DropdownMenuEntry::Item(_)))
+                        .filter(|e| {
+                            matches!(
+                                e,
+                                DropdownMenuEntry::Item(_)
+                                    | DropdownMenuEntry::CheckboxItem(_)
+                                    | DropdownMenuEntry::RadioItem(_)
+                            )
+                        })
                         .count();
                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                         .iter()
                         .map(|e| match e {
                             DropdownMenuEntry::Item(item) => (item.label.clone(), item.disabled),
+                            DropdownMenuEntry::CheckboxItem(item) => {
+                                (item.label.clone(), item.disabled)
+                            }
+                            DropdownMenuEntry::RadioItem(item) => (item.label.clone(), item.disabled),
                             DropdownMenuEntry::Label(_) | DropdownMenuEntry::Separator => {
                                 (Arc::from(""), true)
                             }
-                            DropdownMenuEntry::Group(_) => unreachable!("groups are flattened"),
+                            DropdownMenuEntry::Group(_) | DropdownMenuEntry::RadioGroup(_) => {
+                                unreachable!("entries are flattened")
+                            }
                         })
                         .unzip();
 
@@ -585,6 +926,9 @@ impl DropdownMenu {
                                                     DropdownMenuEntry::Group(_) => {
                                                         unreachable!("groups are flattened")
                                                     }
+                                                    DropdownMenuEntry::RadioGroup(_) => {
+                                                        unreachable!("radio groups are flattened")
+                                                    }
                                                     DropdownMenuEntry::Separator => {
                                                         out.push(cx.container(
                                                             ContainerProps {
@@ -604,6 +948,234 @@ impl DropdownMenu {
                                                                     |_cx| Vec::new(),
                                                                 ));
                                                             }
+                                                    DropdownMenuEntry::CheckboxItem(item) => {
+                                                        let collection_index = item_ix;
+                                                        item_ix = item_ix.saturating_add(1);
+
+                                                        let label = item.label.clone();
+                                                        let value = item.value.clone();
+                                                        let checked = item.checked.clone();
+                                                        let a11y_label = item
+                                                            .a11y_label
+                                                            .clone()
+                                                            .or_else(|| Some(label.clone()));
+                                                        let disabled = item.disabled;
+                                                        let close_on_select = item.close_on_select;
+                                                        let command = item.command;
+                                                        let trailing = item.trailing.clone();
+                                                        let open = open_for_menu.clone();
+                                                        let text_style = text_style.clone();
+                                                        let submenu_for_item =
+                                                            submenu_for_content.clone();
+
+                                                        out.push(cx.keyed(value.clone(), |cx| {
+                                                            cx.pressable_with_id_props(
+                                                                |cx, st, item_id| {
+                                                                    let checked_now = cx
+                                                                        .watch_model(&checked)
+                                                                        .copied()
+                                                                        .unwrap_or(false);
+
+                                                                    let _ = menu::sub_trigger::wire(
+                                                                        cx,
+                                                                        st,
+                                                                        item_id,
+                                                                        disabled,
+                                                                        false,
+                                                                        value.clone(),
+                                                                        &submenu_for_item,
+                                                                        submenu_cfg,
+                                                                        None,
+                                                                    );
+
+                                                                    if !disabled {
+                                                                        menu::checkbox_item::wire_toggle_on_activate(
+                                                                            cx,
+                                                                            checked.clone(),
+                                                                        );
+                                                                        cx.pressable_dispatch_command_opt(command);
+                                                                        if close_on_select {
+                                                                            cx.pressable_set_bool(
+                                                                                &open,
+                                                                                false,
+                                                                            );
+                                                                        }
+                                                                    }
+
+                                                                    let props = PressableProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Fill;
+                                                                            layout.size.min_height =
+                                                                                Some(Px(28.0));
+                                                                            layout
+                                                                        },
+                                                                        enabled: !disabled,
+                                                                        focusable: !disabled,
+                                                                        focus_ring: Some(ring),
+                                                                        a11y: menu::item::menu_item_checkbox_a11y(
+                                                                            a11y_label,
+                                                                            checked_now,
+                                                                        )
+                                                                        .with_collection_position(
+                                                                            collection_index,
+                                                                            item_count,
+                                                                        ),
+                                                                        ..Default::default()
+                                                                    };
+
+                                                                    let mut row_bg =
+                                                                        fret_core::Color::TRANSPARENT;
+                                                                    let mut row_fg = fg;
+                                                                    if st.hovered
+                                                                        || st.pressed
+                                                                        || st.focused
+                                                                    {
+                                                                        row_bg = accent;
+                                                                        row_fg = accent_fg;
+                                                                    }
+
+                                                                    let children = checkable_menu_row_children(
+                                                                        cx,
+                                                                        label.clone(),
+                                                                        trailing.clone(),
+                                                                        checked_now,
+                                                                        disabled,
+                                                                        row_bg,
+                                                                        row_fg,
+                                                                        text_style.clone(),
+                                                                        font_size,
+                                                                        font_line_height,
+                                                                        pad_x,
+                                                                        pad_y,
+                                                                        radius_sm,
+                                                                        text_disabled,
+                                                                    );
+
+                                                                    (props, children)
+                                                                },
+                                                            )
+                                                        }));
+                                                    }
+                                                    DropdownMenuEntry::RadioItem(item) => {
+                                                        let collection_index = item_ix;
+                                                        item_ix = item_ix.saturating_add(1);
+
+                                                        let label = item.label.clone();
+                                                        let value = item.value.clone();
+                                                        let group_value = item.group_value.clone();
+                                                        let a11y_label = item
+                                                            .a11y_label
+                                                            .clone()
+                                                            .or_else(|| Some(label.clone()));
+                                                        let disabled = item.disabled;
+                                                        let close_on_select = item.close_on_select;
+                                                        let command = item.command;
+                                                        let trailing = item.trailing.clone();
+                                                        let open = open_for_menu.clone();
+                                                        let text_style = text_style.clone();
+                                                        let submenu_for_item =
+                                                            submenu_for_content.clone();
+
+                                                        out.push(cx.keyed(value.clone(), |cx| {
+                                                            cx.pressable_with_id_props(
+                                                                |cx, st, item_id| {
+                                                                    let selected = cx
+                                                                        .watch_model(&group_value)
+                                                                        .cloned()
+                                                                        .flatten();
+                                                                    let is_selected =
+                                                                        menu::radio_group::is_selected(
+                                                                            selected.as_ref(),
+                                                                            &value,
+                                                                        );
+
+                                                                    let _ = menu::sub_trigger::wire(
+                                                                        cx,
+                                                                        st,
+                                                                        item_id,
+                                                                        disabled,
+                                                                        false,
+                                                                        value.clone(),
+                                                                        &submenu_for_item,
+                                                                        submenu_cfg,
+                                                                        None,
+                                                                    );
+
+                                                                    if !disabled {
+                                                                        menu::radio_group::wire_select_on_activate(
+                                                                            cx,
+                                                                            group_value.clone(),
+                                                                            value.clone(),
+                                                                        );
+                                                                        cx.pressable_dispatch_command_opt(command);
+                                                                        if close_on_select {
+                                                                            cx.pressable_set_bool(
+                                                                                &open,
+                                                                                false,
+                                                                            );
+                                                                        }
+                                                                    }
+
+                                                                    let props = PressableProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Fill;
+                                                                            layout.size.min_height =
+                                                                                Some(Px(28.0));
+                                                                            layout
+                                                                        },
+                                                                        enabled: !disabled,
+                                                                        focusable: !disabled,
+                                                                        focus_ring: Some(ring),
+                                                                        a11y: menu::item::menu_item_radio_a11y(
+                                                                            a11y_label,
+                                                                            is_selected,
+                                                                        )
+                                                                        .with_collection_position(
+                                                                            collection_index,
+                                                                            item_count,
+                                                                        ),
+                                                                        ..Default::default()
+                                                                    };
+
+                                                                    let mut row_bg =
+                                                                        fret_core::Color::TRANSPARENT;
+                                                                    let mut row_fg = fg;
+                                                                    if st.hovered
+                                                                        || st.pressed
+                                                                        || st.focused
+                                                                    {
+                                                                        row_bg = accent;
+                                                                        row_fg = accent_fg;
+                                                                    }
+
+                                                                    let children = checkable_menu_row_children(
+                                                                        cx,
+                                                                        label.clone(),
+                                                                        trailing.clone(),
+                                                                        is_selected,
+                                                                        disabled,
+                                                                        row_bg,
+                                                                        row_fg,
+                                                                        text_style.clone(),
+                                                                        font_size,
+                                                                        font_line_height,
+                                                                        pad_x,
+                                                                        pad_y,
+                                                                        radius_sm,
+                                                                        text_disabled,
+                                                                    );
+
+                                                                    (props, children)
+                                                                },
+                                                            )
+                                                        }));
+                                                    }
                                                     DropdownMenuEntry::Item(item) => {
                                                         let collection_index = item_ix;
                                                         item_ix = item_ix.saturating_add(1);
@@ -615,6 +1187,7 @@ impl DropdownMenu {
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
                                                         let disabled = item.disabled;
+                                                        let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
@@ -657,7 +1230,9 @@ impl DropdownMenu {
 
                                                                 if !has_submenu && !disabled {
                                                                     cx.pressable_dispatch_command_opt(command);
-                                                                    cx.pressable_set_bool(&open, false);
+                                                                    if close_on_select {
+                                                                        cx.pressable_set_bool(&open, false);
+                                                                    }
                                                                 }
 
                                                                 let props = PressableProps {
@@ -824,7 +1399,14 @@ impl DropdownMenu {
                                         let submenu_entries = flat;
                                         let item_count = submenu_entries
                                             .iter()
-                                            .filter(|e| matches!(e, DropdownMenuEntry::Item(_)))
+                                            .filter(|e| {
+                                                matches!(
+                                                    e,
+                                                    DropdownMenuEntry::Item(_)
+                                                        | DropdownMenuEntry::CheckboxItem(_)
+                                                        | DropdownMenuEntry::RadioItem(_)
+                                                )
+                                            })
                                             .count();
 
                                             let font_size = theme.metrics.font_size;
@@ -857,12 +1439,19 @@ impl DropdownMenu {
                                                     DropdownMenuEntry::Item(item) => {
                                                         (item.label.clone(), item.disabled)
                                                     }
+                                                    DropdownMenuEntry::CheckboxItem(item) => {
+                                                        (item.label.clone(), item.disabled)
+                                                    }
+                                                    DropdownMenuEntry::RadioItem(item) => {
+                                                        (item.label.clone(), item.disabled)
+                                                    }
                                                     DropdownMenuEntry::Label(_)
                                                     | DropdownMenuEntry::Separator => {
                                                         (Arc::from(""), true)
                                                     }
-                                                    DropdownMenuEntry::Group(_) => {
-                                                        unreachable!("groups are flattened")
+                                                    DropdownMenuEntry::Group(_)
+                                                    | DropdownMenuEntry::RadioGroup(_) => {
+                                                        unreachable!("entries are flattened")
                                                     }
                                                 })
                                                 .unzip();
@@ -920,6 +1509,9 @@ impl DropdownMenu {
                                                             DropdownMenuEntry::Group(_) => {
                                                                 unreachable!("groups are flattened")
                                                             }
+                                                            DropdownMenuEntry::RadioGroup(_) => {
+                                                                unreachable!("radio groups are flattened")
+                                                            }
                                                             DropdownMenuEntry::Separator => {
                                                                 rows.push(cx.container(
                                                                     ContainerProps {
@@ -939,6 +1531,203 @@ impl DropdownMenu {
                                                                     |_cx| Vec::new(),
                                                                 ));
                                                             }
+                                                            DropdownMenuEntry::CheckboxItem(item) => {
+                                                                let collection_index = item_ix;
+                                                                item_ix = item_ix.saturating_add(1);
+
+                                                                let label = item.label.clone();
+                                                                let value = item.value.clone();
+                                                                let checked = item.checked.clone();
+                                                                let a11y_label = item
+                                                                    .a11y_label
+                                                                    .clone()
+                                                                    .or_else(|| Some(label.clone()));
+                                                                let disabled = item.disabled;
+                                                                let close_on_select = item.close_on_select;
+                                                                let command = item.command;
+                                                                let trailing = item.trailing.clone();
+                                                                let open = open_for_submenu.clone();
+                                                                let submenu_for_key =
+                                                                    submenu_models_for_panel.clone();
+                                                                let text_style = text_style.clone();
+
+                                                                rows.push(cx.keyed(value.clone(), |cx| {
+                                                                    cx.pressable_with_id_props(
+                                                                        |cx, st, item_id| {
+                                                                            menu::sub_content::wire_item(
+                                                                                cx,
+                                                                                item_id,
+                                                                                disabled,
+                                                                                &submenu_for_key,
+                                                                            );
+
+                                                                            let checked_now = cx
+                                                                                .watch_model(&checked)
+                                                                                .copied()
+                                                                                .unwrap_or(false);
+                                                                            if !disabled {
+                                                                                menu::checkbox_item::wire_toggle_on_activate(
+                                                                                    cx,
+                                                                                    checked.clone(),
+                                                                                );
+                                                                            }
+                                                                            cx.pressable_dispatch_command_opt(command);
+                                                                            if !disabled && close_on_select {
+                                                                                cx.pressable_set_bool(&open, false);
+                                                                            }
+
+                                                                            let props = PressableProps {
+                                                                                layout: {
+                                                                                    let mut layout = LayoutStyle::default();
+                                                                                    layout.size.width = Length::Fill;
+                                                                                    layout.size.min_height = Some(Px(28.0));
+                                                                                    layout
+                                                                                },
+                                                                                enabled: !disabled,
+                                                                                focusable: !disabled,
+                                                                                focus_ring: Some(ring),
+                                                                                a11y: menu::item::menu_item_checkbox_a11y(
+                                                                                    a11y_label,
+                                                                                    checked_now,
+                                                                                )
+                                                                                .with_collection_position(
+                                                                                    collection_index,
+                                                                                    item_count,
+                                                                                ),
+                                                                                ..Default::default()
+                                                                            };
+
+                                                                            let mut row_bg =
+                                                                                fret_core::Color::TRANSPARENT;
+                                                                            let mut row_fg = fg;
+                                                                            if st.hovered || st.pressed || st.focused {
+                                                                                row_bg = accent;
+                                                                                row_fg = accent_fg;
+                                                                            }
+
+                                                                            let children = checkable_menu_row_children(
+                                                                                cx,
+                                                                                label.clone(),
+                                                                                trailing.clone(),
+                                                                                checked_now,
+                                                                                disabled,
+                                                                                row_bg,
+                                                                                row_fg,
+                                                                                text_style.clone(),
+                                                                                font_size,
+                                                                                font_line_height,
+                                                                                pad_x,
+                                                                                pad_y,
+                                                                                radius_sm,
+                                                                                text_disabled,
+                                                                            );
+
+                                                                            (props, children)
+                                                                        },
+                                                                    )
+                                                                }));
+                                                            }
+                                                            DropdownMenuEntry::RadioItem(item) => {
+                                                                let collection_index = item_ix;
+                                                                item_ix = item_ix.saturating_add(1);
+
+                                                                let label = item.label.clone();
+                                                                let value = item.value.clone();
+                                                                let group_value = item.group_value.clone();
+                                                                let a11y_label = item
+                                                                    .a11y_label
+                                                                    .clone()
+                                                                    .or_else(|| Some(label.clone()));
+                                                                let disabled = item.disabled;
+                                                                let close_on_select = item.close_on_select;
+                                                                let command = item.command;
+                                                                let trailing = item.trailing.clone();
+                                                                let open = open_for_submenu.clone();
+                                                                let submenu_for_key =
+                                                                    submenu_models_for_panel.clone();
+                                                                let text_style = text_style.clone();
+
+                                                                rows.push(cx.keyed(value.clone(), |cx| {
+                                                                    cx.pressable_with_id_props(
+                                                                        |cx, st, item_id| {
+                                                                            menu::sub_content::wire_item(
+                                                                                cx,
+                                                                                item_id,
+                                                                                disabled,
+                                                                                &submenu_for_key,
+                                                                            );
+
+                                                                            let selected = cx
+                                                                                .watch_model(&group_value)
+                                                                                .cloned()
+                                                                                .flatten();
+                                                                            let is_selected = menu::radio_group::is_selected(
+                                                                                selected.as_ref(),
+                                                                                &value,
+                                                                            );
+                                                                            if !disabled {
+                                                                                menu::radio_group::wire_select_on_activate(
+                                                                                    cx,
+                                                                                    group_value.clone(),
+                                                                                    value.clone(),
+                                                                                );
+                                                                            }
+                                                                            cx.pressable_dispatch_command_opt(command);
+                                                                            if !disabled && close_on_select {
+                                                                                cx.pressable_set_bool(&open, false);
+                                                                            }
+
+                                                                            let props = PressableProps {
+                                                                                layout: {
+                                                                                    let mut layout = LayoutStyle::default();
+                                                                                    layout.size.width = Length::Fill;
+                                                                                    layout.size.min_height = Some(Px(28.0));
+                                                                                    layout
+                                                                                },
+                                                                                enabled: !disabled,
+                                                                                focusable: !disabled,
+                                                                                focus_ring: Some(ring),
+                                                                                a11y: menu::item::menu_item_radio_a11y(
+                                                                                    a11y_label,
+                                                                                    is_selected,
+                                                                                )
+                                                                                .with_collection_position(
+                                                                                    collection_index,
+                                                                                    item_count,
+                                                                                ),
+                                                                                ..Default::default()
+                                                                            };
+
+                                                                            let mut row_bg =
+                                                                                fret_core::Color::TRANSPARENT;
+                                                                            let mut row_fg = fg;
+                                                                            if st.hovered || st.pressed || st.focused {
+                                                                                row_bg = accent;
+                                                                                row_fg = accent_fg;
+                                                                            }
+
+                                                                            let children = checkable_menu_row_children(
+                                                                                cx,
+                                                                                label.clone(),
+                                                                                trailing.clone(),
+                                                                                is_selected,
+                                                                                disabled,
+                                                                                row_bg,
+                                                                                row_fg,
+                                                                                text_style.clone(),
+                                                                                font_size,
+                                                                                font_line_height,
+                                                                                pad_x,
+                                                                                pad_y,
+                                                                                radius_sm,
+                                                                                text_disabled,
+                                                                            );
+
+                                                                            (props, children)
+                                                                        },
+                                                                    )
+                                                                }));
+                                                            }
                                                             DropdownMenuEntry::Item(item) => {
                                                                 let collection_index = item_ix;
                                                                 item_ix = item_ix.saturating_add(1);
@@ -950,6 +1739,7 @@ impl DropdownMenu {
                                                                     .clone()
                                                                     .or_else(|| Some(label.clone()));
                                                                 let disabled = item.disabled;
+                                                                let close_on_select = item.close_on_select;
                                                                 let command = item.command;
                                                                 let trailing = item.trailing.clone();
                                                                 let variant = item.variant;
@@ -968,7 +1758,7 @@ impl DropdownMenu {
                                                                                 &submenu_for_key,
                                                                             );
                                                                             cx.pressable_dispatch_command_opt(command);
-                                                                            if !disabled {
+                                                                            if !disabled && close_on_select {
                                                                                 cx.pressable_set_bool(&open, false);
                                                                             }
 

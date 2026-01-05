@@ -87,7 +87,11 @@ pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
     CommandList, CommandPalette, CommandSeparator, CommandShortcut, command,
 };
-pub use context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
+pub use context_menu::{
+    ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuGroup, ContextMenuItem,
+    ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
+    ContextMenuShortcut,
+};
 #[cfg(feature = "datagrid")]
 pub use data_table::{DataTable, DataTableRowState};
 pub use dialog::{
@@ -98,7 +102,9 @@ pub use drawer::{
     drawer,
 };
 pub use dropdown_menu::{
-    DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide,
+    DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry,
+    DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
+    DropdownMenuRadioItem, DropdownMenuRadioItemSpec, DropdownMenuShortcut, DropdownMenuSide,
 };
 pub use empty::Empty;
 pub use field::{
@@ -118,7 +124,11 @@ pub use item::{
 };
 pub use kbd::Kbd;
 pub use label::Label;
-pub use menubar::{Menubar, MenubarEntry, MenubarItem, MenubarMenu, MenubarMenuEntries, menubar};
+pub use menubar::{
+    Menubar, MenubarCheckboxItem, MenubarEntry, MenubarGroup, MenubarItem, MenubarLabel,
+    MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem, MenubarRadioItemSpec,
+    MenubarShortcut, menubar,
+};
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
     PaginationLinkSize, PaginationNext, PaginationPrevious,
