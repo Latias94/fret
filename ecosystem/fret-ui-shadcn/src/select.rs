@@ -1300,8 +1300,7 @@ fn select_impl<H: UiHost>(
                         open,
                         OverlayPresence::instant(true),
                         overlay_children,
-                    )
-                    .consume_outside_pointer_events(true);
+                    );
                     request.root_name = Some(overlay_root_name);
                     OverlayController::request(cx, request);
             }

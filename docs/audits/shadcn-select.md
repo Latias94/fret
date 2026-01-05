@@ -49,7 +49,8 @@ examples in `repo-ref/ui`.
   `SelectSeparator`) rendered inside the listbox.
 - Pass: Scroll buttons (`SelectScrollUpButton` / `SelectScrollDownButton`) are rendered for
   overflowing lists and scroll the viewport without dismissing the overlay.
-- Partial: Upstream supports richer content positioning modes (`item-aligned` vs `popper`).
+- Pass: Supports both Radix positioning modes: `SelectPosition::ItemAligned` (default) and
+  `SelectPosition::Popper` (enables arrow rendering when requested).
 
 ## Validation
 
@@ -57,4 +58,5 @@ examples in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- Consider supporting Radix `position="item-aligned"` for Select content.
+- Consider matching Radix horizontal alignment rules based on the value node + selected item text
+  geometry (Fret currently aligns via `align` + `align_offset` only).
