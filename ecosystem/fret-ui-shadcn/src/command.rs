@@ -73,6 +73,61 @@ pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
     }
 }
 
+pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
+    let px = theme
+        .metric_by_key("component.command.shortcut.text_px")
+        .or_else(|| theme.metric_by_key("component.text.sm_px"))
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or(theme.metrics.font_size);
+    let line_height = theme
+        .metric_by_key("component.command.shortcut.line_height")
+        .or_else(|| theme.metric_by_key("component.text.sm_line_height"))
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or(theme.metrics.font_line_height);
+    TextStyle {
+        font: FontId::default(),
+        size: px,
+        weight: FontWeight::NORMAL,
+        line_height: Some(line_height),
+        letter_spacing_em: None,
+    }
+}
+
+/// shadcn/ui `CommandShortcut` (v4).
+#[derive(Clone)]
+pub struct CommandShortcut {
+    text: Arc<str>,
+}
+
+impl std::fmt::Debug for CommandShortcut {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommandShortcut")
+            .field("text", &self.text.as_ref())
+            .finish()
+    }
+}
+
+impl CommandShortcut {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let fg = theme
+            .color_by_key("muted-foreground")
+            .unwrap_or(theme.colors.text_muted);
+        cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text: self.text,
+            style: Some(shortcut_text_style(&theme)),
+            color: Some(fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })
+    }
+}
+
 #[derive(Clone)]
 pub struct Command {
     chrome: ChromeRefinement,
@@ -235,6 +290,7 @@ pub struct CommandItem {
     keywords: Vec<Arc<str>>,
     checked: bool,
     show_checkmark: bool,
+    shortcut: Option<Arc<str>>,
     command: Option<CommandId>,
     on_select: Option<fret_ui::action::OnActivate>,
     children: Vec<AnyElement>,
@@ -249,6 +305,7 @@ impl std::fmt::Debug for CommandItem {
             .field("keywords_len", &self.keywords.len())
             .field("checked", &self.checked)
             .field("show_checkmark", &self.show_checkmark)
+            .field("shortcut", &self.shortcut.as_ref().map(|s| s.as_ref()))
             .field("command", &self.command)
             .field("on_select", &self.on_select.is_some())
             .field("children_len", &self.children.len())
@@ -266,6 +323,7 @@ impl CommandItem {
             keywords: Vec::new(),
             checked: false,
             show_checkmark: false,
+            shortcut: None,
             command: None,
             on_select: None,
             children: Vec::new(),
@@ -287,6 +345,11 @@ impl CommandItem {
         S: Into<Arc<str>>,
     {
         self.keywords = keywords.into_iter().map(Into::into).collect();
+        self
+    }
+
+    pub fn shortcut(mut self, shortcut: impl Into<Arc<str>>) -> Self {
+        self.shortcut = Some(shortcut.into());
         self
     }
 
@@ -672,8 +735,11 @@ impl CommandPalette {
                             aliases.push(kw.as_ref());
                         }
 
-                        let score =
-                            cmdk_score::command_score(item.label.as_ref(), query.as_str(), &aliases);
+                        let score = cmdk_score::command_score(
+                            item.label.as_ref(),
+                            query.as_str(),
+                            &aliases,
+                        );
                         (score > 0.0).then_some((idx, score, item))
                     })
                     .collect();
@@ -696,6 +762,7 @@ impl CommandPalette {
                     for kw in &item.keywords {
                         kw.as_ref().hash(&mut hasher);
                     }
+                    item.shortcut.as_ref().map(|s| s.as_ref()).unwrap_or("").hash(&mut hasher);
                     item.disabled.hash(&mut hasher);
                     item.command
                         .as_ref()
@@ -829,13 +896,14 @@ impl CommandPalette {
                         let enabled = disabled_flags.get(idx).copied() == Some(false);
                         let selected = active_idx.is_some_and(|i| i == idx);
 
-                        let label = item.label.clone();
-                        let value = item.value.clone();
-                        let checked = item.checked;
-                        let show_checkmark = item.show_checkmark;
-                        let command = item.command;
-                        let on_select = item.on_select.clone();
-                        let children = item.children;
+                    let label = item.label.clone();
+                    let value = item.value.clone();
+                    let checked = item.checked;
+                    let show_checkmark = item.show_checkmark;
+                    let shortcut = item.shortcut.clone();
+                    let command = item.command;
+                    let on_select = item.on_select.clone();
+                    let children = item.children;
                         let text_style = text_style.clone();
 
                         let row = cx.pressable(
@@ -891,7 +959,11 @@ impl CommandPalette {
                                 };
 
                                 let props = ContainerProps {
-                                    layout: LayoutStyle::default(),
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout
+                                    },
                                     padding: Edges {
                                         top: pad_y,
                                         right: pad_x,
@@ -908,7 +980,11 @@ impl CommandPalette {
                                 vec![cx.container(props, move |cx| {
                                     vec![cx.row(
                                         RowProps {
-                                            layout: LayoutStyle::default(),
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Fill;
+                                                layout
+                                            },
                                             gap: row_gap,
                                             padding: Edges::all(Px(0.0)),
                                             justify: MainAlign::SpaceBetween,
@@ -920,31 +996,49 @@ impl CommandPalette {
                                             }
 
                                             let fg = if enabled { fg } else { fg_disabled };
-                                            let mut out = Vec::with_capacity(2);
-                                            out.push(cx.text_props(TextProps {
-                                                layout: LayoutStyle::default(),
-                                                text: label.clone(),
-                                                style: Some(text_style.clone()),
-                                                color: Some(fg),
-                                                wrap: TextWrap::None,
-                                                overflow: TextOverflow::Clip,
-                                            }));
 
-                                            if show_checkmark {
-                                                let icon = decl_icon::icon_with(
-                                                    cx,
-                                                    ids::ui::CHECK,
-                                                    Some(Px(16.0)),
-                                                    Some(ColorRef::Color(fg)),
-                                                );
-                                                let icon = cx.opacity(
-                                                    if checked { 1.0 } else { 0.0 },
-                                                    move |_cx| vec![icon],
-                                                );
-                                                out.push(icon);
+                                            let left = cx.row(
+                                                RowProps {
+                                                    layout: LayoutStyle::default(),
+                                                    gap: row_gap,
+                                                    padding: Edges::all(Px(0.0)),
+                                                    justify: MainAlign::Start,
+                                                    align: CrossAlign::Center,
+                                                },
+                                                move |cx| {
+                                                    let mut out = Vec::with_capacity(2);
+                                                    if show_checkmark {
+                                                        let icon = decl_icon::icon_with(
+                                                            cx,
+                                                            ids::ui::CHECK,
+                                                            Some(Px(16.0)),
+                                                            Some(ColorRef::Color(fg)),
+                                                        );
+                                                        let icon = cx.opacity(
+                                                            if checked { 1.0 } else { 0.0 },
+                                                            move |_cx| vec![icon],
+                                                        );
+                                                        out.push(icon);
+                                                    }
+
+                                                    out.push(cx.text_props(TextProps {
+                                                        layout: LayoutStyle::default(),
+                                                        text: label.clone(),
+                                                        style: Some(text_style.clone()),
+                                                        color: Some(fg),
+                                                        wrap: TextWrap::None,
+                                                        overflow: TextOverflow::Clip,
+                                                    }));
+
+                                                    out
+                                                },
+                                            );
+
+                                            if let Some(shortcut) = shortcut.clone() {
+                                                vec![left, CommandShortcut::new(shortcut).into_element(cx)]
+                                            } else {
+                                                vec![left]
                                             }
-
-                                            out
                                         },
                                     )]
                                 })]
@@ -1718,7 +1812,15 @@ mod tests {
             CommandItem::new("Close").on_select(CommandId::new("close")),
         ];
 
-        let _root = render_frame(&mut ui, &mut app, &mut services, window, bounds, model, items);
+        let _root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            items,
+        );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
 
         let options: Vec<_> = snap
