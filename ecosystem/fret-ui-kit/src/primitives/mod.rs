@@ -34,6 +34,7 @@ pub mod presence;
 pub mod radio_group;
 pub mod roving_focus_group;
 pub mod tabs;
+pub mod toggle_group;
 pub mod tooltip_delay_group;
 pub mod tooltip_provider;
 pub mod visually_hidden;

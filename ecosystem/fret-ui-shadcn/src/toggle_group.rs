@@ -1,16 +1,14 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
+use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps, RovingFlexProps,
-    RovingFocusProps,
+    AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, RovingFlexProps, RovingFocusProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::layout as shadcn_layout;
@@ -60,19 +58,7 @@ fn toggle_group_item_pad_x(theme: &Theme) -> Px {
         .unwrap_or(Px(12.0))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ToggleGroupKind {
-    Single,
-    Multiple,
-}
-
-/// Matches Radix ToggleGroup `orientation` outcome.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum ToggleGroupOrientation {
-    #[default]
-    Horizontal,
-    Vertical,
-}
+pub use fret_ui_kit::primitives::toggle_group::{ToggleGroupKind, ToggleGroupOrientation};
 
 #[derive(Clone)]
 enum ToggleGroupModel {
@@ -261,18 +247,17 @@ impl ToggleGroup {
             items.iter().map(|i| group_disabled || i.disabled).collect();
 
         let tab_stop = match (selected_single.as_deref(), selected_multi.as_ref()) {
-            (Some(selected), _) => {
-                roving_focus::active_index_from_str_keys(&values, Some(selected), &disabled_flags)
-            }
-            (_, Some(selected)) => {
-                let first_selected_enabled = values.iter().enumerate().find_map(|(idx, v)| {
-                    let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                    let on = selected.iter().any(|s| s.as_ref() == v.as_ref());
-                    (enabled && on).then_some(idx)
-                });
-                first_selected_enabled.or_else(|| roving_focus::first_enabled(&disabled_flags))
-            }
-            _ => roving_focus::first_enabled(&disabled_flags),
+            (Some(selected), _) => fret_ui_kit::primitives::toggle_group::tab_stop_index_single(
+                &values,
+                Some(selected),
+                &disabled_flags,
+            ),
+            (_, Some(selected)) => fret_ui_kit::primitives::toggle_group::tab_stop_index_multiple(
+                &values,
+                selected,
+                &disabled_flags,
+            ),
+            _ => fret_ui_kit::headless::roving_focus::first_enabled(&disabled_flags),
         };
 
         let gap = MetricRef::space(spacing).resolve(&theme);
@@ -423,12 +408,9 @@ impl ToggleGroup {
                                 enabled,
                                 focusable,
                                 focus_ring: Some(ring),
-                                a11y: PressableA11y {
-                                    role: Some(SemanticsRole::Button),
-                                    label: Some(a11y_label),
-                                    selected: on,
-                                    ..Default::default()
-                                },
+                                a11y: fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y(
+                                    a11y_label, on,
+                                ),
                                 ..Default::default()
                             },
                             move |cx, state| {
