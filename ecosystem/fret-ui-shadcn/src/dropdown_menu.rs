@@ -1597,6 +1597,84 @@ mod tests {
         );
     }
 
+    #[test]
+    fn dropdown_menu_pointer_open_focuses_content_not_first_item() {
+        use fret_core::MouseButton;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        let root = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let position = rect_center(trigger_bounds);
+
+        // shadcn `DropdownMenu` uses a caller-owned open model; treat this pointer interaction as
+        // the "open reason" and flip the open model like a trigger would.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha"))
+            .expect("Alpha menu item");
+
+        let focus = ui.focus().expect("expected focus after pointer-open");
+        assert_ne!(
+            focus, alpha.id,
+            "pointer-open should not move focus to the first menu item (Radix onEntryFocus preventDefault)"
+        );
+        assert_ne!(
+            focus, trigger,
+            "pointer-open should focus menu content/roving container rather than keeping trigger focus"
+        );
+    }
+
     fn rect_center(rect: Rect) -> Point {
         Point::new(
             Px(rect.origin.x.0 + rect.size.width.0 / 2.0),
