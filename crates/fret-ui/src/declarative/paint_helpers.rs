@@ -14,7 +14,8 @@ pub(super) fn scrollbar_thumb_rect(
     }
 
     let track_h = track.size.height.0;
-    let min_thumb_h = 16.0f32.min(track_h);
+    // Minimum of 18 matches macOS minimum and Radix ScrollArea defaults.
+    let min_thumb_h = 18.0f32.min(track_h);
     let ratio = (viewport_h.0 / content_h.0).clamp(0.0, 1.0);
     let thumb_h = (track_h * ratio).max(min_thumb_h).min(track_h);
     let max_thumb_y = (track_h - thumb_h).max(0.0);
@@ -42,7 +43,8 @@ pub(super) fn scrollbar_thumb_rect_horizontal(
     }
 
     let track_w = track.size.width.0;
-    let min_thumb_w = 16.0f32.min(track_w);
+    // Minimum of 18 matches macOS minimum and Radix ScrollArea defaults.
+    let min_thumb_w = 18.0f32.min(track_w);
     let ratio = (viewport_w.0 / content_w.0).clamp(0.0, 1.0);
     let thumb_w = (track_w * ratio).max(min_thumb_w).min(track_w);
     let max_thumb_x = (track_w - thumb_w).max(0.0);

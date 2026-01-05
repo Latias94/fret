@@ -35,7 +35,8 @@ Fret does not use the DOM or native scroll containers. Scrolling is an explicit 
     scroll-end debounce).
   - `always` shows scrollbars when overflowing.
 - Pass: Supports separate X/Y scrollbars and a corner element when both overflow.
-- Partial: Thumb sizing and minimum sizes do not exactly match Radix (best-effort).
+- Partial: Thumb sizing does not exactly match Radix (best-effort).
+  - Pass: Thumb minimum now matches Radix/macOS (`18px`).
 
 ## Follow-ups (recommended)
 
