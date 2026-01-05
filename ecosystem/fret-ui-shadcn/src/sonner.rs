@@ -99,6 +99,10 @@ impl Sonner {
         }
     }
 
+    /// Dispatches a toast request.
+    ///
+    /// Note: this is an upsert. If `request.id` is set and still refers to an open toast, the
+    /// existing toast is updated (useful for `Loading -> Success/Error` flows).
     pub fn toast(
         &self,
         host: &mut dyn UiActionHost,
@@ -106,6 +110,161 @@ impl Sonner {
         request: ToastRequest,
     ) -> ToastId {
         OverlayController::toast_action(host, self.store.clone(), window, request)
+    }
+
+    /// Updates an existing toast by id (or creates a new one if the id is no longer valid).
+    pub fn toast_update(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        id: ToastId,
+        request: ToastRequest,
+    ) -> ToastId {
+        self.toast(host, window, request.id(id))
+    }
+
+    pub fn toast_loading(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.toast(
+            host,
+            window,
+            ToastRequest::new(title)
+                .variant(ToastVariant::Loading)
+                .duration(None),
+        )
+    }
+
+    pub fn toast_loading_update(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        id: ToastId,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.toast_update(
+            host,
+            window,
+            id,
+            ToastRequest::new(title)
+                .variant(ToastVariant::Loading)
+                .duration(None),
+        )
+    }
+
+    pub fn toast_success(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.toast(
+            host,
+            window,
+            ToastRequest::new(title).variant(ToastVariant::Success),
+        )
+    }
+
+    pub fn toast_success_update(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        id: ToastId,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.toast_update(
+            host,
+            window,
+            id,
+            ToastRequest::new(title).variant(ToastVariant::Success),
+        )
+    }
+
+    pub fn toast_error(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.toast(
+            host,
+            window,
+            ToastRequest::new(title).variant(ToastVariant::Error),
+        )
+    }
+
+    pub fn toast_error_update(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        id: ToastId,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.toast_update(
+            host,
+            window,
+            id,
+            ToastRequest::new(title).variant(ToastVariant::Error),
+        )
+    }
+
+    pub fn toast_info(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.toast(
+            host,
+            window,
+            ToastRequest::new(title).variant(ToastVariant::Info),
+        )
+    }
+
+    pub fn toast_info_update(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        id: ToastId,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.toast_update(
+            host,
+            window,
+            id,
+            ToastRequest::new(title).variant(ToastVariant::Info),
+        )
+    }
+
+    pub fn toast_warning(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.toast(
+            host,
+            window,
+            ToastRequest::new(title).variant(ToastVariant::Warning),
+        )
+    }
+
+    pub fn toast_warning_update(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        id: ToastId,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.toast_update(
+            host,
+            window,
+            id,
+            ToastRequest::new(title).variant(ToastVariant::Warning),
+        )
     }
 
     pub fn dismiss(&self, host: &mut dyn UiActionHost, window: AppWindowId, id: ToastId) -> bool {
