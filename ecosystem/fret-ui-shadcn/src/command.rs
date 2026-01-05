@@ -232,6 +232,7 @@ pub struct CommandItem {
     label: Arc<str>,
     value: Arc<str>,
     disabled: bool,
+    keywords: Vec<Arc<str>>,
     checked: bool,
     show_checkmark: bool,
     command: Option<CommandId>,
@@ -245,6 +246,7 @@ impl std::fmt::Debug for CommandItem {
             .field("label", &self.label.as_ref())
             .field("value", &self.value.as_ref())
             .field("disabled", &self.disabled)
+            .field("keywords_len", &self.keywords.len())
             .field("checked", &self.checked)
             .field("show_checkmark", &self.show_checkmark)
             .field("command", &self.command)
@@ -261,6 +263,7 @@ impl CommandItem {
             label: label.clone(),
             value: label,
             disabled: false,
+            keywords: Vec::new(),
             checked: false,
             show_checkmark: false,
             command: None,
@@ -271,6 +274,19 @@ impl CommandItem {
 
     pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
         self.value = value.into();
+        self
+    }
+
+    /// Additional strings that participate in cmdk-style filtering/ranking.
+    ///
+    /// This aligns with cmdk's `keywords` prop: matching against these should surface the item even
+    /// when the visible label does not contain the query.
+    pub fn keywords<I, S>(mut self, keywords: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Arc<str>>,
+    {
+        self.keywords = keywords.into_iter().map(Into::into).collect();
         self
     }
 
@@ -648,15 +664,16 @@ impl CommandPalette {
                     .into_iter()
                     .enumerate()
                     .filter_map(|(idx, item)| {
-                        let score = if item.value.as_ref() != item.label.as_ref() {
-                            cmdk_score::command_score(
-                                item.label.as_ref(),
-                                query.as_str(),
-                                &[item.value.as_ref()],
-                            )
-                        } else {
-                            cmdk_score::command_score(item.label.as_ref(), query.as_str(), &[])
-                        };
+                        let mut aliases: Vec<&str> = Vec::with_capacity(1 + item.keywords.len());
+                        if item.value.as_ref() != item.label.as_ref() {
+                            aliases.push(item.value.as_ref());
+                        }
+                        for kw in &item.keywords {
+                            aliases.push(kw.as_ref());
+                        }
+
+                        let score =
+                            cmdk_score::command_score(item.label.as_ref(), query.as_str(), &aliases);
                         (score > 0.0).then_some((idx, score, item))
                     })
                     .collect();
@@ -675,6 +692,10 @@ impl CommandPalette {
                 for item in &items {
                     item.label.as_ref().hash(&mut hasher);
                     item.value.as_ref().hash(&mut hasher);
+                    item.keywords.len().hash(&mut hasher);
+                    for kw in &item.keywords {
+                        kw.as_ref().hash(&mut hasher);
+                    }
                     item.disabled.hash(&mut hasher);
                     item.command
                         .as_ref()
@@ -1664,6 +1685,40 @@ mod tests {
             model,
             items,
         );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let options: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::ListBoxOption)
+            .collect();
+        assert_eq!(options.len(), 1);
+        assert_eq!(options[0].label.as_deref(), Some("Open"));
+    }
+
+    #[test]
+    fn cmdk_filters_by_keywords() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(String::from("prefs"));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            CommandItem::new("Open")
+                .keywords(["preferences", "prefs"])
+                .on_select(CommandId::new("open")),
+            CommandItem::new("Close").on_select(CommandId::new("close")),
+        ];
+
+        let _root = render_frame(&mut ui, &mut app, &mut services, window, bounds, model, items);
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
 
         let options: Vec<_> = snap
