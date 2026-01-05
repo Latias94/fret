@@ -23,6 +23,7 @@
 //! React/DOM APIs.
 
 pub mod active_descendant;
+pub mod accordion;
 pub mod collection;
 pub mod dismissable_layer;
 pub mod focus_scope;

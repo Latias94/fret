@@ -7,16 +7,14 @@ use fret_core::{
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, PressableA11y,
-    PressableProps, RovingFlexProps, RovingFocusProps, RowProps, SemanticsProps, TextProps,
-    VisualTransformProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, PressableProps,
+    RovingFlexProps, RovingFocusProps, RowProps, SemanticsProps, TextProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 fn border_color(theme: &Theme) -> Color {
@@ -50,11 +48,7 @@ fn trigger_gap(theme: &Theme) -> Px {
         .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AccordionKind {
-    Single,
-    Multiple,
-}
+pub use fret_ui_kit::primitives::accordion::AccordionKind;
 
 #[derive(Clone)]
 enum AccordionModel {
@@ -153,12 +147,10 @@ impl AccordionTrigger {
                 enabled,
                 focusable,
                 focus_ring: Some(decl_style::focus_ring(&theme, radius)),
-                a11y: PressableA11y {
-                    role: Some(SemanticsRole::Button),
-                    label: Some(a11y_label.clone()),
-                    expanded: Some(is_open),
-                    ..Default::default()
-                },
+                a11y: fret_ui_kit::primitives::accordion::accordion_trigger_a11y(
+                    a11y_label.clone(),
+                    is_open,
+                ),
                 ..Default::default()
             },
             move |cx, _state| {
@@ -503,20 +495,17 @@ impl Accordion {
                 items.iter().map(|i| group_disabled || i.disabled).collect();
 
             let tab_stop = match (open_single.as_deref(), open_multi.as_ref()) {
-                (Some(selected), _) => roving_focus::active_index_from_str_keys(
+                (Some(open), _) => fret_ui_kit::primitives::accordion::tab_stop_index_single(
                     &values,
-                    Some(selected),
+                    Some(open),
                     &disabled_flags,
                 ),
-                (_, Some(selected)) => {
-                    let first_open_enabled = values.iter().enumerate().find_map(|(idx, v)| {
-                        let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                        let open = selected.iter().any(|s| s.as_ref() == v.as_ref());
-                        (enabled && open).then_some(idx)
-                    });
-                    first_open_enabled.or_else(|| roving_focus::first_enabled(&disabled_flags))
-                }
-                _ => roving_focus::first_enabled(&disabled_flags),
+                (_, Some(open)) => fret_ui_kit::primitives::accordion::tab_stop_index_multiple(
+                    &values,
+                    open,
+                    &disabled_flags,
+                ),
+                _ => fret_ui_kit::headless::roving_focus::first_enabled(&disabled_flags),
             };
 
             let roving = RovingFocusProps {
