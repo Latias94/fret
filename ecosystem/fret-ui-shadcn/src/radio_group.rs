@@ -272,9 +272,10 @@ impl RadioGroup {
 
                                         let theme = Theme::global(&*cx.app).clone();
 
-                                        let mut border_color =
-                                            if is_selected { dot } else { border };
-                                        if item_enabled && (st.hovered || st.pressed) {
+                                        let mut border_color = border;
+                                        if item_enabled && st.focused {
+                                            border_color = ring;
+                                        } else if item_enabled && (st.hovered || st.pressed) {
                                             border_color = alpha_mul(ring, 0.8);
                                         }
 
@@ -414,8 +415,8 @@ mod tests {
         AppWindowId, Modifiers, PathCommand, SemanticsRole, SvgId, SvgService, TextBlobId,
         TextConstraints, TextMetrics, TextService, TextStyle,
     };
-    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Event, KeyCode};
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Point, Px, Rect};
     use fret_ui::{Theme, ThemeConfig, UiTree};
 
@@ -550,18 +551,19 @@ mod tests {
         orientation: RadioGroupOrientation,
         loop_navigation: bool,
     ) -> fret_core::NodeId {
-        let root = fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
-            vec![
-                RadioGroup::new(model)
-                    .a11y_label("Options")
-                    .orientation(orientation)
-                    .loop_navigation(loop_navigation)
-                    .item(RadioGroupItem::new("alpha", "Alpha"))
-                    .item(RadioGroupItem::new("beta", "Beta"))
-                    .item(RadioGroupItem::new("gamma", "Gamma"))
-                    .into_element(cx),
-            ]
-        });
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![
+                    RadioGroup::new(model)
+                        .a11y_label("Options")
+                        .orientation(orientation)
+                        .loop_navigation(loop_navigation)
+                        .item(RadioGroupItem::new("alpha", "Alpha"))
+                        .item(RadioGroupItem::new("beta", "Beta"))
+                        .item(RadioGroupItem::new("gamma", "Gamma"))
+                        .into_element(cx),
+                ]
+            });
         ui.set_root(root);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
