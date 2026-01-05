@@ -22,7 +22,7 @@ use crate::plot::view::{
     clamp_view_to_data, clamp_zoom_factors, data_rect_from_plot_points, data_rect_key,
     expand_data_bounds, local_from_absolute, pan_view_by_px, sanitize_data_rect, zoom_view_at_px,
 };
-use crate::series::{Series, SeriesId};
+use crate::series::{Series, SeriesData, SeriesId};
 
 #[derive(Debug, Clone)]
 pub struct LineSeries {
@@ -62,12 +62,13 @@ pub struct LinePlotModel {
 
 impl LinePlotModel {
     pub fn from_series(series: Vec<LineSeries>) -> Self {
-        let bounds = compute_data_bounds_from_series(&series).unwrap_or(DataRect {
-            x_min: 0.0,
-            x_max: 1.0,
-            y_min: 0.0,
-            y_max: 1.0,
-        });
+        let bounds =
+            compute_data_bounds_from_series_data(&series, |s| &s.data).unwrap_or(DataRect {
+                x_min: 0.0,
+                x_max: 1.0,
+                y_min: 0.0,
+                y_max: 1.0,
+            });
 
         Self {
             data_bounds: bounds,
@@ -76,6 +77,66 @@ impl LinePlotModel {
     }
 
     pub fn from_series_with_bounds(series: Vec<LineSeries>, data_bounds: DataRect) -> Self {
+        Self {
+            data_bounds: sanitize_data_rect(data_bounds),
+            series,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ScatterSeries {
+    pub id: SeriesId,
+    pub label: Arc<str>,
+    pub data: Series,
+    pub stroke_color: Option<Color>,
+}
+
+impl ScatterSeries {
+    pub fn new(label: impl Into<Arc<str>>, data: Series) -> Self {
+        let label = label.into();
+        Self {
+            id: SeriesId::from_label(&label),
+            label,
+            data,
+            stroke_color: None,
+        }
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.stroke_color = Some(color);
+        self
+    }
+
+    pub fn id(mut self, id: SeriesId) -> Self {
+        self.id = id;
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ScatterPlotModel {
+    pub data_bounds: DataRect,
+    pub series: Vec<ScatterSeries>,
+}
+
+impl ScatterPlotModel {
+    pub fn from_series(series: Vec<ScatterSeries>) -> Self {
+        let bounds =
+            compute_data_bounds_from_series_data(&series, |s| &s.data).unwrap_or(DataRect {
+                x_min: 0.0,
+                x_max: 1.0,
+                y_min: 0.0,
+                y_max: 1.0,
+            });
+
+        Self {
+            data_bounds: bounds,
+            series,
+        }
+    }
+
+    pub fn from_series_with_bounds(series: Vec<ScatterSeries>, data_bounds: DataRect) -> Self {
         Self {
             data_bounds: sanitize_data_rect(data_bounds),
             series,
@@ -192,6 +253,31 @@ fn dim_color(color: Color, factor: f32) -> Color {
         a: (color.a * factor).clamp(0.0, 1.0),
         ..color
     }
+}
+
+fn scatter_marker_commands(samples: &[SamplePoint], radius: Px) -> Vec<fret_core::PathCommand> {
+    if samples.is_empty() {
+        return Vec::new();
+    }
+
+    let r = radius.0.max(0.0);
+    let mut out: Vec<fret_core::PathCommand> = Vec::with_capacity(samples.len().saturating_mul(4));
+
+    for s in samples {
+        let x = s.plot_px.x.0;
+        let y = s.plot_px.y.0;
+        if !x.is_finite() || !y.is_finite() {
+            continue;
+        }
+
+        // Cross marker: horizontal then vertical.
+        out.push(fret_core::PathCommand::MoveTo(Point::new(Px(x - r), Px(y))));
+        out.push(fret_core::PathCommand::LineTo(Point::new(Px(x + r), Px(y))));
+        out.push(fret_core::PathCommand::MoveTo(Point::new(Px(x), Px(y - r))));
+        out.push(fret_core::PathCommand::LineTo(Point::new(Px(x), Px(y + r))));
+    }
+
+    out
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -385,6 +471,13 @@ pub struct LinePlotLayer {
 
 pub type LinePlotCanvas = PlotCanvas<LinePlotLayer>;
 
+#[derive(Debug, Default)]
+pub struct ScatterPlotLayer {
+    cached_paths: Vec<CachedPath>,
+}
+
+pub type ScatterPlotCanvas = PlotCanvas<ScatterPlotLayer>;
+
 #[derive(Debug)]
 pub struct PlotCanvas<L: PlotLayer + 'static> {
     model: Model<L::Model>,
@@ -411,6 +504,12 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
 impl PlotCanvas<LinePlotLayer> {
     pub fn new(model: Model<LinePlotModel>) -> Self {
         Self::with_layer(model, LinePlotLayer::default())
+    }
+}
+
+impl PlotCanvas<ScatterPlotLayer> {
+    pub fn new(model: Model<ScatterPlotModel>) -> Self {
+        Self::with_layer(model, ScatterPlotLayer::default())
     }
 }
 
@@ -1874,30 +1973,76 @@ impl PlotLayer for LinePlotLayer {
     }
 
     fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover> {
-        let PlotHitTestArgs {
+        let series: Vec<(SeriesId, &dyn SeriesData)> =
+            model.series.iter().map(|s| (s.id, &*s.data)).collect();
+        hit_test_series_data(&self.cached_paths, &series, args)
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                services.path().release(id);
+            }
+        }
+    }
+}
+
+impl PlotLayer for ScatterPlotLayer {
+    type Model = ScatterPlotModel;
+
+    fn data_bounds(model: &Self::Model) -> DataRect {
+        model.data_bounds
+    }
+
+    fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
+        model
+            .series
+            .iter()
+            .map(|s| SeriesMeta {
+                id: s.id,
+                label: s.label.clone(),
+                stroke_color: s.stroke_color,
+            })
+            .collect()
+    }
+
+    fn series_label(model: &Self::Model, series_id: SeriesId) -> Option<String> {
+        model
+            .series
+            .iter()
+            .find(|s| s.id == series_id)
+            .map(|s| s.label.to_string())
+    }
+
+    fn paint_paths<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+    ) -> Vec<(SeriesId, PathId, Color)> {
+        let PlotPaintArgs {
             model_revision,
-            plot_size,
+            plot,
             view_bounds,
-            scale_factor,
-            local,
             style,
-            hover_threshold,
             hidden,
-            pinned,
         } = args;
 
-        let threshold = hover_threshold.0.max(0.0);
-        let threshold2 = threshold * threshold;
-
-        let scale_factor_bits = scale_factor.to_bits();
-        let viewport_w_bits = plot_size.width.0.to_bits();
-        let viewport_h_bits = plot_size.height.0.to_bits();
+        let scale_factor_bits = cx.scale_factor.to_bits();
+        let viewport_w_bits = plot.size.width.0.to_bits();
+        let viewport_h_bits = plot.size.height.0.to_bits();
         let view_key = data_rect_key(view_bounds);
 
         let series = &model.series;
         let series_count = series.len();
+
         if series_count == 0 {
-            return None;
+            for cached in self.cached_paths.drain(..) {
+                if let Some(id) = cached.id {
+                    cx.services.path().release(id);
+                }
+            }
+            return Vec::new();
         }
 
         let cached_ok = self.cached_paths.len() == series_count
@@ -1911,63 +2056,98 @@ impl PlotLayer for LinePlotLayer {
                     && c.view_key == view_key
             });
 
-        let mut best: Option<(SamplePoint, f32)> = None;
-        let mut consider_sample = |s: SamplePoint| {
-            let dx = s.plot_px.x.0 - local.x.0;
-            let dy = s.plot_px.y.0 - local.y.0;
-            let d2 = dx * dx + dy * dy;
-            if !d2.is_finite() {
-                return;
-            }
-            if best.is_none_or(|b| d2 < b.1) {
-                best = Some((s, d2));
-            }
-        };
-
         if cached_ok {
-            for cached in &self.cached_paths {
-                if hidden.contains(&cached.series_id) {
+            let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
+            for (i, s) in series.iter().enumerate() {
+                if hidden.contains(&s.id) {
                     continue;
                 }
-                if let Some(pinned) = pinned
-                    && cached.series_id != pinned
-                {
+                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
                     continue;
-                }
-                for s in cached.samples.iter().copied() {
-                    consider_sample(s);
-                }
+                };
+                let color = resolve_series_color(i, style, series_count, s.stroke_color);
+                out.push((s.id, id, color));
             }
-        } else {
-            let transform = PlotTransform {
-                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
-                data: view_bounds,
-            };
+            return out;
+        }
 
-            for s in series.iter() {
-                let series_id = s.id;
-                if hidden.contains(&series_id) {
-                    continue;
-                }
-                if let Some(pinned) = pinned
-                    && pinned != series_id
-                {
-                    continue;
-                }
-                for sample in decimate_samples(transform, &*s.data, scale_factor, series_id) {
-                    consider_sample(sample);
-                }
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                cx.services.path().release(id);
             }
         }
 
-        best.and_then(|(s, d2)| {
-            (d2 <= threshold2).then_some(PlotHover {
-                series_id: s.series_id,
-                index: s.index,
-                data: s.data,
-                plot_px: s.plot_px,
-            })
-        })
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+        let transform = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+        };
+
+        let marker_radius = Px((style.stroke_width.0 * 3.0).clamp(2.0, 6.0));
+        let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
+            width: style.stroke_width,
+        });
+        let constraints = PathConstraints {
+            scale_factor: cx.scale_factor,
+        };
+
+        let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
+        self.cached_paths = Vec::with_capacity(series_count);
+
+        for (series_index, s) in series.iter().enumerate() {
+            let series_id = s.id;
+            if hidden.contains(&series_id) {
+                self.cached_paths.push(CachedPath {
+                    id: None,
+                    series_id,
+                    model_revision,
+                    scale_factor_bits,
+                    viewport_w_bits,
+                    viewport_h_bits,
+                    stroke_width: style.stroke_width,
+                    view_key,
+                    samples: Vec::new(),
+                });
+                continue;
+            }
+
+            let samples = decimate_samples(transform, &*s.data, cx.scale_factor, series_id);
+            let commands = scatter_marker_commands(&samples, marker_radius);
+            let id = if commands.is_empty() {
+                None
+            } else {
+                let (id, _metrics) = cx
+                    .services
+                    .path()
+                    .prepare(&commands, path_style, constraints);
+                Some(id)
+            };
+
+            self.cached_paths.push(CachedPath {
+                id,
+                series_id,
+                model_revision,
+                scale_factor_bits,
+                viewport_w_bits,
+                viewport_h_bits,
+                stroke_width: style.stroke_width,
+                view_key,
+                samples,
+            });
+
+            if let Some(id) = id {
+                let color = resolve_series_color(series_index, style, series_count, s.stroke_color);
+                out.push((series_id, id, color));
+            }
+        }
+
+        out
+    }
+
+    fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover> {
+        let series: Vec<(SeriesId, &dyn SeriesData)> =
+            model.series.iter().map(|s| (s.id, &*s.data)).collect();
+        hit_test_series_data(&self.cached_paths, &series, args)
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
@@ -1985,16 +2165,119 @@ fn hash_value<T: Hash>(v: &T) -> u64 {
     h.finish()
 }
 
-fn compute_data_bounds_from_series(series: &[LineSeries]) -> Option<DataRect> {
+fn hit_test_series_data(
+    cached_paths: &[CachedPath],
+    series: &[(SeriesId, &dyn SeriesData)],
+    args: PlotHitTestArgs<'_>,
+) -> Option<PlotHover> {
+    let PlotHitTestArgs {
+        model_revision,
+        plot_size,
+        view_bounds,
+        scale_factor,
+        local,
+        style,
+        hover_threshold,
+        hidden,
+        pinned,
+    } = args;
+
+    let threshold = hover_threshold.0.max(0.0);
+    let threshold2 = threshold * threshold;
+
+    let scale_factor_bits = scale_factor.to_bits();
+    let viewport_w_bits = plot_size.width.0.to_bits();
+    let viewport_h_bits = plot_size.height.0.to_bits();
+    let view_key = data_rect_key(view_bounds);
+
+    let series_count = series.len();
+    if series_count == 0 {
+        return None;
+    }
+
+    let cached_ok = cached_paths.len() == series_count
+        && cached_paths.iter().enumerate().all(|(i, c)| {
+            series.get(i).is_some_and(|(id, _data)| *id == c.series_id)
+                && c.model_revision == model_revision
+                && c.scale_factor_bits == scale_factor_bits
+                && c.viewport_w_bits == viewport_w_bits
+                && c.viewport_h_bits == viewport_h_bits
+                && c.stroke_width == style.stroke_width
+                && c.view_key == view_key
+        });
+
+    let mut best: Option<(SamplePoint, f32)> = None;
+    let mut consider_sample = |s: SamplePoint| {
+        let dx = s.plot_px.x.0 - local.x.0;
+        let dy = s.plot_px.y.0 - local.y.0;
+        let d2 = dx * dx + dy * dy;
+        if !d2.is_finite() {
+            return;
+        }
+        if best.is_none_or(|b| d2 < b.1) {
+            best = Some((s, d2));
+        }
+    };
+
+    if cached_ok {
+        for cached in cached_paths {
+            if hidden.contains(&cached.series_id) {
+                continue;
+            }
+            if let Some(pinned) = pinned
+                && cached.series_id != pinned
+            {
+                continue;
+            }
+            for s in cached.samples.iter().copied() {
+                consider_sample(s);
+            }
+        }
+    } else {
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+        };
+
+        for (series_id, data) in series.iter().copied() {
+            if hidden.contains(&series_id) {
+                continue;
+            }
+            if let Some(pinned) = pinned
+                && pinned != series_id
+            {
+                continue;
+            }
+            for sample in decimate_samples(transform, data, scale_factor, series_id) {
+                consider_sample(sample);
+            }
+        }
+    }
+
+    best.and_then(|(s, d2)| {
+        (d2 <= threshold2).then_some(PlotHover {
+            series_id: s.series_id,
+            index: s.index,
+            data: s.data,
+            plot_px: s.plot_px,
+        })
+    })
+}
+
+fn compute_data_bounds_from_series_data<T>(
+    series: &[T],
+    data: impl Fn(&T) -> &Series,
+) -> Option<DataRect> {
     let mut out: Option<DataRect> = None;
 
     for s in series {
-        let bounds = if let Some(hint) = s.data.bounds_hint() {
+        let data = data(s);
+        let bounds = if let Some(hint) = data.bounds_hint() {
             Some(hint)
-        } else if let Some(slice) = s.data.as_slice() {
+        } else if let Some(slice) = data.as_slice() {
             DataRect::from_points(slice.iter().copied())
         } else {
-            DataRect::from_points((0..s.data.len()).filter_map(|i| s.data.get(i)))
+            DataRect::from_points((0..data.len()).filter_map(|i| data.get(i)))
         };
 
         let Some(bounds) = bounds else {
