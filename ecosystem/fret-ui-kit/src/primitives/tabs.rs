@@ -39,6 +39,26 @@ pub fn tab_a11y(label: Option<Arc<str>>, selected: bool) -> PressableA11y {
     }
 }
 
+/// A11y metadata for a tab-like pressable with collection position metadata.
+///
+/// This aligns with the APG/Radix expectation that tabs participate in a logical set and can
+/// expose their 1-based position within that set.
+pub fn tab_a11y_with_collection(
+    label: Option<Arc<str>>,
+    selected: bool,
+    pos_in_set: Option<u32>,
+    set_size: Option<u32>,
+) -> PressableA11y {
+    PressableA11y {
+        role: Some(SemanticsRole::Tab),
+        label,
+        selected,
+        pos_in_set,
+        set_size,
+        ..Default::default()
+    }
+}
+
 /// Maps a selected `value` (string key) to the active index, skipping disabled items.
 ///
 /// This is the Radix outcome "value controls which trigger is active", expressed in Fret terms.

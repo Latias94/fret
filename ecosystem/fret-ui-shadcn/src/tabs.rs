@@ -284,6 +284,9 @@ impl Tabs {
             disabled: Arc::from(disabled_flags.clone().into_boxed_slice()),
             ..Default::default()
         };
+        let tab_set_size = u32::try_from(items.len())
+            .ok()
+            .and_then(|size| (size > 0).then_some(size));
 
         let list_height = tabs_list_height(&theme);
         let list_padding = tabs_list_padding(&theme);
@@ -398,9 +401,11 @@ impl Tabs {
                                             enabled: !item_disabled,
                                             focusable: tab_stop || st.focused,
                                             focus_ring: Some(ring),
-                                            a11y: fret_ui_kit::primitives::tabs::tab_a11y(
+                                            a11y: fret_ui_kit::primitives::tabs::tab_a11y_with_collection(
                                                 Some(label.clone()),
                                                 active,
+                                                u32::try_from(idx + 1).ok(),
+                                                tab_set_size,
                                             ),
                                             ..Default::default()
                                         };
@@ -664,6 +669,20 @@ mod tests {
             .iter()
             .find(|n| n.role == SemanticsRole::Tab && n.flags.selected)
             .expect("selected tab");
+        assert_eq!(selected_tab.set_size, Some(3));
+        assert_eq!(selected_tab.pos_in_set, Some(1));
+
+        let mut other_tabs: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Tab && !n.flags.selected)
+            .collect();
+        other_tabs.sort_by_key(|n| n.pos_in_set.unwrap_or(u32::MAX));
+        assert_eq!(other_tabs.len(), 2);
+        assert_eq!(other_tabs[0].set_size, Some(3));
+        assert_eq!(other_tabs[1].set_size, Some(3));
+        assert_eq!(other_tabs[0].pos_in_set, Some(2));
+        assert_eq!(other_tabs[1].pos_in_set, Some(3));
 
         let panel = snap
             .nodes
