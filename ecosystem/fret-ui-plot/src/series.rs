@@ -3,6 +3,29 @@ use std::sync::Arc;
 
 use crate::cartesian::{DataPoint, DataRect};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SeriesId(pub u64);
+
+impl SeriesId {
+    /// Returns a deterministic 64-bit ID derived from the label bytes.
+    ///
+    /// This mirrors the common plot ecosystem convention (ImPlot / egui_plot) where "item identity"
+    /// is derived from user-provided labels/IDs so that interaction state (hidden items, hover, etc)
+    /// can be stored outside the dataset.
+    pub fn from_label(label: &str) -> Self {
+        // 64-bit FNV-1a
+        const OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+        const PRIME: u64 = 0x100000001b3;
+
+        let mut hash = OFFSET_BASIS;
+        for b in label.as_bytes() {
+            hash ^= u64::from(*b);
+            hash = hash.wrapping_mul(PRIME);
+        }
+        Self(hash)
+    }
+}
+
 /// A data source for a single XY series.
 ///
 /// This is intentionally ImPlot-like: callers can provide a slice-backed series or a getter-based

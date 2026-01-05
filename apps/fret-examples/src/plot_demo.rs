@@ -58,9 +58,9 @@ impl PlotDemoDriver {
         let plot = app
             .models_mut()
             .insert(fret_ui_plot::retained::LinePlotModel::from_series(vec![
-                LineSeries::new(Series::from_points_sorted(series0, true)).label("signal A"),
-                LineSeries::new(Series::from_points_sorted(series1, true)).label("signal B"),
-                LineSeries::new(Series::from_points_sorted(series2, true)).label("signal C"),
+                LineSeries::new("signal A", Series::from_points_sorted(series0, true)),
+                LineSeries::new("signal B", Series::from_points_sorted(series1, true)),
+                LineSeries::new("signal C", Series::from_points_sorted(series2, true)),
             ]));
 
         let mut ui: UiTree<App> = UiTree::new();

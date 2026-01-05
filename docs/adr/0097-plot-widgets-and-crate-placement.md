@@ -106,6 +106,23 @@ Prefer a split between a generic substrate and small chart wrappers:
 
 This mirrors GPUI component's design and keeps high-entropy features isolated per chart type.
 
+### 5) Stable series identity and widget-owned interaction state
+
+Plot interaction state must not be keyed by `Vec` indices.
+Series can be dynamically inserted/removed/reordered (filtering, toggles, streaming data), and index-based
+identity will corrupt hover/pin/caches.
+
+Instead, `fret-ui-plot` uses stable series IDs (similar to `egui_plot`'s `Id` and ImPlot's label-ID
+registration):
+
+- Each `LineSeries` has a `SeriesId`.
+- By default, the ID is derived deterministically from the series label (suitable for most cases).
+- Callers can override the ID explicitly when labels are not stable or when collisions must be avoided.
+- Interaction state (hidden items, pinned series, legend hover, etc) is stored in the widget/canvas and
+  keyed by `SeriesId`, not stored inside the model data.
+
+This keeps the model as "data only" and makes interaction memory resilient to structural edits.
+
 ## 3D Scope
 
 This ADR covers 2D plots rendered via portable scene primitives.

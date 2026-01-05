@@ -99,10 +99,10 @@ impl<T> LineChart<T> {
 
         LinePlotModel {
             data_bounds: bounds,
-            series: vec![LineSeries::new(Series::from_points_sorted(
-                points,
-                sorted_by_x,
-            ))],
+            series: vec![LineSeries::new(
+                "Series",
+                Series::from_points_sorted(points, sorted_by_x),
+            )],
         }
     }
 
