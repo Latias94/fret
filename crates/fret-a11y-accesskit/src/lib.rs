@@ -133,6 +133,16 @@ fn utf8_character_lengths(value: &str) -> Vec<u8> {
     value.chars().map(|c| c.len_utf8() as u8).collect()
 }
 
+fn root_for_node(
+    mut node: fret_core::NodeId,
+    parents: &HashMap<fret_core::NodeId, Option<fret_core::NodeId>>,
+) -> fret_core::NodeId {
+    while let Some(parent) = parents.get(&node).copied().flatten() {
+        node = parent;
+    }
+    node
+}
+
 fn byte_to_character_index(value: &str, byte_offset: u32) -> usize {
     let target = byte_offset.min(value.len() as u32);
     let mut offset: u32 = 0;
@@ -155,6 +165,8 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
     let visible_roots = choose_visible_roots(snapshot);
     let children = build_children_index(&snapshot.nodes);
     let reachable = collect_reachable(&visible_roots, &children);
+    let parents: HashMap<fret_core::NodeId, Option<fret_core::NodeId>> =
+        snapshot.nodes.iter().map(|n| (n.id, n.parent)).collect();
 
     let mut nodes_out: Vec<(NodeId, Node)> = Vec::new();
 
@@ -228,6 +240,18 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             } else {
                 Toggled::False
             });
+        }
+
+        if snapshot.barrier_root.is_some()
+            && matches!(
+                node.role,
+                SemanticsRole::Dialog | SemanticsRole::AlertDialog
+            )
+        {
+            let root = root_for_node(node.id, &parents);
+            if snapshot.barrier_root == Some(root) {
+                out.set_modal();
+            }
         }
 
         if node.actions.focus {
@@ -975,6 +999,111 @@ mod tests {
 
         let expected_described_by = vec![to_accesskit_id(description)];
         assert_eq!(dialog_node.described_by(), expected_described_by.as_slice());
+    }
+
+    #[test]
+    fn modal_dialogs_are_marked_modal_under_barrier_root() {
+        let window = AppWindowId::default();
+        let underlay_root = node(1);
+        let modal_root = node(10);
+        let dialog = node(11);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![
+                SemanticsRoot {
+                    root: underlay_root,
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: modal_root,
+                    visible: true,
+                    blocks_underlay_input: true,
+                    hit_testable: true,
+                    z_index: 1,
+                },
+            ],
+            barrier_root: Some(modal_root),
+            focus: None,
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: underlay_root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: modal_root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: dialog,
+                    parent: Some(modal_root),
+                    role: SemanticsRole::Dialog,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Modal dialog".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let dialog_id = to_accesskit_id(dialog);
+        let dialog_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == dialog_id).then_some(n))
+            .expect("dialog node present");
+
+        assert!(
+            dialog_node.is_modal(),
+            "dialogs in the barrier layer must be marked modal"
+        );
     }
 
     #[test]

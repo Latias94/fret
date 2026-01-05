@@ -104,6 +104,9 @@ Dialog baseline (P0):
 - A dialog content root must expose `Dialog` / `AlertDialog` roles.
 - A dialog must be `labelled_by` its title text node when present.
 - A dialog may be `described_by` its description text node when present.
+- When a dialog is installed as a modal barrier layer (`barrier_root`), the platform bridge should
+  mark it as modal where the backend supports it (e.g. AccessKit `modal` flag, comparable to
+  `aria-modal="true"` on the web).
 
 This schema is framework-level infrastructure; editor-domain meanings (e.g. “Gizmo Mode”) remain app-owned.
 
