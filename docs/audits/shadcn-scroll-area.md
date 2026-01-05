@@ -26,8 +26,8 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ### Scrollbar visibility (Radix `type`)
 
-- Pass: Supports `type="always"` and `type="hover"` outcomes (best-effort).
-- Partial: `auto` and `scroll` are not modeled yet (no overflow detection / hide delay).
+- Pass: Supports Radix `type="auto|always|scroll|hover"` outcomes via the primitives facade.
+- Pass: Models delayed hide via `scrollHideDelay` (Fret exposes this as `scroll_hide_delay_ticks`).
 
 ### Visual parity (new-york)
 
@@ -37,5 +37,4 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 ## Validation
 
 - `cargo test -p fret-ui-shadcn --lib collapsible` (for interaction scaffolding patterns)
-- `cargo test -p fret-ui-shadcn --lib scroll_area` (added by this change)
-
+- `cargo test -p fret-ui-shadcn --lib scroll_area`

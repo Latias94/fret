@@ -28,14 +28,14 @@ Fret does not use the DOM or native scroll containers. Scrolling is an explicit 
 ## Current parity notes
 
 - Pass: Root-level `type` enum exists (`ScrollAreaType`).
-- Partial: `type` behavior is best-effort:
-  - `always` is supported.
-  - `hover` is supported via a hover-region gate in shadcn recipes.
-  - `auto` and `scroll` are not modeled yet (no overflow measurement / scroll-hide delay state).
+- Pass: `type` behavior is modeled as outcomes:
+  - `auto` shows scrollbars only when overflowing.
+  - `hover` shows scrollbars while hovered and hides after `scrollHideDelay`.
+  - `scroll` shows scrollbars while scrolling and hides after `scrollHideDelay` (after a short
+    scroll-end debounce).
+  - `always` shows scrollbars when overflowing.
 - Missing: Separate X/Y scrollbars, thumb sizing parity, and corner rendering.
 
 ## Follow-ups (recommended)
 
-- Add a headless scroll-area state machine to support `scrollHideDelay` and "show while scrolling".
 - Add horizontal scrollbar + corner support to match Radix's full surface.
-

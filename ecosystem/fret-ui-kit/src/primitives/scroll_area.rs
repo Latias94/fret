@@ -6,6 +6,11 @@
 //! Upstream reference:
 //! - `repo-ref/primitives/packages/react/scroll-area/src/scroll-area.tsx`
 
+use fret_ui::scroll::ScrollHandle;
+use fret_ui::{ElementContext, UiHost};
+
+pub use crate::headless::scroll_area_visibility::ScrollAreaVisibilityOutput;
+
 /// Matches Radix ScrollArea `type` outcome.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScrollAreaType {
@@ -22,15 +27,37 @@ impl Default for ScrollAreaType {
     }
 }
 
-/// Best-effort mapping from Radix scroll-area types to Fret's current scrollbar visibility model.
+/// Default `scrollHideDelay` (600ms) expressed as frame-ish ticks (assuming ~60fps).
+pub const DEFAULT_SCROLL_HIDE_DELAY_TICKS: u64 = 36;
+
+/// Radix uses a 100ms debounce to detect "scroll end".
+pub const DEFAULT_SCROLL_END_DEBOUNCE_TICKS: u64 = 6;
+
+/// Compute scrollbar visibility for Radix-aligned `type` modes and drive time-based transitions.
 ///
-/// Fret currently supports:
-/// - always show scrollbar, or
-/// - only show scrollbar while hovered.
+/// This facade:
+/// - measures overflow using the imperative `ScrollHandle`,
+/// - detects "scrolling" by comparing handle offsets across frames,
+/// - and schedules redraws while time-based visibility transitions are pending.
+pub fn scrollbar_visibility<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    ty: ScrollAreaType,
+    hovered: bool,
+    handle: ScrollHandle,
+    scroll_hide_delay_ticks: u64,
+) -> ScrollAreaVisibilityOutput {
+    crate::declarative::scroll_area_visibility::scrollbar_visibility(
+        cx,
+        ty,
+        hovered,
+        handle,
+        scroll_hide_delay_ticks,
+    )
+}
+
+/// Legacy best-effort mapping from Radix scroll-area types to a hover-gated boolean.
 ///
-/// We do not yet model:
-/// - `auto` (only show when overflowing), or
-/// - `scroll` (show while scrolling + hide after delay).
+/// Prefer [`scrollbar_visibility`] when you need Radix-aligned `auto`, `scroll`, and delayed hide.
 pub fn show_scrollbar_for_hover_state(ty: ScrollAreaType, hovered: bool) -> bool {
     match ty {
         ScrollAreaType::Always => true,
@@ -40,4 +67,3 @@ pub fn show_scrollbar_for_hover_state(ty: ScrollAreaType, hovered: bool) -> bool
         ScrollAreaType::Scroll => hovered,
     }
 }
-
