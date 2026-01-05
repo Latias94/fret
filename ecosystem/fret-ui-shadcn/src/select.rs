@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -10,9 +11,10 @@ use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    ScrollProps, ScrollbarProps, ScrollbarStyle, SemanticsProps, SizeStyle, StackProps, TextProps,
+    Overflow, PositionStyle, PressableA11y, PressableProps, ScrollProps, ScrollbarProps,
+    ScrollbarStyle, SizeStyle, StackProps, TextProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
@@ -23,6 +25,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::{roving_focus, typeahead};
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::recipes::input::{
@@ -42,7 +45,7 @@ fn select_scroll_with_buttons<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: Theme,
     item_step: Px,
-    content: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    content: impl FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> Vec<AnyElement>,
 ) -> AnyElement {
     cx.flex(
         FlexProps {
@@ -181,6 +184,9 @@ fn select_scroll_with_buttons<H: UiHost>(
                     },
                 },
                 move |cx| {
+                    let active_element = Cell::new(None::<GlobalElementId>);
+                    let active_element_ref = &active_element;
+
                     let mut scroll_layout = LayoutStyle::default();
                     scroll_layout.size.width = Length::Fill;
                     scroll_layout.size.height = Length::Fill;
@@ -192,8 +198,17 @@ fn select_scroll_with_buttons<H: UiHost>(
                             scroll_handle: Some(handle_for_stack.clone()),
                             ..Default::default()
                         },
-                        content,
+                        move |cx| content(cx, active_element_ref),
                     );
+
+                    if let Some(active_element) = active_element.get() {
+                        let _ = active_desc::scroll_active_element_into_view_y(
+                            cx,
+                            &handle_for_stack,
+                            scroll.id,
+                            active_element,
+                        );
+                    }
 
                     let scroll_id = scroll.id;
                     let mut out = vec![scroll];
@@ -655,6 +670,8 @@ fn select_impl<H: UiHost>(
             suppress_next_activate: bool,
             query: String,
             clear_token: Option<TimerToken>,
+            was_open: bool,
+            active_row: Option<usize>,
         }
 
         impl SelectTriggerKeyState {
@@ -663,6 +680,8 @@ fn select_impl<H: UiHost>(
                     suppress_next_activate: false,
                     query: String::new(),
                     clear_token: None,
+                    was_open: false,
+                    active_row: None,
                 }
             }
         }
@@ -966,6 +985,8 @@ fn select_impl<H: UiHost>(
                     let theme_for_overlay = theme.clone();
                     let text_style_for_overlay = text_style.clone();
                     let open_for_overlay = open.clone();
+                    let list_focus_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let list_focus_id_out = &list_focus_id_out_cell;
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
@@ -1013,7 +1034,7 @@ fn select_impl<H: UiHost>(
                             .collect();
                         let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
 
-                        let active = if let Some(selected) = selected.as_deref() {
+                        let initial_active_row = if let Some(selected) = selected.as_deref() {
                             let selected_idx = rows.iter().position(|row| match row {
                                 SelectRow::Item(item) => item.value.as_ref() == selected,
                                 SelectRow::Label(_) | SelectRow::Separator => false,
@@ -1024,11 +1045,26 @@ fn select_impl<H: UiHost>(
                         } else {
                             roving_focus::first_enabled(&disabled)
                         };
-                        let roving = RovingFocusProps {
-                            enabled: true,
-                            wrap: loop_navigation,
-                            disabled: Arc::from(disabled.clone().into_boxed_slice()),
-                            ..Default::default()
+                        let (active_row, _open_query) = {
+                            let mut state = trigger_state
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+
+                            if is_open {
+                                if !state.was_open {
+                                    state.was_open = true;
+                                    state.active_row = initial_active_row;
+                                    state.query.clear();
+                                    state.clear_token = None;
+                                } else if state.active_row.is_none() {
+                                    state.active_row = initial_active_row;
+                                }
+                            } else {
+                                state.was_open = false;
+                                state.active_row = None;
+                            }
+
+                            (state.active_row, state.query.clone())
                         };
 
                         let shadow = decl_style::shadow_sm(&theme_for_overlay, radius);
@@ -1068,33 +1104,195 @@ fn select_impl<H: UiHost>(
                                         cx,
                                         theme_for_overlay.clone(),
                                         item_h,
-                                        |cx| {
-                                            vec![cx.semantics(
-                                                SemanticsProps {
-                                                    layout: LayoutStyle::default(),
-                                                    role: SemanticsRole::ListBox,
-                                                        ..Default::default()
-                                                    },
-                                                    |cx| {
-                                                        vec![cx.roving_flex(
-                                                            RovingFlexProps {
-                                                                flex: FlexProps {
-                                                                    layout: LayoutStyle::default(),
-                                                                    direction: fret_core::Axis::Vertical,
-                                                                    gap: Px(0.0),
-                                                                    padding: Edges::all(Px(4.0)),
-                                                                    justify: MainAlign::Start,
-                                                                    align: CrossAlign::Stretch,
-                                                                    wrap: false,
-                                                                },
-                                                                roving,
-                                                            },
-                                                            |cx| {
-                                                                cx.roving_nav_apg();
-                                                                cx.roving_typeahead_prefix_arc_str(
-                                                                    labels_arc.clone(),
-                                                                    30,
+                                        move |cx, active_element| {
+                                            let disabled_for_key: Arc<[bool]> =
+                                                Arc::from(disabled.clone().into_boxed_slice());
+                                            let labels_for_key = labels_arc.clone();
+                                            let values_by_row: Arc<[Option<Arc<str>>]> = Arc::from(
+                                                rows.iter()
+                                                    .map(|row| match row {
+                                                        SelectRow::Item(item) => Some(item.value.clone()),
+                                                        SelectRow::Label(_) | SelectRow::Separator => None,
+                                                    })
+                                                    .collect::<Vec<_>>()
+                                                    .into_boxed_slice(),
+                                            );
+
+                                            let state_for_key = trigger_state.clone();
+                                            let open_for_key = open_for_overlay.clone();
+                                            let model_for_key = model.clone();
+                                            let loop_navigation_for_key = loop_navigation;
+
+                                            vec![cx.pressable_with_id_props(move |cx, _st, listbox_id| {
+                                                list_focus_id_out.set(Some(listbox_id));
+
+                                                cx.key_on_key_down_for(
+                                                    listbox_id,
+                                                    Arc::new(move |host, action_cx, it| {
+                                                        use fret_core::KeyCode;
+
+                                                        if it.repeat {
+                                                            return false;
+                                                        }
+
+                                                        let is_open = host
+                                                            .models_mut()
+                                                            .get_copied(&open_for_key)
+                                                            .unwrap_or(false);
+                                                        if !is_open {
+                                                            return false;
+                                                        }
+
+                                                        let mut state = state_for_key
+                                                            .lock()
+                                                            .unwrap_or_else(|e| e.into_inner());
+
+                                                        if it.key == KeyCode::Space && !state.query.is_empty() {
+                                                            return true;
+                                                        }
+
+                                                        let current = state
+                                                            .active_row
+                                                            .or_else(|| roving_focus::first_enabled(&disabled_for_key));
+
+                                                        match it.key {
+                                                            KeyCode::Escape => {
+                                                                let _ = host
+                                                                    .models_mut()
+                                                                    .update(&open_for_key, |v| *v = false);
+                                                                host.request_redraw(action_cx.window);
+                                                                true
+                                                            }
+                                                            KeyCode::Home => {
+                                                                state.active_row =
+                                                                    roving_focus::first_enabled(&disabled_for_key);
+                                                                host.request_redraw(action_cx.window);
+                                                                true
+                                                            }
+                                                            KeyCode::End => {
+                                                                state.active_row =
+                                                                    roving_focus::last_enabled(&disabled_for_key);
+                                                                host.request_redraw(action_cx.window);
+                                                                true
+                                                            }
+                                                            KeyCode::ArrowDown | KeyCode::ArrowUp => {
+                                                                let Some(current) = current else {
+                                                                    return true;
+                                                                };
+                                                                let forward = it.key == KeyCode::ArrowDown;
+                                                                state.active_row = roving_focus::next_enabled(
+                                                                    &disabled_for_key,
+                                                                    current,
+                                                                    forward,
+                                                                    loop_navigation_for_key,
+                                                                )
+                                                                .or(Some(current));
+                                                                host.request_redraw(action_cx.window);
+                                                                true
+                                                            }
+                                                            KeyCode::Enter | KeyCode::Space => {
+                                                                let Some(active_row) = current else {
+                                                                    return true;
+                                                                };
+                                                                let is_disabled = disabled_for_key
+                                                                    .get(active_row)
+                                                                    .copied()
+                                                                    .unwrap_or(true);
+                                                                if is_disabled {
+                                                                    return true;
+                                                                }
+                                                                if let Some(value) =
+                                                                    values_by_row.get(active_row).cloned().flatten()
+                                                                {
+                                                                    let _ = host
+                                                                        .models_mut()
+                                                                        .update(&model_for_key, |v| {
+                                                                            *v = Some(value.clone())
+                                                                        });
+                                                                    let _ = host
+                                                                        .models_mut()
+                                                                        .update(&open_for_key, |v| *v = false);
+                                                                    host.request_redraw(action_cx.window);
+                                                                }
+                                                                true
+                                                            }
+                                                            _ => {
+                                                                let key_to_ascii = |key: fret_core::KeyCode| -> Option<char> {
+                                                                    use fret_core::KeyCode;
+                                                                    Some(match key {
+                                                                        KeyCode::KeyA => 'a',
+                                                                        KeyCode::KeyB => 'b',
+                                                                        KeyCode::KeyC => 'c',
+                                                                        KeyCode::KeyD => 'd',
+                                                                        KeyCode::KeyE => 'e',
+                                                                        KeyCode::KeyF => 'f',
+                                                                        KeyCode::KeyG => 'g',
+                                                                        KeyCode::KeyH => 'h',
+                                                                        KeyCode::KeyI => 'i',
+                                                                        KeyCode::KeyJ => 'j',
+                                                                        KeyCode::KeyK => 'k',
+                                                                        KeyCode::KeyL => 'l',
+                                                                        KeyCode::KeyM => 'm',
+                                                                        KeyCode::KeyN => 'n',
+                                                                        KeyCode::KeyO => 'o',
+                                                                        KeyCode::KeyP => 'p',
+                                                                        KeyCode::KeyQ => 'q',
+                                                                        KeyCode::KeyR => 'r',
+                                                                        KeyCode::KeyS => 's',
+                                                                        KeyCode::KeyT => 't',
+                                                                        KeyCode::KeyU => 'u',
+                                                                        KeyCode::KeyV => 'v',
+                                                                        KeyCode::KeyW => 'w',
+                                                                        KeyCode::KeyX => 'x',
+                                                                        KeyCode::KeyY => 'y',
+                                                                        KeyCode::KeyZ => 'z',
+                                                                        KeyCode::Digit0 => '0',
+                                                                        KeyCode::Digit1 => '1',
+                                                                        KeyCode::Digit2 => '2',
+                                                                        KeyCode::Digit3 => '3',
+                                                                        KeyCode::Digit4 => '4',
+                                                                        KeyCode::Digit5 => '5',
+                                                                        KeyCode::Digit6 => '6',
+                                                                        KeyCode::Digit7 => '7',
+                                                                        KeyCode::Digit8 => '8',
+                                                                        KeyCode::Digit9 => '9',
+                                                                        _ => return None,
+                                                                    })
+                                                                };
+
+                                                                let Some(ch) = key_to_ascii(it.key) else {
+                                                                    return false;
+                                                                };
+
+                                                                state.query.push(ch);
+                                                                if let Some(token) = state.clear_token.take() {
+                                                                    host.push_effect(Effect::CancelTimer { token });
+                                                                }
+                                                                let token = host.next_timer_token();
+                                                                state.clear_token = Some(token);
+                                                                host.push_effect(Effect::SetTimer {
+                                                                    window: Some(action_cx.window),
+                                                                    token,
+                                                                    after: Duration::from_millis(500),
+                                                                    repeat: None,
+                                                                });
+
+                                                                let next = typeahead::match_prefix_arc_str(
+                                                                    labels_for_key.as_ref(),
+                                                                    disabled_for_key.as_ref(),
+                                                                    &state.query,
+                                                                    current,
+                                                                    true,
                                                                 );
+                                                                if next != state.active_row {
+                                                                    state.active_row = next;
+                                                                    host.request_redraw(action_cx.window);
+                                                                }
+                                                                true
+                                                            }
+                                                        }
+                                                    }),
+                                                );
 
                                                                 let mut out = Vec::with_capacity(rows.len());
                                                                 let mut item_ordinal: usize = 0;
@@ -1149,15 +1347,11 @@ fn select_impl<H: UiHost>(
                                                                         SelectRow::Item(item) => {
                                                                             let item_disabled =
                                                                                 disabled.get(row_idx).copied().unwrap_or(true);
-                                                                            let tab_stop = active.is_some_and(|a| a == row_idx);
+                                                                            let is_active =
+                                                                                active_row.is_some_and(|a| a == row_idx);
                                                                             let is_selected = selected
                                                                                 .as_ref()
                                                                                 .is_some_and(|v| v.as_ref() == item.value.as_ref());
-
-                                                                            let item_ring = decl_style::focus_ring(
-                                                                                &theme_for_overlay,
-                                                                                theme_for_overlay.metrics.radius_sm,
-                                                                            );
 
                                                                             let model = model.clone();
                                                                             let open = open_for_overlay.clone();
@@ -1165,6 +1359,8 @@ fn select_impl<H: UiHost>(
 
                                                                             let pos = item_ordinal;
                                                                             item_ordinal = item_ordinal.saturating_add(1);
+                                                                            let state_for_hover = trigger_state.clone();
+                                                                            let row_idx_for_hover = row_idx;
 
                                                                             out.push(cx.pressable_with_id(
                                                                                 PressableProps {
@@ -1175,8 +1371,8 @@ fn select_impl<H: UiHost>(
                                                                                         layout
                                                                                     },
                                                                                     enabled: !item_disabled,
-                                                                                    focusable: tab_stop,
-                                                                                    focus_ring: Some(item_ring),
+                                                                                    focusable: false,
+                                                                                    focus_ring: None,
                                                                                     a11y: PressableA11y {
                                                                                         role: Some(SemanticsRole::ListBoxOption),
                                                                                         label: Some(item.label.clone()),
@@ -1187,7 +1383,9 @@ fn select_impl<H: UiHost>(
                                                                                     ..Default::default()
                                                                                 },
                                                                                 move |cx, st, id| {
-                                                                                    let _ = id;
+                                                                                    if is_active {
+                                                                                        active_element.set(Some(id));
+                                                                                    }
 
                                                                                     cx.pressable_set_option_arc_str(
                                                                                         &model,
@@ -1195,15 +1393,34 @@ fn select_impl<H: UiHost>(
                                                                                     );
                                                                                     cx.pressable_set_bool(&open, false);
 
+                                                                                    if !item_disabled {
+                                                                                        cx.pressable_add_on_hover_change(Arc::new(
+                                                                                            move |host, action_cx, hovered| {
+                                                                                                if !hovered {
+                                                                                                    return;
+                                                                                                }
+                                                                                                let mut state = state_for_hover
+                                                                                                    .lock()
+                                                                                                    .unwrap_or_else(|e| e.into_inner());
+                                                                                                if state.active_row
+                                                                                                    != Some(row_idx_for_hover)
+                                                                                                {
+                                                                                                    state.active_row =
+                                                                                                        Some(row_idx_for_hover);
+                                                                                                    host.request_redraw(
+                                                                                                        action_cx.window,
+                                                                                                    );
+                                                                                                }
+                                                                                            },
+                                                                                        ));
+                                                                                    }
+
                                                                                     let theme = Theme::global(&*cx.app).clone();
                                                                                     let mut bg = Color::TRANSPARENT;
                                                                                     if is_selected {
                                                                                         bg = alpha_mul(theme.colors.selection_background, 0.35);
                                                                                     }
-                                                                                    if st.hovered || st.pressed {
-                                                                                        bg = alpha_mul(theme.colors.selection_background, 0.45);
-                                                                                    }
-                                                                                    if st.focused {
+                                                                                    if is_active || st.hovered || st.pressed {
                                                                                         bg = alpha_mul(theme.colors.selection_background, 0.45);
                                                                                     }
 
@@ -1278,15 +1495,45 @@ fn select_impl<H: UiHost>(
                                                                     }
                                                                 }
 
-                                                                out
-                                                            },
-                                                        )]
-                                                    },
-                                                )]
-                                            },
-                                        )]
-                                    },
-                                );
+                                                                let active_descendant = active_element
+                                                                    .get()
+                                                                    .and_then(|id| cx.node_for_element(id));
+
+                                                                (
+                                                                    PressableProps {
+                                                                        layout: {
+                                                                            let mut layout = LayoutStyle::default();
+                                                                            layout.size.width = Length::Fill;
+                                                                            layout
+                                                                        },
+                                                                        enabled: true,
+                                                                        focusable: true,
+                                                                        focus_ring: None,
+                                                                        a11y: PressableA11y {
+                                                                            role: Some(SemanticsRole::ListBox),
+                                                                            active_descendant,
+                                                                            ..Default::default()
+                                                                        },
+                                                                        ..Default::default()
+                                                                    },
+                                                                    vec![cx.flex(
+                                                                        FlexProps {
+                                                                            layout: LayoutStyle::default(),
+                                                                            direction: fret_core::Axis::Vertical,
+                                                                            gap: Px(0.0),
+                                                                            padding: Edges::all(Px(4.0)),
+                                                                            justify: MainAlign::Start,
+                                                                            align: CrossAlign::Stretch,
+                                                                            wrap: false,
+                                                                        },
+                                                                        |_cx| out,
+                                                                    )],
+                                                                )
+                                                            })]
+                                        },
+                                    )]
+                                },
+                            );
 
                                 if let Some(arrow_el) = arrow_el {
                                     vec![arrow_el, panel]
@@ -1307,6 +1554,7 @@ fn select_impl<H: UiHost>(
                     );
                     request.consume_outside_pointer_events = true;
                     request.root_name = Some(overlay_root_name);
+                    request.initial_focus = list_focus_id_out.get();
                     OverlayController::request(cx, request);
             }
 
@@ -1747,6 +1995,17 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
+            entries.clone(),
+        );
+        // Third frame: allow `active_descendant` to resolve via last-frame node IDs.
+        let _ = render_frame_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
             entries,
         );
 
@@ -1757,16 +2016,21 @@ mod tests {
             .iter()
             .find(|n| n.id == focus)
             .expect("focused node");
-        assert_eq!(focused_node.role, SemanticsRole::ListBoxOption);
-        assert_eq!(focused_node.label.as_deref(), Some("Beta"));
+        assert_eq!(focused_node.role, SemanticsRole::ListBox);
 
-        let beta = snap
+        let active = focused_node
+            .active_descendant
+            .expect("active_descendant should be set");
+        let active_node = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Beta"))
-            .expect("Beta list item");
-        assert_eq!(beta.pos_in_set, Some(2));
-        assert_eq!(beta.set_size, Some(2));
+            .find(|n| n.id == active)
+            .expect("active_descendant should reference a node in the snapshot");
+
+        assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
+        assert_eq!(active_node.label.as_deref(), Some("Beta"));
+        assert_eq!(active_node.pos_in_set, Some(2));
+        assert_eq!(active_node.set_size, Some(2));
     }
 
     #[test]

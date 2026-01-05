@@ -20,7 +20,9 @@ pub(super) fn handle_pressable<H: UiHost>(
                 if *button != MouseButton::Left {
                     return;
                 }
-                cx.request_focus(cx.node);
+                if props.focusable {
+                    cx.request_focus(cx.node);
+                }
                 cx.capture_pointer(cx.node);
                 crate::elements::set_pressed_pressable(&mut *cx.app, window, Some(this.element));
                 cx.invalidate_self(Invalidation::Paint);

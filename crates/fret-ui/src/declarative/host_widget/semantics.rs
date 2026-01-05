@@ -107,6 +107,7 @@ impl ElementHostWidget {
                 if let Some(label) = props.a11y.label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
                 }
+                cx.set_active_descendant(props.a11y.active_descendant);
                 if props.a11y.selected {
                     cx.set_selected(true);
                 }
