@@ -63,6 +63,7 @@ pub mod textarea;
 pub mod toggle;
 pub mod toggle_group;
 pub mod tooltip;
+pub mod shadcn_themes;
 
 pub use accordion::{
     Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger,
