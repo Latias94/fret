@@ -11,6 +11,7 @@ fret-ui-docking = { path = "../../ecosystem/fret-ui-docking" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
 fret-ui-plot = { path = "../../ecosystem/fret-ui-plot" }
+fret-ui-plot3d = { path = "../../ecosystem/fret-ui-plot3d" }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
@@ -22,3 +23,4 @@ fret-ui = { path = "../../crates/fret-ui" }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 winit.workspace = true
+wgpu.workspace = true

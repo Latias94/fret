@@ -1127,9 +1127,11 @@ dependencies = [
  "fret-ui-docking",
  "fret-ui-kit",
  "fret-ui-plot",
+ "fret-ui-plot3d",
  "fret-ui-shadcn",
  "tracing",
  "tracing-subscriber",
+ "wgpu",
  "winit",
 ]
 
