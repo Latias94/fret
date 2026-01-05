@@ -15,7 +15,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use crate::cartesian::{DataPoint, DataRect, PlotTransform};
-use crate::plot::axis::linear_ticks;
+use crate::plot::axis::{AxisLabelFormat, linear_ticks};
 use crate::plot::decimate::{
     SamplePoint, decimate_polyline, decimate_samples, decimate_shaded_band,
 };
@@ -1121,6 +1121,8 @@ impl Default for PlotState {
 pub struct PlotCanvas<L: PlotLayer + 'static> {
     model: Model<L::Model>,
     style: LinePlotStyle,
+    x_axis_format: AxisLabelFormat,
+    y_axis_format: AxisLabelFormat,
     layer: L,
     hover: Option<PlotHover>,
     plot_state: PlotState,
@@ -1199,6 +1201,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         Self {
             model,
             style: LinePlotStyle::default(),
+            x_axis_format: AxisLabelFormat::default(),
+            y_axis_format: AxisLabelFormat::default(),
             layer,
             hover: None,
             plot_state: PlotState::default(),
@@ -1224,6 +1228,16 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
     pub fn style(mut self, style: LinePlotStyle) -> Self {
         self.style = style;
+        self
+    }
+
+    pub fn x_axis_format(mut self, format: AxisLabelFormat) -> Self {
+        self.x_axis_format = format;
+        self
+    }
+
+    pub fn y_axis_format(mut self, format: AxisLabelFormat) -> Self {
+        self.y_axis_format = format;
         self
     }
 
@@ -1522,6 +1536,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         key = Self::hash_f32_bits(key, data_bounds.y_max);
         key = Self::hash_u64(key, u64::from(self.style.axis_gap.0.to_bits()));
         key = Self::hash_u64(key, u64::from(self.style.tick_count as u32));
+        key = Self::hash_u64(key, self.x_axis_format.key());
+        key = Self::hash_u64(key, self.y_axis_format.key());
 
         if self.axis_label_key == Some(key) {
             return;
@@ -1543,17 +1559,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
         let x_ticks = linear_ticks(data_bounds.x_min, data_bounds.x_max, self.style.tick_count);
         let y_ticks = linear_ticks(data_bounds.y_min, data_bounds.y_max, self.style.tick_count);
-
-        let fmt = |v: f32| -> String {
-            let abs = v.abs();
-            if abs < 1.0 {
-                format!("{v:.3}")
-            } else if abs < 10.0 {
-                format!("{v:.2}")
-            } else {
-                format!("{v:.1}")
-            }
-        };
+        let x_span = (data_bounds.x_max - data_bounds.x_min).abs();
+        let y_span = (data_bounds.y_max - data_bounds.y_min).abs();
 
         for v in x_ticks {
             let constraints = TextConstraints {
@@ -1562,7 +1569,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
-            let prepared = self.prepare_text(cx.services, &fmt(v), &style, constraints);
+            let text = self.x_axis_format.format(v, x_span);
+            let prepared = self.prepare_text(cx.services, &text, &style, constraints);
             self.axis_labels_x.push(prepared);
         }
 
@@ -1573,7 +1581,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 overflow: TextOverflow::Clip,
                 scale_factor: cx.scale_factor,
             };
-            let prepared = self.prepare_text(cx.services, &fmt(v), &style, constraints);
+            let text = self.y_axis_format.format(v, y_span);
+            let prepared = self.prepare_text(cx.services, &text, &style, constraints);
             self.axis_labels_y.push(prepared);
         }
 
