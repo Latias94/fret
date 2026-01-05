@@ -85,6 +85,8 @@ Fret defines a minimal, stable schema that is sufficient for editor workflows:
 - Relations (P0, minimal):
   - `labelled_by`: declare that this node’s accessible name is provided by another node (e.g. a
     `TabPanel` is labelled by its selected `Tab`).
+  - `described_by`: declare that this node’s accessible description is provided by another node
+    (e.g. a `Dialog` is described by a `DialogDescription` text node).
   - `controls`: declare that this node controls another node (e.g. the selected `Tab` controls its
     active `TabPanel`).
 
@@ -96,6 +98,12 @@ Tabs baseline (P0):
 - A tabs widget must expose `TabList` / `Tab` / `TabPanel` roles.
 - The active `TabPanel` must be `labelled_by` the selected `Tab`.
 - The selected `Tab` must `controls` the active `TabPanel`.
+
+Dialog baseline (P0):
+
+- A dialog content root must expose `Dialog` / `AlertDialog` roles.
+- A dialog must be `labelled_by` its title text node when present.
+- A dialog may be `described_by` its description text node when present.
 
 This schema is framework-level infrastructure; editor-domain meanings (e.g. “Gizmo Mode”) remain app-owned.
 

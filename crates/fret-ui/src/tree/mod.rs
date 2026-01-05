@@ -1155,6 +1155,7 @@ impl<H: UiHost> UiTree<H> {
                 let mut text_selection: Option<(u32, u32)> = None;
                 let mut text_composition: Option<(u32, u32)> = None;
                 let mut labelled_by: Vec<NodeId> = Vec::new();
+                let mut described_by: Vec<NodeId> = Vec::new();
                 let mut controls: Vec<NodeId> = Vec::new();
                 let mut actions = fret_core::SemanticsActions {
                     focus: is_focusable || is_text_input,
@@ -1190,6 +1191,7 @@ impl<H: UiHost> UiTree<H> {
                         pos_in_set: &mut pos_in_set,
                         set_size: &mut set_size,
                         labelled_by: &mut labelled_by,
+                        described_by: &mut described_by,
                         controls: &mut controls,
                     };
                     widget.semantics(&mut cx);
@@ -1223,22 +1225,40 @@ impl<H: UiHost> UiTree<H> {
                     text_composition,
                     actions,
                     labelled_by,
+                    described_by,
                     controls,
                 });
             }
         }
 
-        // Normalize relation edges: derive the inverse `controls` relation from `labelled_by` so
-        // that authoring can set the minimal edge and still get a bidirectional link (e.g. Tabs).
+        // Normalize relation edges: for some composite widgets, authoring only sets `labelled_by`
+        // (e.g. TabPanel -> Tab) but the platform-facing semantics want the controller to also
+        // advertise `controls` (e.g. Tab -> TabPanel). We derive that edge for the subset of
+        // role pairs where this bidirectional link is expected.
         let mut index_by_id: HashMap<NodeId, usize> = HashMap::with_capacity(nodes.len());
         for (idx, node) in nodes.iter().enumerate() {
             index_by_id.insert(node.id, idx);
         }
         for idx in 0..nodes.len() {
             let controlled = nodes[idx].id;
+            let controlled_role = nodes[idx].role;
             let controllers = nodes[idx].labelled_by.clone();
             for controller in controllers {
                 if let Some(&controller_idx) = index_by_id.get(&controller) {
+                    let controller_role = nodes[controller_idx].role;
+                    let derive = matches!(
+                        controlled_role,
+                        SemanticsRole::TabPanel | SemanticsRole::ListBox
+                    ) && matches!(
+                        controller_role,
+                        SemanticsRole::Tab
+                            | SemanticsRole::TextField
+                            | SemanticsRole::ComboBox
+                            | SemanticsRole::Button
+                    );
+                    if !derive {
+                        continue;
+                    }
                     if !nodes[controller_idx]
                         .controls
                         .iter()

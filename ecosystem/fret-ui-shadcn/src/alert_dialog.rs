@@ -143,7 +143,9 @@ impl AlertDialog {
                         |_cx| Vec::new(),
                     );
 
+                    crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
                     let content = content(cx);
+                    crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
 
                     // Center like `Dialog`, but avoid full-window wrappers that can steal hit tests.
                     let outer = cx.bounds;
@@ -333,9 +335,13 @@ impl AlertDialogContent {
             children,
         );
 
+        let (labelled_by_element, described_by_element) =
+            crate::a11y_modal::modal_relations_for_current_scope(cx.app);
         cx.semantics(
             SemanticsProps {
-                role: SemanticsRole::Alert,
+                role: SemanticsRole::AlertDialog,
+                labelled_by_element,
+                described_by_element,
                 ..Default::default()
             },
             move |_cx| vec![container],
@@ -421,7 +427,7 @@ impl AlertDialogTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or(theme.metrics.font_line_height);
 
-        cx.text_props(TextProps {
+        let title = cx.text_props(TextProps {
             layout: Default::default(),
             text: self.text,
             style: Some(TextStyle {
@@ -434,7 +440,9 @@ impl AlertDialogTitle {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
-        })
+        });
+        crate::a11y_modal::register_modal_title(cx.app, title.id);
+        title
     }
 }
 
@@ -465,7 +473,7 @@ impl AlertDialogDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or(theme.metrics.font_line_height);
 
-        cx.text_props(TextProps {
+        let description = cx.text_props(TextProps {
             layout: Default::default(),
             text: self.text,
             style: Some(TextStyle {
@@ -478,7 +486,9 @@ impl AlertDialogDescription {
             color: Some(fg),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
-        })
+        });
+        crate::a11y_modal::register_modal_description(cx.app, description.id);
+        description
     }
 }
 
@@ -977,5 +987,141 @@ mod tests {
             ui.layout_all(&mut app, &mut services, bounds, 1.0);
         }
         assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn alert_dialog_content_exposes_labelled_by_and_described_by_relations() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut dyn fret_core::UiServices,
+                            frame| {
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+
+            let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "alert-dialog-a11y-relations",
+                |cx| {
+                    let trigger = cx.pressable_with_id(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(120.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |cx, _st, id| {
+                            cx.pressable_toggle_bool(&open);
+                            trigger_id = Some(id);
+                            vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                        },
+                    );
+
+                    let alert = AlertDialog::new(open.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            let title = AlertDialogTitle::new("AlertDialog Title").into_element(cx);
+                            let description =
+                                AlertDialogDescription::new("AlertDialog Description")
+                                    .into_element(cx);
+                            AlertDialogContent::new(vec![title, description]).into_element(cx)
+                        },
+                    );
+
+                    vec![alert]
+                },
+            );
+
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            trigger_id.expect("trigger id")
+        };
+
+        // Frame 1: closed.
+        let _trigger = render_frame(&mut ui, &mut app, &mut services, 1);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: open + semantics snapshot.
+        let _ = render_frame(&mut ui, &mut app, &mut services, 2);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alert_dialog = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::AlertDialog)
+            .expect("alert dialog semantics node");
+        let title = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Text
+                    && n.label.as_deref() == Some("AlertDialog Title")
+            })
+            .expect("title semantics node");
+        let description = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Text
+                    && n.label.as_deref() == Some("AlertDialog Description")
+            })
+            .expect("description semantics node");
+
+        assert!(
+            alert_dialog.labelled_by.iter().any(|id| *id == title.id),
+            "alert dialog should be labelled by its title"
+        );
+        assert!(
+            alert_dialog
+                .described_by
+                .iter()
+                .any(|id| *id == description.id),
+            "alert dialog should be described by its description"
+        );
     }
 }

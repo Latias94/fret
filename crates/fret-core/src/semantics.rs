@@ -94,6 +94,10 @@ pub struct SemanticsNode {
     ///
     /// This is a portable approximation of relations such as `aria-labelledby`.
     pub labelled_by: Vec<NodeId>,
+    /// Nodes which provide this node's accessible description.
+    ///
+    /// This is a portable approximation of relations such as `aria-describedby`.
+    pub described_by: Vec<NodeId>,
     /// Nodes which this node controls.
     ///
     /// This is a portable approximation of relations such as `aria-controls`.
@@ -284,6 +288,7 @@ mod tests {
             text_composition: Some((0, 4)),
             actions: SemanticsActions::default(),
             labelled_by: Vec::new(),
+            described_by: Vec::new(),
             controls: Vec::new(),
         };
         n.validate().expect("valid ranges should pass");
@@ -320,6 +325,7 @@ mod tests {
             text_composition: None,
             actions: SemanticsActions::default(),
             labelled_by: Vec::new(),
+            described_by: Vec::new(),
             controls: Vec::new(),
         };
         let err = n.validate().expect_err("range without value should fail");
@@ -346,6 +352,7 @@ mod tests {
             text_composition: None,
             actions: SemanticsActions::default(),
             labelled_by: Vec::new(),
+            described_by: Vec::new(),
             controls: Vec::new(),
         };
         let err = n.validate().expect_err("oob should fail");
@@ -372,6 +379,7 @@ mod tests {
             text_composition: Some((2, 1)),
             actions: SemanticsActions::default(),
             labelled_by: Vec::new(),
+            described_by: Vec::new(),
             controls: Vec::new(),
         };
         let err = n.validate().expect_err("invalid order should fail");

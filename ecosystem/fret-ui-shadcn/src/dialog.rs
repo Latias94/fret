@@ -4,7 +4,7 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
     TextWrap,
 };
-use fret_runtime::Model;
+use fret_runtime::{Model, ModelId};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, PressableA11y, PressableProps, SemanticsProps, SizeStyle, TextProps,
@@ -94,6 +94,7 @@ impl Dialog {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
+            let open_id: ModelId = self.open.id();
 
             let trigger = trigger(cx);
             let id = trigger.id;
@@ -184,7 +185,9 @@ impl Dialog {
                     let available_h =
                         Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
 
+                    crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
                     let content = content(cx);
+                    crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
                     let last_size = cx.last_bounds_for_element(content.id).map(|r| r.size);
 
                     // These defaults match upstream's `sm:max-w-lg` intent and provide a stable
@@ -324,9 +327,13 @@ impl DialogContent {
             children,
         );
 
+        let (labelled_by_element, described_by_element) =
+            crate::a11y_modal::modal_relations_for_current_scope(cx.app);
         cx.semantics(
             SemanticsProps {
                 role: SemanticsRole::Dialog,
+                labelled_by_element,
+                described_by_element,
                 ..Default::default()
             },
             move |_cx| vec![container],
@@ -554,7 +561,7 @@ impl DialogTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or(theme.metrics.font_line_height);
 
-        cx.text_props(TextProps {
+        let title = cx.text_props(TextProps {
             layout: Default::default(),
             text: self.text,
             style: Some(TextStyle {
@@ -567,7 +574,9 @@ impl DialogTitle {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
-        })
+        });
+        crate::a11y_modal::register_modal_title(cx.app, title.id);
+        title
     }
 }
 
@@ -598,7 +607,7 @@ impl DialogDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or(theme.metrics.font_line_height);
 
-        cx.text_props(TextProps {
+        let description = cx.text_props(TextProps {
             layout: Default::default(),
             text: self.text,
             style: Some(TextStyle {
@@ -611,7 +620,9 @@ impl DialogDescription {
             color: Some(fg),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
-        })
+        });
+        crate::a11y_modal::register_modal_description(cx.app, description.id);
+        description
     }
 }
 
@@ -1505,5 +1516,134 @@ mod tests {
         let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
             .expect("trigger");
         assert_ne!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn dialog_content_exposes_labelled_by_and_described_by_relations() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {
+                OverlayController::begin_frame(app, window);
+
+                let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "dialog-a11y-relations",
+                    |cx| {
+                        let trigger = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                cx.pressable_toggle_bool(&open);
+                                trigger_id = Some(id);
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let dialog = Dialog::new(open.clone()).into_element(
+                            cx,
+                            |_cx| trigger,
+                            |cx| {
+                                let title = DialogTitle::new("Dialog Title").into_element(cx);
+                                let description =
+                                    DialogDescription::new("Dialog Description").into_element(cx);
+                                DialogContent::new(vec![title, description]).into_element(cx)
+                            },
+                        );
+
+                        vec![dialog]
+                    },
+                );
+
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                trigger_id.expect("trigger id")
+            };
+
+        // Frame 1: closed.
+        let _trigger = render_frame(&mut ui, &mut app, &mut services);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: open + semantics snapshot.
+        let _ = render_frame(&mut ui, &mut app, &mut services);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let dialog = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Dialog)
+            .expect("dialog semantics node");
+        let title = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Text
+                    && n.label.as_deref() == Some("Dialog Title")
+            })
+            .expect("title semantics node");
+        let description = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Text
+                    && n.label.as_deref() == Some("Dialog Description")
+            })
+            .expect("description semantics node");
+
+        assert!(
+            dialog.labelled_by.iter().any(|id| *id == title.id),
+            "dialog should be labelled by its title"
+        );
+        assert!(
+            dialog.described_by.iter().any(|id| *id == description.id),
+            "dialog should be described by its description"
+        );
     }
 }

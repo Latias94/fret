@@ -289,6 +289,19 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             }
         }
 
+        if !node.described_by.is_empty() {
+            let described_by: Vec<NodeId> = node
+                .described_by
+                .iter()
+                .copied()
+                .filter(|id| reachable.contains(id))
+                .map(to_accesskit_id)
+                .collect();
+            if !described_by.is_empty() {
+                out.set_described_by(described_by);
+            }
+        }
+
         if let Some(pos_in_set) = node.pos_in_set.and_then(|p| usize::try_from(p).ok()) {
             out.set_position_in_set(pos_in_set);
         }
@@ -507,6 +520,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -531,6 +545,7 @@ mod tests {
                         ..SemanticsActions::default()
                     },
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -548,6 +563,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -568,6 +584,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
             ],
@@ -644,6 +661,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -661,6 +679,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -681,6 +700,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -698,6 +718,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -722,6 +743,7 @@ mod tests {
                         ..SemanticsActions::default()
                     },
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
             ],
@@ -783,6 +805,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -800,6 +823,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -817,6 +841,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
             ],
@@ -833,6 +858,123 @@ mod tests {
 
         assert_eq!(item_node.position_in_set(), Some(57));
         assert_eq!(item_node.size_of_set(), Some(1200));
+    }
+
+    #[test]
+    fn described_by_is_emitted_for_reachable_descendant() {
+        let window = AppWindowId::default();
+        let root = node(1);
+        let dialog = node(2);
+        let title = node(3);
+        let description = node(4);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: dialog,
+                    parent: Some(root),
+                    role: SemanticsRole::Dialog,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: vec![title],
+                    described_by: vec![description],
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: title,
+                    parent: Some(dialog),
+                    role: SemanticsRole::Text,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Title".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: description,
+                    parent: Some(dialog),
+                    role: SemanticsRole::Text,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Description".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let dialog_id = to_accesskit_id(dialog);
+
+        let dialog_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == dialog_id).then_some(n))
+            .expect("dialog node present");
+
+        let expected_labelled_by = vec![to_accesskit_id(title)];
+        assert_eq!(dialog_node.labelled_by(), expected_labelled_by.as_slice());
+
+        let expected_described_by = vec![to_accesskit_id(description)];
+        assert_eq!(dialog_node.described_by(), expected_described_by.as_slice());
     }
 
     #[test]
@@ -874,6 +1016,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -898,6 +1041,7 @@ mod tests {
                         ..SemanticsActions::default()
                     },
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
             ],
@@ -974,6 +1118,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -998,6 +1143,7 @@ mod tests {
                         ..SemanticsActions::default()
                     },
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
             ],
@@ -1066,6 +1212,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -1090,6 +1237,7 @@ mod tests {
                         ..SemanticsActions::default()
                     },
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
             ],
@@ -1157,6 +1305,7 @@ mod tests {
                     text_composition: None,
                     actions: SemanticsActions::default(),
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
                 SemanticsNode {
@@ -1181,6 +1330,7 @@ mod tests {
                         ..SemanticsActions::default()
                     },
                     labelled_by: Vec::new(),
+                    described_by: Vec::new(),
                     controls: Vec::new(),
                 },
             ],

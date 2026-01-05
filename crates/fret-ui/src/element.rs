@@ -262,6 +262,12 @@ pub struct SemanticsProps {
     /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
     /// snapshot production.
     pub labelled_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which describes this node.
+    ///
+    /// This is an authoring convenience for relationships like `aria-describedby` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub described_by_element: Option<u64>,
 }
 
 impl Default for SemanticsProps {
@@ -277,6 +283,7 @@ impl Default for SemanticsProps {
             checked: None,
             active_descendant: None,
             labelled_by_element: None,
+            described_by_element: None,
         }
     }
 }
@@ -430,6 +437,12 @@ pub struct PressableA11y {
     /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
     /// snapshot production.
     pub labelled_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which describes this node.
+    ///
+    /// This is an authoring convenience for relationships like `aria-describedby` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub described_by_element: Option<u64>,
     pub pos_in_set: Option<u32>,
     pub set_size: Option<u32>,
 }

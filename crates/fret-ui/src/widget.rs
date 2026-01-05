@@ -231,6 +231,7 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub(crate) pos_in_set: &'a mut Option<u32>,
     pub(crate) set_size: &'a mut Option<u32>,
     pub(crate) labelled_by: &'a mut Vec<NodeId>,
+    pub(crate) described_by: &'a mut Vec<NodeId>,
     pub(crate) controls: &'a mut Vec<NodeId>,
 }
 
@@ -325,6 +326,17 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
 
     pub fn clear_labelled_by(&mut self) {
         self.labelled_by.clear();
+    }
+
+    pub fn push_described_by(&mut self, node: NodeId) {
+        if self.described_by.iter().any(|id| *id == node) {
+            return;
+        }
+        self.described_by.push(node);
+    }
+
+    pub fn clear_described_by(&mut self) {
+        self.described_by.clear();
     }
 
     pub fn push_controlled(&mut self, node: NodeId) {

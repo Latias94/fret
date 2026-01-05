@@ -7,6 +7,7 @@
 //! Note: This crate is now declarative-only. Retained-widget authoring is intentionally not part of
 //! the public component surface (see ADR 0066 / declarative-only migration).
 
+mod a11y_modal;
 pub mod accordion;
 pub mod alert;
 pub mod alert_dialog;
