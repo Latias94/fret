@@ -5,6 +5,7 @@ use std::sync::Arc;
 use fret_core::{
     Edges, MouseButton, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
 };
+use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::PointerDownCx;
 use fret_ui::element::{
@@ -17,13 +18,14 @@ use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
+use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 use crate::popper_arrow::{self, DiamondArrowStyle};
@@ -434,8 +436,8 @@ fn menu_row_children<H: UiHost>(
     row_bg: fret_core::Color,
     row_fg: fret_core::Color,
     text_style: TextStyle,
-    font_size: Px,
-    font_line_height: Px,
+    _font_size: Px,
+    _font_line_height: Px,
     pad_left: Px,
     pad_x: Px,
     pad_y: Px,
@@ -486,20 +488,12 @@ fn menu_row_children<H: UiHost>(
                             return Vec::new();
                         }
 
-                        vec![cx.text_props(TextProps {
-                            layout: LayoutStyle::default(),
-                            text: Arc::from("\u{2713}"),
-                            style: Some(TextStyle {
-                                font: fret_core::FontId::default(),
-                                size: font_size,
-                                weight: fret_core::FontWeight::MEDIUM,
-                                line_height: Some(font_line_height),
-                                letter_spacing_em: None,
-                            }),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Clip,
-                            color: Some(indicator_fg),
-                        })]
+                        vec![decl_icon::icon_with(
+                            cx,
+                            ids::ui::CHECK,
+                            Some(Px(16.0)),
+                            Some(ColorRef::Color(indicator_fg)),
+                        )]
                     },
                 ));
             }

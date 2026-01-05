@@ -64,7 +64,8 @@ Key upstream behaviors/surfaces:
 Still missing (relative to upstream shadcn/ui v4):
 
 - Submenus (and safe-hover corridor for pointer travel).
-- Icons and consistent icon/indicator slot sizing/alignment.
+- Chevron-right submenu icon parity (once submenus are implemented).
+- A shared convention for leading icons (consumer-provided today).
 - Destructive item variant styling.
 
 ## Validation

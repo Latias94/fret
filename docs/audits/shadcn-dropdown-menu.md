@@ -54,12 +54,14 @@ Key upstream behaviors/surfaces:
 - Partial: Menu background/foreground now align with popover tokens (`bg-popover text-popover-foreground`).
 - Partial: Hover/pressed/focused highlight uses `accent` tokens; deeper parity (inset variants,
   checkmark spacing, icon alignment) is still pending.
+- Pass: Checkbox/radio indicators render the `ids::ui::CHECK` icon in a fixed 16×16 slot.
 
 ### Missing surfaces (significant)
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- Icons and consistent icon/indicator slot sizing/alignment.
+- Chevron-right submenu icon parity (currently rendered as a text fallback).
+- A shared convention for leading icons (consumer-provided today).
 - A first-class “active item” highlight state (beyond focus ring) for closer visual parity.
 
 ### Submenus

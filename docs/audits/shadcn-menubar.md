@@ -54,7 +54,7 @@ Key upstream behaviors/surfaces:
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- Icon-backed indicators (checkbox/radio) and chevrons (currently text fallbacks).
+- Chevron-right submenu icon parity (currently rendered as a text fallback).
 - Consistent leading icon slot sizing/alignment across all item variants (currently consumer-provided).
 - Destructive item variant styling.
 
