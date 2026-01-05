@@ -478,19 +478,47 @@ pub struct ScatterPlotLayer {
 
 pub type ScatterPlotCanvas = PlotCanvas<ScatterPlotLayer>;
 
+/// Persistent plot interaction state owned by the caller (optional).
+///
+/// This mirrors common plotting libraries (e.g. ImPlot / egui_plot) where plot view state and user
+/// preferences (hidden series, pinned series) outlive a single render pass.
+///
+/// By default, `PlotCanvas` owns an internal `PlotState`. Callers can provide a `Model<PlotState>`
+/// to store this state externally (so it can be persisted, shared, or controlled programmatically).
+#[derive(Debug, Clone)]
+pub struct PlotState {
+    /// Current view bounds in data space when `view_is_auto == false`.
+    pub view_bounds: Option<DataRect>,
+    /// If true, the plot view is derived from `data_bounds` each frame (auto-fit).
+    pub view_is_auto: bool,
+    /// User-controlled series visibility.
+    pub hidden_series: HashSet<SeriesId>,
+    /// Optional pinned series ID for emphasis and tooltip pinning.
+    pub pinned_series: Option<SeriesId>,
+}
+
+impl Default for PlotState {
+    fn default() -> Self {
+        Self {
+            view_bounds: None,
+            view_is_auto: true,
+            hidden_series: HashSet::new(),
+            pinned_series: None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct PlotCanvas<L: PlotLayer + 'static> {
     model: Model<L::Model>,
     style: LinePlotStyle,
     layer: L,
     hover: Option<PlotHover>,
-    hidden_series: HashSet<SeriesId>,
-    pinned_series: Option<SeriesId>,
+    plot_state: PlotState,
+    plot_state_model: Option<Model<PlotState>>,
     legend_hover: Option<SeriesId>,
     cursor_px: Option<Point>,
     last_scale_factor: f32,
-    view_bounds: Option<DataRect>,
-    view_is_auto: bool,
     pan_last_pos: Option<Point>,
     box_zoom_start: Option<Point>,
     box_zoom_current: Option<Point>,
@@ -521,13 +549,11 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             style: LinePlotStyle::default(),
             layer,
             hover: None,
-            hidden_series: HashSet::new(),
-            pinned_series: None,
+            plot_state: PlotState::default(),
+            plot_state_model: None,
             legend_hover: None,
             cursor_px: None,
             last_scale_factor: 1.0,
-            view_bounds: None,
-            view_is_auto: true,
             pan_last_pos: None,
             box_zoom_start: None,
             box_zoom_current: None,
@@ -545,8 +571,51 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self
     }
 
+    pub fn state(mut self, state: Model<PlotState>) -> Self {
+        self.plot_state_model = Some(state);
+        self
+    }
+
     pub fn create_node<H: UiHost>(ui: &mut fret_ui::UiTree<H>, canvas: Self) -> fret_core::NodeId {
         ui.create_node_retained(canvas)
+    }
+
+    fn read_plot_state<H: UiHost>(&self, app: &mut H) -> PlotState {
+        if let Some(state) = &self.plot_state_model {
+            state
+                .read(app, |_app, s| s.clone())
+                .unwrap_or_else(|_| self.plot_state.clone())
+        } else {
+            self.plot_state.clone()
+        }
+    }
+
+    fn update_plot_state<H: UiHost>(
+        &mut self,
+        app: &mut H,
+        f: impl FnOnce(&mut PlotState),
+    ) -> bool {
+        if let Some(state) = &self.plot_state_model {
+            state.update(app, |s, _cx| f(s)).is_ok()
+        } else {
+            f(&mut self.plot_state);
+            true
+        }
+    }
+
+    fn current_view_bounds<H: UiHost>(&self, app: &mut H, state: &PlotState) -> DataRect {
+        if state.view_is_auto {
+            let data_bounds = self.read_data_bounds(app);
+            if self.style.clamp_to_data_bounds {
+                expand_data_bounds(data_bounds, self.style.overscroll_fraction)
+            } else {
+                data_bounds
+            }
+        } else if let Some(view) = state.view_bounds {
+            sanitize_data_rect(view)
+        } else {
+            self.read_data_bounds(app)
+        }
     }
 
     fn rebuild_paths_if_needed<H: UiHost>(
@@ -554,6 +623,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         cx: &mut PaintCx<'_, H>,
         plot: Rect,
         view_bounds: DataRect,
+        hidden: &HashSet<SeriesId>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         let model_revision = self.model.revision(cx.app).unwrap_or(0);
         let Ok(model) = self.model.read(cx.app, |_app, m| m.clone()) else {
@@ -568,7 +638,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 plot,
                 view_bounds,
                 style: self.style,
-                hidden: &self.hidden_series,
+                hidden,
             },
         )
     }
@@ -661,29 +731,6 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
     fn hash_f32_bits(state: u64, v: f32) -> u64 {
         Self::hash_u64(state, u64::from(v.to_bits()))
-    }
-
-    fn ensure_view_bounds<H: UiHost>(&mut self, app: &mut H) -> DataRect {
-        if self.view_is_auto {
-            let data_bounds = self.read_data_bounds(app);
-            let view = if self.style.clamp_to_data_bounds {
-                expand_data_bounds(data_bounds, self.style.overscroll_fraction)
-            } else {
-                data_bounds
-            };
-            self.view_bounds = Some(view);
-            return view;
-        }
-
-        if let Some(view) = self.view_bounds {
-            let view = sanitize_data_rect(view);
-            self.view_bounds = Some(view);
-            return view;
-        }
-
-        let data_bounds = self.read_data_bounds(app);
-        self.view_bounds = Some(data_bounds);
-        data_bounds
     }
 
     fn read_data_bounds<H: UiHost>(&self, app: &mut H) -> DataRect {
@@ -833,14 +880,6 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             .model
             .read(cx.app, |_app, m| L::series_meta(m))
             .unwrap_or_default();
-
-        self.hidden_series
-            .retain(|id| series.iter().any(|s| s.id == *id));
-        if let Some(pinned) = self.pinned_series
-            && series.iter().all(|s| s.id != pinned)
-        {
-            self.pinned_series = None;
-        }
         if let Some(hovered) = self.legend_hover
             && series.iter().all(|s| s.id != hovered)
         {
@@ -851,7 +890,6 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             if self.legend_key.is_some() {
                 self.clear_legend_cache(cx.services);
             }
-            self.hidden_series.clear();
             return;
         }
 
@@ -916,8 +954,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     && !modifiers.alt_gr
                     && !modifiers.meta;
                 if plain && *key == KeyCode::KeyR {
-                    self.view_is_auto = true;
-                    self.view_bounds = None;
+                    let _ = self.update_plot_state(cx.app, |s| {
+                        s.view_is_auto = true;
+                        s.view_bounds = None;
+                        s.hidden_series.clear();
+                        s.pinned_series = None;
+                    });
                     self.hover = None;
                     self.cursor_px = None;
                     self.pan_last_pos = None;
@@ -930,7 +972,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     cx.request_redraw();
                     cx.stop_propagation();
                 } else if plain && *key == KeyCode::KeyA {
-                    self.hidden_series.clear();
+                    let _ = self.update_plot_state(cx.app, |s| {
+                        s.hidden_series.clear();
+                        s.pinned_series = None;
+                    });
                     self.hover = None;
                     self.cursor_px = None;
                     self.legend_hover = None;
@@ -943,12 +988,17 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
-                } else if *key == KeyCode::Escape && self.pinned_series.is_some() {
-                    self.pinned_series = None;
-                    self.legend_hover = None;
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                    cx.stop_propagation();
+                } else if *key == KeyCode::Escape {
+                    let pinned = self.read_plot_state(cx.app).pinned_series;
+                    if pinned.is_some() {
+                        let _ = self.update_plot_state(cx.app, |s| {
+                            s.pinned_series = None;
+                        });
+                        self.legend_hover = None;
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
                 }
             }
             Event::Pointer(PointerEvent::Down {
@@ -976,6 +1026,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         return;
                     };
                     let id = entry.id;
+                    let state = self.read_plot_state(cx.app);
+                    let mut next_hidden = state.hidden_series;
+                    let mut next_pinned = state.pinned_series;
 
                     // Legend interaction policy:
                     // - Shift+Click: solo the series (or restore all if already solo)
@@ -983,40 +1036,43 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     // - Click label area: pin/unpin tooltip + emphasis to this series
                     if modifiers.shift {
                         let ids: Vec<SeriesId> = self.legend_entries.iter().map(|e| e.id).collect();
-                        let visible_count = ids
-                            .iter()
-                            .filter(|sid| !self.hidden_series.contains(sid))
-                            .count();
-                        let is_solo = visible_count == 1 && !self.hidden_series.contains(&id);
+                        let visible_count =
+                            ids.iter().filter(|sid| !next_hidden.contains(sid)).count();
+                        let is_solo = visible_count == 1 && !next_hidden.contains(&id);
                         if is_solo {
-                            self.hidden_series.clear();
+                            next_hidden.clear();
                         } else {
-                            self.hidden_series = ids.into_iter().filter(|sid| *sid != id).collect();
+                            next_hidden = ids.into_iter().filter(|sid| *sid != id).collect();
                         }
-                        self.hidden_series.remove(&id);
+                        next_hidden.remove(&id);
                     } else if contains_point(swatch, *position) {
                         let total = self.legend_entries.len();
                         let hidden_count = self
                             .legend_entries
                             .iter()
-                            .filter(|e| self.hidden_series.contains(&e.id))
+                            .filter(|e| next_hidden.contains(&e.id))
                             .count();
                         let visible_count = total.saturating_sub(hidden_count);
 
-                        let is_hidden = self.hidden_series.contains(&id);
+                        let is_hidden = next_hidden.contains(&id);
                         if !is_hidden && visible_count <= 1 {
                             // Never hide the last visible series.
                         } else if is_hidden {
-                            self.hidden_series.remove(&id);
+                            next_hidden.remove(&id);
                         } else {
-                            self.hidden_series.insert(id);
+                            next_hidden.insert(id);
                         }
-                    } else if self.pinned_series == Some(id) {
-                        self.pinned_series = None;
+                    } else if next_pinned == Some(id) {
+                        next_pinned = None;
                     } else {
-                        self.pinned_series = Some(id);
-                        self.hidden_series.remove(&id);
+                        next_pinned = Some(id);
+                        next_hidden.remove(&id);
                     }
+
+                    let _ = self.update_plot_state(cx.app, |s| {
+                        s.hidden_series = next_hidden;
+                        s.pinned_series = next_pinned;
+                    });
 
                     self.hover = None;
                     self.cursor_px = None;
@@ -1044,7 +1100,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         self.box_zoom_current = Some(local);
                         self.pan_last_pos = None;
                     } else {
-                        self.view_is_auto = false;
+                        let _ = self.update_plot_state(cx.app, |s| {
+                            s.view_is_auto = false;
+                        });
                         self.pan_last_pos = Some(*position);
                         self.box_zoom_start = None;
                         self.box_zoom_current = None;
@@ -1078,8 +1136,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             let h = (start.y.0 - end.y.0).abs();
 
                             if w >= 4.0 && h >= 4.0 {
-                                let view_bounds = self.ensure_view_bounds(cx.app);
-                                let view_bounds = sanitize_data_rect(view_bounds);
+                                let state = self.read_plot_state(cx.app);
+                                let view_bounds = self.current_view_bounds(cx.app, &state);
                                 if let Some(mut next) = data_rect_from_plot_points(
                                     view_bounds,
                                     layout.plot.size,
@@ -1094,8 +1152,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                             self.style.overscroll_fraction,
                                         );
                                     }
-                                    self.view_is_auto = false;
-                                    self.view_bounds = Some(next);
+                                    let _ = self.update_plot_state(cx.app, |s| {
+                                        s.view_is_auto = false;
+                                        s.view_bounds = Some(next);
+                                    });
                                 }
                             }
                         }
@@ -1151,8 +1211,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     (zoom, zoom)
                 };
 
-                let view_bounds = self.ensure_view_bounds(cx.app);
-                let view_bounds = sanitize_data_rect(view_bounds);
+                let state = self.read_plot_state(cx.app);
+                let view_bounds = self.current_view_bounds(cx.app, &state);
                 let local = local_from_absolute(layout.plot.origin, *position);
                 let Some(next) =
                     zoom_view_at_px(view_bounds, layout.plot.size, local, zoom_x, zoom_y)
@@ -1166,8 +1226,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     next
                 };
 
-                self.view_is_auto = false;
-                self.view_bounds = Some(next);
+                let _ = self.update_plot_state(cx.app, |s| {
+                    s.view_is_auto = false;
+                    s.view_bounds = Some(next);
+                });
                 cx.request_focus(cx.node);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -1238,8 +1300,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let dx_px = position.x.0 - last.x.0;
                     let dy_px = position.y.0 - last.y.0;
 
-                    let view_bounds = self.ensure_view_bounds(cx.app);
-                    let view_bounds = sanitize_data_rect(view_bounds);
+                    let state = self.read_plot_state(cx.app);
+                    let view_bounds = self.current_view_bounds(cx.app, &state);
                     let Some(next) = pan_view_by_px(view_bounds, layout.plot.size, dx_px, dy_px)
                     else {
                         return;
@@ -1251,8 +1313,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         next
                     };
 
-                    self.view_bounds = Some(next);
-                    self.view_is_auto = false;
+                    let _ = self.update_plot_state(cx.app, |s| {
+                        s.view_is_auto = false;
+                        s.view_bounds = Some(next);
+                    });
                     self.pan_last_pos = Some(*position);
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
@@ -1273,8 +1337,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let model_revision = self.model.revision(cx.app).unwrap_or(0);
                     let scale_factor = self.last_scale_factor;
 
-                    let view_bounds = self.ensure_view_bounds(cx.app);
-                    let view_bounds = sanitize_data_rect(view_bounds);
+                    let state = self.read_plot_state(cx.app);
+                    let view_bounds = self.current_view_bounds(cx.app, &state);
+                    let hidden = &state.hidden_series;
+                    let pinned = state.pinned_series;
 
                     let local = local_from_absolute(layout.plot.origin, *position);
 
@@ -1292,8 +1358,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     local,
                                     style: self.style,
                                     hover_threshold: self.style.hover_threshold,
-                                    hidden: &self.hidden_series,
-                                    pinned: self.pinned_series,
+                                    hidden,
+                                    pinned,
                                 },
                             )
                         })
@@ -1313,11 +1379,17 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         cx.observe_model(&self.model, Invalidation::Paint);
+        if let Some(state) = &self.plot_state_model {
+            cx.observe_model(state, Invalidation::Paint);
+        }
         cx.available
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         cx.observe_model(&self.model, Invalidation::Paint);
+        if let Some(state) = &self.plot_state_model {
+            cx.observe_model(state, Invalidation::Paint);
+        }
         cx.observe_global::<TextFontStackKey>(Invalidation::Paint);
         self.last_scale_factor = cx.scale_factor;
 
@@ -1371,17 +1443,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         });
 
         let layout = PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
-
-        let data_bounds = self.read_data_bounds(cx.app);
-
-        let view_bounds = if self.view_is_auto {
-            self.ensure_view_bounds(cx.app)
-        } else {
-            let view = self.view_bounds.unwrap_or(data_bounds);
-            let view = sanitize_data_rect(view);
-            self.view_bounds = Some(view);
-            view
-        };
+        let state = self.read_plot_state(cx.app);
+        let view_bounds = self.current_view_bounds(cx.app, &state);
 
         self.rebuild_axis_labels_if_needed(cx, layout, view_bounds, theme.revision, font_stack_key);
         self.rebuild_legend_if_needed(cx, theme.revision, font_stack_key);
@@ -1421,13 +1484,21 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
             let emphasized = self.style.emphasize_hovered_series;
             let dim_alpha = self.style.dimmed_series_alpha;
-            let emphasized_series = self
+            let series_meta: Vec<SeriesMeta> = self
+                .model
+                .read(cx.app, |_app, m| L::series_meta(m))
+                .unwrap_or_default();
+            let pinned = state
                 .pinned_series
+                .filter(|id| series_meta.iter().any(|s| s.id == *id));
+            let hidden = &state.hidden_series;
+
+            let emphasized_series = pinned
                 .or(self.hover.map(|h| h.series_id))
                 .or(self.legend_hover);
 
             for (series_id, path, color) in
-                self.rebuild_paths_if_needed(cx, layout.plot, view_bounds)
+                self.rebuild_paths_if_needed(cx, layout.plot, view_bounds, hidden)
             {
                 let color = if emphasized {
                     if let Some(emphasized) = emphasized_series
@@ -1527,7 +1598,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let row_h = row.size.height;
 
                 let hovered_row = self.legend_hover == Some(entry.id);
-                let pinned_row = self.pinned_series == Some(entry.id);
+                let pinned_row = state.pinned_series == Some(entry.id);
                 if hovered_row || pinned_row {
                     let a = if pinned_row { 0.16 } else { 0.10 };
                     let highlight = Color {
@@ -1555,7 +1626,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let override_color = series_overrides.get(i).copied().flatten();
                 let color = resolve_series_color(i, self.style, series_count, override_color);
 
-                let visible = !self.hidden_series.contains(&entry.id);
+                let visible = !state.hidden_series.contains(&entry.id);
                 let swatch_color = if visible {
                     color
                 } else {
