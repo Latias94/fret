@@ -1,11 +1,12 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::ids;
-use fret_runtime::Model;
+use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
@@ -19,7 +20,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::headless::{roving_focus, typeahead};
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -449,9 +450,90 @@ fn select_impl<H: UiHost>(
         let enabled = !disabled;
         let item_len = count_items(entries);
 
+        #[derive(Debug)]
+        struct SelectTriggerKeyState {
+            suppress_next_activate: bool,
+            query: String,
+            clear_token: Option<TimerToken>,
+        }
+
+        impl SelectTriggerKeyState {
+            fn new() -> Self {
+                Self {
+                    suppress_next_activate: false,
+                    query: String::new(),
+                    clear_token: None,
+                }
+            }
+        }
+
+        fn flatten_items_for_typeahead(
+            entries: &[SelectEntry],
+            enabled: bool,
+            values: &mut Vec<Arc<str>>,
+            labels: &mut Vec<Arc<str>>,
+            disabled: &mut Vec<bool>,
+        ) {
+            for entry in entries {
+                match entry {
+                    SelectEntry::Item(item) => {
+                        values.push(item.value.clone());
+                        labels.push(item.label.clone());
+                        disabled.push(item.disabled || !enabled);
+                    }
+                    SelectEntry::Group(group) => {
+                        flatten_items_for_typeahead(&group.entries, enabled, values, labels, disabled);
+                    }
+                    SelectEntry::Label(_) | SelectEntry::Separator(_) => {}
+                }
+            }
+        }
+
         decl_chrome::control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
+            let mut typeahead_values: Vec<Arc<str>> = Vec::new();
+            let mut typeahead_labels: Vec<Arc<str>> = Vec::new();
+            let mut typeahead_disabled: Vec<bool> = Vec::new();
+            flatten_items_for_typeahead(
+                entries,
+                enabled,
+                &mut typeahead_values,
+                &mut typeahead_labels,
+                &mut typeahead_disabled,
+            );
+
+            let typeahead_values: Arc<[Arc<str>]> = Arc::from(typeahead_values.into_boxed_slice());
+            let typeahead_labels: Arc<[Arc<str>]> = Arc::from(typeahead_labels.into_boxed_slice());
+            let typeahead_disabled: Arc<[bool]> = Arc::from(typeahead_disabled.into_boxed_slice());
+
+            let trigger_state: Arc<Mutex<SelectTriggerKeyState>> = cx.with_state_for(
+                trigger_id,
+                || Arc::new(Mutex::new(SelectTriggerKeyState::new())),
+                |s| s.clone(),
+            );
+
+            let state_for_timer = trigger_state.clone();
+            cx.timer_on_timer_for(
+                trigger_id,
+                Arc::new(move |_host, _action_cx, token| {
+                    let mut state = state_for_timer
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    if state.clear_token == Some(token) {
+                        state.clear_token = None;
+                        state.query.clear();
+                        return true;
+                    }
+                    false
+                }),
+            );
+
             let open_for_key = open.clone();
-            cx.key_add_on_key_down_for(
+            let model_for_key = model.clone();
+            let values_for_key = typeahead_values.clone();
+            let labels_for_key = typeahead_labels.clone();
+            let disabled_for_key = typeahead_disabled.clone();
+            let state_for_key = trigger_state.clone();
+            cx.key_on_key_down_for(
                 trigger_id,
                 Arc::new(move |host, action_cx, it| {
                     use fret_core::KeyCode;
@@ -460,31 +542,159 @@ fn select_impl<H: UiHost>(
                         return false;
                     }
 
-                    if !matches!(it.key, KeyCode::ArrowDown | KeyCode::ArrowUp) {
-                        return false;
-                    }
-
                     let is_open = host.models_mut().get_copied(&open_for_key).unwrap_or(false);
                     if is_open {
                         return false;
                     }
 
-                    let _ = host
+                    let is_modifier_key = it.modifiers.ctrl
+                        || it.modifiers.alt
+                        || it.modifiers.meta
+                        || it.modifiers.alt_gr;
+                    if is_modifier_key {
+                        return false;
+                    }
+
+                    let mut state = state_for_key
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+
+                    if it.key == KeyCode::Space && !state.query.is_empty() {
+                        return true;
+                    }
+
+                    if matches!(
+                        it.key,
+                        KeyCode::Enter | KeyCode::Space | KeyCode::ArrowDown | KeyCode::ArrowUp
+                    ) {
+                        if matches!(it.key, KeyCode::Enter | KeyCode::Space) {
+                            state.suppress_next_activate = true;
+                        }
+                        if let Some(token) = state.clear_token.take() {
+                            host.push_effect(Effect::CancelTimer { token });
+                        }
+                        state.query.clear();
+
+                        let _ = host.models_mut().update(&open_for_key, |v| *v = true);
+                        host.request_redraw(action_cx.window);
+                        return true;
+                    }
+
+                    let key_to_ascii = |key: fret_core::KeyCode| -> Option<char> {
+                        use fret_core::KeyCode;
+                        Some(match key {
+                            KeyCode::KeyA => 'a',
+                            KeyCode::KeyB => 'b',
+                            KeyCode::KeyC => 'c',
+                            KeyCode::KeyD => 'd',
+                            KeyCode::KeyE => 'e',
+                            KeyCode::KeyF => 'f',
+                            KeyCode::KeyG => 'g',
+                            KeyCode::KeyH => 'h',
+                            KeyCode::KeyI => 'i',
+                            KeyCode::KeyJ => 'j',
+                            KeyCode::KeyK => 'k',
+                            KeyCode::KeyL => 'l',
+                            KeyCode::KeyM => 'm',
+                            KeyCode::KeyN => 'n',
+                            KeyCode::KeyO => 'o',
+                            KeyCode::KeyP => 'p',
+                            KeyCode::KeyQ => 'q',
+                            KeyCode::KeyR => 'r',
+                            KeyCode::KeyS => 's',
+                            KeyCode::KeyT => 't',
+                            KeyCode::KeyU => 'u',
+                            KeyCode::KeyV => 'v',
+                            KeyCode::KeyW => 'w',
+                            KeyCode::KeyX => 'x',
+                            KeyCode::KeyY => 'y',
+                            KeyCode::KeyZ => 'z',
+                            KeyCode::Digit0 => '0',
+                            KeyCode::Digit1 => '1',
+                            KeyCode::Digit2 => '2',
+                            KeyCode::Digit3 => '3',
+                            KeyCode::Digit4 => '4',
+                            KeyCode::Digit5 => '5',
+                            KeyCode::Digit6 => '6',
+                            KeyCode::Digit7 => '7',
+                            KeyCode::Digit8 => '8',
+                            KeyCode::Digit9 => '9',
+                            _ => return None,
+                        })
+                    };
+
+                    let Some(ch) = key_to_ascii(it.key) else {
+                        return false;
+                    };
+
+                    state.query.push(ch);
+                    if let Some(token) = state.clear_token.take() {
+                        host.push_effect(Effect::CancelTimer { token });
+                    }
+                    let token = host.next_timer_token();
+                    state.clear_token = Some(token);
+                    host.push_effect(Effect::SetTimer {
+                        window: Some(action_cx.window),
+                        token,
+                        after: Duration::from_millis(500),
+                        repeat: None,
+                    });
+
+                    let current = host
                         .models_mut()
-                        .update(&open_for_key, |v| *v = true);
-                    host.request_redraw(action_cx.window);
+                        .read(&model_for_key, |v| v.clone())
+                        .ok()
+                        .flatten();
+                    let current_idx = current.as_ref().and_then(|v| {
+                        values_for_key
+                            .iter()
+                            .position(|it| it.as_ref() == v.as_ref())
+                    });
+
+                    if let Some(next) = typeahead::match_prefix_arc_str(
+                        labels_for_key.as_ref(),
+                        disabled_for_key.as_ref(),
+                        &state.query,
+                        current_idx,
+                        true,
+                    ) && let Some(next_value) = values_for_key.get(next).cloned()
+                    {
+                        let _ = host
+                            .models_mut()
+                            .update(&model_for_key, |v| *v = Some(next_value));
+                        host.request_redraw(action_cx.window);
+                    }
 
                     true
                 }),
             );
+
+            let open_for_activate = open.clone();
+            let state_for_activate = trigger_state.clone();
+            cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                let mut state = state_for_activate
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner());
+
+                if state.suppress_next_activate {
+                    state.suppress_next_activate = false;
+                    return;
+                }
+
+                if let Some(token) = state.clear_token.take() {
+                    host.push_effect(Effect::CancelTimer { token });
+                }
+                state.query.clear();
+
+                let _ = host.models_mut().update(&open_for_activate, |v| *v = !*v);
+                host.request_redraw(action_cx.window);
+            }));
 
             let border_color = if st.hovered || st.pressed || st.focused {
                 alpha_mul(border_focus, 0.85)
             } else {
                 border
             };
-
-            cx.pressable_toggle_bool(&open);
 
             let props = PressableProps {
                 layout: trigger_layout,
@@ -944,6 +1154,8 @@ fn select_impl<H: UiHost>(
 mod tests {
     use super::*;
 
+    use std::time::Duration;
+
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
@@ -952,7 +1164,7 @@ mod tests {
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_core::{TextStyle, UiServices};
-    use fret_runtime::FrameId;
+    use fret_runtime::{Effect, FrameId};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -1137,6 +1349,149 @@ mod tests {
             .expect("Beta list item");
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(3));
+    }
+
+    #[test]
+    fn select_trigger_enter_opens_on_key_down_and_does_not_toggle_closed_on_key_up() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![SelectItem::new("alpha", "Alpha"), SelectItem::new("beta", "Beta")];
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open.clone(),
+            items,
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("trigger node");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(app.models().get_copied(&open).unwrap_or(false));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyUp {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+        assert!(app.models().get_copied(&open).unwrap_or(false));
+    }
+
+    #[test]
+    fn select_trigger_typeahead_updates_selection_without_opening() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items,
+        );
+
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("trigger node");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::KeyB,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(!app.models().get_copied(&open).unwrap_or(false));
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+
+        let effects = app.flush_effects();
+        let token = effects
+            .iter()
+            .find_map(|e| match e {
+                Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(500) => {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("typeahead clear timer token");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(!app.models().get_copied(&open).unwrap_or(false));
+
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(app.models().get_copied(&open).unwrap_or(false));
     }
 
     #[test]

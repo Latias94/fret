@@ -29,7 +29,10 @@ examples in `repo-ref/ui`.
 
 ### Keyboard & roving navigation
 
-- Pass: Trigger `ArrowDown` / `ArrowUp` opens the popover when closed (Radix `OPEN_KEYS` outcome).
+- Pass: Trigger `Enter` / `Space` / `ArrowDown` / `ArrowUp` opens the popover on key down when
+  closed (Radix `OPEN_KEYS` outcome; prevents the key-up activation from toggling it closed).
+- Pass: Trigger typeahead while closed updates the selection without opening (Radix trigger
+  typeahead behavior); `Space` is ignored while typing ahead.
 - Pass: Listbox navigation uses roving focus + typeahead hooks (`cx.roving_nav_apg()` and
   `cx.roving_typeahead_prefix_arc_str(...)`).
 - Pass: `loop_navigation(true)` defaults to looping behavior (Radix `loop` default).
