@@ -1,6 +1,7 @@
 use super::ElementHostWidget;
 use crate::declarative::mount::node_for_element_in_window_frame;
 use crate::declarative::paint_helpers::scrollbar_thumb_rect;
+use crate::declarative::paint_helpers::scrollbar_thumb_rect_horizontal;
 use crate::declarative::prelude::*;
 
 pub(super) fn handle_scrollbar<H: UiHost>(
@@ -18,8 +19,18 @@ pub(super) fn handle_scrollbar<H: UiHost>(
     let scroll_target = props.scroll_target;
     match pe {
         fret_core::PointerEvent::Wheel { delta, .. } => {
+            let is_horizontal = cx.bounds.size.width.0 > cx.bounds.size.height.0;
             let prev = handle.offset();
-            handle.set_offset(Point::new(prev.x, Px(prev.y.0 - delta.y.0)));
+            if is_horizontal {
+                let dx = if delta.x.0.abs() > 0.01 {
+                    delta.x
+                } else {
+                    delta.y
+                };
+                handle.set_offset(Point::new(Px(prev.x.0 - dx.0), prev.y));
+            } else {
+                handle.set_offset(Point::new(prev.x, Px(prev.y.0 - delta.y.0)));
+            }
 
             if let Some(target) = scroll_target
                 && let Some(node) = node_for_element_in_window_frame(&mut *cx.app, window, target)
@@ -39,6 +50,7 @@ pub(super) fn handle_scrollbar<H: UiHost>(
 
             let bounds = cx.bounds;
             let position = *position;
+            let is_horizontal = bounds.size.width.0 > bounds.size.height.0;
 
             crate::elements::with_element_state(
                 &mut *cx.app,
@@ -46,9 +58,15 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                 this.element,
                 crate::element::ScrollbarState::default,
                 |state| {
-                    let viewport_h = Px(handle.viewport_size().height.0.max(0.0));
-                    let content_h = Px(handle.content_size().height.0.max(0.0));
-                    let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+                    let (viewport, content, max_offset) = if is_horizontal {
+                        let viewport = Px(handle.viewport_size().width.0.max(0.0));
+                        let content = Px(handle.content_size().width.0.max(0.0));
+                        (viewport, content, Px((content.0 - viewport.0).max(0.0)))
+                    } else {
+                        let viewport = Px(handle.viewport_size().height.0.max(0.0));
+                        let content = Px(handle.content_size().height.0.max(0.0));
+                        (viewport, content, Px((content.0 - viewport.0).max(0.0)))
+                    };
 
                     let hovered = bounds.contains(position);
                     if state.hovered != hovered && !state.dragging_thumb {
@@ -58,26 +76,54 @@ pub(super) fn handle_scrollbar<H: UiHost>(
 
                     if state.dragging_thumb
                         && max_offset.0 > 0.0
-                        && let Some(thumb) = scrollbar_thumb_rect(
-                            bounds,
-                            viewport_h,
-                            content_h,
-                            state.drag_start_offset_y,
-                        )
+                        && let Some(thumb) = (if is_horizontal {
+                            scrollbar_thumb_rect_horizontal(
+                                bounds,
+                                viewport,
+                                content,
+                                state.drag_start_offset_y,
+                            )
+                        } else {
+                            scrollbar_thumb_rect(
+                                bounds,
+                                viewport,
+                                content,
+                                state.drag_start_offset_y,
+                            )
+                        })
                     {
-                        let max_thumb_y = (bounds.size.height.0 - thumb.size.height.0).max(0.0);
-                        if max_thumb_y > 0.0 {
-                            let delta_y = position.y.0 - state.drag_start_pointer_y.0;
-                            let scale = max_offset.0 / max_thumb_y;
-                            let next = Px((state.drag_start_offset_y.0 + delta_y * scale).max(0.0));
-                            let next = Px(next.0.min(max_offset.0));
-                            if (handle.offset().y.0 - next.0).abs() > 0.01 {
-                                let prev = handle.offset();
-                                handle.set_offset(Point::new(prev.x, next));
-                                needs_layout = true;
-                                needs_paint = true;
+                        if is_horizontal {
+                            let max_thumb_x = (bounds.size.width.0 - thumb.size.width.0).max(0.0);
+                            if max_thumb_x > 0.0 {
+                                let delta_x = position.x.0 - state.drag_start_pointer_y.0;
+                                let scale = max_offset.0 / max_thumb_x;
+                                let next =
+                                    Px((state.drag_start_offset_y.0 + delta_x * scale).max(0.0));
+                                let next = Px(next.0.min(max_offset.0));
+                                if (handle.offset().x.0 - next.0).abs() > 0.01 {
+                                    let prev = handle.offset();
+                                    handle.set_offset(Point::new(next, prev.y));
+                                    needs_layout = true;
+                                    needs_paint = true;
+                                }
+                                state.hovered = true;
                             }
-                            state.hovered = true;
+                        } else {
+                            let max_thumb_y = (bounds.size.height.0 - thumb.size.height.0).max(0.0);
+                            if max_thumb_y > 0.0 {
+                                let delta_y = position.y.0 - state.drag_start_pointer_y.0;
+                                let scale = max_offset.0 / max_thumb_y;
+                                let next =
+                                    Px((state.drag_start_offset_y.0 + delta_y * scale).max(0.0));
+                                let next = Px(next.0.min(max_offset.0));
+                                if (handle.offset().y.0 - next.0).abs() > 0.01 {
+                                    let prev = handle.offset();
+                                    handle.set_offset(Point::new(prev.x, next));
+                                    needs_layout = true;
+                                    needs_paint = true;
+                                }
+                                state.hovered = true;
+                            }
                         }
                     }
                 },
@@ -110,6 +156,7 @@ pub(super) fn handle_scrollbar<H: UiHost>(
             let mut did_change_offset = false;
             let bounds = cx.bounds;
             let position = *position;
+            let is_horizontal = bounds.size.width.0 > bounds.size.height.0;
 
             crate::elements::with_element_state(
                 &mut *cx.app,
@@ -117,17 +164,31 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                 this.element,
                 crate::element::ScrollbarState::default,
                 |state| {
-                    let viewport_h = Px(handle.viewport_size().height.0.max(0.0));
-                    let content_h = Px(handle.content_size().height.0.max(0.0));
-                    let max_offset = Px((content_h.0 - viewport_h.0).max(0.0));
+                    let (viewport, content, max_offset) = if is_horizontal {
+                        let viewport = Px(handle.viewport_size().width.0.max(0.0));
+                        let content = Px(handle.content_size().width.0.max(0.0));
+                        (viewport, content, Px((content.0 - viewport.0).max(0.0)))
+                    } else {
+                        let viewport = Px(handle.viewport_size().height.0.max(0.0));
+                        let content = Px(handle.content_size().height.0.max(0.0));
+                        (viewport, content, Px((content.0 - viewport.0).max(0.0)))
+                    };
 
                     if max_offset.0 <= 0.0 {
                         return;
                     }
 
-                    let Some(thumb) =
-                        scrollbar_thumb_rect(bounds, viewport_h, content_h, handle.offset().y)
-                    else {
+                    let current_offset = if is_horizontal {
+                        handle.offset().x
+                    } else {
+                        handle.offset().y
+                    };
+                    let thumb = if is_horizontal {
+                        scrollbar_thumb_rect_horizontal(bounds, viewport, content, current_offset)
+                    } else {
+                        scrollbar_thumb_rect(bounds, viewport, content, current_offset)
+                    };
+                    let Some(thumb) = thumb else {
                         return;
                     };
 
@@ -136,22 +197,41 @@ pub(super) fn handle_scrollbar<H: UiHost>(
 
                     if thumb.contains(position) {
                         state.dragging_thumb = true;
-                        state.drag_start_pointer_y = position.y;
-                        state.drag_start_offset_y = handle.offset().y;
+                        state.drag_start_pointer_y = if is_horizontal {
+                            position.x
+                        } else {
+                            position.y
+                        };
+                        state.drag_start_offset_y = current_offset;
                         did_start_drag = true;
                     } else if bounds.contains(position) {
                         // Page to the click position (center the thumb on the pointer).
-                        let max_thumb_y = (bounds.size.height.0 - thumb.size.height.0).max(0.0);
-                        if max_thumb_y > 0.0 {
-                            let click_y =
-                                (position.y.0 - bounds.origin.y.0).clamp(0.0, bounds.size.height.0);
-                            let thumb_top =
-                                (click_y - thumb.size.height.0 * 0.5).clamp(0.0, max_thumb_y);
-                            let t = thumb_top / max_thumb_y;
-                            let next = Px((max_offset.0 * t).clamp(0.0, max_offset.0));
-                            let prev = handle.offset();
-                            handle.set_offset(Point::new(prev.x, next));
-                            did_change_offset = true;
+                        if is_horizontal {
+                            let max_thumb_x = (bounds.size.width.0 - thumb.size.width.0).max(0.0);
+                            if max_thumb_x > 0.0 {
+                                let click_x = (position.x.0 - bounds.origin.x.0)
+                                    .clamp(0.0, bounds.size.width.0);
+                                let thumb_left =
+                                    (click_x - thumb.size.width.0 * 0.5).clamp(0.0, max_thumb_x);
+                                let t = thumb_left / max_thumb_x;
+                                let next = Px((max_offset.0 * t).clamp(0.0, max_offset.0));
+                                let prev = handle.offset();
+                                handle.set_offset(Point::new(next, prev.y));
+                                did_change_offset = true;
+                            }
+                        } else {
+                            let max_thumb_y = (bounds.size.height.0 - thumb.size.height.0).max(0.0);
+                            if max_thumb_y > 0.0 {
+                                let click_y = (position.y.0 - bounds.origin.y.0)
+                                    .clamp(0.0, bounds.size.height.0);
+                                let thumb_top =
+                                    (click_y - thumb.size.height.0 * 0.5).clamp(0.0, max_thumb_y);
+                                let t = thumb_top / max_thumb_y;
+                                let next = Px((max_offset.0 * t).clamp(0.0, max_offset.0));
+                                let prev = handle.offset();
+                                handle.set_offset(Point::new(prev.x, next));
+                                did_change_offset = true;
+                            }
                         }
                     } else {
                         did_handle = false;
