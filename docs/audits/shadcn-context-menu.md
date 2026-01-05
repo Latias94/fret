@@ -45,6 +45,8 @@ Key upstream behaviors/surfaces:
 - Pass: On open, focus moves to the first focusable descendant in the menu (via overlay policy),
   enabling keyboard navigation.
 - Pass: Selecting an item dispatches the command (if any) and closes the menu.
+- Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
+  on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
 ### Keyboard navigation & typeahead
 
@@ -55,16 +57,16 @@ Key upstream behaviors/surfaces:
 ### Visual parity (shadcn)
 
 - Partial: Token usage roughly aligns with popover/menu defaults, but the full Radix-style
-  taxonomy (checkbox/radio/submenus/shortcuts/insets) is not implemented.
+  taxonomy (submenus/insets/icons/destructive variant) is not fully implemented.
 
 ## Missing surfaces (significant)
 
-Not implemented yet in Fret shadcn surface:
+Still missing (relative to upstream shadcn/ui v4):
 
-- Labels/groups/shortcuts (ContextMenu variants).
-- Checkbox/radio items.
-- Submenus and safe-hover corridor.
-- Icons and inset variants.
+- Submenus (and safe-hover corridor for pointer travel).
+- Inset variants (`data-inset`) for items/labels/sub-triggers and the matching padding rules.
+- Icons and consistent icon/indicator slot sizing/alignment.
+- Destructive item variant styling.
 
 ## Validation
 

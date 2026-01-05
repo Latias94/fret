@@ -41,6 +41,8 @@ Key upstream behaviors/surfaces:
 - Pass: On open, focus moves to the first focusable descendant (driven by overlay policy), enabling
   keyboard navigation inside the menu.
 - Note: “modal=true vs modal=false” is not modeled; current menu is always non-modal.
+- Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
+  on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
 ### Keyboard navigation & typeahead
 
@@ -55,10 +57,11 @@ Key upstream behaviors/surfaces:
 
 ### Missing surfaces (significant)
 
-Not implemented yet in Fret shadcn surface:
+Still missing (relative to upstream shadcn/ui v4):
 
-- Checkbox/radio surfaces: `DropdownMenuCheckboxItem` / `DropdownMenuRadioGroup` / `DropdownMenuRadioItem`
-- Styling knobs: inset/padding variants, icons, and "active item" highlight parity (needs focused state)
+- Inset variants (`data-inset`) for items/labels and the matching padding rules.
+- Icons and consistent icon/indicator slot sizing/alignment.
+- A first-class “active item” highlight state (beyond focus ring) for closer visual parity.
 
 ### Submenus
 
@@ -91,8 +94,8 @@ Notes on API mapping:
 
 ## Follow-ups (recommended)
 
-- Add missing shadcn surfaces gradually, starting with: `Label`, `Group`, `Shortcut`, destructive
-  variant, then checkbox/radio items.
+- Add upstream "inset" variants and align padding rules (item/label/sub-trigger).
+- Add icon/indicator slot conventions for menu rows (leading icon, checkmark/radio indicator, trailing shortcut).
 - Decide whether dropdown menus need a “modal” option (or whether non-modal is the canonical Fret
   behavior).
 - Consider adding a component-facing focus state for `Pressable` (mechanism-only) so menus can

@@ -30,6 +30,8 @@ Key upstream behaviors/surfaces:
 - Pass: Click-to-open per menu trigger.
 - Pass: Hover switches the open menu when a menu is already active.
 - Pass: Outside press + Escape dismiss via popover policy.
+- Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
+  on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
 ### Placement & sizing
 
@@ -48,8 +50,11 @@ Key upstream behaviors/surfaces:
 
 ## Missing surfaces (significant)
 
-- Label/group/shortcut surfaces in menu content.
-- Checkbox/radio items and submenus.
+Still missing (relative to upstream shadcn/ui v4):
+
+- Inset variants (`data-inset`) and the matching padding rules.
+- Icons and consistent icon/indicator slot sizing/alignment.
+- Destructive item variant styling.
 
 ## Validation
 
