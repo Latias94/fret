@@ -16,6 +16,7 @@
 
 use std::sync::Arc;
 
+use fret_core::KeyCode;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ElementKind, PressableA11y, PressableProps};
 use fret_ui::elements::GlobalElementId;
@@ -57,6 +58,19 @@ pub fn apply_select_trigger_a11y(
         _ => {}
     }
     trigger
+}
+
+/// Radix Select trigger "open keys" (`OPEN_KEYS`).
+pub fn is_select_open_key(key: KeyCode) -> bool {
+    matches!(
+        key,
+        KeyCode::Space | KeyCode::Enter | KeyCode::ArrowUp | KeyCode::ArrowDown
+    )
+}
+
+/// Returns `true` when the open key is expected to also produce a click/activate event on key-up.
+pub fn select_open_key_suppresses_activate(key: KeyCode) -> bool {
+    matches!(key, KeyCode::Space | KeyCode::Enter)
 }
 
 /// Builds an overlay request for a Radix-style select content overlay.
@@ -139,5 +153,19 @@ mod tests {
         let req = modal_select_request(id, trigger, open, OverlayPresence::instant(true), Vec::new());
         let expected = select_root_name(id);
         assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
+    }
+
+    #[test]
+    fn select_open_keys_match_radix_defaults() {
+        assert!(is_select_open_key(KeyCode::Enter));
+        assert!(is_select_open_key(KeyCode::Space));
+        assert!(is_select_open_key(KeyCode::ArrowDown));
+        assert!(is_select_open_key(KeyCode::ArrowUp));
+        assert!(!is_select_open_key(KeyCode::Escape));
+
+        assert!(select_open_key_suppresses_activate(KeyCode::Enter));
+        assert!(select_open_key_suppresses_activate(KeyCode::Space));
+        assert!(!select_open_key_suppresses_activate(KeyCode::ArrowDown));
+        assert!(!select_open_key_suppresses_activate(KeyCode::ArrowUp));
     }
 }

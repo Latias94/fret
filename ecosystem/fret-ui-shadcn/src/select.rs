@@ -787,11 +787,8 @@ fn select_impl<H: UiHost>(
                         return true;
                     }
 
-                    if matches!(
-                        it.key,
-                        KeyCode::Enter | KeyCode::Space | KeyCode::ArrowDown | KeyCode::ArrowUp
-                    ) {
-                        if matches!(it.key, KeyCode::Enter | KeyCode::Space) {
+                    if radix_select::is_select_open_key(it.key) {
+                        if radix_select::select_open_key_suppresses_activate(it.key) {
                             state.suppress_next_activate = true;
                         }
                         if let Some(token) = state.clear_token.take() {
