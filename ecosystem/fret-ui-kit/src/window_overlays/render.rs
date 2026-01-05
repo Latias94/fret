@@ -467,6 +467,15 @@ pub fn render<H: UiHost>(
 
                         match outcome {
                             ToastTimerOutcome::Noop => false,
+                            ToastTimerOutcome::RescheduleAuto { window, token, after } => {
+                                host.push_effect(fret_runtime::Effect::SetTimer {
+                                    window: Some(window),
+                                    token,
+                                    after,
+                                    repeat: None,
+                                });
+                                true
+                            }
                             ToastTimerOutcome::BeganClose {
                                 window,
                                 remove_token,

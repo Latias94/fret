@@ -7,6 +7,7 @@ use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::UiHost;
 
 pub(super) const TOAST_CLOSE_DURATION: Duration = Duration::from_millis(200);
+pub(super) const TOAST_AUTO_CLOSE_TICK: Duration = Duration::from_millis(100);
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ToastPosition {
@@ -114,6 +115,7 @@ pub(super) struct ToastEntry {
     pub(super) title: Arc<str>,
     pub(super) description: Option<Arc<str>>,
     pub(super) duration: Option<Duration>,
+    pub(super) auto_close_remaining: Option<Duration>,
     pub(super) variant: ToastVariant,
     pub(super) action: Option<ToastAction>,
     pub(super) dismissible: bool,
@@ -153,6 +155,7 @@ impl ToastStore {
         request: ToastRequest,
         auto_close_token: Option<TimerToken>,
     ) -> ToastId {
+        let wants_timer = request.duration.filter(|d| d.as_secs_f32() > 0.0);
         if self.next_id == 0 {
             self.next_id = 1;
         }
@@ -175,6 +178,7 @@ impl ToastStore {
             title: request.title,
             description: request.description,
             duration: request.duration,
+            auto_close_remaining: wants_timer,
             variant: request.variant,
             action: request.action,
             dismissible: request.dismissible,
@@ -211,6 +215,7 @@ impl ToastStore {
                     toast.title = request.title;
                     toast.description = request.description;
                     toast.duration = request.duration;
+                    toast.auto_close_remaining = wants_timer;
                     toast.variant = request.variant;
                     toast.action = request.action;
                     toast.dismissible = request.dismissible;
@@ -229,7 +234,7 @@ impl ToastStore {
                                     kind: ToastTimerKind::AutoClose,
                                 },
                             );
-                            Some((token, after))
+                            Some((token, auto_close_next_after(after)))
                         }
                         _ => None,
                     };
@@ -245,7 +250,7 @@ impl ToastStore {
 
         let id = self.add_toast(window, request, auto_close_token);
         let schedule_auto = match (wants_timer, auto_close_token) {
-            (Some(after), Some(token)) => Some((token, after)),
+            (Some(after), Some(token)) => Some((token, auto_close_next_after(after))),
             _ => None,
         };
 
@@ -285,6 +290,7 @@ impl ToastStore {
         }
 
         toast.open = false;
+        toast.auto_close_remaining = None;
         toast.drag_start = None;
         toast.drag_x = Px(0.0);
         toast.dragging = false;
@@ -332,7 +338,9 @@ impl ToastStore {
         if !toast.open || toast.auto_close_token.is_some() || toast.remove_token.is_some() {
             return None;
         }
-        let duration = toast.duration.filter(|d| d.as_secs_f32() > 0.0)?;
+        let remaining = toast
+            .auto_close_remaining
+            .filter(|d| d.as_secs_f32() > 0.0)?;
         toast.auto_close_token = Some(token);
         self.by_token.insert(
             token,
@@ -342,7 +350,7 @@ impl ToastStore {
                 kind: ToastTimerKind::AutoClose,
             },
         );
-        Some(duration)
+        Some(auto_close_next_after(remaining))
     }
 
     pub(super) fn begin_drag(&mut self, window: AppWindowId, id: ToastId, start: Point) -> bool {
@@ -410,26 +418,16 @@ impl ToastStore {
         token: TimerToken,
         remove_token: TimerToken,
     ) -> ToastTimerOutcome {
-        let Some(timer) = self.by_token.remove(&token) else {
+        let Some(timer) = self.by_token.get(&token).copied() else {
             return ToastTimerOutcome::Noop;
         };
 
         match timer.kind {
             ToastTimerKind::AutoClose => {
-                let plan = self.begin_close(timer.window, timer.toast, remove_token);
-                let Some(plan) = plan else {
-                    return ToastTimerOutcome::Noop;
-                };
-                if plan.schedule_remove.is_some() {
-                    ToastTimerOutcome::BeganClose {
-                        window: timer.window,
-                        remove_token,
-                    }
-                } else {
-                    ToastTimerOutcome::Noop
-                }
+                self.on_auto_close_tick(token, timer.window, timer.toast, remove_token)
             }
             ToastTimerKind::RemoveAfterClose => {
+                self.by_token.remove(&token);
                 let removed = self.remove_toast(timer.window, timer.toast).is_some();
                 if removed {
                     ToastTimerOutcome::Removed {
@@ -441,6 +439,63 @@ impl ToastStore {
             }
         }
     }
+
+    fn on_auto_close_tick(
+        &mut self,
+        token: TimerToken,
+        window: AppWindowId,
+        toast_id: ToastId,
+        remove_token: TimerToken,
+    ) -> ToastTimerOutcome {
+        let Some(toasts) = self.by_window.get_mut(&window) else {
+            self.by_token.remove(&token);
+            return ToastTimerOutcome::Noop;
+        };
+        let Some(toast) = toasts.iter_mut().find(|t| t.id == toast_id) else {
+            self.by_token.remove(&token);
+            return ToastTimerOutcome::Noop;
+        };
+
+        if !toast.open || toast.remove_token.is_some() || toast.auto_close_token != Some(token) {
+            self.by_token.remove(&token);
+            return ToastTimerOutcome::Noop;
+        }
+
+        let Some(mut remaining) = toast.auto_close_remaining else {
+            toast.auto_close_token = None;
+            self.by_token.remove(&token);
+            return ToastTimerOutcome::Noop;
+        };
+
+        let step = remaining.min(TOAST_AUTO_CLOSE_TICK);
+        remaining = remaining.saturating_sub(step);
+        toast.auto_close_remaining = (!remaining.is_zero()).then_some(remaining);
+
+        if !remaining.is_zero() {
+            ToastTimerOutcome::RescheduleAuto {
+                window,
+                token,
+                after: auto_close_next_after(remaining),
+            }
+        } else {
+            let plan = self.begin_close(window, toast_id, remove_token);
+            let Some(plan) = plan else {
+                return ToastTimerOutcome::Noop;
+            };
+            if plan.schedule_remove.is_some() {
+                ToastTimerOutcome::BeganClose {
+                    window,
+                    remove_token,
+                }
+            } else {
+                ToastTimerOutcome::Noop
+            }
+        }
+    }
+}
+
+fn auto_close_next_after(remaining: Duration) -> Duration {
+    remaining.min(TOAST_AUTO_CLOSE_TICK)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -464,6 +519,11 @@ pub(super) struct ToastDragEnd {
 #[derive(Debug, Clone, Copy)]
 pub(super) enum ToastTimerOutcome {
     Noop,
+    RescheduleAuto {
+        window: AppWindowId,
+        token: TimerToken,
+        after: Duration,
+    },
     BeganClose {
         window: AppWindowId,
         remove_token: TimerToken,
@@ -562,22 +622,50 @@ mod tests {
         let window = AppWindowId::default();
         let mut store = ToastStore::default();
 
-        let request = ToastRequest::new("Hello").duration(Some(Duration::from_secs(3)));
+        let request = ToastRequest::new("Hello").duration(Some(Duration::from_millis(250)));
         let id = store.add_toast(window, request, Some(TimerToken(1)));
 
         let paused = store.pause_auto_close(window, id);
         assert_eq!(paused, Some(TimerToken(1)));
 
         let resumed = store.resume_auto_close(window, id, TimerToken(2));
-        assert_eq!(resumed, Some(Duration::from_secs(3)));
+        assert_eq!(resumed, Some(Duration::from_millis(100)));
 
         let outcome = store.on_timer(TimerToken(2), TimerToken(3));
+        match outcome {
+            ToastTimerOutcome::RescheduleAuto {
+                window: w, after, ..
+            } => {
+                assert_eq!(w, window);
+                assert_eq!(after, Duration::from_millis(100));
+            }
+            _ => panic!("expected RescheduleAuto"),
+        }
+
+        let paused = store.pause_auto_close(window, id);
+        assert_eq!(paused, Some(TimerToken(2)));
+
+        let resumed = store.resume_auto_close(window, id, TimerToken(4));
+        assert_eq!(resumed, Some(Duration::from_millis(100)));
+
+        let outcome = store.on_timer(TimerToken(4), TimerToken(5));
+        match outcome {
+            ToastTimerOutcome::RescheduleAuto {
+                window: w, after, ..
+            } => {
+                assert_eq!(w, window);
+                assert_eq!(after, Duration::from_millis(50));
+            }
+            _ => panic!("expected RescheduleAuto"),
+        }
+
+        let outcome = store.on_timer(TimerToken(4), TimerToken(6));
         match outcome {
             ToastTimerOutcome::BeganClose { window: w, .. } => assert_eq!(w, window),
             _ => panic!("expected BeganClose"),
         }
 
-        let outcome = store.on_timer(TimerToken(3), TimerToken(4));
+        let outcome = store.on_timer(TimerToken(6), TimerToken(7));
         match outcome {
             ToastTimerOutcome::Removed { window: w } => assert_eq!(w, window),
             _ => panic!("expected Removed"),
@@ -630,10 +718,7 @@ mod tests {
         );
         assert_eq!(out1.id, id);
         assert_eq!(out1.cancel_auto, None);
-        assert_eq!(
-            out1.schedule_auto,
-            Some((TimerToken(10), Duration::from_secs(2)))
-        );
+        assert_eq!(out1.schedule_auto, Some((TimerToken(10), TOAST_AUTO_CLOSE_TICK)));
 
         let toast = store.toasts_for_window(window)[0].clone();
         assert_eq!(toast.id, id);
