@@ -50,6 +50,12 @@ fn checkbox_fg_checked(theme: &Theme) -> Color {
         .unwrap_or(theme.colors.text_primary)
 }
 
+fn checkbox_ring_color(theme: &Theme) -> Color {
+    theme
+        .color_by_key("ring")
+        .unwrap_or(theme.colors.focus_ring)
+}
+
 #[derive(Clone)]
 pub struct Checkbox {
     model: Model<bool>,
@@ -109,6 +115,9 @@ impl Checkbox {
             let bg_on = checkbox_bg_checked(&theme);
             let fg_on = checkbox_fg_checked(&theme);
 
+            let mut ring = decl_style::focus_ring(&theme, radius);
+            ring.color = alpha_mul(checkbox_ring_color(&theme), 0.5);
+
             let layout = LayoutRefinement::default()
                 .w_px(MetricRef::Px(size))
                 .h_px(MetricRef::Px(size))
@@ -128,7 +137,13 @@ impl Checkbox {
                 let checked = cx.watch_model(&model).copied().unwrap_or(false);
 
                 let mut bg = if checked { bg_on } else { Color::TRANSPARENT };
-                let border_color = if checked { bg_on } else { border };
+                let border_color = if st.focused {
+                    checkbox_ring_color(&theme)
+                } else if checked {
+                    bg_on
+                } else {
+                    border
+                };
                 let fg = if checked { fg_on } else { Color::TRANSPARENT };
 
                 let hovered = st.hovered && !disabled;
@@ -158,7 +173,7 @@ impl Checkbox {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable: true,
-                    focus_ring: Some(decl_style::focus_ring(&theme, radius)),
+                    focus_ring: Some(ring),
                     a11y: PressableA11y {
                         role: Some(fret_core::SemanticsRole::Checkbox),
                         label: a11y_label.clone(),
@@ -212,4 +227,130 @@ impl Checkbox {
 
 pub fn checkbox<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement {
     Checkbox::new(model).into_element(cx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
+        PathStyle, Point, Px, Rect, Scene, Size as CoreSize, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+    };
+    use fret_ui::tree::UiTree;
+
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &CoreTextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: CoreSize::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn checkbox_toggles_model_on_click_and_exposes_checked_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-checkbox-toggles-model-on-click",
+            |cx| vec![Checkbox::new(model.clone()).into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Checkbox)
+            .expect("checkbox semantics node");
+        assert_eq!(node.flags.checked, Some(false));
+
+        let checkbox_node = ui.children(root)[0];
+        let checkbox_bounds = ui.debug_node_bounds(checkbox_node).expect("checkbox bounds");
+        let position = Point::new(
+            Px(checkbox_bounds.origin.x.0 + checkbox_bounds.size.width.0 * 0.5),
+            Px(checkbox_bounds.origin.y.0 + checkbox_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&model), Some(true));
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        assert!(!scene.ops().is_empty());
+    }
 }
