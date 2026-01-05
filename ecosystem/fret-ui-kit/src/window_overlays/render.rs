@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, NodeId, Rect};
+use fret_core::{AppWindowId, NodeId, Point, Px, Rect, Transform2D};
 use fret_runtime::DragKind;
 use fret_ui::action::{DismissReason, UiActionHostExt};
 use fret_ui::declarative;
@@ -17,7 +17,7 @@ use super::state::{
     ActiveHoverOverlay, ActiveModal, ActivePopover, ActiveToastLayer, ActiveTooltip, OverlayLayer,
     WindowOverlays,
 };
-use super::toast::ToastEntry;
+use super::toast::{ToastEntry, ToastTimerOutcome};
 use super::{ToastPosition, ToastVariant, dismiss_toast_action};
 
 pub fn render<H: UiHost>(
@@ -437,9 +437,34 @@ pub fn render<H: UiHost>(
                 cx.timer_on_timer_for(
                     cx.root_id(),
                     Arc::new(move |host, _cx, token| {
-                        host.update_weak_model(&hook_store, |st| st.remove_toast_by_token(token))
-                            .flatten()
-                            .is_some()
+                        let remove_token = host.next_timer_token();
+                        let outcome = host
+                            .update_weak_model(&hook_store, |st| st.on_timer(token, remove_token));
+
+                        let Some(outcome) = outcome else {
+                            return false;
+                        };
+
+                        match outcome {
+                            ToastTimerOutcome::Noop => false,
+                            ToastTimerOutcome::BeganClose {
+                                window,
+                                remove_token,
+                            } => {
+                                host.push_effect(fret_runtime::Effect::SetTimer {
+                                    window: Some(window),
+                                    token: remove_token,
+                                    after: super::toast::TOAST_CLOSE_DURATION,
+                                    repeat: None,
+                                });
+                                host.request_redraw(window);
+                                true
+                            }
+                            ToastTimerOutcome::Removed { window } => {
+                                host.request_redraw(window);
+                                true
+                            }
+                        }
                     }),
                 );
 
@@ -485,14 +510,32 @@ pub fn render<H: UiHost>(
                     }
                 }
 
+                let justify = match position {
+                    ToastPosition::TopLeft | ToastPosition::TopRight => {
+                        fret_ui::element::MainAlign::Start
+                    }
+                    ToastPosition::BottomLeft | ToastPosition::BottomRight => {
+                        fret_ui::element::MainAlign::End
+                    }
+                };
+
+                let align = match position {
+                    ToastPosition::TopLeft | ToastPosition::BottomLeft => {
+                        fret_ui::element::CrossAlign::Start
+                    }
+                    ToastPosition::TopRight | ToastPosition::BottomRight => {
+                        fret_ui::element::CrossAlign::End
+                    }
+                };
+
                 vec![cx.flex(
                     fret_ui::element::FlexProps {
                         layout: wrapper_layout,
                         direction: fret_core::Axis::Vertical,
                         gap,
                         padding: fret_core::Edges::all(fret_core::Px(0.0)),
-                        justify: fret_ui::element::MainAlign::End,
-                        align: fret_ui::element::CrossAlign::End,
+                        justify,
+                        align,
                         wrap: false,
                     },
                     move |cx| {
@@ -500,14 +543,30 @@ pub fn render<H: UiHost>(
                         for toast in toasts {
                             let store = store_for_toasts.clone();
                             let toast_id = toast.id;
+                            let open = toast.open;
+                            let position = position;
 
-                            let bg = match toast.variant {
-                                ToastVariant::Default => theme.colors.panel_background,
-                                ToastVariant::Destructive => theme.colors.menu_background,
+                            let bg_default = theme
+                                .color_by_key("popover")
+                                .unwrap_or(theme.colors.panel_background);
+                            let fg_default = theme
+                                .color_by_key("popover-foreground")
+                                .unwrap_or(theme.colors.text_primary);
+                            let (bg, fg) = match toast.variant {
+                                ToastVariant::Default => (bg_default, fg_default),
+                                ToastVariant::Destructive => (
+                                    theme.color_by_key("destructive").unwrap_or(bg_default),
+                                    theme
+                                        .color_by_key("destructive-foreground")
+                                        .unwrap_or(fg_default),
+                                ),
                             };
-                            let border_color = theme.colors.panel_border;
-                            let fg = theme.colors.text_primary;
-                            let fg_muted = theme.colors.text_muted;
+                            let border_color = theme
+                                .color_by_key("border")
+                                .unwrap_or(theme.colors.panel_border);
+                            let fg_muted = theme
+                                .color_by_key("muted-foreground")
+                                .unwrap_or(theme.colors.text_muted);
 
                             let close = toast.dismissible.then(|| {
                                 let close_store = store.clone();
@@ -588,6 +647,10 @@ pub fn render<H: UiHost>(
                                         wrap: fret_core::TextWrap::None,
                                         overflow: fret_core::TextOverflow::Clip,
                                     }));
+                                    row.push(cx.spacer(fret_ui::element::SpacerProps {
+                                        min: fret_core::Px(0.0),
+                                        ..Default::default()
+                                    }));
                                     if let Some(action) = action {
                                         row.push(action);
                                     }
@@ -610,18 +673,56 @@ pub fn render<H: UiHost>(
                                 }));
                             }
 
-                            out.push(cx.container(
-                                fret_ui::element::ContainerProps {
-                                    layout: fret_ui::element::LayoutStyle::default(),
-                                    padding: fret_core::Edges::all(toast_padding),
-                                    background: Some(bg),
-                                    shadow: None,
-                                    border: fret_core::Edges::all(fret_core::Px(1.0)),
-                                    border_color: Some(border_color),
-                                    corner_radii: fret_core::Corners::all(radius),
-                                },
-                                move |_cx| toast_children,
-                            ));
+                            out.push(cx.keyed(toast_id, move |cx| {
+                                let presence =
+                                    crate::OverlayController::fade_presence_with_durations(
+                                        cx, open, 12, 12,
+                                    );
+                                let opacity = presence.opacity;
+                                let slide_px = Px(16.0 * (1.0 - opacity));
+                                let dx = match position {
+                                    ToastPosition::TopLeft | ToastPosition::BottomLeft => {
+                                        Px(-slide_px.0)
+                                    }
+                                    ToastPosition::TopRight | ToastPosition::BottomRight => {
+                                        slide_px
+                                    }
+                                };
+                                let slide = Transform2D::translation(Point::new(dx, Px(0.0)));
+
+                                let mut toast_layout = fret_ui::element::LayoutStyle::default();
+                                toast_layout.size.min_width = Some(Px(280.0));
+                                toast_layout.size.max_width = Some(Px(420.0));
+
+                                let toast_el = cx.container(
+                                    fret_ui::element::ContainerProps {
+                                        layout: toast_layout,
+                                        padding: fret_core::Edges::all(toast_padding),
+                                        background: Some(bg),
+                                        shadow: None,
+                                        border: fret_core::Edges::all(fret_core::Px(1.0)),
+                                        border_color: Some(border_color),
+                                        corner_radii: fret_core::Corners::all(radius),
+                                    },
+                                    move |_cx| toast_children,
+                                );
+
+                                cx.opacity_props(
+                                    fret_ui::element::OpacityProps {
+                                        layout: fret_ui::element::LayoutStyle::default(),
+                                        opacity,
+                                    },
+                                    move |cx| {
+                                        vec![cx.visual_transform_props(
+                                            fret_ui::element::VisualTransformProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                transform: slide,
+                                            },
+                                            move |_cx| vec![toast_el],
+                                        )]
+                                    },
+                                )
+                            }));
                         }
                         out
                     },
