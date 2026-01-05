@@ -24,6 +24,7 @@
 
 pub mod accordion;
 pub mod active_descendant;
+pub mod aspect_ratio;
 pub mod alert_dialog;
 pub mod checkbox;
 pub mod collapsible;
