@@ -105,7 +105,8 @@ impl ScrollAreaVisibility {
         }
 
         if self.hover_visible_until.is_none() {
-            self.hover_visible_until = Some(input.tick.saturating_add(config.scroll_hide_delay_ticks));
+            self.hover_visible_until =
+                Some(input.tick.saturating_add(config.scroll_hide_delay_ticks));
         }
 
         let visible = self
@@ -147,7 +148,8 @@ impl ScrollAreaVisibility {
             }
         } else if self.scroll_state == ScrollVisibilityState::Interacting {
             self.scroll_state = ScrollVisibilityState::Idle;
-            self.scroll_hide_deadline = Some(input.tick.saturating_add(config.scroll_hide_delay_ticks));
+            self.scroll_hide_deadline =
+                Some(input.tick.saturating_add(config.scroll_hide_delay_ticks));
         }
 
         if self.scroll_state == ScrollVisibilityState::Scrolling {
@@ -334,4 +336,3 @@ mod tests {
         assert!(out1.animating);
     }
 }
-

@@ -4,8 +4,8 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::scroll;
-use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::primitives::scroll_area::DEFAULT_SCROLL_HIDE_DELAY_TICKS;
+use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 
 #[derive(Debug, Clone)]
 pub struct ScrollArea {
@@ -67,8 +67,8 @@ impl ScrollArea {
         let scroll_handle = self.scroll_handle;
 
         cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
-            let handle =
-                scroll_handle.unwrap_or_else(|| cx.with_state(ScrollHandle::default, |h| h.clone()));
+            let handle = scroll_handle
+                .unwrap_or_else(|| cx.with_state(ScrollHandle::default, |h| h.clone()));
 
             let show_scrollbar_now = show_scrollbar
                 && fret_ui_kit::primitives::scroll_area::scrollbar_visibility(
@@ -102,14 +102,14 @@ pub fn scroll_area<H: UiHost>(
 mod tests {
     use super::*;
     use fret_app::App;
-    use fret_ui::element::ColumnProps;
     use fret_core::{
         AppWindowId, Modifiers, MouseButtons, Point, Px, Rect, Size, SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
-    use fret_ui::tree::UiTree;
     use fret_runtime::TickId;
+    use fret_ui::element::ColumnProps;
+    use fret_ui::tree::UiTree;
 
     #[derive(Default)]
     struct FakeServices;
@@ -176,8 +176,8 @@ mod tests {
                     ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
                         (0..50).map(|_| cx.text("Row")).collect()
                     })])
-                        .type_(ty)
-                        .into_element(cx),
+                    .type_(ty)
+                    .into_element(cx),
                 ]
             });
         ui.set_root(root);
@@ -247,8 +247,20 @@ mod tests {
         let mut services = FakeServices::default();
 
         // First render establishes the scroll handle's viewport/content sizes during layout.
-        let _ = render(&mut ui, &mut app, &mut services, window, ScrollAreaType::Auto);
-        let root = render(&mut ui, &mut app, &mut services, window, ScrollAreaType::Auto);
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            ScrollAreaType::Auto,
+        );
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            ScrollAreaType::Auto,
+        );
 
         // Root -> HoverRegion -> Stack -> Scroll + Scrollbar (overflowing content).
         let hover_region = ui.children(root)[0];
@@ -278,13 +290,15 @@ mod tests {
             bounds(),
             "sa-scroll",
             |cx| {
-                vec![ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                    (0..50).map(|_| cx.text("Row")).collect()
-                })])
-                .type_(ScrollAreaType::Scroll)
-                .scroll_hide_delay_ticks(4)
-                .scroll_handle(handle.clone())
-                .into_element(cx)]
+                vec![
+                    ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
+                        (0..50).map(|_| cx.text("Row")).collect()
+                    })])
+                    .type_(ScrollAreaType::Scroll)
+                    .scroll_hide_delay_ticks(4)
+                    .scroll_handle(handle.clone())
+                    .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -310,13 +324,15 @@ mod tests {
             bounds(),
             "sa-scroll",
             |cx| {
-                vec![ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                    (0..50).map(|_| cx.text("Row")).collect()
-                })])
-                .type_(ScrollAreaType::Scroll)
-                .scroll_hide_delay_ticks(4)
-                .scroll_handle(handle.clone())
-                .into_element(cx)]
+                vec![
+                    ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
+                        (0..50).map(|_| cx.text("Row")).collect()
+                    })])
+                    .type_(ScrollAreaType::Scroll)
+                    .scroll_hide_delay_ticks(4)
+                    .scroll_handle(handle.clone())
+                    .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -324,7 +340,11 @@ mod tests {
 
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
-        assert_eq!(ui.children(stack).len(), 2, "expected scrollbar while scrolling");
+        assert_eq!(
+            ui.children(stack).len(),
+            2,
+            "expected scrollbar while scrolling"
+        );
 
         // Keep rendering without scroll input; after debounce + hide delay it should disappear.
         for n in 0..12 {
@@ -337,13 +357,15 @@ mod tests {
                 bounds(),
                 "sa-scroll",
                 |cx| {
-                    vec![ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                        (0..50).map(|_| cx.text("Row")).collect()
-                    })])
-                    .type_(ScrollAreaType::Scroll)
-                    .scroll_hide_delay_ticks(4)
-                    .scroll_handle(handle.clone())
-                    .into_element(cx)]
+                    vec![
+                        ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
+                            (0..50).map(|_| cx.text("Row")).collect()
+                        })])
+                        .type_(ScrollAreaType::Scroll)
+                        .scroll_hide_delay_ticks(4)
+                        .scroll_handle(handle.clone())
+                        .into_element(cx),
+                    ]
                 },
             );
             ui.set_root(root);
@@ -358,13 +380,15 @@ mod tests {
             bounds(),
             "sa-scroll",
             |cx| {
-                vec![ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
-                    (0..50).map(|_| cx.text("Row")).collect()
-                })])
-                .type_(ScrollAreaType::Scroll)
-                .scroll_hide_delay_ticks(4)
-                .scroll_handle(handle.clone())
-                .into_element(cx)]
+                vec![
+                    ScrollArea::new(vec![cx.column(ColumnProps::default(), |cx| {
+                        (0..50).map(|_| cx.text("Row")).collect()
+                    })])
+                    .type_(ScrollAreaType::Scroll)
+                    .scroll_hide_delay_ticks(4)
+                    .scroll_handle(handle.clone())
+                    .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);

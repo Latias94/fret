@@ -7,7 +7,7 @@ use crate::headless::scroll_area_visibility::{
     ScrollAreaVisibility, ScrollAreaVisibilityConfig, ScrollAreaVisibilityInput,
     ScrollAreaVisibilityOutput,
 };
-use crate::primitives::scroll_area::{ScrollAreaType, DEFAULT_SCROLL_END_DEBOUNCE_TICKS};
+use crate::primitives::scroll_area::{DEFAULT_SCROLL_END_DEBOUNCE_TICKS, ScrollAreaType};
 
 #[derive(Default)]
 struct ScrollAreaVisibilityDriverState {
@@ -93,4 +93,3 @@ pub fn scrollbar_visibility<H: UiHost>(
 
     out
 }
-
