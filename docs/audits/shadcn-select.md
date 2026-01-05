@@ -42,8 +42,10 @@ examples in `repo-ref/ui`.
 ### Visual parity (shadcn)
 
 - Pass: Selected option shows a trailing checkmark (`ids::ui::CHECK`) and selection background.
-- Partial: Upstream exposes a split taxonomy (`SelectContent`, `SelectGroup`, `SelectLabel`,
-  `SelectSeparator`, scroll buttons). Fret currently ships a single `Select` with an `items` list.
+- Pass: Structural rows are supported via `SelectEntry` (`SelectLabel`, `SelectGroup`,
+  `SelectSeparator`) rendered inside the listbox.
+- Partial: Upstream includes scroll buttons (`SelectScrollUpButton` / `SelectScrollDownButton`) and
+  richer content positioning modes (`item-aligned` vs `popper`).
 
 ## Validation
 
@@ -51,6 +53,5 @@ examples in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- Add group/label/separator/scroll-button surfaces aligned with the upstream shadcn taxonomy (likely
-  via a richer `entries` model similar to `DropdownMenuEntry`).
+- Add scroll buttons aligned with the upstream taxonomy.
 - Align trigger-side typeahead behavior when closed (Radix trigger typeahead updates selection).
