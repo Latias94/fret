@@ -1,6 +1,7 @@
 pub mod action_hooks;
 pub mod active_descendant;
 pub mod chrome;
+pub mod collapsible_motion;
 pub mod collection_semantics;
 pub mod dismissible;
 pub mod focus_scope;

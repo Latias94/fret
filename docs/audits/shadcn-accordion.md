@@ -30,8 +30,11 @@ examples in `repo-ref/ui`.
 
 - Pass: Trigger activation toggles open state.
 - Pass: Arrow-key roving navigation is implemented via `RovingFlex` + `cx.roving_nav_apg()`.
-- Partial: Hover underline and open/close animations are intentionally simplified compared to the
-  upstream Tailwind implementation.
+- Partial: Hover underline styling is intentionally simplified compared to the upstream Tailwind
+  implementation.
+- Partial: Content open/close animations use a presence-driven cached-height clip (best-effort; no
+  CSS variables yet).
+  - Shared helper: `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
 
 ### Visual defaults (shadcn parity)
 

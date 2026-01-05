@@ -5,10 +5,11 @@ use std::sync::Arc;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, PressableProps, StackProps};
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::collapsible_motion;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::primitives::presence;
-use fret_ui_kit::{LayoutRefinement, MetricRef};
 
 #[derive(Clone)]
 pub struct Collapsible {
@@ -64,11 +65,6 @@ impl Collapsible {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
-            #[derive(Debug, Default, Clone, Copy)]
-            struct CollapsibleAnimState {
-                last_height: fret_core::Px,
-            }
-
             let state_id = cx.root_id();
 
             let is_open = cx
@@ -82,15 +78,19 @@ impl Collapsible {
             let disabled = self.disabled;
 
             // Radix/shadcn-like behavior uses `Presence` to keep content mounted during close
-            // animations. We approximate the height transition using the same driver that powers
-            // fade presence, reinterpreting the eased opacity as a 0..1 progress value.
+            // animations. We approximate the height transition by mapping the eased `opacity`
+            // output to a 0..1 progress value.
             let presence_out = presence::fade_presence_with_durations(cx, is_open, 8, 8);
 
-            let last_height =
-                cx.with_state_for(state_id, CollapsibleAnimState::default, |st| st.last_height);
-            let has_measurement = last_height.0 > 0.0;
-
-            let should_render_content = force_mount_content || is_open || presence_out.present;
+            let last_height = collapsible_motion::last_measured_height_for(cx, state_id);
+            let (should_render_content, wrapper) =
+                collapsible_motion::collapsible_height_wrapper_refinement(
+                    is_open,
+                    force_mount_content,
+                    true,
+                    presence_out,
+                    last_height,
+                );
             let content = should_render_content.then(|| content(cx));
             let layout = self.layout;
 
@@ -107,21 +107,6 @@ impl Collapsible {
                     if let Some(content) = content {
                         let theme = fret_ui::Theme::global(&*cx.app);
 
-                        let progress = presence_out.opacity.clamp(0.0, 1.0);
-                        let wants_height_animation =
-                            has_measurement && (presence_out.animating || !is_open);
-
-                        let mut wrapper = LayoutRefinement::default()
-                            .w_full()
-                            .min_w_0()
-                            .overflow_hidden();
-                        if wants_height_animation {
-                            wrapper = wrapper
-                                .h_px(MetricRef::Px(fret_core::Px(last_height.0 * progress)));
-                        } else if !is_open && force_mount_content {
-                            wrapper = wrapper.h_px(MetricRef::Px(fret_core::Px(0.0)));
-                        }
-
                         let wrapper_layout =
                             fret_ui_kit::declarative::style::layout_style(theme, wrapper);
 
@@ -135,22 +120,16 @@ impl Collapsible {
                         });
                         let wrapper_id = wrapper_el.id;
 
-                        // Update the cached content height once the collapsible is fully open and not
-                        // animating. This gives subsequent close/open transitions a stable target.
-                        if is_open && !presence_out.animating {
-                            if let Some(bounds) = cx.last_bounds_for_element(wrapper_id) {
-                                let h = bounds.size.height;
-                                if h.0 > 0.0 && (h.0 - last_height.0).abs() > 0.5 {
-                                    cx.with_state_for(
-                                        state_id,
-                                        CollapsibleAnimState::default,
-                                        |st| {
-                                            st.last_height = h;
-                                        },
-                                    );
-                                }
-                            }
-                        }
+                        // Update the cached content height once the collapsible is fully open and
+                        // not animating. This gives subsequent close/open transitions a stable
+                        // target.
+                        let _ = collapsible_motion::update_measured_height_if_open_for(
+                            cx,
+                            state_id,
+                            wrapper_id,
+                            is_open,
+                            presence_out.animating,
+                        );
 
                         children.push(wrapper_el);
                     }

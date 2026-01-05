@@ -28,6 +28,10 @@ Fret does not use React context or CSS variables. Collapsible outcomes are compo
 
 - Pass: Trigger exposes an "expanded" a11y outcome (mapped to `PressableA11y.expanded`).
 - Note: Fret does not currently model `aria-controls` wiring (content id references).
-- Note: Dimension-driven collapse animations (`content-height` variables) are not modeled yet; the
-  current shadcn recipe uses simple mount/unmount behavior.
-
+- Partial: Dimension-driven collapse animations are modeled as a presence-driven "keep mounted while
+  closing" + cached height clip (no CSS variables yet).
+  - Shared helper: `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
+  - Implementation: `ecosystem/fret-ui-shadcn/src/collapsible.rs`
+  - Backing primitive: `ecosystem/fret-ui-kit/src/primitives/presence.rs`
+  - Note: `--radix-collapsible-content-height/width` style variables are not modeled; we keep the
+    measured height in per-element state instead.

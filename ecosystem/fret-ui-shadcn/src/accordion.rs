@@ -8,13 +8,16 @@ use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, PressableProps,
-    RovingFlexProps, RovingFocusProps, RowProps, SemanticsProps, TextProps, VisualTransformProps,
+    RovingFlexProps, RovingFocusProps, RowProps, SemanticsProps, StackProps, TextProps,
+    VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::collapsible_motion;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::presence;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 fn border_color(theme: &Theme) -> Color {
@@ -575,7 +578,8 @@ impl Accordion {
                                         is_open,
                                     );
 
-                                    let content = is_open.then(|| item.content.into_element(cx));
+                                    let content = item.content;
+                                    let theme = theme.clone();
 
                                     let mut props = decl_style::container_props(
                                         &theme,
@@ -592,11 +596,53 @@ impl Accordion {
                                         props.border.bottom = Px(0.0);
                                     }
 
-                                    out.push(cx.container(props, move |_cx| {
+                                    out.push(cx.container(props, move |cx| {
                                         let mut children = Vec::new();
                                         children.push(trigger);
-                                        if let Some(content) = content {
-                                            children.push(content);
+
+                                        let presence_out = presence::fade_presence_with_durations(
+                                            cx, is_open, 8, 8,
+                                        );
+                                        let state_id = cx.root_id();
+                                        let last_height =
+                                            collapsible_motion::last_measured_height_for(
+                                                cx, state_id,
+                                            );
+                                        let (should_render, wrapper) =
+                                            collapsible_motion::collapsible_height_wrapper_refinement(
+                                                is_open,
+                                                false,
+                                                true,
+                                                presence_out,
+                                                last_height,
+                                            );
+
+                                        if should_render {
+                                            let wrapper_layout =
+                                                decl_style::layout_style(&theme, wrapper);
+
+                                            let content_el = content.clone().into_element(cx);
+                                            let wrapper_el =
+                                                cx.keyed("accordion-content", |cx| {
+                                                    cx.stack_props(
+                                                        StackProps {
+                                                            layout: wrapper_layout,
+                                                        },
+                                                        move |_cx| vec![content_el],
+                                                    )
+                                                });
+                                            let wrapper_id = wrapper_el.id;
+
+                                            let _ = collapsible_motion::
+                                                update_measured_height_if_open_for(
+                                                    cx,
+                                                    state_id,
+                                                    wrapper_id,
+                                                    is_open,
+                                                    presence_out.animating,
+                                                );
+
+                                            children.push(wrapper_el);
                                         }
                                         children
                                     }));
@@ -638,6 +684,7 @@ mod tests {
     use fret_core::{
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
+    use fret_runtime::{FrameId, TickId};
     use fret_ui::UiTree;
     use fret_ui_kit::LayoutRefinement;
     use fret_ui_kit::MetricRef;
@@ -722,6 +769,23 @@ mod tests {
             });
 
         ui.set_root(root);
+    }
+
+    fn render_accordion_frame_with_semantics(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: fret_runtime::Model<Option<Arc<str>>>,
+        collapsible: bool,
+    ) {
+        app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+        render_accordion_frame(ui, app, services, window, bounds, open, collapsible);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
     }
 
     #[test]
@@ -891,5 +955,131 @@ mod tests {
             app.models().get_cloned(&open).flatten().as_deref(),
             Some("item-1")
         );
+    }
+
+    #[derive(Default)]
+    struct MeasuredServices;
+
+    impl TextService for MeasuredServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &CoreTextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for MeasuredServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for MeasuredServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn accordion_content_remains_mounted_for_close_animation_when_measured() {
+        fn snapshot_has_label(ui: &UiTree<App>, label: &str) -> bool {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .any(|n| n.label.as_deref() == Some(label))
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert::<Option<Arc<str>>>(None);
+        let mut services = MeasuredServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        render_accordion_frame_with_semantics(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+        );
+        assert!(!snapshot_has_label(&ui, "Content 1"));
+
+        let _ = app
+            .models_mut()
+            .update(&open, |v| *v = Some(Arc::from("item-1")));
+
+        // Render enough frames for presence to settle and for height to be measured.
+        for _ in 0..12 {
+            render_accordion_frame_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                true,
+            );
+        }
+        assert!(snapshot_has_label(&ui, "Content 1"));
+
+        let _ = app.models_mut().update(&open, |v| *v = None);
+
+        // First close frame: content should still be mounted (present=true) for the transition.
+        render_accordion_frame_with_semantics(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+        );
+        assert!(snapshot_has_label(&ui, "Content 1"));
+
+        // After enough frames, presence completes and content unmounts.
+        for _ in 0..16 {
+            render_accordion_frame_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                true,
+            );
+        }
+        assert!(!snapshot_has_label(&ui, "Content 1"));
     }
 }
