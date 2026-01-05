@@ -14,6 +14,7 @@ pub mod presence;
 pub mod scheduling;
 pub mod scroll;
 pub mod scroll_area_visibility;
+pub mod slider;
 pub mod stack;
 pub mod style;
 pub mod text;

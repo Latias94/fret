@@ -45,6 +45,7 @@ pub mod roving_focus_group;
 pub mod scroll_area;
 pub mod select;
 pub mod switch;
+pub mod slider;
 pub mod tabs;
 pub mod toggle;
 pub mod toggle_group;
