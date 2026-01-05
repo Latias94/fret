@@ -15,6 +15,7 @@ examples in `repo-ref/ui`.
 - Key building blocks:
   - Overlay orchestration: `ecosystem/fret-ui-kit/src/overlay_controller.rs`
   - Anchored placement: `ecosystem/fret-ui-kit/src/primitives/popper.rs`
+  - Radix facade: `ecosystem/fret-ui-kit/src/primitives/select.rs`
   - Dismissal policy: `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs`
   - Focus policy: `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs`
 
