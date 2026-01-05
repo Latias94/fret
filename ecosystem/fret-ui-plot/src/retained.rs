@@ -324,6 +324,50 @@ fn lower_bound_valid_by_x(series: &dyn SeriesData, x: f32) -> Option<usize> {
     Some(lo)
 }
 
+fn step_commands_from_polyline(
+    polyline: &[fret_core::PathCommand],
+    step_mode: StepMode,
+) -> Vec<fret_core::PathCommand> {
+    if polyline.is_empty() {
+        return Vec::new();
+    }
+
+    let mut out: Vec<fret_core::PathCommand> = Vec::with_capacity(polyline.len().saturating_mul(2));
+    let mut last: Option<Point> = None;
+
+    for cmd in polyline {
+        match *cmd {
+            fret_core::PathCommand::MoveTo(p) => {
+                out.push(fret_core::PathCommand::MoveTo(p));
+                last = Some(p);
+            }
+            fret_core::PathCommand::LineTo(p) => {
+                let Some(prev) = last else {
+                    out.push(fret_core::PathCommand::MoveTo(p));
+                    last = Some(p);
+                    continue;
+                };
+
+                let mid = match step_mode {
+                    StepMode::Pre => Point::new(prev.x, p.y),
+                    StepMode::Post => Point::new(p.x, prev.y),
+                };
+
+                if mid != prev {
+                    out.push(fret_core::PathCommand::LineTo(mid));
+                }
+                if p != mid {
+                    out.push(fret_core::PathCommand::LineTo(p));
+                }
+                last = Some(p);
+            }
+            _ => {}
+        }
+    }
+
+    out
+}
+
 fn nearest_valid_in_range(
     series: &dyn SeriesData,
     center: usize,
@@ -696,12 +740,49 @@ pub struct LinePlotLayer {
 
 pub type LinePlotCanvas = PlotCanvas<LinePlotLayer>;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StepMode {
+    Pre,
+    Post,
+}
+
+impl Default for StepMode {
+    fn default() -> Self {
+        Self::Post
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct ScatterPlotLayer {
     cached_paths: Vec<CachedPath>,
 }
 
 pub type ScatterPlotCanvas = PlotCanvas<ScatterPlotLayer>;
+
+#[derive(Debug, Default)]
+pub struct StairsPlotLayer {
+    cached_paths: Vec<CachedPath>,
+    step_mode: StepMode,
+}
+
+pub type StairsPlotCanvas = PlotCanvas<StairsPlotLayer>;
+
+impl PlotCanvas<StairsPlotLayer> {
+    pub fn new(model: Model<LinePlotModel>) -> Self {
+        Self::with_layer(
+            model,
+            StairsPlotLayer {
+                cached_paths: Vec::new(),
+                step_mode: StepMode::default(),
+            },
+        )
+    }
+
+    pub fn step_mode(mut self, mode: StepMode) -> Self {
+        self.layer.step_mode = mode;
+        self
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct BarSeries {
@@ -3020,6 +3101,203 @@ impl PlotLayer for ScatterPlotLayer {
             if let Some(id) = id {
                 let color = resolve_series_color(series_index, style, series_count, s.stroke_color);
                 out.push((series_id, id, color));
+            }
+        }
+
+        out
+    }
+
+    fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover> {
+        let series: Vec<(SeriesId, &dyn SeriesData)> =
+            model.series.iter().map(|s| (s.id, &*s.data)).collect();
+        hit_test_series_data(&self.cached_paths, &series, args)
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                services.path().release(id);
+            }
+        }
+    }
+}
+
+impl PlotLayer for StairsPlotLayer {
+    type Model = LinePlotModel;
+
+    fn data_bounds(model: &Self::Model) -> DataRect {
+        model.data_bounds
+    }
+
+    fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
+        model
+            .series
+            .iter()
+            .map(|s| SeriesMeta {
+                id: s.id,
+                label: s.label.clone(),
+                stroke_color: s.stroke_color,
+            })
+            .collect()
+    }
+
+    fn series_label(model: &Self::Model, series_id: SeriesId) -> Option<String> {
+        model
+            .series
+            .iter()
+            .find(|s| s.id == series_id)
+            .map(|s| s.label.to_string())
+    }
+
+    fn cursor_readout(
+        model: &Self::Model,
+        x: f32,
+        hidden: &HashSet<SeriesId>,
+    ) -> Vec<PlotCursorReadoutRow> {
+        if !x.is_finite() {
+            return Vec::new();
+        }
+
+        let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
+        for s in &model.series {
+            if hidden.contains(&s.id) {
+                continue;
+            }
+            let y = interpolate_y_at_x(&*s.data, x);
+            out.push(PlotCursorReadoutRow {
+                series_id: s.id,
+                label: s.label.clone(),
+                y,
+            });
+        }
+        out
+    }
+
+    fn paint_paths<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+    ) -> Vec<(SeriesId, PathId, Color)> {
+        let PlotPaintArgs {
+            model_revision,
+            plot,
+            view_bounds,
+            style,
+            hidden,
+        } = args;
+
+        let scale_factor_bits = cx.scale_factor.to_bits();
+        let viewport_w_bits = plot.size.width.0.to_bits();
+        let viewport_h_bits = plot.size.height.0.to_bits();
+        let view_key = data_rect_key(view_bounds);
+
+        let series = &model.series;
+        let series_count = series.len();
+
+        if series_count == 0 {
+            for cached in self.cached_paths.drain(..) {
+                if let Some(id) = cached.id {
+                    cx.services.path().release(id);
+                }
+            }
+            return Vec::new();
+        }
+
+        let cached_ok = self.cached_paths.len() == series_count
+            && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                series.get(i).is_some_and(|s| s.id == c.series_id)
+                    && c.model_revision == model_revision
+                    && c.scale_factor_bits == scale_factor_bits
+                    && c.viewport_w_bits == viewport_w_bits
+                    && c.viewport_h_bits == viewport_h_bits
+                    && c.stroke_width == style.stroke_width
+                    && c.view_key == view_key
+            });
+
+        if cached_ok {
+            let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
+            for (i, s) in series.iter().enumerate() {
+                if hidden.contains(&s.id) {
+                    continue;
+                }
+                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                    continue;
+                };
+                let style = series_style(s, i, style, series_count);
+                out.push((s.id, id, style.stroke_color));
+            }
+            return out;
+        }
+
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                cx.services.path().release(id);
+            }
+        }
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+        let transform = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+        };
+
+        let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
+            width: style.stroke_width,
+        });
+        let constraints = PathConstraints {
+            scale_factor: cx.scale_factor,
+        };
+
+        let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
+        self.cached_paths = Vec::with_capacity(series_count);
+
+        for (series_index, s) in series.iter().enumerate() {
+            let series_id = s.id;
+            if hidden.contains(&series_id) {
+                self.cached_paths.push(CachedPath {
+                    id: None,
+                    series_id,
+                    model_revision,
+                    scale_factor_bits,
+                    viewport_w_bits,
+                    viewport_h_bits,
+                    stroke_width: style.stroke_width,
+                    view_key,
+                    samples: Vec::new(),
+                });
+                continue;
+            }
+
+            let (polyline, samples) =
+                decimate_polyline(transform, &*s.data, cx.scale_factor, series_id);
+            let commands = step_commands_from_polyline(&polyline, self.step_mode);
+
+            let id = if commands.is_empty() {
+                None
+            } else {
+                let (id, _metrics) = cx
+                    .services
+                    .path()
+                    .prepare(&commands, path_style, constraints);
+                Some(id)
+            };
+
+            self.cached_paths.push(CachedPath {
+                id,
+                series_id,
+                model_revision,
+                scale_factor_bits,
+                viewport_w_bits,
+                viewport_h_bits,
+                stroke_width: style.stroke_width,
+                view_key,
+                samples,
+            });
+
+            if let Some(id) = id {
+                let style = series_style(s, series_index, style, series_count);
+                out.push((series_id, id, style.stroke_color));
             }
         }
 
