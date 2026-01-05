@@ -471,3 +471,57 @@ pub fn dismiss_toast_action(
     host.request_redraw(window);
     true
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn toast_pause_resume_and_removal_flow() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let request = ToastRequest::new("Hello").duration(Some(Duration::from_secs(3)));
+        let id = store.add_toast(window, request, Some(TimerToken(1)));
+
+        let paused = store.pause_auto_close(window, id);
+        assert_eq!(paused, Some(TimerToken(1)));
+
+        let resumed = store.resume_auto_close(window, id, TimerToken(2));
+        assert_eq!(resumed, Some(Duration::from_secs(3)));
+
+        let outcome = store.on_timer(TimerToken(2), TimerToken(3));
+        match outcome {
+            ToastTimerOutcome::BeganClose { window: w, .. } => assert_eq!(w, window),
+            _ => panic!("expected BeganClose"),
+        }
+
+        let outcome = store.on_timer(TimerToken(3), TimerToken(4));
+        match outcome {
+            ToastTimerOutcome::Removed { window: w } => assert_eq!(w, window),
+            _ => panic!("expected Removed"),
+        }
+
+        assert!(store.toasts_for_window(window).is_empty());
+    }
+
+    #[test]
+    fn toast_drag_sets_and_resets_offset() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let request = ToastRequest::new("Drag").duration(None);
+        let id = store.add_toast(window, request, None);
+
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+
+        let moved = store.drag_move(window, id, Point::new(Px(30.0), Px(10.0)));
+        assert!(moved.is_some());
+        assert!(store.toasts_for_window(window)[0].drag_x.0 > 0.0);
+
+        let end = store.end_drag(window, id);
+        assert!(end.is_some());
+        assert_eq!(store.toasts_for_window(window)[0].drag_x, Px(0.0));
+        assert_eq!(store.toasts_for_window(window)[0].drag_start, None);
+    }
+}
