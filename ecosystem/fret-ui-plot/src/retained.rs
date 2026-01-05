@@ -637,6 +637,27 @@ fn apply_axis_locks(
     next
 }
 
+fn log10_decade_exponent(v: f64) -> Option<i32> {
+    if !v.is_finite() || v <= 0.0 {
+        return None;
+    }
+    let e = v.log10();
+    if !e.is_finite() {
+        return None;
+    }
+
+    let rounded = e.round();
+    let eps = 1.0e-10_f64;
+    ((e - rounded).abs() <= eps).then_some(rounded as i32)
+}
+
+fn log10_tick_label_or_empty(v: f64) -> String {
+    let Some(exp) = log10_decade_exponent(v) else {
+        return String::new();
+    };
+    format!("10^{exp}")
+}
+
 fn scatter_marker_commands(samples: &[SamplePoint], radius: Px) -> Vec<fret_core::PathCommand> {
     if samples.is_empty() {
         return Vec::new();
@@ -2312,13 +2333,21 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         };
 
         for v in x_ticks {
-            let text = self.x_axis_labels.format(v, x_span);
+            let text = if self.x_scale == AxisScale::Log10 && self.x_axis_labels.is_number_auto() {
+                log10_tick_label_or_empty(v)
+            } else {
+                self.x_axis_labels.format(v, x_span)
+            };
             let prepared = self.prepare_text(cx.services, &text, &style, constraints_x);
             self.axis_labels_x.push(prepared);
         }
 
         for v in y_ticks {
-            let text = self.y_axis_labels.format(v, y_span);
+            let text = if self.y_scale == AxisScale::Log10 && self.y_axis_labels.is_number_auto() {
+                log10_tick_label_or_empty(v)
+            } else {
+                self.y_axis_labels.format(v, y_span)
+            };
             let prepared = self.prepare_text(cx.services, &text, &style, constraints_y);
             self.axis_labels_y.push(prepared);
         }
@@ -2326,7 +2355,12 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         if self.show_y2_axis {
             let y2_ticks = self.axis_ticks_y2.clone();
             for v in y2_ticks {
-                let text = self.y2_axis_labels.format(v, y2_span);
+                let text =
+                    if self.y2_scale == AxisScale::Log10 && self.y2_axis_labels.is_number_auto() {
+                        log10_tick_label_or_empty(v)
+                    } else {
+                        self.y2_axis_labels.format(v, y2_span)
+                    };
                 let prepared = self.prepare_text(cx.services, &text, &style, constraints_y2);
                 self.axis_labels_y2.push(prepared);
             }
@@ -3435,13 +3469,19 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     continue;
                 };
                 let x = Px(x.0.round());
+                let background =
+                    if self.x_scale == AxisScale::Log10 && log10_decade_exponent(v).is_none() {
+                        dim_color(grid_color, 0.45)
+                    } else {
+                        grid_color
+                    };
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(1),
                     rect: Rect::new(
                         Point::new(x, layout.plot.origin.y),
                         Size::new(Px(1.0), layout.plot.size.height),
                     ),
-                    background: grid_color,
+                    background,
                     border: fret_core::Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(Px(0.0)),
@@ -3453,13 +3493,19 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     continue;
                 };
                 let y = Px(y.0.round());
+                let background =
+                    if self.y_scale == AxisScale::Log10 && log10_decade_exponent(v).is_none() {
+                        dim_color(grid_color, 0.45)
+                    } else {
+                        grid_color
+                    };
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(1),
                     rect: Rect::new(
                         Point::new(layout.plot.origin.x, y),
                         Size::new(layout.plot.size.width, Px(1.0)),
                     ),
-                    background: grid_color,
+                    background,
                     border: fret_core::Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(Px(0.0)),
@@ -3844,6 +3890,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         });
 
         for (i, label) in self.axis_labels_x.iter().enumerate() {
+            if label.metrics.size.width.0 <= 0.0 {
+                continue;
+            }
             let Some(v) = x_ticks.get(i).copied() else {
                 continue;
             };
@@ -3867,6 +3916,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         }
 
         for (i, label) in self.axis_labels_y.iter().enumerate() {
+            if label.metrics.size.width.0 <= 0.0 {
+                continue;
+            }
             let Some(v) = y_ticks.get(i).copied() else {
                 continue;
             };
@@ -3895,6 +3947,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         if self.show_y2_axis {
             if let Some(transform_y2) = transform_y2 {
                 for (i, label) in self.axis_labels_y2.iter().enumerate() {
+                    if label.metrics.size.width.0 <= 0.0 {
+                        continue;
+                    }
                     let Some(v) = y2_ticks.get(i).copied() else {
                         continue;
                     };

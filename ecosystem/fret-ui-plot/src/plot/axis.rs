@@ -235,6 +235,11 @@ impl AxisLabelFormatter {
         self.key
     }
 
+    pub fn is_number_auto(&self) -> bool {
+        // AxisLabelFormatter::default() == number(Auto) uses this deterministic key.
+        self.key == 0x4e55_4d00_0000_0000u64
+    }
+
     pub fn format(&self, v: f64, span: f64) -> String {
         (self.f)(v, span)
     }
