@@ -76,3 +76,4 @@ This path should only be taken via a dedicated ADR focused on scene/renderer con
 - Viewport input forwarding: `docs/adr/0025-viewport-input-forwarding.md`
 - Engine render hook / queue ownership: `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - Display list ordering: `docs/adr/0002-display-list.md`
+- Plot architecture and performance baseline: `docs/adr/0099-plot-architecture-and-performance.md`

@@ -63,65 +63,23 @@ If plot work requires configurable joins/caps/dashes, gradients/patterns, or AA 
 - extending ADR 0080 (Path v2), or introducing a separate paint abstraction ADR,
 - and adding conformance tests to prevent renderer-only behavior drift.
 
-## Design Sketch (Recommended for Fret)
+### 5) Stable series identity is required
 
-This ADR intentionally focuses on portable primitives and crate placement. For an initial API and
-responsibility split that fits Fret's architecture, we recommend:
+Plot interaction state must not be keyed by `Vec` indices. Series can be dynamically inserted/removed/reordered
+(filtering, toggles, streaming data), and index-based identity will corrupt hover/pin/caches.
 
-### 1) Retained-first UI integration (GPUI-aligned)
+Instead, `fret-ui-plot` uses stable series IDs:
 
-Start with a retained widget as the integration layer. This keeps plot state (hover/selection/cached paths)
-in one place and avoids expanding the declarative element contract too early.
+- Each series has a `SeriesId`.
+- Interaction state (hidden, pinned, hover, caches) is owned by the widget/canvas and keyed by `SeriesId`
+  (model data stays “data-only”).
 
-### 2) Headless helpers + thin scene emission
+## Design and Performance
 
-Structure the crate as:
+This ADR intentionally focuses on portable primitives and crate placement.
+For the detailed retained-layer architecture and performance baseline, see:
 
-- Headless modules: scales, tick generation, layout, decimation, hit testing, interaction math.
-  - Input: data points, plot viewport, data bounds, style parameters, interaction state.
-  - Output: a small set of computed values (ticks, transformed points, hit results).
-- UI bridge modules: translate computed results into `SceneOp::{Path,Quad,Text}` using `PathService` and
-  `TextService`, with caching keyed by model revision + viewport + scale factor + style.
-
-This keeps "math and policy" portable while still using the renderer efficiently.
-
-### 3) Performance model
-
-The default rendering path should be CPU-driven and cache-friendly:
-
-- Transform data points into plot-local logical pixels (`PlotTransform`).
-- Apply decimation/downsampling bounded by plot width in device pixels (avoid "huge paths").
-- Emit a single path per series where possible; keep axis labels and tick text cached.
-- Use the decimated point set for hover hit testing to avoid per-pointer-event O(N) scans.
-
-If/when this is insufficient, introduce renderer contract upgrades via separate ADRs (e.g. dashed strokes,
-marker glyph atlases, polyline/line-strip semantics, or GPU line rendering).
-
-### 4) Public API shape (P0/P1 direction)
-
-Prefer a split between a generic substrate and small chart wrappers:
-
-- `PlotCanvas` (or similar): owns layout, axes, interaction, and series painting hooks.
-- `LineChart`, `ScatterPlot`, `BarChart`: thin wrappers that configure a `PlotCanvas` with one or more series.
-
-This mirrors GPUI component's design and keeps high-entropy features isolated per chart type.
-
-### 5) Stable series identity and widget-owned interaction state
-
-Plot interaction state must not be keyed by `Vec` indices.
-Series can be dynamically inserted/removed/reordered (filtering, toggles, streaming data), and index-based
-identity will corrupt hover/pin/caches.
-
-Instead, `fret-ui-plot` uses stable series IDs (similar to `egui_plot`'s `Id` and ImPlot's label-ID
-registration):
-
-- Each `LineSeries` has a `SeriesId`.
-- By default, the ID is derived deterministically from the series label (suitable for most cases).
-- Callers can override the ID explicitly when labels are not stable or when collisions must be avoided.
-- Interaction state (hidden items, pinned series, legend hover, etc) is stored in the widget/canvas and
-  keyed by `SeriesId`, not stored inside the model data.
-
-This keeps the model as "data only" and makes interaction memory resilient to structural edits.
+- `docs/adr/0099-plot-architecture-and-performance.md`
 
 ## 3D Scope
 
@@ -188,3 +146,4 @@ should remain retained and cache-driven.
 - ImPlot reference (vendored): `repo-ref/implot`
 - ImPlot3D reference (vendored): `repo-ref/implot3d`
 - Plot3D rendering strategy: `docs/adr/0098-plot3d-rendering-strategy.md`
+- Plot architecture and performance baseline: `docs/adr/0099-plot-architecture-and-performance.md`
