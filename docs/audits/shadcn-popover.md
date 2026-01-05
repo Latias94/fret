@@ -16,6 +16,7 @@ documentation and the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Depends on overlay policy/infra:
   - `ecosystem/fret-ui-kit/src/window_overlays/*` (dismissible overlays, focus rules)
   - `ecosystem/fret-ui-kit/src/overlay_controller.rs` (overlay requests + presence)
+  - `ecosystem/fret-ui-kit/src/primitives/popover.rs` (Radix-aligned a11y + request facade)
   - `crates/fret-ui/src/overlay_placement/solver.rs` (anchored placement + flip/clamp)
 
 ## What upstream exports (new-york)

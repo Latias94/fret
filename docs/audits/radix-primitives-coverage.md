@@ -30,6 +30,7 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 - `focus-scope` -> `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs`
 - `menu` -> `ecosystem/fret-ui-kit/src/primitives/menu/*`
 - `menubar` -> `ecosystem/fret-ui-kit/src/primitives/menubar.rs` (facade over `menu`, plus trigger-row + ArrowLeft/Right switching policy in `primitives/menubar/trigger_row.rs`)
+- `popover` -> `ecosystem/fret-ui-kit/src/primitives/popover.rs` (facade over window overlays + popper)
 - `popper` -> `ecosystem/fret-ui-kit/src/primitives/popper.rs` (+ `popper_content.rs`)
 - `presence` -> `ecosystem/fret-ui-kit/src/primitives/presence.rs`
 - `radio-group` -> `ecosystem/fret-ui-kit/src/primitives/radio_group.rs`
@@ -52,7 +53,6 @@ Radix-named primitives facades so non-shadcn consumers can reuse them:
 
 - `dialog` -> `ecosystem/fret-ui-shadcn/src/dialog.rs`
 - `alert-dialog` -> `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`
-- `popover` -> `ecosystem/fret-ui-shadcn/src/popover.rs`
 - `hover-card` -> `ecosystem/fret-ui-shadcn/src/hover_card.rs`
 - `select` -> `ecosystem/fret-ui-shadcn/src/select.rs`
 - `checkbox` -> `ecosystem/fret-ui-shadcn/src/checkbox.rs`
@@ -122,6 +122,5 @@ If we want the biggest reuse win with minimal risk:
 
 1. Add thin facades for `dropdown-menu`, `context-menu`, `menubar` (delegating to `menu`).
 2. Add `primitives/tooltip.rs` facade (compose provider + delay group + popper; keep skin out).
-3. Downshift `popover` (common building block for many shadcn components).
-4. Downshift `dialog` / `alert-dialog` (focus trap + dismiss + scroll lock policies).
-5. Downshift form controls (`checkbox`, `switch`, `slider`, `select`) as a11y + interaction policy.
+3. Downshift `dialog` / `alert-dialog` (focus trap + dismiss + scroll lock policies).
+4. Downshift form controls (`checkbox`, `switch`, `slider`, `select`) as a11y + interaction policy.

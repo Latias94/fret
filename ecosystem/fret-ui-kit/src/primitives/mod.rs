@@ -34,6 +34,7 @@ pub mod focus_scope;
 pub mod hover_intent;
 pub mod menu;
 pub mod menubar;
+pub mod popover;
 pub mod popper;
 pub mod popper_content;
 pub mod presence;

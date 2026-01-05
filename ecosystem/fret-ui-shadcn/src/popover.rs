@@ -6,67 +6,24 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, OpacityProps, Overflow,
-    PressableProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, SemanticsProps,
+    SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    OverlayRequest, Radius, Space,
+    Radius, Space,
 };
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
-
-fn popover_dialog_wrapper<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    label: Option<Arc<str>>,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
-) -> AnyElement {
-    cx.semantics_with_id(
-        SemanticsProps {
-            role: SemanticsRole::Dialog,
-            label,
-            ..Default::default()
-        },
-        move |cx, _id| f(cx),
-    )
-}
-
-fn popover_dialog_wrapper_id<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    overlay_root_name: &str,
-) -> fret_ui::elements::GlobalElementId {
-    cx.with_root_name(overlay_root_name, |cx| {
-        let element = popover_dialog_wrapper::<H>(cx, None, |_cx| Vec::new());
-        element.id
-    })
-}
-
-fn apply_popover_trigger_a11y(
-    mut trigger: AnyElement,
-    expanded: bool,
-    dialog_element: fret_ui::elements::GlobalElementId,
-) -> AnyElement {
-    match &mut trigger.kind {
-        ElementKind::Pressable(PressableProps { a11y, .. }) => {
-            a11y.expanded = Some(expanded);
-            a11y.controls_element = Some(dialog_element.0);
-        }
-        ElementKind::Semantics(props) => {
-            props.expanded = Some(expanded);
-            props.controls_element = Some(dialog_element.0);
-        }
-        _ => {}
-    }
-    trigger
-}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
@@ -250,13 +207,14 @@ impl Popover {
             let dialog_id = if let Some(dialog_id) = dialog_id {
                 dialog_id
             } else {
-                let dialog_id = popover_dialog_wrapper_id::<H>(cx, &overlay_root_name);
+                let dialog_id =
+                    radix_popover::popover_dialog_wrapper_id::<H>(cx, &overlay_root_name);
                 cx.with_state(PopoverA11yState::default, |st| {
                     st.dialog_id = Some(dialog_id)
                 });
                 dialog_id
             };
-            let trigger = apply_popover_trigger_a11y(trigger, is_open, dialog_id);
+            let trigger = radix_popover::apply_popover_trigger_a11y(trigger, is_open, dialog_id);
 
             let presence = OverlayController::fade_presence_with_durations(
                 cx,
@@ -299,7 +257,7 @@ impl Popover {
 
                     let inner_id = std::cell::Cell::new(None);
                     let inner_id_for_scope = inner_id.clone();
-                    let content = popover_dialog_wrapper(cx, None, move |cx| {
+                    let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
                         let inner = content(cx, anchor_raw);
                         inner_id_for_scope.set(Some(inner.id));
                         vec![inner]
@@ -433,20 +391,18 @@ impl Popover {
                     Some(trigger_id)
                 };
 
-                let mut request = OverlayRequest::dismissible_popover(
-                    trigger_id,
+                let mut request = radix_popover::dismissible_popover_request(
                     trigger_id,
                     self.open,
                     overlay_presence,
                     overlay_children,
                 );
-                request.root_name = Some(overlay_root_name);
                 if anchor_id != trigger_id {
                     request.dismissable_branches.push(anchor_id);
                 }
                 request.consume_outside_pointer_events = self.consume_outside_pointer_events;
                 request.initial_focus = initial_focus;
-                OverlayController::request(cx, request);
+                radix_popover::request_dismissible_popover(cx, request);
             }
 
             trigger
