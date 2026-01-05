@@ -29,7 +29,7 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 - `dropdown-menu` -> `ecosystem/fret-ui-kit/src/primitives/dropdown_menu.rs` (facade over `menu`)
 - `focus-scope` -> `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs`
 - `menu` -> `ecosystem/fret-ui-kit/src/primitives/menu/*`
-- `menubar` -> `ecosystem/fret-ui-kit/src/primitives/menubar.rs` (facade over `menu`, plus trigger-row policy in `primitives/menubar/trigger_row.rs`)
+- `menubar` -> `ecosystem/fret-ui-kit/src/primitives/menubar.rs` (facade over `menu`, plus trigger-row + ArrowLeft/Right switching policy in `primitives/menubar/trigger_row.rs`)
 - `popper` -> `ecosystem/fret-ui-kit/src/primitives/popper.rs` (+ `popper_content.rs`)
 - `presence` -> `ecosystem/fret-ui-kit/src/primitives/presence.rs`
 - `radio-group` -> `ecosystem/fret-ui-kit/src/primitives/radio_group.rs`

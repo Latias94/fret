@@ -884,6 +884,7 @@ impl MenubarMenuEntries {
         let align_leading_icons = self.align_leading_icons;
         cx.keyed(key, |cx| {
             let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
+            let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
 
             let open = cx.with_state(MenubarMenuState::default, |st| st.open.clone());
             let open = if let Some(open) = open {
@@ -917,11 +918,21 @@ impl MenubarMenuEntries {
             };
 
             let label = self.menu.label.clone();
+            let menu_key = label.clone();
 
             cx.pressable_with_id_props(|cx, st, trigger_id| {
                 if enabled {
                     menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, open.clone());
                 }
+
+                menubar_trigger_row::register_trigger_in_registry(
+                    cx,
+                    trigger_registry.clone(),
+                    menu_key.clone(),
+                    trigger_id,
+                    open.clone(),
+                    enabled,
+                );
 
                 let mut trigger_layout = LayoutStyle::default();
                 trigger_layout.size.height = Length::Auto;
@@ -979,6 +990,8 @@ impl MenubarMenuEntries {
                     let open_for_overlay = open.clone();
                     let text_style = text_style.clone();
                     let entries = entries.clone();
+                    let menu_key_for_overlay = menu_key.clone();
+                    let trigger_registry_for_overlay = trigger_registry.clone();
                     let content_focus_id: Rc<Cell<Option<GlobalElementId>>> =
                         Rc::new(Cell::new(None));
                     let content_focus_id_for_children = content_focus_id.clone();
@@ -1213,6 +1226,9 @@ impl MenubarMenuEntries {
                                                                 text_style_for_content.clone();
                                                             let submenu_for_item =
                                                                 submenu_for_content.clone();
+                                                            let menu_key = menu_key_for_overlay.clone();
+                                                            let trigger_registry =
+                                                                trigger_registry_for_overlay.clone();
 
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
@@ -1231,6 +1247,13 @@ impl MenubarMenuEntries {
                                                                         &submenu_for_item,
                                                                         submenu_cfg,
                                                                         None,
+                                                                    );
+                                                                    menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                                                        cx,
+                                                                        item_id,
+                                                                        group_active.clone(),
+                                                                        trigger_registry.clone(),
+                                                                        menu_key.clone(),
                                                                     );
 
                                                                     if item_enabled {
@@ -1335,6 +1358,9 @@ impl MenubarMenuEntries {
                                                                 text_style_for_content.clone();
                                                             let submenu_for_item =
                                                                 submenu_for_content.clone();
+                                                            let menu_key = menu_key_for_overlay.clone();
+                                                            let trigger_registry =
+                                                                trigger_registry_for_overlay.clone();
 
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
@@ -1357,6 +1383,13 @@ impl MenubarMenuEntries {
                                                                         &submenu_for_item,
                                                                         submenu_cfg,
                                                                         None,
+                                                                    );
+                                                                    menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                                                        cx,
+                                                                        item_id,
+                                                                        group_active.clone(),
+                                                                        trigger_registry.clone(),
+                                                                        menu_key.clone(),
                                                                     );
 
                                                                     if item_enabled {
@@ -1473,6 +1506,10 @@ impl MenubarMenuEntries {
 
                                                               let submenu_for_item =
                                                                   submenu_for_content.clone();
+                                                              let menu_key =
+                                                                  menu_key_for_overlay.clone();
+                                                              let trigger_registry =
+                                                                  trigger_registry_for_overlay.clone();
                                                              let value = item.value.clone();
                                                              let pad_left =
                                                                  if item.inset { pad_x_inset } else { pad_x };
@@ -1497,6 +1534,13 @@ impl MenubarMenuEntries {
                                                                         &submenu_for_item,
                                                                         submenu_cfg,
                                                                         geometry_hint,
+                                                                    );
+                                                                    menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                                                        cx,
+                                                                        item_id,
+                                                                        group_active.clone(),
+                                                                        trigger_registry.clone(),
+                                                                        menu_key.clone(),
                                                                     );
 
                                                                      if !has_submenu {
