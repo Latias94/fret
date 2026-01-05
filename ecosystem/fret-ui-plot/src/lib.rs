@@ -5,6 +5,7 @@
 
 pub mod cartesian;
 pub mod chart;
+pub mod linking;
 pub mod plot;
 pub mod retained;
 pub mod series;

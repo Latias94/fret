@@ -1,0 +1,241 @@
+use fret_runtime::Model;
+use fret_ui::UiHost;
+
+use crate::retained::{PlotOutput, PlotOutputSnapshot, PlotState};
+
+#[derive(Debug, Clone, Copy)]
+pub struct PlotLinkPolicy {
+    pub view_bounds: bool,
+    pub query: bool,
+}
+
+impl Default for PlotLinkPolicy {
+    fn default() -> Self {
+        Self {
+            view_bounds: true,
+            query: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LinkedPlotMember {
+    pub state: Model<PlotState>,
+    pub output: Model<PlotOutput>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LinkedPlotMemberMemory {
+    last_output_revision: u64,
+    ignore_next_output_revision: bool,
+}
+
+/// A simple coordinator that links interaction state across multiple plots.
+///
+/// This is intended to support common ImPlot-style workflows:
+/// - Linked view bounds (pan/zoom) across multiple plots.
+/// - Shared query selections across multiple plots.
+///
+/// Design notes:
+/// - The coordinator uses `PlotOutput.revision` as a change detector.
+/// - When it applies state to other plots, their next output update is suppressed once to avoid
+///   feedback loops (ping-pong).
+/// - This assumes plots in the group share compatible domains (or at least can tolerate adopting
+///   each other's view bounds).
+#[derive(Debug)]
+pub struct LinkedPlotGroup {
+    policy: PlotLinkPolicy,
+    members: Vec<LinkedPlotMember>,
+    memory: Vec<LinkedPlotMemberMemory>,
+}
+
+impl LinkedPlotGroup {
+    pub fn new(policy: PlotLinkPolicy) -> Self {
+        Self {
+            policy,
+            members: Vec::new(),
+            memory: Vec::new(),
+        }
+    }
+
+    pub fn push(&mut self, member: LinkedPlotMember) -> &mut Self {
+        self.members.push(member);
+        self.memory.push(LinkedPlotMemberMemory {
+            last_output_revision: 0,
+            ignore_next_output_revision: false,
+        });
+        self
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.members.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.members.len()
+    }
+
+    pub fn clear(&mut self) {
+        self.members.clear();
+        self.memory.clear();
+    }
+
+    /// Propagate interaction state if any member output changed since the previous tick.
+    ///
+    /// Recommended usage:
+    /// - Call this after dispatching input events (e.g. after `ui.dispatch_event(...)`).
+    /// - Optionally call this once per frame; it is cheap when nothing changes.
+    pub fn tick<H: UiHost>(&mut self, app: &mut H) {
+        if self.members.len() <= 1 {
+            return;
+        }
+
+        let mut outputs: Vec<Option<PlotOutput>> = Vec::with_capacity(self.members.len());
+        for m in &self.members {
+            let out = m.output.read(app, |_app, o| *o).ok();
+            outputs.push(out);
+        }
+
+        // First pass: clear "ignore next" markers if the expected output change happened.
+        for i in 0..self.members.len() {
+            let Some(out) = outputs.get(i).and_then(|o| *o) else {
+                continue;
+            };
+            let mem = &mut self.memory[i];
+            if mem.ignore_next_output_revision && out.revision != mem.last_output_revision {
+                mem.last_output_revision = out.revision;
+                mem.ignore_next_output_revision = false;
+            }
+        }
+
+        // Second pass: pick the first member that changed (and is not suppressed) as the source.
+        let mut source_index: Option<usize> = None;
+        let mut source_snapshot: Option<PlotOutputSnapshot> = None;
+        for i in 0..self.members.len() {
+            let Some(out) = outputs.get(i).and_then(|o| *o) else {
+                continue;
+            };
+            let mem = &mut self.memory[i];
+            if out.revision != mem.last_output_revision {
+                mem.last_output_revision = out.revision;
+                if !mem.ignore_next_output_revision {
+                    source_index = Some(i);
+                    source_snapshot = Some(out.snapshot);
+                    break;
+                }
+            }
+        }
+
+        let Some(source_index) = source_index else {
+            return;
+        };
+        let Some(source_snapshot) = source_snapshot else {
+            return;
+        };
+
+        for i in 0..self.members.len() {
+            if i == source_index {
+                continue;
+            }
+            let Some(out) = outputs.get(i).and_then(|o| *o) else {
+                continue;
+            };
+
+            let state = &self.members[i].state;
+            let policy = self.policy;
+            let ok = state
+                .update(app, |s, _cx| {
+                    apply_snapshot_to_plot_state(s, source_snapshot, policy);
+                })
+                .is_ok();
+
+            if ok {
+                let mem = &mut self.memory[i];
+                mem.last_output_revision = out.revision;
+                mem.ignore_next_output_revision = true;
+            }
+        }
+    }
+}
+
+fn apply_snapshot_to_plot_state(
+    state: &mut PlotState,
+    snapshot: PlotOutputSnapshot,
+    policy: PlotLinkPolicy,
+) {
+    if policy.view_bounds {
+        state.view_is_auto = false;
+        state.view_bounds = Some(snapshot.view_bounds);
+    }
+    if policy.query {
+        state.query = snapshot.query;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug, Clone)]
+    struct SimMember {
+        mem: LinkedPlotMemberMemory,
+        rev: u64,
+    }
+
+    fn tick_pick_source(members: &mut [SimMember]) -> Option<usize> {
+        // Clear ignore markers.
+        for m in members.iter_mut() {
+            if m.mem.ignore_next_output_revision && m.rev != m.mem.last_output_revision {
+                m.mem.last_output_revision = m.rev;
+                m.mem.ignore_next_output_revision = false;
+            }
+        }
+
+        // Pick the first changed member as the source (unless suppressed).
+        for (i, m) in members.iter_mut().enumerate() {
+            if m.rev != m.mem.last_output_revision {
+                m.mem.last_output_revision = m.rev;
+                if !m.mem.ignore_next_output_revision {
+                    return Some(i);
+                }
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn ignores_next_output_after_propagation_to_prevent_ping_pong() {
+        let mut members = vec![
+            SimMember {
+                mem: LinkedPlotMemberMemory {
+                    last_output_revision: 0,
+                    ignore_next_output_revision: false,
+                },
+                rev: 0,
+            },
+            SimMember {
+                mem: LinkedPlotMemberMemory {
+                    last_output_revision: 0,
+                    ignore_next_output_revision: false,
+                },
+                rev: 0,
+            },
+        ];
+
+        // User interacts with plot A.
+        members[0].rev = 1;
+        assert_eq!(tick_pick_source(&mut members), Some(0));
+
+        // Propagation would mark plot B as suppressed for the next output bump.
+        members[1].mem.ignore_next_output_revision = true;
+
+        // Plot B output bumps due to the propagated state change; do not treat it as a source.
+        members[1].rev = 1;
+        assert_eq!(tick_pick_source(&mut members), None);
+        assert_eq!(members[1].mem.ignore_next_output_revision, false);
+
+        // Now a real user interaction on plot B should be observed.
+        members[1].rev = 2;
+        assert_eq!(tick_pick_source(&mut members), Some(1));
+    }
+}
