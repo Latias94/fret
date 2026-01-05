@@ -44,6 +44,22 @@ pub(crate) fn shadcn_enter_slide_transform(side: Side, opacity: f32, opening: bo
     Transform2D::translation(shadcn_enter_slide_offset(side, opacity, opening))
 }
 
+pub(crate) fn shadcn_modal_slide_offset(side: Side, distance: Px, opacity: f32) -> Point {
+    // Used by modal panels like `Sheet`, which slide in/out from the same side.
+    // This differs from popper overlays (Tooltip/HoverCard/Popover) that slide towards the anchor.
+    let t = 1.0 - opacity.clamp(0.0, 1.0);
+    match side {
+        Side::Top => Point::new(Px(0.0), Px(-distance.0 * t)),
+        Side::Bottom => Point::new(Px(0.0), Px(distance.0 * t)),
+        Side::Left => Point::new(Px(-distance.0 * t), Px(0.0)),
+        Side::Right => Point::new(Px(distance.0 * t), Px(0.0)),
+    }
+}
+
+pub(crate) fn shadcn_modal_slide_transform(side: Side, distance: Px, opacity: f32) -> Transform2D {
+    Transform2D::translation(shadcn_modal_slide_offset(side, distance, opacity))
+}
+
 pub(crate) fn shadcn_zoom_transform(origin: Point, opacity: f32) -> Transform2D {
     // shadcn/ui v4 uses a small zoom-in (95% -> 100%) plus opacity transitions.
     // We approximate that with a fade-driven zoom transform around a popper-style transform origin

@@ -6,8 +6,9 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, PressableProps, SemanticsProps, SizeStyle, TextProps,
+    PositionStyle, PressableProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
+use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -18,6 +19,7 @@ use fret_ui_kit::{
 };
 
 use crate::layout as shadcn_layout;
+use crate::overlay_motion;
 
 fn default_overlay_color() -> Color {
     Color {
@@ -116,7 +118,7 @@ impl Sheet {
             if overlay_presence.present {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
-                let side = self.side;
+                let sheet_side = self.side;
 
                 let default_size = theme
                     .metric_by_key("component.sheet.size")
@@ -198,7 +200,7 @@ impl Sheet {
                     let sheet_w = Px(size.0.min(max_w.0).max(0.0));
                     let sheet_h = Px(size.0.min(max_h.0).max(0.0));
 
-                    let (inset, size) = match side {
+                    let (inset, size) = match sheet_side {
                         SheetSide::Right => (
                             InsetStyle {
                                 top: Some(Px(0.0)),
@@ -253,6 +255,22 @@ impl Sheet {
                         ),
                     };
 
+                    let motion_side = match sheet_side {
+                        SheetSide::Left => Side::Left,
+                        SheetSide::Right => Side::Right,
+                        SheetSide::Top => Side::Top,
+                        SheetSide::Bottom => Side::Bottom,
+                    };
+                    let motion_distance = match sheet_side {
+                        SheetSide::Left | SheetSide::Right => sheet_w,
+                        SheetSide::Top | SheetSide::Bottom => sheet_h,
+                    };
+                    let slide = overlay_motion::shadcn_modal_slide_transform(
+                        motion_side,
+                        motion_distance,
+                        opacity,
+                    );
+
                     let wrapper = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
@@ -277,10 +295,21 @@ impl Sheet {
                     };
                     vec![cx.opacity_props(
                         OpacityProps {
-                            layout: opacity_layout,
+                            layout: opacity_layout.clone(),
                             opacity,
                         },
-                        |_cx| vec![barrier, wrapper],
+                        move |cx| {
+                            vec![
+                                barrier,
+                                cx.visual_transform_props(
+                                    VisualTransformProps {
+                                        layout: opacity_layout,
+                                        transform: slide,
+                                    },
+                                    move |_cx| vec![wrapper],
+                                ),
+                            ]
+                        },
                     )]
                 });
 

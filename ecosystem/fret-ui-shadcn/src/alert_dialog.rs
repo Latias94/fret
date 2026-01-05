@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_runtime::{Model, ModelId};
 use fret_ui::element::{
-    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    SemanticsProps, SizeStyle, TextProps,
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
+    PositionStyle, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -18,6 +19,7 @@ use fret_ui_kit::{
 };
 
 use crate::layout as shadcn_layout;
+use crate::overlay_motion;
 
 use crate::button::{Button, ButtonVariant};
 
@@ -90,14 +92,20 @@ impl AlertDialog {
             let id = trigger.id;
             let overlay_root_name = OverlayController::modal_root_name(id);
 
-            if is_open {
-                cx.app
-                    .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
-                        reg.by_open.remove(&open_id);
-                    });
+            let presence = OverlayController::fade_presence(cx, is_open, 4);
+            let overlay_presence = OverlayPresence::from_fade(is_open, presence);
+
+            if overlay_presence.present {
+                if is_open {
+                    cx.app
+                        .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
+                            reg.by_open.remove(&open_id);
+                        });
+                }
 
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
+                let opacity = presence.opacity;
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let barrier_layout = LayoutStyle {
@@ -152,6 +160,12 @@ impl AlertDialog {
                         + window_padding_px.0
                         + ((available_h.0 - content_h.0) * 0.5).max(0.0));
 
+                    let origin = Point::new(
+                        Px(left.0 + content_w.0 * 0.5),
+                        Px(top.0 + content_h.0 * 0.5),
+                    );
+                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+
                     let wrapper = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
@@ -175,22 +189,51 @@ impl AlertDialog {
                         move |_cx| vec![content],
                     );
 
-                    vec![barrier, wrapper]
+                    let opacity_layout = LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+
+                    vec![cx.opacity_props(
+                        OpacityProps {
+                            layout: opacity_layout.clone(),
+                            opacity,
+                        },
+                        move |cx| {
+                            vec![
+                                barrier,
+                                cx.visual_transform_props(
+                                    VisualTransformProps {
+                                        layout: opacity_layout,
+                                        transform: zoom,
+                                    },
+                                    move |_cx| vec![wrapper],
+                                ),
+                            ]
+                        },
+                    )]
                 });
 
                 let mut request = OverlayRequest::modal(
                     id,
                     Some(id),
                     self.open.clone(),
-                    OverlayPresence::instant(true),
+                    overlay_presence,
                     overlay_children,
                 );
                 request.root_name = Some(overlay_root_name);
-                request.initial_focus = cx
-                    .app
-                    .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
-                        reg.by_open.get(&open_id).copied()
-                    });
+                request.initial_focus = if is_open {
+                    cx.app
+                        .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
+                            reg.by_open.get(&open_id).copied()
+                        })
+                } else {
+                    None
+                };
                 OverlayController::request(cx, request);
             } else {
                 cx.app

@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, PressableA11y, PressableProps, SemanticsProps, SizeStyle, TextProps,
+    VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -19,6 +21,7 @@ use fret_ui_kit::{
 };
 
 use crate::layout as shadcn_layout;
+use crate::overlay_motion;
 
 fn default_overlay_color() -> Color {
     Color {
@@ -193,6 +196,12 @@ impl Dialog {
                         + window_padding_px.0
                         + ((available_h.0 - content_h.0) * 0.5).max(0.0));
 
+                    let origin = Point::new(
+                        Px(left.0 + content_w.0 * 0.5),
+                        Px(top.0 + content_h.0 * 0.5),
+                    );
+                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+
                     let wrapper = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
@@ -226,10 +235,21 @@ impl Dialog {
                     };
                     vec![cx.opacity_props(
                         OpacityProps {
-                            layout: opacity_layout,
+                            layout: opacity_layout.clone(),
                             opacity,
                         },
-                        |_cx| vec![barrier, wrapper],
+                        move |cx| {
+                            vec![
+                                barrier,
+                                cx.visual_transform_props(
+                                    VisualTransformProps {
+                                        layout: opacity_layout,
+                                        transform: zoom,
+                                    },
+                                    move |_cx| vec![wrapper],
+                                ),
+                            ]
+                        },
                     )]
                 });
 
