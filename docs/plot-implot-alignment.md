@@ -32,6 +32,7 @@ This contract is documented in ADR 0099.
 - [x] Crosshair visible when cursor is inside plot
 - [x] Cursor coordinate tooltip visible when cursor is inside plot
 - [~] Series value readout (cursor X -> per-series Y; currently implemented via sorted-by-x interpolation)
+- [x] Tooltip/readout uses axis formatters (consistent units/time)
 - [x] Legend interaction: hide/solo/pin (basic)
 - [x] Cursor linking across plots (vertical cursor + per-series readout at X)
 - [x] Selection/query linking across plots (built on top of `LinkedPlotGroup`)

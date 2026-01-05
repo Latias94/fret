@@ -2834,6 +2834,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         let is_selection_drag_active =
             self.box_zoom_start.is_some() || self.query_drag_start.is_some();
         if !is_selection_drag_active {
+            let x_span = (view_bounds.x_max - view_bounds.x_min).abs();
+            let y_span = (view_bounds.y_max - view_bounds.y_min).abs();
+
             let cursor_px = self.cursor_px;
             let cursor_data = cursor_px.and_then(|cursor_px| {
                 if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
@@ -2859,17 +2862,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         })
                         .unwrap_or((0, None));
 
+                    let x_text = self.x_axis_labels.format(hover.data.x, x_span);
+                    let y_text = self.y_axis_labels.format(hover.data.y, y_span);
                     let text = if series_count > 1 {
                         if let Some(label) = series_label {
-                            format!("{label}  x={:.3}  y={:.3}", hover.data.x, hover.data.y)
+                            format!("{label}  x={x_text}  y={y_text}")
                         } else {
-                            format!(
-                                "s={}  x={:.3}  y={:.3}",
-                                hover.series_id.0, hover.data.x, hover.data.y
-                            )
+                            format!("s={}  x={x_text}  y={y_text}", hover.series_id.0)
                         }
                     } else {
-                        format!("x={:.3}  y={:.3}", hover.data.x, hover.data.y)
+                        format!("x={x_text}  y={y_text}")
                     };
                     (hover.plot_px, text)
                 })
@@ -2889,15 +2891,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         readout_rows.retain(|r| r.series_id == pinned);
                     }
 
-                    let mut text = format!("x={:.3}  y={:.3}", cursor_data.x, cursor_data.y);
+                    let x_text = self.x_axis_labels.format(cursor_data.x, x_span);
+                    let y_text = self.y_axis_labels.format(cursor_data.y, y_span);
+                    let mut text = format!("x={x_text}  y={y_text}");
                     for row in readout_rows {
-                        if let Some(y) = row.y
-                            && y.is_finite()
-                        {
-                            text.push_str(&format!("\n{}: y={:.3}", row.label, y));
-                        } else {
-                            text.push_str(&format!("\n{}: y=NA", row.label));
-                        }
+                        let y_text = row
+                            .y
+                            .filter(|y| y.is_finite())
+                            .map(|y| self.y_axis_labels.format(y, y_span))
+                            .unwrap_or_else(|| "NA".to_string());
+                        text.push_str(&format!("\n{}: y={y_text}", row.label));
                     }
 
                     Some((cursor_px, text))
@@ -2935,15 +2938,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         readout_rows.retain(|r| r.series_id == pinned);
                     }
 
-                    let mut text = format!("x={:.3}", linked_x);
+                    let x_text = self.x_axis_labels.format(linked_x, x_span);
+                    let mut text = format!("x={x_text}");
                     for row in readout_rows {
-                        if let Some(y) = row.y
-                            && y.is_finite()
-                        {
-                            text.push_str(&format!("\n{}: y={:.3}", row.label, y));
-                        } else {
-                            text.push_str(&format!("\n{}: y=NA", row.label));
-                        }
+                        let y_text = row
+                            .y
+                            .filter(|y| y.is_finite())
+                            .map(|y| self.y_axis_labels.format(y, y_span))
+                            .unwrap_or_else(|| "NA".to_string());
+                        text.push_str(&format!("\n{}: y={y_text}", row.label));
                     }
 
                     Some((anchor_local, text))
