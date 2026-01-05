@@ -620,6 +620,23 @@ fn query_rect_from_plot_points_raw(
     })
 }
 
+fn apply_axis_locks(
+    view_before: DataRect,
+    mut next: DataRect,
+    lock_x: bool,
+    lock_y: bool,
+) -> DataRect {
+    if lock_x {
+        next.x_min = view_before.x_min;
+        next.x_max = view_before.x_max;
+    }
+    if lock_y {
+        next.y_min = view_before.y_min;
+        next.y_max = view_before.y_max;
+    }
+    next
+}
+
 fn scatter_marker_commands(samples: &[SamplePoint], radius: Px) -> Vec<fret_core::PathCommand> {
     if samples.is_empty() {
         return Vec::new();
@@ -1461,6 +1478,9 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     y_axis_thickness: Px,
     y_axis_right_thickness: Px,
     show_y2_axis: bool,
+    lock_x_axis: bool,
+    lock_y_axis: bool,
+    lock_y2_axis: bool,
     pan_last_pos: Option<Point>,
     box_zoom_start: Option<Point>,
     box_zoom_current: Option<Point>,
@@ -1559,6 +1579,9 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             y_axis_thickness: axis_gap,
             y_axis_right_thickness: Px(0.0),
             show_y2_axis: false,
+            lock_x_axis: false,
+            lock_y_axis: false,
+            lock_y2_axis: false,
             pan_last_pos: None,
             box_zoom_start: None,
             box_zoom_current: None,
@@ -1602,6 +1625,21 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self.show_y2_axis = true;
         self.y2_axis_ticks = format.ticks();
         self.y2_axis_labels = format.labels();
+        self
+    }
+
+    pub fn x_axis_locked(mut self, locked: bool) -> Self {
+        self.lock_x_axis = locked;
+        self
+    }
+
+    pub fn y_axis_locked(mut self, locked: bool) -> Self {
+        self.lock_y_axis = locked;
+        self
+    }
+
+    pub fn y2_axis_locked(mut self, locked: bool) -> Self {
+        self.lock_y2_axis = locked;
         self
     }
 
@@ -2729,58 +2767,102 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             let h = (start.y.0 - end.y.0).abs();
 
                             if w >= 4.0 && h >= 4.0 {
-                                let state = self.read_plot_state(cx.app);
-                                let view_bounds = self.current_view_bounds(cx.app, &state);
-                                let view_bounds_y2 =
-                                    self.current_view_bounds_y2(cx.app, &state, view_bounds);
-                                if let Some(mut next) = data_rect_from_plot_points_scaled(
-                                    view_bounds,
-                                    layout.plot.size,
-                                    start,
-                                    end,
-                                    self.x_scale,
-                                    self.y_scale,
-                                ) {
-                                    let mut next_y2 = view_bounds_y2.and_then(|vb| {
-                                        data_rect_from_plot_points_scaled(
-                                            vb,
-                                            layout.plot.size,
-                                            start,
-                                            end,
-                                            self.x_scale,
-                                            self.y2_scale,
-                                        )
-                                    });
-                                    let data_bounds = self.read_data_bounds(cx.app);
-                                    if self.style.clamp_to_data_bounds {
-                                        next = clamp_view_to_data_scaled(
-                                            next,
-                                            data_bounds,
-                                            self.style.overscroll_fraction,
-                                            self.x_scale,
-                                            self.y_scale,
-                                        );
-                                        if let (Some(candidate), Some(bounds_y2)) =
-                                            (next_y2.as_mut(), self.read_data_bounds_y2(cx.app))
-                                        {
-                                            *candidate = clamp_view_to_data_scaled(
-                                                *candidate,
-                                                bounds_y2,
+                                let all_locked = self.lock_x_axis
+                                    && self.lock_y_axis
+                                    && (!self.show_y2_axis || self.lock_y2_axis);
+                                if all_locked {
+                                    // Axis locks prevent any view change; keep auto-fit state intact.
+                                    // The selection rectangle is still useful feedback for users.
+                                } else {
+                                    let state = self.read_plot_state(cx.app);
+                                    let view_bounds = self.current_view_bounds(cx.app, &state);
+                                    let view_bounds_y2 =
+                                        self.current_view_bounds_y2(cx.app, &state, view_bounds);
+                                    if let Some(mut next) = data_rect_from_plot_points_scaled(
+                                        view_bounds,
+                                        layout.plot.size,
+                                        start,
+                                        end,
+                                        self.x_scale,
+                                        self.y_scale,
+                                    ) {
+                                        let mut next_y2 = (!self.lock_y2_axis)
+                                            .then(|| {
+                                                view_bounds_y2.and_then(|vb| {
+                                                    data_rect_from_plot_points_scaled(
+                                                        vb,
+                                                        layout.plot.size,
+                                                        start,
+                                                        end,
+                                                        self.x_scale,
+                                                        self.y2_scale,
+                                                    )
+                                                })
+                                            })
+                                            .flatten();
+                                        let data_bounds = self.read_data_bounds(cx.app);
+                                        if self.style.clamp_to_data_bounds {
+                                            next = clamp_view_to_data_scaled(
+                                                next,
+                                                data_bounds,
                                                 self.style.overscroll_fraction,
                                                 self.x_scale,
-                                                self.y2_scale,
+                                                self.y_scale,
                                             );
+                                            if let (Some(candidate), Some(bounds_y2)) =
+                                                (next_y2.as_mut(), self.read_data_bounds_y2(cx.app))
+                                            {
+                                                *candidate = clamp_view_to_data_scaled(
+                                                    *candidate,
+                                                    bounds_y2,
+                                                    self.style.overscroll_fraction,
+                                                    self.x_scale,
+                                                    self.y2_scale,
+                                                );
+                                            }
                                         }
+
+                                        next = apply_axis_locks(
+                                            view_bounds,
+                                            next,
+                                            self.lock_x_axis,
+                                            self.lock_y_axis,
+                                        );
+                                        if let Some(vb_y2) = view_bounds_y2 {
+                                            if let Some(candidate) = next_y2.as_mut() {
+                                                *candidate = apply_axis_locks(
+                                                    vb_y2,
+                                                    *candidate,
+                                                    self.lock_x_axis,
+                                                    self.lock_y2_axis,
+                                                );
+                                            }
+                                        }
+
+                                        let primary_changed = next != view_bounds;
+                                        let y2_changed = next_y2
+                                            .zip(view_bounds_y2)
+                                            .map(|(next, prev)| next != prev)
+                                            .unwrap_or(
+                                                next_y2.is_some() && view_bounds_y2.is_none(),
+                                            );
+                                        let show_y2_axis = self.show_y2_axis;
+                                        let lock_y2_axis = self.lock_y2_axis;
+                                        let _ = self.update_plot_state(cx.app, |s| {
+                                            if primary_changed {
+                                                s.view_is_auto = false;
+                                                s.view_bounds = Some(next);
+                                            }
+                                            if show_y2_axis
+                                                && !lock_y2_axis
+                                                && y2_changed
+                                                && next_y2.is_some()
+                                            {
+                                                s.view_y2_is_auto = false;
+                                                s.view_bounds_y2 = next_y2;
+                                            }
+                                        });
                                     }
-                                    let show_y2_axis = self.show_y2_axis;
-                                    let _ = self.update_plot_state(cx.app, |s| {
-                                        s.view_is_auto = false;
-                                        s.view_bounds = Some(next);
-                                        if show_y2_axis && next_y2.is_some() {
-                                            s.view_y2_is_auto = false;
-                                            s.view_bounds_y2 = next_y2;
-                                        }
-                                    });
                                 }
                             }
                         }
@@ -2834,13 +2916,31 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 let zoom = clamp_zoom_factors(2.0_f32.powf(delta_y * 0.0025));
-                let (zoom_x, zoom_y) = if modifiers.shift {
+                let (zoom_x_raw, zoom_y_raw) = if modifiers.shift {
                     (zoom, 1.0)
                 } else if modifiers.ctrl {
                     (1.0, zoom)
                 } else {
                     (zoom, zoom)
                 };
+
+                let mut zoom_x = zoom_x_raw;
+                let mut zoom_y1 = zoom_y_raw;
+                let mut zoom_y2 = zoom_y_raw;
+
+                if self.lock_x_axis {
+                    zoom_x = 1.0;
+                }
+                if self.lock_y_axis {
+                    zoom_y1 = 1.0;
+                }
+                if self.lock_y2_axis {
+                    zoom_y2 = 1.0;
+                }
+
+                if zoom_x == 1.0 && zoom_y1 == 1.0 && (!self.show_y2_axis || zoom_y2 == 1.0) {
+                    return;
+                }
 
                 let state = self.read_plot_state(cx.app);
                 let view_bounds = self.current_view_bounds(cx.app, &state);
@@ -2851,25 +2951,29 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     layout.plot.size,
                     local,
                     zoom_x,
-                    zoom_y,
+                    zoom_y1,
                     self.x_scale,
                     self.y_scale,
                 ) else {
                     return;
                 };
-                let mut next_y2 = view_bounds_y2.and_then(|vb| {
-                    zoom_view_at_px_scaled(
-                        vb,
-                        layout.plot.size,
-                        local,
-                        zoom_x,
-                        zoom_y,
-                        self.x_scale,
-                        self.y2_scale,
-                    )
-                });
+                let mut next_y2 = (!self.lock_y2_axis)
+                    .then(|| {
+                        view_bounds_y2.and_then(|vb| {
+                            zoom_view_at_px_scaled(
+                                vb,
+                                layout.plot.size,
+                                local,
+                                zoom_x,
+                                zoom_y2,
+                                self.x_scale,
+                                self.y2_scale,
+                            )
+                        })
+                    })
+                    .flatten();
                 let data_bounds = self.read_data_bounds(cx.app);
-                let next = if self.style.clamp_to_data_bounds {
+                let mut next = if self.style.clamp_to_data_bounds {
                     clamp_view_to_data_scaled(
                         next,
                         data_bounds,
@@ -2894,11 +2998,25 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     }
                 }
 
+                next = apply_axis_locks(view_bounds, next, self.lock_x_axis, self.lock_y_axis);
+                if let (Some(vb_y2), Some(candidate)) = (view_bounds_y2, next_y2.as_mut()) {
+                    *candidate =
+                        apply_axis_locks(vb_y2, *candidate, self.lock_x_axis, self.lock_y2_axis);
+                }
+
+                let primary_changed = next != view_bounds;
+                let y2_changed = next_y2
+                    .zip(view_bounds_y2)
+                    .map(|(next, prev)| next != prev)
+                    .unwrap_or(next_y2.is_some() && view_bounds_y2.is_none());
                 let show_y2_axis = self.show_y2_axis;
+                let lock_y2_axis = self.lock_y2_axis;
                 let _ = self.update_plot_state(cx.app, |s| {
-                    s.view_is_auto = false;
-                    s.view_bounds = Some(next);
-                    if show_y2_axis && next_y2.is_some() {
+                    if primary_changed {
+                        s.view_is_auto = false;
+                        s.view_bounds = Some(next);
+                    }
+                    if show_y2_axis && !lock_y2_axis && y2_changed && next_y2.is_some() {
                         s.view_y2_is_auto = false;
                         s.view_bounds_y2 = next_y2;
                     }
@@ -2987,8 +3105,18 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
                 if let Some(last) = self.pan_last_pos {
                     self.cursor_px = None;
-                    let dx_px = position.x.0 - last.x.0;
-                    let dy_px = position.y.0 - last.y.0;
+                    let dx_px_raw = position.x.0 - last.x.0;
+                    let dy_px_raw = position.y.0 - last.y.0;
+
+                    let dx_px = if self.lock_x_axis { 0.0 } else { dx_px_raw };
+                    let dy_px_y1 = if self.lock_y_axis { 0.0 } else { dy_px_raw };
+                    let dy_px_y2 = if self.lock_y2_axis { 0.0 } else { dy_px_raw };
+
+                    if dx_px == 0.0 && dy_px_y1 == 0.0 && (!self.show_y2_axis || dy_px_y2 == 0.0) {
+                        self.pan_last_pos = Some(*position);
+                        cx.stop_propagation();
+                        return;
+                    }
 
                     let state = self.read_plot_state(cx.app);
                     let view_bounds = self.current_view_bounds(cx.app, &state);
@@ -2997,24 +3125,28 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         view_bounds,
                         layout.plot.size,
                         dx_px,
-                        dy_px,
+                        dy_px_y1,
                         self.x_scale,
                         self.y_scale,
                     ) else {
                         return;
                     };
-                    let mut next_y2 = view_bounds_y2.and_then(|vb| {
-                        pan_view_by_px_scaled(
-                            vb,
-                            layout.plot.size,
-                            dx_px,
-                            dy_px,
-                            self.x_scale,
-                            self.y2_scale,
-                        )
-                    });
+                    let mut next_y2 = (!self.lock_y2_axis)
+                        .then(|| {
+                            view_bounds_y2.and_then(|vb| {
+                                pan_view_by_px_scaled(
+                                    vb,
+                                    layout.plot.size,
+                                    dx_px,
+                                    dy_px_y2,
+                                    self.x_scale,
+                                    self.y2_scale,
+                                )
+                            })
+                        })
+                        .flatten();
                     let data_bounds = self.read_data_bounds(cx.app);
-                    let next = if self.style.clamp_to_data_bounds {
+                    let mut next = if self.style.clamp_to_data_bounds {
                         clamp_view_to_data_scaled(
                             next,
                             data_bounds,
@@ -3039,11 +3171,29 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         }
                     }
 
+                    next = apply_axis_locks(view_bounds, next, self.lock_x_axis, self.lock_y_axis);
+                    if let (Some(vb_y2), Some(candidate)) = (view_bounds_y2, next_y2.as_mut()) {
+                        *candidate = apply_axis_locks(
+                            vb_y2,
+                            *candidate,
+                            self.lock_x_axis,
+                            self.lock_y2_axis,
+                        );
+                    }
+
+                    let primary_changed = next != view_bounds;
+                    let y2_changed = next_y2
+                        .zip(view_bounds_y2)
+                        .map(|(next, prev)| next != prev)
+                        .unwrap_or(next_y2.is_some() && view_bounds_y2.is_none());
                     let show_y2_axis = self.show_y2_axis;
+                    let lock_y2_axis = self.lock_y2_axis;
                     let _ = self.update_plot_state(cx.app, |s| {
-                        s.view_is_auto = false;
-                        s.view_bounds = Some(next);
-                        if show_y2_axis && next_y2.is_some() {
+                        if primary_changed {
+                            s.view_is_auto = false;
+                            s.view_bounds = Some(next);
+                        }
+                        if show_y2_axis && !lock_y2_axis && y2_changed && next_y2.is_some() {
                             s.view_y2_is_auto = false;
                             s.view_bounds_y2 = next_y2;
                         }
