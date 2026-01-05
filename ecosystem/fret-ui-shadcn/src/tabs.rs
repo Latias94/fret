@@ -5,15 +5,13 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, MainAlign, PressableA11y,
-    PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, SpinnerProps, SvgIconProps,
-    TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, MainAlign, PressableProps,
+    RovingFlexProps, RovingFocusProps, SemanticsProps, SpinnerProps, SvgIconProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 fn apply_trigger_inherited_style(
@@ -130,23 +128,7 @@ fn tabs_trigger_border_width(theme: &Theme) -> Px {
         .unwrap_or(Px(1.0))
 }
 
-/// Matches Radix Tabs `orientation` outcome: horizontal (default) vs vertical layout.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TabsOrientation {
-    #[default]
-    Horizontal,
-    Vertical,
-}
-
-/// Matches Radix Tabs `activationMode` outcome:
-/// - `Automatic`: moving focus (arrow keys) activates the tab.
-/// - `Manual`: moving focus does not activate; activation happens on click/Enter/Space.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TabsActivationMode {
-    #[default]
-    Automatic,
-    Manual,
-}
+pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 
 #[derive(Debug, Clone)]
 pub struct TabsItem {
@@ -288,8 +270,11 @@ impl Tabs {
 
         let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
         let disabled_flags: Vec<bool> = items.iter().map(|i| tabs_disabled || i.disabled).collect();
-        let active_idx =
-            roving_focus::active_index_from_str_keys(&values, selected.as_deref(), &disabled_flags);
+        let active_idx = fret_ui_kit::primitives::tabs::active_index_from_values(
+            &values,
+            selected.as_deref(),
+            &disabled_flags,
+        );
 
         let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
         let roving = RovingFocusProps {
@@ -397,12 +382,10 @@ impl Tabs {
                                     enabled: !item_disabled,
                                     focusable: tab_stop || st.focused,
                                     focus_ring: Some(ring),
-                                    a11y: PressableA11y {
-                                        role: Some(SemanticsRole::Tab),
-                                        label: Some(label.clone()),
-                                        selected: active,
-                                        ..Default::default()
-                                    },
+                                    a11y: fret_ui_kit::primitives::tabs::tab_a11y(
+                                        Some(label.clone()),
+                                        active,
+                                    ),
                                     ..Default::default()
                                 };
 
