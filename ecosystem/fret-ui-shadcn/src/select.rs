@@ -459,7 +459,6 @@ fn select_impl<H: UiHost>(
                             &disabled,
                         );
 
-                        let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
                         let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                         let roving = RovingFocusProps {
                             enabled: true,
@@ -527,10 +526,6 @@ fn select_impl<H: UiHost>(
                                                             },
                                                             |cx| {
                                                                 cx.roving_nav_apg();
-                                                                cx.roving_select_option_arc_str(
-                                                                    &model,
-                                                                    values_arc.clone(),
-                                                                );
                                                                 cx.roving_typeahead_prefix_arc_str(
                                                                     labels_arc.clone(),
                                                                     30,
@@ -740,7 +735,8 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Modifiers, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics,
+        AppWindowId, Event, KeyCode, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
+        PathMetrics,
     };
     use fret_core::{PathService, PathStyle, Point, Px, Rect, SemanticsRole, Size};
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
@@ -905,6 +901,80 @@ mod tests {
             .expect("Beta list item");
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(3));
+    }
+
+    #[test]
+    fn select_roving_navigation_does_not_commit_value_until_activation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("beta")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        assert!(ui.focus().is_some(), "expected focus to move into the open select");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items,
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+        assert!(app.models().get_copied(&open).unwrap_or(false));
     }
 
     #[test]
