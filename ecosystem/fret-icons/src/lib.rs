@@ -32,6 +32,7 @@ pub mod ids {
 
         pub const CHECK: IconId = IconId::new_static("ui.check");
         pub const CHEVRON_DOWN: IconId = IconId::new_static("ui.chevron.down");
+        pub const CHEVRON_RIGHT: IconId = IconId::new_static("ui.chevron.right");
         pub const CHEVRON_UP: IconId = IconId::new_static("ui.chevron.up");
         pub const CLOSE: IconId = IconId::new_static("ui.close");
         pub const PLAY: IconId = IconId::new_static("ui.play");

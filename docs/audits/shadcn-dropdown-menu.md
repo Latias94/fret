@@ -60,7 +60,6 @@ Key upstream behaviors/surfaces:
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- Chevron-right submenu icon parity (currently rendered as a text fallback).
 - A shared convention for leading icons (consumer-provided today).
 - A first-class “active item” highlight state (beyond focus ring) for closer visual parity.
 

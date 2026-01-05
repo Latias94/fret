@@ -563,7 +563,7 @@ fn menu_row_children<H: UiHost>(
 fn submenu_chevron_right_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     fg: Color,
-    text_style: TextStyle,
+    _text_style: TextStyle,
 ) -> AnyElement {
     cx.flex(
         FlexProps {
@@ -581,20 +581,12 @@ fn submenu_chevron_right_text<H: UiHost>(
             wrap: false,
         },
         move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: Arc::from(">"),
-                style: Some(TextStyle {
-                    font: FontId::default(),
-                    size: text_style.size,
-                    weight: FontWeight::MEDIUM,
-                    line_height: text_style.line_height,
-                    letter_spacing_em: None,
-                }),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            })]
+            vec![decl_icon::icon_with(
+                cx,
+                ids::ui::CHEVRON_RIGHT,
+                Some(Px(16.0)),
+                Some(ColorRef::Color(fg)),
+            )]
         },
     )
 }

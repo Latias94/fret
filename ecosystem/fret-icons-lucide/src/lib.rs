@@ -49,6 +49,7 @@ mod semantic_ui {
     pub fn register(reg: &mut IconRegistry) {
         reg.alias(ids::ui::CHECK, IconId::new("lucide.check"));
         reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("lucide.chevron-down"));
+        reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("lucide.chevron-right"));
         reg.alias(ids::ui::CHEVRON_UP, IconId::new("lucide.chevron-up"));
         reg.alias(ids::ui::CLOSE, IconId::new("lucide.x"));
         reg.alias(ids::ui::SEARCH, IconId::new("lucide.search"));

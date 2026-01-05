@@ -572,8 +572,8 @@ fn checkable_menu_row_children<H: UiHost>(
 fn submenu_chevron_right_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     fg: fret_core::Color,
-    font_size: Px,
-    font_line_height: Px,
+    _font_size: Px,
+    _font_line_height: Px,
 ) -> AnyElement {
     cx.flex(
         FlexProps {
@@ -591,20 +591,12 @@ fn submenu_chevron_right_text<H: UiHost>(
             wrap: false,
         },
         move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: Arc::from(">"),
-                style: Some(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    weight: FontWeight::MEDIUM,
-                    line_height: Some(font_line_height),
-                    letter_spacing_em: None,
-                }),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                color: Some(fg),
-            })]
+            vec![decl_icon::icon_with(
+                cx,
+                ids::ui::CHEVRON_RIGHT,
+                Some(Px(16.0)),
+                Some(ColorRef::Color(fg)),
+            )]
         },
     )
 }

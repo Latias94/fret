@@ -48,6 +48,7 @@ mod semantic_ui {
     pub fn register(reg: &mut IconRegistry) {
         reg.alias(ids::ui::CHECK, IconId::new("radix.check"));
         reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("radix.chevron-down"));
+        reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("radix.chevron-right"));
         reg.alias(ids::ui::CHEVRON_UP, IconId::new("radix.chevron-up"));
         reg.alias(ids::ui::CLOSE, IconId::new("radix.cross-1"));
         reg.alias(ids::ui::SEARCH, IconId::new("radix.magnifying-glass"));
