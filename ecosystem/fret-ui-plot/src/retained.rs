@@ -377,6 +377,16 @@ fn contains_point(rect: Rect, p: Point) -> bool {
         && p.y.0 <= rect.origin.y.0 + rect.size.height.0
 }
 
+fn offset_rect(rect: Rect, origin: Point) -> Rect {
+    Rect::new(
+        Point::new(
+            Px(origin.x.0 + rect.origin.x.0),
+            Px(origin.y.0 + rect.origin.y.0),
+        ),
+        rect.size,
+    )
+}
+
 fn dim_color(color: Color, factor: f32) -> Color {
     let factor = factor.clamp(0.0, 1.0);
     Color {
@@ -797,6 +807,7 @@ pub struct PlotHover {
     pub index: usize,
     pub data: DataPoint,
     pub plot_px: Point,
+    pub value: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -921,6 +932,15 @@ pub trait PlotLayer {
         args: PlotPaintArgs<'_>,
     ) -> Vec<(SeriesId, PathId, Color)>;
 
+    fn paint_quads<H: UiHost>(
+        &mut self,
+        _cx: &mut PaintCx<'_, H>,
+        _model: &Self::Model,
+        _args: PlotPaintArgs<'_>,
+    ) -> Vec<PlotQuad> {
+        Vec::new()
+    }
+
     fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover>;
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices);
@@ -937,6 +957,14 @@ pub struct PlotPaintArgs<'a> {
     pub y2_scale: AxisScale,
     pub style: LinePlotStyle,
     pub hidden: &'a HashSet<SeriesId>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PlotQuad {
+    /// Plot-local rect (origin at plot top-left, before `layout.plot.origin` is applied).
+    pub rect_local: Rect,
+    pub background: Color,
+    pub order: DrawOrder,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1125,6 +1153,65 @@ impl BarsPlotModel {
             data_bounds_y2: y2,
             series,
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct HeatmapPlotModel {
+    /// Grid domain in data space.
+    pub data_bounds: DataRect,
+    pub cols: usize,
+    pub rows: usize,
+    /// Row-major values, length == cols * rows.
+    pub values: Arc<[f32]>,
+    pub value_min: f32,
+    pub value_max: f32,
+}
+
+impl HeatmapPlotModel {
+    pub fn new(
+        data_bounds: DataRect,
+        cols: usize,
+        rows: usize,
+        values: impl Into<Arc<[f32]>>,
+    ) -> Self {
+        let values: Arc<[f32]> = values.into();
+        let expected = cols.saturating_mul(rows);
+        debug_assert_eq!(values.len(), expected, "values.len != cols*rows");
+
+        let mut min_v: Option<f32> = None;
+        let mut max_v: Option<f32> = None;
+        for v in values.iter().copied() {
+            if !v.is_finite() {
+                continue;
+            }
+            min_v = Some(min_v.map_or(v, |m| m.min(v)));
+            max_v = Some(max_v.map_or(v, |m| m.max(v)));
+        }
+
+        let (value_min, value_max) = match min_v.zip(max_v) {
+            Some((min_v, max_v)) if min_v.is_finite() && max_v.is_finite() && max_v >= min_v => {
+                (min_v, max_v)
+            }
+            _ => (0.0, 1.0),
+        };
+
+        Self {
+            data_bounds: sanitize_data_rect(data_bounds),
+            cols,
+            rows,
+            values,
+            value_min,
+            value_max,
+        }
+    }
+
+    pub fn value_at(&self, col: usize, row: usize) -> Option<f32> {
+        if col >= self.cols || row >= self.rows {
+            return None;
+        }
+        let idx = row.saturating_mul(self.cols).saturating_add(col);
+        self.values.get(idx).copied()
     }
 }
 
@@ -1381,6 +1468,7 @@ impl ShadedPlotModel {
 pub struct PlotHoverOutput {
     pub series_id: SeriesId,
     pub data: DataPoint,
+    pub value: Option<f64>,
 }
 
 /// A caller-owned output snapshot for plot interaction state.
@@ -1534,6 +1622,32 @@ impl PlotCanvas<LinePlotLayer> {
 impl PlotCanvas<ScatterPlotLayer> {
     pub fn new(model: Model<ScatterPlotModel>) -> Self {
         Self::with_layer(model, ScatterPlotLayer::default())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct HeatmapCacheKey {
+    model_revision: u64,
+    view_key: u64,
+    cols: usize,
+    rows: usize,
+    viewport_w_bits: u32,
+    viewport_h_bits: u32,
+    value_min_bits: u32,
+    value_max_bits: u32,
+}
+
+#[derive(Debug, Default)]
+pub struct HeatmapPlotLayer {
+    cache_key: Option<HeatmapCacheKey>,
+    cached_quads: Vec<PlotQuad>,
+}
+
+pub type HeatmapPlotCanvas = PlotCanvas<HeatmapPlotLayer>;
+
+impl PlotCanvas<HeatmapPlotLayer> {
+    pub fn new(model: Model<HeatmapPlotModel>) -> Self {
+        Self::with_layer(model, HeatmapPlotLayer::default())
     }
 }
 
@@ -1864,6 +1978,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 hover: self.hover.map(|h| PlotHoverOutput {
                     series_id: h.series_id,
                     data: h.data,
+                    value: h.value,
                 }),
                 query: state.query,
             },
@@ -1945,6 +2060,36 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         };
 
         self.layer.paint_paths(
+            cx,
+            &model,
+            PlotPaintArgs {
+                model_revision,
+                plot,
+                view_bounds,
+                view_bounds_y2,
+                x_scale: self.x_scale,
+                y_scale: self.y_scale,
+                y2_scale: self.y2_scale,
+                style: self.style,
+                hidden,
+            },
+        )
+    }
+
+    fn rebuild_quads_if_needed<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        plot: Rect,
+        view_bounds: DataRect,
+        view_bounds_y2: Option<DataRect>,
+        hidden: &HashSet<SeriesId>,
+    ) -> Vec<PlotQuad> {
+        let model_revision = self.model.revision(cx.app).unwrap_or(0);
+        let Ok(model) = self.model.read(cx.app, |_app, m| m.clone()) else {
+            return Vec::new();
+        };
+
+        self.layer.paint_quads(
             cx,
             &model,
             PlotPaintArgs {
@@ -3568,6 +3713,19 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 .or(self.hover.map(|h| h.series_id))
                 .or(self.legend_hover);
 
+            for quad in
+                self.rebuild_quads_if_needed(cx, layout.plot, view_bounds, view_bounds_y2, hidden)
+            {
+                cx.scene.push(SceneOp::Quad {
+                    order: quad.order,
+                    rect: offset_rect(quad.rect_local, layout.plot.origin),
+                    background: quad.background,
+                    border: fret_core::Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                });
+            }
+
             for (series_id, path, color) in
                 self.rebuild_paths_if_needed(cx, layout.plot, view_bounds, view_bounds_y2, hidden)
             {
@@ -4097,13 +4255,32 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         self.tooltip_y_labels.format(hover.data.y, y_span)
                     };
                     let text = if series_count > 1 {
-                        if let Some(label) = series_label {
+                        if let Some(label) = series_label.as_deref() {
                             format!("{label}  x={x_text}  y={y_text}")
                         } else {
                             format!("s={}  x={x_text}  y={y_text}", hover.series_id.0)
                         }
                     } else {
                         format!("x={x_text}  y={y_text}")
+                    };
+                    let text = if series_count == 0
+                        && let Some(label) = series_label.as_deref()
+                    {
+                        format!("{label}  {text}")
+                    } else {
+                        text
+                    };
+                    let text = if let Some(v) = hover.value
+                        && v.is_finite()
+                    {
+                        let v_text = if v.abs() < 10_000.0 {
+                            format!("{v:.4}")
+                        } else {
+                            format!("{v:.4e}")
+                        };
+                        format!("{text}  value={v_text}")
+                    } else {
+                        text
                     };
                     (hover.plot_px, text)
                 })
@@ -5307,6 +5484,255 @@ impl PlotLayer for BarsPlotLayer {
     }
 }
 
+impl PlotLayer for HeatmapPlotLayer {
+    type Model = HeatmapPlotModel;
+
+    fn data_bounds(model: &Self::Model) -> DataRect {
+        model.data_bounds
+    }
+
+    fn series_meta(_model: &Self::Model) -> Vec<SeriesMeta> {
+        Vec::new()
+    }
+
+    fn series_label(_model: &Self::Model, _series_id: SeriesId) -> Option<String> {
+        Some("heatmap".to_string())
+    }
+
+    fn paint_paths<H: UiHost>(
+        &mut self,
+        _cx: &mut PaintCx<'_, H>,
+        _model: &Self::Model,
+        _args: PlotPaintArgs<'_>,
+    ) -> Vec<(SeriesId, PathId, Color)> {
+        Vec::new()
+    }
+
+    fn paint_quads<H: UiHost>(
+        &mut self,
+        _cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+    ) -> Vec<PlotQuad> {
+        let PlotPaintArgs {
+            model_revision,
+            plot,
+            view_bounds,
+            x_scale,
+            y_scale,
+            ..
+        } = args;
+
+        if model.cols == 0 || model.rows == 0 {
+            self.cache_key = None;
+            self.cached_quads.clear();
+            return Vec::new();
+        }
+
+        let view_key = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let cache_key = HeatmapCacheKey {
+            model_revision,
+            view_key,
+            cols: model.cols,
+            rows: model.rows,
+            viewport_w_bits: plot.size.width.0.to_bits(),
+            viewport_h_bits: plot.size.height.0.to_bits(),
+            value_min_bits: model.value_min.to_bits(),
+            value_max_bits: model.value_max.to_bits(),
+        };
+
+        if self.cache_key == Some(cache_key) {
+            return self.cached_quads.clone();
+        }
+
+        fn lerp(a: f32, b: f32, t: f32) -> f32 {
+            a + (b - a) * t
+        }
+
+        fn heatmap_color(t: f32) -> Color {
+            // Simple blue -> cyan -> green -> yellow -> red ramp (portable and predictable).
+            let t = t.clamp(0.0, 1.0);
+            let (r, g, b) = if t < 0.25 {
+                let u = t / 0.25;
+                (0.0, lerp(0.1, 1.0, u), 1.0)
+            } else if t < 0.50 {
+                let u = (t - 0.25) / 0.25;
+                (0.0, 1.0, lerp(1.0, 0.0, u))
+            } else if t < 0.75 {
+                let u = (t - 0.50) / 0.25;
+                (lerp(0.0, 1.0, u), 1.0, 0.0)
+            } else {
+                let u = (t - 0.75) / 0.25;
+                (1.0, lerp(1.0, 0.0, u), 0.0)
+            };
+            Color { r, g, b, a: 1.0 }
+        }
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+        let transform = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+
+        let dx = (model.data_bounds.x_max - model.data_bounds.x_min) / (model.cols as f64);
+        let dy = (model.data_bounds.y_max - model.data_bounds.y_min) / (model.rows as f64);
+        if !dx.is_finite() || !dy.is_finite() || dx <= 0.0 || dy <= 0.0 {
+            self.cache_key = Some(cache_key);
+            self.cached_quads.clear();
+            return Vec::new();
+        }
+
+        let clip_min_x = view_bounds.x_min.max(model.data_bounds.x_min);
+        let clip_max_x = view_bounds.x_max.min(model.data_bounds.x_max);
+        let clip_min_y = view_bounds.y_min.max(model.data_bounds.y_min);
+        let clip_max_y = view_bounds.y_max.min(model.data_bounds.y_max);
+
+        if clip_max_x <= clip_min_x || clip_max_y <= clip_min_y {
+            self.cache_key = Some(cache_key);
+            self.cached_quads.clear();
+            return Vec::new();
+        }
+
+        let col0 = (((clip_min_x - model.data_bounds.x_min) / dx).floor() as isize)
+            .clamp(0, model.cols.saturating_sub(1) as isize) as usize;
+        let col1 = (((clip_max_x - model.data_bounds.x_min) / dx).ceil() as isize)
+            .clamp(0, model.cols as isize) as usize;
+
+        let row0 = (((clip_min_y - model.data_bounds.y_min) / dy).floor() as isize)
+            .clamp(0, model.rows.saturating_sub(1) as isize) as usize;
+        let row1 = (((clip_max_y - model.data_bounds.y_min) / dy).ceil() as isize)
+            .clamp(0, model.rows as isize) as usize;
+
+        let denom = (model.value_max - model.value_min).max(1.0e-12);
+
+        let mut quads: Vec<PlotQuad> = Vec::with_capacity(
+            (col1.saturating_sub(col0)).saturating_mul(row1.saturating_sub(row0)),
+        );
+
+        for row in row0..row1 {
+            let y0 = model.data_bounds.y_min + (row as f64) * dy;
+            let y1 = y0 + dy;
+            let (Some(py0), Some(py1)) = (transform.data_y_to_px(y0), transform.data_y_to_px(y1))
+            else {
+                continue;
+            };
+            let top = py0.0.min(py1.0);
+            let bottom = py0.0.max(py1.0);
+            if !top.is_finite() || !bottom.is_finite() || bottom <= top {
+                continue;
+            }
+
+            for col in col0..col1 {
+                let Some(v) = model.value_at(col, row) else {
+                    continue;
+                };
+                if !v.is_finite() {
+                    continue;
+                }
+
+                let x0 = model.data_bounds.x_min + (col as f64) * dx;
+                let x1 = x0 + dx;
+                let (Some(px0), Some(px1)) =
+                    (transform.data_x_to_px(x0), transform.data_x_to_px(x1))
+                else {
+                    continue;
+                };
+                let left = px0.0.min(px1.0);
+                let right = px0.0.max(px1.0);
+                if !left.is_finite() || !right.is_finite() || right <= left {
+                    continue;
+                }
+
+                let t = ((v - model.value_min) / denom).clamp(0.0, 1.0);
+                let color = heatmap_color(t);
+
+                quads.push(PlotQuad {
+                    rect_local: Rect::new(
+                        Point::new(Px(left), Px(top)),
+                        Size::new(Px(right - left), Px(bottom - top)),
+                    ),
+                    background: color,
+                    order: DrawOrder(2),
+                });
+            }
+        }
+
+        self.cache_key = Some(cache_key);
+        self.cached_quads = quads.clone();
+        quads
+    }
+
+    fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover> {
+        if model.cols == 0 || model.rows == 0 {
+            return None;
+        }
+
+        let PlotHitTestArgs {
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            local,
+            ..
+        } = args;
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size);
+        let transform = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let data = transform.px_to_data(local);
+        if !data.x.is_finite() || !data.y.is_finite() {
+            return None;
+        }
+
+        let dx = (model.data_bounds.x_max - model.data_bounds.x_min) / (model.cols as f64);
+        let dy = (model.data_bounds.y_max - model.data_bounds.y_min) / (model.rows as f64);
+        if !dx.is_finite() || !dy.is_finite() || dx <= 0.0 || dy <= 0.0 {
+            return None;
+        }
+
+        let col_f = (data.x - model.data_bounds.x_min) / dx;
+        let row_f = (data.y - model.data_bounds.y_min) / dy;
+        if !col_f.is_finite() || !row_f.is_finite() {
+            return None;
+        }
+
+        let col = col_f.floor() as isize;
+        let row = row_f.floor() as isize;
+        if col < 0 || row < 0 || col >= model.cols as isize || row >= model.rows as isize {
+            return None;
+        }
+        let (col, row) = (col as usize, row as usize);
+
+        let v = model.value_at(col, row)?;
+        if !v.is_finite() {
+            return None;
+        }
+
+        let cx = model.data_bounds.x_min + (col as f64 + 0.5) * dx;
+        let cy = model.data_bounds.y_min + (row as f64 + 0.5) * dy;
+        let plot_px = transform.data_to_px(DataPoint { x: cx, y: cy });
+
+        Some(PlotHover {
+            series_id: SeriesId::from_label("heatmap"),
+            index: row.saturating_mul(model.cols).saturating_add(col),
+            data: DataPoint { x: cx, y: cy },
+            plot_px,
+            value: Some(f64::from(v)),
+        })
+    }
+
+    fn cleanup_resources(&mut self, _services: &mut dyn UiServices) {
+        self.cache_key = None;
+        self.cached_quads.clear();
+    }
+}
+
 impl PlotLayer for AreaPlotLayer {
     type Model = AreaPlotModel;
 
@@ -5719,6 +6145,7 @@ impl PlotLayer for AreaPlotLayer {
                 index: s.index,
                 data: s.data,
                 plot_px: s.plot_px,
+                value: None,
             })
         })
     }
@@ -6174,6 +6601,7 @@ impl PlotLayer for ShadedPlotLayer {
                 index: s.index,
                 data: s.data,
                 plot_px: s.plot_px,
+                value: None,
             })
         })
     }
@@ -6317,6 +6745,7 @@ fn hit_test_series_data(
             index: s.index,
             data: s.data,
             plot_px: s.plot_px,
+            value: None,
         })
     })
 }
