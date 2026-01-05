@@ -1512,6 +1512,7 @@ fn select_impl<H: UiHost>(
                                                                         a11y: PressableA11y {
                                                                             role: Some(SemanticsRole::ListBox),
                                                                             active_descendant,
+                                                                            labelled_by_element: Some(trigger_id.0),
                                                                             ..Default::default()
                                                                         },
                                                                         ..Default::default()
@@ -2016,6 +2017,20 @@ mod tests {
             .find(|n| n.id == focus)
             .expect("focused node");
         assert_eq!(focused_node.role, SemanticsRole::ListBox);
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.flags.expanded)
+            .expect("select trigger node");
+        assert!(
+            focused_node.labelled_by.iter().any(|id| *id == trigger.id),
+            "listbox should be labelled by the trigger"
+        );
+        assert!(
+            trigger.controls.iter().any(|id| *id == focused_node.id),
+            "trigger should control the listbox"
+        );
 
         let active = focused_node
             .active_descendant

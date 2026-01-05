@@ -126,6 +126,11 @@ impl ElementHostWidget {
                 if props.a11y.checked.is_some() {
                     cx.set_checked(props.a11y.checked);
                 }
+                if let Some(element) = props.a11y.labelled_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_labelled_by(node);
+                }
                 cx.set_disabled(!props.enabled);
                 cx.set_focusable(props.enabled);
                 cx.set_invokable(props.enabled);

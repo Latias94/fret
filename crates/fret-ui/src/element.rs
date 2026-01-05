@@ -424,6 +424,12 @@ pub struct PressableA11y {
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
     pub active_descendant: Option<NodeId>,
+    /// Declarative-only: element ID of a node which labels this node.
+    ///
+    /// This is an authoring convenience for relationships like `aria-labelledby` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub labelled_by_element: Option<u64>,
     pub pos_in_set: Option<u32>,
     pub set_size: Option<u32>,
 }
