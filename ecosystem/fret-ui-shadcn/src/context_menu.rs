@@ -43,6 +43,7 @@ pub enum ContextMenuEntry {
 pub struct ContextMenuItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
+    pub inset: bool,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -56,6 +57,7 @@ impl ContextMenuItem {
         Self {
             label: label.clone(),
             value: label,
+            inset: false,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -66,6 +68,11 @@ impl ContextMenuItem {
 
     pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
         self.value = value.into();
+        self
+    }
+
+    pub fn inset(mut self, inset: bool) -> Self {
+        self.inset = inset;
         self
     }
 
@@ -99,11 +106,20 @@ impl ContextMenuItem {
 #[derive(Debug, Clone)]
 pub struct ContextMenuLabel {
     pub text: Arc<str>,
+    pub inset: bool,
 }
 
 impl ContextMenuLabel {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            inset: false,
+        }
+    }
+
+    pub fn inset(mut self, inset: bool) -> Self {
+        self.inset = inset;
+        self
     }
 }
 
@@ -390,6 +406,7 @@ fn menu_row_children<H: UiHost>(
     text_style: TextStyle,
     font_size: Px,
     font_line_height: Px,
+    pad_left: Px,
     pad_x: Px,
     pad_y: Px,
     radius_sm: Px,
@@ -402,7 +419,7 @@ fn menu_row_children<H: UiHost>(
                 top: pad_y,
                 right: pad_x,
                 bottom: pad_y,
-                left: pad_x,
+                left: pad_left,
             },
             background: Some(row_bg),
             corner_radii: fret_core::Corners::all(radius_sm),
@@ -734,6 +751,7 @@ impl ContextMenu {
                     let shadow = decl_style::shadow_sm(&theme, theme.metrics.radius_sm);
                     let ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
                     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
+                    let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                     let pad_y = MetricRef::space(Space::N2).resolve(&theme);
 
                     let arrow_el = popper_arrow::diamond_arrow_element(
@@ -829,6 +847,8 @@ impl ContextMenu {
                                             for entry in entries.clone() {
                                                 match entry {
                                                     ContextMenuEntry::Label(label) => {
+                                                        let pad_left =
+                                                            if label.inset { pad_x_inset } else { pad_x };
                                                         let text = label.text.clone();
                                                         out.push(cx.container(
                                                             ContainerProps {
@@ -837,7 +857,7 @@ impl ContextMenu {
                                                                     top: pad_y,
                                                                     right: pad_x,
                                                                     bottom: pad_y,
-                                                                    left: pad_x,
+                                                                    left: pad_left,
                                                                 },
                                                                 ..Default::default()
                                                             },
@@ -899,6 +919,8 @@ impl ContextMenu {
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                         let trailing = item.trailing.clone();
+                                                        let pad_left =
+                                                            if item.inset { pad_x_inset } else { pad_x };
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
 
@@ -955,6 +977,7 @@ impl ContextMenu {
                                                                         text_style.clone(),
                                                                         theme.metrics.font_size,
                                                                         theme.metrics.font_line_height,
+                                                                        pad_left,
                                                                         pad_x,
                                                                         pad_y,
                                                                         radius_sm,
@@ -1050,6 +1073,7 @@ impl ContextMenu {
                                                                         text_style.clone(),
                                                                         theme.metrics.font_size,
                                                                         theme.metrics.font_line_height,
+                                                                        pad_x,
                                                                         pad_x,
                                                                         pad_y,
                                                                         radius_sm,
@@ -1155,6 +1179,7 @@ impl ContextMenu {
                                                                         theme.metrics.font_size,
                                                                         theme.metrics.font_line_height,
                                                                         pad_x,
+                                                                        pad_x,
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_disabled,
@@ -1196,6 +1221,7 @@ impl ContextMenu {
                     OverlayPresence::instant(true),
                     overlay_children,
                 );
+                request.consume_outside_pointer_events = true;
                 request.root_name = Some(overlay_root_name);
                 if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
                     request.initial_focus = content_focus_id.get();

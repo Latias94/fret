@@ -64,7 +64,6 @@ Key upstream behaviors/surfaces:
 Still missing (relative to upstream shadcn/ui v4):
 
 - Submenus (and safe-hover corridor for pointer travel).
-- Inset variants (`data-inset`) for items/labels/sub-triggers and the matching padding rules.
 - Icons and consistent icon/indicator slot sizing/alignment.
 - Destructive item variant styling.
 

@@ -59,7 +59,6 @@ Key upstream behaviors/surfaces:
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- Inset variants (`data-inset`) for items/labels and the matching padding rules.
 - Icons and consistent icon/indicator slot sizing/alignment.
 - A first-class “active item” highlight state (beyond focus ring) for closer visual parity.
 
@@ -94,7 +93,6 @@ Notes on API mapping:
 
 ## Follow-ups (recommended)
 
-- Add upstream "inset" variants and align padding rules (item/label/sub-trigger).
 - Add icon/indicator slot conventions for menu rows (leading icon, checkmark/radio indicator, trailing shortcut).
 - Decide whether dropdown menus need a “modal” option (or whether non-modal is the canonical Fret
   behavior).

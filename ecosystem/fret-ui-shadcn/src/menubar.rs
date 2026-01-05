@@ -32,6 +32,7 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 pub struct MenubarItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
+    pub inset: bool,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -45,6 +46,7 @@ impl MenubarItem {
         Self {
             label: label.clone(),
             value: label,
+            inset: false,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -59,6 +61,11 @@ impl MenubarItem {
 
     pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
         self.value = value.into();
+        self
+    }
+
+    pub fn inset(mut self, inset: bool) -> Self {
+        self.inset = inset;
         self
     }
 
@@ -119,11 +126,20 @@ pub enum MenubarEntry {
 #[derive(Debug, Clone)]
 pub struct MenubarLabel {
     pub text: Arc<str>,
+    pub inset: bool,
 }
 
 impl MenubarLabel {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            inset: false,
+        }
+    }
+
+    pub fn inset(mut self, inset: bool) -> Self {
+        self.inset = inset;
+        self
     }
 }
 
@@ -404,6 +420,7 @@ fn menu_row_children<H: UiHost>(
     indicator_on: Option<bool>,
     bg: Color,
     fg: Color,
+    pad_left: Px,
     pad_x: Px,
     pad_y: Px,
     radius_sm: Px,
@@ -416,7 +433,7 @@ fn menu_row_children<H: UiHost>(
                 top: pad_y,
                 right: pad_x,
                 bottom: pad_y,
-                left: pad_x,
+                left: pad_left,
             },
             background: Some(bg),
             shadow: None,
@@ -972,6 +989,7 @@ impl MenubarMenuEntries {
                         let shadow = decl_style::shadow_sm(&theme, theme.metrics.radius_sm);
                         let item_ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
                         let pad_x = MetricRef::space(Space::N3).resolve(&theme);
+                        let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                         let pad_y = MetricRef::space(Space::N2).resolve(&theme);
 
                         let open_for_submenu = open_for_overlay.clone();
@@ -1053,6 +1071,8 @@ impl MenubarMenuEntries {
                                                         MenubarEntry::Label(label) => {
                                                             let text = label.text.clone();
                                                             let fg = alpha_mul(fg_muted, 0.85);
+                                                            let pad_left =
+                                                                if label.inset { pad_x_inset } else { pad_x };
                                                             out.push(cx.container(
                                                                 ContainerProps {
                                                                     layout: LayoutStyle::default(),
@@ -1060,7 +1080,7 @@ impl MenubarMenuEntries {
                                                                         top: pad_y,
                                                                         right: pad_x,
                                                                         bottom: pad_y,
-                                                                        left: pad_x,
+                                                                        left: pad_left,
                                                                     },
                                                                     ..Default::default()
                                                                 },
@@ -1192,6 +1212,7 @@ impl MenubarMenuEntries {
                                                                         bg,
                                                                         fg,
                                                                         pad_x,
+                                                                        pad_x,
                                                                         pad_y,
                                                                         theme.metrics.radius_sm,
                                                                         text_style.clone(),
@@ -1314,6 +1335,7 @@ impl MenubarMenuEntries {
                                                                         bg,
                                                                         fg,
                                                                         pad_x,
+                                                                        pad_x,
                                                                         pad_y,
                                                                         theme.metrics.radius_sm,
                                                                         text_style.clone(),
@@ -1351,13 +1373,15 @@ impl MenubarMenuEntries {
                                                             let text_style =
                                                                 text_style_for_content.clone();
                                                              let has_submenu =
-                                                                 matches!(entry, MenubarEntry::Submenu(_));
+                                                                  matches!(entry, MenubarEntry::Submenu(_));
 
-                                                             let submenu_for_item =
-                                                                 submenu_for_content.clone();
-                                                            let value = item.value.clone();
-                                                            out.push(cx.keyed(value.clone(), move |cx| {
-                                                                cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                              let submenu_for_item =
+                                                                  submenu_for_content.clone();
+                                                             let value = item.value.clone();
+                                                             let pad_left =
+                                                                 if item.inset { pad_x_inset } else { pad_x };
+                                                             out.push(cx.keyed(value.clone(), move |cx| {
+                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let geometry_hint = has_submenu.then_some(
                                                                         menu::sub_trigger::MenuSubTriggerGeometryHint {
                                                                             outer,
@@ -1442,6 +1466,7 @@ impl MenubarMenuEntries {
                                                                         None,
                                                                         bg,
                                                                         fg,
+                                                                        pad_left,
                                                                         pad_x,
                                                                         pad_y,
                                                                         theme.metrics.radius_sm,
@@ -1713,6 +1738,11 @@ impl MenubarMenuEntries {
                                                                     MenubarEntry::Label(label) => {
                                                                         let text = label.text.clone();
                                                                         let fg = alpha_mul(fg_muted, 0.85);
+                                                                        let pad_left = if label.inset {
+                                                                            pad_x_inset
+                                                                        } else {
+                                                                            pad_x
+                                                                        };
                                                                         out.push(cx.container(
                                                                             ContainerProps {
                                                                                 layout: LayoutStyle::default(),
@@ -1720,7 +1750,7 @@ impl MenubarMenuEntries {
                                                                                     top: pad_y,
                                                                                     right: pad_x,
                                                                                     bottom: pad_y,
-                                                                                    left: pad_x,
+                                                                                    left: pad_left,
                                                                                 },
                                                                                 ..Default::default()
                                                                             },
@@ -1837,6 +1867,7 @@ impl MenubarMenuEntries {
                                                                                     bg,
                                                                                     fg,
                                                                                     pad_x,
+                                                                                    pad_x,
                                                                                     pad_y,
                                                                                     theme.metrics.radius_sm,
                                                                                     text_style.clone(),
@@ -1946,6 +1977,7 @@ impl MenubarMenuEntries {
                                                                                     bg,
                                                                                     fg,
                                                                                     pad_x,
+                                                                                    pad_x,
                                                                                     pad_y,
                                                                                     theme.metrics.radius_sm,
                                                                                     text_style.clone(),
@@ -1970,6 +2002,8 @@ impl MenubarMenuEntries {
                                                                         let group_active = group_active.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
                                                                         let value = item.value.clone();
+                                                                        let pad_left =
+                                                                            if item.inset { pad_x_inset } else { pad_x };
                                                                         let text_style = text_style.clone();
 
                                                                         out.push(cx.keyed(value.clone(), move |cx| {
@@ -2038,6 +2072,7 @@ impl MenubarMenuEntries {
                                                                                     None,
                                                                                     bg,
                                                                                     fg,
+                                                                                    pad_left,
                                                                                     pad_x,
                                                                                     pad_y,
                                                                                     theme.metrics.radius_sm,
@@ -2080,6 +2115,7 @@ impl MenubarMenuEntries {
                         OverlayPresence::instant(true),
                         overlay_children,
                     );
+                    request.consume_outside_pointer_events = true;
                     request.root_name = Some(overlay_root_name);
                     request.dismissible_on_pointer_move = dismissible_on_pointer_move;
                     if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {

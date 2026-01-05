@@ -59,6 +59,7 @@ pub enum DropdownMenuEntry {
 pub struct DropdownMenuItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
+    pub inset: bool,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -74,6 +75,7 @@ impl DropdownMenuItem {
         Self {
             label: label.clone(),
             value: label,
+            inset: false,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -86,6 +88,11 @@ impl DropdownMenuItem {
 
     pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
         self.value = value.into();
+        self
+    }
+
+    pub fn inset(mut self, inset: bool) -> Self {
+        self.inset = inset;
         self
     }
 
@@ -340,11 +347,20 @@ pub enum DropdownMenuItemVariant {
 #[derive(Debug, Clone)]
 pub struct DropdownMenuLabel {
     pub text: Arc<str>,
+    pub inset: bool,
 }
 
 impl DropdownMenuLabel {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            inset: false,
+        }
+    }
+
+    pub fn inset(mut self, inset: bool) -> Self {
+        self.inset = inset;
+        self
     }
 }
 
@@ -749,6 +765,7 @@ impl DropdownMenu {
                     let shadow = decl_style::shadow_sm(&theme, theme.metrics.radius_sm);
                     let ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
                     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
+                    let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                     let pad_y = MetricRef::space(Space::N2).resolve(&theme);
                     let bg = theme
                         .color_by_key("popover")
@@ -892,6 +909,8 @@ impl DropdownMenu {
                                                             .or_else(|| theme.color_by_key("muted-foreground"))
                                                             .unwrap_or(theme.colors.text_muted);
                                                         let text = label.text.clone();
+                                                        let pad_left =
+                                                            if label.inset { pad_x_inset } else { pad_x };
                                                         out.push(cx.container(
                                                             ContainerProps {
                                                                 layout: LayoutStyle::default(),
@@ -899,7 +918,7 @@ impl DropdownMenu {
                                                                     top: pad_y,
                                                                     right: pad_x,
                                                                     bottom: pad_y,
-                                                                    left: pad_x,
+                                                                    left: pad_left,
                                                                 },
                                                                 ..Default::default()
                                                             },
@@ -1192,6 +1211,8 @@ impl DropdownMenu {
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
                                                         let has_submenu = item.submenu.is_some();
+                                                        let pad_left =
+                                                            if item.inset { pad_x_inset } else { pad_x };
                                                         let open = open_for_menu.clone();
                                                         let text_style = text_style.clone();
                                                         let submenu_for_item =
@@ -1269,18 +1290,18 @@ impl DropdownMenu {
                                                                 }
 
                                                                 let children = vec![cx.container(
-                                                                    ContainerProps {
-                                                                        layout: LayoutStyle::default(),
-                                                                        padding: Edges {
-                                                                            top: pad_y,
-                                                                            right: pad_x,
-                                                                            bottom: pad_y,
-                                                                            left: pad_x,
+                                                                        ContainerProps {
+                                                                            layout: LayoutStyle::default(),
+                                                                            padding: Edges {
+                                                                                top: pad_y,
+                                                                                right: pad_x,
+                                                                                bottom: pad_y,
+                                                                                left: pad_left,
+                                                                            },
+                                                                            background: Some(row_bg),
+                                                                            corner_radii: fret_core::Corners::all(radius_sm),
+                                                                            ..Default::default()
                                                                         },
-                                                                        background: Some(row_bg),
-                                                                        corner_radii: fret_core::Corners::all(radius_sm),
-                                                                        ..Default::default()
-                                                                    },
                                                                     move |cx| {
                                                                         let mut row: Vec<AnyElement> = Vec::with_capacity(
                                                                             2 + usize::from(trailing.is_some()),
@@ -1743,6 +1764,8 @@ impl DropdownMenu {
                                                                 let command = item.command;
                                                                 let trailing = item.trailing.clone();
                                                                 let variant = item.variant;
+                                                                let pad_left =
+                                                                    if item.inset { pad_x_inset } else { pad_x };
                                                                 let open = open_for_submenu.clone();
                                                                 let submenu_for_key =
                                                                     submenu_models_for_panel.clone();
@@ -1804,7 +1827,7 @@ impl DropdownMenu {
                                                                                         top: pad_y,
                                                                                         right: pad_x,
                                                                                         bottom: pad_y,
-                                                                                        left: pad_x,
+                                                                                        left: pad_left,
                                                                                     },
                                                                                     background: Some(row_bg),
                                                                                     corner_radii: fret_core::Corners::all(radius_sm),
@@ -1893,6 +1916,7 @@ impl DropdownMenu {
                     OverlayPresence::instant(true),
                     overlay_children,
                 );
+                request.consume_outside_pointer_events = true;
                 request.dismissible_on_pointer_move = dismissible_on_pointer_move;
                 request.root_name = Some(overlay_root_name);
                 if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
@@ -2757,8 +2781,8 @@ mod tests {
             "expected focus to move inside the menu when opened in pointer modality"
         );
 
-        // Click the underlay while the menu is open: should close via observer pass but still
-        // focus the underlay (click-through) without being overridden on close.
+        // Click the underlay while the menu is open: should close via observer pass, but must not
+        // activate or focus the underlay (non-click-through dismissal).
         let position = Point::new(Px(410.0), Px(310.0));
         let underlay_id = underlay_id_out.get().expect("underlay element id");
         let underlay_node =
@@ -2778,8 +2802,7 @@ mod tests {
             hit_path
                 .as_ref()
                 .is_some_and(|path| path.contains(&underlay_node)),
-            "expected click-through hit to target the underlay subtree; hit={hit:?} hit_path={hit_path:?} underlay={underlay_node:?} trigger={trigger_node:?} focus_before={:?}",
-            ui.focus()
+            "expected hit-testing to target the underlay subtree at this position; hit={hit:?} hit_path={hit_path:?} underlay={underlay_node:?}"
         );
         ui.dispatch_event(
             &mut app,
@@ -2800,14 +2823,14 @@ mod tests {
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
-        assert_eq!(
+        assert_ne!(
             ui.focus(),
             Some(underlay_node),
-            "expected underlay to be focused by the click-through pointer interaction; focus_after={:?}",
+            "expected underlay to not be focused by a non-click-through dismissal; focus_after={:?}",
             ui.focus()
         );
 
-        // Frame 3: closed, focus should remain on the underlay.
+        // Frame 3: closed, focus should remain on the trigger.
         let _root = render_frame_with_underlay(
             &mut ui,
             &mut app,
@@ -2819,7 +2842,7 @@ mod tests {
             underlay_id_out.clone(),
             vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))],
         );
-        assert_eq!(ui.focus(), Some(underlay_node));
+        assert_eq!(ui.focus(), Some(trigger_node));
     }
 
     #[test]
