@@ -107,6 +107,9 @@ Dialog baseline (P0):
 - When a dialog is installed as a modal barrier layer (`barrier_root`), the platform bridge should
   mark it as modal where the backend supports it (e.g. AccessKit `modal` flag, comparable to
   `aria-modal="true"` on the web).
+- When a modal barrier layer (`barrier_root`) is active, the bridge should also apply "hide others"
+  semantics by only exposing roots at-or-above the barrier z-index (Radix uses `hideOthers(content)`
+  for `Select` and similar overlays even though the content is not a dialog).
 
 This schema is framework-level infrastructure; editor-domain meanings (e.g. “Gizmo Mode”) remain app-owned.
 

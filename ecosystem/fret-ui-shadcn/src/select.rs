@@ -143,7 +143,12 @@ fn select_scroll_with_buttons<H: UiHost>(
                             |cx| {
                                 vec![cx.flex(
                                     FlexProps {
-                                        layout: LayoutStyle::default(),
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout.size.height = Length::Fill;
+                                            layout
+                                        },
                                         direction: fret_core::Axis::Horizontal,
                                         gap: Px(0.0),
                                         padding: Edges::all(Px(0.0)),
@@ -929,7 +934,11 @@ fn select_impl<H: UiHost>(
                 ..Default::default()
             };
 
-            let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+            // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
+            // pointer events while open. In Fret we approximate that by installing a modal barrier
+            // layer (blocks underlay input + gates accessibility roots) even though the content
+            // itself remains `role=listbox` (not a dialog).
+            let overlay_root_name = OverlayController::modal_root_name(trigger_id);
 
             if is_open
                 && enabled
@@ -989,6 +998,36 @@ fn select_impl<H: UiHost>(
                     let list_focus_id_out = &list_focus_id_out_cell;
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                        let barrier_layout = LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                top: Some(Px(0.0)),
+                                right: Some(Px(0.0)),
+                                bottom: Some(Px(0.0)),
+                                left: Some(Px(0.0)),
+                            },
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
+
+                        let open_for_barrier = open_for_overlay.clone();
+                        let barrier = cx.pressable(
+                            PressableProps {
+                                layout: barrier_layout,
+                                enabled: true,
+                                focusable: false,
+                                ..Default::default()
+                            },
+                            move |cx, _st| {
+                                cx.pressable_set_bool(&open_for_barrier, false);
+                                Vec::new()
+                            },
+                        );
+
                         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
                         #[derive(Clone)]
@@ -1464,7 +1503,15 @@ fn select_impl<H: UiHost>(
                                                                                         |cx| {
                                                                                             vec![cx.flex(
                                                                                                 FlexProps {
-                                                                                                    layout: LayoutStyle::default(),
+                                                                                                    layout: {
+                                                                                                        let mut layout =
+                                                                                                            LayoutStyle::default();
+                                                                                                        layout.size.width =
+                                                                                                            Length::Fill;
+                                                                                                        layout.size.height =
+                                                                                                            Length::Fill;
+                                                                                                        layout
+                                                                                                    },
                                                                                                     direction: fret_core::Axis::Horizontal,
                                                                                                     gap: MetricRef::space(Space::N2)
                                                                                                         .resolve(&theme),
@@ -1476,7 +1523,13 @@ fn select_impl<H: UiHost>(
                                                                                                 |cx| {
                                                                                                     vec![
                                                                                                         cx.text_props(TextProps {
-                                                                                                            layout: LayoutStyle::default(),
+                                                                                                            layout: {
+                                                                                                                let mut layout =
+                                                                                                                    LayoutStyle::default();
+                                                                                                                layout.size.width =
+                                                                                                                    Length::Fill;
+                                                                                                                layout
+                                                                                                            },
                                                                                                             text: item.label.clone(),
                                                                                                             style: Some(text_style.clone()),
                                                                                                             wrap: TextWrap::None,
@@ -1543,12 +1596,12 @@ fn select_impl<H: UiHost>(
                                 }
                             });
 
-                        vec![wrapper]
+                        vec![barrier, wrapper]
                     });
 
-                    let mut request = OverlayRequest::dismissible_menu(
+                    let mut request = OverlayRequest::modal(
                         trigger_id,
-                        trigger_id,
+                        Some(trigger_id),
                         open,
                         OverlayPresence::instant(true),
                         overlay_children,
@@ -1571,7 +1624,11 @@ fn select_impl<H: UiHost>(
             let content = move |cx: &mut ElementContext<'_, H>| {
                 vec![cx.flex(
                     FlexProps {
-                        layout: LayoutStyle::default(),
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout
+                        },
                         direction: fret_core::Axis::Horizontal,
                         gap: MetricRef::space(Space::N2).resolve(&theme),
                         padding: Edges::all(Px(0.0)),
@@ -2045,6 +2102,86 @@ mod tests {
         assert_eq!(active_node.label.as_deref(), Some("Beta"));
         assert_eq!(active_node.pos_in_set, Some(2));
         assert_eq!(active_node.set_size, Some(2));
+    }
+
+    #[test]
+    fn select_open_installs_modal_barrier_root_for_a11y_isolation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+        ];
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let barrier_root = snap
+            .barrier_root
+            .expect("expected select to install a modal barrier root");
+        assert!(
+            snap.roots
+                .iter()
+                .any(|r| r.root == barrier_root && r.blocks_underlay_input),
+            "expected barrier root to correspond to a blocks-underlay-input layer"
+        );
+
+        let listbox = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+
+        let mut parent_by_id: std::collections::HashMap<
+            fret_core::NodeId,
+            Option<fret_core::NodeId>,
+        > = std::collections::HashMap::new();
+        for n in snap.nodes.iter() {
+            parent_by_id.insert(n.id, n.parent);
+        }
+
+        let mut root = listbox.id;
+        while let Some(parent) = parent_by_id.get(&root).copied().flatten() {
+            root = parent;
+        }
+
+        assert_eq!(
+            root, barrier_root,
+            "expected listbox to be rooted under the barrier layer"
+        );
     }
 
     #[test]
