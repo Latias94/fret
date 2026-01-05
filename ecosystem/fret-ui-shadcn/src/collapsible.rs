@@ -7,6 +7,7 @@ use fret_ui::element::{AnyElement, PressableProps, StackProps};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::primitives::presence;
 use fret_ui_kit::{LayoutRefinement, MetricRef};
 
 #[derive(Clone)]
@@ -63,6 +64,11 @@ impl Collapsible {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         cx.scope(|cx| {
+            #[derive(Debug, Default, Clone, Copy)]
+            struct CollapsibleAnimState {
+                last_height: fret_core::Px,
+            }
+
             let is_open = cx
                 .watch_model(&self.open)
                 .layout()
@@ -72,7 +78,18 @@ impl Collapsible {
             let trigger = trigger(cx, is_open);
             let force_mount_content = self.force_mount_content;
             let disabled = self.disabled;
-            let content = (is_open || force_mount_content).then(|| content(cx));
+
+            // Radix/shadcn-like behavior uses `Presence` to keep content mounted during close
+            // animations. We approximate the height transition using the same driver that powers
+            // fade presence, reinterpreting the eased opacity as a 0..1 progress value.
+            let presence_out = presence::fade_presence_with_durations(cx, is_open, 8, 8);
+
+            let last_height = cx.with_state(CollapsibleAnimState::default, |st| st.last_height);
+            let has_measurement = last_height.0 > 0.0;
+
+            let should_render_content =
+                force_mount_content || is_open || (presence_out.present && has_measurement);
+            let content = should_render_content.then(|| content(cx));
             let layout = self.layout;
 
             let stack = cx.stack_props(
@@ -86,31 +103,59 @@ impl Collapsible {
                     let mut children = Vec::new();
                     children.push(trigger);
                     if let Some(content) = content {
-                        if is_open || !force_mount_content {
-                            children.push(content);
-                        } else {
-                            let theme = fret_ui::Theme::global(&*cx.app);
-                            let clipped_layout = fret_ui_kit::declarative::style::layout_style(
-                                theme,
-                                LayoutRefinement::default()
-                                    .h_px(MetricRef::Px(fret_core::Px(0.0)))
-                                    .overflow_hidden(),
-                            );
-                            children.push(cx.stack_props(
-                                StackProps { layout: clipped_layout },
-                                move |_cx| vec![content],
-                            ));
+                        let theme = fret_ui::Theme::global(&*cx.app);
+
+                        let progress = presence_out.opacity.clamp(0.0, 1.0);
+                        let wants_height_animation =
+                            has_measurement && (presence_out.animating || !is_open);
+
+                        let mut wrapper = LayoutRefinement::default()
+                            .w_full()
+                            .min_w_0()
+                            .overflow_hidden();
+                        if wants_height_animation {
+                            wrapper = wrapper
+                                .h_px(MetricRef::Px(fret_core::Px(last_height.0 * progress)));
+                        } else if !is_open && force_mount_content {
+                            wrapper = wrapper.h_px(MetricRef::Px(fret_core::Px(0.0)));
                         }
+
+                        let wrapper_layout =
+                            fret_ui_kit::declarative::style::layout_style(theme, wrapper);
+
+                        let mut wrapper_id: Option<fret_ui::elements::GlobalElementId> = None;
+                        let wrapper_el = cx.keyed("collapsible-content", |cx| {
+                            wrapper_id = Some(cx.root_id());
+                            cx.stack_props(
+                                StackProps {
+                                    layout: wrapper_layout,
+                                },
+                                move |_cx| vec![content],
+                            )
+                        });
+                        let wrapper_id = wrapper_id.expect("wrapper id");
+
+                        // Update the cached content height once the overlay is fully open and not
+                        // animating. This gives subsequent close/open transitions a stable target.
+                        if is_open && !presence_out.animating {
+                            if let Some(bounds) = cx.last_bounds_for_element(wrapper_id) {
+                                let h = bounds.size.height;
+                                if h.0 > 0.0 && (h.0 - last_height.0).abs() > 0.5 {
+                                    cx.with_state(CollapsibleAnimState::default, |st| {
+                                        st.last_height = h;
+                                    });
+                                }
+                            }
+                        }
+
+                        children.push(wrapper_el);
                     }
                     children
                 },
             );
 
             cx.semantics(
-                fret_ui_kit::primitives::collapsible::collapsible_root_semantics(
-                    disabled,
-                    is_open,
-                ),
+                fret_ui_kit::primitives::collapsible::collapsible_root_semantics(disabled, is_open),
                 move |_cx| vec![stack],
             )
         })
@@ -170,8 +215,7 @@ impl CollapsibleTrigger {
             PressableProps {
                 enabled: !disabled,
                 a11y: fret_ui_kit::primitives::collapsible::collapsible_trigger_a11y(
-                    a11y_label,
-                    is_open,
+                    a11y_label, is_open,
                 ),
                 ..Default::default()
             },
@@ -243,6 +287,7 @@ mod tests {
     use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, Size, SvgId, SvgService};
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_runtime::{FrameId, TickId};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -298,6 +343,9 @@ mod tests {
         bounds: Rect,
         open: Model<bool>,
     ) -> fret_core::NodeId {
+        app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
         let root = fret_ui::declarative::render_root(
             ui,
             app,
@@ -337,7 +385,14 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let root = render(&mut ui, &mut app, &mut services, window, bounds, open.clone());
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
 
         let focusable = ui
             .first_focusable_descendant_including_declarative(&mut app, window, root)
@@ -362,9 +417,91 @@ mod tests {
             },
         );
 
-        let _ = render(&mut ui, &mut app, &mut services, window, bounds, open.clone());
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
 
         let is_open = app.models().get_copied(&open).unwrap_or(false);
         assert!(is_open);
+    }
+
+    #[test]
+    fn collapsible_content_remains_mounted_for_close_animation_when_measured() {
+        fn snapshot_has_label(ui: &UiTree<App>, label: &str) -> bool {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .any(|n| n.label.as_deref() == Some(label))
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+        assert!(!snapshot_has_label(&ui, "Content"));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Render enough frames for presence to settle and for height to be measured.
+        for _ in 0..12 {
+            let _ = render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+            );
+        }
+        assert!(snapshot_has_label(&ui, "Content"));
+
+        let _ = app.models_mut().update(&open, |v| *v = false);
+
+        // First close frame: content should still be mounted (present=true) for the transition.
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+        );
+        assert!(snapshot_has_label(&ui, "Content"));
+
+        // After enough frames, presence completes and content unmounts.
+        for _ in 0..16 {
+            let _ = render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+            );
+        }
+        assert!(!snapshot_has_label(&ui, "Content"));
     }
 }
