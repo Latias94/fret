@@ -285,7 +285,7 @@ impl ToggleGroup {
         let pad_x = toggle_group_item_pad_x(&theme);
         let pad_y = Px(0.0);
 
-        let bg_hover = toggle_bg_hover(&theme);
+        let bg_hover_muted = toggle_bg_hover(&theme);
         let bg_on = toggle_bg_on(&theme);
         let border = toggle_border(&theme);
 
@@ -295,6 +295,8 @@ impl ToggleGroup {
         let base_chrome = match variant {
             ToggleVariant::Default => ChromeRefinement {
                 radius: Some(MetricRef::Px(radius)),
+                border_width: Some(MetricRef::Px(Px(1.0))),
+                border_color: Some(ColorRef::Color(Color::TRANSPARENT)),
                 ..Default::default()
             },
             ToggleVariant::Outline => ChromeRefinement {
@@ -412,74 +414,77 @@ impl ToggleGroup {
                                 .flex_none(),
                         );
 
-                        out.push(
-                            cx.pressable(
-                                PressableProps {
-                                    layout: pressable_layout,
-                                    enabled,
-                                    focusable,
-                                    focus_ring: Some(ring),
-                                    a11y: PressableA11y {
-                                        role: Some(SemanticsRole::Button),
-                                        label: Some(a11y_label),
-                                        selected: on,
-                                        ..Default::default()
-                                    },
+                        out.push(cx.pressable(
+                            PressableProps {
+                                layout: pressable_layout,
+                                enabled,
+                                focusable,
+                                focus_ring: Some(ring),
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(a11y_label),
+                                    selected: on,
                                     ..Default::default()
                                 },
-                                move |cx, state| {
-                                    if let Some(m) = model_single.as_ref() {
-                                        let model = m.clone();
-                                        let value = value.clone();
-                                        cx.pressable_add_on_activate(Arc::new(
-                                            move |host, _action_cx, _reason| {
-                                                let current =
-                                                    host.models_mut().get_cloned(&model).flatten();
-                                                let next = if current.as_ref().is_some_and(|cur| {
-                                                    cur.as_ref() == value.as_ref()
-                                                }) {
-                                                    None
-                                                } else {
-                                                    Some(value.clone())
-                                                };
-                                                let _ =
-                                                    host.models_mut().update(&model, |v| *v = next);
-                                            },
-                                        ));
-                                    }
-                                    if let Some(m) = model_multi.as_ref() {
-                                        cx.pressable_toggle_vec_arc_str(m, value.clone());
-                                    }
+                                ..Default::default()
+                            },
+                            move |cx, state| {
+                                if let Some(m) = model_single.as_ref() {
+                                    let model = m.clone();
+                                    let value = value.clone();
+                                    cx.pressable_add_on_activate(Arc::new(
+                                        move |host, _action_cx, _reason| {
+                                            let current =
+                                                host.models_mut().get_cloned(&model).flatten();
+                                            let next = if current
+                                                .as_ref()
+                                                .is_some_and(|cur| cur.as_ref() == value.as_ref())
+                                            {
+                                                None
+                                            } else {
+                                                Some(value.clone())
+                                            };
+                                            let _ = host.models_mut().update(&model, |v| *v = next);
+                                        },
+                                    ));
+                                }
+                                if let Some(m) = model_multi.as_ref() {
+                                    cx.pressable_toggle_vec_arc_str(m, value.clone());
+                                }
 
-                                    let hovered = state.hovered && !state.pressed;
-                                    let pressed = state.pressed;
+                                let hovered = state.hovered && !state.pressed;
+                                let pressed = state.pressed;
 
-                                    let bg = if on && !item_disabled {
-                                        Some(bg_on)
-                                    } else if (hovered || pressed) && !item_disabled {
-                                        Some(bg_hover)
-                                    } else {
-                                        None
-                                    };
+                                let hover_bg = match variant {
+                                    ToggleVariant::Default => bg_hover_muted,
+                                    ToggleVariant::Outline => bg_on,
+                                };
 
-                                    let mut props = base_props;
-                                    if bg.is_some() {
-                                        props.background = bg;
-                                    }
-                                    if state.focused && variant == ToggleVariant::Outline {
-                                        props.border_color = Some(ring_border);
-                                    }
-                                    props.layout.size = pressable_layout.size;
+                                let bg = if on && !item_disabled {
+                                    Some(bg_on)
+                                } else if (hovered || pressed) && !item_disabled {
+                                    Some(hover_bg)
+                                } else {
+                                    None
+                                };
 
-                                    vec![shadcn_layout::container_hstack_centered(
-                                        cx,
-                                        props,
-                                        Space::N1,
-                                        children,
-                                    )]
-                                },
-                            ),
-                        );
+                                let mut props = base_props;
+                                if bg.is_some() {
+                                    props.background = bg;
+                                }
+                                if state.focused {
+                                    props.border_color = Some(ring_border);
+                                }
+                                props.layout.size = pressable_layout.size;
+
+                                vec![shadcn_layout::container_hstack_centered(
+                                    cx,
+                                    props,
+                                    Space::N1,
+                                    children,
+                                )]
+                            },
+                        ));
                     }
 
                     out
