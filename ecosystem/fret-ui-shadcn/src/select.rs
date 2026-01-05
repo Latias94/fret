@@ -1456,19 +1456,26 @@ fn select_impl<H: UiHost>(
                                                                                     }
 
                                                                                     let theme = Theme::global(&*cx.app).clone();
-                                                                                    let mut bg = Color::TRANSPARENT;
-                                                                                    if is_selected {
-                                                                                        bg = alpha_mul(theme.colors.selection_background, 0.35);
-                                                                                    }
-                                                                                    if is_active || st.hovered || st.pressed {
-                                                                                        bg = alpha_mul(theme.colors.selection_background, 0.45);
-                                                                                    }
+                                                                                    // new-york-v4: items highlight on focus/hover via `bg-accent`.
+                                                                                    let bg_accent = theme
+                                                                                        .color_by_key("accent")
+                                                                                        .or_else(|| theme.color_by_key("accent.background"))
+                                                                                        .unwrap_or(theme.colors.hover_background);
+                                                                                    let fg_accent = theme
+                                                                                        .color_by_key("accent-foreground")
+                                                                                        .or_else(|| theme.color_by_key("accent.foreground"))
+                                                                                        .unwrap_or(theme.colors.text_primary);
 
-                                                                                    let fg = if item_disabled {
+                                                                                    let mut bg = Color::TRANSPARENT;
+                                                                                    let mut fg = if item_disabled {
                                                                                         alpha_mul(fg_muted, 0.8)
                                                                                     } else {
                                                                                         fg
                                                                                     };
+                                                                                    if is_active || st.hovered || st.pressed {
+                                                                                        bg = bg_accent;
+                                                                                        fg = fg_accent;
+                                                                                    }
 
                                                                                     let icon = decl_icon::icon_with(
                                                                                         cx,
@@ -1494,7 +1501,13 @@ fn select_impl<H: UiHost>(
                                                                                                 layout.size.height = Length::Fill;
                                                                                                 layout
                                                                                             },
-                                                                                            padding: Edges::all(Px(8.0)),
+                                                                                            // new-york-v4: `py-1.5 pl-2 pr-8`
+                                                                                            padding: Edges {
+                                                                                                top: Px(6.0),
+                                                                                                right: Px(32.0),
+                                                                                                bottom: Px(6.0),
+                                                                                                left: Px(8.0),
+                                                                                            },
                                                                                             background: Some(bg),
                                                                                             shadow: None,
                                                                                             border: Edges::all(Px(0.0)),
@@ -1502,8 +1515,72 @@ fn select_impl<H: UiHost>(
                                                                                             corner_radii: Corners::all(theme.metrics.radius_sm),
                                                                                         },
                                                                                         |cx| {
-                                                                                            vec![cx.flex(
-                                                                                                FlexProps {
+                                                                                            let text = cx.text_props(TextProps {
+                                                                                                layout: {
+                                                                                                    let mut layout =
+                                                                                                        LayoutStyle::default();
+                                                                                                    layout.size.width =
+                                                                                                        Length::Fill;
+                                                                                                    layout
+                                                                                                },
+                                                                                                text: item.label.clone(),
+                                                                                                style: Some(text_style.clone()),
+                                                                                                wrap: TextWrap::None,
+                                                                                                overflow: TextOverflow::Ellipsis,
+                                                                                                color: Some(fg),
+                                                                                            });
+
+                                                                                            // Indicator slot matches upstream: absolute at the end, but reserve `pr-8`.
+                                                                                            let indicator = cx.container(
+                                                                                                ContainerProps {
+                                                                                                    layout: LayoutStyle {
+                                                                                                        position: PositionStyle::Absolute,
+                                                                                                        inset: InsetStyle {
+                                                                                                            top: Some(Px(0.0)),
+                                                                                                            right: Some(Px(8.0)),
+                                                                                                            bottom: Some(Px(0.0)),
+                                                                                                            left: None,
+                                                                                                        },
+                                                                                                        size: SizeStyle {
+                                                                                                            width: Length::Px(Px(16.0)),
+                                                                                                            height: Length::Fill,
+                                                                                                            ..Default::default()
+                                                                                                        },
+                                                                                                        ..Default::default()
+                                                                                                    },
+                                                                                                    padding: Edges::all(Px(0.0)),
+                                                                                                    background: None,
+                                                                                                    shadow: None,
+                                                                                                    border: Edges::all(Px(0.0)),
+                                                                                                    border_color: None,
+                                                                                                    corner_radii: Corners::all(Px(0.0)),
+                                                                                                },
+                                                                                                |cx| {
+                                                                                                    vec![cx.flex(
+                                                                                                        FlexProps {
+                                                                                                            layout: {
+                                                                                                                let mut layout =
+                                                                                                                    LayoutStyle::default();
+                                                                                                                layout.size.width =
+                                                                                                                    Length::Fill;
+                                                                                                                layout.size.height =
+                                                                                                                    Length::Fill;
+                                                                                                                layout
+                                                                                                            },
+                                                                                                            direction: fret_core::Axis::Horizontal,
+                                                                                                            gap: Px(0.0),
+                                                                                                            padding: Edges::all(Px(0.0)),
+                                                                                                            justify: MainAlign::Center,
+                                                                                                            align: CrossAlign::Center,
+                                                                                                            wrap: false,
+                                                                                                        },
+                                                                                                        |_cx| vec![icon.clone()],
+                                                                                                    )]
+                                                                                                },
+                                                                                            );
+
+                                                                                            vec![cx.stack_props(
+                                                                                                StackProps {
                                                                                                     layout: {
                                                                                                         let mut layout =
                                                                                                             LayoutStyle::default();
@@ -1513,33 +1590,8 @@ fn select_impl<H: UiHost>(
                                                                                                             Length::Fill;
                                                                                                         layout
                                                                                                     },
-                                                                                                    direction: fret_core::Axis::Horizontal,
-                                                                                                    gap: MetricRef::space(Space::N2)
-                                                                                                        .resolve(&theme),
-                                                                                                    padding: Edges::all(Px(0.0)),
-                                                                                                    justify: MainAlign::SpaceBetween,
-                                                                                                    align: CrossAlign::Center,
-                                                                                                    wrap: false,
                                                                                                 },
-                                                                                                |cx| {
-                                                                                                    vec![
-                                                                                                        cx.text_props(TextProps {
-                                                                                                            layout: {
-                                                                                                                let mut layout =
-                                                                                                                    LayoutStyle::default();
-                                                                                                                layout.size.width =
-                                                                                                                    Length::Fill;
-                                                                                                                layout
-                                                                                                            },
-                                                                                                            text: item.label.clone(),
-                                                                                                            style: Some(text_style.clone()),
-                                                                                                            wrap: TextWrap::None,
-                                                                                                            overflow: TextOverflow::Ellipsis,
-                                                                                                            color: Some(fg),
-                                                                                                        }),
-                                                                                                        icon,
-                                                                                                    ]
-                                                                                                },
+                                                                                                |_cx| vec![text, indicator],
                                                                                             )]
                                                                                         },
                                                                                     )]

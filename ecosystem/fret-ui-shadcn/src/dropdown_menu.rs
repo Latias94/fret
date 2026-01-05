@@ -893,9 +893,11 @@ impl DropdownMenu {
                         .unwrap_or(theme.colors.panel_border);
                     let shadow = decl_style::shadow_sm(&theme, theme.metrics.radius_sm);
                     let ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
-                    let pad_x = MetricRef::space(Space::N3).resolve(&theme);
+                    // new-york-v4: item rows use `px-2`.
+                    let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
-                    let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+                    // new-york-v4: item rows use `py-1.5`.
+                    let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                     let bg = theme
                         .color_by_key("popover")
                         .or_else(|| theme.color_by_key("popover.background"))
