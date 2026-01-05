@@ -1471,6 +1471,12 @@ impl Default for PlotState {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct AxisLock {
+    pan: bool,
+    zoom: bool,
+}
+
 #[derive(Debug)]
 pub struct PlotCanvas<L: PlotLayer + 'static> {
     model: Model<L::Model>,
@@ -1499,9 +1505,9 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     y_axis_thickness: Px,
     y_axis_right_thickness: Px,
     show_y2_axis: bool,
-    lock_x_axis: bool,
-    lock_y_axis: bool,
-    lock_y2_axis: bool,
+    lock_x: AxisLock,
+    lock_y: AxisLock,
+    lock_y2: AxisLock,
     pan_last_pos: Option<Point>,
     box_zoom_start: Option<Point>,
     box_zoom_current: Option<Point>,
@@ -1600,9 +1606,9 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             y_axis_thickness: axis_gap,
             y_axis_right_thickness: Px(0.0),
             show_y2_axis: false,
-            lock_x_axis: false,
-            lock_y_axis: false,
-            lock_y2_axis: false,
+            lock_x: AxisLock::default(),
+            lock_y: AxisLock::default(),
+            lock_y2: AxisLock::default(),
             pan_last_pos: None,
             box_zoom_start: None,
             box_zoom_current: None,
@@ -1650,17 +1656,56 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
     }
 
     pub fn x_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_x_axis = locked;
+        self.lock_x = AxisLock {
+            pan: locked,
+            zoom: locked,
+        };
         self
     }
 
     pub fn y_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_y_axis = locked;
+        self.lock_y = AxisLock {
+            pan: locked,
+            zoom: locked,
+        };
         self
     }
 
     pub fn y2_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_y2_axis = locked;
+        self.lock_y2 = AxisLock {
+            pan: locked,
+            zoom: locked,
+        };
+        self
+    }
+
+    pub fn x_axis_pan_locked(mut self, locked: bool) -> Self {
+        self.lock_x.pan = locked;
+        self
+    }
+
+    pub fn x_axis_zoom_locked(mut self, locked: bool) -> Self {
+        self.lock_x.zoom = locked;
+        self
+    }
+
+    pub fn y_axis_pan_locked(mut self, locked: bool) -> Self {
+        self.lock_y.pan = locked;
+        self
+    }
+
+    pub fn y_axis_zoom_locked(mut self, locked: bool) -> Self {
+        self.lock_y.zoom = locked;
+        self
+    }
+
+    pub fn y2_axis_pan_locked(mut self, locked: bool) -> Self {
+        self.lock_y2.pan = locked;
+        self
+    }
+
+    pub fn y2_axis_zoom_locked(mut self, locked: bool) -> Self {
+        self.lock_y2.zoom = locked;
         self
     }
 
@@ -2801,9 +2846,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             let h = (start.y.0 - end.y.0).abs();
 
                             if w >= 4.0 && h >= 4.0 {
-                                let all_locked = self.lock_x_axis
-                                    && self.lock_y_axis
-                                    && (!self.show_y2_axis || self.lock_y2_axis);
+                                let all_locked = self.lock_x.zoom
+                                    && self.lock_y.zoom
+                                    && (!self.show_y2_axis || self.lock_y2.zoom);
                                 if all_locked {
                                     // Axis locks prevent any view change; keep auto-fit state intact.
                                     // The selection rectangle is still useful feedback for users.
@@ -2820,7 +2865,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                         self.x_scale,
                                         self.y_scale,
                                     ) {
-                                        let mut next_y2 = (!self.lock_y2_axis)
+                                        let mut next_y2 = (!self.lock_y2.zoom)
                                             .then(|| {
                                                 view_bounds_y2.and_then(|vb| {
                                                     data_rect_from_plot_points_scaled(
@@ -2859,16 +2904,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                         next = apply_axis_locks(
                                             view_bounds,
                                             next,
-                                            self.lock_x_axis,
-                                            self.lock_y_axis,
+                                            self.lock_x.zoom,
+                                            self.lock_y.zoom,
                                         );
                                         if let Some(vb_y2) = view_bounds_y2 {
                                             if let Some(candidate) = next_y2.as_mut() {
                                                 *candidate = apply_axis_locks(
                                                     vb_y2,
                                                     *candidate,
-                                                    self.lock_x_axis,
-                                                    self.lock_y2_axis,
+                                                    self.lock_x.zoom,
+                                                    self.lock_y2.zoom,
                                                 );
                                             }
                                         }
@@ -2881,7 +2926,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                                 next_y2.is_some() && view_bounds_y2.is_none(),
                                             );
                                         let show_y2_axis = self.show_y2_axis;
-                                        let lock_y2_axis = self.lock_y2_axis;
+                                        let lock_y2_axis = self.lock_y2.zoom;
                                         let _ = self.update_plot_state(cx.app, |s| {
                                             if primary_changed {
                                                 s.view_is_auto = false;
@@ -2962,13 +3007,13 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let mut zoom_y1 = zoom_y_raw;
                 let mut zoom_y2 = zoom_y_raw;
 
-                if self.lock_x_axis {
+                if self.lock_x.zoom {
                     zoom_x = 1.0;
                 }
-                if self.lock_y_axis {
+                if self.lock_y.zoom {
                     zoom_y1 = 1.0;
                 }
-                if self.lock_y2_axis {
+                if self.lock_y2.zoom {
                     zoom_y2 = 1.0;
                 }
 
@@ -2991,7 +3036,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 ) else {
                     return;
                 };
-                let mut next_y2 = (!self.lock_y2_axis)
+                let mut next_y2 = (!self.lock_y2.zoom)
                     .then(|| {
                         view_bounds_y2.and_then(|vb| {
                             zoom_view_at_px_scaled(
@@ -3032,10 +3077,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     }
                 }
 
-                next = apply_axis_locks(view_bounds, next, self.lock_x_axis, self.lock_y_axis);
+                next = apply_axis_locks(view_bounds, next, self.lock_x.zoom, self.lock_y.zoom);
                 if let (Some(vb_y2), Some(candidate)) = (view_bounds_y2, next_y2.as_mut()) {
                     *candidate =
-                        apply_axis_locks(vb_y2, *candidate, self.lock_x_axis, self.lock_y2_axis);
+                        apply_axis_locks(vb_y2, *candidate, self.lock_x.zoom, self.lock_y2.zoom);
                 }
 
                 let primary_changed = next != view_bounds;
@@ -3044,7 +3089,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     .map(|(next, prev)| next != prev)
                     .unwrap_or(next_y2.is_some() && view_bounds_y2.is_none());
                 let show_y2_axis = self.show_y2_axis;
-                let lock_y2_axis = self.lock_y2_axis;
+                let lock_y2_axis = self.lock_y2.zoom;
                 let _ = self.update_plot_state(cx.app, |s| {
                     if primary_changed {
                         s.view_is_auto = false;
@@ -3142,9 +3187,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let dx_px_raw = position.x.0 - last.x.0;
                     let dy_px_raw = position.y.0 - last.y.0;
 
-                    let dx_px = if self.lock_x_axis { 0.0 } else { dx_px_raw };
-                    let dy_px_y1 = if self.lock_y_axis { 0.0 } else { dy_px_raw };
-                    let dy_px_y2 = if self.lock_y2_axis { 0.0 } else { dy_px_raw };
+                    let dx_px = if self.lock_x.pan { 0.0 } else { dx_px_raw };
+                    let dy_px_y1 = if self.lock_y.pan { 0.0 } else { dy_px_raw };
+                    let dy_px_y2 = if self.lock_y2.pan { 0.0 } else { dy_px_raw };
 
                     if dx_px == 0.0 && dy_px_y1 == 0.0 && (!self.show_y2_axis || dy_px_y2 == 0.0) {
                         self.pan_last_pos = Some(*position);
@@ -3165,7 +3210,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     ) else {
                         return;
                     };
-                    let mut next_y2 = (!self.lock_y2_axis)
+                    let mut next_y2 = (!self.lock_y2.pan)
                         .then(|| {
                             view_bounds_y2.and_then(|vb| {
                                 pan_view_by_px_scaled(
@@ -3205,14 +3250,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         }
                     }
 
-                    next = apply_axis_locks(view_bounds, next, self.lock_x_axis, self.lock_y_axis);
+                    next = apply_axis_locks(view_bounds, next, self.lock_x.pan, self.lock_y.pan);
                     if let (Some(vb_y2), Some(candidate)) = (view_bounds_y2, next_y2.as_mut()) {
-                        *candidate = apply_axis_locks(
-                            vb_y2,
-                            *candidate,
-                            self.lock_x_axis,
-                            self.lock_y2_axis,
-                        );
+                        *candidate =
+                            apply_axis_locks(vb_y2, *candidate, self.lock_x.pan, self.lock_y2.pan);
                     }
 
                     let primary_changed = next != view_bounds;
@@ -3221,7 +3262,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         .map(|(next, prev)| next != prev)
                         .unwrap_or(next_y2.is_some() && view_bounds_y2.is_none());
                     let show_y2_axis = self.show_y2_axis;
-                    let lock_y2_axis = self.lock_y2_axis;
+                    let lock_y2_axis = self.lock_y2.pan;
                     let _ = self.update_plot_state(cx.app, |s| {
                         if primary_changed {
                             s.view_is_auto = false;
