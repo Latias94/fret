@@ -1,15 +1,19 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Color, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Transform2D,
 };
+use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, PressableA11y,
     PressableProps, RovingFlexProps, RovingFocusProps, RowProps, SemanticsProps, TextProps,
+    VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
@@ -38,6 +42,12 @@ fn trigger_text_style(theme: &Theme) -> TextStyle {
         line_height: Some(line_height),
         letter_spacing_em: None,
     }
+}
+
+fn trigger_gap(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.accordion.trigger.gap")
+        .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -177,6 +187,7 @@ impl AccordionTrigger {
                 let chrome = ChromeRefinement::default()
                     .px(Space::N0)
                     .py(Space::N4)
+                    .rounded(Radius::Md)
                     .merge(chrome.clone());
                 let mut props = decl_style::container_props(&theme, chrome, Default::default());
                 props.layout.size = container_layout.size;
@@ -193,16 +204,55 @@ impl AccordionTrigger {
                         corner_radii: props.corner_radii,
                     },
                     move |cx| {
+                        let chevron_fg = theme
+                            .color_by_key("muted-foreground")
+                            .unwrap_or(theme.colors.text_muted);
+                        let chevron_layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default()
+                                .w_px(MetricRef::Px(Px(16.0)))
+                                .h_px(MetricRef::Px(Px(16.0)))
+                                .flex_shrink_0()
+                                .mt(Space::N0p5),
+                        );
+                        let mut chevron_center = Point::new(Px(8.0), Px(8.0));
+                        if let (fret_ui::element::Length::Px(w), fret_ui::element::Length::Px(h)) =
+                            (chevron_layout.size.width, chevron_layout.size.height)
+                        {
+                            chevron_center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
+                        }
+                        let chevron_rotation = if is_open { 180.0 } else { 0.0 };
+                        let chevron_transform =
+                            Transform2D::rotation_about_degrees(chevron_rotation, chevron_center);
+                        let chevron = cx.visual_transform_props(
+                            VisualTransformProps {
+                                layout: chevron_layout,
+                                transform: chevron_transform,
+                            },
+                            move |cx| {
+                                vec![decl_icon::icon_with(
+                                    cx,
+                                    ids::ui::CHEVRON_DOWN,
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(chevron_fg)),
+                                )]
+                            },
+                        );
+
+                        let left_layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().flex_1().min_w_0(),
+                        );
                         vec![cx.row(
                             RowProps {
                                 layout: LayoutStyle::default(),
-                                gap: MetricRef::space(Space::N2).resolve(&theme),
+                                gap: trigger_gap(&theme),
                                 padding: Edges::all(Px(0.0)),
                                 justify: MainAlign::SpaceBetween,
-                                align: CrossAlign::Center,
+                                align: CrossAlign::Start,
                             },
                             move |cx| {
-                                if children.is_empty() {
+                                let left_children = if children.is_empty() {
                                     vec![cx.text_props(TextProps {
                                         layout: LayoutStyle::default(),
                                         text: a11y_label.clone(),
@@ -213,7 +263,18 @@ impl AccordionTrigger {
                                     })]
                                 } else {
                                     children
-                                }
+                                };
+
+                                vec![
+                                    cx.container(
+                                        ContainerProps {
+                                            layout: left_layout,
+                                            ..Default::default()
+                                        },
+                                        |_cx| left_children,
+                                    ),
+                                    chevron,
+                                ]
                             },
                         )]
                     },
@@ -499,6 +560,7 @@ impl Accordion {
                             move |cx| {
                                 cx.roving_nav_apg();
                                 let mut out = Vec::with_capacity(items.len());
+                                let item_len = items.len();
 
                                 for (idx, item) in items.into_iter().enumerate() {
                                     let item_disabled =
@@ -537,6 +599,9 @@ impl Accordion {
                                         bottom: props.border.bottom,
                                         left: Px(0.0),
                                     };
+                                    if idx + 1 == item_len {
+                                        props.border.bottom = Px(0.0);
+                                    }
 
                                     out.push(cx.container(props, move |_cx| {
                                         let mut children = Vec::new();
