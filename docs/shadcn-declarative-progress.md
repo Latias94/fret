@@ -99,7 +99,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | radio-group | `radio_group` | Present | Unreviewed |  |
 | resizable | `resizable` | Present | Unreviewed | Runtime-owned drag + layout; multi-panel group; a11y TBD |
 | scroll-area | `scroll_area` | Present | Unreviewed | Declarative wrapper over `Scroll` + styling |
-| select | `select` | Present | Unreviewed | Uses `window_overlays` dismissible popover infra |
+| select | `select` | Present | In review | Anchored placement supports `side`/`align` + offsets; roving navigation supports `loop` default; audit: `docs/audits/shadcn-select.md` |
 | separator | `separator` | Present | Unreviewed | Simple primitive; declarative-only |
 | sheet | `sheet` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
 | sidebar | `sidebar` | Present | Unreviewed |  |

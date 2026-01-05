@@ -132,7 +132,7 @@ pub use resizable::{
     ResizableEntry, ResizableHandle, ResizablePanel, ResizablePanelGroup, resizable_panel_group,
 };
 pub use scroll_area::{ScrollArea, scroll_area};
-pub use select::{Select, SelectItem, select};
+pub use select::{Select, SelectAlign, SelectItem, SelectSide, select};
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
     Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide, SheetTitle,

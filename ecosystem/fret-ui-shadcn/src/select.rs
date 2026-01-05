@@ -27,13 +27,51 @@ use fret_ui_kit::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
 };
 use fret_ui_kit::{
-    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     OverlayRequest, Space,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SelectAlign {
+    Start,
+    #[default]
+    Center,
+    End,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SelectSide {
+    Top,
+    Right,
+    #[default]
+    Bottom,
+    Left,
+}
+
+impl From<SelectAlign> for Align {
+    fn from(value: SelectAlign) -> Self {
+        match value {
+            SelectAlign::Start => Align::Start,
+            SelectAlign::Center => Align::Center,
+            SelectAlign::End => Align::End,
+        }
+    }
+}
+
+impl From<SelectSide> for Side {
+    fn from(value: SelectSide) -> Self {
+        match value {
+            SelectSide::Top => Side::Top,
+            SelectSide::Right => Side::Right,
+            SelectSide::Bottom => Side::Bottom,
+            SelectSide::Left => Side::Left,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +105,11 @@ pub struct Select {
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     layout: LayoutRefinement,
+    align: SelectAlign,
+    side: SelectSide,
+    align_offset: Px,
+    side_offset_override: Option<Px>,
+    loop_navigation: bool,
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
@@ -82,6 +125,11 @@ impl Select {
             disabled: false,
             a11y_label: None,
             layout: LayoutRefinement::default(),
+            align: SelectAlign::default(),
+            side: SelectSide::default(),
+            align_offset: Px(0.0),
+            side_offset_override: None,
+            loop_navigation: true,
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
@@ -110,6 +158,32 @@ impl Select {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn align(mut self, align: SelectAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn side(mut self, side: SelectSide) -> Self {
+        self.side = side;
+        self
+    }
+
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.align_offset = offset;
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.side_offset_override = Some(offset);
+        self
+    }
+
+    /// When `true` (default), roving navigation loops at the ends (Radix `loop` behavior).
+    pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
+        self.loop_navigation = loop_navigation;
         self
     }
 
@@ -144,6 +218,11 @@ impl Select {
             self.disabled,
             self.a11y_label,
             self.layout,
+            self.align,
+            self.side,
+            self.align_offset,
+            self.side_offset_override,
+            self.loop_navigation,
             self.arrow,
             self.arrow_size_override,
             self.arrow_padding_override,
@@ -170,6 +249,11 @@ pub fn select<H: UiHost>(
         disabled,
         a11y_label,
         layout,
+        SelectAlign::default(),
+        SelectSide::default(),
+        Px(0.0),
+        None,
+        true,
         false,
         None,
         None,
@@ -185,6 +269,11 @@ fn select_impl<H: UiHost>(
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     layout: LayoutRefinement,
+    align: SelectAlign,
+    side: SelectSide,
+    align_offset: Px,
+    side_offset_override: Option<Px>,
+    loop_navigation: bool,
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
@@ -255,6 +344,34 @@ fn select_impl<H: UiHost>(
         let enabled = !disabled;
 
         decl_chrome::control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
+            let open_for_key = open.clone();
+            cx.key_add_on_key_down_for(
+                trigger_id,
+                Arc::new(move |host, action_cx, it| {
+                    use fret_core::KeyCode;
+
+                    if it.repeat {
+                        return false;
+                    }
+
+                    if !matches!(it.key, KeyCode::ArrowDown | KeyCode::ArrowUp) {
+                        return false;
+                    }
+
+                    let is_open = host.models_mut().get_copied(&open_for_key).unwrap_or(false);
+                    if is_open {
+                        return false;
+                    }
+
+                    let _ = host
+                        .models_mut()
+                        .update(&open_for_key, |v| *v = true);
+                    host.request_redraw(action_cx.window);
+
+                    true
+                }),
+            );
+
             let border_color = if st.hovered || st.pressed || st.focused {
                 alpha_mul(border_focus, 0.85)
             } else {
@@ -298,9 +415,11 @@ fn select_impl<H: UiHost>(
                     let desired_w = Px(anchor.size.width.0.max(min_width.0));
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
-                    let side_offset = theme
-                        .metric_by_key("component.select.popover_offset")
-                        .unwrap_or(Px(6.0));
+                    let side_offset = side_offset_override.unwrap_or_else(|| {
+                        theme
+                            .metric_by_key("component.select.popover_offset")
+                            .unwrap_or(Px(6.0))
+                    });
 
                     let border_width = resolved.border_width;
                     let (arrow_options, arrow_protrusion) =
@@ -312,10 +431,11 @@ fn select_impl<H: UiHost>(
                         desired,
                         popper::PopperContentPlacement::new(
                             LayoutDirection::Ltr,
-                            Side::Bottom,
-                            Align::Start,
+                            side.into(),
+                            align.into(),
                             side_offset,
                         )
+                        .with_align_offset(align_offset)
                         .with_arrow(arrow_options, arrow_protrusion),
                     );
 
@@ -343,7 +463,7 @@ fn select_impl<H: UiHost>(
                         let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
                         let roving = RovingFocusProps {
                             enabled: true,
-                            wrap: true,
+                            wrap: loop_navigation,
                             disabled: Arc::from(disabled.clone().into_boxed_slice()),
                             ..Default::default()
                         };
@@ -471,8 +591,26 @@ fn select_impl<H: UiHost>(
                                                                     if st.hovered || st.pressed {
                                                                         bg = alpha_mul(theme.colors.selection_background, 0.45);
                                                                     }
+                                                                    if st.focused {
+                                                                        bg = alpha_mul(theme.colors.selection_background, 0.45);
+                                                                    }
 
                                                                     let fg = if item_disabled { alpha_mul(fg_muted, 0.8) } else { fg };
+
+                                                                    let icon = decl_icon::icon_with(
+                                                                        cx,
+                                                                        ids::ui::CHECK,
+                                                                        Some(Px(16.0)),
+                                                                        Some(ColorRef::Color(if item_disabled {
+                                                                            alpha_mul(fg_muted, 0.8)
+                                                                        } else {
+                                                                            fg
+                                                                        })),
+                                                                    );
+                                                                    let icon = cx.opacity(
+                                                                        if is_selected { 1.0 } else { 0.0 },
+                                                                        move |_cx| vec![icon],
+                                                                    );
 
                                                                     vec![cx.container(
                                                                         ContainerProps {
@@ -490,18 +628,34 @@ fn select_impl<H: UiHost>(
                                                                             corner_radii: Corners::all(theme.metrics.radius_sm),
                                                                         },
                                                                         |cx| {
-                                                                            vec![cx.text_props(TextProps {
-                                                                                layout: LayoutStyle::default(),
-                                                                                text: item.label.clone(),
-                                                                                style: Some(text_style.clone()),
-                                                                                wrap: TextWrap::None,
-                                                                                overflow: TextOverflow::Ellipsis,
-                                                                                color: Some(fg),
-                                                                            })]
+                                                                            vec![cx.flex(
+                                                                                FlexProps {
+                                                                                    layout: LayoutStyle::default(),
+                                                                                    direction: fret_core::Axis::Horizontal,
+                                                                                    gap: MetricRef::space(Space::N2).resolve(&theme),
+                                                                                    padding: Edges::all(Px(0.0)),
+                                                                                    justify: MainAlign::SpaceBetween,
+                                                                                    align: CrossAlign::Center,
+                                                                                    wrap: false,
+                                                                                },
+                                                                                |cx| {
+                                                                                    vec![
+                                                                                        cx.text_props(TextProps {
+                                                                                            layout: LayoutStyle::default(),
+                                                                                            text: item.label.clone(),
+                                                                                            style: Some(text_style.clone()),
+                                                                                            wrap: TextWrap::None,
+                                                                                            overflow: TextOverflow::Ellipsis,
+                                                                                            color: Some(fg),
+                                                                                        }),
+                                                                                        icon,
+                                                                                    ]
+                                                                                },
+                                                                            )]
                                                                         },
                                                                     )]
                                                                  },
-                                                             ));
+                                                              ));
                                                                 }
                                                                 out
                                                             },
