@@ -30,9 +30,9 @@ examples in `repo-ref/ui`.
 
 - Pass: Overlay placement and dismissal are delegated to `Popover` (portal-like per-window overlay
   roots + outside-press dismissal).
-- Partial: Content width tracks trigger width (via `Popover::into_element_with_anchor(...)`), which
-  is convenient but slightly different from the upstream demo where width is explicitly set on both
-  trigger and content (`w-[200px]`).
+- Pass: By default, content width tracks the trigger width (via `Popover::into_element_with_anchor(...)`);
+  recipes can opt into a fixed width via `Combobox::width(Px(...))` to match upstream demos
+  (`w-[200px]`).
 
 ### Keyboard & focus
 
@@ -45,8 +45,7 @@ examples in `repo-ref/ui`.
 
 ### Visual parity (shadcn)
 
-- Partial: Popover content padding is aligned to the demo (`p-0`) by rendering the list inside
-  `PopoverContent` with `p-0`.
+- Pass: Popover content padding matches the demo (`p-0`).
 - Partial: The trigger is styled via input chrome tokens; upstream uses `Button` `variant="outline"`
   with `role="combobox"`.
 

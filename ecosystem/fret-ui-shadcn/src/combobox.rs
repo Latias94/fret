@@ -58,6 +58,7 @@ pub struct Combobox {
     open: Model<bool>,
     query: Option<Model<String>>,
     items: Vec<ComboboxItem>,
+    width: Option<Px>,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
@@ -73,6 +74,7 @@ impl Combobox {
             open,
             query: None,
             items: Vec::new(),
+            width: None,
             placeholder: Arc::from("Select..."),
             search_placeholder: Arc::from("Search..."),
             empty_text: Arc::from("No results."),
@@ -80,6 +82,13 @@ impl Combobox {
             a11y_label: None,
             search_enabled: true,
         }
+    }
+
+    /// When set, applies a fixed width to both the trigger and the popover content (shadcn demo
+    /// uses `w-[200px]`).
+    pub fn width(mut self, width: Px) -> Self {
+        self.width = Some(width);
+        self
     }
 
     pub fn query_model(mut self, query: Model<String>) -> Self {
@@ -134,6 +143,7 @@ impl Combobox {
             self.open,
             self.query,
             &self.items,
+            self.width,
             self.placeholder,
             self.search_placeholder,
             self.empty_text,
@@ -151,6 +161,7 @@ pub fn combobox<H: UiHost>(
     open: Model<bool>,
     query: Option<Model<String>>,
     items: &[ComboboxItem],
+    width: Option<Px>,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
@@ -214,9 +225,13 @@ pub fn combobox<H: UiHost>(
 
         let mut trigger_layout = decl_style::layout_style(
             &theme,
-            LayoutRefinement::default()
-                .w_full()
-                .min_h(MetricRef::Px(resolved.min_height)),
+            LayoutRefinement::default().min_h(MetricRef::Px(resolved.min_height)).merge(
+                if let Some(w) = width {
+                    LayoutRefinement::default().w_px(MetricRef::Px(w))
+                } else {
+                    LayoutRefinement::default().w_full()
+                },
+            ),
         );
         trigger_layout.size.height = Length::Auto;
         trigger_layout.size.min_height = Some(resolved.min_height);
@@ -325,7 +340,7 @@ pub fn combobox<H: UiHost>(
                         .metric_by_key("component.combobox.max_list_height")
                         .or_else(|| theme.metric_by_key("component.select.max_list_height"))
                         .unwrap_or(Px(280.0));
-                    let desired_w = Px(anchor.size.width.0.max(180.0));
+                    let desired_w = width.unwrap_or_else(|| Px(anchor.size.width.0.max(180.0)));
 
                     let transparent = Color::TRANSPARENT;
                     let list = if search_enabled {
