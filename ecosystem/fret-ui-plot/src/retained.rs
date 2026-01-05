@@ -487,6 +487,7 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     hidden_series: HashSet<SeriesId>,
     pinned_series: Option<SeriesId>,
     legend_hover: Option<SeriesId>,
+    cursor_px: Option<Point>,
     last_scale_factor: f32,
     view_bounds: Option<DataRect>,
     view_is_auto: bool,
@@ -523,6 +524,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             hidden_series: HashSet::new(),
             pinned_series: None,
             legend_hover: None,
+            cursor_px: None,
             last_scale_factor: 1.0,
             view_bounds: None,
             view_is_auto: true,
@@ -917,6 +919,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.view_is_auto = true;
                     self.view_bounds = None;
                     self.hover = None;
+                    self.cursor_px = None;
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
                     self.box_zoom_current = None;
@@ -929,6 +932,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 } else if plain && *key == KeyCode::KeyA {
                     self.hidden_series.clear();
                     self.hover = None;
+                    self.cursor_px = None;
                     self.legend_hover = None;
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
@@ -1015,6 +1019,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     }
 
                     self.hover = None;
+                    self.cursor_px = None;
                     self.legend_hover = Some(id);
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
@@ -1031,6 +1036,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let inside = contains_point(layout.plot, *position);
 
                 if inside && *button == MouseButton::Left {
+                    self.cursor_px = Some(local_from_absolute(layout.plot.origin, *position));
                     self.hover = None;
                     if modifiers.shift {
                         let local = local_from_absolute(layout.plot.origin, *position);
@@ -1178,6 +1184,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     if let Some((legend, rows)) = self.legend_layout(layout)
                         && contains_point(legend, *position)
                     {
+                        let cursor_changed = self.cursor_px.take().is_some();
+
                         let series_index = rows
                             .iter()
                             .enumerate()
@@ -1199,6 +1207,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             cx.request_redraw();
                         }
 
+                        if cursor_changed {
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                        }
+
                         cx.stop_propagation();
                         return;
                     }
@@ -1210,8 +1223,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 if self.box_zoom_start.is_some() {
-                    self.box_zoom_current =
-                        Some(local_from_absolute(layout.plot.origin, *position));
+                    let local = local_from_absolute(layout.plot.origin, *position);
+                    self.cursor_px = Some(local);
+                    self.box_zoom_current = Some(local);
                     self.hover = None;
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
@@ -1220,6 +1234,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 if let Some(last) = self.pan_last_pos {
+                    self.cursor_px = None;
                     let dx_px = position.x.0 - last.x.0;
                     let dy_px = position.y.0 - last.y.0;
 
@@ -1246,6 +1261,13 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 let inside = contains_point(layout.plot, *position);
+
+                let prev_cursor = self.cursor_px;
+                self.cursor_px = inside.then(|| local_from_absolute(layout.plot.origin, *position));
+                if prev_cursor != self.cursor_px {
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
 
                 let next_hover = if inside {
                     let model_revision = self.model.revision(cx.app).unwrap_or(0);
@@ -1426,10 +1448,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 });
             }
 
-            if let Some(hover) = self.hover {
-                let x = Px((layout.plot.origin.x.0 + hover.plot_px.x.0).round());
-                let y = Px((layout.plot.origin.y.0 + hover.plot_px.y.0).round());
-
+            if let Some(cursor) = self.cursor_px {
+                let x = Px((layout.plot.origin.x.0 + cursor.x.0).round());
+                let y = Px((layout.plot.origin.y.0 + cursor.y.0).round());
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(3),
                     rect: Rect::new(
@@ -1453,9 +1474,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     border_color: Color::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
+            }
+
+            if let Some(hover) = self.hover {
+                let hx = Px((layout.plot.origin.x.0 + hover.plot_px.x.0).round());
+                let hy = Px((layout.plot.origin.y.0 + hover.plot_px.y.0).round());
 
                 let dot_size = Px(6.0);
-                let dot_origin = Point::new(Px(x.0 - dot_size.0 * 0.5), Px(y.0 - dot_size.0 * 0.5));
+                let dot_origin =
+                    Point::new(Px(hx.0 - dot_size.0 * 0.5), Px(hy.0 - dot_size.0 * 0.5));
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(4),
                     rect: Rect::new(dot_origin, Size::new(dot_size, dot_size)),
