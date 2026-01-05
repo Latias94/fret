@@ -44,4 +44,5 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 ## Follow-ups (recommended)
 
 - Consider matching shadcn’s exact size scale (`h-8 / h-9 / h-10`) via theme tokens.
-- Consider a shared “shadow-xs” token/recipe for outline toggle group containers (upstream uses `shadow-xs`).
+- A shared `shadow_xs` recipe now exists (`fret-ui-kit::declarative::style::shadow_xs(...)`); wire it
+  into outline toggle group containers if strict parity is desired.

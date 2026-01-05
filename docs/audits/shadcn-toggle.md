@@ -45,5 +45,6 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- Consider introducing a shared “shadow-xs” token/recipe (upstream outline toggle uses `shadow-xs`).
+- A shared `shadow_xs` recipe now exists (`fret-ui-kit::declarative::style::shadow_xs(...)`); wire it
+  into outline toggles if strict parity is desired.
 - Consider an icon-sizing helper to match shadcn’s default `svg.size-4` rule.

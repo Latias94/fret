@@ -246,6 +246,23 @@ fn shadow_style(
     }
 }
 
+pub fn shadow_xs(theme: &Theme, radius: Px) -> ShadowStyle {
+    let offset_x = shadow_metric(theme, "component.shadow.xs.offset_x", Px(0.0));
+    let offset_y = shadow_metric(theme, "component.shadow.xs.offset_y", Px(1.0));
+    let spread = shadow_metric(theme, "component.shadow.xs.spread", Px(0.0));
+    let softness_px = shadow_metric(theme, "component.shadow.xs.softness", Px(1.0));
+    let softness = softness_px.0.round().clamp(0.0, 8.0) as u8;
+
+    ShadowStyle {
+        color: shadow_color(theme, 0.12),
+        offset_x,
+        offset_y,
+        spread,
+        softness,
+        corner_radii: Corners::all(radius),
+    }
+}
+
 pub fn shadow_sm(theme: &Theme, radius: Px) -> ShadowStyle {
     shadow_style(
         theme,

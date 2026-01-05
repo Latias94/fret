@@ -41,4 +41,5 @@ This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn
 ## Follow-ups (recommended)
 
 - Consider exposing size variants (e.g. `sm` vs `default`) if parity needs it.
-- Consider a shared “shadow-xs” token/recipe for controls (`Switch` uses `shadow-xs` upstream).
+- A shared `shadow_xs` recipe now exists (`fret-ui-kit::declarative::style::shadow_xs(...)`); wire it
+  into controls if strict parity is desired.

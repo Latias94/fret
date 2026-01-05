@@ -41,4 +41,5 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 ## Follow-ups (recommended)
 
 - Consider supporting Radix `checked="indeterminate"` (tri-state) if needed.
-- Consider a shared “shadow-xs” token/recipe for controls (upstream uses `shadow-xs`).
+- A shared `shadow_xs` recipe now exists (`fret-ui-kit::declarative::style::shadow_xs(...)`); wire it
+  into controls if strict parity is desired.

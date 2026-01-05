@@ -35,7 +35,8 @@ examples in `repo-ref/ui`.
 - Pass: Item sizing defaults to `size-4` (`16px`) via `component.radio_group.icon_size_px`.
 - Pass: Item border defaults to `border-input` and switches to `border-ring` on focus.
 - Pass: Selected indicator uses `primary` (dot fill), matching shadcn’s `CircleIcon fill-primary`.
-- Partial: The shadcn wrapper applies `shadow-xs`; Fret currently does not model an `xs` shadow tier.
+- Partial: The shadcn wrapper applies `shadow-xs`; Fret now provides a `shadow_xs` recipe, but it is
+  not applied to `RadioGroup` yet.
 
 ## Validation
 
@@ -43,4 +44,5 @@ examples in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- Consider adding an `xs` shadow tier to match shadcn’s `shadow-xs` token usage.
+- Wire `fret-ui-kit::declarative::style::shadow_xs(...)` into the radio group container if strict
+  parity is desired.
