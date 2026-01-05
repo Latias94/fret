@@ -83,7 +83,8 @@ pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible};
 pub use combobox::{Combobox, ComboboxItem, combobox};
 pub use command::{
-    Command, CommandDialog, CommandInput, CommandItem, CommandList, CommandPalette, command,
+    Command, CommandDialog, CommandInput, CommandItem, CommandList, CommandPalette, CommandShortcut,
+    command,
 };
 pub use context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
 #[cfg(feature = "datagrid")]
