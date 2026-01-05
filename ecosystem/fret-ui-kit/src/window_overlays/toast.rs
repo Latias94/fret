@@ -24,6 +24,11 @@ pub enum ToastVariant {
     #[default]
     Default,
     Destructive,
+    Success,
+    Info,
+    Warning,
+    Error,
+    Loading,
 }
 
 #[derive(Debug, Clone)]

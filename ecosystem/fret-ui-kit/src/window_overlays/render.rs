@@ -20,6 +20,17 @@ use super::state::{
 use super::toast::{ToastEntry, ToastTimerOutcome};
 use super::{ToastPosition, ToastVariant, dismiss_toast_action};
 
+fn toast_icon_glyph(variant: ToastVariant) -> Option<&'static str> {
+    match variant {
+        ToastVariant::Success => Some("✓"),
+        ToastVariant::Info => Some("i"),
+        ToastVariant::Warning => Some("!"),
+        ToastVariant::Error | ToastVariant::Destructive => Some("×"),
+        ToastVariant::Loading => None,
+        ToastVariant::Default => None,
+    }
+}
+
 pub fn render<H: UiHost>(
     ui: &mut UiTree<H>,
     app: &mut H,
@@ -577,12 +588,29 @@ pub fn render<H: UiHost>(
                                 .unwrap_or(theme.colors.text_primary);
                             let (bg, fg) = match toast.variant {
                                 ToastVariant::Default => (bg_default, fg_default),
-                                ToastVariant::Destructive => (
+                                ToastVariant::Destructive | ToastVariant::Error => (
                                     theme.color_by_key("destructive").unwrap_or(bg_default),
                                     theme
                                         .color_by_key("destructive-foreground")
                                         .unwrap_or(fg_default),
                                 ),
+                                ToastVariant::Success => (
+                                    theme.color_by_key("success").unwrap_or(bg_default),
+                                    theme
+                                        .color_by_key("success-foreground")
+                                        .unwrap_or(fg_default),
+                                ),
+                                ToastVariant::Info => (
+                                    theme.color_by_key("info").unwrap_or(bg_default),
+                                    theme.color_by_key("info-foreground").unwrap_or(fg_default),
+                                ),
+                                ToastVariant::Warning => (
+                                    theme.color_by_key("warning").unwrap_or(bg_default),
+                                    theme
+                                        .color_by_key("warning-foreground")
+                                        .unwrap_or(fg_default),
+                                ),
+                                ToastVariant::Loading => (bg_default, fg_default),
                             };
                             let border_color = theme
                                 .color_by_key("border")
@@ -650,6 +678,25 @@ pub fn render<H: UiHost>(
                                 )
                             });
 
+                            let icon = match toast.variant {
+                                ToastVariant::Loading => {
+                                    let mut spinner = fret_ui::element::SpinnerProps::default();
+                                    spinner.color = Some(fg);
+                                    Some(cx.spinner_props(spinner))
+                                }
+                                v => toast_icon_glyph(v).map(|glyph| {
+                                    cx.text_props(fret_ui::element::TextProps {
+                                        layout: fret_ui::element::LayoutStyle::default(),
+                                        text: glyph.into(),
+                                        style: None,
+                                        color: Some(fg),
+                                        wrap: fret_core::TextWrap::None,
+                                        overflow: fret_core::TextOverflow::Clip,
+                                    })
+                                }),
+                            };
+
+                            let icon = icon.clone();
                             let header_row = cx.flex(
                                 fret_ui::element::FlexProps {
                                     layout: fret_ui::element::LayoutStyle::default(),
@@ -660,8 +707,30 @@ pub fn render<H: UiHost>(
                                     align: fret_ui::element::CrossAlign::Center,
                                     wrap: false,
                                 },
-                                |cx| {
+                                move |cx| {
                                     let mut row: Vec<AnyElement> = Vec::new();
+                                    if let Some(icon) = icon.clone() {
+                                        row.push(cx.container(
+                                            fret_ui::element::ContainerProps {
+                                                layout: {
+                                                    let mut layout =
+                                                        fret_ui::element::LayoutStyle::default();
+                                                    layout.size.width =
+                                                        fret_ui::element::Length::Px(Px(16.0));
+                                                    layout.size.height =
+                                                        fret_ui::element::Length::Px(Px(16.0));
+                                                    layout
+                                                },
+                                                padding: fret_core::Edges::all(Px(0.0)),
+                                                background: None,
+                                                shadow: None,
+                                                border: fret_core::Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: fret_core::Corners::all(Px(0.0)),
+                                            },
+                                            move |_cx| vec![icon.clone()],
+                                        ));
+                                    }
                                     row.push(cx.text_props(fret_ui::element::TextProps {
                                         layout: fret_ui::element::LayoutStyle::default(),
                                         text: toast.title.clone(),
