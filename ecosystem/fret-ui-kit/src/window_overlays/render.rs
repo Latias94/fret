@@ -480,6 +480,16 @@ pub fn render<H: UiHost>(
                     return Vec::new();
                 }
 
+                // Match common toast UX: top stacks show the newest item at the top edge, while
+                // bottom stacks show the newest item at the bottom edge.
+                let mut toasts = toasts;
+                if matches!(
+                    position,
+                    ToastPosition::TopLeft | ToastPosition::TopCenter | ToastPosition::TopRight
+                ) {
+                    toasts.reverse();
+                }
+
                 let theme = fret_ui::Theme::global(&*cx.app).clone();
                 let margin = theme.metrics.padding_md;
                 let gap = theme.metrics.padding_sm;
