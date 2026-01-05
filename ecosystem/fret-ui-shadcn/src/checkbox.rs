@@ -13,6 +13,7 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::checked_state::CheckedState;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -58,7 +59,7 @@ fn checkbox_ring_color(theme: &Theme) -> Color {
 
 #[derive(Clone)]
 pub struct Checkbox {
-    model: Model<bool>,
+    checked: CheckboxCheckedModel,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     on_click: Option<CommandId>,
@@ -66,10 +67,27 @@ pub struct Checkbox {
     layout: LayoutRefinement,
 }
 
+#[derive(Debug, Clone)]
+enum CheckboxCheckedModel {
+    Bool(Model<bool>),
+    TriState(Model<CheckedState>),
+}
+
 impl Checkbox {
     pub fn new(model: Model<bool>) -> Self {
         Self {
-            model,
+            checked: CheckboxCheckedModel::Bool(model),
+            disabled: false,
+            a11y_label: None,
+            on_click: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn new_tristate(model: Model<CheckedState>) -> Self {
+        Self {
+            checked: CheckboxCheckedModel::TriState(model),
             disabled: false,
             a11y_label: None,
             on_click: None,
@@ -105,7 +123,7 @@ impl Checkbox {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
-            let model = self.model;
+            let checked = self.checked;
 
             let theme = Theme::global(&*cx.app).clone();
 
@@ -131,20 +149,35 @@ impl Checkbox {
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_opt(on_click);
-                cx.pressable_toggle_bool(&model);
+                match &checked {
+                    CheckboxCheckedModel::Bool(model) => cx.pressable_toggle_bool(model),
+                    CheckboxCheckedModel::TriState(model) => {
+                        cx.pressable_update_model(model, |v| *v = v.toggle());
+                    }
+                }
 
                 let theme = Theme::global(&*cx.app).clone();
-                let checked = cx.watch_model(&model).copied().unwrap_or(false);
+                let state = match &checked {
+                    CheckboxCheckedModel::Bool(model) => {
+                        CheckedState::from(cx.watch_model(model).copied().unwrap_or(false))
+                    }
+                    CheckboxCheckedModel::TriState(model) => {
+                        cx.watch_model(model).copied().unwrap_or_default()
+                    }
+                };
+                let is_on = state.is_on();
+                let is_checked = state.is_checked();
+                let is_indeterminate = state.is_indeterminate();
 
-                let bg = if checked { bg_on } else { Color::TRANSPARENT };
+                let bg = if is_on { bg_on } else { Color::TRANSPARENT };
                 let border_color = if st.focused {
                     checkbox_ring_color(&theme)
-                } else if checked {
+                } else if is_on {
                     bg_on
                 } else {
                     border
                 };
-                let fg = if checked { fg_on } else { Color::TRANSPARENT };
+                let fg = if is_on { fg_on } else { Color::TRANSPARENT };
 
                 let mut chrome_props = decl_style::container_props(
                     &theme,
@@ -169,23 +202,30 @@ impl Checkbox {
                     a11y: PressableA11y {
                         role: Some(fret_core::SemanticsRole::Checkbox),
                         label: a11y_label.clone(),
-                        checked: Some(checked),
+                        checked: state.to_semantics_checked(),
                         ..Default::default()
                     },
                     ..Default::default()
                 };
 
                 let children = move |cx: &mut ElementContext<'_, H>| {
-                    if !checked {
+                    if !is_on {
                         return Vec::new();
                     }
 
                     let icon_size = theme
                         .metric_by_key("component.checkbox.icon_size")
                         .unwrap_or(Px(14.0));
+                    let icon_id = if is_checked {
+                        ids::ui::CHECK
+                    } else if is_indeterminate {
+                        ids::ui::MINUS
+                    } else {
+                        ids::ui::CHECK
+                    };
                     let icon = decl_icon::icon_with(
                         &mut *cx,
-                        ids::ui::CHECK,
+                        icon_id,
                         Some(icon_size),
                         Some(ColorRef::Color(fg)),
                     );
@@ -349,5 +389,63 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
         assert!(!scene.ops().is_empty());
+    }
+
+    #[test]
+    fn checkbox_tristate_indeterminate_toggles_to_checked() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(CheckedState::Indeterminate);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-checkbox-tristate-indeterminate-toggles",
+            |cx| vec![Checkbox::new_tristate(model.clone()).into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let checkbox_node = ui.children(root)[0];
+        let checkbox_bounds = ui
+            .debug_node_bounds(checkbox_node)
+            .expect("checkbox bounds");
+        let position = Point::new(
+            Px(checkbox_bounds.origin.x.0 + checkbox_bounds.size.width.0 * 0.5),
+            Px(checkbox_bounds.origin.y.0 + checkbox_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&model), Some(CheckedState::Checked));
     }
 }

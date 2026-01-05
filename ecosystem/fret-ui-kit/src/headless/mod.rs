@@ -1,5 +1,6 @@
 pub mod cmdk_score;
 pub mod cmdk_selection;
+pub mod checked_state;
 pub mod dismissible_layer;
 pub mod focus_scope;
 pub mod hover_intent;

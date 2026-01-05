@@ -52,6 +52,7 @@ mod semantic_ui {
         reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("lucide.chevron-right"));
         reg.alias(ids::ui::CHEVRON_UP, IconId::new("lucide.chevron-up"));
         reg.alias(ids::ui::CLOSE, IconId::new("lucide.x"));
+        reg.alias(ids::ui::MINUS, IconId::new("lucide.minus"));
         reg.alias(ids::ui::SEARCH, IconId::new("lucide.search"));
         reg.alias(ids::ui::SETTINGS, IconId::new("lucide.settings"));
         reg.alias(ids::ui::PLAY, IconId::new("lucide.play"));

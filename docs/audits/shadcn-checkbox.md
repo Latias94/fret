@@ -41,4 +41,5 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 
 ## Follow-ups (recommended)
 
-- Consider supporting Radix `checked="indeterminate"` (tri-state) if needed.
+- Pass: Supports Radix `checked="indeterminate"` (tri-state) via `Checkbox::new_tristate`.
+  - Note: Semantics currently maps indeterminate to `checked: None`.
