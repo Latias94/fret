@@ -477,6 +477,10 @@ impl MenubarMenuEntries {
                     let content_focus_id: Rc<Cell<Option<GlobalElementId>>> =
                         Rc::new(Cell::new(None));
                     let content_focus_id_for_children = content_focus_id.clone();
+                    let content_focus_id_for_children_for_content =
+                        content_focus_id_for_children.clone();
+                    let content_focus_id_for_children_for_submenu =
+                        content_focus_id_for_children.clone();
 
                     let (overlay_children, dismissible_on_pointer_move) =
                         cx.with_root_name(&overlay_root_name, move |cx| {
@@ -561,7 +565,9 @@ impl MenubarMenuEntries {
                                         corner_radii: Corners::all(theme.metrics.radius_sm),
                                     },
                                     move |cx| {
-                                        vec![menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
+                                        let content_focus_id_for_panel =
+                                            content_focus_id_for_children_for_content.clone();
+                                        let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
                                             cx,
                                             RovingFlexProps {
                                                 flex: FlexProps {
@@ -846,7 +852,11 @@ impl MenubarMenuEntries {
 
                                                 out
                                             },
-                                        )]
+                                        );
+                                        if content_focus_id_for_panel.get().is_none() {
+                                            content_focus_id_for_panel.set(Some(roving.id));
+                                        }
+                                        vec![roving]
                                     },
                                 )]
                             },
@@ -936,7 +946,7 @@ impl MenubarMenuEntries {
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
-                                                content_focus_id_for_children.clone();
+                                                content_focus_id_for_children_for_submenu.clone();
                                             let roving = menu::content::menu_roving_group_apg_prefix_typeahead(
                                                         cx,
                                                         RovingFlexProps {
@@ -1481,6 +1491,68 @@ mod tests {
                 n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New")
             }),
             "menu items should render after ArrowDown opens the menubar menu"
+        );
+    }
+
+    #[test]
+    fn menubar_pointer_open_focuses_content_not_first_item() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        // Frame 0: render and locate triggers.
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file_node = menu_trigger_node_id(&snap0, "File");
+        let file_pos = center(menu_trigger_bounds(&snap0, "File"));
+        ui.set_focus(Some(file_node));
+
+        // Click "File" to open.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        // Frame 1: open menu should be present in semantics.
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(menu_trigger_expanded(snap1, "File"));
+
+        let first_item = snap1
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New"))
+            .expect("New menu item");
+
+        let focus = ui.focus().expect("expected focus after pointer-open");
+        assert_ne!(
+            focus, first_item.id,
+            "pointer-open should not move focus to the first menu item (Radix onEntryFocus preventDefault)"
+        );
+        assert_ne!(
+            focus, file_node,
+            "pointer-open should focus menu content/roving container rather than keeping trigger focus"
         );
     }
 

@@ -9,6 +9,7 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle,
     TextWrap,
 };
+use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
@@ -18,8 +19,10 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::headless::cmdk_score;
 use fret_ui_kit::headless::cmdk_selection;
 use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
@@ -229,6 +232,8 @@ pub struct CommandItem {
     label: Arc<str>,
     value: Arc<str>,
     disabled: bool,
+    checked: bool,
+    show_checkmark: bool,
     command: Option<CommandId>,
     on_select: Option<fret_ui::action::OnActivate>,
     children: Vec<AnyElement>,
@@ -240,6 +245,8 @@ impl std::fmt::Debug for CommandItem {
             .field("label", &self.label.as_ref())
             .field("value", &self.value.as_ref())
             .field("disabled", &self.disabled)
+            .field("checked", &self.checked)
+            .field("show_checkmark", &self.show_checkmark)
             .field("command", &self.command)
             .field("on_select", &self.on_select.is_some())
             .field("children_len", &self.children.len())
@@ -254,6 +261,8 @@ impl CommandItem {
             label: label.clone(),
             value: label,
             disabled: false,
+            checked: false,
+            show_checkmark: false,
             command: None,
             on_select: None,
             children: Vec::new(),
@@ -267,6 +276,13 @@ impl CommandItem {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Shows a cmdk-style checkmark indicator, with visibility controlled by `checked`.
+    pub fn checkmark(mut self, checked: bool) -> Self {
+        self.checked = checked;
+        self.show_checkmark = true;
         self
     }
 
@@ -620,10 +636,41 @@ impl CommandPalette {
 
             let disabled = self.disabled;
             let wrap = self.wrap;
-            let items = self.items;
+            let query = cx
+                .watch_model(&self.model)
+                .layout()
+                .read_ref(|s| s.trim().to_ascii_lowercase())
+                .unwrap_or_default();
+
+            let mut items = self.items;
+            if !query.is_empty() {
+                let mut scored: Vec<(usize, f32, CommandItem)> = items
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(idx, item)| {
+                        let score = if item.value.as_ref() != item.label.as_ref() {
+                            cmdk_score::command_score(
+                                item.label.as_ref(),
+                                query.as_str(),
+                                &[item.value.as_ref()],
+                            )
+                        } else {
+                            cmdk_score::command_score(item.label.as_ref(), query.as_str(), &[])
+                        };
+                        (score > 0.0).then_some((idx, score, item))
+                    })
+                    .collect();
+
+                scored.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
+                    b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
+                });
+
+                items = scored.into_iter().map(|(_, _, item)| item).collect();
+            }
 
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
+                query.as_str().hash(&mut hasher);
                 items.len().hash(&mut hasher);
                 for item in &items {
                     item.label.as_ref().hash(&mut hasher);
@@ -720,6 +767,7 @@ impl CommandPalette {
             let fg = theme
                 .color_by_key("foreground")
                 .unwrap_or(theme.colors.text_primary);
+            let fg_disabled = theme.colors.text_disabled;
             let text_style = item_text_style(&theme);
             let item_layout = decl_style::layout_style(
                 &theme,
@@ -762,6 +810,8 @@ impl CommandPalette {
 
                         let label = item.label.clone();
                         let value = item.value.clone();
+                        let checked = item.checked;
+                        let show_checkmark = item.show_checkmark;
                         let command = item.command;
                         let on_select = item.on_select.clone();
                         let children = item.children;
@@ -844,18 +894,36 @@ impl CommandPalette {
                                             align: CrossAlign::Center,
                                         },
                                         move |cx| {
-                                            if children.is_empty() {
-                                                vec![cx.text_props(TextProps {
-                                                    layout: LayoutStyle::default(),
-                                                    text: label.clone(),
-                                                    style: Some(text_style.clone()),
-                                                    color: Some(fg),
-                                                    wrap: TextWrap::None,
-                                                    overflow: TextOverflow::Clip,
-                                                })]
-                                            } else {
-                                                children
+                                            if !children.is_empty() {
+                                                return children;
                                             }
+
+                                            let fg = if enabled { fg } else { fg_disabled };
+                                            let mut out = Vec::with_capacity(2);
+                                            out.push(cx.text_props(TextProps {
+                                                layout: LayoutStyle::default(),
+                                                text: label.clone(),
+                                                style: Some(text_style.clone()),
+                                                color: Some(fg),
+                                                wrap: TextWrap::None,
+                                                overflow: TextOverflow::Clip,
+                                            }));
+
+                                            if show_checkmark {
+                                                let icon = decl_icon::icon_with(
+                                                    cx,
+                                                    ids::ui::CHECK,
+                                                    Some(Px(16.0)),
+                                                    Some(ColorRef::Color(fg)),
+                                                );
+                                                let icon = cx.opacity(
+                                                    if checked { 1.0 } else { 0.0 },
+                                                    move |_cx| vec![icon],
+                                                );
+                                                out.push(icon);
+                                            }
+
+                                            out
                                         },
                                     )]
                                 })]
@@ -1561,5 +1629,49 @@ mod tests {
 
         assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
         assert_eq!(active_node.label.as_deref(), Some("Gamma"));
+    }
+
+    #[test]
+    fn cmdk_filters_by_value_alias() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(String::from("settings"));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            CommandItem::new("Open")
+                .value("settings")
+                .on_select(CommandId::new("open")),
+            CommandItem::new("Close")
+                .value("close")
+                .on_select(CommandId::new("close")),
+        ];
+
+        let _root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            items,
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let options: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::ListBoxOption)
+            .collect();
+        assert_eq!(options.len(), 1);
+        assert_eq!(options[0].label.as_deref(), Some("Open"));
     }
 }

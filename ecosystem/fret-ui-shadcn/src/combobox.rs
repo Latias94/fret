@@ -14,7 +14,6 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::cmdk_score;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 
@@ -328,107 +327,46 @@ pub fn combobox<H: UiHost>(
                         .unwrap_or(Px(280.0));
                     let desired_w = Px(anchor.size.width.0.max(180.0));
 
-                    let query = if search_enabled {
-                        cx.watch_model(&query_model)
-                            .layout()
-                            .read_ref(|s| s.trim().to_ascii_lowercase())
-                            .unwrap_or_default()
-                    } else {
-                        String::new()
-                    };
-
-                    let filtered: Vec<ComboboxItem> = if query.is_empty() {
-                        items.iter().cloned().collect()
-                    } else {
-                        let mut scored: Vec<(usize, f32, ComboboxItem)> = items
-                            .iter()
-                            .cloned()
-                            .enumerate()
-                            .filter_map(|(idx, it)| {
-                                let score = cmdk_score::command_score(
-                                    it.label.as_ref(),
-                                    query.as_str(),
-                                    &[it.value.as_ref()],
-                                );
-                                (score > 0.0).then_some((idx, score, it))
-                            })
-                            .collect();
-
-                        scored.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
-                            b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
-                        });
-
-                        scored.into_iter().map(|(_, _, it)| it).collect()
-                    };
-
-                    let fg = theme
-                        .color_by_key("foreground")
-                        .unwrap_or(theme.colors.text_primary);
-                    let fg_disabled = theme.colors.text_disabled;
-
-                    let item_text_style = crate::command::item_text_style(&theme);
-
-                    let mut command_items: Vec<CommandItem> = Vec::with_capacity(filtered.len());
-                    for item in filtered {
-                        let item_disabled = disabled || item.disabled;
-                        let is_selected = selected
-                            .as_ref()
-                            .is_some_and(|v| v.as_ref() == item.value.as_ref());
-
-                        let model_for_select = model.clone();
-                        let open_for_select = open.clone();
-                        let query_for_select = query_model.clone();
-                        let value_for_select = item.value.clone();
-                        let on_select: fret_ui::action::OnActivate =
-                            Arc::new(move |host, action_cx, _reason| {
-                                let _ = host.models_mut().update(&model_for_select, |v| {
-                                    if v.as_ref().is_some_and(|cur| {
-                                        cur.as_ref() == value_for_select.as_ref()
-                                    }) {
-                                        *v = None;
-                                    } else {
-                                        *v = Some(value_for_select.clone());
-                                    }
-                                });
-                                let _ = host.models_mut().update(&open_for_select, |v| *v = false);
-                                let _ = host.models_mut().update(&query_for_select, |v| v.clear());
-                                host.request_redraw(action_cx.window);
-                            });
-
-                        let label_text = item.label.clone();
-                        let icon = decl_icon::icon_with(
-                            cx,
-                            ids::ui::CHECK,
-                            Some(Px(16.0)),
-                            Some(ColorRef::Color(if item_disabled {
-                                fg_disabled
-                            } else {
-                                fg
-                            })),
-                        );
-                        let icon =
-                            cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![icon]);
-
-                        let text = cx.text_props(TextProps {
-                            layout: LayoutStyle::default(),
-                            text: label_text.clone(),
-                            style: Some(item_text_style.clone()),
-                            color: Some(if item_disabled { fg_disabled } else { fg }),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Ellipsis,
-                        });
-
-                        command_items.push(
-                            CommandItem::new(label_text)
-                                .value(item.value.clone())
-                                .disabled(item_disabled)
-                                .on_select_action(on_select)
-                                .children(vec![text, icon]),
-                        );
-                    }
-
                     let transparent = Color::TRANSPARENT;
                     let list = if search_enabled {
+                        let mut command_items: Vec<CommandItem> = Vec::with_capacity(items.len());
+                        for item in items.iter().cloned() {
+                            let item_disabled = disabled || item.disabled;
+                            let is_selected = selected
+                                .as_ref()
+                                .is_some_and(|v| v.as_ref() == item.value.as_ref());
+
+                            let model_for_select = model.clone();
+                            let open_for_select = open.clone();
+                            let query_for_select = query_model.clone();
+                            let value_for_select = item.value.clone();
+                            let on_select: fret_ui::action::OnActivate =
+                                Arc::new(move |host, action_cx, _reason| {
+                                    let _ = host.models_mut().update(&model_for_select, |v| {
+                                        if v.as_ref().is_some_and(|cur| {
+                                            cur.as_ref() == value_for_select.as_ref()
+                                        }) {
+                                            *v = None;
+                                        } else {
+                                            *v = Some(value_for_select.clone());
+                                        }
+                                    });
+                                    let _ =
+                                        host.models_mut().update(&open_for_select, |v| *v = false);
+                                    let _ =
+                                        host.models_mut().update(&query_for_select, |v| v.clear());
+                                    host.request_redraw(action_cx.window);
+                                });
+
+                            command_items.push(
+                                CommandItem::new(item.label.clone())
+                                    .value(item.value.clone())
+                                    .disabled(item_disabled)
+                                    .checkmark(is_selected)
+                                    .on_select_action(on_select),
+                            );
+                        }
+
                         CommandPalette::new(query_model.clone(), command_items)
                             .a11y_label("Combobox list")
                             .placeholder(search_placeholder.clone())
@@ -446,6 +384,75 @@ pub fn combobox<H: UiHost>(
                             )
                             .into_element(cx)
                     } else {
+                        let fg = theme
+                            .color_by_key("foreground")
+                            .unwrap_or(theme.colors.text_primary);
+                        let fg_disabled = theme.colors.text_disabled;
+                        let item_text_style = crate::command::item_text_style(&theme);
+
+                        let mut command_items: Vec<CommandItem> = Vec::with_capacity(items.len());
+                        for item in items.iter().cloned() {
+                            let item_disabled = disabled || item.disabled;
+                            let is_selected = selected
+                                .as_ref()
+                                .is_some_and(|v| v.as_ref() == item.value.as_ref());
+
+                            let model_for_select = model.clone();
+                            let open_for_select = open.clone();
+                            let query_for_select = query_model.clone();
+                            let value_for_select = item.value.clone();
+                            let on_select: fret_ui::action::OnActivate =
+                                Arc::new(move |host, action_cx, _reason| {
+                                    let _ = host.models_mut().update(&model_for_select, |v| {
+                                        if v.as_ref().is_some_and(|cur| {
+                                            cur.as_ref() == value_for_select.as_ref()
+                                        }) {
+                                            *v = None;
+                                        } else {
+                                            *v = Some(value_for_select.clone());
+                                        }
+                                    });
+                                    let _ =
+                                        host.models_mut().update(&open_for_select, |v| *v = false);
+                                    let _ =
+                                        host.models_mut().update(&query_for_select, |v| v.clear());
+                                    host.request_redraw(action_cx.window);
+                                });
+
+                            let label_text = item.label.clone();
+                            let icon = decl_icon::icon_with(
+                                cx,
+                                ids::ui::CHECK,
+                                Some(Px(16.0)),
+                                Some(ColorRef::Color(if item_disabled {
+                                    fg_disabled
+                                } else {
+                                    fg
+                                })),
+                            );
+                            let icon = cx
+                                .opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| {
+                                    vec![icon]
+                                });
+
+                            let text = cx.text_props(TextProps {
+                                layout: LayoutStyle::default(),
+                                text: label_text.clone(),
+                                style: Some(item_text_style.clone()),
+                                color: Some(if item_disabled { fg_disabled } else { fg }),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Ellipsis,
+                            });
+
+                            command_items.push(
+                                CommandItem::new(label_text)
+                                    .value(item.value.clone())
+                                    .disabled(item_disabled)
+                                    .on_select_action(on_select)
+                                    .children(vec![text, icon]),
+                            );
+                        }
+
                         CommandList::new(command_items)
                             .disabled(disabled)
                             .empty_text(empty_text)
