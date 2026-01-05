@@ -16,7 +16,15 @@ use fret_runtime::Model;
 
 use crate::primitives::dismissable_layer;
 use crate::primitives::menu::sub;
-use crate::{OverlayPresence, OverlayRequest};
+use crate::{OverlayController, OverlayPresence, OverlayRequest};
+
+/// A stable per-overlay root name for menu-like popovers.
+///
+/// This is the root naming convention used by shadcn menu wrappers (DropdownMenu, ContextMenu,
+/// Menubar) and is safe to share as a Radix-aligned default.
+pub fn menu_overlay_root_name(id: GlobalElementId) -> String {
+    OverlayController::popover_root_name(id)
+}
 
 /// Ensure submenu models exist and install the menu-root timer handler.
 ///
@@ -45,6 +53,19 @@ pub fn sync_root_open_and_ensure_submenu<H: UiHost>(
 ) -> sub::MenuSubmenuModels {
     sub::sync_root_open(cx, is_open);
     ensure_submenu(cx, timer_handler_element, cfg)
+}
+
+/// Sync root open state and ensure submenu models exist inside a named overlay root.
+#[track_caller]
+pub fn with_root_name_sync_root_open_and_ensure_submenu<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_name: &str,
+    is_open: bool,
+    cfg: sub::MenuSubmenuConfig,
+) -> sub::MenuSubmenuModels {
+    cx.with_root_name(root_name, |cx| {
+        sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), cfg)
+    })
 }
 
 /// Build a DismissableLayer pointer-move observer that drives submenu grace intent.

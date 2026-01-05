@@ -42,7 +42,7 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 
 ### Partially implemented (split / naming drift)
 
-- `tooltip` → currently split into:
+- `tooltip` -> currently split into:
   - `ecosystem/fret-ui-kit/src/primitives/tooltip_provider.rs`
   - `ecosystem/fret-ui-kit/src/primitives/tooltip_delay_group.rs`
   - (missing) a Radix-named `primitives/tooltip.rs` facade that composes provider + delay + popper.
@@ -52,19 +52,19 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 These shadcn components exist today, but their reusable behavior/policy should be moved into
 Radix-named primitives facades so non-shadcn consumers can reuse them:
 
-- `dialog` → `ecosystem/fret-ui-shadcn/src/dialog.rs`
-- `alert-dialog` → `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`
-- `popover` → `ecosystem/fret-ui-shadcn/src/popover.rs`
-- `hover-card` → `ecosystem/fret-ui-shadcn/src/hover_card.rs`
-- `select` → `ecosystem/fret-ui-shadcn/src/select.rs`
-- `checkbox` → `ecosystem/fret-ui-shadcn/src/checkbox.rs`
-- `switch` → `ecosystem/fret-ui-shadcn/src/switch.rs`
-- `slider` → `ecosystem/fret-ui-shadcn/src/slider.rs`
-- `progress` → `ecosystem/fret-ui-shadcn/src/progress.rs`
-- `separator` → `ecosystem/fret-ui-shadcn/src/separator.rs`
-- `label` → `ecosystem/fret-ui-shadcn/src/label.rs`
-- `avatar` → `ecosystem/fret-ui-shadcn/src/avatar.rs`
-- `aspect-ratio` → `ecosystem/fret-ui-shadcn/src/aspect_ratio.rs`
+- `dialog` -> `ecosystem/fret-ui-shadcn/src/dialog.rs`
+- `alert-dialog` -> `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`
+- `popover` -> `ecosystem/fret-ui-shadcn/src/popover.rs`
+- `hover-card` -> `ecosystem/fret-ui-shadcn/src/hover_card.rs`
+- `select` -> `ecosystem/fret-ui-shadcn/src/select.rs`
+- `checkbox` -> `ecosystem/fret-ui-shadcn/src/checkbox.rs`
+- `switch` -> `ecosystem/fret-ui-shadcn/src/switch.rs`
+- `slider` -> `ecosystem/fret-ui-shadcn/src/slider.rs`
+- `progress` -> `ecosystem/fret-ui-shadcn/src/progress.rs`
+- `separator` -> `ecosystem/fret-ui-shadcn/src/separator.rs`
+- `label` -> `ecosystem/fret-ui-shadcn/src/label.rs`
+- `avatar` -> `ecosystem/fret-ui-shadcn/src/avatar.rs`
+- `aspect-ratio` -> `ecosystem/fret-ui-shadcn/src/aspect_ratio.rs`
 
 ### Intentional differences
 
@@ -81,6 +81,14 @@ we keep thin facades that delegate to `primitives::menu`:
 - `ecosystem/fret-ui-kit/src/primitives/dropdown_menu.rs`
 - `ecosystem/fret-ui-kit/src/primitives/context_menu.rs`
 - `ecosystem/fret-ui-kit/src/primitives/menubar.rs`
+
+These facades are intentionally small and mostly re-export shared menu helpers under
+Radix package names (for discoverability), for example:
+
+- `*_root_name` (overlay root naming convention)
+- `*_sync_root_open_and_ensure_submenu` (submenu model + timer wiring)
+- `*_dismissible_request` (menu overlay request policy)
+- `wire_*_open_on_*` (trigger keyboard / pointer open policies)
 
 ## Downshift proposal (how to match Radix interfaces)
 
