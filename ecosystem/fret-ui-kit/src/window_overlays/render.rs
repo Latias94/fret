@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, NodeId, Point, Px, Rect, Transform2D};
+use fret_core::{AppWindowId, Color, NodeId, Point, Px, Rect, Transform2D};
 use fret_runtime::DragKind;
 use fret_ui::action::{DismissReason, UiActionHostExt};
 use fret_ui::declarative;
@@ -25,12 +25,17 @@ struct ToastHoverPauseState {
     hovered: bool,
 }
 
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
 fn toast_icon_glyph(variant: ToastVariant) -> Option<&'static str> {
     match variant {
-        ToastVariant::Success => Some("✓"),
+        ToastVariant::Success => Some("\u{2713}"),
         ToastVariant::Info => Some("i"),
         ToastVariant::Warning => Some("!"),
-        ToastVariant::Error | ToastVariant::Destructive => Some("×"),
+        ToastVariant::Error | ToastVariant::Destructive => Some("\u{00D7}"),
         ToastVariant::Loading => None,
         ToastVariant::Default => None,
     }
@@ -467,7 +472,11 @@ pub fn render<H: UiHost>(
 
                         match outcome {
                             ToastTimerOutcome::Noop => false,
-                            ToastTimerOutcome::RescheduleAuto { window, token, after } => {
+                            ToastTimerOutcome::RescheduleAuto {
+                                window,
+                                token,
+                                after,
+                            } => {
                                 host.push_effect(fret_runtime::Effect::SetTimer {
                                     window: Some(window),
                                     token,
@@ -639,6 +648,13 @@ pub fn render<H: UiHost>(
                                 .color_by_key("muted-foreground")
                                 .unwrap_or(theme.colors.text_muted);
 
+                            let button_bg = theme
+                                .color_by_key("muted")
+                                .unwrap_or(theme.colors.hover_background);
+                            let button_radius = Px(6.0);
+                            let button_pad_x = Px(8.0);
+                            let button_pad_y = Px(4.0);
+
                             let close = toast.dismissible.then(|| {
                                 let close_store = store.clone();
                                 cx.pressable(
@@ -649,7 +665,7 @@ pub fn render<H: UiHost>(
                                         focus_ring: None,
                                         a11y: Default::default(),
                                     },
-                                    move |cx, _st| {
+                                    move |cx, st| {
                                         cx.pressable_add_on_activate(Arc::new(
                                             move |host, cx, _reason| {
                                                 let _ = dismiss_toast_action(
@@ -660,7 +676,41 @@ pub fn render<H: UiHost>(
                                                 );
                                             },
                                         ));
-                                        vec![cx.text("×")]
+
+                                        let bg = if st.pressed {
+                                            Some(alpha_mul(button_bg, 0.8))
+                                        } else if st.hovered {
+                                            Some(alpha_mul(button_bg, 0.6))
+                                        } else {
+                                            None
+                                        };
+
+                                        vec![cx.container(
+                                            fret_ui::element::ContainerProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                padding: fret_core::Edges {
+                                                    top: button_pad_y,
+                                                    right: button_pad_x,
+                                                    bottom: button_pad_y,
+                                                    left: button_pad_x,
+                                                },
+                                                background: bg,
+                                                shadow: None,
+                                                border: fret_core::Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: fret_core::Corners::all(button_radius),
+                                            },
+                                            move |cx| {
+                                                vec![cx.text_props(fret_ui::element::TextProps {
+                                                    layout: fret_ui::element::LayoutStyle::default(),
+                                                    text: "\u{00D7}".into(),
+                                                    style: None,
+                                                    color: Some(fg),
+                                                    wrap: fret_core::TextWrap::None,
+                                                    overflow: fret_core::TextOverflow::Clip,
+                                                })]
+                                            },
+                                        )]
                                     },
                                 )
                             });
@@ -677,7 +727,7 @@ pub fn render<H: UiHost>(
                                         focus_ring: None,
                                         a11y: Default::default(),
                                     },
-                                    move |cx, _st| {
+                                    move |cx, st| {
                                         cx.pressable_add_on_activate(Arc::new(
                                             move |host, cx, _reason| {
                                                 host.dispatch_command(Some(cx.window), cmd.clone());
@@ -693,7 +743,41 @@ pub fn render<H: UiHost>(
                                                 );
                                             },
                                         ));
-                                        vec![cx.text(label.as_ref())]
+
+                                        let bg = if st.pressed {
+                                            Some(alpha_mul(button_bg, 0.8))
+                                        } else if st.hovered {
+                                            Some(alpha_mul(button_bg, 0.6))
+                                        } else {
+                                            None
+                                        };
+
+                                        vec![cx.container(
+                                            fret_ui::element::ContainerProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                padding: fret_core::Edges {
+                                                    top: button_pad_y,
+                                                    right: button_pad_x,
+                                                    bottom: button_pad_y,
+                                                    left: button_pad_x,
+                                                },
+                                                background: bg,
+                                                shadow: None,
+                                                border: fret_core::Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: fret_core::Corners::all(button_radius),
+                                            },
+                                            move |cx| {
+                                                vec![cx.text_props(fret_ui::element::TextProps {
+                                                    layout: fret_ui::element::LayoutStyle::default(),
+                                                    text: label.clone(),
+                                                    style: None,
+                                                    color: Some(fg),
+                                                    wrap: fret_core::TextWrap::None,
+                                                    overflow: fret_core::TextOverflow::Clip,
+                                                })]
+                                            },
+                                        )]
                                     },
                                 )
                             });
@@ -710,7 +794,7 @@ pub fn render<H: UiHost>(
                                         focus_ring: None,
                                         a11y: Default::default(),
                                     },
-                                    move |cx, _st| {
+                                    move |cx, st| {
                                         cx.pressable_add_on_activate(Arc::new(
                                             move |host, cx, _reason| {
                                                 host.dispatch_command(Some(cx.window), cmd.clone());
@@ -726,7 +810,41 @@ pub fn render<H: UiHost>(
                                                 );
                                             },
                                         ));
-                                        vec![cx.text(label.as_ref())]
+
+                                        let bg = if st.pressed {
+                                            Some(alpha_mul(button_bg, 0.8))
+                                        } else if st.hovered {
+                                            Some(alpha_mul(button_bg, 0.6))
+                                        } else {
+                                            None
+                                        };
+
+                                        vec![cx.container(
+                                            fret_ui::element::ContainerProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                padding: fret_core::Edges {
+                                                    top: button_pad_y,
+                                                    right: button_pad_x,
+                                                    bottom: button_pad_y,
+                                                    left: button_pad_x,
+                                                },
+                                                background: bg,
+                                                shadow: None,
+                                                border: fret_core::Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: fret_core::Corners::all(button_radius),
+                                            },
+                                            move |cx| {
+                                                vec![cx.text_props(fret_ui::element::TextProps {
+                                                    layout: fret_ui::element::LayoutStyle::default(),
+                                                    text: label.clone(),
+                                                    style: None,
+                                                    color: Some(fg),
+                                                    wrap: fret_core::TextWrap::None,
+                                                    overflow: fret_core::TextOverflow::Clip,
+                                                })]
+                                            },
+                                        )]
                                     },
                                 )
                             });
@@ -796,14 +914,39 @@ pub fn render<H: UiHost>(
                                         min: fret_core::Px(0.0),
                                         ..Default::default()
                                     }));
-                                    if let Some(cancel) = cancel {
-                                        row.push(cancel);
-                                    }
-                                    if let Some(action) = action {
-                                        row.push(action);
-                                    }
-                                    if let Some(close) = close {
-                                        row.push(close);
+
+                                    let trailing_cancel = cancel.clone();
+                                    let trailing_action = action.clone();
+                                    let trailing_close = close.clone();
+                                    if trailing_cancel.is_some()
+                                        || trailing_action.is_some()
+                                        || trailing_close.is_some()
+                                    {
+                                        row.push(cx.flex(
+                                            fret_ui::element::FlexProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: theme.metrics.padding_sm,
+                                                padding: fret_core::Edges::all(Px(0.0)),
+                                                justify: fret_ui::element::MainAlign::End,
+                                                align: fret_ui::element::CrossAlign::Center,
+                                                wrap: false,
+                                                ..Default::default()
+                                            },
+                                            move |_cx| {
+                                                let mut out = Vec::new();
+                                                if let Some(el) = trailing_cancel.clone() {
+                                                    out.push(el);
+                                                }
+                                                if let Some(el) = trailing_action.clone() {
+                                                    out.push(el);
+                                                }
+                                                if let Some(el) = trailing_close.clone() {
+                                                    out.push(el);
+                                                }
+                                                out
+                                            },
+                                        ));
                                     }
                                     row
                                 },
