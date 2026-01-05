@@ -159,7 +159,7 @@ pub use sidebar::{
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};
 pub use sonner::{
-    Sonner, ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant, Toaster,
+    Sonner, ToastAction, ToastId, ToastPosition, ToastPromise, ToastRequest, ToastVariant, Toaster,
 };
 pub use spinner::Spinner;
 pub use switch::{Switch, switch};

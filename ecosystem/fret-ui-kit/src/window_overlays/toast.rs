@@ -8,6 +8,7 @@ use fret_ui::UiHost;
 
 pub(super) const TOAST_CLOSE_DURATION: Duration = Duration::from_millis(200);
 pub(super) const TOAST_AUTO_CLOSE_TICK: Duration = Duration::from_millis(100);
+pub const DEFAULT_MAX_TOASTS: usize = 3;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ToastPosition {
@@ -127,11 +128,12 @@ pub(super) struct ToastEntry {
     pub(super) dragging: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(super) struct ToastUpsertOutcome {
     pub(super) id: ToastId,
     pub(super) cancel_auto: Option<TimerToken>,
     pub(super) schedule_auto: Option<(TimerToken, Duration)>,
+    pub(super) evicted: Vec<ToastId>,
 }
 
 #[derive(Debug, Default)]
@@ -139,14 +141,33 @@ pub struct ToastStore {
     next_id: u64,
     by_window: HashMap<AppWindowId, Vec<ToastEntry>>,
     by_token: HashMap<TimerToken, ToastTimerRef>,
+    max_toasts_by_window: HashMap<AppWindowId, usize>,
 }
 
 impl ToastStore {
+    pub fn set_window_max_toasts(&mut self, window: AppWindowId, max_toasts: Option<usize>) -> bool {
+        let max_toasts = max_toasts.unwrap_or(0);
+        let prev = self.max_toasts_by_window.get(&window).copied().unwrap_or(0);
+        if prev == max_toasts {
+            return false;
+        }
+        if max_toasts == 0 {
+            self.max_toasts_by_window.remove(&window);
+        } else {
+            self.max_toasts_by_window.insert(window, max_toasts);
+        }
+        true
+    }
+
     pub(super) fn toasts_for_window(&self, window: AppWindowId) -> &[ToastEntry] {
         self.by_window
             .get(&window)
             .map(Vec::as_slice)
             .unwrap_or(&[])
+    }
+
+    fn max_toasts_for_window(&self, window: AppWindowId) -> Option<usize> {
+        self.max_toasts_by_window.get(&window).copied()
     }
 
     fn add_toast(
@@ -243,6 +264,7 @@ impl ToastStore {
                         id,
                         cancel_auto,
                         schedule_auto,
+                        evicted: Vec::new(),
                     };
                 }
             }
@@ -253,12 +275,51 @@ impl ToastStore {
             (Some(after), Some(token)) => Some((token, auto_close_next_after(after))),
             _ => None,
         };
+        let evicted = self.evict_excess_toasts(window, id);
 
         ToastUpsertOutcome {
             id,
             cancel_auto: None,
             schedule_auto,
+            evicted,
         }
+    }
+
+    fn evict_excess_toasts(&self, window: AppWindowId, keep: ToastId) -> Vec<ToastId> {
+        let Some(max) = self.max_toasts_for_window(window) else {
+            return Vec::new();
+        };
+        if max == 0 {
+            return Vec::new();
+        }
+
+        let Some(toasts) = self.by_window.get(&window) else {
+            return Vec::new();
+        };
+
+        let active: Vec<ToastId> = toasts
+            .iter()
+            .filter(|t| t.open && t.remove_token.is_none())
+            .map(|t| t.id)
+            .collect();
+
+        let mut need = active.len().saturating_sub(max);
+        if need == 0 {
+            return Vec::new();
+        }
+
+        let mut evicted = Vec::new();
+        for id in active {
+            if need == 0 {
+                break;
+            }
+            if id == keep {
+                continue;
+            }
+            evicted.push(id);
+            need = need.saturating_sub(1);
+        }
+        evicted
     }
 
     fn remove_toast(&mut self, window: AppWindowId, id: ToastId) -> Option<ToastEntry> {
@@ -577,6 +638,32 @@ pub fn toast_action(
         });
     }
 
+    for id in outcome.evicted {
+        let remove_token = host.next_timer_token();
+        let plan = host
+            .models_mut()
+            .update(&store, |st| st.begin_close(window, id, remove_token))
+            .ok()
+            .flatten();
+
+        let Some(plan) = plan else {
+            continue;
+        };
+
+        if let Some(token) = plan.cancel_auto {
+            host.push_effect(Effect::CancelTimer { token });
+        }
+
+        if plan.schedule_remove.is_some() {
+            host.push_effect(Effect::SetTimer {
+                window: Some(window),
+                token: remove_token,
+                after: TOAST_CLOSE_DURATION,
+                repeat: None,
+            });
+        }
+    }
+
     host.request_redraw(window);
     outcome.id
 }
@@ -741,5 +828,20 @@ mod tests {
         );
 
         assert!(!store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+    }
+
+    #[test]
+    fn toast_max_toasts_evicts_oldest_open_toasts() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+        store.set_window_max_toasts(window, Some(2));
+
+        let out0 = store.upsert_toast(window, ToastRequest::new("A").duration(None), None);
+        let out1 = store.upsert_toast(window, ToastRequest::new("B").duration(None), None);
+        let out2 = store.upsert_toast(window, ToastRequest::new("C").duration(None), None);
+
+        assert_eq!(out0.evicted, Vec::new());
+        assert_eq!(out1.evicted, Vec::new());
+        assert_eq!(out2.evicted, vec![out0.id]);
     }
 }

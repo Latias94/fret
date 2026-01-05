@@ -13,6 +13,12 @@ pub struct Toaster {
     gap: Option<Px>,
     toast_min_width: Option<Px>,
     toast_max_width: Option<Px>,
+    max_toasts: Option<usize>,
+}
+
+#[derive(Debug, Default)]
+struct ToasterConfigState {
+    max_toasts: Option<usize>,
 }
 
 impl Default for Toaster {
@@ -23,6 +29,7 @@ impl Default for Toaster {
             gap: None,
             toast_min_width: None,
             toast_max_width: None,
+            max_toasts: Some(fret_ui_kit::DEFAULT_MAX_TOASTS),
         }
     }
 }
@@ -57,10 +64,33 @@ impl Toaster {
         self
     }
 
+    pub fn max_toasts(mut self, max_toasts: usize) -> Self {
+        self.max_toasts = Some(max_toasts.max(1));
+        self
+    }
+
+    pub fn unlimited(mut self) -> Self {
+        self.max_toasts = None;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let id = cx.root_id();
             let store = OverlayController::toast_store(&mut *cx.app);
+            let config_changed = cx.with_state(ToasterConfigState::default, |st| {
+                if st.max_toasts == self.max_toasts {
+                    return false;
+                }
+                st.max_toasts = self.max_toasts;
+                true
+            });
+            if config_changed {
+                let _ = cx.app.models_mut().update(&store, |st| {
+                    st.set_window_max_toasts(cx.window, self.max_toasts)
+                });
+            }
+
             let mut request = OverlayRequest::toast_layer(id, store).toast_position(self.position);
             if let Some(margin) = self.margin {
                 request = request.toast_margin(margin);
@@ -269,6 +299,83 @@ impl Sonner {
 
     pub fn dismiss(&self, host: &mut dyn UiActionHost, window: AppWindowId, id: ToastId) -> bool {
         OverlayController::dismiss_toast_action(host, self.store.clone(), window, id)
+    }
+
+    /// Starts a manual "promise" toast flow, similar to `sonner`'s `toast.promise(...)` on the web.
+    ///
+    /// This does not run async tasks. It returns a handle that can be resolved later by updating
+    /// the same toast id (e.g. `Loading -> Success/Error`).
+    pub fn toast_promise(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        loading: impl Into<std::sync::Arc<str>>,
+    ) -> ToastPromise {
+        let id = self.toast_loading(host, window, loading);
+        ToastPromise {
+            sonner: self.clone(),
+            window,
+            id,
+        }
+    }
+
+    pub fn toast_promise_with(
+        &self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        loading: ToastRequest,
+    ) -> ToastPromise {
+        let id = self.toast(
+            host,
+            window,
+            loading.variant(ToastVariant::Loading).duration(None),
+        );
+        ToastPromise {
+            sonner: self.clone(),
+            window,
+            id,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ToastPromise {
+    sonner: Sonner,
+    window: AppWindowId,
+    id: ToastId,
+}
+
+impl ToastPromise {
+    pub fn id(&self) -> ToastId {
+        self.id
+    }
+
+    pub fn update(
+        &self,
+        host: &mut dyn UiActionHost,
+        request: ToastRequest,
+    ) -> ToastId {
+        self.sonner.toast_update(host, self.window, self.id, request)
+    }
+
+    pub fn success(
+        &self,
+        host: &mut dyn UiActionHost,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.sonner.toast_success_update(host, self.window, self.id, title)
+    }
+
+    pub fn error(
+        &self,
+        host: &mut dyn UiActionHost,
+        title: impl Into<std::sync::Arc<str>>,
+    ) -> ToastId {
+        self.sonner.toast_error_update(host, self.window, self.id, title)
+    }
+
+    pub fn dismiss(&self, host: &mut dyn UiActionHost) -> bool {
+        self.sonner.dismiss(host, self.window, self.id)
     }
 }
 
