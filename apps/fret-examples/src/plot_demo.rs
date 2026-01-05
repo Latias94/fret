@@ -1,9 +1,11 @@
+#[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
+#[cfg(not(target_arch = "wasm32"))]
+use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    run_app,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
@@ -175,6 +177,7 @@ pub fn build_driver() -> impl WinitAppDriver {
     PlotDemoDriver::default()
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -192,4 +195,9 @@ pub fn run() -> anyhow::Result<()> {
     run_app(config, app, driver)
         .context("run plot_demo app")
         .map_err(anyhow::Error::from)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn run() -> anyhow::Result<()> {
+    Ok(())
 }

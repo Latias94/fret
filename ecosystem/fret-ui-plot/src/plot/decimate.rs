@@ -186,3 +186,119 @@ pub(crate) fn decimate_polyline(
 
     (commands, samples)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_core::geometry::{Rect, Size};
+
+    use crate::cartesian::DataRect;
+    use crate::series::{GetterSeriesData, OwnedSeriesData};
+
+    fn transform(viewport_w: f32, viewport_h: f32, data: DataRect) -> PlotTransform {
+        PlotTransform {
+            viewport: Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(viewport_w), Px(viewport_h)),
+            ),
+            data,
+        }
+    }
+
+    #[test]
+    fn preserves_spikes_with_min_max_per_bucket() {
+        let points: Vec<DataPoint> = (0..100)
+            .map(|i| DataPoint {
+                x: i as f32,
+                y: 0.0,
+            })
+            .collect();
+        let mut points = points;
+        points[40].y = 10.0;
+        points[60].y = -10.0;
+
+        let data_bounds = DataRect {
+            x_min: 0.0,
+            x_max: 99.0,
+            y_min: -10.0,
+            y_max: 10.0,
+        };
+
+        // Collapse X heavily so most points fall into a small set of pixel buckets.
+        let transform = transform(8.0, 80.0, data_bounds);
+        let series = OwnedSeriesData::new(points);
+
+        let (_commands, samples) = decimate_polyline(transform, &series, 1.0, SeriesId(123));
+        let indices: Vec<usize> = samples.iter().map(|s| s.index).collect();
+
+        assert!(indices.contains(&40), "expected the spike to be sampled");
+        assert!(indices.contains(&60), "expected the valley to be sampled");
+
+        assert!(samples.windows(2).all(|w| w[0].index <= w[1].index));
+    }
+
+    #[test]
+    fn breaks_segments_on_non_finite_points() {
+        let points = vec![
+            DataPoint { x: 0.0, y: 0.0 },
+            DataPoint { x: 1.0, y: 1.0 },
+            DataPoint { x: 2.0, y: 2.0 },
+            DataPoint {
+                x: 3.0,
+                y: f32::NAN,
+            },
+            DataPoint { x: 4.0, y: 4.0 },
+            DataPoint { x: 5.0, y: 5.0 },
+        ];
+
+        let data_bounds = DataRect {
+            x_min: 0.0,
+            x_max: 5.0,
+            y_min: 0.0,
+            y_max: 5.0,
+        };
+        let transform = transform(100.0, 100.0, data_bounds);
+        let series = OwnedSeriesData::new(points);
+
+        let (commands, _samples) = decimate_polyline(transform, &series, 1.0, SeriesId(1));
+        let move_tos = commands
+            .iter()
+            .filter(|c| matches!(c, PathCommand::MoveTo(_)))
+            .count();
+        assert_eq!(
+            move_tos, 2,
+            "expected two subpaths due to NaN discontinuity"
+        );
+    }
+
+    #[test]
+    fn getter_none_breaks_segments() {
+        let series = GetterSeriesData::new(6, |i| match i {
+            0 => Some(DataPoint { x: 0.0, y: 0.0 }),
+            1 => Some(DataPoint { x: 1.0, y: 1.0 }),
+            2 => None,
+            3 => Some(DataPoint { x: 3.0, y: 3.0 }),
+            4 => Some(DataPoint { x: 4.0, y: 4.0 }),
+            _ => Some(DataPoint { x: 5.0, y: 5.0 }),
+        });
+
+        let data_bounds = DataRect {
+            x_min: 0.0,
+            x_max: 5.0,
+            y_min: 0.0,
+            y_max: 5.0,
+        };
+        let transform = transform(100.0, 100.0, data_bounds);
+
+        let (commands, _samples) = decimate_polyline(transform, &series, 1.0, SeriesId(2));
+        let move_tos = commands
+            .iter()
+            .filter(|c| matches!(c, PathCommand::MoveTo(_)))
+            .count();
+        assert_eq!(
+            move_tos, 2,
+            "expected two subpaths due to missing getter point"
+        );
+    }
+}

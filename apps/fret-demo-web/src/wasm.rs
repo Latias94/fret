@@ -7,17 +7,52 @@ thread_local! {
         const { std::cell::RefCell::new(None) };
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Demo {
+    ComponentsGallery,
+    PlotDemo,
+}
+
+fn select_demo() -> Demo {
+    let Some(window) = web_sys::window() else {
+        return Demo::ComponentsGallery;
+    };
+
+    let location = window.location();
+
+    let hash = location.hash().unwrap_or_default();
+    let search = location.search().unwrap_or_default();
+
+    if hash.contains("plot_demo") || search.contains("demo=plot_demo") {
+        return Demo::PlotDemo;
+    }
+
+    Demo::ComponentsGallery
+}
+
 #[wasm_bindgen(start)]
 pub fn start() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
 
-    let app = fret_examples::components_gallery::build_app();
-    let mut config = fret_examples::components_gallery::build_runner_config();
-    config.main_window_title = "fret-demo components_gallery (web)".to_string();
+    let demo = select_demo();
 
-    let driver = fret_examples::components_gallery::build_driver();
-    let handle = fret_launch::run_app_with_handle(config, app, driver)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let handle = match demo {
+        Demo::ComponentsGallery => {
+            let app = fret_examples::components_gallery::build_app();
+            let mut config = fret_examples::components_gallery::build_runner_config();
+            config.main_window_title = "fret-demo components_gallery (web)".to_string();
+            let driver = fret_examples::components_gallery::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::PlotDemo => {
+            let app = fret_examples::plot_demo::build_app();
+            let mut config = fret_examples::plot_demo::build_runner_config();
+            config.main_window_title = "fret-demo plot_demo (web)".to_string();
+            let driver = fret_examples::plot_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+    }
+    .map_err(|e| JsValue::from_str(&e.to_string()))?;
 
     RUNNER_HANDLE.with(|slot| {
         slot.borrow_mut().replace(handle);

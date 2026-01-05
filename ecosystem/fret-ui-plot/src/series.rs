@@ -88,6 +88,26 @@ impl Series {
             bounds,
         })
     }
+
+    pub fn from_shared_points(points: Arc<[DataPoint]>) -> Self {
+        Self::new(SharedSeriesData::new(points))
+    }
+
+    pub fn from_shared_points_sorted(points: Arc<[DataPoint]>, sorted_by_x: bool) -> Self {
+        let bounds = DataRect::from_points(points.iter().copied());
+        Self::new(SharedSeriesData {
+            points,
+            sorted_by_x,
+            bounds,
+        })
+    }
+
+    pub fn from_getter(
+        len: usize,
+        get: impl Fn(usize) -> Option<DataPoint> + Send + Sync + 'static,
+    ) -> Self {
+        Self::new(GetterSeriesData::new(len, get))
+    }
 }
 
 impl fmt::Debug for Series {
@@ -148,16 +168,70 @@ impl SeriesData for OwnedSeriesData {
     }
 }
 
+/// A shared slice-backed series (zero-copy via `Arc<[DataPoint]>`).
+#[derive(Debug, Clone)]
+pub struct SharedSeriesData {
+    points: Arc<[DataPoint]>,
+    sorted_by_x: bool,
+    bounds: Option<DataRect>,
+}
+
+impl SharedSeriesData {
+    pub fn new(points: Arc<[DataPoint]>) -> Self {
+        let bounds = DataRect::from_points(points.iter().copied());
+        Self {
+            points,
+            sorted_by_x: false,
+            bounds,
+        }
+    }
+
+    pub fn sorted_by_x(mut self, sorted: bool) -> Self {
+        self.sorted_by_x = sorted;
+        self
+    }
+
+    pub fn bounds_hint(mut self, bounds: DataRect) -> Self {
+        self.bounds = Some(bounds);
+        self
+    }
+}
+
+impl SeriesData for SharedSeriesData {
+    fn len(&self) -> usize {
+        self.points.len()
+    }
+
+    fn get(&self, index: usize) -> Option<DataPoint> {
+        self.points.get(index).copied()
+    }
+
+    fn as_slice(&self) -> Option<&[DataPoint]> {
+        Some(&self.points)
+    }
+
+    fn bounds_hint(&self) -> Option<DataRect> {
+        self.bounds
+    }
+
+    fn is_sorted_by_x(&self) -> bool {
+        self.sorted_by_x
+    }
+}
+
 /// A getter-backed series (zero-copy from caller data).
 pub struct GetterSeriesData {
     len: usize,
-    get: Arc<dyn Fn(usize) -> DataPoint + Send + Sync + 'static>,
+    get: Arc<dyn Fn(usize) -> Option<DataPoint> + Send + Sync + 'static>,
     sorted_by_x: bool,
     bounds: Option<DataRect>,
 }
 
 impl GetterSeriesData {
-    pub fn new(len: usize, get: impl Fn(usize) -> DataPoint + Send + Sync + 'static) -> Self {
+    pub fn new(
+        len: usize,
+        get: impl Fn(usize) -> Option<DataPoint> + Send + Sync + 'static,
+    ) -> Self {
         Self {
             len,
             get: Arc::new(get),
@@ -193,7 +267,7 @@ impl SeriesData for GetterSeriesData {
     }
 
     fn get(&self, index: usize) -> Option<DataPoint> {
-        (index < self.len).then(|| (self.get)(index))
+        (index < self.len).then(|| (self.get)(index)).flatten()
     }
 
     fn bounds_hint(&self) -> Option<DataRect> {
