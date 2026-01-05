@@ -649,9 +649,10 @@ struct PlotLayout {
 }
 
 impl PlotLayout {
-    fn from_bounds(bounds: Rect, padding: Px, axis_gap: Px) -> Self {
+    fn from_bounds(bounds: Rect, padding: Px, y_axis_gap: Px, x_axis_gap: Px) -> Self {
         let pad = padding.0.max(0.0);
-        let axis_gap = axis_gap.0.max(0.0);
+        let y_axis_gap = y_axis_gap.0.max(0.0);
+        let x_axis_gap = x_axis_gap.0.max(0.0);
 
         let content = Rect::new(
             Point::new(Px(bounds.origin.x.0 + pad), Px(bounds.origin.y.0 + pad)),
@@ -661,19 +662,19 @@ impl PlotLayout {
             ),
         );
 
-        let plot_w = (content.size.width.0 - axis_gap).max(0.0);
-        let plot_h = (content.size.height.0 - axis_gap).max(0.0);
+        let plot_w = (content.size.width.0 - y_axis_gap).max(0.0);
+        let plot_h = (content.size.height.0 - x_axis_gap).max(0.0);
 
         let plot = Rect::new(
-            Point::new(Px(content.origin.x.0 + axis_gap), content.origin.y),
+            Point::new(Px(content.origin.x.0 + y_axis_gap), content.origin.y),
             Size::new(Px(plot_w), Px(plot_h)),
         );
 
-        let y_axis = Rect::new(content.origin, Size::new(Px(axis_gap), Px(plot_h)));
+        let y_axis = Rect::new(content.origin, Size::new(Px(y_axis_gap), Px(plot_h)));
 
         let x_axis = Rect::new(
             Point::new(plot.origin.x, Px(plot.origin.y.0 + plot.size.height.0)),
-            Size::new(Px(plot_w), Px(axis_gap)),
+            Size::new(Px(plot_w), Px(x_axis_gap)),
         );
 
         Self {
@@ -1139,6 +1140,8 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     legend_hover: Option<SeriesId>,
     cursor_px: Option<Point>,
     last_scale_factor: f32,
+    x_axis_thickness: Px,
+    y_axis_thickness: Px,
     pan_last_pos: Option<Point>,
     box_zoom_start: Option<Point>,
     box_zoom_current: Option<Point>,
@@ -1207,6 +1210,7 @@ impl PlotCanvas<ShadedPlotLayer> {
 
 impl<L: PlotLayer + 'static> PlotCanvas<L> {
     pub fn with_layer(model: Model<L::Model>, layer: L) -> Self {
+        let axis_gap = LinePlotStyle::default().axis_gap;
         Self {
             model,
             style: LinePlotStyle::default(),
@@ -1225,6 +1229,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             legend_hover: None,
             cursor_px: None,
             last_scale_factor: 1.0,
+            x_axis_thickness: axis_gap,
+            y_axis_thickness: axis_gap,
             pan_last_pos: None,
             box_zoom_start: None,
             box_zoom_current: None,
@@ -1306,6 +1312,13 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
     pub fn create_node<H: UiHost>(ui: &mut fret_ui::UiTree<H>, canvas: Self) -> fret_core::NodeId {
         ui.create_node_retained(canvas)
+    }
+
+    fn axis_gaps(&self) -> (Px, Px) {
+        let min = self.style.axis_gap.0.max(0.0);
+        let y = self.y_axis_thickness.0.max(min);
+        let x = self.x_axis_thickness.0.max(min);
+        (Px(y), Px(x))
     }
 
     fn read_plot_state<H: UiHost>(&self, app: &mut H) -> PlotState {
@@ -1580,7 +1593,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         data_bounds: DataRect,
         theme_revision: u64,
         font_stack_key: u64,
-    ) {
+    ) -> bool {
         let scale_bits = cx.scale_factor.to_bits();
 
         let mut key = 0u64;
@@ -1601,7 +1614,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         key = Self::hash_u64(key, self.y_axis_labels.key());
 
         if self.axis_label_key == Some(key) {
-            return;
+            return false;
         }
 
         self.clear_axis_label_cache(cx.services);
@@ -1750,6 +1763,46 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         }
 
         self.axis_label_key = Some(key);
+
+        // Axis thickness auto-fit: expand the axis gaps to fit the largest tick label.
+        // This mirrors egui_plot's approach where axis thickness is cached and increased as needed.
+        let mut changed = false;
+        let min_axis = self.style.axis_gap.0.max(0.0);
+
+        let content_w = layout.plot.size.width.0 + layout.y_axis.size.width.0;
+        let content_h = layout.plot.size.height.0 + layout.x_axis.size.height.0;
+
+        let max_y_label_w = self
+            .axis_labels_y
+            .iter()
+            .map(|t| t.metrics.size.width.0)
+            .fold(0.0f32, f32::max);
+        let max_x_label_h = self
+            .axis_labels_x
+            .iter()
+            .map(|t| t.metrics.size.height.0)
+            .fold(0.0f32, f32::max);
+
+        let desired_y = (max_y_label_w + 8.0).max(min_axis);
+        let desired_x = (max_x_label_h + 6.0).max(min_axis);
+
+        // Prevent axes from consuming the majority of the plot area in degenerate cases.
+        let cap_y = (content_w * 0.5).max(min_axis);
+        let cap_x = (content_h * 0.5).max(min_axis);
+
+        let next_y = desired_y.min(cap_y);
+        let next_x = desired_x.min(cap_x);
+
+        if next_y.is_finite() && next_y > self.y_axis_thickness.0 + 0.5 {
+            self.y_axis_thickness = Px(next_y);
+            changed = true;
+        }
+        if next_x.is_finite() && next_x > self.x_axis_thickness.0 + 0.5 {
+            self.x_axis_thickness = Px(next_x);
+            changed = true;
+        }
+
+        changed
     }
 
     fn rebuild_legend_if_needed<H: UiHost>(
@@ -1928,8 +1981,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 button,
                 modifiers,
             }) => {
+                let (y_axis_gap, x_axis_gap) = self.axis_gaps();
                 let layout =
-                    PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
+                    PlotLayout::from_bounds(cx.bounds, self.style.padding, y_axis_gap, x_axis_gap);
                 if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
                     return;
                 }
@@ -2054,10 +2108,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             cx.release_pointer_capture();
                         }
 
+                        let (y_axis_gap, x_axis_gap) = self.axis_gaps();
                         let layout = PlotLayout::from_bounds(
                             cx.bounds,
                             self.style.padding,
-                            self.style.axis_gap,
+                            y_axis_gap,
+                            x_axis_gap,
                         );
                         if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
                             let start = self
@@ -2099,10 +2155,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             cx.release_pointer_capture();
                         }
 
+                        let (y_axis_gap, x_axis_gap) = self.axis_gaps();
                         let layout = PlotLayout::from_bounds(
                             cx.bounds,
                             self.style.padding,
-                            self.style.axis_gap,
+                            y_axis_gap,
+                            x_axis_gap,
                         );
                         if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
                             let start = self.box_zoom_start.unwrap_or(Point::new(Px(0.0), Px(0.0)));
@@ -2161,8 +2219,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 delta,
                 modifiers,
             }) => {
+                let (y_axis_gap, x_axis_gap) = self.axis_gaps();
                 let layout =
-                    PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
+                    PlotLayout::from_bounds(cx.bounds, self.style.padding, y_axis_gap, x_axis_gap);
                 if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
                     return;
                 }
@@ -2214,8 +2273,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 cx.stop_propagation();
             }
             Event::Pointer(PointerEvent::Move { position, .. }) => {
+                let (y_axis_gap, x_axis_gap) = self.axis_gaps();
                 let layout =
-                    PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
+                    PlotLayout::from_bounds(cx.bounds, self.style.padding, y_axis_gap, x_axis_gap);
                 if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
                     return;
                 }
@@ -2437,9 +2497,72 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
-        let layout = PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
+        let min_axis = self.style.axis_gap;
+        self.x_axis_thickness = Px(self.x_axis_thickness.0.max(min_axis.0));
+        self.y_axis_thickness = Px(self.y_axis_thickness.0.max(min_axis.0));
+
+        // Layout can depend on text metrics (axis thickness). Converge in up to two passes.
+        let mut layout = PlotLayout::from_bounds(
+            cx.bounds,
+            self.style.padding,
+            self.y_axis_thickness,
+            self.x_axis_thickness,
+        );
         let state = self.read_plot_state(cx.app);
         let view_bounds = self.current_view_bounds(cx.app, &state);
+
+        // Axis labels can expand axis thickness; keep plot-local interaction points stable by
+        // shifting stored coordinates when the plot origin moves.
+        for _ in 0..2 {
+            let changed = self.rebuild_axis_labels_if_needed(
+                cx,
+                layout,
+                view_bounds,
+                theme.revision,
+                font_stack_key,
+            );
+            if !changed {
+                break;
+            }
+
+            let next_layout = PlotLayout::from_bounds(
+                cx.bounds,
+                self.style.padding,
+                self.y_axis_thickness,
+                self.x_axis_thickness,
+            );
+
+            let dx = next_layout.plot.origin.x.0 - layout.plot.origin.x.0;
+            let dy = next_layout.plot.origin.y.0 - layout.plot.origin.y.0;
+            if dx != 0.0 || dy != 0.0 {
+                let delta = Point::new(Px(dx), Px(dy));
+
+                let shift = |p: &mut Point| {
+                    p.x.0 -= delta.x.0;
+                    p.y.0 -= delta.y.0;
+                };
+
+                if let Some(p) = self.cursor_px.as_mut() {
+                    shift(p);
+                }
+                if let Some(p) = self.box_zoom_start.as_mut() {
+                    shift(p);
+                }
+                if let Some(p) = self.box_zoom_current.as_mut() {
+                    shift(p);
+                }
+                if let Some(p) = self.query_drag_start.as_mut() {
+                    shift(p);
+                }
+                if let Some(p) = self.query_drag_current.as_mut() {
+                    shift(p);
+                }
+
+                self.hover = None;
+            }
+
+            layout = next_layout;
+        }
 
         let cursor_data = self.cursor_px.and_then(|cursor_px| {
             if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
@@ -2465,8 +2588,6 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 query: state.query,
             },
         );
-
-        self.rebuild_axis_labels_if_needed(cx, layout, view_bounds, theme.revision, font_stack_key);
         self.rebuild_legend_if_needed(cx, theme.revision, font_stack_key);
 
         // Grid + series + hover are clipped to the plot area.
