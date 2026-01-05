@@ -7,6 +7,7 @@ pub mod docking_arbitration_demo;
 pub mod docking_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod first_frame_smoke_demo;
+pub mod heatmap_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod image_upload_demo;
 #[cfg(not(target_arch = "wasm32"))]

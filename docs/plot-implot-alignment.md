@@ -61,7 +61,7 @@ This contract is documented in ADR 0099.
 - [x] Area (fill to baseline)
 - [x] Shaded band (fill between upper/lower series)
 - [x] Stairs / Step
-- [ ] Heatmap
+- [x] Heatmap (quad-based, portable)
 - [ ] Error bars
 - [ ] Candlesticks / OHLC
 
@@ -88,6 +88,7 @@ This contract is documented in ADR 0099.
 - [x] `plot_demo` (desktop + web)
 - [x] `bars_demo` (desktop + web)
 - [x] `area_demo` (desktop + web)
+- [x] `heatmap_demo` (desktop + web)
 - [x] `stairs_demo` (desktop + web)
 - [x] `shaded_demo` (desktop + web)
 - [x] `linked_cursor_demo` (desktop + web)
