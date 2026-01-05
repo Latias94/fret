@@ -136,7 +136,7 @@ impl Checkbox {
                 let theme = Theme::global(&*cx.app).clone();
                 let checked = cx.watch_model(&model).copied().unwrap_or(false);
 
-                let mut bg = if checked { bg_on } else { Color::TRANSPARENT };
+                let bg = if checked { bg_on } else { Color::TRANSPARENT };
                 let border_color = if st.focused {
                     checkbox_ring_color(&theme)
                 } else if checked {
@@ -145,15 +145,6 @@ impl Checkbox {
                     border
                 };
                 let fg = if checked { fg_on } else { Color::TRANSPARENT };
-
-                let hovered = st.hovered && !disabled;
-                if hovered && !checked {
-                    let hover = theme
-                        .color_by_key("accent")
-                        .or_else(|| theme.color_by_key("hover.background"))
-                        .unwrap_or(theme.colors.hover_background);
-                    bg = alpha_mul(hover, 0.35);
-                }
 
                 let mut chrome_props = decl_style::container_props(
                     &theme,
@@ -188,10 +179,13 @@ impl Checkbox {
                         return Vec::new();
                     }
 
+                    let icon_size = theme
+                        .metric_by_key("component.checkbox.icon_size")
+                        .unwrap_or(Px(14.0));
                     let icon = decl_icon::icon_with(
                         &mut *cx,
                         ids::ui::CHECK,
-                        Some(Px(12.0)),
+                        Some(icon_size),
                         Some(ColorRef::Color(fg)),
                     );
 
@@ -322,7 +316,9 @@ mod tests {
         assert_eq!(node.flags.checked, Some(false));
 
         let checkbox_node = ui.children(root)[0];
-        let checkbox_bounds = ui.debug_node_bounds(checkbox_node).expect("checkbox bounds");
+        let checkbox_bounds = ui
+            .debug_node_bounds(checkbox_node)
+            .expect("checkbox bounds");
         let position = Point::new(
             Px(checkbox_bounds.origin.x.0 + checkbox_bounds.size.width.0 * 0.5),
             Px(checkbox_bounds.origin.y.0 + checkbox_bounds.size.height.0 * 0.5),
