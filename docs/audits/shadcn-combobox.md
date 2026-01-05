@@ -48,8 +48,8 @@ examples in `repo-ref/ui`.
 ### Visual parity (shadcn)
 
 - Pass: Popover content padding matches the demo (`p-0`).
-- Partial: The trigger is styled via input chrome tokens; upstream uses `Button` `variant="outline"`
-  with `role="combobox"`.
+- Pass: Trigger styling matches the upstream intent (`Button` `variant="outline"` + `role="combobox"`)
+  using outline-button-like tokens while preserving `SemanticsRole::ComboBox` + `expanded` semantics.
 
 ### Filtering semantics
 
