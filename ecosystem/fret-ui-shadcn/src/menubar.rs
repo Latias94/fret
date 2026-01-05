@@ -918,7 +918,6 @@ impl MenubarMenuEntries {
             };
 
             let label = self.menu.label.clone();
-            let menu_key = label.clone();
 
             cx.pressable_with_id_props(|cx, st, trigger_id| {
                 if enabled {
@@ -928,7 +927,6 @@ impl MenubarMenuEntries {
                 menubar_trigger_row::register_trigger_in_registry(
                     cx,
                     trigger_registry.clone(),
-                    menu_key.clone(),
                     trigger_id,
                     open.clone(),
                     enabled,
@@ -990,7 +988,6 @@ impl MenubarMenuEntries {
                     let open_for_overlay = open.clone();
                     let text_style = text_style.clone();
                     let entries = entries.clone();
-                    let menu_key_for_overlay = menu_key.clone();
                     let trigger_registry_for_overlay = trigger_registry.clone();
                     let content_focus_id: Rc<Cell<Option<GlobalElementId>>> =
                         Rc::new(Cell::new(None));
@@ -1100,6 +1097,8 @@ impl MenubarMenuEntries {
                         let group_active_for_submenu = group_active.clone();
                         let text_style_for_content = text_style.clone();
                         let text_style_for_submenu = text_style.clone();
+                        let trigger_registry_for_overlay_for_content =
+                            trigger_registry_for_overlay.clone();
 
                         let content = cx.semantics(
                             SemanticsProps {
@@ -1126,8 +1125,7 @@ impl MenubarMenuEntries {
                                         let group_active_for_switch =
                                             group_active_for_content.clone();
                                         let trigger_registry_for_switch =
-                                            trigger_registry_for_overlay.clone();
-                                        let menu_key_for_switch = menu_key_for_overlay.clone();
+                                            trigger_registry_for_overlay_for_content.clone();
                                         let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
                                             cx,
                                             RovingFlexProps {
@@ -1231,7 +1229,6 @@ impl MenubarMenuEntries {
                                                                 text_style_for_content.clone();
                                                             let submenu_for_item =
                                                                 submenu_for_content.clone();
-                                                            let menu_key = menu_key_for_overlay.clone();
                                                             let trigger_registry =
                                                                 trigger_registry_for_overlay.clone();
 
@@ -1258,7 +1255,6 @@ impl MenubarMenuEntries {
                                                                         item_id,
                                                                         group_active.clone(),
                                                                         trigger_registry.clone(),
-                                                                        menu_key.clone(),
                                                                     );
 
                                                                     if item_enabled {
@@ -1363,7 +1359,6 @@ impl MenubarMenuEntries {
                                                                 text_style_for_content.clone();
                                                             let submenu_for_item =
                                                                 submenu_for_content.clone();
-                                                            let menu_key = menu_key_for_overlay.clone();
                                                             let trigger_registry =
                                                                 trigger_registry_for_overlay.clone();
 
@@ -1394,7 +1389,6 @@ impl MenubarMenuEntries {
                                                                         item_id,
                                                                         group_active.clone(),
                                                                         trigger_registry.clone(),
-                                                                        menu_key.clone(),
                                                                     );
 
                                                                     if item_enabled {
@@ -1511,8 +1505,6 @@ impl MenubarMenuEntries {
 
                                                               let submenu_for_item =
                                                                   submenu_for_content.clone();
-                                                              let menu_key =
-                                                                  menu_key_for_overlay.clone();
                                                               let trigger_registry =
                                                                   trigger_registry_for_overlay.clone();
                                                              let value = item.value.clone();
@@ -1545,7 +1537,6 @@ impl MenubarMenuEntries {
                                                                         item_id,
                                                                         group_active.clone(),
                                                                         trigger_registry.clone(),
-                                                                        menu_key.clone(),
                                                                     );
 
                                                                      if !has_submenu {
@@ -1746,7 +1737,6 @@ impl MenubarMenuEntries {
                                             roving.id,
                                             group_active_for_switch,
                                             trigger_registry_for_switch,
-                                            menu_key_for_switch,
                                         );
                                         if content_focus_id_for_panel.get().is_none() {
                                             content_focus_id_for_panel.set(Some(roving.id));
@@ -1857,7 +1847,6 @@ impl MenubarMenuEntries {
                                     let submenu_entries_for_panel = submenu_entries.clone();
                                     let open_for_submenu = open_for_submenu.clone();
                                     let group_active = group_active_for_submenu.clone();
-                                    let menu_key_for_switch = menu_key_for_overlay.clone();
                                     let trigger_registry_for_switch =
                                         trigger_registry_for_overlay.clone();
                                     let text_style = text_style_for_submenu.clone();
@@ -1880,8 +1869,9 @@ impl MenubarMenuEntries {
                                             let content_focus_id_for_panel =
                                                 content_focus_id_for_children_for_submenu.clone();
                                             let group_active_for_switch = group_active.clone();
-                                            let menu_key_for_switch = menu_key_for_switch.clone();
                                             let trigger_registry_for_switch =
+                                                trigger_registry_for_switch.clone();
+                                            let trigger_registry_for_items =
                                                 trigger_registry_for_switch.clone();
                                             let roving = menu::content::menu_roving_group_apg_prefix_typeahead(
                                                         cx,
@@ -1977,10 +1967,8 @@ impl MenubarMenuEntries {
                                                                         let close_on_select = item.close_on_select;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
-                                                                        let menu_key =
-                                                                            menu_key_for_switch.clone();
                                                                         let trigger_registry =
-                                                                            trigger_registry_for_switch.clone();
+                                                                            trigger_registry_for_items.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
                                                                         let value = item.value.clone();
                                                                         let checked = item.checked.clone();
@@ -1993,7 +1981,6 @@ impl MenubarMenuEntries {
                                                                                     item_id,
                                                                                     group_active.clone(),
                                                                                     trigger_registry.clone(),
-                                                                                    menu_key.clone(),
                                                                                 );
                                                                                 menu::sub_content::wire_item(
                                                                                     cx,
@@ -2097,10 +2084,8 @@ impl MenubarMenuEntries {
                                                                         let close_on_select = item.close_on_select;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
-                                                                        let menu_key =
-                                                                            menu_key_for_switch.clone();
                                                                         let trigger_registry =
-                                                                            trigger_registry_for_switch.clone();
+                                                                            trigger_registry_for_items.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
                                                                         let value = item.value.clone();
                                                                         let group_value = item.group_value.clone();
@@ -2113,7 +2098,6 @@ impl MenubarMenuEntries {
                                                                                     item_id,
                                                                                     group_active.clone(),
                                                                                     trigger_registry.clone(),
-                                                                                    menu_key.clone(),
                                                                                 );
                                                                                 menu::sub_content::wire_item(
                                                                                     cx,
@@ -2223,10 +2207,8 @@ impl MenubarMenuEntries {
                                                                         let variant = item.variant;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
-                                                                        let menu_key =
-                                                                            menu_key_for_switch.clone();
                                                                         let trigger_registry =
-                                                                            trigger_registry_for_switch.clone();
+                                                                            trigger_registry_for_items.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
                                                                         let value = item.value.clone();
                                                                         let pad_left =
@@ -2240,7 +2222,6 @@ impl MenubarMenuEntries {
                                                                                     item_id,
                                                                                     group_active.clone(),
                                                                                     trigger_registry.clone(),
-                                                                                    menu_key.clone(),
                                                                                 );
                                                                                 menu::sub_content::wire_item(
                                                                                     cx,
@@ -2348,7 +2329,6 @@ impl MenubarMenuEntries {
                                                 roving.id,
                                                 group_active_for_switch,
                                                 trigger_registry_for_switch,
-                                                menu_key_for_switch,
                                             );
                                             if content_focus_id_for_panel.get().is_none() {
                                                 content_focus_id_for_panel.set(Some(roving.id));

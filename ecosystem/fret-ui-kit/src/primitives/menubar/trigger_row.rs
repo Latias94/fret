@@ -25,7 +25,6 @@ pub struct MenubarActiveTrigger {
 
 #[derive(Debug, Clone)]
 pub struct MenubarTriggerRowEntry {
-    pub key: Arc<str>,
     pub trigger: GlobalElementId,
     pub open: Model<bool>,
     pub enabled: bool,
@@ -86,21 +85,18 @@ pub fn ensure_group_registry_model<H: UiHost>(
 pub fn register_trigger_in_registry<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     registry: Model<Vec<MenubarTriggerRowEntry>>,
-    key: Arc<str>,
     trigger: GlobalElementId,
     open: Model<bool>,
     enabled: bool,
 ) {
     let _ = cx.app.models_mut().update(&registry, move |v| {
-        if let Some(existing) = v.iter_mut().find(|e| e.key.as_ref() == key.as_ref()) {
-            existing.trigger = trigger;
+        if let Some(existing) = v.iter_mut().find(|e| e.trigger == trigger) {
             existing.open = open;
             existing.enabled = enabled;
             return;
         }
 
         v.push(MenubarTriggerRowEntry {
-            key,
             trigger,
             open,
             enabled,
@@ -135,7 +131,6 @@ fn find_next_enabled(
 pub fn switch_open_menu_on_horizontal_arrows(
     group_active: Model<Option<MenubarActiveTrigger>>,
     registry: Model<Vec<MenubarTriggerRowEntry>>,
-    current_key: Arc<str>,
 ) -> OnKeyDown {
     Arc::new(
         move |host: &mut dyn UiFocusActionHost, acx: ActionCx, down: KeyDownCx| {
@@ -152,10 +147,10 @@ pub fn switch_open_menu_on_horizontal_arrows(
             let Some(entries) = host.models_mut().get_cloned(&registry) else {
                 return false;
             };
-            let Some(current_idx) = entries
-                .iter()
-                .position(|e| e.key.as_ref() == current_key.as_ref())
-            else {
+            let Some(active) = host.models_mut().get_cloned(&group_active).flatten() else {
+                return false;
+            };
+            let Some(current_idx) = entries.iter().position(|e| e.trigger == active.trigger) else {
                 return false;
             };
 
@@ -174,7 +169,7 @@ pub fn switch_open_menu_on_horizontal_arrows(
                 return false;
             }
 
-            let _ = host.models_mut().update(&current.open, |v| *v = false);
+            let _ = host.models_mut().update(&active.open, |v| *v = false);
             let _ = host.models_mut().update(&next.open, |v| *v = true);
             let open_for_state = next.open.clone();
             let _ = host.models_mut().update(&group_active, |v| {
@@ -199,11 +194,10 @@ pub fn wire_switch_open_menu_on_horizontal_arrows<H: UiHost>(
     item_id: GlobalElementId,
     group_active: Model<Option<MenubarActiveTrigger>>,
     registry: Model<Vec<MenubarTriggerRowEntry>>,
-    current_key: Arc<str>,
 ) {
     cx.key_add_on_key_down_for(
         item_id,
-        switch_open_menu_on_horizontal_arrows(group_active, registry, current_key),
+        switch_open_menu_on_horizontal_arrows(group_active, registry),
     );
 }
 
