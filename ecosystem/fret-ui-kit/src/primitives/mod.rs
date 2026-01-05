@@ -24,12 +24,16 @@
 
 pub mod accordion;
 pub mod active_descendant;
-pub mod collection;
+pub mod checkbox;
 pub mod collapsible;
+pub mod collection;
+pub mod context_menu;
 pub mod dismissable_layer;
+pub mod dropdown_menu;
 pub mod focus_scope;
 pub mod hover_intent;
 pub mod menu;
+pub mod menubar;
 pub mod popper;
 pub mod popper_content;
 pub mod presence;
