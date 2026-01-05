@@ -257,6 +257,7 @@ impl Popover {
 
                     let bg = theme
                         .color_by_key("popover")
+                        .or_else(|| theme.color_by_key("popover.background"))
                         .unwrap_or(theme.colors.panel_background);
                     let border = theme
                         .color_by_key("border")
@@ -373,6 +374,7 @@ impl PopoverAnchor {
 fn popover_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme
         .color_by_key("popover")
+        .or_else(|| theme.color_by_key("popover.background"))
         .unwrap_or(theme.colors.panel_background);
     let border = theme
         .color_by_key("border")
@@ -487,7 +489,9 @@ impl PopoverTitle {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
-            .color_by_key("foreground")
+            .color_by_key("popover.foreground")
+            .or_else(|| theme.color_by_key("popover-foreground"))
+            .or_else(|| theme.color_by_key("foreground"))
             .unwrap_or(theme.colors.text_primary);
 
         let px = theme
@@ -576,8 +580,8 @@ mod tests {
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
     use fret_runtime::FrameId;
-    use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
+    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[derive(Default)]
@@ -737,14 +741,8 @@ mod tests {
         let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
             Rc::new(Cell::new(None));
 
-        let root = fret_ui::declarative::render_root(
-            ui,
-            app,
-            services,
-            window,
-            bounds,
-            "test",
-            |cx| {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
                 let clipped_surface = cx.container(
                     ContainerProps {
                         layout: {
@@ -760,68 +758,69 @@ mod tests {
                     {
                         let trigger_id_out = trigger_id_out.clone();
                         move |cx| {
-                        let popover_content_id_out = popover_content_id_out.clone();
-                        vec![Popover::new(open.clone())
-                            .side(PopoverSide::Bottom)
-                            .into_element(
-                                cx,
-                                |cx| {
-                                    cx.pressable_with_id(
-                                        PressableProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Px(Px(120.0));
-                                                layout.size.height = Length::Px(Px(40.0));
-                                                layout.position = fret_ui::element::PositionStyle::Absolute;
-                                                layout.inset.top = Some(Px(20.0));
-                                                layout.inset.left = Some(Px(10.0));
-                                                layout
+                            let popover_content_id_out = popover_content_id_out.clone();
+                            vec![Popover::new(open.clone())
+                                .side(PopoverSide::Bottom)
+                                .into_element(
+                                    cx,
+                                    |cx| {
+                                        cx.pressable_with_id(
+                                            PressableProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.width = Length::Px(Px(120.0));
+                                                    layout.size.height = Length::Px(Px(40.0));
+                                                    layout.position =
+                                                        fret_ui::element::PositionStyle::Absolute;
+                                                    layout.inset.top = Some(Px(20.0));
+                                                    layout.inset.left = Some(Px(10.0));
+                                                    layout
+                                                },
+                                                enabled: true,
+                                                focusable: true,
+                                                ..Default::default()
                                             },
-                                            enabled: true,
-                                            focusable: true,
-                                            ..Default::default()
-                                        },
-                                        |cx, _st, id| {
-                                            cx.pressable_toggle_bool(&open);
-                                            trigger_id_out.set(Some(id));
-                                            vec![cx.container(
-                                                ContainerProps::default(),
-                                                |_cx| Vec::new(),
-                                            )]
-                                        },
-                                    )
-                                },
-                                move |cx| {
-                                    let focusable = cx.pressable_with_id(
-                                        PressableProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Px(Px(220.0));
-                                                layout.size.height = Length::Px(Px(120.0));
-                                                layout
+                                            |cx, _st, id| {
+                                                cx.pressable_toggle_bool(&open);
+                                                trigger_id_out.set(Some(id));
+                                                vec![cx
+                                                    .container(ContainerProps::default(), |_cx| {
+                                                        Vec::new()
+                                                    })]
                                             },
-                                            enabled: true,
-                                            focusable: true,
-                                            ..Default::default()
-                                        },
-                                        |cx, _st, _id| {
-                                            vec![cx.container(
-                                                ContainerProps::default(),
-                                                |_cx| Vec::new(),
-                                            )]
-                                        },
-                                    );
-                                    let content = PopoverContent::new(vec![focusable]).into_element(cx);
-                                    popover_content_id_out.set(Some(content.id));
-                                    content
-                                },
-                            )]
+                                        )
+                                    },
+                                    move |cx| {
+                                        let focusable = cx.pressable_with_id(
+                                            PressableProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.width = Length::Px(Px(220.0));
+                                                    layout.size.height = Length::Px(Px(120.0));
+                                                    layout
+                                                },
+                                                enabled: true,
+                                                focusable: true,
+                                                ..Default::default()
+                                            },
+                                            |cx, _st, _id| {
+                                                vec![cx
+                                                    .container(ContainerProps::default(), |_cx| {
+                                                        Vec::new()
+                                                    })]
+                                            },
+                                        );
+                                        let content =
+                                            PopoverContent::new(vec![focusable]).into_element(cx);
+                                        popover_content_id_out.set(Some(content.id));
+                                        content
+                                    },
+                                )]
                         }
                     },
                 );
                 vec![clipped_surface]
-            },
-        );
+            });
 
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);

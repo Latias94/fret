@@ -62,8 +62,10 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 ### Visual parity (new-york)
 
 - Pass: Default `PopoverContent` sizing matches `w-72` (`288px`) and padding matches `p-4`.
-- Pass: Default border/background uses theme keys (`popover`, `border`) and shadow matches the
-  design-system "md" shadow.
+- Pass: Default border/background uses popover tokens (`popover` / `popover.background`, `border`)
+  and shadow matches the design-system "md" shadow.
+- Pass: Popover title text defaults to `popover.foreground` / `popover-foreground` (best-effort),
+  matching `text-popover-foreground` semantics.
 - Partial: Upstream content has open/close + side-based slide/zoom animations; Fret currently uses a
   simple fade presence.
 
