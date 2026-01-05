@@ -381,6 +381,117 @@ impl CommandItem {
     }
 }
 
+/// shadcn/ui `CommandGroup` (v4).
+#[derive(Clone)]
+pub struct CommandGroup {
+    heading: Option<Arc<str>>,
+    items: Vec<CommandItem>,
+}
+
+impl std::fmt::Debug for CommandGroup {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommandGroup")
+            .field("heading", &self.heading.as_ref().map(|s| s.as_ref()))
+            .field("items_len", &self.items.len())
+            .finish()
+    }
+}
+
+impl CommandGroup {
+    pub fn new(items: Vec<CommandItem>) -> Self {
+        Self {
+            heading: None,
+            items,
+        }
+    }
+
+    pub fn heading(mut self, heading: impl Into<Arc<str>>) -> Self {
+        self.heading = Some(heading.into());
+        self
+    }
+
+    pub fn item(mut self, item: CommandItem) -> Self {
+        self.items.push(item);
+        self
+    }
+
+    pub fn items(mut self, items: impl IntoIterator<Item = CommandItem>) -> Self {
+        self.items.extend(items);
+        self
+    }
+}
+
+/// shadcn/ui `CommandSeparator` (v4).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CommandSeparator;
+
+impl CommandSeparator {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// shadcn/ui `CommandEmpty` (v4).
+#[derive(Clone)]
+pub struct CommandEmpty {
+    text: Arc<str>,
+}
+
+impl std::fmt::Debug for CommandEmpty {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommandEmpty")
+            .field("text", &self.text.as_ref())
+            .finish()
+    }
+}
+
+impl CommandEmpty {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let fg = theme.colors.text_muted;
+        let text_style = item_text_style(&theme);
+        cx.container(ContainerProps::default(), move |cx| {
+            vec![cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: self.text,
+                style: Some(text_style),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })]
+        })
+    }
+}
+
+#[derive(Clone)]
+pub enum CommandEntry {
+    Item(CommandItem),
+    Group(CommandGroup),
+    Separator(CommandSeparator),
+}
+
+impl From<CommandItem> for CommandEntry {
+    fn from(value: CommandItem) -> Self {
+        Self::Item(value)
+    }
+}
+
+impl From<CommandGroup> for CommandEntry {
+    fn from(value: CommandGroup) -> Self {
+        Self::Group(value)
+    }
+}
+
+impl From<CommandSeparator> for CommandEntry {
+    fn from(value: CommandSeparator) -> Self {
+        Self::Separator(value)
+    }
+}
+
 #[derive(Clone)]
 pub struct CommandList {
     items: Vec<CommandItem>,
@@ -603,7 +714,7 @@ impl CommandList {
 #[derive(Clone)]
 pub struct CommandPalette {
     model: Model<String>,
-    items: Vec<CommandItem>,
+    entries: Vec<CommandEntry>,
     disabled: bool,
     wrap: bool,
     empty_text: Arc<str>,
@@ -617,7 +728,7 @@ pub struct CommandPalette {
 impl std::fmt::Debug for CommandPalette {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommandPalette")
-            .field("items_len", &self.items.len())
+            .field("entries_len", &self.entries.len())
             .field("disabled", &self.disabled)
             .field("wrap", &self.wrap)
             .field("empty_text", &self.empty_text.as_ref())
@@ -633,7 +744,7 @@ impl CommandPalette {
     pub fn new(model: Model<String>, items: Vec<CommandItem>) -> Self {
         Self {
             model,
-            items,
+            entries: items.into_iter().map(CommandEntry::Item).collect(),
             disabled: false,
             wrap: true,
             empty_text: Arc::from("No results."),
@@ -655,6 +766,16 @@ impl CommandPalette {
 
     pub fn wrap(mut self, wrap: bool) -> Self {
         self.wrap = wrap;
+        self
+    }
+
+    pub fn entries(mut self, entries: Vec<CommandEntry>) -> Self {
+        self.entries = entries;
+        self
+    }
+
+    pub fn empty(mut self, empty: CommandEmpty) -> Self {
+        self.empty_text = empty.text;
         self
     }
 
@@ -721,54 +842,163 @@ impl CommandPalette {
                 .read_ref(|s| s.trim().to_ascii_lowercase())
                 .unwrap_or_default();
 
-            let mut items = self.items;
-            if !query.is_empty() {
-                let mut scored: Vec<(usize, f32, CommandItem)> = items
-                    .into_iter()
-                    .enumerate()
-                    .filter_map(|(idx, item)| {
-                        let mut aliases: Vec<&str> = Vec::with_capacity(1 + item.keywords.len());
-                        if item.value.as_ref() != item.label.as_ref() {
-                            aliases.push(item.value.as_ref());
-                        }
-                        for kw in &item.keywords {
-                            aliases.push(kw.as_ref());
-                        }
-
-                        let score = cmdk_score::command_score(
-                            item.label.as_ref(),
-                            query.as_str(),
-                            &aliases,
-                        );
-                        (score > 0.0).then_some((idx, score, item))
-                    })
-                    .collect();
-
-                scored.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
-                    b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
-                });
-
-                items = scored.into_iter().map(|(_, _, item)| item).collect();
+            #[derive(Clone)]
+            enum PendingRow {
+                Heading(Arc<str>),
+                Separator,
+                Item(CommandItem),
             }
+
+            enum RenderRow {
+                Heading(Arc<str>),
+                Separator,
+                Item(usize),
+            }
+
+            let score_item = |item: &CommandItem| -> f32 {
+                if query.is_empty() {
+                    return 1.0;
+                }
+
+                let mut aliases: Vec<&str> = Vec::with_capacity(1 + item.keywords.len());
+                if item.value.as_ref() != item.label.as_ref() {
+                    aliases.push(item.value.as_ref());
+                }
+                for kw in &item.keywords {
+                    aliases.push(kw.as_ref());
+                }
+
+                cmdk_score::command_score(item.label.as_ref(), query.as_str(), &aliases)
+            };
+
+            let mut pending_rows: Vec<PendingRow> = Vec::new();
+            for entry in self.entries {
+                match entry {
+                    CommandEntry::Item(item) => {
+                        let score = score_item(&item);
+                        if score > 0.0 {
+                            pending_rows.push(PendingRow::Item(item));
+                        }
+                    }
+                    CommandEntry::Separator(_) => pending_rows.push(PendingRow::Separator),
+                    CommandEntry::Group(group) => {
+                        let items = group.items;
+                        if query.is_empty() {
+                            if let Some(heading) = group.heading {
+                                pending_rows.push(PendingRow::Heading(heading));
+                            }
+                            pending_rows.extend(items.into_iter().map(PendingRow::Item));
+                            continue;
+                        }
+
+                        let mut scored: Vec<(usize, f32, CommandItem)> = items
+                            .into_iter()
+                            .enumerate()
+                            .filter_map(|(idx, item)| {
+                                let score = score_item(&item);
+                                (score > 0.0).then_some((idx, score, item))
+                            })
+                            .collect();
+
+                        if scored.is_empty() {
+                            continue;
+                        }
+
+                        scored.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
+                            b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
+                        });
+                        if let Some(heading) = group.heading {
+                            pending_rows.push(PendingRow::Heading(heading));
+                        }
+                        pending_rows.extend(
+                            scored
+                                .into_iter()
+                                .map(|(_, _, item)| PendingRow::Item(item)),
+                        );
+                    }
+                }
+            }
+
+            let mut has_item_from: Vec<bool> = vec![false; pending_rows.len() + 1];
+            for idx in (0..pending_rows.len()).rev() {
+                has_item_from[idx] =
+                    has_item_from[idx + 1] || matches!(pending_rows[idx], PendingRow::Item(_));
+            }
+
+            let mut filtered_rows: Vec<PendingRow> = Vec::with_capacity(pending_rows.len());
+            let mut seen_item_before = false;
+            let mut prev_is_sep = false;
+            for (idx, row) in pending_rows.into_iter().enumerate() {
+                match row {
+                    PendingRow::Separator => {
+                        if !seen_item_before || !has_item_from[idx + 1] || prev_is_sep {
+                            continue;
+                        }
+                        prev_is_sep = true;
+                        filtered_rows.push(PendingRow::Separator);
+                    }
+                    PendingRow::Item(item) => {
+                        seen_item_before = true;
+                        prev_is_sep = false;
+                        filtered_rows.push(PendingRow::Item(item));
+                    }
+                    PendingRow::Heading(h) => {
+                        prev_is_sep = false;
+                        filtered_rows.push(PendingRow::Heading(h));
+                    }
+                }
+            }
+
+            let mut items: Vec<CommandItem> = Vec::new();
+            let render_rows: Vec<RenderRow> = filtered_rows
+                .into_iter()
+                .map(|row| match row {
+                    PendingRow::Heading(h) => RenderRow::Heading(h),
+                    PendingRow::Separator => RenderRow::Separator,
+                    PendingRow::Item(item) => {
+                        let idx = items.len();
+                        items.push(item);
+                        RenderRow::Item(idx)
+                    }
+                })
+                .collect();
 
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
                 query.as_str().hash(&mut hasher);
-                items.len().hash(&mut hasher);
-                for item in &items {
-                    item.label.as_ref().hash(&mut hasher);
-                    item.value.as_ref().hash(&mut hasher);
-                    item.keywords.len().hash(&mut hasher);
-                    for kw in &item.keywords {
-                        kw.as_ref().hash(&mut hasher);
+                render_rows.len().hash(&mut hasher);
+                for row in &render_rows {
+                    match row {
+                        RenderRow::Heading(h) => {
+                            "heading".hash(&mut hasher);
+                            h.as_ref().hash(&mut hasher);
+                        }
+                        RenderRow::Separator => {
+                            "separator".hash(&mut hasher);
+                        }
+                        RenderRow::Item(idx) => {
+                            "item".hash(&mut hasher);
+                            if let Some(item) = items.get(*idx) {
+                                item.label.as_ref().hash(&mut hasher);
+                                item.value.as_ref().hash(&mut hasher);
+                                item.keywords.len().hash(&mut hasher);
+                                for kw in &item.keywords {
+                                    kw.as_ref().hash(&mut hasher);
+                                }
+                                item.shortcut
+                                    .as_ref()
+                                    .map(|s| s.as_ref())
+                                    .unwrap_or("")
+                                    .hash(&mut hasher);
+                                item.disabled.hash(&mut hasher);
+                                item.command
+                                    .as_ref()
+                                    .map(|c| c.as_str())
+                                    .unwrap_or("")
+                                    .hash(&mut hasher);
+                            }
+                        }
                     }
-                    item.shortcut.as_ref().map(|s| s.as_ref()).unwrap_or("").hash(&mut hasher);
-                    item.disabled.hash(&mut hasher);
-                    item.command
-                        .as_ref()
-                        .map(|c| c.as_str())
-                        .unwrap_or("")
-                        .hash(&mut hasher);
                 }
                 hasher.finish()
             };
@@ -878,176 +1108,234 @@ impl CommandPalette {
                 })
             });
             let item_count = items.len();
-            let rows: Vec<AnyElement> = items
+            let rows: Vec<AnyElement> = render_rows
                 .into_iter()
-                .enumerate()
-                .map(|(idx, item)| {
-                    let base = item
-                        .command
-                        .clone()
-                        .map(RowKey::Command)
-                        .unwrap_or_else(|| RowKey::Value(item.value.clone()));
-                    let count = key_counts.entry(base.clone()).or_insert(0);
-                    let occ = *count;
-                    *count = count.saturating_add(1);
-
-                    let active_for_row = active.clone();
-                    cx.keyed((base, occ), |cx| {
-                        let enabled = disabled_flags.get(idx).copied() == Some(false);
-                        let selected = active_idx.is_some_and(|i| i == idx);
-
-                    let label = item.label.clone();
-                    let value = item.value.clone();
-                    let checked = item.checked;
-                    let show_checkmark = item.show_checkmark;
-                    let shortcut = item.shortcut.clone();
-                    let command = item.command;
-                    let on_select = item.on_select.clone();
-                    let children = item.children;
-                        let text_style = text_style.clone();
-
-                        let row = cx.pressable(
-                            PressableProps {
-                                layout: item_layout,
-                                enabled,
-                                focusable: false,
-                                focus_ring: None,
-                                a11y: PressableA11y {
-                                    role: Some(SemanticsRole::ListBoxOption),
-                                    label: Some(label.clone()),
-                                    selected,
-                                    ..Default::default()
-                                }
-                                .with_collection_position(idx, item_count),
+                .map(|row| match row {
+                    RenderRow::Heading(heading) => {
+                        let fg = theme
+                            .color_by_key("muted-foreground")
+                            .unwrap_or(theme.colors.text_muted);
+                        let mut style = shortcut_text_style(&theme);
+                        style.weight = FontWeight::MEDIUM;
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout
+                                },
+                                padding: Edges {
+                                    top: Px(8.0),
+                                    right: pad_x,
+                                    bottom: Px(4.0),
+                                    left: pad_x,
+                                },
                                 ..Default::default()
                             },
-                            move |cx, st| {
-                                cx.pressable_dispatch_command_opt(command);
-                                if let Some(on_select) = on_select.clone() {
-                                    cx.pressable_add_on_activate(on_select);
-                                }
-                                if enabled {
-                                    let active = active_for_row.clone();
-                                    cx.pressable_on_hover_change(Arc::new(
-                                        move |host, action_cx, hovered| {
-                                            if !hovered {
-                                                return;
-                                            }
-                                            let current = host
-                                                .models_mut()
-                                                .get_cloned(&active)
-                                                .unwrap_or(None);
-                                            let next = Some(value.clone());
-                                            if current != next {
-                                                let _ = host
-                                                    .models_mut()
-                                                    .update(&active, |v| *v = next.clone());
-                                                host.request_redraw(action_cx.window);
-                                            }
-                                        },
-                                    ));
-                                }
-
-                                let hovered = st.hovered && !st.pressed;
-                                let pressed = st.pressed;
-                                let bg = if selected {
-                                    Some(bg_selected)
-                                } else if hovered || pressed {
-                                    Some(bg_hover)
-                                } else {
-                                    None
-                                };
-
-                                let props = ContainerProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout
-                                    },
-                                    padding: Edges {
-                                        top: pad_y,
-                                        right: pad_x,
-                                        bottom: pad_y,
-                                        left: pad_x,
-                                    },
-                                    background: bg,
-                                    shadow: None,
-                                    border: Edges::all(Px(0.0)),
-                                    border_color: None,
-                                    corner_radii: Corners::all(radius),
-                                };
-
-                                vec![cx.container(props, move |cx| {
-                                    vec![cx.row(
-                                        RowProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Fill;
-                                                layout
-                                            },
-                                            gap: row_gap,
-                                            padding: Edges::all(Px(0.0)),
-                                            justify: MainAlign::SpaceBetween,
-                                            align: CrossAlign::Center,
-                                        },
-                                        move |cx| {
-                                            if !children.is_empty() {
-                                                return children;
-                                            }
-
-                                            let fg = if enabled { fg } else { fg_disabled };
-
-                                            let left = cx.row(
-                                                RowProps {
-                                                    layout: LayoutStyle::default(),
-                                                    gap: row_gap,
-                                                    padding: Edges::all(Px(0.0)),
-                                                    justify: MainAlign::Start,
-                                                    align: CrossAlign::Center,
-                                                },
-                                                move |cx| {
-                                                    let mut out = Vec::with_capacity(2);
-                                                    if show_checkmark {
-                                                        let icon = decl_icon::icon_with(
-                                                            cx,
-                                                            ids::ui::CHECK,
-                                                            Some(Px(16.0)),
-                                                            Some(ColorRef::Color(fg)),
-                                                        );
-                                                        let icon = cx.opacity(
-                                                            if checked { 1.0 } else { 0.0 },
-                                                            move |_cx| vec![icon],
-                                                        );
-                                                        out.push(icon);
-                                                    }
-
-                                                    out.push(cx.text_props(TextProps {
-                                                        layout: LayoutStyle::default(),
-                                                        text: label.clone(),
-                                                        style: Some(text_style.clone()),
-                                                        color: Some(fg),
-                                                        wrap: TextWrap::None,
-                                                        overflow: TextOverflow::Clip,
-                                                    }));
-
-                                                    out
-                                                },
-                                            );
-
-                                            if let Some(shortcut) = shortcut.clone() {
-                                                vec![left, CommandShortcut::new(shortcut).into_element(cx)]
-                                            } else {
-                                                vec![left]
-                                            }
-                                        },
-                                    )]
+                            move |cx| {
+                                vec![cx.text_props(TextProps {
+                                    layout: LayoutStyle::default(),
+                                    text: heading,
+                                    style: Some(style),
+                                    color: Some(fg),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
                                 })]
                             },
-                        );
+                        )
+                    }
+                    RenderRow::Separator => {
+                        let border = border(&theme);
+                        cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Px(Px(1.0));
+                                    layout
+                                },
+                                background: Some(border),
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        )
+                    }
+                    RenderRow::Item(idx) => {
+                        let Some(item) = items.get(idx).cloned() else {
+                            return cx.container(ContainerProps::default(), |_cx| Vec::new());
+                        };
 
-                        row_ids.push(row.id);
-                        row
-                    })
+                        let base = item
+                            .command
+                            .clone()
+                            .map(RowKey::Command)
+                            .unwrap_or_else(|| RowKey::Value(item.value.clone()));
+                        let count = key_counts.entry(base.clone()).or_insert(0);
+                        let occ = *count;
+                        *count = count.saturating_add(1);
+
+                        let active_for_row = active.clone();
+                        cx.keyed((base, occ), |cx| {
+                            let enabled = disabled_flags.get(idx).copied() == Some(false);
+                            let selected = active_idx.is_some_and(|i| i == idx);
+
+                            let label = item.label.clone();
+                            let value = item.value.clone();
+                            let checked = item.checked;
+                            let show_checkmark = item.show_checkmark;
+                            let shortcut = item.shortcut.clone();
+                            let command = item.command;
+                            let on_select = item.on_select.clone();
+                            let children = item.children;
+                            let text_style = text_style.clone();
+
+                            let row = cx.pressable(
+                                PressableProps {
+                                    layout: item_layout,
+                                    enabled,
+                                    focusable: false,
+                                    focus_ring: None,
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::ListBoxOption),
+                                        label: Some(label.clone()),
+                                        selected,
+                                        ..Default::default()
+                                    }
+                                    .with_collection_position(idx, item_count),
+                                    ..Default::default()
+                                },
+                                move |cx, st| {
+                                    cx.pressable_dispatch_command_opt(command);
+                                    if let Some(on_select) = on_select.clone() {
+                                        cx.pressable_add_on_activate(on_select);
+                                    }
+                                    if enabled {
+                                        let active = active_for_row.clone();
+                                        cx.pressable_on_hover_change(Arc::new(
+                                            move |host, action_cx, hovered| {
+                                                if !hovered {
+                                                    return;
+                                                }
+                                                let current = host
+                                                    .models_mut()
+                                                    .get_cloned(&active)
+                                                    .unwrap_or(None);
+                                                let next = Some(value.clone());
+                                                if current != next {
+                                                    let _ = host
+                                                        .models_mut()
+                                                        .update(&active, |v| *v = next.clone());
+                                                    host.request_redraw(action_cx.window);
+                                                }
+                                            },
+                                        ));
+                                    }
+
+                                    let hovered = st.hovered && !st.pressed;
+                                    let pressed = st.pressed;
+                                    let bg = if selected {
+                                        Some(bg_selected)
+                                    } else if hovered || pressed {
+                                        Some(bg_hover)
+                                    } else {
+                                        None
+                                    };
+
+                                    let props = ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout
+                                        },
+                                        padding: Edges {
+                                            top: pad_y,
+                                            right: pad_x,
+                                            bottom: pad_y,
+                                            left: pad_x,
+                                        },
+                                        background: bg,
+                                        shadow: None,
+                                        border: Edges::all(Px(0.0)),
+                                        border_color: None,
+                                        corner_radii: Corners::all(radius),
+                                    };
+
+                                    vec![cx.container(props, move |cx| {
+                                        vec![cx.row(
+                                            RowProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.width = Length::Fill;
+                                                    layout
+                                                },
+                                                gap: row_gap,
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::SpaceBetween,
+                                                align: CrossAlign::Center,
+                                            },
+                                            move |cx| {
+                                                if !children.is_empty() {
+                                                    return children;
+                                                }
+
+                                                let fg = if enabled { fg } else { fg_disabled };
+
+                                                let left = cx.row(
+                                                    RowProps {
+                                                        layout: LayoutStyle::default(),
+                                                        gap: row_gap,
+                                                        padding: Edges::all(Px(0.0)),
+                                                        justify: MainAlign::Start,
+                                                        align: CrossAlign::Center,
+                                                    },
+                                                    move |cx| {
+                                                        let mut out = Vec::with_capacity(2);
+                                                        if show_checkmark {
+                                                            let icon = decl_icon::icon_with(
+                                                                cx,
+                                                                ids::ui::CHECK,
+                                                                Some(Px(16.0)),
+                                                                Some(ColorRef::Color(fg)),
+                                                            );
+                                                            let icon = cx.opacity(
+                                                                if checked { 1.0 } else { 0.0 },
+                                                                move |_cx| vec![icon],
+                                                            );
+                                                            out.push(icon);
+                                                        }
+
+                                                        out.push(cx.text_props(TextProps {
+                                                            layout: LayoutStyle::default(),
+                                                            text: label.clone(),
+                                                            style: Some(text_style.clone()),
+                                                            color: Some(fg),
+                                                            wrap: TextWrap::None,
+                                                            overflow: TextOverflow::Clip,
+                                                        }));
+
+                                                        out
+                                                    },
+                                                );
+
+                                                if let Some(shortcut) = shortcut.clone() {
+                                                    vec![
+                                                        left,
+                                                        CommandShortcut::new(shortcut)
+                                                            .into_element(cx),
+                                                    ]
+                                                } else {
+                                                    vec![left]
+                                                }
+                                            },
+                                        )]
+                                    })]
+                                },
+                            );
+
+                            row_ids.push(row.id);
+                            row
+                        })
+                    }
                 })
                 .collect();
 
