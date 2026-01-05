@@ -47,6 +47,7 @@ pub struct ToastRequest {
     pub duration: Option<Duration>,
     pub variant: ToastVariant,
     pub action: Option<ToastAction>,
+    pub cancel: Option<ToastAction>,
     pub dismissible: bool,
 }
 
@@ -59,6 +60,7 @@ impl ToastRequest {
             duration: Some(Duration::from_secs(3)),
             variant: ToastVariant::default(),
             action: None,
+            cancel: None,
             dismissible: true,
         }
     }
@@ -85,6 +87,11 @@ impl ToastRequest {
 
     pub fn action(mut self, action: ToastAction) -> Self {
         self.action = Some(action);
+        self
+    }
+
+    pub fn cancel(mut self, cancel: ToastAction) -> Self {
+        self.cancel = Some(cancel);
         self
     }
 
@@ -119,6 +126,7 @@ pub(super) struct ToastEntry {
     pub(super) auto_close_remaining: Option<Duration>,
     pub(super) variant: ToastVariant,
     pub(super) action: Option<ToastAction>,
+    pub(super) cancel: Option<ToastAction>,
     pub(super) dismissible: bool,
     pub(super) open: bool,
     pub(super) auto_close_token: Option<TimerToken>,
@@ -202,6 +210,7 @@ impl ToastStore {
             auto_close_remaining: wants_timer,
             variant: request.variant,
             action: request.action,
+            cancel: request.cancel,
             dismissible: request.dismissible,
             open: true,
             auto_close_token,
@@ -239,6 +248,7 @@ impl ToastStore {
                     toast.auto_close_remaining = wants_timer;
                     toast.variant = request.variant;
                     toast.action = request.action;
+                    toast.cancel = request.cancel;
                     toast.dismissible = request.dismissible;
                     toast.drag_start = None;
                     toast.drag_x = Px(0.0);
@@ -800,7 +810,15 @@ mod tests {
             ToastRequest::new("Done")
                 .id(id)
                 .variant(ToastVariant::Success)
-                .duration(Some(Duration::from_secs(2))),
+                .duration(Some(Duration::from_secs(2)))
+                .action(ToastAction {
+                    label: Arc::from("Undo"),
+                    command: CommandId::from("toast.undo"),
+                })
+                .cancel(ToastAction {
+                    label: Arc::from("Cancel"),
+                    command: CommandId::from("toast.cancel"),
+                }),
             Some(TimerToken(10)),
         );
         assert_eq!(out1.id, id);
@@ -812,6 +830,8 @@ mod tests {
         assert_eq!(toast.title.as_ref(), "Done");
         assert_eq!(toast.variant, ToastVariant::Success);
         assert_eq!(toast.auto_close_token, Some(TimerToken(10)));
+        assert_eq!(toast.action.as_ref().map(|a| a.label.as_ref()), Some("Undo"));
+        assert_eq!(toast.cancel.as_ref().map(|a| a.label.as_ref()), Some("Cancel"));
     }
 
     #[test]

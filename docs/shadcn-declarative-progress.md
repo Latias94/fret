@@ -105,7 +105,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | sidebar | `sidebar` | Present | Unreviewed |  |
 | skeleton | `skeleton` | Present | Unreviewed |  |
 | slider | `slider` | Present | Unreviewed | Declarative composition over primitives (PointerRegion hooks + bounds); a11y TBD |
-| sonner | `sonner` | Present | Unreviewed | Toast store + overlay layer + timers; upsert-by-id; swipe-to-dismiss; hover pause/resume; max-toasts eviction; manual promise handle (no a11y yet) |
+| sonner | `sonner` | Present | Unreviewed | Toast store + overlay layer + timers; upsert-by-id; swipe-to-dismiss; hover pause/resume; max-toasts eviction; action/cancel; manual promise handle (no a11y yet) |
 | spinner | `spinner` | Present | Unreviewed |  |
 | switch | `switch` | Present | Unreviewed |  |
 | table | `table` | Present | Unreviewed |  |

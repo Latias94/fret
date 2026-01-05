@@ -698,6 +698,39 @@ pub fn render<H: UiHost>(
                                 )
                             });
 
+                            let cancel = toast.cancel.clone().map(|cancel| {
+                                let cancel_store = store.clone();
+                                let cmd = cancel.command;
+                                let label = cancel.label;
+                                cx.pressable(
+                                    fret_ui::element::PressableProps {
+                                        layout: fret_ui::element::LayoutStyle::default(),
+                                        enabled: true,
+                                        focusable: false,
+                                        focus_ring: None,
+                                        a11y: Default::default(),
+                                    },
+                                    move |cx, _st| {
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, cx, _reason| {
+                                                host.dispatch_command(Some(cx.window), cmd.clone());
+                                            },
+                                        ));
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, cx, _reason| {
+                                                let _ = dismiss_toast_action(
+                                                    host,
+                                                    cancel_store.clone(),
+                                                    cx.window,
+                                                    toast_id,
+                                                );
+                                            },
+                                        ));
+                                        vec![cx.text(label.as_ref())]
+                                    },
+                                )
+                            });
+
                             let icon = match toast.variant {
                                 ToastVariant::Loading => {
                                     let mut spinner = fret_ui::element::SpinnerProps::default();
@@ -763,6 +796,9 @@ pub fn render<H: UiHost>(
                                         min: fret_core::Px(0.0),
                                         ..Default::default()
                                     }));
+                                    if let Some(cancel) = cancel {
+                                        row.push(cancel);
+                                    }
                                     if let Some(action) = action {
                                         row.push(action);
                                     }
