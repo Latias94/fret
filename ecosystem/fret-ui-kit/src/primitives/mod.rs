@@ -35,6 +35,7 @@ pub mod popper_content;
 pub mod presence;
 pub mod radio_group;
 pub mod roving_focus_group;
+pub mod scroll_area;
 pub mod tabs;
 pub mod toggle;
 pub mod toggle_group;
