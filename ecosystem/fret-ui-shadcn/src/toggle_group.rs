@@ -391,6 +391,17 @@ impl ToggleGroup {
 
                         let value = item.value.clone();
                         let a11y_label = item.a11y_label.clone().unwrap_or_else(|| value.clone());
+                        let a11y = if model_single.is_some() {
+                            fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y_single(
+                                a11y_label.clone(),
+                                on,
+                            )
+                        } else {
+                            fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y_multiple(
+                                a11y_label.clone(),
+                                on,
+                            )
+                        };
                         let children = item.children;
                         let model_single = model_single.clone();
                         let model_multi = model_multi.clone();
@@ -408,9 +419,7 @@ impl ToggleGroup {
                                 enabled,
                                 focusable,
                                 focus_ring: Some(ring),
-                                a11y: fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y(
-                                    a11y_label, on,
-                                ),
+                                a11y,
                                 ..Default::default()
                             },
                             move |cx, state| {
@@ -699,7 +708,7 @@ mod tests {
             .iter()
             .find(|n| n.id == focus)
             .expect("focused node");
-        assert_eq!(focused_node.role, SemanticsRole::Button);
+        assert_eq!(focused_node.role, SemanticsRole::RadioButton);
         assert_eq!(focused_node.label.as_deref(), Some("beta"));
     }
 }

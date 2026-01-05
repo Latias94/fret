@@ -28,15 +28,30 @@ pub enum ToggleGroupOrientation {
 
 /// A11y metadata for a toggle-group item.
 ///
-/// Note: Radix uses `aria-pressed` in multiple mode and `role="radio" + aria-checked` in single
-/// mode. Fret does not model that distinction yet; we currently expose a button-like outcome.
-pub fn toggle_group_item_a11y(label: Arc<str>, pressed: bool) -> PressableA11y {
+/// Radix uses `aria-pressed` in multiple mode and `role="radio" + aria-checked` in single mode.
+/// Fret models this by switching the item role and using the `checked` flag for single mode.
+pub fn toggle_group_item_a11y_multiple(label: Arc<str>, pressed: bool) -> PressableA11y {
     PressableA11y {
         role: Some(SemanticsRole::Button),
         label: Some(label),
         selected: pressed,
         ..Default::default()
     }
+}
+
+/// A11y metadata for a single-select toggle-group item (Radix `role="radio"`).
+pub fn toggle_group_item_a11y_single(label: Arc<str>, checked: bool) -> PressableA11y {
+    PressableA11y {
+        role: Some(SemanticsRole::RadioButton),
+        label: Some(label),
+        checked: Some(checked),
+        ..Default::default()
+    }
+}
+
+/// Back-compat shim: treated as the multiple-select button-like outcome.
+pub fn toggle_group_item_a11y(label: Arc<str>, pressed: bool) -> PressableA11y {
+    toggle_group_item_a11y_multiple(label, pressed)
 }
 
 /// Derive the "tab stop" index for a single-select toggle group:
@@ -71,4 +86,25 @@ pub fn tab_stop_index_multiple(
         (enabled && on).then_some(idx)
     });
     first_selected_enabled.or_else(|| crate::headless::roving_focus::first_enabled(disabled))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn toggle_group_item_a11y_single_uses_radio_role_and_checked() {
+        let a11y = toggle_group_item_a11y_single(Arc::from("A"), true);
+        assert_eq!(a11y.role, Some(SemanticsRole::RadioButton));
+        assert_eq!(a11y.checked, Some(true));
+        assert!(!a11y.selected);
+    }
+
+    #[test]
+    fn toggle_group_item_a11y_multiple_uses_button_role_and_selected() {
+        let a11y = toggle_group_item_a11y_multiple(Arc::from("A"), true);
+        assert_eq!(a11y.role, Some(SemanticsRole::Button));
+        assert_eq!(a11y.selected, true);
+        assert_eq!(a11y.checked, None);
+    }
 }
