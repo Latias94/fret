@@ -527,6 +527,10 @@ pub struct LinePlotStyle {
     pub tooltip_border: Option<Color>,
     pub tooltip_text_color: Option<Color>,
     pub hover_threshold: Px,
+    /// Minimum number of major tick labels per axis.
+    ///
+    /// The plot may choose more ticks for large viewports and fewer ticks for small viewports when
+    /// labels would overlap.
     pub tick_count: usize,
     pub stroke_color: Color,
     pub stroke_width: Px,
@@ -1141,6 +1145,8 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     query_drag_start: Option<Point>,
     query_drag_current: Option<Point>,
     axis_label_key: Option<u64>,
+    axis_ticks_x: Vec<f64>,
+    axis_ticks_y: Vec<f64>,
     axis_labels_x: Vec<PreparedText>,
     axis_labels_y: Vec<PreparedText>,
     legend_key: Option<u64>,
@@ -1225,6 +1231,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             query_drag_start: None,
             query_drag_current: None,
             axis_label_key: None,
+            axis_ticks_x: Vec::new(),
+            axis_ticks_y: Vec::new(),
             axis_labels_x: Vec::new(),
             axis_labels_y: Vec::new(),
             legend_key: None,
@@ -1419,6 +1427,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         for t in self.axis_labels_y.drain(..) {
             services.text().release(t.blob);
         }
+        self.axis_ticks_x.clear();
+        self.axis_ticks_y.clear();
         self.axis_label_key = None;
     }
 
@@ -1608,42 +1618,134 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             letter_spacing_em: None,
         };
 
-        let x_ticks = axis_ticks(
-            data_bounds.x_min,
-            data_bounds.x_max,
-            self.style.tick_count,
-            self.x_axis_ticks,
-        );
-        let y_ticks = axis_ticks(
-            data_bounds.y_min,
-            data_bounds.y_max,
-            self.style.tick_count,
-            self.y_axis_ticks,
-        );
         let x_span = (data_bounds.x_max - data_bounds.x_min).abs();
         let y_span = (data_bounds.y_max - data_bounds.y_min).abs();
 
-        for v in x_ticks {
-            let constraints = TextConstraints {
-                max_width: None,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                scale_factor: cx.scale_factor,
+        let constraints_x = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+        let constraints_y = TextConstraints {
+            max_width: Some(layout.y_axis.size.width),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+
+        let plot_w = layout.plot.size.width.0.max(0.0);
+        let plot_h = layout.plot.size.height.0.max(0.0);
+
+        let estimate_ticks = |span_px: f32, target_spacing_px: f32| -> usize {
+            if !span_px.is_finite() || span_px <= 0.0 {
+                return 2;
+            }
+            let spacing = target_spacing_px.max(1.0);
+            ((span_px / spacing).floor() as usize)
+                .saturating_add(1)
+                .max(2)
+        };
+
+        let min_ticks = self.style.tick_count.max(2).min(128);
+        let mut x_tick_count = estimate_ticks(plot_w, 70.0).max(min_ticks).min(128);
+        let mut y_tick_count = estimate_ticks(plot_h, 28.0).max(min_ticks).min(128);
+
+        let mut x_ticks: Vec<f64> = Vec::new();
+        let mut y_ticks: Vec<f64> = Vec::new();
+
+        // X axis: reduce ticks until formatted labels fit horizontally.
+        for _ in 0..8 {
+            x_ticks = axis_ticks(
+                data_bounds.x_min,
+                data_bounds.x_max,
+                x_tick_count,
+                self.x_axis_ticks,
+            );
+            if x_ticks.len() <= 1 {
+                break;
+            }
+
+            let mut max_w = 0.0f32;
+            for v in &x_ticks {
+                let text = self.x_axis_labels.format(*v, x_span);
+                let prepared = self.prepare_text(cx.services, &text, &style, constraints_x);
+                max_w = max_w.max(prepared.metrics.size.width.0);
+                cx.services.text().release(prepared.blob);
+            }
+
+            let spacing_px = plot_w / ((x_ticks.len() - 1) as f32);
+            let needed = max_w + 8.0;
+            if spacing_px.is_finite() && needed.is_finite() && spacing_px >= needed {
+                break;
+            }
+
+            let suggested = ((plot_w / needed.max(1.0)).floor() as usize)
+                .saturating_add(1)
+                .max(2);
+            let next = x_tick_count.min(suggested);
+            x_tick_count = if next == x_tick_count {
+                x_tick_count.saturating_sub(1).max(2)
+            } else {
+                next
             };
+            if x_tick_count <= 2 {
+                break;
+            }
+        }
+
+        // Y axis: reduce ticks until labels fit vertically (avoid overlap).
+        for _ in 0..8 {
+            y_ticks = axis_ticks(
+                data_bounds.y_min,
+                data_bounds.y_max,
+                y_tick_count,
+                self.y_axis_ticks,
+            );
+            if y_ticks.len() <= 1 {
+                break;
+            }
+
+            let mut max_h = 0.0f32;
+            for v in &y_ticks {
+                let text = self.y_axis_labels.format(*v, y_span);
+                let prepared = self.prepare_text(cx.services, &text, &style, constraints_y);
+                max_h = max_h.max(prepared.metrics.size.height.0);
+                cx.services.text().release(prepared.blob);
+            }
+
+            let spacing_px = plot_h / ((y_ticks.len() - 1) as f32);
+            let needed = max_h + 4.0;
+            if spacing_px.is_finite() && needed.is_finite() && spacing_px >= needed {
+                break;
+            }
+
+            let suggested = ((plot_h / needed.max(1.0)).floor() as usize)
+                .saturating_add(1)
+                .max(2);
+            let next = y_tick_count.min(suggested);
+            y_tick_count = if next == y_tick_count {
+                y_tick_count.saturating_sub(1).max(2)
+            } else {
+                next
+            };
+            if y_tick_count <= 2 {
+                break;
+            }
+        }
+
+        self.axis_ticks_x = x_ticks.clone();
+        self.axis_ticks_y = y_ticks.clone();
+
+        for v in x_ticks {
             let text = self.x_axis_labels.format(v, x_span);
-            let prepared = self.prepare_text(cx.services, &text, &style, constraints);
+            let prepared = self.prepare_text(cx.services, &text, &style, constraints_x);
             self.axis_labels_x.push(prepared);
         }
 
         for v in y_ticks {
-            let constraints = TextConstraints {
-                max_width: Some(layout.y_axis.size.width),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                scale_factor: cx.scale_factor,
-            };
             let text = self.y_axis_labels.format(v, y_span);
-            let prepared = self.prepare_text(cx.services, &text, &style, constraints);
+            let prepared = self.prepare_text(cx.services, &text, &style, constraints_y);
             self.axis_labels_y.push(prepared);
         }
 
@@ -2372,24 +2474,14 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
         if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
             // Grid: align to axis ticks so labels and grid are consistent (ImPlot-style).
-            let x_ticks = axis_ticks(
-                view_bounds.x_min,
-                view_bounds.x_max,
-                self.style.tick_count,
-                self.x_axis_ticks,
-            );
-            let y_ticks = axis_ticks(
-                view_bounds.y_min,
-                view_bounds.y_max,
-                self.style.tick_count,
-                self.y_axis_ticks,
-            );
+            let x_ticks = &self.axis_ticks_x;
+            let y_ticks = &self.axis_ticks_y;
 
             let x_den = view_bounds.x_max - view_bounds.x_min;
             let y_den = view_bounds.y_max - view_bounds.y_min;
 
             if x_den != 0.0 && x_den.is_finite() {
-                for v in x_ticks {
+                for v in x_ticks.iter().copied() {
                     let t = (v - view_bounds.x_min) / x_den;
                     if !t.is_finite() || t < 0.0 || t > 1.0 {
                         continue;
@@ -2411,7 +2503,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             }
 
             if y_den != 0.0 && y_den.is_finite() {
-                for v in y_ticks {
+                for v in y_ticks.iter().copied() {
                     let t = (v - view_bounds.y_min) / y_den;
                     if !t.is_finite() || t < 0.0 || t > 1.0 {
                         continue;
@@ -2775,19 +2867,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             });
         }
 
-        // Axis labels (P0: evenly spaced ticks).
-        let x_ticks = axis_ticks(
-            view_bounds.x_min,
-            view_bounds.x_max,
-            self.style.tick_count,
-            self.x_axis_ticks,
-        );
-        let y_ticks = axis_ticks(
-            view_bounds.y_min,
-            view_bounds.y_max,
-            self.style.tick_count,
-            self.y_axis_ticks,
-        );
+        // Axis labels: tick density adapts to viewport + label spacing.
+        let x_ticks = &self.axis_ticks_x;
+        let y_ticks = &self.axis_ticks_y;
 
         let x_den = view_bounds.x_max - view_bounds.x_min;
         let y_den = view_bounds.y_max - view_bounds.y_min;
