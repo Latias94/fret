@@ -39,6 +39,7 @@ pub struct ToastAction {
 
 #[derive(Debug, Clone)]
 pub struct ToastRequest {
+    pub id: Option<ToastId>,
     pub title: Arc<str>,
     pub description: Option<Arc<str>>,
     pub duration: Option<Duration>,
@@ -50,6 +51,7 @@ pub struct ToastRequest {
 impl ToastRequest {
     pub fn new(title: impl Into<Arc<str>>) -> Self {
         Self {
+            id: None,
             title: title.into(),
             description: None,
             duration: Some(Duration::from_secs(3)),
@@ -61,6 +63,11 @@ impl ToastRequest {
 
     pub fn description(mut self, description: impl Into<Arc<str>>) -> Self {
         self.description = Some(description.into());
+        self
+    }
+
+    pub fn id(mut self, id: ToastId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -118,6 +125,13 @@ pub(super) struct ToastEntry {
     pub(super) dragging: bool,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ToastUpsertOutcome {
+    pub(super) id: ToastId,
+    pub(super) cancel_auto: Option<TimerToken>,
+    pub(super) schedule_auto: Option<(TimerToken, Duration)>,
+}
+
 #[derive(Debug, Default)]
 pub struct ToastStore {
     next_id: u64,
@@ -173,6 +187,73 @@ impl ToastStore {
         });
 
         id
+    }
+
+    pub(super) fn upsert_toast(
+        &mut self,
+        window: AppWindowId,
+        request: ToastRequest,
+        auto_close_token: Option<TimerToken>,
+    ) -> ToastUpsertOutcome {
+        let wants_timer = request.duration.filter(|d| d.as_secs_f32() > 0.0);
+
+        if let Some(id) = request.id {
+            if let Some(toasts) = self.by_window.get_mut(&window) {
+                if let Some(toast) = toasts
+                    .iter_mut()
+                    .find(|t| t.id == id && t.open && t.remove_token.is_none())
+                {
+                    let cancel_auto = toast.auto_close_token.take();
+                    if let Some(token) = cancel_auto {
+                        self.by_token.remove(&token);
+                    }
+
+                    toast.title = request.title;
+                    toast.description = request.description;
+                    toast.duration = request.duration;
+                    toast.variant = request.variant;
+                    toast.action = request.action;
+                    toast.dismissible = request.dismissible;
+                    toast.drag_start = None;
+                    toast.drag_x = Px(0.0);
+                    toast.dragging = false;
+
+                    let schedule_auto = match (wants_timer, auto_close_token) {
+                        (Some(after), Some(token)) => {
+                            toast.auto_close_token = Some(token);
+                            self.by_token.insert(
+                                token,
+                                ToastTimerRef {
+                                    window,
+                                    toast: id,
+                                    kind: ToastTimerKind::AutoClose,
+                                },
+                            );
+                            Some((token, after))
+                        }
+                        _ => None,
+                    };
+
+                    return ToastUpsertOutcome {
+                        id,
+                        cancel_auto,
+                        schedule_auto,
+                    };
+                }
+            }
+        }
+
+        let id = self.add_toast(window, request, auto_close_token);
+        let schedule_auto = match (wants_timer, auto_close_token) {
+            (Some(after), Some(token)) => Some((token, after)),
+            _ => None,
+        };
+
+        ToastUpsertOutcome {
+            id,
+            cancel_auto: None,
+            schedule_auto,
+        }
     }
 
     fn remove_toast(&mut self, window: AppWindowId, id: ToastId) -> Option<ToastEntry> {
@@ -271,7 +352,7 @@ impl ToastStore {
         let Some(toast) = toasts.iter_mut().find(|t| t.id == id) else {
             return false;
         };
-        if !toast.open || toast.remove_token.is_some() {
+        if !toast.open || toast.remove_token.is_some() || !toast.dismissible {
             return false;
         }
         toast.drag_start = Some(start);
@@ -411,33 +492,33 @@ pub fn toast_action(
     window: AppWindowId,
     request: ToastRequest,
 ) -> ToastId {
-    let token = request
-        .duration
-        .filter(|d| d.as_secs_f32() > 0.0)
-        .map(|after| {
-            let token = host.next_timer_token();
-            host.push_effect(Effect::SetTimer {
-                window: Some(window),
-                token,
-                after,
-                repeat: None,
-            });
-            token
-        });
+    let wants_timer = request.duration.filter(|d| d.as_secs_f32() > 0.0);
+    let token = wants_timer.map(|_| host.next_timer_token());
 
-    let result = host
+    let outcome = host
         .models_mut()
-        .update(&store, |st| st.add_toast(window, request, token));
+        .update(&store, |st| st.upsert_toast(window, request, token))
+        .ok();
 
-    let Ok(id) = result else {
-        if let Some(token) = token {
-            host.push_effect(Effect::CancelTimer { token });
-        }
+    let Some(outcome) = outcome else {
         return ToastId(0);
     };
 
+    if let Some(token) = outcome.cancel_auto {
+        host.push_effect(Effect::CancelTimer { token });
+    }
+
+    if let Some((token, after)) = outcome.schedule_auto {
+        host.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token,
+            after,
+            repeat: None,
+        });
+    }
+
     host.request_redraw(window);
-    id
+    outcome.id
 }
 
 pub fn dismiss_toast_action(
@@ -523,5 +604,57 @@ mod tests {
         assert!(end.is_some());
         assert_eq!(store.toasts_for_window(window)[0].drag_x, Px(0.0));
         assert_eq!(store.toasts_for_window(window)[0].drag_start, None);
+    }
+
+    #[test]
+    fn toast_upsert_updates_existing_entry_and_resets_timer() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let out0 = store.upsert_toast(
+            window,
+            ToastRequest::new("Loading")
+                .variant(ToastVariant::Loading)
+                .duration(None),
+            None,
+        );
+        let id = out0.id;
+
+        let out1 = store.upsert_toast(
+            window,
+            ToastRequest::new("Done")
+                .id(id)
+                .variant(ToastVariant::Success)
+                .duration(Some(Duration::from_secs(2))),
+            Some(TimerToken(10)),
+        );
+        assert_eq!(out1.id, id);
+        assert_eq!(out1.cancel_auto, None);
+        assert_eq!(
+            out1.schedule_auto,
+            Some((TimerToken(10), Duration::from_secs(2)))
+        );
+
+        let toast = store.toasts_for_window(window)[0].clone();
+        assert_eq!(toast.id, id);
+        assert_eq!(toast.title.as_ref(), "Done");
+        assert_eq!(toast.variant, ToastVariant::Success);
+        assert_eq!(toast.auto_close_token, Some(TimerToken(10)));
+    }
+
+    #[test]
+    fn toast_upsert_noops_swipe_for_non_dismissible_toasts() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let id = store.add_toast(
+            window,
+            ToastRequest::new("Pinned")
+                .duration(None)
+                .dismissible(false),
+            None,
+        );
+
+        assert!(!store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
     }
 }
