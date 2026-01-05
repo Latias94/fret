@@ -467,6 +467,7 @@ fn checkable_menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
     leading: Option<AnyElement>,
+    reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
     indicator_on: bool,
     disabled: bool,
@@ -495,7 +496,8 @@ fn checkable_menu_row_children<H: UiHost>(
         },
         move |cx| {
             let mut row: Vec<AnyElement> = Vec::with_capacity(
-                3 + usize::from(leading.is_some()) + usize::from(trailing.is_some()),
+                3 + usize::from(leading.is_some() || reserve_leading_slot)
+                    + usize::from(trailing.is_some()),
             );
 
             let indicator_fg = if disabled { text_disabled } else { row_fg };
@@ -530,6 +532,8 @@ fn checkable_menu_row_children<H: UiHost>(
 
             if let Some(l) = leading.clone() {
                 row.push(menu_icon_slot(cx, l));
+            } else if reserve_leading_slot {
+                row.push(menu_icon_slot_empty(cx));
             }
 
             row.push(cx.text_props(TextProps {
@@ -621,6 +625,26 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
     )
 }
 
+fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(16.0));
+                layout.size.height = Length::Px(Px(16.0));
+                layout
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        |_cx| Vec::new(),
+    )
+}
+
 /// shadcn/ui `Dropdown Menu` (v4).
 ///
 /// This is a dismissible popover overlay (non-modal) backed by the component-layer overlay
@@ -637,6 +661,7 @@ pub struct DropdownMenu {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    align_leading_icons: bool,
 }
 
 impl std::fmt::Debug for DropdownMenu {
@@ -665,6 +690,7 @@ impl DropdownMenu {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
+            align_leading_icons: true,
         }
     }
 
@@ -695,6 +721,11 @@ impl DropdownMenu {
 
     pub fn min_width(mut self, min_width: Px) -> Self {
         self.min_width = min_width;
+        self
+    }
+
+    pub fn align_leading_icons(mut self, align: bool) -> Self {
+        self.align_leading_icons = align;
         self
     }
 
@@ -756,6 +787,7 @@ impl DropdownMenu {
                 let open_for_overlay = open.clone();
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                 let min_width = self.min_width;
+                let align_leading_icons = self.align_leading_icons;
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
 
@@ -770,6 +802,16 @@ impl DropdownMenu {
                     let mut flat: Vec<DropdownMenuEntry> = Vec::new();
                     flatten_entries(&mut flat, entries(cx));
                     let entries = flat;
+                    let reserve_leading_slot = align_leading_icons
+                        && entries.iter().any(|e| match e {
+                            DropdownMenuEntry::Item(item) => item.leading.is_some(),
+                            DropdownMenuEntry::CheckboxItem(item) => item.leading.is_some(),
+                            DropdownMenuEntry::RadioItem(item) => item.leading.is_some(),
+                            DropdownMenuEntry::Label(_)
+                            | DropdownMenuEntry::Group(_)
+                            | DropdownMenuEntry::RadioGroup(_)
+                            | DropdownMenuEntry::Separator => false,
+                        });
 
                     let item_count = entries
                         .iter()
@@ -1143,6 +1185,7 @@ impl DropdownMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
+                                                                        reserve_leading_slot,
                                                                         trailing.clone(),
                                                                         checked_now,
                                                                         disabled,
@@ -1262,6 +1305,7 @@ impl DropdownMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
+                                                                        reserve_leading_slot,
                                                                         trailing.clone(),
                                                                         is_selected,
                                                                         disabled,
@@ -1391,12 +1435,16 @@ impl DropdownMenu {
                                                                         },
                                                                     move |cx| {
                                                                         let mut row: Vec<AnyElement> = Vec::with_capacity(
-                                                                            2 + usize::from(leading.is_some())
-                                                                                + usize::from(trailing.is_some())
+                                                                            2 + usize::from(
+                                                                                leading.is_some()
+                                                                                    || reserve_leading_slot,
+                                                                            ) + usize::from(trailing.is_some())
                                                                                 + usize::from(has_submenu),
                                                                         );
                                                                         if let Some(l) = leading.clone() {
                                                                             row.push(menu_icon_slot(cx, l));
+                                                                        } else if reserve_leading_slot {
+                                                                            row.push(menu_icon_slot_empty(cx));
                                                                         }
                                                                         row.push(cx.text_props(TextProps {
                                                                             layout: {
@@ -1499,6 +1547,18 @@ impl DropdownMenu {
                                         let mut flat: Vec<DropdownMenuEntry> = Vec::new();
                                         flatten_entries(&mut flat, submenu_entries);
                                         let submenu_entries = flat;
+                                        let reserve_leading_slot = align_leading_icons
+                                            && submenu_entries.iter().any(|e| match e {
+                                                DropdownMenuEntry::Item(item) => item.leading.is_some(),
+                                                DropdownMenuEntry::CheckboxItem(item) => {
+                                                    item.leading.is_some()
+                                                }
+                                                DropdownMenuEntry::RadioItem(item) => item.leading.is_some(),
+                                                DropdownMenuEntry::Label(_)
+                                                | DropdownMenuEntry::Group(_)
+                                                | DropdownMenuEntry::RadioGroup(_)
+                                                | DropdownMenuEntry::Separator => false,
+                                            });
                                         let item_count = submenu_entries
                                             .iter()
                                             .filter(|e| {
@@ -1712,6 +1772,7 @@ impl DropdownMenu {
                                                                                 cx,
                                                                                 label.clone(),
                                                                                 leading.clone(),
+                                                                                reserve_leading_slot,
                                                                                 trailing.clone(),
                                                                                 checked_now,
                                                                                 disabled,
@@ -1815,6 +1876,7 @@ impl DropdownMenu {
                                                                                 cx,
                                                                                 label.clone(),
                                                                                 leading.clone(),
+                                                                                reserve_leading_slot,
                                                                                 trailing.clone(),
                                                                                 is_selected,
                                                                                 disabled,
@@ -1921,11 +1983,15 @@ impl DropdownMenu {
                                                                                 },
                                                                                 move |cx| {
                                                                                     let mut row: Vec<AnyElement> = Vec::with_capacity(
-                                                                                        1 + usize::from(leading.is_some())
-                                                                                            + usize::from(trailing.is_some()),
+                                                                                        1 + usize::from(
+                                                                                            leading.is_some()
+                                                                                                || reserve_leading_slot,
+                                                                                        ) + usize::from(trailing.is_some()),
                                                                                     );
                                                                                     if let Some(l) = leading.clone() {
                                                                                         row.push(menu_icon_slot(cx, l));
+                                                                                    } else if reserve_leading_slot {
+                                                                                        row.push(menu_icon_slot_empty(cx));
                                                                                     }
                                                                                     row.push(cx.text_props(TextProps {
                                                                                         layout: {

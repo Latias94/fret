@@ -448,6 +448,7 @@ fn menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
     leading: Option<AnyElement>,
+    reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
     indicator_on: Option<bool>,
     has_submenu: bool,
@@ -476,9 +477,10 @@ fn menu_row_children<H: UiHost>(
         },
         move |cx| {
             let has_indicator = indicator_on.is_some();
+            let has_leading_slot = leading.is_some() || reserve_leading_slot;
             let mut row: Vec<AnyElement> = Vec::with_capacity(
                 usize::from(has_indicator)
-                    + usize::from(leading.is_some())
+                    + usize::from(has_leading_slot)
                     + 1
                     + usize::from(trailing.is_some())
                     + usize::from(has_submenu),
@@ -517,6 +519,8 @@ fn menu_row_children<H: UiHost>(
 
             if let Some(l) = leading.clone() {
                 row.push(menu_icon_slot(cx, l));
+            } else if reserve_leading_slot {
+                row.push(menu_icon_slot_empty(cx));
             }
 
             row.push(cx.text_props(TextProps {
@@ -580,6 +584,26 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
     )
 }
 
+fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(16.0));
+                layout.size.height = Length::Px(Px(16.0));
+                layout
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        |_cx| Vec::new(),
+    )
+}
+
 fn submenu_chevron_right_text<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     fg: Color,
@@ -616,6 +640,7 @@ pub struct Menubar {
     menus: Vec<MenubarMenuEntries>,
     disabled: bool,
     typeahead_timeout_ticks: u64,
+    align_leading_icons: bool,
 }
 
 impl std::fmt::Debug for Menubar {
@@ -634,6 +659,7 @@ impl Menubar {
             menus,
             disabled: false,
             typeahead_timeout_ticks: 30,
+            align_leading_icons: true,
         }
     }
 
@@ -644,6 +670,11 @@ impl Menubar {
 
     pub fn typeahead_timeout_ticks(mut self, ticks: u64) -> Self {
         self.typeahead_timeout_ticks = ticks;
+        self
+    }
+
+    pub fn align_leading_icons(mut self, align: bool) -> Self {
+        self.align_leading_icons = align;
         self
     }
 
@@ -661,6 +692,7 @@ impl Menubar {
             let disabled = self.disabled;
             let menus = self.menus;
             let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
+            let align_leading_icons = self.align_leading_icons;
 
             let trigger_labels: Arc<[Arc<str>]> = Arc::from(
                 menus
@@ -723,7 +755,15 @@ impl Menubar {
                                     labels: trigger_labels.clone(),
                                     timeout_ticks: typeahead_timeout_ticks,
                                 },
-                                move |cx| menus.into_iter().map(|m| m.into_element(cx)).collect(),
+                                move |cx| {
+                                    menus
+                                        .into_iter()
+                                        .map(|m| {
+                                            m.align_leading_icons(align_leading_icons)
+                                                .into_element(cx)
+                                        })
+                                        .collect()
+                                },
                             )]
                         },
                     )]
@@ -785,6 +825,7 @@ impl MenubarMenu {
         MenubarMenuEntries {
             menu: self,
             entries: Arc::from(entries.into_boxed_slice()),
+            align_leading_icons: true,
         }
     }
 
@@ -813,6 +854,7 @@ impl MenubarMenu {
 pub struct MenubarMenuEntries {
     menu: MenubarMenu,
     entries: Arc<[MenubarEntry]>,
+    align_leading_icons: bool,
 }
 
 impl std::fmt::Debug for MenubarMenuEntries {
@@ -826,10 +868,16 @@ impl std::fmt::Debug for MenubarMenuEntries {
 }
 
 impl MenubarMenuEntries {
+    pub fn align_leading_icons(mut self, align: bool) -> Self {
+        self.align_leading_icons = align;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let group = cx.root_id();
         let key = self.menu.label.clone();
         let entries = self.entries.clone();
+        let align_leading_icons = self.align_leading_icons;
         cx.keyed(key, |cx| {
             let group_active =
                 cx.with_state_for(group, MenubarGroupState::default, |st| st.active.clone());
@@ -1025,6 +1073,17 @@ impl MenubarMenuEntries {
                         let mut flat: Vec<MenubarEntry> = Vec::new();
                         flatten_entries(&mut flat, entries.iter().cloned().collect());
                         let entries: Arc<[MenubarEntry]> = Arc::from(flat.into_boxed_slice());
+                        let reserve_leading_slot = align_leading_icons
+                            && entries.iter().any(|e| match e {
+                                MenubarEntry::Item(item) => item.leading.is_some(),
+                                MenubarEntry::CheckboxItem(item) => item.leading.is_some(),
+                                MenubarEntry::RadioItem(item) => item.leading.is_some(),
+                                MenubarEntry::Submenu(submenu) => submenu.trigger.leading.is_some(),
+                                MenubarEntry::Label(_)
+                                | MenubarEntry::Group(_)
+                                | MenubarEntry::RadioGroup(_)
+                                | MenubarEntry::Separator => false,
+                            });
 
                         let item_count = entries
                             .iter()
@@ -1297,6 +1356,7 @@ impl MenubarMenuEntries {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
+                                                                        reserve_leading_slot,
                                                                         trailing.clone(),
                                                                         Some(checked_now),
                                                                         false,
@@ -1423,6 +1483,7 @@ impl MenubarMenuEntries {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
+                                                                        reserve_leading_slot,
                                                                         trailing.clone(),
                                                                         Some(is_selected),
                                                                         false,
@@ -1558,6 +1619,7 @@ impl MenubarMenuEntries {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
+                                                                        reserve_leading_slot,
                                                                         trailing.clone(),
                                                                         None,
                                                                         has_submenu,
@@ -1713,6 +1775,19 @@ impl MenubarMenuEntries {
                                     );
                                     let submenu_entries: Arc<[MenubarEntry]> =
                                         Arc::from(flat.into_boxed_slice());
+                                    let reserve_leading_slot = align_leading_icons
+                                        && submenu_entries.iter().any(|e| match e {
+                                            MenubarEntry::Item(item) => item.leading.is_some(),
+                                            MenubarEntry::CheckboxItem(item) => item.leading.is_some(),
+                                            MenubarEntry::RadioItem(item) => item.leading.is_some(),
+                                            MenubarEntry::Submenu(submenu) => {
+                                                submenu.trigger.leading.is_some()
+                                            }
+                                            MenubarEntry::Label(_)
+                                            | MenubarEntry::Group(_)
+                                            | MenubarEntry::RadioGroup(_)
+                                            | MenubarEntry::Separator => false,
+                                        });
 
                                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) =
                                         submenu_entries
@@ -1961,6 +2036,7 @@ impl MenubarMenuEntries {
                                                                                     cx,
                                                                                     label.clone(),
                                                                                     leading.clone(),
+                                                                                    reserve_leading_slot,
                                                                                     trailing.clone(),
                                                                                     Some(checked_now),
                                                                                     false,
@@ -2074,6 +2150,7 @@ impl MenubarMenuEntries {
                                                                                     cx,
                                                                                     label.clone(),
                                                                                     leading.clone(),
+                                                                                    reserve_leading_slot,
                                                                                     trailing.clone(),
                                                                                     Some(is_selected),
                                                                                     false,
@@ -2173,6 +2250,7 @@ impl MenubarMenuEntries {
                                                                                     cx,
                                                                                     label.clone(),
                                                                                     leading.clone(),
+                                                                                    reserve_leading_slot,
                                                                                     trailing.clone(),
                                                                                     None,
                                                                                     false,

@@ -430,6 +430,7 @@ fn menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
     leading: Option<AnyElement>,
+    reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
     indicator_on: Option<bool>,
     disabled: bool,
@@ -459,9 +460,10 @@ fn menu_row_children<H: UiHost>(
         },
         move |cx| {
             let has_indicator = indicator_on.is_some();
+            let has_leading_slot = leading.is_some() || reserve_leading_slot;
             let mut row: Vec<AnyElement> = Vec::with_capacity(
                 usize::from(has_indicator)
-                    + usize::from(leading.is_some())
+                    + usize::from(has_leading_slot)
                     + 1
                     + usize::from(trailing.is_some()),
             );
@@ -500,6 +502,8 @@ fn menu_row_children<H: UiHost>(
 
             if let Some(l) = leading.clone() {
                 row.push(menu_icon_slot(cx, l));
+            } else if reserve_leading_slot {
+                row.push(menu_icon_slot_empty(cx));
             }
 
             row.push(cx.text_props(TextProps {
@@ -559,6 +563,26 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
     )
 }
 
+fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(16.0));
+                layout.size.height = Length::Px(Px(16.0));
+                layout
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        |_cx| Vec::new(),
+    )
+}
+
 /// shadcn/ui `ContextMenu` root (v4).
 ///
 /// This is a dismissible popover (non-modal) opened by a component-owned pointer policy:
@@ -580,6 +604,7 @@ pub struct ContextMenu {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    align_leading_icons: bool,
 }
 
 impl std::fmt::Debug for ContextMenu {
@@ -607,6 +632,7 @@ impl ContextMenu {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
+            align_leading_icons: true,
         }
     }
 
@@ -632,6 +658,11 @@ impl ContextMenu {
 
     pub fn typeahead_timeout_ticks(mut self, ticks: u64) -> Self {
         self.typeahead_timeout_ticks = ticks;
+        self
+    }
+
+    pub fn align_leading_icons(mut self, align: bool) -> Self {
+        self.align_leading_icons = align;
         self
     }
 
@@ -713,6 +744,7 @@ impl ContextMenu {
                 let side_offset = self.side_offset;
                 let window_margin = self.window_margin;
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
+                let align_leading_icons = self.align_leading_icons;
                 let open_for_overlay = open.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
@@ -728,6 +760,16 @@ impl ContextMenu {
                     let mut flat: Vec<ContextMenuEntry> = Vec::new();
                     flatten_entries(&mut flat, entries(cx));
                     let entries = flat;
+                    let reserve_leading_slot = align_leading_icons
+                        && entries.iter().any(|e| match e {
+                            ContextMenuEntry::Item(item) => item.leading.is_some(),
+                            ContextMenuEntry::CheckboxItem(item) => item.leading.is_some(),
+                            ContextMenuEntry::RadioItem(item) => item.leading.is_some(),
+                            ContextMenuEntry::Label(_)
+                            | ContextMenuEntry::Group(_)
+                            | ContextMenuEntry::RadioGroup(_)
+                            | ContextMenuEntry::Separator => false,
+                        });
 
                     let item_count = entries
                         .iter()
@@ -1022,6 +1064,7 @@ impl ContextMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
+                                                                        reserve_leading_slot,
                                                                         trailing.clone(),
                                                                         None,
                                                                         disabled,
@@ -1120,6 +1163,7 @@ impl ContextMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
+                                                                        reserve_leading_slot,
                                                                         trailing.clone(),
                                                                         Some(checked_now),
                                                                         disabled,
@@ -1227,6 +1271,7 @@ impl ContextMenu {
                                                                         cx,
                                                                         label.clone(),
                                                                         leading.clone(),
+                                                                        reserve_leading_slot,
                                                                         trailing.clone(),
                                                                         Some(is_selected),
                                                                         disabled,
