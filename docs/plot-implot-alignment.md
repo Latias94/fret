@@ -31,7 +31,7 @@ This contract is documented in ADR 0099.
 - [x] Query selection (Alt + drag) stored in `PlotState.query`
 - [x] Crosshair visible when cursor is inside plot
 - [x] Cursor coordinate tooltip visible when cursor is inside plot
-- [~] Series value tooltip (currently nearest-point hover only; ImPlot also supports richer "cursor readout" patterns)
+- [~] Series value readout (cursor X -> per-series Y; currently implemented via sorted-by-x interpolation)
 - [x] Legend interaction: hide/solo/pin (basic)
 - [ ] Cursor linking across plots (vertical cursor + per-series readout at X)
 - [ ] Selection/query linking across plots (built on top of `LinkedPlotGroup`)
@@ -89,4 +89,3 @@ This contract is documented in ADR 0099.
 2. Add `Area/Shaded` and `Stairs/Step` plot layers.
 3. Axis formatting (time + custom formatters).
 4. Expand plot type set (heatmap, error bars, candlesticks).
-

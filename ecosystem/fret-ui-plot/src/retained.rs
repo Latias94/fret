@@ -255,6 +255,155 @@ fn dim_color(color: Color, factor: f32) -> Color {
     }
 }
 
+fn interpolate_y_at_x(series: &dyn SeriesData, x: f32) -> Option<f32> {
+    if !x.is_finite() || !series.is_sorted_by_x() {
+        return None;
+    }
+
+    let len = series.len();
+    if len == 0 {
+        return None;
+    }
+
+    let lower = lower_bound_valid_by_x(series, x)?;
+    let right = if lower < len {
+        find_valid_at_or_after(series, lower)
+    } else {
+        None
+    };
+    let left = if lower > 0 {
+        find_valid_at_or_before(series, lower - 1)
+    } else {
+        None
+    };
+
+    match (left, right) {
+        (Some((_li, a)), Some((_ri, b))) => {
+            let x0 = a.x;
+            let x1 = b.x;
+            let y0 = a.y;
+            let y1 = b.y;
+
+            if !x0.is_finite() || !x1.is_finite() || !y0.is_finite() || !y1.is_finite() {
+                return None;
+            }
+            if x0 == x1 {
+                return Some(y0);
+            }
+
+            let t = (x - x0) / (x1 - x0);
+            if !t.is_finite() {
+                return None;
+            }
+            Some(y0 + (y1 - y0) * t)
+        }
+        (Some((_i, p)), None) | (None, Some((_i, p))) => p.y.is_finite().then_some(p.y),
+        (None, None) => None,
+    }
+}
+
+fn lower_bound_valid_by_x(series: &dyn SeriesData, x: f32) -> Option<usize> {
+    let len = series.len();
+    if len == 0 {
+        return None;
+    }
+
+    let mut lo = 0usize;
+    let mut hi = len;
+
+    while lo < hi {
+        let mid = lo + (hi - lo) / 2;
+        let (idx, p) = nearest_valid_in_range(series, mid, lo, hi, 8)?;
+        if p.x < x {
+            lo = idx.saturating_add(1);
+        } else {
+            hi = idx;
+        }
+    }
+
+    Some(lo)
+}
+
+fn nearest_valid_in_range(
+    series: &dyn SeriesData,
+    center: usize,
+    lo: usize,
+    hi: usize,
+    max_steps: usize,
+) -> Option<(usize, DataPoint)> {
+    if lo >= hi {
+        return None;
+    }
+    let center = center.clamp(lo, hi - 1);
+
+    for step in 0..=max_steps {
+        let left = center.saturating_sub(step);
+        if left >= lo {
+            if let Some(p) = series.get(left)
+                && p.x.is_finite()
+                && p.y.is_finite()
+            {
+                return Some((left, p));
+            }
+        }
+
+        let right = center.saturating_add(step);
+        if step > 0 && right < hi {
+            if let Some(p) = series.get(right)
+                && p.x.is_finite()
+                && p.y.is_finite()
+            {
+                return Some((right, p));
+            }
+        }
+    }
+
+    None
+}
+
+fn find_valid_at_or_before(series: &dyn SeriesData, mut idx: usize) -> Option<(usize, DataPoint)> {
+    let max_steps = 64usize;
+    let mut steps = 0usize;
+    loop {
+        if let Some(p) = series.get(idx)
+            && p.x.is_finite()
+            && p.y.is_finite()
+        {
+            return Some((idx, p));
+        }
+        if idx == 0 {
+            return None;
+        }
+        idx -= 1;
+        steps += 1;
+        if steps >= max_steps {
+            return None;
+        }
+    }
+}
+
+fn find_valid_at_or_after(series: &dyn SeriesData, mut idx: usize) -> Option<(usize, DataPoint)> {
+    let len = series.len();
+    if idx >= len {
+        return None;
+    }
+    let max_steps = 64usize;
+    let mut steps = 0usize;
+    loop {
+        if let Some(p) = series.get(idx)
+            && p.x.is_finite()
+            && p.y.is_finite()
+        {
+            return Some((idx, p));
+        }
+        idx = idx.saturating_add(1);
+        steps += 1;
+        if idx >= len || steps >= max_steps {
+            return None;
+        }
+    }
+}
+
 fn query_rect_from_plot_points_raw(
     view_bounds: DataRect,
     viewport: Size,
@@ -461,12 +610,34 @@ pub struct SeriesMeta {
     pub stroke_color: Option<Color>,
 }
 
+#[derive(Debug, Clone)]
+pub struct PlotCursorReadoutRow {
+    pub series_id: SeriesId,
+    pub label: Arc<str>,
+    pub y: Option<f32>,
+}
+
 pub trait PlotLayer {
     type Model: Clone + 'static;
 
     fn data_bounds(model: &Self::Model) -> DataRect;
     fn series_meta(model: &Self::Model) -> Vec<SeriesMeta>;
     fn series_label(model: &Self::Model, series_id: SeriesId) -> Option<String>;
+
+    /// Optional per-series readout at the given X coordinate in data space.
+    ///
+    /// This powers the common "cursor readout" UX (ImPlot-style), where the plot can show each
+    /// series' Y value at the cursor's X position even when the cursor is not close enough to
+    /// trigger nearest-point hover.
+    ///
+    /// The default implementation returns no rows.
+    fn cursor_readout(
+        _model: &Self::Model,
+        _x: f32,
+        _hidden: &HashSet<SeriesId>,
+    ) -> Vec<PlotCursorReadoutRow> {
+        Vec::new()
+    }
 
     fn paint_paths<H: UiHost>(
         &mut self,
@@ -2241,10 +2412,31 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 .or_else(|| {
                     let cursor_px = cursor_px?;
                     let cursor_data = cursor_data?;
-                    Some((
-                        cursor_px,
-                        format!("x={:.3}  y={:.3}", cursor_data.x, cursor_data.y),
-                    ))
+
+                    let hidden = &state.hidden_series;
+                    let mut readout_rows = self
+                        .model
+                        .read(cx.app, |_app, m| {
+                            L::cursor_readout(m, cursor_data.x, hidden)
+                        })
+                        .unwrap_or_default();
+
+                    if let Some(pinned) = state.pinned_series {
+                        readout_rows.retain(|r| r.series_id == pinned);
+                    }
+
+                    let mut text = format!("x={:.3}  y={:.3}", cursor_data.x, cursor_data.y);
+                    for row in readout_rows {
+                        if let Some(y) = row.y
+                            && y.is_finite()
+                        {
+                            text.push_str(&format!("\n{}: y={:.3}", row.label, y));
+                        } else {
+                            text.push_str(&format!("\n{}: y=—", row.label));
+                        }
+                    }
+
+                    Some((cursor_px, text))
                 });
 
             if let Some((anchor_local, text)) = tooltip {
@@ -2374,6 +2566,30 @@ impl PlotLayer for LinePlotLayer {
             .iter()
             .find(|s| s.id == series_id)
             .map(|s| s.label.to_string())
+    }
+
+    fn cursor_readout(
+        model: &Self::Model,
+        x: f32,
+        hidden: &HashSet<SeriesId>,
+    ) -> Vec<PlotCursorReadoutRow> {
+        if !x.is_finite() {
+            return Vec::new();
+        }
+
+        let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
+        for s in &model.series {
+            if hidden.contains(&s.id) {
+                continue;
+            }
+            let y = interpolate_y_at_x(&*s.data, x);
+            out.push(PlotCursorReadoutRow {
+                series_id: s.id,
+                label: s.label.clone(),
+                y,
+            });
+        }
+        out
     }
 
     fn paint_paths<H: UiHost>(
@@ -2547,6 +2763,30 @@ impl PlotLayer for ScatterPlotLayer {
             .map(|s| s.label.to_string())
     }
 
+    fn cursor_readout(
+        model: &Self::Model,
+        x: f32,
+        hidden: &HashSet<SeriesId>,
+    ) -> Vec<PlotCursorReadoutRow> {
+        if !x.is_finite() {
+            return Vec::new();
+        }
+
+        let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
+        for s in &model.series {
+            if hidden.contains(&s.id) {
+                continue;
+            }
+            let y = interpolate_y_at_x(&*s.data, x);
+            out.push(PlotCursorReadoutRow {
+                series_id: s.id,
+                label: s.label.clone(),
+                y,
+            });
+        }
+        out
+    }
+
     fn paint_paths<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
@@ -2717,6 +2957,30 @@ impl PlotLayer for BarsPlotLayer {
             .iter()
             .find(|s| s.id == series_id)
             .map(|s| s.label.to_string())
+    }
+
+    fn cursor_readout(
+        model: &Self::Model,
+        x: f32,
+        hidden: &HashSet<SeriesId>,
+    ) -> Vec<PlotCursorReadoutRow> {
+        if !x.is_finite() {
+            return Vec::new();
+        }
+
+        let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
+        for s in &model.series {
+            if hidden.contains(&s.id) {
+                continue;
+            }
+            let y = interpolate_y_at_x(&*s.data, x);
+            out.push(PlotCursorReadoutRow {
+                series_id: s.id,
+                label: s.label.clone(),
+                y,
+            });
+        }
+        out
     }
 
     fn paint_paths<H: UiHost>(
