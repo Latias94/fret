@@ -66,7 +66,7 @@ impl Dialog {
             open,
             overlay_closable: true,
             overlay_color: None,
-            window_padding: Space::N6,
+            window_padding: Space::N4,
         }
     }
 
@@ -179,15 +179,16 @@ impl Dialog {
                         )
                     };
 
-                    let content = content(cx);
-
                     let outer = cx.bounds;
                     let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
                     let available_h =
                         Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
 
+                    let content = content(cx);
                     let last_size = cx.last_bounds_for_element(content.id).map(|r| r.size);
 
+                    // These defaults match upstream's `sm:max-w-lg` intent and provide a stable
+                    // first-frame anchor without forcing a fixed size.
                     let desired_w = last_size.map(|s| s.width).unwrap_or(Px(512.0));
                     let desired_h = last_size.map(|s| s.height).unwrap_or(Px(320.0));
 
@@ -207,8 +208,8 @@ impl Dialog {
                     );
                     let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
 
-                    let wrapper = cx.container(
-                        ContainerProps {
+                    let dialog = cx.visual_transform_props(
+                        VisualTransformProps {
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
@@ -217,15 +218,10 @@ impl Dialog {
                                     right: None,
                                     bottom: None,
                                 },
-                                size: SizeStyle {
-                                    width: Length::Px(content_w),
-                                    height: Length::Px(content_h),
-                                    ..Default::default()
-                                },
                                 overflow: Overflow::Visible,
                                 ..Default::default()
                             },
-                            ..Default::default()
+                            transform: zoom,
                         },
                         move |_cx| vec![content],
                     );
@@ -243,18 +239,7 @@ impl Dialog {
                             layout: opacity_layout.clone(),
                             opacity,
                         },
-                        move |cx| {
-                            vec![
-                                barrier,
-                                cx.visual_transform_props(
-                                    VisualTransformProps {
-                                        layout: opacity_layout,
-                                        transform: zoom,
-                                    },
-                                    move |_cx| vec![wrapper],
-                                ),
-                            ]
-                        },
+                        move |_cx| vec![barrier, dialog],
                     )]
                 });
 
@@ -851,7 +836,17 @@ mod tests {
         assert!(content_id.get().is_some());
 
         // Click inside content should not close.
-        let inside = Point::new(Px(400.0), Px(300.0));
+        let inside = content_id
+            .get()
+            .and_then(|id| fret_ui::elements::node_for_element(&mut app, window, id))
+            .and_then(|node| ui.debug_node_bounds(node))
+            .map(|rect| {
+                Point::new(
+                    Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
+                    Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
+                )
+            })
+            .expect("content bounds");
         ui.dispatch_event(
             &mut app,
             &mut services,
