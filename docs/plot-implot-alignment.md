@@ -55,7 +55,7 @@ This contract is documented in ADR 0099.
 - [x] Line plot
 - [x] Scatter plot (marker crosses)
 - [x] Bars plot (filled rectangles)
-- [ ] Area / Shaded
+- [x] Area / Shaded
 - [ ] Stairs / Step
 - [ ] Heatmap
 - [ ] Error bars
