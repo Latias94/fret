@@ -45,14 +45,17 @@ Key upstream behaviors/surfaces:
 
 ### Visual parity
 
-- Partial: Token usage aligns with shadcn-ish defaults (border/background/radius), but many Radix
-  surfaces are not implemented yet.
+- Partial: Token usage aligns with shadcn-ish defaults (border/background/radius), but some
+  higher-fidelity slots are still text-based or consumer-provided (see missing surfaces).
+- Pass: `inset` is supported for items/labels (left padding parity with upstream `data-inset`).
+- Pass: Submenu triggers render a right chevron (text fallback) to match upstream affordance.
 
 ## Missing surfaces (significant)
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- Icons and consistent icon/indicator slot sizing/alignment.
+- Icon-backed indicators (checkbox/radio) and chevrons (currently text fallbacks).
+- Consistent leading icon slot sizing/alignment across all item variants (currently consumer-provided).
 - Destructive item variant styling.
 
 ## Validation

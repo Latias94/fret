@@ -208,6 +208,7 @@ pub struct MenubarCheckboxItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub checked: Model<bool>,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -222,6 +223,7 @@ impl MenubarCheckboxItem {
             label: label.clone(),
             value: label,
             checked,
+            leading: None,
             disabled: false,
             close_on_select: false,
             command: None,
@@ -232,6 +234,11 @@ impl MenubarCheckboxItem {
 
     pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
         self.value = value.into();
+        self
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
         self
     }
 
@@ -286,6 +293,7 @@ impl MenubarRadioGroup {
 pub struct MenubarRadioItemSpec {
     pub label: Arc<str>,
     pub value: Arc<str>,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -300,12 +308,18 @@ impl MenubarRadioItemSpec {
         Self {
             label,
             value,
+            leading: None,
             disabled: false,
             close_on_select: true,
             command: None,
             a11y_label: None,
             trailing: None,
         }
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -338,6 +352,7 @@ impl MenubarRadioItemSpec {
             label: self.label,
             value: self.value,
             group_value,
+            leading: self.leading,
             disabled: self.disabled,
             close_on_select: self.close_on_select,
             command: self.command,
@@ -353,6 +368,7 @@ pub struct MenubarRadioItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub group_value: Model<Option<Arc<str>>>,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -372,6 +388,7 @@ impl MenubarRadioItem {
             label,
             value,
             group_value,
+            leading: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -400,6 +417,11 @@ impl MenubarRadioItem {
         self
     }
 
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
+        self
+    }
+
     pub fn trailing(mut self, element: AnyElement) -> Self {
         self.trailing = Some(element);
         self
@@ -423,8 +445,10 @@ fn flatten_entries(into: &mut Vec<MenubarEntry>, entries: Vec<MenubarEntry>) {
 fn menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
+    leading: Option<AnyElement>,
     trailing: Option<AnyElement>,
     indicator_on: Option<bool>,
+    has_submenu: bool,
     bg: Color,
     fg: Color,
     pad_left: Px,
@@ -451,7 +475,11 @@ fn menu_row_children<H: UiHost>(
         move |cx| {
             let has_indicator = indicator_on.is_some();
             let mut row: Vec<AnyElement> = Vec::with_capacity(
-                usize::from(has_indicator) + 1 + usize::from(trailing.is_some()),
+                usize::from(has_indicator)
+                    + usize::from(leading.is_some())
+                    + 1
+                    + usize::from(trailing.is_some())
+                    + usize::from(has_submenu),
             );
 
             if let Some(is_on) = indicator_on {
@@ -493,6 +521,10 @@ fn menu_row_children<H: UiHost>(
                 ));
             }
 
+            if let Some(l) = leading.clone() {
+                row.push(l);
+            }
+
             row.push(cx.text_props(TextProps {
                 layout: {
                     let mut layout = LayoutStyle::default();
@@ -508,6 +540,10 @@ fn menu_row_children<H: UiHost>(
 
             if let Some(t) = trailing.clone() {
                 row.push(t);
+            }
+
+            if has_submenu {
+                row.push(submenu_chevron_right_text(cx, fg, text_style.clone()));
             }
 
             vec![cx.flex(
@@ -528,6 +564,45 @@ fn menu_row_children<H: UiHost>(
             )]
         },
     )]
+}
+
+fn submenu_chevron_right_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    fg: Color,
+    text_style: TextStyle,
+) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(16.0));
+                layout.size.height = Length::Px(Px(16.0));
+                layout
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        move |cx| {
+            vec![cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: Arc::from(">"),
+                style: Some(TextStyle {
+                    font: FontId::default(),
+                    size: text_style.size,
+                    weight: FontWeight::MEDIUM,
+                    line_height: text_style.line_height,
+                    letter_spacing_em: None,
+                }),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })]
+        },
+    )
 }
 
 #[derive(Clone)]
@@ -1125,6 +1200,7 @@ impl MenubarMenuEntries {
                                                             let a11y_label = item.a11y_label.clone();
                                                             let command = item.command.clone();
                                                             let trailing = item.trailing.clone();
+                                                            let leading = item.leading.clone();
                                                             let close_on_select = item.close_on_select;
                                                             let open = open_for_overlay.clone();
                                                             let group_active =
@@ -1214,8 +1290,10 @@ impl MenubarMenuEntries {
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
+                                                                        leading.clone(),
                                                                         trailing.clone(),
                                                                         Some(checked_now),
+                                                                        false,
                                                                         bg,
                                                                         fg,
                                                                         pad_x,
@@ -1243,6 +1321,7 @@ impl MenubarMenuEntries {
                                                             let a11y_label = item.a11y_label.clone();
                                                             let command = item.command.clone();
                                                             let trailing = item.trailing.clone();
+                                                            let leading = item.leading.clone();
                                                             let close_on_select = item.close_on_select;
                                                             let open = open_for_overlay.clone();
                                                             let group_active =
@@ -1337,8 +1416,10 @@ impl MenubarMenuEntries {
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
+                                                                        leading.clone(),
                                                                         trailing.clone(),
                                                                         Some(is_selected),
+                                                                        false,
                                                                         bg,
                                                                         fg,
                                                                         pad_x,
@@ -1370,13 +1451,14 @@ impl MenubarMenuEntries {
                                                                 active.is_some_and(|a| a == idx);
                                                             let label = item.label.clone();
                                                              let a11y_label =
-                                                                 item.a11y_label.clone();
-                                                             let command = item.command.clone();
-                                                            let trailing = item.trailing.clone();
-                                                            let close_on_select = item.close_on_select;
-                                                             let open = open_for_overlay.clone();
-                                                             let group_active =
-                                                                 group_active_for_content.clone();
+                                                                  item.a11y_label.clone();
+                                                              let command = item.command.clone();
+                                                             let trailing = item.trailing.clone();
+                                                             let leading = item.leading.clone();
+                                                             let close_on_select = item.close_on_select;
+                                                              let open = open_for_overlay.clone();
+                                                              let group_active =
+                                                                  group_active_for_content.clone();
                                                             let text_style =
                                                                 text_style_for_content.clone();
                                                              let has_submenu =
@@ -1469,8 +1551,10 @@ impl MenubarMenuEntries {
                                                                     let children = menu_row_children(
                                                                         cx,
                                                                         label.clone(),
+                                                                        leading.clone(),
                                                                         trailing.clone(),
                                                                         None,
+                                                                        has_submenu,
                                                                         bg,
                                                                         fg,
                                                                         pad_left,
@@ -1789,6 +1873,7 @@ impl MenubarMenuEntries {
                                                                         let a11y_label = item.a11y_label.clone();
                                                                         let command = item.command.clone();
                                                                         let trailing = item.trailing.clone();
+                                                                        let leading = item.leading.clone();
                                                                         let close_on_select = item.close_on_select;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
@@ -1869,8 +1954,10 @@ impl MenubarMenuEntries {
                                                                                 let children = menu_row_children(
                                                                                     cx,
                                                                                     label.clone(),
+                                                                                    leading.clone(),
                                                                                     trailing.clone(),
                                                                                     Some(checked_now),
+                                                                                    false,
                                                                                     bg,
                                                                                     fg,
                                                                                     pad_x,
@@ -1894,6 +1981,7 @@ impl MenubarMenuEntries {
                                                                         let a11y_label = item.a11y_label.clone();
                                                                         let command = item.command.clone();
                                                                         let trailing = item.trailing.clone();
+                                                                        let leading = item.leading.clone();
                                                                         let close_on_select = item.close_on_select;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
@@ -1979,8 +2067,10 @@ impl MenubarMenuEntries {
                                                                                 let children = menu_row_children(
                                                                                     cx,
                                                                                     label.clone(),
+                                                                                    leading.clone(),
                                                                                     trailing.clone(),
                                                                                     Some(is_selected),
+                                                                                    false,
                                                                                     bg,
                                                                                     fg,
                                                                                     pad_x,
@@ -2004,6 +2094,7 @@ impl MenubarMenuEntries {
                                                                         let a11y_label = item.a11y_label.clone();
                                                                         let command = item.command.clone();
                                                                         let trailing = item.trailing.clone();
+                                                                        let leading = item.leading.clone();
                                                                         let close_on_select = item.close_on_select;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
@@ -2075,8 +2166,10 @@ impl MenubarMenuEntries {
                                                                                 let children = menu_row_children(
                                                                                     cx,
                                                                                     label.clone(),
+                                                                                    leading.clone(),
                                                                                     trailing.clone(),
                                                                                     None,
+                                                                                    false,
                                                                                     bg,
                                                                                     fg,
                                                                                     pad_left,
