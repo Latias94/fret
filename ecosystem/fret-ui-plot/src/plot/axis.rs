@@ -1,6 +1,8 @@
 use std::fmt;
 use std::sync::Arc;
 
+use crate::cartesian::AxisScale;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AxisLabelFormat {
     Number(AxisNumberFormat),
@@ -47,6 +49,7 @@ impl AxisLabelFormat {
 pub enum AxisTicks {
     Nice,
     Linear,
+    Log10,
     TimeSeconds(TimeAxisFormat),
 }
 
@@ -61,6 +64,7 @@ impl AxisTicks {
         match self {
             Self::Nice => 0x4e_0000_0000_0000u64,
             Self::Linear => 0x4c_0000_0000_0000u64,
+            Self::Log10 => 0x4f_0000_0000_0000u64,
             Self::TimeSeconds(f) => 0x54_0000_0000_0000u64 ^ f.key(),
         }
     }
@@ -70,8 +74,126 @@ pub fn axis_ticks(min: f64, max: f64, tick_count: usize, ticks: AxisTicks) -> Ve
     match ticks {
         AxisTicks::Nice => nice_ticks(min, max, tick_count),
         AxisTicks::Linear => linear_ticks(min, max, tick_count),
+        AxisTicks::Log10 => log10_ticks(min, max, tick_count),
         AxisTicks::TimeSeconds(f) => time_ticks_seconds(min, max, tick_count, f),
     }
+}
+
+pub fn axis_ticks_scaled(
+    min: f64,
+    max: f64,
+    tick_count: usize,
+    ticks: AxisTicks,
+    scale: AxisScale,
+) -> Vec<f64> {
+    if scale == AxisScale::Log10 {
+        // For log axes, always generate log ticks (even if the caller requests "nice" ticks).
+        return log10_ticks(min, max, tick_count);
+    }
+    axis_ticks(min, max, tick_count, ticks)
+}
+
+pub fn log10_ticks(min: f64, max: f64, tick_count: usize) -> Vec<f64> {
+    if tick_count == 0 {
+        return Vec::new();
+    }
+    if !min.is_finite() || !max.is_finite() {
+        return Vec::new();
+    }
+
+    // Clamp the log domain to positive values. Non-positive values are not representable.
+    const MIN_POS: f64 = 1.0e-12;
+    let (min, max) = if min <= max { (min, max) } else { (max, min) };
+    let min = min.max(MIN_POS);
+    if max <= 0.0 || max <= min {
+        return vec![min];
+    }
+
+    let e0 = min.log10().floor();
+    let e1 = max.log10().ceil();
+    if !e0.is_finite() || !e1.is_finite() || e0 > e1 {
+        return vec![min, max]
+            .into_iter()
+            .filter(|v| v.is_finite() && *v > 0.0)
+            .collect();
+    }
+
+    // Always include decade marks, then optionally add 2/5 ticks within each decade.
+    let exp0 = e0 as i32;
+    let exp1 = e1 as i32;
+    let max_decades = 4096i32;
+
+    let mut decades: Vec<f64> = Vec::new();
+    for (i, exp) in (exp0..=exp1).enumerate() {
+        if i as i32 >= max_decades {
+            break;
+        }
+        let v = 10.0_f64.powi(exp);
+        if v.is_finite() && v >= min && v <= max {
+            decades.push(v);
+        }
+    }
+
+    if decades.is_empty() {
+        return vec![min, max]
+            .into_iter()
+            .filter(|v| v.is_finite() && *v > 0.0)
+            .collect();
+    }
+
+    decades.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    decades.dedup_by(|a, b| (*a - *b).abs() <= 0.0);
+
+    if tick_count <= decades.len() {
+        if tick_count == 1 {
+            return vec![decades[0]];
+        }
+
+        let len = decades.len();
+        let mut out: Vec<f64> = Vec::with_capacity(tick_count);
+        for i in 0..tick_count {
+            let t = i as f64 / (tick_count.saturating_sub(1) as f64);
+            let idx = (t * ((len - 1) as f64)).round() as usize;
+            if let Some(v) = decades.get(idx).copied()
+                && out.last().copied().is_none_or(|last| last != v)
+            {
+                out.push(v);
+            }
+        }
+        return out;
+    }
+
+    let mut candidates: Vec<f64> = Vec::new();
+    for (i, exp) in (exp0..=exp1).enumerate() {
+        if i as i32 >= max_decades {
+            break;
+        }
+        let base = 10.0_f64.powi(exp);
+        for m in [2.0, 5.0] {
+            let v = m * base;
+            if v.is_finite() && v >= min && v <= max {
+                candidates.push(v);
+            }
+        }
+    }
+    candidates.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    candidates.dedup_by(|a, b| (*a - *b).abs() <= 0.0);
+
+    let mut out = decades;
+    for v in candidates {
+        if out.len() >= tick_count {
+            break;
+        }
+        if out
+            .binary_search_by(|x| x.partial_cmp(&v).unwrap_or(std::cmp::Ordering::Equal))
+            .is_err()
+        {
+            out.push(v);
+        }
+    }
+    out.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    out.dedup_by(|a, b| (*a - *b).abs() <= 0.0);
+    out
 }
 
 #[derive(Clone)]
@@ -520,5 +642,15 @@ mod tests {
             AxisLabelFormat::TimeSeconds(fmt).format(0.0, 86400.0),
             "1970-01-01"
         );
+    }
+
+    #[test]
+    fn log10_ticks_include_decade_marks() {
+        let ticks = log10_ticks(0.1, 1000.0, 8);
+        assert!(ticks.contains(&0.1));
+        assert!(ticks.contains(&1.0));
+        assert!(ticks.contains(&10.0));
+        assert!(ticks.contains(&100.0));
+        assert!(ticks.contains(&1000.0));
     }
 }

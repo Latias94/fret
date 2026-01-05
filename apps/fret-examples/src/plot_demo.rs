@@ -9,7 +9,7 @@ use fret_launch::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
-use fret_ui_plot::cartesian::DataPoint;
+use fret_ui_plot::cartesian::{AxisScale, DataPoint};
 use fret_ui_plot::plot::axis::AxisLabelFormatter;
 use fret_ui_plot::retained::{
     LinePlotCanvas, LinePlotStyle, LineSeries, PlotOutput, PlotState, YAxis,
@@ -46,24 +46,26 @@ impl PlotDemoDriver {
 
         for i in 0..n {
             let t = i as f64 / (n - 1) as f64;
-            let x = t * 10.0;
+            // Log X domain: 0.1 .. 1000.0 (4 decades).
+            let x = 0.1 * 10.0_f64.powf(t * 4.0);
+            let u = x.log10() * std::f64::consts::TAU;
             push(
                 &mut series0,
                 x,
-                (x * 1.25).sin() * 0.75 + (x * 0.33).cos() * 0.25,
+                (u * 1.25).sin() * 0.75 + (u * 0.33).cos() * 0.25,
             );
             push(
                 &mut series1,
                 x,
-                (x * 1.10).sin() * 0.55 + (x * 0.20).cos() * 0.20 + 0.35,
+                (u * 1.10).sin() * 0.55 + (u * 0.20).cos() * 0.20 + 0.35,
             );
             push(
                 &mut series2,
                 x,
-                (x * 0.75).sin() * 0.35 + (x * 0.15).cos() * 0.10 - 0.35,
+                (u * 0.75).sin() * 0.35 + (u * 0.15).cos() * 0.10 - 0.35,
             );
             // A "right axis" series with a very different scale (e.g. amps vs volts).
-            push(&mut series3, x, (x * 0.22).sin() * 25.0 + 10.0);
+            push(&mut series3, x, (u * 0.22).sin() * 25.0 + 10.0);
         }
 
         let plot = app
@@ -167,6 +169,7 @@ impl WinitAppDriver for PlotDemoDriver {
             };
             let canvas = LinePlotCanvas::new(state.plot.clone())
                 .style(style)
+                .x_axis_scale(AxisScale::Log10)
                 .y_axis_labels(AxisLabelFormatter::custom(0x554e4954u64, |v, span| {
                     // Stable-key custom formatter example: attach a unit suffix.
                     // Keep the logic deterministic so the cache key is meaningful.
@@ -230,8 +233,8 @@ pub fn build_app() -> App {
 
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
-        main_window_title: "fret-demo plot_demo (Shift+Drag zoom, Alt+Drag query, Q clear query)"
-            .to_string(),
+        main_window_title:
+            "fret-demo plot_demo (LogX, Shift+Drag zoom, Alt+Drag query, Q clear query)".to_string(),
         main_window_size: winit::dpi::LogicalSize::new(960.0, 640.0),
         ..Default::default()
     }

@@ -14,14 +14,15 @@ use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use crate::cartesian::{DataPoint, DataRect, PlotTransform};
-use crate::plot::axis::{AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks};
+use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
+use crate::plot::axis::{AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
 use crate::plot::decimate::{
     SamplePoint, decimate_polyline, decimate_samples, decimate_shaded_band,
 };
 use crate::plot::view::{
-    clamp_view_to_data, clamp_zoom_factors, data_rect_from_plot_points, data_rect_key,
-    expand_data_bounds, local_from_absolute, pan_view_by_px, sanitize_data_rect, zoom_view_at_px,
+    clamp_view_to_data_scaled, clamp_zoom_factors, data_rect_from_plot_points_scaled,
+    data_rect_key_scaled, expand_data_bounds_scaled, local_from_absolute, pan_view_by_px_scaled,
+    sanitize_data_rect, sanitize_data_rect_scaled, zoom_view_at_px_scaled,
 };
 use crate::series::{Series, SeriesData, SeriesId};
 
@@ -582,6 +583,8 @@ fn query_rect_from_plot_points_raw(
     viewport: Size,
     a: Point,
     b: Point,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
 ) -> Option<DataRect> {
     let viewport_w = viewport.width.0;
     let viewport_h = viewport.height.0;
@@ -598,6 +601,8 @@ fn query_rect_from_plot_points_raw(
     let transform = PlotTransform {
         viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), viewport),
         data: view_bounds,
+        x_scale,
+        y_scale,
     };
 
     let da = transform.px_to_data(Point::new(Px(x0), Px(y0)));
@@ -889,6 +894,9 @@ pub struct PlotPaintArgs<'a> {
     pub plot: Rect,
     pub view_bounds: DataRect,
     pub view_bounds_y2: Option<DataRect>,
+    pub x_scale: AxisScale,
+    pub y_scale: AxisScale,
+    pub y2_scale: AxisScale,
     pub style: LinePlotStyle,
     pub hidden: &'a HashSet<SeriesId>,
 }
@@ -899,6 +907,9 @@ pub struct PlotHitTestArgs<'a> {
     pub plot_size: Size,
     pub view_bounds: DataRect,
     pub view_bounds_y2: Option<DataRect>,
+    pub x_scale: AxisScale,
+    pub y_scale: AxisScale,
+    pub y2_scale: AxisScale,
     pub scale_factor: f32,
     pub local: Point,
     pub style: LinePlotStyle,
@@ -1429,6 +1440,9 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     x_axis_ticks: AxisTicks,
     y_axis_ticks: AxisTicks,
     y2_axis_ticks: AxisTicks,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+    y2_scale: AxisScale,
     x_axis_labels: AxisLabelFormatter,
     y_axis_labels: AxisLabelFormatter,
     y2_axis_labels: AxisLabelFormatter,
@@ -1524,6 +1538,9 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             x_axis_ticks: AxisTicks::default(),
             y_axis_ticks: AxisTicks::default(),
             y2_axis_ticks: AxisTicks::default(),
+            x_scale: AxisScale::Linear,
+            y_scale: AxisScale::Linear,
+            y2_scale: AxisScale::Linear,
             x_axis_labels: AxisLabelFormatter::default(),
             y_axis_labels: AxisLabelFormatter::default(),
             y2_axis_labels: AxisLabelFormatter::default(),
@@ -1585,6 +1602,21 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self.show_y2_axis = true;
         self.y2_axis_ticks = format.ticks();
         self.y2_axis_labels = format.labels();
+        self
+    }
+
+    pub fn x_axis_scale(mut self, scale: AxisScale) -> Self {
+        self.x_scale = scale;
+        self
+    }
+
+    pub fn y_axis_scale(mut self, scale: AxisScale) -> Self {
+        self.y_scale = scale;
+        self
+    }
+
+    pub fn y2_axis_scale(mut self, scale: AxisScale) -> Self {
+        self.y2_scale = scale;
         self
     }
 
@@ -1712,6 +1744,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             let transform = PlotTransform {
                 viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
                 data: view_bounds,
+                x_scale: self.x_scale,
+                y_scale: self.y_scale,
             };
             let data = transform.px_to_data(cursor_px);
             (data.x.is_finite() && data.y.is_finite()).then_some(data)
@@ -1736,14 +1770,19 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         if state.view_is_auto {
             let data_bounds = self.read_data_bounds(app);
             if self.style.clamp_to_data_bounds {
-                expand_data_bounds(data_bounds, self.style.overscroll_fraction)
+                expand_data_bounds_scaled(
+                    data_bounds,
+                    self.style.overscroll_fraction,
+                    self.x_scale,
+                    self.y_scale,
+                )
             } else {
-                data_bounds
+                sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y_scale)
             }
         } else if let Some(view) = state.view_bounds {
-            sanitize_data_rect(view)
+            sanitize_data_rect_scaled(view, self.x_scale, self.y_scale)
         } else {
-            self.read_data_bounds(app)
+            sanitize_data_rect_scaled(self.read_data_bounds(app), self.x_scale, self.y_scale)
         }
     }
 
@@ -1761,22 +1800,31 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
         let y2_bounds = if state.view_y2_is_auto {
             if self.style.clamp_to_data_bounds {
-                expand_data_bounds(data_bounds, self.style.overscroll_fraction)
+                expand_data_bounds_scaled(
+                    data_bounds,
+                    self.style.overscroll_fraction,
+                    self.x_scale,
+                    self.y2_scale,
+                )
             } else {
-                data_bounds
+                sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y2_scale)
             }
         } else if let Some(view) = state.view_bounds_y2 {
-            sanitize_data_rect(view)
+            sanitize_data_rect_scaled(view, self.x_scale, self.y2_scale)
         } else {
-            data_bounds
+            sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y2_scale)
         };
 
-        Some(DataRect {
-            x_min: view_bounds.x_min,
-            x_max: view_bounds.x_max,
-            y_min: y2_bounds.y_min,
-            y_max: y2_bounds.y_max,
-        })
+        Some(sanitize_data_rect_scaled(
+            DataRect {
+                x_min: view_bounds.x_min,
+                x_max: view_bounds.x_max,
+                y_min: y2_bounds.y_min,
+                y_max: y2_bounds.y_max,
+            },
+            self.x_scale,
+            self.y2_scale,
+        ))
     }
 
     fn rebuild_paths_if_needed<H: UiHost>(
@@ -1800,6 +1848,9 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 plot,
                 view_bounds,
                 view_bounds_y2,
+                x_scale: self.x_scale,
+                y_scale: self.y_scale,
+                y2_scale: self.y2_scale,
                 style: self.style,
                 hidden,
             },
@@ -2004,6 +2055,9 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         key = Self::hash_u64(key, self.x_axis_ticks.key());
         key = Self::hash_u64(key, self.y_axis_ticks.key());
         key = Self::hash_u64(key, self.y2_axis_ticks.key());
+        key = Self::hash_u64(key, self.x_scale.key());
+        key = Self::hash_u64(key, self.y_scale.key());
+        key = Self::hash_u64(key, self.y2_scale.key());
         key = Self::hash_u64(key, self.x_axis_labels.key());
         key = Self::hash_u64(key, self.y_axis_labels.key());
         key = Self::hash_u64(key, self.y2_axis_labels.key());
@@ -2027,10 +2081,19 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             letter_spacing_em: None,
         };
 
-        let x_span = (view_bounds.x_max - view_bounds.x_min).abs();
-        let y_span = (view_bounds.y_max - view_bounds.y_min).abs();
+        let axis_span = |min: f64, max: f64, scale: AxisScale| -> f64 {
+            let span_data = (max - min).abs();
+            scale
+                .to_axis(min)
+                .zip(scale.to_axis(max))
+                .map(|(a, b)| (b - a).abs())
+                .unwrap_or(span_data)
+        };
+
+        let x_span = axis_span(view_bounds.x_min, view_bounds.x_max, self.x_scale);
+        let y_span = axis_span(view_bounds.y_min, view_bounds.y_max, self.y_scale);
         let y2_span = view_bounds_y2
-            .map(|b| (b.y_max - b.y_min).abs())
+            .map(|b| axis_span(b.y_min, b.y_max, self.y2_scale))
             .unwrap_or(0.0);
 
         let constraints_x = TextConstraints {
@@ -2065,6 +2128,14 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 .max(2)
         };
 
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+        let transform_y1 = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+            x_scale: self.x_scale,
+            y_scale: self.y_scale,
+        };
+
         let min_ticks = self.style.tick_count.max(2).min(128);
         let mut x_tick_count = estimate_ticks(plot_w, 70.0).max(min_ticks).min(128);
         let mut y_tick_count = estimate_ticks(plot_h, 28.0).max(min_ticks).min(128);
@@ -2074,11 +2145,12 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
         // X axis: reduce ticks until formatted labels fit horizontally.
         for _ in 0..8 {
-            x_ticks = axis_ticks(
+            x_ticks = axis_ticks_scaled(
                 view_bounds.x_min,
                 view_bounds.x_max,
                 x_tick_count,
                 self.x_axis_ticks,
+                self.x_scale,
             );
             if x_ticks.len() <= 1 {
                 break;
@@ -2092,7 +2164,22 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 cx.services.text().release(prepared.blob);
             }
 
-            let spacing_px = plot_w / ((x_ticks.len() - 1) as f32);
+            let mut min_spacing_px = plot_w;
+            let mut prev: Option<f32> = None;
+            for v in &x_ticks {
+                let Some(px) = transform_y1.data_x_to_px(*v) else {
+                    continue;
+                };
+                let x = px.0;
+                if let Some(prev) = prev {
+                    let dx = (x - prev).abs();
+                    if dx.is_finite() && dx > 0.0 {
+                        min_spacing_px = min_spacing_px.min(dx);
+                    }
+                }
+                prev = Some(x);
+            }
+            let spacing_px = min_spacing_px;
             let needed = max_w + 8.0;
             if spacing_px.is_finite() && needed.is_finite() && spacing_px >= needed {
                 break;
@@ -2114,11 +2201,12 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
         // Y axis: reduce ticks until labels fit vertically (avoid overlap).
         for _ in 0..8 {
-            y_ticks = axis_ticks(
+            y_ticks = axis_ticks_scaled(
                 view_bounds.y_min,
                 view_bounds.y_max,
                 y_tick_count,
                 self.y_axis_ticks,
+                self.y_scale,
             );
             if y_ticks.len() <= 1 {
                 break;
@@ -2132,7 +2220,22 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 cx.services.text().release(prepared.blob);
             }
 
-            let spacing_px = plot_h / ((y_ticks.len() - 1) as f32);
+            let mut min_spacing_px = plot_h;
+            let mut prev: Option<f32> = None;
+            for v in &y_ticks {
+                let Some(px) = transform_y1.data_y_to_px(*v) else {
+                    continue;
+                };
+                let y = px.0;
+                if let Some(prev) = prev {
+                    let dy = (y - prev).abs();
+                    if dy.is_finite() && dy > 0.0 {
+                        min_spacing_px = min_spacing_px.min(dy);
+                    }
+                }
+                prev = Some(y);
+            }
+            let spacing_px = min_spacing_px;
             let needed = max_h + 4.0;
             if spacing_px.is_finite() && needed.is_finite() && spacing_px >= needed {
                 break;
@@ -2156,11 +2259,12 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self.axis_ticks_y = y_ticks.clone();
         self.axis_ticks_y2 = if self.show_y2_axis {
             if let Some(y2_bounds) = view_bounds_y2 {
-                axis_ticks(
+                axis_ticks_scaled(
                     y2_bounds.y_min,
                     y2_bounds.y_max,
                     y_tick_count,
                     self.y2_axis_ticks,
+                    self.y2_scale,
                 )
             } else {
                 Vec::new()
@@ -2584,6 +2688,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     layout.plot.size,
                                     start,
                                     end,
+                                    self.x_scale,
+                                    self.y_scale,
                                 ) {
                                     let _ = self.update_plot_state(cx.app, |s| {
                                         s.query = Some(next);
@@ -2627,29 +2733,42 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 let view_bounds = self.current_view_bounds(cx.app, &state);
                                 let view_bounds_y2 =
                                     self.current_view_bounds_y2(cx.app, &state, view_bounds);
-                                if let Some(mut next) = data_rect_from_plot_points(
+                                if let Some(mut next) = data_rect_from_plot_points_scaled(
                                     view_bounds,
                                     layout.plot.size,
                                     start,
                                     end,
+                                    self.x_scale,
+                                    self.y_scale,
                                 ) {
                                     let mut next_y2 = view_bounds_y2.and_then(|vb| {
-                                        data_rect_from_plot_points(vb, layout.plot.size, start, end)
+                                        data_rect_from_plot_points_scaled(
+                                            vb,
+                                            layout.plot.size,
+                                            start,
+                                            end,
+                                            self.x_scale,
+                                            self.y2_scale,
+                                        )
                                     });
                                     let data_bounds = self.read_data_bounds(cx.app);
                                     if self.style.clamp_to_data_bounds {
-                                        next = clamp_view_to_data(
+                                        next = clamp_view_to_data_scaled(
                                             next,
                                             data_bounds,
                                             self.style.overscroll_fraction,
+                                            self.x_scale,
+                                            self.y_scale,
                                         );
                                         if let (Some(candidate), Some(bounds_y2)) =
                                             (next_y2.as_mut(), self.read_data_bounds_y2(cx.app))
                                         {
-                                            *candidate = clamp_view_to_data(
+                                            *candidate = clamp_view_to_data_scaled(
                                                 *candidate,
                                                 bounds_y2,
                                                 self.style.overscroll_fraction,
+                                                self.x_scale,
+                                                self.y2_scale,
                                             );
                                         }
                                     }
@@ -2727,16 +2846,37 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let view_bounds = self.current_view_bounds(cx.app, &state);
                 let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
                 let local = local_from_absolute(layout.plot.origin, *position);
-                let Some(next) =
-                    zoom_view_at_px(view_bounds, layout.plot.size, local, zoom_x, zoom_y)
-                else {
+                let Some(next) = zoom_view_at_px_scaled(
+                    view_bounds,
+                    layout.plot.size,
+                    local,
+                    zoom_x,
+                    zoom_y,
+                    self.x_scale,
+                    self.y_scale,
+                ) else {
                     return;
                 };
-                let mut next_y2 = view_bounds_y2
-                    .and_then(|vb| zoom_view_at_px(vb, layout.plot.size, local, zoom_x, zoom_y));
+                let mut next_y2 = view_bounds_y2.and_then(|vb| {
+                    zoom_view_at_px_scaled(
+                        vb,
+                        layout.plot.size,
+                        local,
+                        zoom_x,
+                        zoom_y,
+                        self.x_scale,
+                        self.y2_scale,
+                    )
+                });
                 let data_bounds = self.read_data_bounds(cx.app);
                 let next = if self.style.clamp_to_data_bounds {
-                    clamp_view_to_data(next, data_bounds, self.style.overscroll_fraction)
+                    clamp_view_to_data_scaled(
+                        next,
+                        data_bounds,
+                        self.style.overscroll_fraction,
+                        self.x_scale,
+                        self.y_scale,
+                    )
                 } else {
                     next
                 };
@@ -2744,10 +2884,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     if let (Some(candidate), Some(bounds_y2)) =
                         (next_y2.as_mut(), self.read_data_bounds_y2(cx.app))
                     {
-                        *candidate = clamp_view_to_data(
+                        *candidate = clamp_view_to_data_scaled(
                             *candidate,
                             bounds_y2,
                             self.style.overscroll_fraction,
+                            self.x_scale,
+                            self.y2_scale,
                         );
                     }
                 }
@@ -2851,15 +2993,35 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let state = self.read_plot_state(cx.app);
                     let view_bounds = self.current_view_bounds(cx.app, &state);
                     let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
-                    let Some(next) = pan_view_by_px(view_bounds, layout.plot.size, dx_px, dy_px)
-                    else {
+                    let Some(next) = pan_view_by_px_scaled(
+                        view_bounds,
+                        layout.plot.size,
+                        dx_px,
+                        dy_px,
+                        self.x_scale,
+                        self.y_scale,
+                    ) else {
                         return;
                     };
-                    let mut next_y2 = view_bounds_y2
-                        .and_then(|vb| pan_view_by_px(vb, layout.plot.size, dx_px, dy_px));
+                    let mut next_y2 = view_bounds_y2.and_then(|vb| {
+                        pan_view_by_px_scaled(
+                            vb,
+                            layout.plot.size,
+                            dx_px,
+                            dy_px,
+                            self.x_scale,
+                            self.y2_scale,
+                        )
+                    });
                     let data_bounds = self.read_data_bounds(cx.app);
                     let next = if self.style.clamp_to_data_bounds {
-                        clamp_view_to_data(next, data_bounds, self.style.overscroll_fraction)
+                        clamp_view_to_data_scaled(
+                            next,
+                            data_bounds,
+                            self.style.overscroll_fraction,
+                            self.x_scale,
+                            self.y_scale,
+                        )
                     } else {
                         next
                     };
@@ -2867,10 +3029,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         if let (Some(candidate), Some(bounds_y2)) =
                             (next_y2.as_mut(), self.read_data_bounds_y2(cx.app))
                         {
-                            *candidate = clamp_view_to_data(
+                            *candidate = clamp_view_to_data_scaled(
                                 *candidate,
                                 bounds_y2,
                                 self.style.overscroll_fraction,
+                                self.x_scale,
+                                self.y2_scale,
                             );
                         }
                     }
@@ -2923,6 +3087,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     plot_size: layout.plot.size,
                                     view_bounds,
                                     view_bounds_y2,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y_scale,
+                                    y2_scale: self.y2_scale,
                                     scale_factor,
                                     local,
                                     style: self.style,
@@ -3106,51 +3273,47 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             let x_ticks = &self.axis_ticks_x;
             let y_ticks = &self.axis_ticks_y;
 
-            let x_den = view_bounds.x_max - view_bounds.x_min;
-            let y_den = view_bounds.y_max - view_bounds.y_min;
+            let transform = PlotTransform {
+                viewport: layout.plot,
+                data: view_bounds,
+                x_scale: self.x_scale,
+                y_scale: self.y_scale,
+            };
 
-            if x_den != 0.0 && x_den.is_finite() {
-                for v in x_ticks.iter().copied() {
-                    let t = (v - view_bounds.x_min) / x_den;
-                    if !t.is_finite() || t < 0.0 || t > 1.0 {
-                        continue;
-                    }
-                    let x = layout.plot.origin.x.0 + layout.plot.size.width.0 * (t as f32);
-                    let x = Px(x.round());
-                    cx.scene.push(SceneOp::Quad {
-                        order: DrawOrder(1),
-                        rect: Rect::new(
-                            Point::new(x, layout.plot.origin.y),
-                            Size::new(Px(1.0), layout.plot.size.height),
-                        ),
-                        background: grid_color,
-                        border: fret_core::Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
-                        corner_radii: fret_core::Corners::all(Px(0.0)),
-                    });
-                }
+            for v in x_ticks.iter().copied() {
+                let Some(x) = transform.data_x_to_px(v) else {
+                    continue;
+                };
+                let x = Px(x.0.round());
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(1),
+                    rect: Rect::new(
+                        Point::new(x, layout.plot.origin.y),
+                        Size::new(Px(1.0), layout.plot.size.height),
+                    ),
+                    background: grid_color,
+                    border: fret_core::Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                });
             }
 
-            if y_den != 0.0 && y_den.is_finite() {
-                for v in y_ticks.iter().copied() {
-                    let t = (v - view_bounds.y_min) / y_den;
-                    if !t.is_finite() || t < 0.0 || t > 1.0 {
-                        continue;
-                    }
-                    let y = layout.plot.origin.y.0 + layout.plot.size.height.0 * ((1.0 - t) as f32);
-                    let y = Px(y.round());
-                    cx.scene.push(SceneOp::Quad {
-                        order: DrawOrder(1),
-                        rect: Rect::new(
-                            Point::new(layout.plot.origin.x, y),
-                            Size::new(layout.plot.size.width, Px(1.0)),
-                        ),
-                        background: grid_color,
-                        border: fret_core::Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
-                        corner_radii: fret_core::Corners::all(Px(0.0)),
-                    });
-                }
+            for v in y_ticks.iter().copied() {
+                let Some(y) = transform.data_y_to_px(v) else {
+                    continue;
+                };
+                let y = Px(y.0.round());
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(1),
+                    rect: Rect::new(
+                        Point::new(layout.plot.origin.x, y),
+                        Size::new(layout.plot.size.width, Px(1.0)),
+                    ),
+                    background: grid_color,
+                    border: fret_core::Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                });
             }
 
             let emphasized = self.style.emphasize_hovered_series;
@@ -3226,13 +3389,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let transform = PlotTransform {
                     viewport: local_viewport,
                     data: view_bounds,
+                    x_scale: self.x_scale,
+                    y_scale: self.y_scale,
                 };
-                let px = transform.data_to_px(DataPoint {
-                    x: linked_x,
-                    y: view_bounds.y_min,
-                });
-                if px.x.0.is_finite() {
-                    let x0 = px.x.0.clamp(0.0, layout.plot.size.width.0);
+                if let Some(px) = transform.data_x_to_px(linked_x) {
+                    let x0 = px.0.clamp(0.0, layout.plot.size.width.0);
                     let x = Px((layout.plot.origin.x.0 + x0).round());
                     let linked_color = Color {
                         a: (crosshair_color.a * 0.55).clamp(0.05, 1.0),
@@ -3274,6 +3435,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let transform = PlotTransform {
                     viewport: local_viewport,
                     data: view_bounds,
+                    x_scale: self.x_scale,
+                    y_scale: self.y_scale,
                 };
 
                 let a = transform.data_to_px(DataPoint {
@@ -3517,22 +3680,27 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         let y_ticks = &self.axis_ticks_y;
         let y2_ticks = &self.axis_ticks_y2;
 
-        let x_den = view_bounds.x_max - view_bounds.x_min;
-        let y_den = view_bounds.y_max - view_bounds.y_min;
+        let transform_y1 = PlotTransform {
+            viewport: layout.plot,
+            data: view_bounds,
+            x_scale: self.x_scale,
+            y_scale: self.y_scale,
+        };
+        let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
+            viewport: layout.plot,
+            data: b,
+            x_scale: self.x_scale,
+            y_scale: self.y2_scale,
+        });
 
         for (i, label) in self.axis_labels_x.iter().enumerate() {
             let Some(v) = x_ticks.get(i).copied() else {
                 continue;
             };
-            if x_den == 0.0 || !x_den.is_finite() {
+            let Some(x) = transform_y1.data_x_to_px(v) else {
                 continue;
-            }
-            let t = (v - view_bounds.x_min) / x_den;
-            if !t.is_finite() {
-                continue;
-            }
-            let x = layout.plot.origin.x.0 + layout.plot.size.width.0 * (t as f32);
-            let x = Px(x.round());
+            };
+            let x = Px(x.0.round());
 
             let top = layout.x_axis.origin.y.0 + 2.0;
             let origin = Point::new(
@@ -3552,15 +3720,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             let Some(v) = y_ticks.get(i).copied() else {
                 continue;
             };
-            if y_den == 0.0 || !y_den.is_finite() {
+            let Some(y) = transform_y1.data_y_to_px(v) else {
                 continue;
-            }
-            let t = (v - view_bounds.y_min) / y_den;
-            if !t.is_finite() {
-                continue;
-            }
-            let y = layout.plot.origin.y.0 + layout.plot.size.height.0 * ((1.0 - t) as f32);
-            let y = Px(y.round());
+            };
+            let y = Px(y.0.round());
 
             let origin_x = layout.y_axis_left.origin.x.0 + layout.y_axis_left.size.width.0
                 - label.metrics.size.width.0
@@ -3579,34 +3742,28 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             });
         }
 
-        if self.show_y2_axis
-            && let Some(view_bounds_y2) = view_bounds_y2
-        {
-            let y2_den = view_bounds_y2.y_max - view_bounds_y2.y_min;
-            for (i, label) in self.axis_labels_y2.iter().enumerate() {
-                let Some(v) = y2_ticks.get(i).copied() else {
-                    continue;
-                };
-                if y2_den == 0.0 || !y2_den.is_finite() {
-                    continue;
-                }
-                let t = (v - view_bounds_y2.y_min) / y2_den;
-                if !t.is_finite() {
-                    continue;
-                }
-                let y = layout.plot.origin.y.0 + layout.plot.size.height.0 * ((1.0 - t) as f32);
-                let y = Px(y.round());
+        if self.show_y2_axis {
+            if let Some(transform_y2) = transform_y2 {
+                for (i, label) in self.axis_labels_y2.iter().enumerate() {
+                    let Some(v) = y2_ticks.get(i).copied() else {
+                        continue;
+                    };
+                    let Some(y) = transform_y2.data_y_to_px(v) else {
+                        continue;
+                    };
+                    let y = Px(y.0.round());
 
-                let origin_x = layout.y_axis_right.origin.x.0 + 4.0;
-                let top = y.0 - (label.metrics.size.height.0 * 0.5);
-                let origin = Point::new(Px(origin_x), Px(top + label.metrics.baseline.0));
+                    let origin_x = layout.y_axis_right.origin.x.0 + 4.0;
+                    let top = y.0 - (label.metrics.size.height.0 * 0.5);
+                    let origin = Point::new(Px(origin_x), Px(top + label.metrics.baseline.0));
 
-                cx.scene.push(SceneOp::Text {
-                    order: DrawOrder(11),
-                    origin,
-                    text: label.blob,
-                    color: label_color,
-                });
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(11),
+                        origin,
+                        text: label.blob,
+                        color: label_color,
+                    });
+                }
             }
         }
 
@@ -3617,29 +3774,44 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         let x_span = (view_bounds.x_max - view_bounds.x_min).abs();
         let y_span = (view_bounds.y_max - view_bounds.y_min).abs();
 
-        let selection_tooltip = if let (Some(start), Some(end)) =
-            (self.query_drag_start, self.query_drag_current)
-        {
-            query_rect_from_plot_points_raw(view_bounds, layout.plot.size, start, end).map(|rect| {
-                let x0 = self.tooltip_x_labels.format(rect.x_min, x_span);
-                let x1 = self.tooltip_x_labels.format(rect.x_max, x_span);
-                let y0 = self.tooltip_y_labels.format(rect.y_min, y_span);
-                let y1 = self.tooltip_y_labels.format(rect.y_max, y_span);
-                let text = format!("query\nx=[{x0}, {x1}]\ny=[{y0}, {y1}]");
-                (end, text)
-            })
-        } else if let (Some(start), Some(end)) = (self.box_zoom_start, self.box_zoom_current) {
-            query_rect_from_plot_points_raw(view_bounds, layout.plot.size, start, end).map(|rect| {
-                let x0 = self.tooltip_x_labels.format(rect.x_min, x_span);
-                let x1 = self.tooltip_x_labels.format(rect.x_max, x_span);
-                let y0 = self.tooltip_y_labels.format(rect.y_min, y_span);
-                let y1 = self.tooltip_y_labels.format(rect.y_max, y_span);
-                let text = format!("zoom\nx=[{x0}, {x1}]\ny=[{y0}, {y1}]");
-                (end, text)
-            })
-        } else {
-            None
-        };
+        let selection_tooltip =
+            if let (Some(start), Some(end)) = (self.query_drag_start, self.query_drag_current) {
+                query_rect_from_plot_points_raw(
+                    view_bounds,
+                    layout.plot.size,
+                    start,
+                    end,
+                    self.x_scale,
+                    self.y_scale,
+                )
+                .map(|rect| {
+                    let x0 = self.tooltip_x_labels.format(rect.x_min, x_span);
+                    let x1 = self.tooltip_x_labels.format(rect.x_max, x_span);
+                    let y0 = self.tooltip_y_labels.format(rect.y_min, y_span);
+                    let y1 = self.tooltip_y_labels.format(rect.y_max, y_span);
+                    let text = format!("query\nx=[{x0}, {x1}]\ny=[{y0}, {y1}]");
+                    (end, text)
+                })
+            } else if let (Some(start), Some(end)) = (self.box_zoom_start, self.box_zoom_current) {
+                query_rect_from_plot_points_raw(
+                    view_bounds,
+                    layout.plot.size,
+                    start,
+                    end,
+                    self.x_scale,
+                    self.y_scale,
+                )
+                .map(|rect| {
+                    let x0 = self.tooltip_x_labels.format(rect.x_min, x_span);
+                    let x1 = self.tooltip_x_labels.format(rect.x_max, x_span);
+                    let y0 = self.tooltip_y_labels.format(rect.y_min, y_span);
+                    let y1 = self.tooltip_y_labels.format(rect.y_max, y_span);
+                    let text = format!("zoom\nx=[{x0}, {x1}]\ny=[{y0}, {y1}]");
+                    (end, text)
+                })
+            } else {
+                None
+            };
 
         let cursor_px = self.cursor_px;
         let cursor_data = cursor_px.and_then(|cursor_px| {
@@ -3649,6 +3821,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             let transform = PlotTransform {
                 viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
                 data: view_bounds,
+                x_scale: self.x_scale,
+                y_scale: self.y_scale,
             };
             let data = transform.px_to_data(cursor_px);
             (data.x.is_finite() && data.y.is_finite()).then_some(data)
@@ -3743,17 +3917,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let transform = PlotTransform {
                         viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
                         data: view_bounds,
+                        x_scale: self.x_scale,
+                        y_scale: self.y_scale,
                     };
-                    let linked_px = transform.data_to_px(DataPoint {
-                        x: linked_x,
-                        y: view_bounds.y_min,
-                    });
-                    if !linked_px.x.0.is_finite() {
+                    let Some(linked_x_px) = transform.data_x_to_px(linked_x) else {
                         return None;
-                    }
+                    };
 
                     let anchor_local = Point::new(
-                        Px(linked_px.x.0.clamp(0.0, layout.plot.size.width.0)),
+                        Px(linked_x_px.0.clamp(0.0, layout.plot.size.width.0)),
                         Px(0.0),
                     );
 
@@ -3977,6 +4149,9 @@ impl PlotLayer for LinePlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
             style,
             hidden,
         } = args;
@@ -3984,8 +4159,8 @@ impl PlotLayer for LinePlotLayer {
         let scale_factor_bits = cx.scale_factor.to_bits();
         let viewport_w_bits = plot.size.width.0.to_bits();
         let viewport_h_bits = plot.size.height.0.to_bits();
-        let view_key_y1 = data_rect_key(view_bounds);
-        let view_key_y2 = view_bounds_y2.map(data_rect_key);
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
 
         let series = &model.series;
         let series_count = series.len();
@@ -4041,10 +4216,14 @@ impl PlotLayer for LinePlotLayer {
         let transform_y1 = PlotTransform {
             viewport: local_viewport,
             data: view_bounds,
+            x_scale,
+            y_scale,
         };
         let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
             viewport: local_viewport,
             data: b,
+            x_scale,
+            y_scale: y2_scale,
         });
 
         let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
@@ -4216,6 +4395,9 @@ impl PlotLayer for ScatterPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
             style,
             hidden,
         } = args;
@@ -4223,8 +4405,8 @@ impl PlotLayer for ScatterPlotLayer {
         let scale_factor_bits = cx.scale_factor.to_bits();
         let viewport_w_bits = plot.size.width.0.to_bits();
         let viewport_h_bits = plot.size.height.0.to_bits();
-        let view_key_y1 = data_rect_key(view_bounds);
-        let view_key_y2 = view_bounds_y2.map(data_rect_key);
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
 
         let series = &model.series;
         let series_count = series.len();
@@ -4279,10 +4461,14 @@ impl PlotLayer for ScatterPlotLayer {
         let transform_y1 = PlotTransform {
             viewport: local_viewport,
             data: view_bounds,
+            x_scale,
+            y_scale,
         };
         let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
             viewport: local_viewport,
             data: b,
+            x_scale,
+            y_scale: y2_scale,
         });
 
         let marker_radius = Px((style.stroke_width.0 * 3.0).clamp(2.0, 6.0));
@@ -4457,6 +4643,9 @@ impl PlotLayer for StairsPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
             style,
             hidden,
         } = args;
@@ -4464,8 +4653,8 @@ impl PlotLayer for StairsPlotLayer {
         let scale_factor_bits = cx.scale_factor.to_bits();
         let viewport_w_bits = plot.size.width.0.to_bits();
         let viewport_h_bits = plot.size.height.0.to_bits();
-        let view_key_y1 = data_rect_key(view_bounds);
-        let view_key_y2 = view_bounds_y2.map(data_rect_key);
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
 
         let series = &model.series;
         let series_count = series.len();
@@ -4520,10 +4709,14 @@ impl PlotLayer for StairsPlotLayer {
         let transform_y1 = PlotTransform {
             viewport: local_viewport,
             data: view_bounds,
+            x_scale,
+            y_scale,
         };
         let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
             viewport: local_viewport,
             data: b,
+            x_scale,
+            y_scale: y2_scale,
         });
 
         let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
@@ -4699,6 +4892,9 @@ impl PlotLayer for BarsPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
             style,
             hidden,
         } = args;
@@ -4706,8 +4902,8 @@ impl PlotLayer for BarsPlotLayer {
         let scale_factor_bits = cx.scale_factor.to_bits();
         let viewport_w_bits = plot.size.width.0.to_bits();
         let viewport_h_bits = plot.size.height.0.to_bits();
-        let view_key_y1 = data_rect_key(view_bounds);
-        let view_key_y2 = view_bounds_y2.map(data_rect_key);
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
 
         let series = &model.series;
         let series_count = series.len();
@@ -4762,10 +4958,14 @@ impl PlotLayer for BarsPlotLayer {
         let transform_y1 = PlotTransform {
             viewport: local_viewport,
             data: view_bounds,
+            x_scale,
+            y_scale,
         };
         let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
             viewport: local_viewport,
             data: b,
+            x_scale,
+            y_scale: y2_scale,
         });
 
         let path_style = PathStyle::Fill(fret_core::FillStyle::default());
@@ -4938,6 +5138,9 @@ impl PlotLayer for AreaPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
             style,
             hidden,
         } = args;
@@ -4945,8 +5148,8 @@ impl PlotLayer for AreaPlotLayer {
         let scale_factor_bits = cx.scale_factor.to_bits();
         let viewport_w_bits = plot.size.width.0.to_bits();
         let viewport_h_bits = plot.size.height.0.to_bits();
-        let view_key_y1 = data_rect_key(view_bounds);
-        let view_key_y2 = view_bounds_y2.map(data_rect_key);
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
 
         let series = &model.series;
         let series_count = series.len();
@@ -5026,10 +5229,14 @@ impl PlotLayer for AreaPlotLayer {
         let transform_y1 = PlotTransform {
             viewport: local_viewport,
             data: view_bounds,
+            x_scale,
+            y_scale,
         };
         let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
             viewport: local_viewport,
             data: b,
+            x_scale,
+            y_scale: y2_scale,
         });
 
         let fill_style = PathStyle::Fill(fret_core::FillStyle::default());
@@ -5152,6 +5359,9 @@ impl PlotLayer for AreaPlotLayer {
             plot_size,
             view_bounds,
             view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
             scale_factor,
             local,
             style,
@@ -5166,8 +5376,8 @@ impl PlotLayer for AreaPlotLayer {
         let scale_factor_bits = scale_factor.to_bits();
         let viewport_w_bits = plot_size.width.0.to_bits();
         let viewport_h_bits = plot_size.height.0.to_bits();
-        let view_key_y1 = data_rect_key(view_bounds);
-        let view_key_y2 = view_bounds_y2.map(data_rect_key);
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
 
         let series = &model.series;
         let series_count = series.len();
@@ -5227,10 +5437,14 @@ impl PlotLayer for AreaPlotLayer {
             let transform_y1 = PlotTransform {
                 viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
                 data: view_bounds,
+                x_scale,
+                y_scale,
             };
             let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
                 viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
                 data: b,
+                x_scale,
+                y_scale: y2_scale,
             });
 
             for s in series {
@@ -5361,6 +5575,9 @@ impl PlotLayer for ShadedPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
             style,
             hidden,
         } = args;
@@ -5368,8 +5585,8 @@ impl PlotLayer for ShadedPlotLayer {
         let scale_factor_bits = cx.scale_factor.to_bits();
         let viewport_w_bits = plot.size.width.0.to_bits();
         let viewport_h_bits = plot.size.height.0.to_bits();
-        let view_key_y1 = data_rect_key(view_bounds);
-        let view_key_y2 = view_bounds_y2.map(data_rect_key);
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
 
         let series = &model.series;
         let series_count = series.len();
@@ -5457,10 +5674,14 @@ impl PlotLayer for ShadedPlotLayer {
         let transform_y1 = PlotTransform {
             viewport: local_viewport,
             data: view_bounds,
+            x_scale,
+            y_scale,
         };
         let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
             viewport: local_viewport,
             data: b,
+            x_scale,
+            y_scale: y2_scale,
         });
 
         let fill_style = PathStyle::Fill(fret_core::FillStyle::default());
@@ -5590,6 +5811,9 @@ impl PlotLayer for ShadedPlotLayer {
             plot_size,
             view_bounds,
             view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
             scale_factor,
             local,
             style,
@@ -5604,8 +5828,8 @@ impl PlotLayer for ShadedPlotLayer {
         let scale_factor_bits = scale_factor.to_bits();
         let viewport_w_bits = plot_size.width.0.to_bits();
         let viewport_h_bits = plot_size.height.0.to_bits();
-        let view_key_y1 = data_rect_key(view_bounds);
-        let view_key_y2 = view_bounds_y2.map(data_rect_key);
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
 
         let series = &model.series;
         let series_count = series.len();
@@ -5665,10 +5889,14 @@ impl PlotLayer for ShadedPlotLayer {
             let transform_y1 = PlotTransform {
                 viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
                 data: view_bounds,
+                x_scale,
+                y_scale,
             };
             let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
                 viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
                 data: b,
+                x_scale,
+                y_scale: y2_scale,
             });
 
             for s in series {
@@ -5735,6 +5963,9 @@ fn hit_test_series_data(
         plot_size,
         view_bounds,
         view_bounds_y2,
+        x_scale,
+        y_scale,
+        y2_scale,
         scale_factor,
         local,
         style,
@@ -5749,8 +5980,8 @@ fn hit_test_series_data(
     let scale_factor_bits = scale_factor.to_bits();
     let viewport_w_bits = plot_size.width.0.to_bits();
     let viewport_h_bits = plot_size.height.0.to_bits();
-    let view_key_y1 = data_rect_key(view_bounds);
-    let view_key_y2 = view_bounds_y2.map(data_rect_key);
+    let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+    let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
 
     let series_count = series.len();
     if series_count == 0 {
@@ -5804,10 +6035,14 @@ fn hit_test_series_data(
         let transform_y1 = PlotTransform {
             viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
             data: view_bounds,
+            x_scale,
+            y_scale,
         };
         let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
             viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
             data: b,
+            x_scale,
+            y_scale: y2_scale,
         });
 
         for (series_id, axis, data) in series.iter().copied() {

@@ -73,6 +73,21 @@ To align with common ImPlot usage while keeping contracts portable, multi-axis s
 - Independent Y view bounds per axis (`PlotState.view_bounds` and `PlotState.view_bounds_y2`), allowing
   different scales without distorting the primary Y axis.
 
+### 2.6) Axis scales are explicit (Linear / Log10)
+
+Axis scaling is an explicit, per-axis configuration on the canvas (not hidden inside series data):
+
+- `AxisScale::{Linear,Log10}` is carried by the canvas for X, Y, and Y2.
+- `PlotTransform` maps **data space → axis space → pixels** so pan/zoom math and clamping behave
+  consistently across scales.
+- Tick generation is scale-aware (log axes always produce log ticks regardless of "nice/linear" hints).
+- Cache keys include axis scale so switching a scale forces path/tick rebuild.
+
+Log10 constraints:
+
+- Non-positive values are not representable; invalid samples break segments and are skipped for hit testing.
+- View/data bounds are sanitized into a deterministic positive domain to keep transforms well-defined.
+
 ### 3) Data access is adapter-based (zero-copy first)
 
 To avoid forcing allocations/copies for large datasets, series data should be representable as:

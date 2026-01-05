@@ -70,7 +70,7 @@ This contract is documented in ADR 0099.
 - [x] Nice ticks (1/2/5 * 10^n)
 - [x] Adaptive tick density (avoid label overlap)
 - [~] Time axis + formatting (UTC seconds baseline)
-- [ ] Log axis
+- [x] Log axis (Log10 scale + ticks + interactions)
 - [~] Axis formatters (custom label callbacks with stable cache key)
 - [x] Axis thickness auto-fit (avoid clipped labels)
 - [~] Multi-axes (Y2 supported; no Y3/Y4 yet)

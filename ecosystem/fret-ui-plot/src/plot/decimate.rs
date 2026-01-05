@@ -765,7 +765,7 @@ mod tests {
 
     use fret_core::geometry::{Rect, Size};
 
-    use crate::cartesian::DataRect;
+    use crate::cartesian::{AxisScale, DataRect};
     use crate::series::{GetterSeriesData, OwnedSeriesData};
 
     fn transform(viewport_w: f32, viewport_h: f32, data: DataRect) -> PlotTransform {
@@ -775,6 +775,8 @@ mod tests {
                 Size::new(Px(viewport_w), Px(viewport_h)),
             ),
             data,
+            x_scale: AxisScale::Linear,
+            y_scale: AxisScale::Linear,
         }
     }
 
