@@ -725,6 +725,135 @@ pub struct CommandPalette {
     scroll: LayoutRefinement,
 }
 
+#[derive(Clone)]
+enum CommandPaletteRenderRow {
+    Heading(Arc<str>),
+    Separator,
+    Item(usize),
+}
+
+fn command_palette_render_rows_for_query(
+    entries: Vec<CommandEntry>,
+    query: &str,
+) -> (Vec<CommandPaletteRenderRow>, Vec<CommandItem>) {
+    #[derive(Clone)]
+    enum PendingRow {
+        Heading(Arc<str>),
+        Separator,
+        Item(CommandItem),
+    }
+
+    let score_item = |item: &CommandItem| -> f32 {
+        if query.is_empty() {
+            return 1.0;
+        }
+
+        let mut aliases: Vec<&str> = Vec::with_capacity(1 + item.keywords.len());
+        if item.value.as_ref() != item.label.as_ref() {
+            aliases.push(item.value.as_ref());
+        }
+        for kw in &item.keywords {
+            aliases.push(kw.as_ref());
+        }
+
+        cmdk_score::command_score(item.label.as_ref(), query, &aliases)
+    };
+
+    let mut pending_rows: Vec<PendingRow> = Vec::new();
+    for entry in entries {
+        match entry {
+            CommandEntry::Item(item) => {
+                let score = score_item(&item);
+                if score > 0.0 {
+                    pending_rows.push(PendingRow::Item(item));
+                }
+            }
+            CommandEntry::Separator(_) => pending_rows.push(PendingRow::Separator),
+            CommandEntry::Group(group) => {
+                if group.items.is_empty() {
+                    continue;
+                }
+
+                if query.is_empty() {
+                    if let Some(heading) = group.heading {
+                        pending_rows.push(PendingRow::Heading(heading));
+                    }
+                    pending_rows.extend(group.items.into_iter().map(PendingRow::Item));
+                    continue;
+                }
+
+                let mut scored: Vec<(usize, f32, CommandItem)> = group
+                    .items
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(idx, item)| {
+                        let score = score_item(&item);
+                        (score > 0.0).then_some((idx, score, item))
+                    })
+                    .collect();
+
+                if scored.is_empty() {
+                    continue;
+                }
+
+                scored.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
+                    b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
+                });
+                if let Some(heading) = group.heading {
+                    pending_rows.push(PendingRow::Heading(heading));
+                }
+                pending_rows.extend(scored.into_iter().map(|(_, _, item)| PendingRow::Item(item)));
+            }
+        }
+    }
+
+    let mut has_item_from: Vec<bool> = vec![false; pending_rows.len() + 1];
+    for idx in (0..pending_rows.len()).rev() {
+        has_item_from[idx] = has_item_from[idx + 1]
+            || matches!(pending_rows[idx], PendingRow::Item(_));
+    }
+
+    let mut filtered_rows: Vec<PendingRow> = Vec::with_capacity(pending_rows.len());
+    let mut seen_item_before = false;
+    let mut prev_is_sep = false;
+    for (idx, row) in pending_rows.into_iter().enumerate() {
+        match row {
+            PendingRow::Separator => {
+                if !seen_item_before || !has_item_from[idx + 1] || prev_is_sep {
+                    continue;
+                }
+                prev_is_sep = true;
+                filtered_rows.push(PendingRow::Separator);
+            }
+            PendingRow::Item(item) => {
+                seen_item_before = true;
+                prev_is_sep = false;
+                filtered_rows.push(PendingRow::Item(item));
+            }
+            PendingRow::Heading(h) => {
+                prev_is_sep = false;
+                filtered_rows.push(PendingRow::Heading(h));
+            }
+        }
+    }
+
+    let mut items: Vec<CommandItem> = Vec::new();
+    let render_rows: Vec<CommandPaletteRenderRow> = filtered_rows
+        .into_iter()
+        .map(|row| match row {
+            PendingRow::Heading(h) => CommandPaletteRenderRow::Heading(h),
+            PendingRow::Separator => CommandPaletteRenderRow::Separator,
+            PendingRow::Item(item) => {
+                let idx = items.len();
+                items.push(item);
+                CommandPaletteRenderRow::Item(idx)
+            }
+        })
+        .collect();
+
+    (render_rows, items)
+}
+
 impl std::fmt::Debug for CommandPalette {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommandPalette")
@@ -842,126 +971,8 @@ impl CommandPalette {
                 .read_ref(|s| s.trim().to_ascii_lowercase())
                 .unwrap_or_default();
 
-            #[derive(Clone)]
-            enum PendingRow {
-                Heading(Arc<str>),
-                Separator,
-                Item(CommandItem),
-            }
-
-            enum RenderRow {
-                Heading(Arc<str>),
-                Separator,
-                Item(usize),
-            }
-
-            let score_item = |item: &CommandItem| -> f32 {
-                if query.is_empty() {
-                    return 1.0;
-                }
-
-                let mut aliases: Vec<&str> = Vec::with_capacity(1 + item.keywords.len());
-                if item.value.as_ref() != item.label.as_ref() {
-                    aliases.push(item.value.as_ref());
-                }
-                for kw in &item.keywords {
-                    aliases.push(kw.as_ref());
-                }
-
-                cmdk_score::command_score(item.label.as_ref(), query.as_str(), &aliases)
-            };
-
-            let mut pending_rows: Vec<PendingRow> = Vec::new();
-            for entry in self.entries {
-                match entry {
-                    CommandEntry::Item(item) => {
-                        let score = score_item(&item);
-                        if score > 0.0 {
-                            pending_rows.push(PendingRow::Item(item));
-                        }
-                    }
-                    CommandEntry::Separator(_) => pending_rows.push(PendingRow::Separator),
-                    CommandEntry::Group(group) => {
-                        let items = group.items;
-                        if query.is_empty() {
-                            if let Some(heading) = group.heading {
-                                pending_rows.push(PendingRow::Heading(heading));
-                            }
-                            pending_rows.extend(items.into_iter().map(PendingRow::Item));
-                            continue;
-                        }
-
-                        let mut scored: Vec<(usize, f32, CommandItem)> = items
-                            .into_iter()
-                            .enumerate()
-                            .filter_map(|(idx, item)| {
-                                let score = score_item(&item);
-                                (score > 0.0).then_some((idx, score, item))
-                            })
-                            .collect();
-
-                        if scored.is_empty() {
-                            continue;
-                        }
-
-                        scored.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
-                            b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
-                        });
-                        if let Some(heading) = group.heading {
-                            pending_rows.push(PendingRow::Heading(heading));
-                        }
-                        pending_rows.extend(
-                            scored
-                                .into_iter()
-                                .map(|(_, _, item)| PendingRow::Item(item)),
-                        );
-                    }
-                }
-            }
-
-            let mut has_item_from: Vec<bool> = vec![false; pending_rows.len() + 1];
-            for idx in (0..pending_rows.len()).rev() {
-                has_item_from[idx] =
-                    has_item_from[idx + 1] || matches!(pending_rows[idx], PendingRow::Item(_));
-            }
-
-            let mut filtered_rows: Vec<PendingRow> = Vec::with_capacity(pending_rows.len());
-            let mut seen_item_before = false;
-            let mut prev_is_sep = false;
-            for (idx, row) in pending_rows.into_iter().enumerate() {
-                match row {
-                    PendingRow::Separator => {
-                        if !seen_item_before || !has_item_from[idx + 1] || prev_is_sep {
-                            continue;
-                        }
-                        prev_is_sep = true;
-                        filtered_rows.push(PendingRow::Separator);
-                    }
-                    PendingRow::Item(item) => {
-                        seen_item_before = true;
-                        prev_is_sep = false;
-                        filtered_rows.push(PendingRow::Item(item));
-                    }
-                    PendingRow::Heading(h) => {
-                        prev_is_sep = false;
-                        filtered_rows.push(PendingRow::Heading(h));
-                    }
-                }
-            }
-
-            let mut items: Vec<CommandItem> = Vec::new();
-            let render_rows: Vec<RenderRow> = filtered_rows
-                .into_iter()
-                .map(|row| match row {
-                    PendingRow::Heading(h) => RenderRow::Heading(h),
-                    PendingRow::Separator => RenderRow::Separator,
-                    PendingRow::Item(item) => {
-                        let idx = items.len();
-                        items.push(item);
-                        RenderRow::Item(idx)
-                    }
-                })
-                .collect();
+            let (render_rows, items) =
+                command_palette_render_rows_for_query(self.entries, query.as_str());
 
             let items_fingerprint = {
                 let mut hasher = DefaultHasher::new();
@@ -969,14 +980,14 @@ impl CommandPalette {
                 render_rows.len().hash(&mut hasher);
                 for row in &render_rows {
                     match row {
-                        RenderRow::Heading(h) => {
+                        CommandPaletteRenderRow::Heading(h) => {
                             "heading".hash(&mut hasher);
                             h.as_ref().hash(&mut hasher);
                         }
-                        RenderRow::Separator => {
+                        CommandPaletteRenderRow::Separator => {
                             "separator".hash(&mut hasher);
                         }
-                        RenderRow::Item(idx) => {
+                        CommandPaletteRenderRow::Item(idx) => {
                             "item".hash(&mut hasher);
                             if let Some(item) = items.get(*idx) {
                                 item.label.as_ref().hash(&mut hasher);
@@ -1111,7 +1122,7 @@ impl CommandPalette {
             let rows: Vec<AnyElement> = render_rows
                 .into_iter()
                 .map(|row| match row {
-                    RenderRow::Heading(heading) => {
+                    CommandPaletteRenderRow::Heading(heading) => {
                         let fg = theme
                             .color_by_key("muted-foreground")
                             .unwrap_or(theme.colors.text_muted);
@@ -1144,7 +1155,7 @@ impl CommandPalette {
                             },
                         )
                     }
-                    RenderRow::Separator => {
+                    CommandPaletteRenderRow::Separator => {
                         let border = border(&theme);
                         cx.container(
                             ContainerProps {
@@ -1160,7 +1171,7 @@ impl CommandPalette {
                             |_cx| Vec::new(),
                         )
                     }
-                    RenderRow::Item(idx) => {
+                    CommandPaletteRenderRow::Item(idx) => {
                         let Some(item) = items.get(idx).cloned() else {
                             return cx.container(ContainerProps::default(), |_cx| Vec::new());
                         };
@@ -1587,7 +1598,7 @@ impl CommandPalette {
 pub struct CommandDialog {
     open: Model<bool>,
     query: Model<String>,
-    items: Vec<CommandItem>,
+    entries: Vec<CommandEntry>,
     a11y_label: Option<Arc<str>>,
     disabled: bool,
     wrap: bool,
@@ -1599,7 +1610,7 @@ impl std::fmt::Debug for CommandDialog {
         f.debug_struct("CommandDialog")
             .field("open", &"<model>")
             .field("query", &"<model>")
-            .field("items_len", &self.items.len())
+            .field("entries_len", &self.entries.len())
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("disabled", &self.disabled)
             .field("wrap", &self.wrap)
@@ -1613,12 +1624,17 @@ impl CommandDialog {
         Self {
             open,
             query,
-            items,
+            entries: items.into_iter().map(CommandEntry::Item).collect(),
             a11y_label: None,
             disabled: false,
             wrap: true,
             empty_text: Arc::from("No results."),
         }
+    }
+
+    pub fn entries(mut self, entries: Vec<CommandEntry>) -> Self {
+        self.entries = entries;
+        self
     }
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
@@ -1641,6 +1657,11 @@ impl CommandDialog {
         self
     }
 
+    pub fn empty(mut self, empty: CommandEmpty) -> Self {
+        self.empty_text = empty.text;
+        self
+    }
+
     pub fn into_element<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -1648,14 +1669,15 @@ impl CommandDialog {
     ) -> AnyElement {
         let open = self.open;
         let query = self.query;
-        let items = self.items;
+        let entries = self.entries;
         let a11y_label = self.a11y_label;
         let disabled = self.disabled;
         let wrap = self.wrap;
         let empty_text = self.empty_text;
 
         Dialog::new(open).into_element(cx, trigger, move |cx| {
-            let palette = CommandPalette::new(query, items)
+            let palette = CommandPalette::new(query, Vec::new())
+                .entries(entries)
                 .a11y_label(a11y_label.unwrap_or_else(|| Arc::from("Command palette")))
                 .disabled(disabled)
                 .wrap(wrap)
@@ -1760,6 +1782,22 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    fn row_signatures(rows: &[CommandPaletteRenderRow], items: &[CommandItem]) -> Vec<String> {
+        rows.iter()
+            .map(|row| match row {
+                CommandPaletteRenderRow::Heading(h) => format!("H:{h}"),
+                CommandPaletteRenderRow::Separator => "S".to_string(),
+                CommandPaletteRenderRow::Item(idx) => {
+                    let label = items
+                        .get(*idx)
+                        .map(|i| i.label.as_ref())
+                        .unwrap_or("<missing>");
+                    format!("I:{label}")
+                }
+            })
+            .collect()
     }
 
     #[test]
@@ -2076,6 +2114,72 @@ mod tests {
             .collect();
         assert_eq!(options.len(), 1);
         assert_eq!(options[0].label.as_deref(), Some("Open"));
+    }
+
+    #[test]
+    fn command_palette_groups_flatten_into_headings_separators_and_items() {
+        let entries = vec![
+            CommandGroup::new(vec![CommandItem::new("Alpha"), CommandItem::new("Beta")])
+                .heading("Basics")
+                .into(),
+            CommandSeparator::new().into(),
+            CommandItem::new("Gamma").into(),
+        ];
+
+        let (rows, items) = command_palette_render_rows_for_query(entries, "");
+        assert_eq!(items.len(), 3);
+        assert_eq!(
+            row_signatures(&rows, &items),
+            vec![
+                "H:Basics".to_string(),
+                "I:Alpha".to_string(),
+                "I:Beta".to_string(),
+                "S".to_string(),
+                "I:Gamma".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn command_palette_filter_hides_empty_groups_and_trims_separators() {
+        let entries = vec![
+            CommandGroup::new(vec![CommandItem::new("Alpha"), CommandItem::new("Beta")])
+                .heading("Basics")
+                .into(),
+            CommandSeparator::new().into(),
+            CommandGroup::new(vec![CommandItem::new("Gamma")])
+                .heading("Advanced")
+                .into(),
+            CommandSeparator::new().into(),
+        ];
+
+        let (rows, items) = command_palette_render_rows_for_query(entries, "gam");
+        assert_eq!(items.len(), 1);
+        assert_eq!(
+            row_signatures(&rows, &items),
+            vec!["H:Advanced".to_string(), "I:Gamma".to_string()]
+        );
+    }
+
+    #[test]
+    fn command_palette_collapses_consecutive_separators() {
+        let entries = vec![
+            CommandItem::new("Alpha").into(),
+            CommandSeparator::new().into(),
+            CommandSeparator::new().into(),
+            CommandItem::new("Beta").into(),
+            CommandSeparator::new().into(),
+        ];
+
+        let (rows, items) = command_palette_render_rows_for_query(entries, "");
+        assert_eq!(
+            row_signatures(&rows, &items),
+            vec![
+                "I:Alpha".to_string(),
+                "S".to_string(),
+                "I:Beta".to_string()
+            ]
+        );
     }
 
     #[test]
