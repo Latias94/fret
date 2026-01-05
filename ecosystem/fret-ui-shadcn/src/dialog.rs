@@ -836,17 +836,15 @@ mod tests {
         assert!(content_id.get().is_some());
 
         // Click inside content should not close.
-        let inside = content_id
+        let content_rect = content_id
             .get()
             .and_then(|id| fret_ui::elements::node_for_element(&mut app, window, id))
             .and_then(|node| ui.debug_node_bounds(node))
-            .map(|rect| {
-                Point::new(
-                    Px(rect.origin.x.0 + rect.size.width.0 * 0.5),
-                    Px(rect.origin.y.0 + rect.size.height.0 * 0.5),
-                )
-            })
             .expect("content bounds");
+        let inside = Point::new(
+            Px(content_rect.origin.x.0 + content_rect.size.width.0 * 0.5),
+            Px(content_rect.origin.y.0 + content_rect.size.height.0 * 0.5),
+        );
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -868,11 +866,22 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Click outside content should close via barrier.
+        let mut outside = Point::new(Px(bounds.origin.x.0 + 4.0), Px(bounds.origin.y.0 + 4.0));
+        if content_rect.contains(outside) {
+            outside = Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 - 4.0),
+                Px(bounds.origin.y.0 + bounds.size.height.0 - 4.0),
+            );
+        }
+        assert!(
+            !content_rect.contains(outside),
+            "expected an outside point that is not inside the dialog content"
+        );
         ui.dispatch_event(
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
-                position: Point::new(Px(4.0), Px(4.0)),
+                position: outside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
             }),
@@ -881,7 +890,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
-                position: Point::new(Px(4.0), Px(4.0)),
+                position: outside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
             }),

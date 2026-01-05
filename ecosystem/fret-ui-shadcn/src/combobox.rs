@@ -384,6 +384,8 @@ pub fn combobox<H: UiHost>(
 
                         CommandPalette::new(query_model.clone(), command_items)
                             .a11y_label("Combobox list")
+                            .input_role(SemanticsRole::ComboBox)
+                            .input_expanded(true)
                             .placeholder(search_placeholder.clone())
                             .disabled(disabled)
                             .empty_text(empty_text)
@@ -488,4 +490,205 @@ pub fn combobox<H: UiHost>(
                 },
             )
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle, UiServices,
+    };
+    use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_runtime::FrameId;
+    use fret_ui::tree::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        open: Model<bool>,
+        items: Vec<ComboboxItem>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "combobox",
+            |cx| vec![Combobox::new(model, open).items(items).into_element(cx)],
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    #[test]
+    fn combobox_search_input_exposes_combobox_role_active_descendant_and_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            ComboboxItem::new("alpha", "Alpha"),
+            ComboboxItem::new("beta", "Beta"),
+            ComboboxItem::new("gamma", "Gamma"),
+        ];
+
+        // First frame: establish stable trigger bounds.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Second frame: open the popover.
+        //
+        // `active_descendant` depends on stable element<->node mapping, so we render one extra
+        // frame before asserting it (see cmdk tests).
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox && n.value.is_some())
+            .expect("combobox search input node");
+        assert!(
+            input.flags.expanded,
+            "combobox search input should report expanded=true while open"
+        );
+        assert_eq!(input.value.as_deref(), Some(""));
+
+        let active = input
+            .active_descendant
+            .expect("active_descendant should be set");
+        let active_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == active)
+            .expect("active_descendant should reference a node in the snapshot");
+        assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
+
+        let input_id = input.id;
+        ui.set_focus(Some(input_id));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::TextInput("a".to_string()),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == input_id)
+            .expect("combobox search input node after typing");
+        assert_eq!(input.role, SemanticsRole::ComboBox);
+        assert_eq!(input.value.as_deref(), Some("a"));
+    }
 }

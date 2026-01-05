@@ -50,6 +50,7 @@ impl ElementHostWidget {
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
+                input.set_a11y_role(props.a11y_role.unwrap_or(SemanticsRole::TextField));
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
@@ -57,6 +58,9 @@ impl ElementHostWidget {
                 input.set_cancel_command(props.cancel_command);
                 if let Some(label) = props.a11y_label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
+                }
+                if let Some(expanded) = props.expanded {
+                    cx.set_expanded(expanded);
                 }
                 cx.set_active_descendant(props.active_descendant);
                 input.semantics(cx);

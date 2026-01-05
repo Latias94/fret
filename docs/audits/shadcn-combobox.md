@@ -40,6 +40,8 @@ examples in `repo-ref/ui`.
   navigation inside the command list.
 - Pass: `CommandPalette` now supports input placeholder (backed by the `TextInput` placeholder
   surface in `fret-ui`), so recipes can match `CommandInput placeholder="..."` ergonomics.
+- Pass: When used by `Combobox`, the command input is exposed as a `ComboBox` semantics role (so the
+  focused editable surface reports combobox semantics instead of only `TextField`).
 - Pass: `Combobox` exposes `search_placeholder(...)` and forwards it to
   `CommandPalette::placeholder(...)`.
 

@@ -553,8 +553,10 @@ pub struct TextInputProps {
     pub layout: LayoutStyle,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
+    pub a11y_role: Option<SemanticsRole>,
     pub placeholder: Option<std::sync::Arc<str>>,
     pub active_descendant: Option<NodeId>,
+    pub expanded: Option<bool>,
     pub chrome: TextInputStyle,
     pub text_style: TextStyle,
     pub submit_command: Option<CommandId>,
@@ -567,8 +569,10 @@ impl TextInputProps {
             layout: LayoutStyle::default(),
             model,
             a11y_label: None,
+            a11y_role: None,
             placeholder: None,
             active_descendant: None,
+            expanded: None,
             chrome: TextInputStyle::default(),
             text_style: TextStyle::default(),
             submit_command: None,
@@ -583,10 +587,12 @@ impl std::fmt::Debug for TextInputProps {
             .field("layout", &self.layout)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("a11y_role", &self.a11y_role)
             .field(
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)
             .field("text_style", &self.text_style)
             .field("submit_command", &self.submit_command)

@@ -1,4 +1,4 @@
-use fret_core::{Event, KeyCode, Size, TextStyle};
+use fret_core::{Event, KeyCode, SemanticsRole, Size, TextStyle};
 use fret_runtime::{CommandId, Model};
 
 use super::TextInput;
@@ -74,6 +74,10 @@ impl BoundTextInput {
 
     pub fn set_text_style(&mut self, style: TextStyle) {
         self.input.set_text_style(style);
+    }
+
+    pub fn set_a11y_role(&mut self, role: SemanticsRole) {
+        self.input.set_a11y_role(role);
     }
 
     pub fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {

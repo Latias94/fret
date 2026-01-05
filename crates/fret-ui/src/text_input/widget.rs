@@ -1,6 +1,6 @@
 use fret_core::{
-    Color, DrawOrder, Event, MouseButton, Px, Rect, SceneOp, SemanticsRole, Size, TextConstraints,
-    TextOverflow, TextWrap,
+    Color, DrawOrder, Event, MouseButton, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow,
+    TextWrap,
 };
 use fret_runtime::{CommandId, Effect};
 
@@ -28,7 +28,7 @@ impl<H: UiHost> Widget<H> for TextInput {
     }
 
     fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
-        cx.set_role(SemanticsRole::TextField);
+        cx.set_role(self.a11y_role);
         cx.set_focusable(true);
         cx.set_value_editable(true);
         cx.set_text_selection_supported(true);

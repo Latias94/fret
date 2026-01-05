@@ -723,6 +723,8 @@ pub struct CommandPalette {
     empty_text: Arc<str>,
     a11y_label: Arc<str>,
     placeholder: Option<Arc<str>>,
+    input_role: Option<SemanticsRole>,
+    input_expanded: Option<bool>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     scroll: LayoutRefinement,
@@ -869,6 +871,8 @@ impl std::fmt::Debug for CommandPalette {
             .field("wrap", &self.wrap)
             .field("empty_text", &self.empty_text.as_ref())
             .field("a11y_label", &self.a11y_label.as_ref())
+            .field("input_role", &self.input_role)
+            .field("input_expanded", &self.input_expanded)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("scroll", &self.scroll)
@@ -886,6 +890,8 @@ impl CommandPalette {
             empty_text: Arc::from("No results."),
             a11y_label: Arc::from("Command input"),
             placeholder: None,
+            input_role: None,
+            input_expanded: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             scroll: LayoutRefinement::default()
@@ -927,6 +933,16 @@ impl CommandPalette {
 
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn input_role(mut self, role: SemanticsRole) -> Self {
+        self.input_role = Some(role);
+        self
+    }
+
+    pub fn input_expanded(mut self, expanded: bool) -> Self {
+        self.input_expanded = Some(expanded);
         self
     }
 
@@ -1379,8 +1395,14 @@ impl CommandPalette {
             if let Some(placeholder) = self.placeholder {
                 input = input.placeholder(placeholder);
             }
+            if let Some(role) = self.input_role {
+                input = input.a11y_role(role);
+            }
             if let Some(active_descendant) = active_descendant {
                 input = input.active_descendant(active_descendant);
+            }
+            if let Some(expanded) = self.input_expanded {
+                input = input.expanded(expanded);
             }
 
             let mut input = input.into_element(cx);

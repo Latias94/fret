@@ -1,4 +1,6 @@
-use fret_core::{FontId, Px, Rect, Size, TextConstraints, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    FontId, Px, Rect, SemanticsRole, Size, TextConstraints, TextOverflow, TextStyle, TextWrap,
+};
 
 use super::TextInput;
 use super::cx::TextInputUiCx;
@@ -8,6 +10,7 @@ use crate::{Invalidation, TextInputStyle, UiHost};
 impl TextInput {
     pub fn new() -> Self {
         Self {
+            a11y_role: SemanticsRole::TextField,
             text: String::new(),
             caret: 0,
             selection_anchor: 0,
@@ -46,6 +49,13 @@ impl TextInput {
             text_style_override: false,
             last_text_style_theme_revision: None,
         }
+    }
+
+    pub fn set_a11y_role(&mut self, role: SemanticsRole) {
+        if self.a11y_role == role {
+            return;
+        }
+        self.a11y_role = role;
     }
 
     pub fn set_placeholder(&mut self, placeholder: Option<std::sync::Arc<str>>) {
