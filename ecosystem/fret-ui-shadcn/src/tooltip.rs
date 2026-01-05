@@ -14,7 +14,7 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
-use fret_core::{Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D};
+use fret_core::{Edges, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
 use fret_ui::element::{
@@ -47,6 +47,42 @@ fn tooltip_text_style(theme: &Theme) -> TextStyle {
         line_height: Some(line_height),
         letter_spacing_em: None,
     }
+}
+
+fn tooltip_slide_insets(side: Side, slide: Px) -> Edges {
+    match side {
+        Side::Top => Edges {
+            bottom: slide,
+            ..Edges::all(Px(0.0))
+        },
+        Side::Bottom => Edges {
+            top: slide,
+            ..Edges::all(Px(0.0))
+        },
+        Side::Left => Edges {
+            right: slide,
+            ..Edges::all(Px(0.0))
+        },
+        Side::Right => Edges {
+            left: slide,
+            ..Edges::all(Px(0.0))
+        },
+    }
+}
+
+fn tooltip_slide_transform(side: Side, opacity: f32) -> Transform2D {
+    // shadcn/ui v4 uses `slide-in-from-*-2` (8px) keyed off `data-side`.
+    // We approximate that by allocating extra wrapper insets and translating the content inside
+    // the wrapper, keeping hit-test bounds stable.
+    let slide = Px(8.0);
+    let t = 1.0 - opacity.clamp(0.0, 1.0);
+    let offset = match side {
+        Side::Top => Point::new(Px(0.0), Px(slide.0 * t)),
+        Side::Bottom => Point::new(Px(0.0), Px(-slide.0 * t)),
+        Side::Left => Point::new(Px(slide.0 * t), Px(0.0)),
+        Side::Right => Point::new(Px(-slide.0 * t), Px(0.0)),
+    };
+    Transform2D::translation(offset)
 }
 
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
@@ -389,8 +425,13 @@ impl Tooltip {
                             .with_arrow(arrow_options, arrow_protrusion),
                         );
 
-                        let wrapper_insets =
+                        let mut wrapper_insets =
                             popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                        let slide_insets = tooltip_slide_insets(layout.side, Px(8.0));
+                        wrapper_insets.top.0 += slide_insets.top.0;
+                        wrapper_insets.right.0 += slide_insets.right.0;
+                        wrapper_insets.bottom.0 += slide_insets.bottom.0;
+                        wrapper_insets.left.0 += slide_insets.left.0;
                         let wrapper_bounds = Rect::new(
                             Point::new(
                                 layout.rect.origin.x - wrapper_insets.left,
@@ -478,7 +519,12 @@ impl Tooltip {
                 );
 
                 let placed = layout.rect;
-                let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                let mut wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                let slide_insets = tooltip_slide_insets(layout.side, Px(8.0));
+                wrapper_insets.top.0 += slide_insets.top.0;
+                wrapper_insets.right.0 += slide_insets.right.0;
+                wrapper_insets.bottom.0 += slide_insets.bottom.0;
+                wrapper_insets.left.0 += slide_insets.left.0;
 
                 let wrapper = popper_content::popper_wrapper_at_with_panel(
                     cx,
@@ -526,6 +572,7 @@ impl Tooltip {
                 let zoom = Transform2D::translation(center)
                     * Transform2D::scale_uniform(scale)
                     * Transform2D::translation(Point::new(Px(-center.x.0), Px(-center.y.0)));
+                let transform = tooltip_slide_transform(layout.side, opacity) * zoom;
 
                 let overlay_layout = LayoutStyle {
                     size: SizeStyle {
@@ -545,7 +592,7 @@ impl Tooltip {
                         vec![cx.visual_transform_props(
                             VisualTransformProps {
                                 layout: overlay_layout,
-                                transform: zoom,
+                                transform,
                             },
                             move |_cx| vec![wrapper],
                         )]
