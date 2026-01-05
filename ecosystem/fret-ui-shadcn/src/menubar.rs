@@ -30,6 +30,13 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum MenubarItemVariant {
+    #[default]
+    Default,
+    Destructive,
+}
+
 #[derive(Debug, Clone)]
 pub struct MenubarItem {
     pub label: Arc<str>,
@@ -41,6 +48,7 @@ pub struct MenubarItem {
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
+    pub variant: MenubarItemVariant,
 }
 
 impl MenubarItem {
@@ -56,6 +64,7 @@ impl MenubarItem {
             command: None,
             a11y_label: None,
             trailing: None,
+            variant: MenubarItemVariant::Default,
         }
     }
 
@@ -85,6 +94,11 @@ impl MenubarItem {
 
     pub fn close_on_select(mut self, close: bool) -> Self {
         self.close_on_select = close;
+        self
+    }
+
+    pub fn variant(mut self, variant: MenubarItemVariant) -> Self {
+        self.variant = variant;
         self
     }
 
@@ -1138,6 +1152,11 @@ impl MenubarMenuEntries {
                         let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                         let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                         let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+                        let destructive_fg = theme
+                            .color_by_key("destructive")
+                            .or_else(|| theme.color_by_key("destructive.background"))
+                            .unwrap_or(fg);
+                        let destructive_bg = alpha_mul(destructive_fg, 0.12);
 
                         let open_for_submenu = open_for_overlay.clone();
                         let submenu_for_content = submenu.clone();
@@ -1517,19 +1536,20 @@ impl MenubarMenuEntries {
                                                             let focusable =
                                                                 active.is_some_and(|a| a == idx);
                                                             let label = item.label.clone();
-                                                             let a11y_label =
-                                                                  item.a11y_label.clone();
-                                                              let command = item.command.clone();
-                                                             let trailing = item.trailing.clone();
-                                                             let leading = item.leading.clone();
-                                                             let close_on_select = item.close_on_select;
-                                                              let open = open_for_overlay.clone();
-                                                              let group_active =
-                                                                  group_active_for_content.clone();
-                                                            let text_style =
-                                                                text_style_for_content.clone();
-                                                             let has_submenu =
-                                                                  matches!(entry, MenubarEntry::Submenu(_));
+                                                              let a11y_label =
+                                                                   item.a11y_label.clone();
+                                                               let command = item.command.clone();
+                                                              let trailing = item.trailing.clone();
+                                                              let leading = item.leading.clone();
+                                                              let close_on_select = item.close_on_select;
+                                                            let variant = item.variant;
+                                                               let open = open_for_overlay.clone();
+                                                               let group_active =
+                                                                   group_active_for_content.clone();
+                                                             let text_style =
+                                                                 text_style_for_content.clone();
+                                                              let has_submenu =
+                                                                   matches!(entry, MenubarEntry::Submenu(_));
 
                                                               let submenu_for_item =
                                                                   submenu_for_content.clone();
@@ -1577,14 +1597,30 @@ impl MenubarMenuEntries {
                                                                      }
 
                                                                     let mut bg = Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed || st.focused || expanded.unwrap_or(false) {
-                                                                        bg = alpha_mul(
-                                                                            theme.colors.menu_item_hover,
-                                                                            0.9,
-                                                                        );
+                                                                    if st.hovered
+                                                                        || st.pressed
+                                                                        || st.focused
+                                                                        || expanded.unwrap_or(false)
+                                                                    {
+                                                                        bg = if variant
+                                                                            == MenubarItemVariant::Destructive
+                                                                        {
+                                                                            destructive_bg
+                                                                        } else {
+                                                                            alpha_mul(
+                                                                                theme.colors.menu_item_hover,
+                                                                                0.9,
+                                                                            )
+                                                                        };
                                                                     }
                                                                     let fg = if item_enabled {
-                                                                        fg
+                                                                        if variant
+                                                                            == MenubarItemVariant::Destructive
+                                                                        {
+                                                                            destructive_fg
+                                                                        } else {
+                                                                            fg
+                                                                        }
                                                                     } else {
                                                                         alpha_mul(fg_muted, 0.85)
                                                                     };
@@ -2179,6 +2215,7 @@ impl MenubarMenuEntries {
                                                                         let trailing = item.trailing.clone();
                                                                         let leading = item.leading.clone();
                                                                         let close_on_select = item.close_on_select;
+                                                                        let variant = item.variant;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
@@ -2213,13 +2250,25 @@ impl MenubarMenuEntries {
 
                                                                                 let mut bg = Color::TRANSPARENT;
                                                                                 if st.hovered || st.pressed || st.focused {
-                                                                                    bg = alpha_mul(
-                                                                                        theme.colors.menu_item_hover,
-                                                                                        0.9,
-                                                                                    );
+                                                                                    bg = if variant
+                                                                                        == MenubarItemVariant::Destructive
+                                                                                    {
+                                                                                        destructive_bg
+                                                                                    } else {
+                                                                                        alpha_mul(
+                                                                                            theme.colors.menu_item_hover,
+                                                                                            0.9,
+                                                                                        )
+                                                                                    };
                                                                                 }
                                                                                 let fg = if item_enabled {
-                                                                                    fg
+                                                                                    if variant
+                                                                                        == MenubarItemVariant::Destructive
+                                                                                    {
+                                                                                        destructive_fg
+                                                                                    } else {
+                                                                                        fg
+                                                                                    }
                                                                                 } else {
                                                                                     alpha_mul(fg_muted, 0.85)
                                                                                 };

@@ -41,6 +41,18 @@ pub enum ContextMenuEntry {
     Separator,
 }
 
+fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ContextMenuItemVariant {
+    #[default]
+    Default,
+    Destructive,
+}
+
 #[derive(Debug, Clone)]
 pub struct ContextMenuItem {
     pub label: Arc<str>,
@@ -53,6 +65,7 @@ pub struct ContextMenuItem {
     pub a11y_label: Option<Arc<str>>,
     pub trailing: Option<AnyElement>,
     pub submenu: Option<Vec<ContextMenuEntry>>,
+    pub variant: ContextMenuItemVariant,
 }
 
 impl ContextMenuItem {
@@ -69,6 +82,7 @@ impl ContextMenuItem {
             a11y_label: None,
             trailing: None,
             submenu: None,
+            variant: ContextMenuItemVariant::Default,
         }
     }
 
@@ -104,6 +118,11 @@ impl ContextMenuItem {
 
     pub fn submenu(mut self, entries: Vec<ContextMenuEntry>) -> Self {
         self.submenu = Some(entries);
+        self
+    }
+
+    pub fn variant(mut self, variant: ContextMenuItemVariant) -> Self {
+        self.variant = variant;
         self
     }
 
@@ -727,6 +746,11 @@ fn context_menu_submenu_panel<H: UiHost>(
         .or_else(|| theme.color_by_key("accent-foreground"))
         .unwrap_or(theme.colors.text_primary);
     let fg = theme.colors.text_primary;
+    let destructive_fg = theme
+        .color_by_key("destructive")
+        .or_else(|| theme.color_by_key("destructive.background"))
+        .unwrap_or(fg);
+    let destructive_bg = alpha_mul(destructive_fg, 0.12);
 
     menu::sub_content::submenu_panel_at(
         cx,
@@ -808,6 +832,7 @@ fn context_menu_submenu_panel<H: UiHost>(
                         let command = item.command;
                         let leading = item.leading.clone();
                         let trailing = item.trailing.clone();
+                        let variant = item.variant;
                         let pad_left = if item.inset { pad_x_inset } else { pad_x };
                         let open_for_item = open.clone();
                         let text_style = text_style.clone();
@@ -845,10 +870,19 @@ fn context_menu_submenu_panel<H: UiHost>(
                                 };
 
                                 let mut row_bg = fret_core::Color::TRANSPARENT;
-                                let mut row_fg = fg;
+                                let mut row_fg = if variant == ContextMenuItemVariant::Destructive {
+                                    destructive_fg
+                                } else {
+                                    fg
+                                };
                                 if st.hovered || st.pressed || st.focused {
-                                    row_bg = accent;
-                                    row_fg = accent_fg;
+                                    if variant == ContextMenuItemVariant::Destructive {
+                                        row_bg = destructive_bg;
+                                        row_fg = destructive_fg;
+                                    } else {
+                                        row_bg = accent;
+                                        row_fg = accent_fg;
+                                    }
                                 }
 
                                 let children = menu_row_children(
@@ -1378,6 +1412,11 @@ impl ContextMenu {
                         .or_else(|| theme.color_by_key("accent-foreground"))
                         .unwrap_or(theme.colors.text_primary);
                     let fg = theme.colors.text_primary;
+                    let destructive_fg = theme
+                        .color_by_key("destructive")
+                        .or_else(|| theme.color_by_key("destructive.background"))
+                        .unwrap_or(fg);
+                    let destructive_bg = alpha_mul(destructive_fg, 0.12);
 
                     let arrow_el = popper_arrow::diamond_arrow_element(
                         cx,
@@ -1528,6 +1567,7 @@ impl ContextMenu {
                                                         let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let has_submenu = item.submenu.is_some();
+                                                        let variant = item.variant;
                                                         let pad_left =
                                                             if item.inset { pad_x_inset } else { pad_x };
                                                         let open = open_for_overlay.clone();
@@ -1602,13 +1642,22 @@ impl ContextMenu {
 
                                                                     let mut row_bg =
                                                                         fret_core::Color::TRANSPARENT;
-                                                                    let mut row_fg = fg;
+                                                                    let mut row_fg = if variant == ContextMenuItemVariant::Destructive {
+                                                                        destructive_fg
+                                                                    } else {
+                                                                        fg
+                                                                    };
                                                                     if st.hovered
                                                                         || st.pressed
                                                                         || st.focused
                                                                     {
-                                                                        row_bg = accent;
-                                                                        row_fg = accent_fg;
+                                                                        if variant == ContextMenuItemVariant::Destructive {
+                                                                            row_bg = destructive_bg;
+                                                                            row_fg = destructive_fg;
+                                                                        } else {
+                                                                            row_bg = accent;
+                                                                            row_fg = accent_fg;
+                                                                        }
                                                                     }
 
                                                                     let children = menu_row_children(

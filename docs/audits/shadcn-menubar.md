@@ -48,6 +48,7 @@ Key upstream behaviors/surfaces:
 - Partial: Token usage aligns with shadcn-ish defaults (border/background/radius), but some
   higher-fidelity slots are still text-based or consumer-provided (see missing surfaces).
 - Pass: `inset` is supported for items/labels (left padding parity with upstream `data-inset`).
+- Pass: Destructive item variants are supported via `MenubarItemVariant::Destructive`.
 - Pass: Submenu triggers render a right chevron (`ids::ui::CHEVRON_RIGHT`) to match upstream affordance.
 - Pass: Leading icons are aligned within a fixed 16×16 slot; when any row provides a leading icon,
   the menu reserves the slot across the panel for consistent label alignment.
@@ -56,7 +57,7 @@ Key upstream behaviors/surfaces:
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- Destructive item variant styling.
+_None tracked at this time._
 
 ## Validation
 

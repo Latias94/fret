@@ -57,13 +57,12 @@ Key upstream behaviors/surfaces:
 ### Visual parity (shadcn)
 
 - Partial: Token usage roughly aligns with popover/menu defaults; remaining parity gaps are mostly
-  around destructive item variants and any missing fine-grained layout details.
+  around any missing fine-grained layout details.
 
 ## Missing surfaces (significant)
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- Destructive item variant styling.
 - A shared convention for leading icons (consumer-provided today).
 
 ## Implemented surfaces (notable)
@@ -71,6 +70,7 @@ Still missing (relative to upstream shadcn/ui v4):
 - Pass: Submenus (single-level) with Radix-style pointer grace intent (safe-hover corridor) via
   `fret-ui-kit::primitives::menu::sub` + `menu::root::submenu_pointer_move_handler`.
 - Pass: Chevron-right submenu affordance icon parity.
+- Pass: Destructive item variant styling via `ContextMenuItemVariant::Destructive`.
 
 ## Validation
 
