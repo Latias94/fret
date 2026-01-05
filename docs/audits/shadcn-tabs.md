@@ -44,7 +44,7 @@ examples in `repo-ref/ui`.
   - Active background uses `background`
   - Active border uses `input`/`border`
   - Active shadow uses the standard shadcn-ish `shadow-sm`
-- Partial: Trigger content is label-only; upstream supports arbitrary children (icons, badges).
+- Pass: Triggers can render arbitrary children (icons, badges) via `TabsItem::trigger_children(...)`.
 
 ## Validation
 

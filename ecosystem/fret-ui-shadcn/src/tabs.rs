@@ -5,8 +5,9 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps,
-    RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, MainAlign, PressableA11y,
+    PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, SpinnerProps, SvgIconProps,
+    TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
@@ -14,6 +15,46 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+
+fn apply_trigger_inherited_style(
+    mut element: AnyElement,
+    fg: Color,
+    text_style: &TextStyle,
+) -> AnyElement {
+    match &mut element.kind {
+        fret_ui::element::ElementKind::Text(props) => {
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+        }
+        fret_ui::element::ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
+            let is_default = *color
+                == Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                };
+            if is_default {
+                *color = fg;
+            }
+        }
+        fret_ui::element::ElementKind::Spinner(SpinnerProps { color, .. }) => {
+            color.get_or_insert(fg);
+        }
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(|child| apply_trigger_inherited_style(child, fg, text_style))
+        .collect();
+    element
+}
 
 fn tabs_gap(theme: &Theme) -> Px {
     theme
@@ -112,6 +153,7 @@ pub struct TabsItem {
     value: Arc<str>,
     label: Arc<str>,
     content: Vec<AnyElement>,
+    trigger: Option<Vec<AnyElement>>,
     disabled: bool,
 }
 
@@ -125,8 +167,19 @@ impl TabsItem {
             value: value.into(),
             label: label.into(),
             content,
+            trigger: None,
             disabled: false,
         }
+    }
+
+    pub fn trigger_children(mut self, children: Vec<AnyElement>) -> Self {
+        self.trigger = Some(children);
+        self
+    }
+
+    pub fn trigger_child(mut self, child: AnyElement) -> Self {
+        self.trigger = Some(vec![child]);
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -332,6 +385,7 @@ impl Tabs {
 
                             let value = item.value.clone();
                             let label = item.label.clone();
+                            let trigger_children = item.trigger.clone();
                             let model = model.clone();
                             let text_style = text_style.clone();
 
@@ -368,14 +422,40 @@ impl Tabs {
                                         ..Default::default()
                                     },
                                     move |cx| {
-                                        vec![cx.text_props(TextProps {
-                                            layout: Default::default(),
-                                            text: label,
-                                            style: Some(text_style.clone()),
-                                            color: Some(fg),
-                                            wrap: TextWrap::None,
-                                            overflow: TextOverflow::Clip,
-                                        })]
+                                        let base = trigger_children.clone().unwrap_or_else(|| {
+                                            vec![cx.text_props(TextProps {
+                                                layout: Default::default(),
+                                                text: label.clone(),
+                                                style: Some(text_style.clone()),
+                                                color: Some(fg),
+                                                wrap: TextWrap::None,
+                                                overflow: TextOverflow::Clip,
+                                            })]
+                                        });
+
+                                        let styled: Vec<AnyElement> = base
+                                            .into_iter()
+                                            .map(|child| {
+                                                apply_trigger_inherited_style(
+                                                    child,
+                                                    fg,
+                                                    &text_style,
+                                                )
+                                            })
+                                            .collect();
+
+                                        vec![cx.flex(
+                                            FlexProps {
+                                                layout: LayoutStyle::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(6.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Center,
+                                                align: CrossAlign::Center,
+                                                wrap: false,
+                                            },
+                                            move |_cx| styled,
+                                        )]
                                     },
                                 )];
 
