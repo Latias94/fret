@@ -5,10 +5,12 @@ use crate::cartesian::{DataPoint, DataRect};
 use crate::retained::{LinePlotCanvas, LinePlotModel};
 use crate::series::Series;
 
+type Accessor<T> = Box<dyn Fn(&T) -> Option<f32> + 'static>;
+
 pub struct LineChart<T> {
     data: Vec<T>,
-    x: Box<dyn Fn(&T) -> Option<f32>>,
-    y: Box<dyn Fn(&T) -> Option<f32>>,
+    x: Accessor<T>,
+    y: Accessor<T>,
     clamp_empty_domain: bool,
 }
 
@@ -64,10 +66,10 @@ impl<T> LineChart<T> {
             y_min = Some(y_min.map_or(y, |v| v.min(y)));
             y_max = Some(y_max.map_or(y, |v| v.max(y)));
 
-            if let Some(prev) = last_x {
-                if x < prev {
-                    sorted_by_x = false;
-                }
+            if let Some(prev) = last_x
+                && x < prev
+            {
+                sorted_by_x = false;
             }
             last_x = Some(x);
 
@@ -97,7 +99,7 @@ impl<T> LineChart<T> {
 
         LinePlotModel {
             data_bounds: bounds,
-            points: Series::from_points_sorted(points, sorted_by_x),
+            series: vec![Series::from_points_sorted(points, sorted_by_x)],
         }
     }
 

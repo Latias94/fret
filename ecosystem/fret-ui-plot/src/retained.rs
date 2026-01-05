@@ -10,7 +10,6 @@ use fret_ui::UiHost;
 use fret_ui::retained_bridge::{
     Invalidation, LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt, Widget,
 };
-use std::borrow::Cow;
 use std::hash::{Hash, Hasher};
 
 use crate::cartesian::{DataPoint, DataRect, PlotTransform};
@@ -25,7 +24,90 @@ use crate::series::{Series, SeriesData};
 #[derive(Debug, Clone)]
 pub struct LinePlotModel {
     pub data_bounds: DataRect,
-    pub points: Series,
+    pub series: Vec<Series>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct SeriesStyle {
+    stroke_color: Color,
+}
+
+const SERIES_PALETTE: [Color; 10] = [
+    Color {
+        r: 0.35,
+        g: 0.65,
+        b: 0.95,
+        a: 1.0,
+    },
+    Color {
+        r: 0.95,
+        g: 0.45,
+        b: 0.55,
+        a: 1.0,
+    },
+    Color {
+        r: 0.45,
+        g: 0.85,
+        b: 0.55,
+        a: 1.0,
+    },
+    Color {
+        r: 0.95,
+        g: 0.75,
+        b: 0.35,
+        a: 1.0,
+    },
+    Color {
+        r: 0.75,
+        g: 0.55,
+        b: 0.95,
+        a: 1.0,
+    },
+    Color {
+        r: 0.35,
+        g: 0.85,
+        b: 0.85,
+        a: 1.0,
+    },
+    Color {
+        r: 0.95,
+        g: 0.35,
+        b: 0.85,
+        a: 1.0,
+    },
+    Color {
+        r: 0.65,
+        g: 0.65,
+        b: 0.65,
+        a: 1.0,
+    },
+    Color {
+        r: 0.55,
+        g: 0.75,
+        b: 0.35,
+        a: 1.0,
+    },
+    Color {
+        r: 0.35,
+        g: 0.55,
+        b: 0.95,
+        a: 1.0,
+    },
+];
+
+fn series_style(
+    series_index: usize,
+    plot_style: LinePlotStyle,
+    series_count: usize,
+) -> SeriesStyle {
+    if series_count <= 1 {
+        return SeriesStyle {
+            stroke_color: plot_style.stroke_color,
+        };
+    }
+    SeriesStyle {
+        stroke_color: SERIES_PALETTE[series_index % SERIES_PALETTE.len()],
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -85,7 +167,8 @@ impl Default for LinePlotStyle {
 
 #[derive(Debug)]
 struct CachedPath {
-    id: PathId,
+    id: Option<PathId>,
+    series_index: usize,
     model_revision: u64,
     scale_factor_bits: u32,
     viewport_w_bits: u32,
@@ -97,6 +180,7 @@ struct CachedPath {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct SamplePoint {
+    series_index: usize,
     index: usize,
     data: DataPoint,
     /// Point in plot-local logical pixels (origin at plot rect origin).
@@ -105,6 +189,7 @@ struct SamplePoint {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct HoverState {
+    series_index: usize,
     index: usize,
     data: DataPoint,
     plot_px: Point,
@@ -164,7 +249,7 @@ impl PlotLayout {
 pub struct LinePlotCanvas {
     model: Model<LinePlotModel>,
     style: LinePlotStyle,
-    cached_path: Option<CachedPath>,
+    cached_paths: Vec<CachedPath>,
     hover: Option<HoverState>,
     last_scale_factor: f32,
     view_bounds: Option<DataRect>,
@@ -183,7 +268,7 @@ impl LinePlotCanvas {
         Self {
             model,
             style: LinePlotStyle::default(),
-            cached_path: None,
+            cached_paths: Vec::new(),
             hover: None,
             last_scale_factor: 1.0,
             view_bounds: None,
@@ -207,33 +292,72 @@ impl LinePlotCanvas {
         ui.create_node_retained(canvas)
     }
 
-    fn rebuild_path_if_needed<H: UiHost>(
+    fn rebuild_paths_if_needed<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
         plot: Rect,
         view_bounds: DataRect,
-    ) -> Option<PathId> {
+    ) -> Vec<(PathId, Color)> {
         let model_revision = self.model.revision(cx.app).unwrap_or(0);
         let scale_factor_bits = cx.scale_factor.to_bits();
         let viewport_w_bits = plot.size.width.0.to_bits();
         let viewport_h_bits = plot.size.height.0.to_bits();
         let view_key = data_rect_key(view_bounds);
 
-        let needs_rebuild = self.cached_path.as_ref().is_none_or(|c| {
-            c.model_revision != model_revision
-                || c.scale_factor_bits != scale_factor_bits
-                || c.viewport_w_bits != viewport_w_bits
-                || c.viewport_h_bits != viewport_h_bits
-                || c.stroke_width != self.style.stroke_width
-                || c.view_key != view_key
-        });
+        let series_count = self
+            .model
+            .read(cx.app, |_app, m| m.series.len())
+            .unwrap_or(0);
 
-        if !needs_rebuild {
-            return self.cached_path.as_ref().map(|c| c.id);
+        if series_count == 0 {
+            for cached in self.cached_paths.drain(..) {
+                if let Some(id) = cached.id {
+                    cx.services.path().release(id);
+                }
+            }
+            return Vec::new();
         }
 
-        if let Some(prev) = self.cached_path.take() {
-            cx.services.path().release(prev.id);
+        let cached_ok = self.cached_paths.len() == series_count
+            && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                c.series_index == i
+                    && c.model_revision == model_revision
+                    && c.scale_factor_bits == scale_factor_bits
+                    && c.viewport_w_bits == viewport_w_bits
+                    && c.viewport_h_bits == viewport_h_bits
+                    && c.stroke_width == self.style.stroke_width
+                    && c.view_key == view_key
+            });
+
+        if cached_ok {
+            let mut out: Vec<(PathId, Color)> = Vec::with_capacity(series_count);
+            for i in 0..series_count {
+                let style = series_style(i, self.style, series_count);
+                if let Some(id) = self.cached_paths[i].id {
+                    out.push((id, style.stroke_color));
+                }
+            }
+            return out;
+        }
+
+        let series: Vec<Series> = self
+            .model
+            .read(cx.app, |_app, m| m.series.clone())
+            .unwrap_or_default();
+        let series_count = series.len();
+        if series_count == 0 {
+            for cached in self.cached_paths.drain(..) {
+                if let Some(id) = cached.id {
+                    cx.services.path().release(id);
+                }
+            }
+            return Vec::new();
+        }
+
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                cx.services.path().release(id);
+            }
         }
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
@@ -242,37 +366,48 @@ impl LinePlotCanvas {
             data: view_bounds,
         };
 
-        let (commands, samples) = self
-            .model
-            .read(cx.app, |_app, m| {
-                decimate_polyline(transform, &*m.points, cx.scale_factor)
-            })
-            .ok()?;
-
-        if commands.is_empty() {
-            self.cached_path = None;
-            return None;
-        }
-
-        let style = PathStyle::Stroke(fret_core::StrokeStyle {
+        let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
             width: self.style.stroke_width,
         });
         let constraints = PathConstraints {
             scale_factor: cx.scale_factor,
         };
 
-        let (id, _metrics) = cx.services.path().prepare(&commands, style, constraints);
-        self.cached_path = Some(CachedPath {
-            id,
-            model_revision,
-            scale_factor_bits,
-            viewport_w_bits,
-            viewport_h_bits,
-            stroke_width: self.style.stroke_width,
-            view_key,
-            samples,
-        });
-        Some(id)
+        let mut out: Vec<(PathId, Color)> = Vec::with_capacity(series_count);
+        self.cached_paths = Vec::with_capacity(series_count);
+
+        for (series_index, s) in series.into_iter().enumerate() {
+            let (commands, samples) =
+                decimate_polyline(transform, &*s, cx.scale_factor, series_index);
+            let id = if commands.is_empty() {
+                None
+            } else {
+                let (id, _metrics) = cx
+                    .services
+                    .path()
+                    .prepare(&commands, path_style, constraints);
+                Some(id)
+            };
+
+            self.cached_paths.push(CachedPath {
+                id,
+                series_index,
+                model_revision,
+                scale_factor_bits,
+                viewport_w_bits,
+                viewport_h_bits,
+                stroke_width: self.style.stroke_width,
+                view_key,
+                samples,
+            });
+
+            if let Some(id) = id {
+                let style = series_style(series_index, self.style, series_count);
+                out.push((id, style.stroke_color));
+            }
+        }
+
+        out
     }
 
     fn clear_axis_label_cache(&mut self, services: &mut dyn UiServices) {
@@ -702,47 +837,64 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     let threshold = self.style.hover_threshold.0.max(0.0);
                     let threshold2 = threshold * threshold;
 
-                    let samples: Cow<'_, [SamplePoint]> = if let Some(cached) =
-                        self.cached_path.as_ref()
-                        && cached.model_revision == model_revision
-                        && cached.scale_factor_bits == scale_factor_bits
-                        && cached.viewport_w_bits == viewport_w_bits
-                        && cached.viewport_h_bits == viewport_h_bits
-                        && cached.view_key == view_key
-                    {
-                        Cow::Borrowed(cached.samples.as_slice())
-                    } else {
-                        Cow::Owned(
-                            self.model
-                                .read(cx.app, |_app, m| {
-                                    let transform = PlotTransform {
-                                        viewport: Rect::new(
-                                            Point::new(Px(0.0), Px(0.0)),
-                                            layout.plot.size,
-                                        ),
-                                        data: view_bounds,
-                                    };
-                                    decimate_samples(transform, &*m.points, scale_factor)
-                                })
-                                .unwrap_or_default(),
-                        )
-                    };
+                    let series_count = self
+                        .model
+                        .read(cx.app, |_app, m| m.series.len())
+                        .unwrap_or(0);
+
+                    let cached_ok = self.cached_paths.len() == series_count
+                        && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                            c.series_index == i
+                                && c.model_revision == model_revision
+                                && c.scale_factor_bits == scale_factor_bits
+                                && c.viewport_w_bits == viewport_w_bits
+                                && c.viewport_h_bits == viewport_h_bits
+                                && c.stroke_width == self.style.stroke_width
+                                && c.view_key == view_key
+                        });
 
                     let mut best: Option<(SamplePoint, f32)> = None;
-                    for s in samples.iter().copied() {
+                    let mut consider_sample = |s: SamplePoint| {
                         let dx = s.plot_px.x.0 - local.x.0;
                         let dy = s.plot_px.y.0 - local.y.0;
                         let d2 = dx * dx + dy * dy;
                         if !d2.is_finite() {
-                            continue;
+                            return;
                         }
-                        if best.map_or(true, |b| d2 < b.1) {
+                        if best.is_none_or(|b| d2 < b.1) {
                             best = Some((s, d2));
+                        }
+                    };
+
+                    if cached_ok {
+                        for cached in &self.cached_paths {
+                            for s in cached.samples.iter().copied() {
+                                consider_sample(s);
+                            }
+                        }
+                    } else {
+                        let series: Vec<Series> = self
+                            .model
+                            .read(cx.app, |_app, m| m.series.clone())
+                            .unwrap_or_default();
+
+                        let transform = PlotTransform {
+                            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
+                            data: view_bounds,
+                        };
+
+                        for (series_index, s) in series.into_iter().enumerate() {
+                            for sample in
+                                decimate_samples(transform, &*s, scale_factor, series_index)
+                            {
+                                consider_sample(sample);
+                            }
                         }
                     }
 
                     best.and_then(|(s, d2)| {
                         (d2 <= threshold2).then_some(HoverState {
+                            series_index: s.series_index,
                             index: s.index,
                             data: s.data,
                             plot_px: s.plot_px,
@@ -869,12 +1021,12 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 });
             }
 
-            if let Some(path) = self.rebuild_path_if_needed(cx, layout.plot, view_bounds) {
+            for (path, color) in self.rebuild_paths_if_needed(cx, layout.plot, view_bounds) {
                 cx.scene.push(SceneOp::Path {
                     order: DrawOrder(2),
                     origin: layout.plot.origin,
                     path,
-                    color: self.style.stroke_color,
+                    color,
                 });
             }
 
@@ -1019,6 +1171,10 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
 
         // Tooltip (P0: drawn in the same scene; can be moved to overlays later).
         if let Some(hover) = self.hover {
+            let series_count = self
+                .model
+                .read(cx.app, |_app, m| m.series.len())
+                .unwrap_or(0);
             let font_size = cx
                 .theme()
                 .metric_by_key("font.size")
@@ -1030,7 +1186,14 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 line_height: None,
                 letter_spacing_em: None,
             };
-            let text = format!("x={:.3}  y={:.3}", hover.data.x, hover.data.y);
+            let text = if series_count > 1 {
+                format!(
+                    "s={}  x={:.3}  y={:.3}",
+                    hover.series_index, hover.data.x, hover.data.y
+                )
+            } else {
+                format!("x={:.3}  y={:.3}", hover.data.x, hover.data.y)
+            };
             let constraints = TextConstraints {
                 max_width: None,
                 wrap: TextWrap::None,
@@ -1136,8 +1299,10 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
-        if let Some(cached) = self.cached_path.take() {
-            services.path().release(cached.id);
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                services.path().release(id);
+            }
         }
         self.clear_axis_label_cache(services);
         if let Some(t) = self.tooltip_text.take() {
@@ -1156,8 +1321,9 @@ fn decimate_samples(
     transform: PlotTransform,
     points: &dyn SeriesData,
     scale_factor: f32,
+    series_index: usize,
 ) -> Vec<SamplePoint> {
-    let (_commands, samples) = decimate_polyline(transform, points, scale_factor);
+    let (_commands, samples) = decimate_polyline(transform, points, scale_factor, series_index);
     samples
 }
 
@@ -1169,6 +1335,7 @@ fn decimate_polyline(
     transform: PlotTransform,
     points: &dyn SeriesData,
     scale_factor: f32,
+    series_index: usize,
 ) -> (Vec<fret_core::PathCommand>, Vec<SamplePoint>) {
     let mut commands: Vec<fret_core::PathCommand> = Vec::new();
     let mut samples: Vec<SamplePoint> = Vec::new();
@@ -1289,6 +1456,7 @@ fn decimate_polyline(
                 continue;
             }
             segment.push(SamplePoint {
+                series_index,
                 index: idx,
                 data: p,
                 plot_px: px,
@@ -1310,6 +1478,7 @@ fn decimate_polyline(
                 continue;
             }
             segment.push(SamplePoint {
+                series_index,
                 index: idx,
                 data: p,
                 plot_px: px,

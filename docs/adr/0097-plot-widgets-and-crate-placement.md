@@ -156,7 +156,8 @@ should remain retained and cache-driven.
 
 - Implement `fret-ui-plot` as a policy-heavy retained widget first (via `fret-ui`'s
   `unstable-retained-bridge`), to avoid expanding the declarative element contract prematurely.
-- Start with a single-series line plot + axes + pan/zoom + tooltip.
+- Start with a line plot that supports one or more series (the single-series case should stay
+  frictionless), plus axes + pan/zoom + tooltip.
 - Validate correctness under clip/transform/strict ordering.
 - Add decimation to avoid per-frame pathological tessellation on large datasets.
 

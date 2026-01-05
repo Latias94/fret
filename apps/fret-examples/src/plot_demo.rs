@@ -7,14 +7,14 @@ use fret_launch::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
-use fret_ui_plot::chart::line_chart::LineChart;
+use fret_ui_plot::cartesian::{DataPoint, DataRect};
 use fret_ui_plot::retained::{LinePlotCanvas, LinePlotStyle};
+use fret_ui_plot::series::Series;
 
 struct PlotDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     plot: fret_runtime::Model<fret_ui_plot::retained::LinePlotModel>,
-    close_requested: bool,
 }
 
 #[derive(Default)]
@@ -22,19 +22,63 @@ struct PlotDemoDriver;
 
 impl PlotDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> PlotDemoWindowState {
-        let points: Vec<(f32, f32)> = (0..2048)
-            .map(|i| {
-                let t = i as f32 / 2047.0;
-                let x = t * 10.0;
-                let y = (x * 1.25).sin() * 0.75 + (x * 0.33).cos() * 0.25;
-                (x, y)
-            })
-            .collect();
+        let n = 4096usize;
 
-        let plot = LineChart::new(points)
-            .x(|(x, _y)| Some(*x))
-            .y(|(_x, y)| Some(*y))
-            .install(app);
+        let mut series0: Vec<DataPoint> = Vec::with_capacity(n);
+        let mut series1: Vec<DataPoint> = Vec::with_capacity(n);
+        let mut series2: Vec<DataPoint> = Vec::with_capacity(n);
+
+        let push = |series: &mut Vec<DataPoint>, x: f32, y: f32| {
+            if !x.is_finite() || !y.is_finite() {
+                return;
+            }
+            series.push(DataPoint { x, y });
+        };
+
+        for i in 0..n {
+            let t = i as f32 / (n - 1) as f32;
+            let x = t * 10.0;
+            push(
+                &mut series0,
+                x,
+                (x * 1.25).sin() * 0.75 + (x * 0.33).cos() * 0.25,
+            );
+            push(
+                &mut series1,
+                x,
+                (x * 1.10).sin() * 0.55 + (x * 0.20).cos() * 0.20 + 0.35,
+            );
+            push(
+                &mut series2,
+                x,
+                (x * 0.75).sin() * 0.35 + (x * 0.15).cos() * 0.10 - 0.35,
+            );
+        }
+
+        let bounds = DataRect::from_points(
+            series0
+                .iter()
+                .copied()
+                .chain(series1.iter().copied())
+                .chain(series2.iter().copied()),
+        )
+        .unwrap_or(DataRect {
+            x_min: 0.0,
+            x_max: 1.0,
+            y_min: 0.0,
+            y_max: 1.0,
+        });
+
+        let plot = app
+            .models_mut()
+            .insert(fret_ui_plot::retained::LinePlotModel {
+                data_bounds: bounds,
+                series: vec![
+                    Series::from_points_sorted(series0, true),
+                    Series::from_points_sorted(series1, true),
+                    Series::from_points_sorted(series2, true),
+                ],
+            });
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -43,7 +87,6 @@ impl PlotDemoDriver {
             ui,
             root: None,
             plot,
-            close_requested: false,
         }
     }
 }
@@ -70,10 +113,8 @@ impl WinitAppDriver for PlotDemoDriver {
                 key: fret_core::KeyCode::Escape,
                 ..
             } => {
-                if !state.close_requested {
-                    state.close_requested = true;
-                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                }
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                return;
             }
             _ => {
                 state.ui.dispatch_event(app, services, event);

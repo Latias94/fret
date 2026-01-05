@@ -23,6 +23,40 @@ impl DataRect {
     pub fn height(self) -> f32 {
         self.y_max - self.y_min
     }
+
+    pub fn union(self, other: DataRect) -> DataRect {
+        DataRect {
+            x_min: self.x_min.min(other.x_min),
+            x_max: self.x_max.max(other.x_max),
+            y_min: self.y_min.min(other.y_min),
+            y_max: self.y_max.max(other.y_max),
+        }
+    }
+
+    pub fn from_points(points: impl IntoIterator<Item = DataPoint>) -> Option<DataRect> {
+        let mut x_min: Option<f32> = None;
+        let mut x_max: Option<f32> = None;
+        let mut y_min: Option<f32> = None;
+        let mut y_max: Option<f32> = None;
+
+        for p in points {
+            if !p.x.is_finite() || !p.y.is_finite() {
+                continue;
+            }
+
+            x_min = Some(x_min.map_or(p.x, |v| v.min(p.x)));
+            x_max = Some(x_max.map_or(p.x, |v| v.max(p.x)));
+            y_min = Some(y_min.map_or(p.y, |v| v.min(p.y)));
+            y_max = Some(y_max.map_or(p.y, |v| v.max(p.y)));
+        }
+
+        Some(DataRect {
+            x_min: x_min?,
+            x_max: x_max?,
+            y_min: y_min?,
+            y_max: y_max?,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
