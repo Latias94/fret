@@ -67,7 +67,7 @@ This contract is documented in ADR 0099.
 - [x] Nice ticks (1/2/5 * 10^n)
 - [~] Time axis + formatting (UTC seconds baseline)
 - [ ] Log axis
-- [ ] Axis formatters (custom label callbacks)
+- [~] Axis formatters (custom label callbacks with stable cache key)
 - [ ] Multi-axes (dual Y, etc.)
 - [ ] Axis lock (lock X/Y pan/zoom)
 

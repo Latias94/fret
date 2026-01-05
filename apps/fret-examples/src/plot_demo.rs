@@ -10,6 +10,7 @@ use fret_launch::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui_plot::cartesian::DataPoint;
+use fret_ui_plot::plot::axis::AxisLabelFormatter;
 use fret_ui_plot::retained::{LinePlotCanvas, LinePlotStyle, LineSeries, PlotOutput, PlotState};
 use fret_ui_plot::series::Series;
 
@@ -156,6 +157,20 @@ impl WinitAppDriver for PlotDemoDriver {
             };
             let canvas = LinePlotCanvas::new(state.plot.clone())
                 .style(style)
+                .y_axis_labels(AxisLabelFormatter::custom(0x554e4954u64, |v, span| {
+                    // Stable-key custom formatter example: attach a unit suffix.
+                    // Keep the logic deterministic so the cache key is meaningful.
+                    if !v.is_finite() {
+                        return "NA".to_string();
+                    }
+                    if span.abs().is_finite() && span.abs() < 1.0 {
+                        format!("{v:.4} V")
+                    } else if v.abs() < 10.0 {
+                        format!("{v:.3} V")
+                    } else {
+                        format!("{v:.2} V")
+                    }
+                }))
                 .state(state.plot_state.clone())
                 .output(state.plot_output.clone());
             let node = LinePlotCanvas::create_node(&mut state.ui, canvas);

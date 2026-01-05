@@ -1,3 +1,6 @@
+use std::fmt;
+use std::sync::Arc;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AxisLabelFormat {
     Number(AxisNumberFormat),
@@ -24,12 +27,100 @@ impl AxisLabelFormat {
             Self::TimeSeconds(f) => format_time_seconds(v, span, f),
         }
     }
+
+    pub fn ticks(self) -> AxisTicks {
+        match self {
+            Self::Number(_) => AxisTicks::Nice,
+            Self::TimeSeconds(f) => AxisTicks::TimeSeconds(f),
+        }
+    }
+
+    pub fn labels(self) -> AxisLabelFormatter {
+        match self {
+            Self::Number(f) => AxisLabelFormatter::number(f),
+            Self::TimeSeconds(f) => AxisLabelFormatter::time_seconds(f),
+        }
+    }
 }
 
-pub fn axis_ticks(min: f32, max: f32, tick_count: usize, format: AxisLabelFormat) -> Vec<f32> {
-    match format {
-        AxisLabelFormat::Number(_) => nice_ticks(min, max, tick_count),
-        AxisLabelFormat::TimeSeconds(f) => time_ticks_seconds(min, max, tick_count, f),
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum AxisTicks {
+    Nice,
+    Linear,
+    TimeSeconds(TimeAxisFormat),
+}
+
+impl Default for AxisTicks {
+    fn default() -> Self {
+        Self::Nice
+    }
+}
+
+impl AxisTicks {
+    pub fn key(self) -> u64 {
+        match self {
+            Self::Nice => 0x4e_0000_0000_0000u64,
+            Self::Linear => 0x4c_0000_0000_0000u64,
+            Self::TimeSeconds(f) => 0x54_0000_0000_0000u64 ^ f.key(),
+        }
+    }
+}
+
+pub fn axis_ticks(min: f32, max: f32, tick_count: usize, ticks: AxisTicks) -> Vec<f32> {
+    match ticks {
+        AxisTicks::Nice => nice_ticks(min, max, tick_count),
+        AxisTicks::Linear => linear_ticks(min, max, tick_count),
+        AxisTicks::TimeSeconds(f) => time_ticks_seconds(min, max, tick_count, f),
+    }
+}
+
+#[derive(Clone)]
+pub struct AxisLabelFormatter {
+    key: u64,
+    f: Arc<dyn Fn(f32, f32) -> String + Send + Sync + 'static>,
+}
+
+impl fmt::Debug for AxisLabelFormatter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AxisLabelFormatter")
+            .field("key", &self.key)
+            .finish()
+    }
+}
+
+impl AxisLabelFormatter {
+    pub fn custom(key: u64, f: impl Fn(f32, f32) -> String + Send + Sync + 'static) -> Self {
+        Self {
+            key,
+            f: Arc::new(f),
+        }
+    }
+
+    pub fn number(fmt: AxisNumberFormat) -> Self {
+        Self::custom(
+            0x4e554d00_0000_0000u64 ^ u64::from(fmt.key()),
+            move |v, span| format_number(v, span, fmt),
+        )
+    }
+
+    pub fn time_seconds(fmt: TimeAxisFormat) -> Self {
+        Self::custom(0x54494d00_0000_0000u64 ^ fmt.key(), move |v, span| {
+            format_time_seconds(v, span, fmt)
+        })
+    }
+
+    pub fn key(&self) -> u64 {
+        self.key
+    }
+
+    pub fn format(&self, v: f32, span: f32) -> String {
+        (self.f)(v, span)
+    }
+}
+
+impl Default for AxisLabelFormatter {
+    fn default() -> Self {
+        Self::number(AxisNumberFormat::Auto)
     }
 }
 
