@@ -21,6 +21,18 @@ fn tabs_gap(theme: &Theme) -> Px {
         .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme))
 }
 
+fn tabs_list_height(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.tabs.list_height")
+        .unwrap_or(Px(36.0))
+}
+
+fn tabs_list_padding(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.tabs.list_padding")
+        .unwrap_or(Px(3.0))
+}
+
 fn tabs_list_bg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted")
@@ -69,6 +81,12 @@ fn tabs_trigger_border_active(theme: &Theme) -> Color {
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
         .unwrap_or(theme.colors.panel_border)
+}
+
+fn tabs_trigger_border_width(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.tabs.trigger.border_width")
+        .unwrap_or(Px(1.0))
 }
 
 /// Matches Radix Tabs `orientation` outcome: horizontal (default) vs vertical layout.
@@ -228,14 +246,16 @@ impl Tabs {
             ..Default::default()
         };
 
-        let list_props = decl_style::container_props(
+        let list_height = tabs_list_height(&theme);
+        let list_padding = tabs_list_padding(&theme);
+        let mut list_props = decl_style::container_props(
             &theme,
             ChromeRefinement::default()
-                .p(Space::N1)
                 .rounded(Radius::Lg)
                 .bg(ColorRef::Color(tabs_list_bg(&theme))),
-            LayoutRefinement::default(),
+            LayoutRefinement::default().h_px(MetricRef::Px(list_height)),
         );
+        list_props.padding = Edges::all(list_padding);
 
         let active_label = active_idx
             .and_then(|active| items.get(active))
@@ -261,7 +281,7 @@ impl Tabs {
                             },
                             gap: Px(0.0),
                             padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
+                            justify: MainAlign::Center,
                             align: CrossAlign::Center,
                             wrap: false,
                             ..Default::default()
@@ -283,6 +303,7 @@ impl Tabs {
                         let ring = decl_style::focus_ring(&theme, radius);
                         let bg_active = tabs_trigger_bg_active(&theme);
                         let border_active = tabs_trigger_border_active(&theme);
+                        let border_w = tabs_trigger_border_width(&theme);
 
                         let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                         let pad_y = MetricRef::space(Space::N1).resolve(&theme);
@@ -303,7 +324,9 @@ impl Tabs {
                                 fg_muted
                             };
                             let bg = (active && !item_disabled).then_some(bg_active);
-                            let border = (active && !item_disabled).then_some(border_active);
+                            let border = (active && !item_disabled)
+                                .then_some(border_active)
+                                .unwrap_or(Color::TRANSPARENT);
                             let shadow = (active && !item_disabled)
                                 .then(|| decl_style::shadow_sm(&theme, radius));
 
@@ -339,11 +362,8 @@ impl Tabs {
                                         },
                                         background: bg,
                                         shadow,
-                                        border: border.map_or_else(
-                                            || Edges::all(Px(0.0)),
-                                            |_| Edges::all(Px(1.0)),
-                                        ),
-                                        border_color: border,
+                                        border: Edges::all(border_w),
+                                        border_color: Some(border),
                                         corner_radii: Corners::all(radius),
                                         ..Default::default()
                                     },
@@ -475,10 +495,12 @@ mod tests {
                     TabsItem::new("beta", "Beta", vec![]),
                     TabsItem::new("gamma", "Gamma", vec![]),
                 ];
-                vec![Tabs::new(model)
-                    .activation_mode(activation_mode)
-                    .items(items)
-                    .into_element(cx)]
+                vec![
+                    Tabs::new(model)
+                        .activation_mode(activation_mode)
+                        .items(items)
+                        .into_element(cx),
+                ]
             });
         ui.set_root(root);
         ui.request_semantics_snapshot();
