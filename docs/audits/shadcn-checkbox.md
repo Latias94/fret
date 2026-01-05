@@ -13,6 +13,7 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 
 - Component code: `ecosystem/fret-ui-shadcn/src/checkbox.rs`
 - Shared primitives:
+  - Radix checkbox outcomes: `ecosystem/fret-ui-kit/src/primitives/checkbox.rs`
   - Focus ring recipe: `ecosystem/fret-ui-kit/src/declarative/style.rs`
   - Control chrome composition: `ecosystem/fret-ui-kit/src/declarative/chrome.rs`
 

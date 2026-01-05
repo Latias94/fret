@@ -4,8 +4,7 @@ use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
-    PressableProps,
+    AnyElement, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, PressableProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -13,7 +12,7 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::checked_state::CheckedState;
+use fret_ui_kit::primitives::checkbox::{CheckedState, checkbox_a11y};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -199,12 +198,7 @@ impl Checkbox {
                     enabled: !disabled,
                     focusable: true,
                     focus_ring: Some(ring),
-                    a11y: PressableA11y {
-                        role: Some(fret_core::SemanticsRole::Checkbox),
-                        label: a11y_label.clone(),
-                        checked: state.to_semantics_checked(),
-                        ..Default::default()
-                    },
+                    a11y: checkbox_a11y(a11y_label.clone(), state),
                     ..Default::default()
                 };
 
