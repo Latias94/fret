@@ -23,4 +23,3 @@ pub fn toggle_a11y(label: Option<Arc<str>>, pressed: bool) -> PressableA11y {
         ..Default::default()
     }
 }
-

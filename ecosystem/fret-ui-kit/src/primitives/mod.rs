@@ -22,8 +22,8 @@
 //! Runtime mechanisms live in `fret-ui`; these facades intentionally port behavior outcomes, not
 //! React/DOM APIs.
 
-pub mod active_descendant;
 pub mod accordion;
+pub mod active_descendant;
 pub mod collection;
 pub mod dismissable_layer;
 pub mod focus_scope;
@@ -35,8 +35,8 @@ pub mod presence;
 pub mod radio_group;
 pub mod roving_focus_group;
 pub mod tabs;
-pub mod toggle_group;
 pub mod toggle;
+pub mod toggle_group;
 pub mod tooltip_delay_group;
 pub mod tooltip_provider;
 pub mod visually_hidden;

@@ -608,7 +608,10 @@ fn base_message_request(title: Arc<str>, variant: ToastVariant) -> ToastRequest 
     }
 }
 
-fn apply_toast_message_options(mut req: ToastRequest, options: ToastMessageOptions) -> ToastRequest {
+fn apply_toast_message_options(
+    mut req: ToastRequest,
+    options: ToastMessageOptions,
+) -> ToastRequest {
     if let Some(description) = options.description {
         req = req.description(description);
     }
@@ -650,7 +653,10 @@ mod tests {
         assert_eq!(req.duration, None);
         assert_eq!(req.dismissible, false);
         assert_eq!(req.action.as_ref().map(|a| a.label.as_ref()), Some("Undo"));
-        assert_eq!(req.cancel.as_ref().map(|a| a.label.as_ref()), Some("Cancel"));
+        assert_eq!(
+            req.cancel.as_ref().map(|a| a.label.as_ref()),
+            Some("Cancel")
+        );
     }
 
     #[test]

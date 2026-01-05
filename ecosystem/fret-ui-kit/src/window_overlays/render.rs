@@ -698,11 +698,14 @@ pub fn render<H: UiHost>(
                                                 shadow: None,
                                                 border: fret_core::Edges::all(Px(0.0)),
                                                 border_color: None,
-                                                corner_radii: fret_core::Corners::all(button_radius),
+                                                corner_radii: fret_core::Corners::all(
+                                                    button_radius,
+                                                ),
                                             },
                                             move |cx| {
                                                 vec![cx.text_props(fret_ui::element::TextProps {
-                                                    layout: fret_ui::element::LayoutStyle::default(),
+                                                    layout: fret_ui::element::LayoutStyle::default(
+                                                    ),
                                                     text: "\u{00D7}".into(),
                                                     style: None,
                                                     color: Some(fg),
@@ -765,11 +768,14 @@ pub fn render<H: UiHost>(
                                                 shadow: None,
                                                 border: fret_core::Edges::all(Px(0.0)),
                                                 border_color: None,
-                                                corner_radii: fret_core::Corners::all(button_radius),
+                                                corner_radii: fret_core::Corners::all(
+                                                    button_radius,
+                                                ),
                                             },
                                             move |cx| {
                                                 vec![cx.text_props(fret_ui::element::TextProps {
-                                                    layout: fret_ui::element::LayoutStyle::default(),
+                                                    layout: fret_ui::element::LayoutStyle::default(
+                                                    ),
                                                     text: label.clone(),
                                                     style: None,
                                                     color: Some(fg),
@@ -832,11 +838,14 @@ pub fn render<H: UiHost>(
                                                 shadow: None,
                                                 border: fret_core::Edges::all(Px(0.0)),
                                                 border_color: None,
-                                                corner_radii: fret_core::Corners::all(button_radius),
+                                                corner_radii: fret_core::Corners::all(
+                                                    button_radius,
+                                                ),
                                             },
                                             move |cx| {
                                                 vec![cx.text_props(fret_ui::element::TextProps {
-                                                    layout: fret_ui::element::LayoutStyle::default(),
+                                                    layout: fret_ui::element::LayoutStyle::default(
+                                                    ),
                                                     text: label.clone(),
                                                     style: None,
                                                     color: Some(fg),

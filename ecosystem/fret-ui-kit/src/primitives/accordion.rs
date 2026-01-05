@@ -59,4 +59,3 @@ pub fn tab_stop_index_multiple(
     });
     first_open_enabled.or_else(|| crate::headless::roving_focus::first_enabled(disabled))
 }
-

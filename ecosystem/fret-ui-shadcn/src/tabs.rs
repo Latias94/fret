@@ -309,150 +309,163 @@ impl Tabs {
         cx.container(root_props, move |cx| {
             let mut children: Vec<AnyElement> = Vec::new();
 
-            children.push(cx.container(list_props, |cx| {
-                vec![cx.roving_flex(
-                    RovingFlexProps {
-                        flex: FlexProps {
-                            direction: match orientation {
-                                TabsOrientation::Horizontal => fret_core::Axis::Horizontal,
-                                TabsOrientation::Vertical => fret_core::Axis::Vertical,
-                            },
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Center,
-                            align: CrossAlign::Center,
-                            wrap: false,
-                            ..Default::default()
-                        },
-                        roving,
-                    },
-                    |cx| {
-                        cx.roving_nav_apg();
-                        if activation_mode == TabsActivationMode::Automatic {
-                            cx.roving_select_option_arc_str(&model, values_arc.clone());
-                        }
-
-                        let fg_muted = tabs_list_fg_muted(&theme);
-                        let fg_disabled = theme.colors.text_disabled;
-                        let fg_active = theme
-                            .color_by_key("foreground")
-                            .unwrap_or(theme.colors.text_primary);
-                        let radius = tabs_trigger_radius(&theme);
-                        let ring = decl_style::focus_ring(&theme, radius);
-                        let bg_active = tabs_trigger_bg_active(&theme);
-                        let border_active = tabs_trigger_border_active(&theme);
-                        let border_w = tabs_trigger_border_width(&theme);
-
-                        let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-                        let pad_y = MetricRef::space(Space::N1).resolve(&theme);
-                        let trigger_layout =
-                            decl_style::layout_style(&theme, LayoutRefinement::default().flex_1());
-
-                        let mut out: Vec<AnyElement> = Vec::with_capacity(disabled_flags.len());
-                        for (idx, item) in items.iter().cloned().enumerate() {
-                            let item_disabled = disabled_flags.get(idx).copied().unwrap_or(true);
-                            let tab_stop = active_idx.is_some_and(|a| a == idx);
-                            let active = tab_stop;
-
-                            let fg = if item_disabled {
-                                fg_disabled
-                            } else if active {
-                                fg_active
-                            } else {
-                                fg_muted
-                            };
-                            let bg = (active && !item_disabled).then_some(bg_active);
-                            let border = (active && !item_disabled)
-                                .then_some(border_active)
-                                .unwrap_or(Color::TRANSPARENT);
-                            let shadow = (active && !item_disabled)
-                                .then(|| decl_style::shadow_sm(&theme, radius));
-
-                            let value = item.value.clone();
-                            let label = item.label.clone();
-                            let trigger_children = item.trigger.clone();
-                            let model = model.clone();
-                            let text_style = text_style.clone();
-
-                            out.push(cx.pressable_with_id_props(move |cx, st, _id| {
-                                cx.pressable_set_option_arc_str(&model, value.clone());
-
-                                let props = PressableProps {
-                                    layout: trigger_layout,
-                                    enabled: !item_disabled,
-                                    focusable: tab_stop || st.focused,
-                                    focus_ring: Some(ring),
-                                    a11y: fret_ui_kit::primitives::tabs::tab_a11y(
-                                        Some(label.clone()),
-                                        active,
-                                    ),
+            children.push(cx.semantics(
+                SemanticsProps {
+                    role: SemanticsRole::TabList,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![cx.container(list_props, |cx| {
+                        vec![cx.roving_flex(
+                            RovingFlexProps {
+                                flex: FlexProps {
+                                    direction: match orientation {
+                                        TabsOrientation::Horizontal => fret_core::Axis::Horizontal,
+                                        TabsOrientation::Vertical => fret_core::Axis::Vertical,
+                                    },
+                                    gap: Px(0.0),
+                                    padding: Edges::all(Px(0.0)),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
                                     ..Default::default()
-                                };
+                                },
+                                roving,
+                            },
+                            |cx| {
+                                cx.roving_nav_apg();
+                                if activation_mode == TabsActivationMode::Automatic {
+                                    cx.roving_select_option_arc_str(&model, values_arc.clone());
+                                }
 
-                                let children = vec![cx.container(
-                                    ContainerProps {
-                                        padding: Edges {
-                                            top: pad_y,
-                                            right: pad_x,
-                                            bottom: pad_y,
-                                            left: pad_x,
-                                        },
-                                        background: bg,
-                                        shadow,
-                                        border: Edges::all(border_w),
-                                        border_color: Some(border),
-                                        corner_radii: Corners::all(radius),
-                                        ..Default::default()
-                                    },
-                                    move |cx| {
-                                        let base = trigger_children.clone().unwrap_or_else(|| {
-                                            vec![cx.text_props(TextProps {
-                                                layout: Default::default(),
-                                                text: label.clone(),
-                                                style: Some(text_style.clone()),
-                                                color: Some(fg),
-                                                wrap: TextWrap::None,
-                                                overflow: TextOverflow::Clip,
-                                            })]
-                                        });
+                                let fg_muted = tabs_list_fg_muted(&theme);
+                                let fg_disabled = theme.colors.text_disabled;
+                                let fg_active = theme
+                                    .color_by_key("foreground")
+                                    .unwrap_or(theme.colors.text_primary);
+                                let radius = tabs_trigger_radius(&theme);
+                                let ring = decl_style::focus_ring(&theme, radius);
+                                let bg_active = tabs_trigger_bg_active(&theme);
+                                let border_active = tabs_trigger_border_active(&theme);
+                                let border_w = tabs_trigger_border_width(&theme);
 
-                                        let styled: Vec<AnyElement> = base
-                                            .into_iter()
-                                            .map(|child| {
-                                                apply_trigger_inherited_style(
-                                                    child,
-                                                    fg,
-                                                    &text_style,
-                                                )
-                                            })
-                                            .collect();
+                                let pad_x = MetricRef::space(Space::N2).resolve(&theme);
+                                let pad_y = MetricRef::space(Space::N1).resolve(&theme);
+                                let trigger_layout = decl_style::layout_style(
+                                    &theme,
+                                    LayoutRefinement::default().flex_1(),
+                                );
 
-                                        vec![cx.flex(
-                                            FlexProps {
-                                                layout: LayoutStyle::default(),
-                                                direction: fret_core::Axis::Horizontal,
-                                                gap: Px(6.0),
-                                                padding: Edges::all(Px(0.0)),
-                                                justify: MainAlign::Center,
-                                                align: CrossAlign::Center,
-                                                wrap: false,
+                                let mut out: Vec<AnyElement> =
+                                    Vec::with_capacity(disabled_flags.len());
+                                for (idx, item) in items.iter().cloned().enumerate() {
+                                    let item_disabled =
+                                        disabled_flags.get(idx).copied().unwrap_or(true);
+                                    let tab_stop = active_idx.is_some_and(|a| a == idx);
+                                    let active = tab_stop;
+
+                                    let fg = if item_disabled {
+                                        fg_disabled
+                                    } else if active {
+                                        fg_active
+                                    } else {
+                                        fg_muted
+                                    };
+                                    let bg = (active && !item_disabled).then_some(bg_active);
+                                    let border = (active && !item_disabled)
+                                        .then_some(border_active)
+                                        .unwrap_or(Color::TRANSPARENT);
+                                    let shadow = (active && !item_disabled)
+                                        .then(|| decl_style::shadow_sm(&theme, radius));
+
+                                    let value = item.value.clone();
+                                    let label = item.label.clone();
+                                    let trigger_children = item.trigger.clone();
+                                    let model = model.clone();
+                                    let text_style = text_style.clone();
+
+                                    out.push(cx.pressable_with_id_props(move |cx, st, _id| {
+                                        cx.pressable_set_option_arc_str(&model, value.clone());
+
+                                        let props = PressableProps {
+                                            layout: trigger_layout,
+                                            enabled: !item_disabled,
+                                            focusable: tab_stop || st.focused,
+                                            focus_ring: Some(ring),
+                                            a11y: fret_ui_kit::primitives::tabs::tab_a11y(
+                                                Some(label.clone()),
+                                                active,
+                                            ),
+                                            ..Default::default()
+                                        };
+
+                                        let children = vec![cx.container(
+                                            ContainerProps {
+                                                padding: Edges {
+                                                    top: pad_y,
+                                                    right: pad_x,
+                                                    bottom: pad_y,
+                                                    left: pad_x,
+                                                },
+                                                background: bg,
+                                                shadow,
+                                                border: Edges::all(border_w),
+                                                border_color: Some(border),
+                                                corner_radii: Corners::all(radius),
+                                                ..Default::default()
                                             },
-                                            move |_cx| styled,
-                                        )]
-                                    },
-                                )];
+                                            move |cx| {
+                                                let base =
+                                                    trigger_children.clone().unwrap_or_else(|| {
+                                                        vec![cx.text_props(TextProps {
+                                                            layout: Default::default(),
+                                                            text: label.clone(),
+                                                            style: Some(text_style.clone()),
+                                                            color: Some(fg),
+                                                            wrap: TextWrap::None,
+                                                            overflow: TextOverflow::Clip,
+                                                        })]
+                                                    });
 
-                                (props, children)
-                            }));
-                        }
-                        out
-                    },
-                )]
-            }));
+                                                let styled: Vec<AnyElement> = base
+                                                    .into_iter()
+                                                    .map(|child| {
+                                                        apply_trigger_inherited_style(
+                                                            child,
+                                                            fg,
+                                                            &text_style,
+                                                        )
+                                                    })
+                                                    .collect();
+
+                                                vec![cx.flex(
+                                                    FlexProps {
+                                                        layout: LayoutStyle::default(),
+                                                        direction: fret_core::Axis::Horizontal,
+                                                        gap: Px(6.0),
+                                                        padding: Edges::all(Px(0.0)),
+                                                        justify: MainAlign::Center,
+                                                        align: CrossAlign::Center,
+                                                        wrap: false,
+                                                    },
+                                                    move |_cx| styled,
+                                                )]
+                                            },
+                                        )];
+
+                                        (props, children)
+                                    }));
+                                }
+                                out
+                            },
+                        )]
+                    })]
+                },
+            ));
 
             children.push(cx.semantics(
                 SemanticsProps {
-                    role: SemanticsRole::Panel,
+                    role: SemanticsRole::TabPanel,
                     label: (!active_label.is_empty()).then_some(active_label),
                     ..Default::default()
                 },
@@ -633,5 +646,17 @@ mod tests {
             .expect("focused node");
         assert_eq!(focused_node.role, SemanticsRole::Tab);
         assert_eq!(focused_node.label.as_deref(), Some("Beta"));
+
+        assert!(
+            snap.nodes.iter().any(|n| n.role == SemanticsRole::TabList),
+            "tab list role"
+        );
+
+        let panel = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::TabPanel)
+            .expect("tab panel");
+        assert_eq!(panel.label.as_deref(), Some("Alpha"));
     }
 }

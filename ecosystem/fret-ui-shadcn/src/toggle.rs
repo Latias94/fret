@@ -2,9 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Edges, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, TextProps,
-};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;

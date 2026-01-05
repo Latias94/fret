@@ -49,4 +49,3 @@ pub fn active_index_from_values(
 ) -> Option<usize> {
     crate::headless::roving_focus::active_index_from_str_keys(values, selected, disabled)
 }
-
