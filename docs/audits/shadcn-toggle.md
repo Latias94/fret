@@ -36,6 +36,7 @@ the `new-york-v4` implementation in `repo-ref/ui`.
   `component.toggle.px{,_sm,_lg}` tokens (with `8px/6px/10px` fallbacks).
 - Pass: `data-[state=on]` styling matches: `bg-accent` + `text-accent-foreground`.
 - Pass: Outline variant hover matches: `hover:bg-accent` + `hover:text-accent-foreground`.
+- Pass: Outline variant uses `shadow_xs`, matching shadcn’s `shadow-xs` default.
 - Pass: Focus-visible styling includes a ring-colored outline border plus an outward focus ring
   (best-effort, matching `border-ring` and `ring-ring/50`).
 
@@ -45,6 +46,4 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- A shared `shadow_xs` recipe now exists (`fret-ui-kit::declarative::style::shadow_xs(...)`); wire it
-  into outline toggles if strict parity is desired.
 - Consider an icon-sizing helper to match shadcn’s default `svg.size-4` rule.

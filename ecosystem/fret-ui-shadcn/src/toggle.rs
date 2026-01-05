@@ -315,6 +315,9 @@ impl Toggle {
                 bottom: pad_y,
                 left: pad_x,
             };
+            if matches!(variant, ToggleVariant::Outline) {
+                chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
+            }
             if bg.is_some() {
                 chrome_props.background = bg;
             }

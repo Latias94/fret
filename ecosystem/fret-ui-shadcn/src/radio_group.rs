@@ -297,7 +297,7 @@ impl RadioGroup {
                                             layout: icon_layout,
                                             padding: Edges::all(Px(0.0)),
                                             background: None,
-                                            shadow: None,
+                                            shadow: Some(decl_style::shadow_xs(&theme, radius)),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border_color),
                                             corner_radii: Corners::all(radius),

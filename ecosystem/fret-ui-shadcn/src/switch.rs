@@ -172,6 +172,7 @@ impl Switch {
                     LayoutRefinement::default(),
                 );
                 chrome_props.corner_radii = Corners::all(radius);
+                chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
                 chrome_props.layout.size = pressable_layout.size;
 
                 let pressable_props = PressableProps {

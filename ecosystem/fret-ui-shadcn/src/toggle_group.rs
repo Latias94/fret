@@ -291,6 +291,9 @@ impl ToggleGroup {
 
         let mut group_props = decl_style::container_props(&theme, chrome, layout);
         group_props.corner_radii = Corners::all(radius);
+        if matches!(variant, ToggleVariant::Outline) && gap.0 > 0.0 {
+            group_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
+        }
 
         let base_chrome = match variant {
             ToggleVariant::Default => ChromeRefinement {

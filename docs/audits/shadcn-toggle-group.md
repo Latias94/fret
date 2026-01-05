@@ -36,6 +36,7 @@ the `new-york-v4` implementation in `repo-ref/ui`.
   - Items have no inner rounding, first/last get rounded corners.
   - Outline variant collapses inner borders (`border-left: 0` / `border-top: 0`) for non-first items.
 - Pass: Focus-visible styling includes an outward focus ring and a `ring`-colored outline border (best-effort).
+- Pass: When `spacing != 0` and `variant == outline`, the group container uses `shadow_xs`, matching shadcn’s `shadow-xs`.
 
 ## Validation
 
@@ -44,5 +45,3 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 ## Follow-ups (recommended)
 
 - Consider matching shadcn’s exact size scale (`h-8 / h-9 / h-10`) via theme tokens.
-- A shared `shadow_xs` recipe now exists (`fret-ui-kit::declarative::style::shadow_xs(...)`); wire it
-  into outline toggle group containers if strict parity is desired.

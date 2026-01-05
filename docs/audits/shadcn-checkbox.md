@@ -32,6 +32,7 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 - Pass: Unchecked state uses `border-input` and transparent background.
 - Pass: Checked state uses `primary` background, `primary-foreground` indicator color, and `primary`
   border.
+- Pass: Uses `shadow_xs`, matching shadcn’s `shadow-xs` default.
 - Pass: Focus-visible styling includes an outward focus ring and a `ring`-colored border (best-effort).
 
 ## Validation
@@ -41,5 +42,3 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 ## Follow-ups (recommended)
 
 - Consider supporting Radix `checked="indeterminate"` (tri-state) if needed.
-- A shared `shadow_xs` recipe now exists (`fret-ui-kit::declarative::style::shadow_xs(...)`); wire it
-  into controls if strict parity is desired.

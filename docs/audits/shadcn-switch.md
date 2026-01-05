@@ -32,6 +32,7 @@ This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn
 - Pass: Track uses `primary` when checked and `input` when unchecked (theme-key aligned).
 - Pass: Thumb is rendered as a circular element with `background` color and is non-interactive.
 - Pass: Thumb is vertically centered based on track/thumbnail sizes (aligns with `items-center`).
+- Pass: Track uses `shadow_xs`, matching shadcn’s `shadow-xs` default.
 - Pass: Focus-visible styling includes an outward focus ring and a `ring`-colored border (best-effort).
 
 ## Validation
@@ -41,5 +42,3 @@ This audit compares Fret’s shadcn-aligned `Switch` against the upstream shadcn
 ## Follow-ups (recommended)
 
 - Consider exposing size variants (e.g. `sm` vs `default`) if parity needs it.
-- A shared `shadow_xs` recipe now exists (`fret-ui-kit::declarative::style::shadow_xs(...)`); wire it
-  into controls if strict parity is desired.
