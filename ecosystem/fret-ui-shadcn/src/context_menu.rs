@@ -1650,6 +1650,7 @@ impl ContextMenu {
                                                                     if st.hovered
                                                                         || st.pressed
                                                                         || st.focused
+                                                                        || is_open_submenu
                                                                     {
                                                                         if variant == ContextMenuItemVariant::Destructive {
                                                                             row_bg = destructive_bg;
