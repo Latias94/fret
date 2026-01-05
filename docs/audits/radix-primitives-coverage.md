@@ -37,6 +37,7 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 - `popover` -> `ecosystem/fret-ui-kit/src/primitives/popover.rs` (facade over window overlays + popper)
 - `popper` -> `ecosystem/fret-ui-kit/src/primitives/popper.rs` (+ `popper_content.rs`)
 - `presence` -> `ecosystem/fret-ui-kit/src/primitives/presence.rs`
+- `progress` -> `ecosystem/fret-ui-kit/src/primitives/progress.rs`
 - `radio-group` -> `ecosystem/fret-ui-kit/src/primitives/radio_group.rs`
 - `roving-focus` -> `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs`
 - `scroll-area` -> `ecosystem/fret-ui-kit/src/primitives/scroll_area.rs`
@@ -60,7 +61,6 @@ Radix-named primitives facades so non-shadcn consumers can reuse them:
 
 - `checkbox` -> `ecosystem/fret-ui-shadcn/src/checkbox.rs`
 - `switch` -> `ecosystem/fret-ui-shadcn/src/switch.rs`
-- `progress` -> `ecosystem/fret-ui-shadcn/src/progress.rs`
 - `separator` -> `ecosystem/fret-ui-shadcn/src/separator.rs`
 - `label` -> `ecosystem/fret-ui-shadcn/src/label.rs`
 - `avatar` -> `ecosystem/fret-ui-shadcn/src/avatar.rs`

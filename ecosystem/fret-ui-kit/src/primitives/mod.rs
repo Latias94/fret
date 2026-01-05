@@ -42,6 +42,7 @@ pub mod popover;
 pub mod popper;
 pub mod popper_content;
 pub mod presence;
+pub mod progress;
 pub mod radio_group;
 pub mod roving_focus_group;
 pub mod scroll_area;

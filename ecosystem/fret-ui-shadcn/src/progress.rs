@@ -4,6 +4,7 @@ use fret_ui::element::{AnyElement, LayoutStyle, Length};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::progress as radix_progress;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 #[derive(Clone)]
@@ -42,14 +43,6 @@ impl Progress {
         self
     }
 
-    fn normalized(&self, v: f32) -> f32 {
-        let span = self.max - self.min;
-        if !span.is_finite() || span.abs() <= f32::EPSILON {
-            return 0.0;
-        }
-        ((v - self.min) / span).clamp(0.0, 1.0)
-    }
-
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
@@ -75,7 +68,7 @@ impl Progress {
                 .unwrap_or(theme.colors.panel_border);
 
             let v = cx.watch_model(&self.model).copied().unwrap_or(self.min);
-            let t = self.normalized(v);
+            let t = radix_progress::normalize_progress(v, self.min, self.max);
 
             let base_layout = LayoutRefinement::default()
                 .w_full()
