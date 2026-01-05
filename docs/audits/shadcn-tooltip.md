@@ -55,7 +55,8 @@ Key upstream notes:
   sets `background` as the text color, but rich children must set colors explicitly for now.
 - Pass: Arrow is implemented and enabled by default (can be disabled via `Tooltip::arrow(false)`).
 - Partial: Upstream includes zoom/slide animations keyed off `data-state` and `data-side`; Fret
-  includes fade + zoom + side-based slide (best-effort) but does not yet model transform origins.
+  includes fade + zoom + side-based slide (best-effort), including a geometry-driven transform
+  origin aligned to the anchor/arrow.
 
 ## Follow-ups (recommended)
 
