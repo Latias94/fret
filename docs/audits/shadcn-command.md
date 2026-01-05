@@ -48,6 +48,7 @@ Key upstream semantics:
 
 - Pass: `CommandItem.checkmark(bool)` + `CommandShortcut` support the common "left check + right shortcut" row layout.
 - Pass: `CommandItem.children(...)` allows rich custom row content.
+- Pass: Default `CommandPalette` rows can render cmdk-style match highlighting (matched characters use `foreground`; non-matched characters use `muted-foreground`).
 
 ### CommandDialog
 
@@ -59,5 +60,4 @@ Key upstream semantics:
 
 ## Follow-ups (non-P0)
 
-- Match highlighting: extend `cmdk_score` to optionally return match ranges and render highlights in the default `CommandItem` presentation.
 - Composability: if split authoring (`CommandInput`/`CommandList`/`CommandItem`) becomes a goal, introduce a shared context model (query + active + selection) with an explicit contract/ADR first.

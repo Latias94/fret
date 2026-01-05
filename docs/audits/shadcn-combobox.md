@@ -57,6 +57,7 @@ examples in `repo-ref/ui`.
   helper (`fret-ui-kit::headless::cmdk_score`). `CommandItem.value` participates as an alias.
 - Pass: `CommandItem.keywords([...])` is supported, aligning with cmdk’s `keywords` taxonomy.
 - Pass: Highlight selection tracks `CommandItem.value` (stable across list reorder/filtering).
+- Pass: Default rows can render cmdk-style match highlighting via `cmdk_score::command_match_ranges`.
 
 ## Validation
 
@@ -64,4 +65,4 @@ examples in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- Consider adding match highlighting ranges (cmdk-style) if visual parity requires it.
+_None tracked at this time._

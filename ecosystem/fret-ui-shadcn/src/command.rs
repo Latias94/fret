@@ -58,6 +58,109 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn cmdk_highlighted_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    query: &str,
+    fg: Color,
+    text_style: TextStyle,
+) -> AnyElement {
+    if query.is_empty() {
+        return cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text: label,
+            style: Some(text_style),
+            color: Some(fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        });
+    }
+
+    let theme = Theme::global(&*cx.app).clone();
+    let muted_fg = theme
+        .color_by_key("muted-foreground")
+        .unwrap_or(theme.colors.text_muted);
+
+    let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
+    if ranges.is_empty() {
+        return cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text: label,
+            style: Some(text_style),
+            color: Some(fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        });
+    }
+
+    let label_chars: Vec<char> = label.chars().collect();
+    let mut pieces: Vec<AnyElement> = Vec::new();
+
+    let mut cursor: usize = 0;
+    for range in ranges {
+        let start = range.start.min(label_chars.len());
+        let end = range.end.min(label_chars.len());
+        if cursor < start {
+            let text: Arc<str> = label_chars[cursor..start]
+                .iter()
+                .copied()
+                .collect::<String>()
+                .into();
+            pieces.push(cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text,
+                style: Some(text_style.clone()),
+                color: Some(muted_fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            }));
+        }
+        if start < end {
+            let text: Arc<str> = label_chars[start..end]
+                .iter()
+                .copied()
+                .collect::<String>()
+                .into();
+            pieces.push(cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text,
+                style: Some(text_style.clone()),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            }));
+        }
+        cursor = end;
+    }
+
+    if cursor < label_chars.len() {
+        let text: Arc<str> = label_chars[cursor..]
+            .iter()
+            .copied()
+            .collect::<String>()
+            .into();
+        pieces.push(cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text,
+            style: Some(text_style),
+            color: Some(muted_fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        }));
+    }
+
+    cx.row(
+        RowProps {
+            layout: LayoutStyle::default(),
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Start,
+            align: CrossAlign::Center,
+        },
+        move |_cx| pieces,
+    )
+}
+
 pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.command.item.text_px")
@@ -623,11 +726,11 @@ impl CommandList {
                             },
                             roving,
                         },
-                        move |cx| {
-                            cx.roving_nav_apg();
-                            let mut out = Vec::with_capacity(items.len());
+                            move |cx| {
+                                cx.roving_nav_apg();
+                                let mut out = Vec::with_capacity(items.len());
 
-                            for (idx, item) in items.into_iter().enumerate() {
+                                for (idx, item) in items.into_iter().enumerate() {
                                 let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
                                 let focusable = tab_stop.is_some_and(|i| i == idx);
 
@@ -993,6 +1096,7 @@ impl CommandPalette {
                 .layout()
                 .read_ref(|s| s.trim().to_ascii_lowercase())
                 .unwrap_or_default();
+            let query_for_render: Arc<str> = Arc::from(query.as_str());
 
             let (render_rows, items) =
                 command_palette_render_rows_for_query(self.entries, query.as_str());
@@ -1199,6 +1303,7 @@ impl CommandPalette {
                             return cx.container(ContainerProps::default(), |_cx| Vec::new());
                         };
 
+                        let query_for_row = query_for_render.clone();
                         let base = item
                             .command
                             .clone()
@@ -1209,11 +1314,11 @@ impl CommandPalette {
                         *count = count.saturating_add(1);
 
                         let active_for_row = active.clone();
-                        cx.keyed((base, occ), |cx| {
-                            let enabled = disabled_flags.get(idx).copied() == Some(false);
-                            let selected = active_idx.is_some_and(|i| i == idx);
+                                cx.keyed((base, occ), |cx| {
+                                    let enabled = disabled_flags.get(idx).copied() == Some(false);
+                                    let selected = active_idx.is_some_and(|i| i == idx);
 
-                            let label = item.label.clone();
+                                    let label = item.label.clone();
                             let value = item.value.clone();
                             let checked = item.checked;
                             let show_checkmark = item.show_checkmark;
@@ -1338,14 +1443,13 @@ impl CommandPalette {
                                                             out.push(icon);
                                                         }
 
-                                                        out.push(cx.text_props(TextProps {
-                                                            layout: LayoutStyle::default(),
-                                                            text: label.clone(),
-                                                            style: Some(text_style.clone()),
-                                                            color: Some(fg),
-                                                            wrap: TextWrap::None,
-                                                            overflow: TextOverflow::Clip,
-                                                        }));
+                                                        out.push(cmdk_highlighted_label(
+                                                            cx,
+                                                            label.clone(),
+                                                            query_for_row.as_ref(),
+                                                            fg,
+                                                            text_style.clone(),
+                                                        ));
 
                                                         out
                                                     },

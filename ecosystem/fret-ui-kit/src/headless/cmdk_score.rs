@@ -7,6 +7,8 @@
 //! - It is ASCII-oriented on purpose (stable indexing + predictable performance).
 //! - It returns a score in `[0, 1]` (0 means "no match").
 
+use std::ops::Range;
+
 const SCORE_CONTINUE_MATCH: f32 = 1.0;
 const SCORE_SPACE_WORD_JUMP: f32 = 0.9;
 const SCORE_NON_SPACE_WORD_JUMP: f32 = 0.8;
@@ -209,6 +211,61 @@ pub fn command_score(value: &str, search: &str, aliases: &[&str]) -> f32 {
     command_score_inner(&s, &abbr, &lower_s, &lower_abbr, 0, 0, &mut memo).clamp(0.0, 1.0)
 }
 
+/// Returns a best-effort set of match ranges for highlighting `search` within `value`.
+///
+/// This is intentionally a lightweight, deterministic helper for UI rendering:
+/// - It performs a greedy subsequence match over the same normalized (ASCII-oriented) inputs used by
+///   [`command_score`].
+/// - Returned ranges are **character index ranges** (not byte ranges) into the original `value`.
+/// - If no full subsequence match exists, returns an empty list.
+///
+/// Note: cmdk upstream does not provide "true" best-path match indices for its score; this helper is
+/// meant to be "good enough" for match highlighting while preserving stable behavior.
+pub fn command_match_ranges(value: &str, search: &str) -> Vec<Range<usize>> {
+    let search = search.trim();
+    if search.is_empty() {
+        return Vec::new();
+    }
+
+    let lower_s = format_input(value);
+    let lower_abbr = format_input(search);
+    if lower_s.is_empty() || lower_abbr.is_empty() {
+        return Vec::new();
+    }
+
+    let mut matched_indices: Vec<usize> = Vec::with_capacity(lower_abbr.len());
+    let mut s_idx: usize = 0;
+    for ch in lower_abbr {
+        let Some(i) = find_from(&lower_s, ch, s_idx) else {
+            return Vec::new();
+        };
+        matched_indices.push(i);
+        s_idx = i.saturating_add(1);
+        if s_idx > lower_s.len() {
+            s_idx = lower_s.len();
+        }
+    }
+
+    if matched_indices.is_empty() {
+        return Vec::new();
+    }
+
+    let mut ranges: Vec<Range<usize>> = Vec::new();
+    let mut start = matched_indices[0];
+    let mut prev = matched_indices[0];
+    for &idx in matched_indices.iter().skip(1) {
+        if idx == prev.saturating_add(1) {
+            prev = idx;
+            continue;
+        }
+        ranges.push(start..prev.saturating_add(1));
+        start = idx;
+        prev = idx;
+    }
+    ranges.push(start..prev.saturating_add(1));
+    ranges
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -247,5 +304,29 @@ mod tests {
         let exact = command_score("HTML", "HM", &[]);
         let mismatch = command_score("haml", "HM", &[]);
         assert!(exact > mismatch);
+    }
+
+    #[test]
+    fn match_ranges_empty_when_search_empty() {
+        assert_eq!(command_match_ranges("Open File", ""), Vec::<Range<usize>>::new());
+        assert_eq!(command_match_ranges("Open File", "   "), Vec::<Range<usize>>::new());
+    }
+
+    #[test]
+    fn match_ranges_returns_subsequence_character_ranges() {
+        // "of" matches non-contiguously in "open file".
+        let ranges = command_match_ranges("open file", "of");
+        assert_eq!(ranges, vec![0..1, 5..6]);
+
+        // contiguous match is returned as a single range.
+        let ranges = command_match_ranges("open file", "open");
+        assert_eq!(ranges, vec![0..4]);
+    }
+
+    #[test]
+    fn match_ranges_normalizes_hyphen_as_space() {
+        // cmdk normalization treats '-' as space, so "of" matches "open-file" at the same indices.
+        let ranges = command_match_ranges("open-file", "of");
+        assert_eq!(ranges, vec![0..1, 5..6]);
     }
 }
