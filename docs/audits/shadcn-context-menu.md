@@ -51,8 +51,7 @@ Key upstream behaviors/surfaces:
 ### Keyboard navigation & typeahead
 
 - Pass: Uses `RovingFlex` + APG navigation + prefix typeahead.
-- Gap: No explicit “focus transfer back to trigger” policy on close beyond the default popover
-  policy (restore only when focus is missing or still inside the closing layer).
+- Pass: Restores focus back to the trigger on close (Radix-style menu default).
 
 ### Visual parity (shadcn)
 

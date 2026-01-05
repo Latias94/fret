@@ -211,6 +211,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                     trigger: req.trigger,
                     initial_focus: req.initial_focus,
+                    consume_outside_pointer_events: req.consume_outside_pointer_events,
                     open: false,
                     restore_focus: None,
                     last_focus: focus_now,
@@ -219,6 +220,7 @@ pub fn render<H: UiHost>(
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
             entry.initial_focus = req.initial_focus;
+            entry.consume_outside_pointer_events = req.consume_outside_pointer_events;
 
             if open_now
                 && let Some(layer_root) = ui.layer_root(entry.layer)
@@ -267,14 +269,19 @@ pub fn render<H: UiHost>(
         }
     }
 
-    let to_hide_popovers: Vec<(UiLayerId, GlobalElementId, Option<NodeId>)> =
+    let to_hide_popovers: Vec<(UiLayerId, GlobalElementId, bool, Option<NodeId>)> =
         app.with_global_mut(WindowOverlays::default, |overlays, _app| {
-            let mut out: Vec<(UiLayerId, GlobalElementId, Option<NodeId>)> = Vec::new();
+            let mut out: Vec<(UiLayerId, GlobalElementId, bool, Option<NodeId>)> = Vec::new();
             for ((w, id), active) in overlays.popovers.iter() {
                 if *w != window || seen_popovers.contains(id) {
                     continue;
                 }
-                out.push((active.layer, active.trigger, active.restore_focus));
+                out.push((
+                    active.layer,
+                    active.trigger,
+                    active.consume_outside_pointer_events,
+                    active.restore_focus,
+                ));
             }
             out
         });
@@ -293,8 +300,13 @@ pub fn render<H: UiHost>(
                 .collect()
         });
 
-    for (layer, trigger, restore_focus) in to_hide_popovers {
-        if focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer) {
+    for (layer, trigger, consume_outside_pointer_events, restore_focus) in to_hide_popovers {
+        // Radix-aligned outcome for menu-like overlays (ADR 0069):
+        // when the overlay consumes outside pointer-down events (non-click-through), it's safe to
+        // always restore focus to the trigger on unmount (like modals).
+        if consume_outside_pointer_events
+            || focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer)
+        {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
             ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
             ui.set_layer_consume_pointer_down_outside_events(layer, false);
