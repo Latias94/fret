@@ -56,6 +56,14 @@ It complements (but does not replace) ADRs:
   - ADRs: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
   - Code: `crates/fret-render/src/text.rs`
 
+- **Center baseline within the line box across font swaps**
+  - Symptom: switching the UI font in `fret-demo` to fonts with unusual metrics (e.g. Nerd Fonts like "Agave NF") can make text look slightly "up/right" in controls that visually expect centered labels.
+  - Root cause: baseline placement derived from ascent only (no distribution of extra line-height padding), plus glyph bitmap bearings can shift perceived ink position vs logical advance metrics.
+  - Current: baseline offset is centered within the line box when `line_height > ascent+descent` (see `crates/fret-render/src/text.rs`).
+  - TODO: add a deterministic regression harness in `apps/fret-examples/src/components_gallery.rs` that toggles a known-problem font and captures a centered-label alignment snapshot.
+  - Option A: keep ascent/descent-based baseline centering (like Zed/GPUI's `baseline_offset`) and tune line-height defaults in themes.
+  - Option B: investigate "optical alignment" (ink bounds) for centered UI labels, likely requiring a new contract surface for ink metrics and careful cross-platform testing.
+
 ## P0 — Docking / Overlays / Viewport Capture
 
 - **Dock host keep-alive and early submission**
