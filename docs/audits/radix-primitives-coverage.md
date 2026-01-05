@@ -22,6 +22,7 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 ### Implemented (direct)
 
 - `accordion` -> `ecosystem/fret-ui-kit/src/primitives/accordion.rs`
+- `avatar` -> `ecosystem/fret-ui-kit/src/primitives/avatar.rs`
 - `aspect-ratio` -> `ecosystem/fret-ui-kit/src/primitives/aspect_ratio.rs`
 - `alert-dialog` -> `ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs`
 - `collapsible` -> `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`
@@ -63,7 +64,6 @@ Radix-named primitives facades so non-shadcn consumers can reuse them:
 - `switch` -> `ecosystem/fret-ui-shadcn/src/switch.rs`
 - `separator` -> `ecosystem/fret-ui-shadcn/src/separator.rs`
 - `label` -> `ecosystem/fret-ui-shadcn/src/label.rs`
-- `avatar` -> `ecosystem/fret-ui-shadcn/src/avatar.rs`
 
 ### Intentional differences
 
