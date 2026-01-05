@@ -18,13 +18,46 @@ use fret_core::{Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transf
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
 use fret_ui::element::{
-    AnyElement, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow, SizeStyle,
-    TextProps, VisualTransformProps,
+    AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow,
+    SizeStyle, SpinnerProps, SvgIconProps, TextProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::overlay_motion;
+
+fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> AnyElement {
+    match &mut element.kind {
+        ElementKind::Text(props) => {
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+        }
+        ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
+            let is_default = *color
+                == fret_core::Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                };
+            if is_default {
+                *color = fg;
+            }
+        }
+        ElementKind::Spinner(SpinnerProps { color, .. }) => {
+            color.get_or_insert(fg);
+        }
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(|child| apply_tooltip_inherited_fg(child, fg))
+        .collect();
+    element
+}
 
 fn tooltip_text_fg(theme: &Theme) -> fret_core::Color {
     theme
@@ -677,7 +710,12 @@ impl TooltipContent {
         let base_layout = LayoutRefinement::default().flex_shrink_0();
         let chrome = tooltip_content_chrome(&theme).merge(self.chrome);
         let props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
-        let children = self.children;
+        let fg = tooltip_text_fg(&theme);
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| apply_tooltip_inherited_fg(child, fg))
+            .collect();
         shadcn_layout::container_flow(cx, props, children)
     }
 }
@@ -745,6 +783,58 @@ mod tests {
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn tooltip_content_applies_default_fg_to_descendant_text() {
+        use fret_core::Color;
+        use fret_ui::element::ElementKind;
+        use fret_ui::elements::GlobalElementId;
+
+        let fg = Color {
+            r: 0.1,
+            g: 0.2,
+            b: 0.3,
+            a: 0.4,
+        };
+
+        let text_no_color = AnyElement::new(
+            GlobalElementId(1),
+            ElementKind::Text(TextProps::new("tip")),
+            Vec::new(),
+        );
+        let mut text_with_color = TextProps::new("fixed");
+        text_with_color.color = Some(Color {
+            r: 0.9,
+            g: 0.8,
+            b: 0.7,
+            a: 1.0,
+        });
+        let text_with_color = AnyElement::new(
+            GlobalElementId(2),
+            ElementKind::Text(text_with_color),
+            Vec::new(),
+        );
+
+        let root = AnyElement::new(
+            GlobalElementId(3),
+            ElementKind::Container(ContainerProps::default()),
+            vec![text_no_color, text_with_color],
+        );
+
+        let out = apply_tooltip_inherited_fg(root, fg);
+        let colors: Vec<Option<Color>> = out
+            .children
+            .iter()
+            .map(|child| match &child.kind {
+                ElementKind::Text(t) => t.color,
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(colors.len(), 2);
+        assert_eq!(colors[0], Some(fg));
+        assert_ne!(colors[1], Some(fg));
     }
 
     fn render_tooltip_frame(

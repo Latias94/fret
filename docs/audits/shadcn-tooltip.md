@@ -51,8 +51,8 @@ Key upstream notes:
 - Pass: Default rounding and padding match the wrapper (`rounded-md`, `px-3`, `py-1.5`).
 - Pass: `TooltipContent::text(...)` defaults to `text-xs`-like sizing via `component.tooltip.text_px`
   (fallback `12px`) and a `16px` line height.
-- Partial: Default “text color inheritance” is not a first-class concept; `TooltipContent::text(...)`
-  sets `background` as the text color, but rich children must set colors explicitly for now.
+- Pass: Tooltip content applies the `text-background` foreground to descendant text/icon primitives
+  by default when colors are not specified.
 - Pass: Arrow is implemented and enabled by default (can be disabled via `Tooltip::arrow(false)`).
 - Pass: Upstream includes zoom/slide animations keyed off `data-state` and `data-side`; Fret matches
   the same motion taxonomy (fade + zoom + side-based slide) on both enter and exit, including a
