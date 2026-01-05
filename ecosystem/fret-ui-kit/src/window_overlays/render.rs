@@ -20,6 +20,11 @@ use super::state::{
 use super::toast::{ToastEntry, ToastTimerOutcome};
 use super::{ToastPosition, ToastVariant, dismiss_toast_action};
 
+#[derive(Default)]
+struct ToastHoverPauseState {
+    hovered: bool,
+}
+
 fn toast_icon_glyph(variant: ToastVariant) -> Option<&'static str> {
     match variant {
         ToastVariant::Success => Some("✓"),
@@ -579,6 +584,8 @@ pub fn render<H: UiHost>(
                             let toast_id = toast.id;
                             let open = toast.open;
                             let position = position;
+                            let drag_x = toast.drag_x;
+                            let drag_active = toast.dragging;
 
                             let bg_default = theme
                                 .color_by_key("popover")
@@ -791,7 +798,8 @@ pub fn render<H: UiHost>(
                                     | ToastPosition::BottomCenter
                                     | ToastPosition::BottomRight => slide_px,
                                 };
-                                let slide = Transform2D::translation(Point::new(dx, dy));
+                                let slide =
+                                    Transform2D::translation(Point::new(Px(dx.0 + drag_x.0), dy));
 
                                 let mut toast_layout = fret_ui::element::LayoutStyle::default();
                                 toast_layout.size.min_width = Some(Px(280.0));
@@ -810,6 +818,142 @@ pub fn render<H: UiHost>(
                                     move |_cx| toast_children,
                                 );
 
+                                let store_for_hooks = store.clone();
+                                let pause_store = store.clone();
+                                let toast_hover = cx.hover_region(
+                                    fret_ui::element::HoverRegionProps::default(),
+                                    move |cx, hovered| {
+                                        let hovered = hovered || drag_active;
+                                        let changed =
+                                            cx.with_state(ToastHoverPauseState::default, |st| {
+                                                let changed = st.hovered != hovered;
+                                                st.hovered = hovered;
+                                                changed
+                                            });
+
+                                        if changed {
+                                            if hovered {
+                                                if let Ok(Some(token)) =
+                                                    cx.app.models_mut().update(&pause_store, |st| {
+                                                        st.pause_auto_close(cx.window, toast_id)
+                                                    })
+                                                {
+                                                    cx.app.push_effect(
+                                                        fret_runtime::Effect::CancelTimer { token },
+                                                    );
+                                                    cx.app.request_redraw(cx.window);
+                                                }
+                                            } else {
+                                                let token = cx.app.next_timer_token();
+                                                if let Ok(Some(after)) =
+                                                    cx.app.models_mut().update(&pause_store, |st| {
+                                                        st.resume_auto_close(
+                                                            cx.window, toast_id, token,
+                                                        )
+                                                    })
+                                                {
+                                                    cx.app.push_effect(
+                                                        fret_runtime::Effect::SetTimer {
+                                                            window: Some(cx.window),
+                                                            token,
+                                                            after,
+                                                            repeat: None,
+                                                        },
+                                                    );
+                                                    cx.app.request_redraw(cx.window);
+                                                }
+                                            }
+                                        }
+
+                                        vec![cx.pointer_region(
+                                            fret_ui::element::PointerRegionProps::default(),
+                                            move |cx| {
+                                                let store = store_for_hooks.clone();
+                                                cx.pointer_region_on_pointer_down(Arc::new(
+                                                    move |host, acx, down| {
+                                                        let _ = host.models_mut().update(
+                                                            &store,
+                                                            |st| {
+                                                                st.begin_drag(
+                                                                    acx.window,
+                                                                    toast_id,
+                                                                    down.position,
+                                                                )
+                                                            },
+                                                        );
+                                                        false
+                                                    },
+                                                ));
+
+                                                let store = store_for_hooks.clone();
+                                                cx.pointer_region_on_pointer_move(Arc::new(
+                                                    move |host, acx, mv| {
+                                                        let update = host
+                                                            .models_mut()
+                                                            .update(&store, |st| {
+                                                                st.drag_move(
+                                                                    acx.window,
+                                                                    toast_id,
+                                                                    mv.position,
+                                                                )
+                                                            })
+                                                            .ok()
+                                                            .flatten();
+
+                                                        let Some(update) = update else {
+                                                            return false;
+                                                        };
+
+                                                        if update.capture_pointer {
+                                                            host.capture_pointer();
+                                                        }
+
+                                                        if update.dragging {
+                                                            host.request_redraw(acx.window);
+                                                            return true;
+                                                        }
+                                                        false
+                                                    },
+                                                ));
+
+                                                let store = store_for_hooks.clone();
+                                                cx.pointer_region_on_pointer_up(Arc::new(
+                                                    move |host, acx, _up| {
+                                                        let end = host
+                                                            .models_mut()
+                                                            .update(&store, |st| {
+                                                                st.end_drag(acx.window, toast_id)
+                                                            })
+                                                            .ok()
+                                                            .flatten();
+
+                                                        let Some(end) = end else {
+                                                            return false;
+                                                        };
+
+                                                        if end.dragging {
+                                                            host.release_pointer_capture();
+                                                            if end.dx.0.abs() >= 80.0 {
+                                                                let _ = dismiss_toast_action(
+                                                                    host,
+                                                                    store.clone(),
+                                                                    acx.window,
+                                                                    toast_id,
+                                                                );
+                                                            }
+                                                            host.request_redraw(acx.window);
+                                                            return true;
+                                                        }
+                                                        false
+                                                    },
+                                                ));
+
+                                                vec![toast_el.clone()]
+                                            },
+                                        )]
+                                    },
+                                );
+
                                 cx.opacity_props(
                                     fret_ui::element::OpacityProps {
                                         layout: fret_ui::element::LayoutStyle::default(),
@@ -821,7 +965,7 @@ pub fn render<H: UiHost>(
                                                 layout: fret_ui::element::LayoutStyle::default(),
                                                 transform: slide,
                                             },
-                                            move |_cx| vec![toast_el],
+                                            move |_cx| vec![toast_hover],
                                         )]
                                     },
                                 )

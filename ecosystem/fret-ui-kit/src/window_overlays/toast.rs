@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{AppWindowId, TimerToken};
+use fret_core::{AppWindowId, Point, Px, TimerToken};
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::UiHost;
 
@@ -106,12 +106,16 @@ pub(super) struct ToastEntry {
     pub(super) id: ToastId,
     pub(super) title: Arc<str>,
     pub(super) description: Option<Arc<str>>,
+    pub(super) duration: Option<Duration>,
     pub(super) variant: ToastVariant,
     pub(super) action: Option<ToastAction>,
     pub(super) dismissible: bool,
     pub(super) open: bool,
     pub(super) auto_close_token: Option<TimerToken>,
     pub(super) remove_token: Option<TimerToken>,
+    pub(super) drag_start: Option<Point>,
+    pub(super) drag_x: Px,
+    pub(super) dragging: bool,
 }
 
 #[derive(Debug, Default)]
@@ -156,12 +160,16 @@ impl ToastStore {
             id,
             title: request.title,
             description: request.description,
+            duration: request.duration,
             variant: request.variant,
             action: request.action,
             dismissible: request.dismissible,
             open: true,
             auto_close_token,
             remove_token: None,
+            drag_start: None,
+            drag_x: Px(0.0),
+            dragging: false,
         });
 
         id
@@ -196,6 +204,9 @@ impl ToastStore {
         }
 
         toast.open = false;
+        toast.drag_start = None;
+        toast.drag_x = Px(0.0);
+        toast.dragging = false;
         let cancel_auto = toast.auto_close_token.take();
         if let Some(token) = cancel_auto {
             self.by_token.remove(&token);
@@ -215,6 +226,102 @@ impl ToastStore {
             cancel_auto,
             schedule_remove: Some(remove_token),
         })
+    }
+
+    pub(super) fn pause_auto_close(
+        &mut self,
+        window: AppWindowId,
+        id: ToastId,
+    ) -> Option<TimerToken> {
+        let toasts = self.by_window.get_mut(&window)?;
+        let toast = toasts.iter_mut().find(|t| t.id == id)?;
+        let token = toast.auto_close_token.take()?;
+        self.by_token.remove(&token);
+        Some(token)
+    }
+
+    pub(super) fn resume_auto_close(
+        &mut self,
+        window: AppWindowId,
+        id: ToastId,
+        token: TimerToken,
+    ) -> Option<Duration> {
+        let toasts = self.by_window.get_mut(&window)?;
+        let toast = toasts.iter_mut().find(|t| t.id == id)?;
+        if !toast.open || toast.auto_close_token.is_some() || toast.remove_token.is_some() {
+            return None;
+        }
+        let duration = toast.duration.filter(|d| d.as_secs_f32() > 0.0)?;
+        toast.auto_close_token = Some(token);
+        self.by_token.insert(
+            token,
+            ToastTimerRef {
+                window,
+                toast: id,
+                kind: ToastTimerKind::AutoClose,
+            },
+        );
+        Some(duration)
+    }
+
+    pub(super) fn begin_drag(&mut self, window: AppWindowId, id: ToastId, start: Point) -> bool {
+        let Some(toasts) = self.by_window.get_mut(&window) else {
+            return false;
+        };
+        let Some(toast) = toasts.iter_mut().find(|t| t.id == id) else {
+            return false;
+        };
+        if !toast.open || toast.remove_token.is_some() {
+            return false;
+        }
+        toast.drag_start = Some(start);
+        toast.drag_x = Px(0.0);
+        toast.dragging = false;
+        true
+    }
+
+    pub(super) fn drag_move(
+        &mut self,
+        window: AppWindowId,
+        id: ToastId,
+        position: Point,
+    ) -> Option<ToastDragMove> {
+        let toasts = self.by_window.get_mut(&window)?;
+        let toast = toasts.iter_mut().find(|t| t.id == id)?;
+        let start = toast.drag_start?;
+        if !toast.open || toast.remove_token.is_some() {
+            return None;
+        }
+
+        let dx = Px(position.x.0 - start.x.0);
+        let dx = Px(dx.0.clamp(-240.0, 240.0));
+        let was_dragging = toast.dragging;
+        if !toast.dragging && dx.0.abs() >= 4.0 {
+            toast.dragging = true;
+        }
+        toast.drag_x = dx;
+
+        Some(ToastDragMove {
+            dragging: toast.dragging,
+            capture_pointer: toast.dragging && !was_dragging,
+        })
+    }
+
+    pub(super) fn end_drag(&mut self, window: AppWindowId, id: ToastId) -> Option<ToastDragEnd> {
+        let toasts = self.by_window.get_mut(&window)?;
+        let toast = toasts.iter_mut().find(|t| t.id == id)?;
+        if toast.drag_start.is_none() {
+            return None;
+        }
+
+        let result = ToastDragEnd {
+            dx: toast.drag_x,
+            dragging: toast.dragging,
+        };
+        toast.drag_start = None;
+        toast.drag_x = Px(0.0);
+        toast.dragging = false;
+        Some(result)
     }
 
     pub(super) fn on_timer(
@@ -259,6 +366,18 @@ impl ToastStore {
 pub(super) struct ToastClosePlan {
     pub(super) cancel_auto: Option<TimerToken>,
     pub(super) schedule_remove: Option<TimerToken>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ToastDragMove {
+    pub(super) dragging: bool,
+    pub(super) capture_pointer: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ToastDragEnd {
+    pub(super) dx: Px,
+    pub(super) dragging: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
