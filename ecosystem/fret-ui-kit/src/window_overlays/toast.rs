@@ -11,8 +11,10 @@ pub(super) const TOAST_CLOSE_DURATION: Duration = Duration::from_millis(200);
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ToastPosition {
     TopLeft,
+    TopCenter,
     TopRight,
     BottomLeft,
+    BottomCenter,
     #[default]
     BottomRight,
 }

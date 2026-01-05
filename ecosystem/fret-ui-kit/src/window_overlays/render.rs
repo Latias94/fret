@@ -496,6 +496,11 @@ pub fn render<H: UiHost>(
                         wrapper_layout.inset.top = Some(margin);
                         wrapper_layout.inset.left = Some(margin);
                     }
+                    ToastPosition::TopCenter => {
+                        wrapper_layout.inset.top = Some(margin);
+                        wrapper_layout.inset.left = Some(Px(0.0));
+                        wrapper_layout.inset.right = Some(Px(0.0));
+                    }
                     ToastPosition::TopRight => {
                         wrapper_layout.inset.top = Some(margin);
                         wrapper_layout.inset.right = Some(margin);
@@ -504,6 +509,11 @@ pub fn render<H: UiHost>(
                         wrapper_layout.inset.bottom = Some(margin);
                         wrapper_layout.inset.left = Some(margin);
                     }
+                    ToastPosition::BottomCenter => {
+                        wrapper_layout.inset.bottom = Some(margin);
+                        wrapper_layout.inset.left = Some(Px(0.0));
+                        wrapper_layout.inset.right = Some(Px(0.0));
+                    }
                     ToastPosition::BottomRight => {
                         wrapper_layout.inset.bottom = Some(margin);
                         wrapper_layout.inset.right = Some(margin);
@@ -511,17 +521,20 @@ pub fn render<H: UiHost>(
                 }
 
                 let justify = match position {
-                    ToastPosition::TopLeft | ToastPosition::TopRight => {
+                    ToastPosition::TopLeft | ToastPosition::TopCenter | ToastPosition::TopRight => {
                         fret_ui::element::MainAlign::Start
                     }
-                    ToastPosition::BottomLeft | ToastPosition::BottomRight => {
-                        fret_ui::element::MainAlign::End
-                    }
+                    ToastPosition::BottomLeft
+                    | ToastPosition::BottomCenter
+                    | ToastPosition::BottomRight => fret_ui::element::MainAlign::End,
                 };
 
                 let align = match position {
                     ToastPosition::TopLeft | ToastPosition::BottomLeft => {
                         fret_ui::element::CrossAlign::Start
+                    }
+                    ToastPosition::TopCenter | ToastPosition::BottomCenter => {
+                        fret_ui::element::CrossAlign::Center
                     }
                     ToastPosition::TopRight | ToastPosition::BottomRight => {
                         fret_ui::element::CrossAlign::End
@@ -687,8 +700,19 @@ pub fn render<H: UiHost>(
                                     ToastPosition::TopRight | ToastPosition::BottomRight => {
                                         slide_px
                                     }
+                                    ToastPosition::TopCenter | ToastPosition::BottomCenter => {
+                                        Px(0.0)
+                                    }
                                 };
-                                let slide = Transform2D::translation(Point::new(dx, Px(0.0)));
+                                let dy = match position {
+                                    ToastPosition::TopLeft
+                                    | ToastPosition::TopCenter
+                                    | ToastPosition::TopRight => Px(-slide_px.0),
+                                    ToastPosition::BottomLeft
+                                    | ToastPosition::BottomCenter
+                                    | ToastPosition::BottomRight => slide_px,
+                                };
+                                let slide = Transform2D::translation(Point::new(dx, dy));
 
                                 let mut toast_layout = fret_ui::element::LayoutStyle::default();
                                 toast_layout.size.min_width = Some(Px(280.0));
