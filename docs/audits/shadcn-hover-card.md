@@ -41,8 +41,8 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Pass: Default content sizing matches `w-64` (`256px`) and padding matches `p-4`.
 - Pass: Default background/border follow popover tokens (`popover` / `popover.background`, `border`).
 - Partial: Upstream includes open/close animations (fade + zoom + side-based slide) keyed off
-  `data-state` and `data-side`. Fret includes fade + zoom + side-based slide (best-effort), using a
-  geometry-driven transform origin aligned to the anchor/arrow.
+  `data-state` and `data-side`. Fret includes fade + zoom + side-based slide on enter (best-effort),
+  using a geometry-driven transform origin aligned to the anchor/arrow.
 
 ## Validation
 

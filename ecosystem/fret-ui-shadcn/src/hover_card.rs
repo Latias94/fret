@@ -238,6 +238,7 @@ impl HoverCard {
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
             let update = hover_intent::drive(cx, hovered, cfg);
+            let opening = update.open;
             let presence = OverlayController::fade_presence(cx, update.open, 4);
             let opacity = presence.opacity;
 
@@ -309,7 +310,12 @@ impl HoverCard {
                 let zoom = Transform2D::translation(origin)
                     * Transform2D::scale_uniform(scale)
                     * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)));
-                let transform = hover_card_slide_transform(layout.side, opacity) * zoom;
+                let slide = if opening {
+                    hover_card_slide_transform(layout.side, opacity)
+                } else {
+                    Transform2D::IDENTITY
+                };
+                let transform = slide * zoom;
 
                 let overlay_layout = LayoutStyle {
                     size: SizeStyle {
