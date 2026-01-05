@@ -54,9 +54,9 @@ Key upstream notes:
 - Partial: Default “text color inheritance” is not a first-class concept; `TooltipContent::text(...)`
   sets `background` as the text color, but rich children must set colors explicitly for now.
 - Pass: Arrow is implemented and enabled by default (can be disabled via `Tooltip::arrow(false)`).
-- Partial: Upstream includes zoom/slide animations keyed off `data-state` and `data-side`; Fret
-  includes fade + zoom + side-based slide on enter (best-effort), including a geometry-driven
-  transform origin aligned to the anchor/arrow.
+- Pass: Upstream includes zoom/slide animations keyed off `data-state` and `data-side`; Fret matches
+  the same motion taxonomy (fade + zoom + side-based slide) on both enter and exit, including a
+  geometry-driven transform origin aligned to the anchor/arrow.
 
 ## Follow-ups (recommended)
 
