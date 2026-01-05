@@ -255,6 +255,44 @@ fn dim_color(color: Color, factor: f32) -> Color {
     }
 }
 
+fn query_rect_from_plot_points_raw(
+    view_bounds: DataRect,
+    viewport: Size,
+    a: Point,
+    b: Point,
+) -> Option<DataRect> {
+    let viewport_w = viewport.width.0;
+    let viewport_h = viewport.height.0;
+    if !viewport_w.is_finite() || !viewport_h.is_finite() || viewport_w <= 0.0 || viewport_h <= 0.0
+    {
+        return None;
+    }
+
+    let x0 = a.x.0.min(b.x.0).clamp(0.0, viewport_w);
+    let x1 = a.x.0.max(b.x.0).clamp(0.0, viewport_w);
+    let y0 = a.y.0.min(b.y.0).clamp(0.0, viewport_h);
+    let y1 = a.y.0.max(b.y.0).clamp(0.0, viewport_h);
+
+    let transform = PlotTransform {
+        viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), viewport),
+        data: view_bounds,
+    };
+
+    let da = transform.px_to_data(Point::new(Px(x0), Px(y0)));
+    let db = transform.px_to_data(Point::new(Px(x1), Px(y1)));
+
+    if !da.x.is_finite() || !da.y.is_finite() || !db.x.is_finite() || !db.y.is_finite() {
+        return None;
+    }
+
+    Some(DataRect {
+        x_min: da.x.min(db.x),
+        x_max: da.x.max(db.x),
+        y_min: da.y.min(db.y),
+        y_max: da.y.max(db.y),
+    })
+}
+
 fn scatter_marker_commands(samples: &[SamplePoint], radius: Px) -> Vec<fret_core::PathCommand> {
     if samples.is_empty() {
         return Vec::new();
@@ -495,6 +533,8 @@ pub struct PlotState {
     pub hidden_series: HashSet<SeriesId>,
     /// Optional pinned series ID for emphasis and tooltip pinning.
     pub pinned_series: Option<SeriesId>,
+    /// Optional user query selection in data space.
+    pub query: Option<DataRect>,
 }
 
 impl Default for PlotState {
@@ -504,6 +544,7 @@ impl Default for PlotState {
             view_is_auto: true,
             hidden_series: HashSet::new(),
             pinned_series: None,
+            query: None,
         }
     }
 }
@@ -522,6 +563,8 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     pan_last_pos: Option<Point>,
     box_zoom_start: Option<Point>,
     box_zoom_current: Option<Point>,
+    query_drag_start: Option<Point>,
+    query_drag_current: Option<Point>,
     axis_label_key: Option<u64>,
     axis_labels_x: Vec<PreparedText>,
     axis_labels_y: Vec<PreparedText>,
@@ -557,6 +600,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             pan_last_pos: None,
             box_zoom_start: None,
             box_zoom_current: None,
+            query_drag_start: None,
+            query_drag_current: None,
             axis_label_key: None,
             axis_labels_x: Vec::new(),
             axis_labels_y: Vec::new(),
@@ -959,12 +1004,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         s.view_bounds = None;
                         s.hidden_series.clear();
                         s.pinned_series = None;
+                        s.query = None;
                     });
                     self.hover = None;
                     self.cursor_px = None;
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
                     self.box_zoom_current = None;
+                    self.query_drag_start = None;
+                    self.query_drag_current = None;
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -982,19 +1030,55 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
                     self.box_zoom_current = None;
+                    self.query_drag_start = None;
+                    self.query_drag_current = None;
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
+                } else if plain && *key == KeyCode::KeyQ {
+                    let query = self.read_plot_state(cx.app).query;
+                    if query.is_some() {
+                        let _ = self.update_plot_state(cx.app, |s| {
+                            s.query = None;
+                        });
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
                 } else if *key == KeyCode::Escape {
-                    let pinned = self.read_plot_state(cx.app).pinned_series;
-                    if pinned.is_some() {
+                    let state = self.read_plot_state(cx.app);
+                    let has_active_drag = self.box_zoom_start.is_some()
+                        || self.pan_last_pos.is_some()
+                        || self.query_drag_start.is_some();
+
+                    if has_active_drag {
+                        self.pan_last_pos = None;
+                        self.box_zoom_start = None;
+                        self.box_zoom_current = None;
+                        self.query_drag_start = None;
+                        self.query_drag_current = None;
+                        self.hover = None;
+                        if cx.captured == Some(cx.node) {
+                            cx.release_pointer_capture();
+                        }
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    } else if state.pinned_series.is_some() {
                         let _ = self.update_plot_state(cx.app, |s| {
                             s.pinned_series = None;
                         });
                         self.legend_hover = None;
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    } else if state.query.is_some() {
+                        let _ = self.update_plot_state(cx.app, |s| {
+                            s.query = None;
+                        });
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
@@ -1094,11 +1178,20 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 if inside && *button == MouseButton::Left {
                     self.cursor_px = Some(local_from_absolute(layout.plot.origin, *position));
                     self.hover = None;
-                    if modifiers.shift {
+                    if modifiers.alt {
+                        let local = local_from_absolute(layout.plot.origin, *position);
+                        self.query_drag_start = Some(local);
+                        self.query_drag_current = Some(local);
+                        self.pan_last_pos = None;
+                        self.box_zoom_start = None;
+                        self.box_zoom_current = None;
+                    } else if modifiers.shift {
                         let local = local_from_absolute(layout.plot.origin, *position);
                         self.box_zoom_start = Some(local);
                         self.box_zoom_current = Some(local);
                         self.pan_last_pos = None;
+                        self.query_drag_start = None;
+                        self.query_drag_current = None;
                     } else {
                         let _ = self.update_plot_state(cx.app, |s| {
                             s.view_is_auto = false;
@@ -1106,6 +1199,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         self.pan_last_pos = Some(*position);
                         self.box_zoom_start = None;
                         self.box_zoom_current = None;
+                        self.query_drag_start = None;
+                        self.query_drag_current = None;
                     }
                     cx.request_focus(cx.node);
                     cx.capture_pointer(cx.node);
@@ -1116,7 +1211,52 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             }
             Event::Pointer(PointerEvent::Up { button, .. }) => {
                 if *button == MouseButton::Left {
-                    if self.box_zoom_start.is_some() {
+                    if self.query_drag_start.is_some() {
+                        if cx.captured == Some(cx.node) {
+                            cx.release_pointer_capture();
+                        }
+
+                        let layout = PlotLayout::from_bounds(
+                            cx.bounds,
+                            self.style.padding,
+                            self.style.axis_gap,
+                        );
+                        if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
+                            let start = self
+                                .query_drag_start
+                                .unwrap_or(Point::new(Px(0.0), Px(0.0)));
+                            let end = self
+                                .query_drag_current
+                                .unwrap_or(Point::new(Px(0.0), Px(0.0)));
+
+                            let w = (start.x.0 - end.x.0).abs();
+                            let h = (start.y.0 - end.y.0).abs();
+
+                            if w >= 4.0 && h >= 4.0 {
+                                let state = self.read_plot_state(cx.app);
+                                let view_bounds = self.current_view_bounds(cx.app, &state);
+                                if let Some(next) = query_rect_from_plot_points_raw(
+                                    view_bounds,
+                                    layout.plot.size,
+                                    start,
+                                    end,
+                                ) {
+                                    let _ = self.update_plot_state(cx.app, |s| {
+                                        s.query = Some(next);
+                                    });
+                                }
+                            }
+                        }
+
+                        self.query_drag_start = None;
+                        self.query_drag_current = None;
+                        self.pan_last_pos = None;
+                        self.hover = None;
+
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    } else if self.box_zoom_start.is_some() {
                         if cx.captured == Some(cx.node) {
                             cx.release_pointer_capture();
                         }
@@ -1193,7 +1333,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 if !inside {
                     return;
                 }
-                if self.box_zoom_start.is_some() {
+                if self.box_zoom_start.is_some() || self.query_drag_start.is_some() {
                     return;
                 }
 
@@ -1282,6 +1422,17 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                     }
+                }
+
+                if self.query_drag_start.is_some() {
+                    let local = local_from_absolute(layout.plot.origin, *position);
+                    self.cursor_px = Some(local);
+                    self.query_drag_current = Some(local);
+                    self.hover = None;
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
                 }
 
                 if self.box_zoom_start.is_some() {
@@ -1562,6 +1713,96 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     border_color: tooltip_border,
                     corner_radii: fret_core::Corners::all(Px(dot_size.0 * 0.5)),
                 });
+            }
+
+            if let Some(query) = state.query {
+                let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+                let transform = PlotTransform {
+                    viewport: local_viewport,
+                    data: view_bounds,
+                };
+
+                let a = transform.data_to_px(DataPoint {
+                    x: query.x_min,
+                    y: query.y_min,
+                });
+                let b = transform.data_to_px(DataPoint {
+                    x: query.x_max,
+                    y: query.y_max,
+                });
+
+                let x0 = a.x.0.min(b.x.0).clamp(0.0, layout.plot.size.width.0);
+                let x1 = a.x.0.max(b.x.0).clamp(0.0, layout.plot.size.width.0);
+                let y0 = a.y.0.min(b.y.0).clamp(0.0, layout.plot.size.height.0);
+                let y1 = a.y.0.max(b.y.0).clamp(0.0, layout.plot.size.height.0);
+                let w = x1 - x0;
+                let h = y1 - y0;
+                if w >= 1.0 && h >= 1.0 {
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(5),
+                        rect: Rect::new(
+                            Point::new(
+                                Px(layout.plot.origin.x.0 + x0),
+                                Px(layout.plot.origin.y.0 + y0),
+                            ),
+                            Size::new(Px(w), Px(h)),
+                        ),
+                        background: selection_fill,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: selection_border,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+                }
+            }
+
+            if let (Some(start), Some(end)) = (self.query_drag_start, self.query_drag_current) {
+                let x0 = start.x.0.min(end.x.0).clamp(0.0, layout.plot.size.width.0);
+                let x1 = start.x.0.max(end.x.0).clamp(0.0, layout.plot.size.width.0);
+                let y0 = start.y.0.min(end.y.0).clamp(0.0, layout.plot.size.height.0);
+                let y1 = start.y.0.max(end.y.0).clamp(0.0, layout.plot.size.height.0);
+                let w = x1 - x0;
+                let h = y1 - y0;
+                if w >= 1.0 && h >= 1.0 {
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(5),
+                        rect: Rect::new(
+                            Point::new(
+                                Px(layout.plot.origin.x.0 + x0),
+                                Px(layout.plot.origin.y.0 + y0),
+                            ),
+                            Size::new(Px(w), Px(h)),
+                        ),
+                        background: selection_fill,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: selection_border,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+                }
+            }
+
+            if let (Some(start), Some(end)) = (self.box_zoom_start, self.box_zoom_current) {
+                let x0 = start.x.0.min(end.x.0).clamp(0.0, layout.plot.size.width.0);
+                let x1 = start.x.0.max(end.x.0).clamp(0.0, layout.plot.size.width.0);
+                let y0 = start.y.0.min(end.y.0).clamp(0.0, layout.plot.size.height.0);
+                let y1 = start.y.0.max(end.y.0).clamp(0.0, layout.plot.size.height.0);
+                let w = x1 - x0;
+                let h = y1 - y0;
+                if w >= 1.0 && h >= 1.0 {
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(5),
+                        rect: Rect::new(
+                            Point::new(
+                                Px(layout.plot.origin.x.0 + x0),
+                                Px(layout.plot.origin.y.0 + y0),
+                            ),
+                            Size::new(Px(w), Px(h)),
+                        ),
+                        background: selection_fill,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: selection_border,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+                }
             }
         }
 
@@ -1870,31 +2111,6 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     text: tt.blob,
                     color: tooltip_text_color,
                 });
-            }
-
-            if let (Some(start), Some(end)) = (self.box_zoom_start, self.box_zoom_current) {
-                let x0 = start.x.0.min(end.x.0).clamp(0.0, layout.plot.size.width.0);
-                let x1 = start.x.0.max(end.x.0).clamp(0.0, layout.plot.size.width.0);
-                let y0 = start.y.0.min(end.y.0).clamp(0.0, layout.plot.size.height.0);
-                let y1 = start.y.0.max(end.y.0).clamp(0.0, layout.plot.size.height.0);
-                let w = x1 - x0;
-                let h = y1 - y0;
-                if w >= 1.0 && h >= 1.0 {
-                    cx.scene.push(SceneOp::Quad {
-                        order: DrawOrder(5),
-                        rect: Rect::new(
-                            Point::new(
-                                Px(layout.plot.origin.x.0 + x0),
-                                Px(layout.plot.origin.y.0 + y0),
-                            ),
-                            Size::new(Px(w), Px(h)),
-                        ),
-                        background: selection_fill,
-                        border: fret_core::Edges::all(Px(1.0)),
-                        border_color: selection_border,
-                        corner_radii: fret_core::Corners::all(Px(0.0)),
-                    });
-                }
             }
         }
     }
