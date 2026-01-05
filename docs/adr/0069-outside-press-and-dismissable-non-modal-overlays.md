@@ -130,12 +130,29 @@ This rule is implemented by `OverlayPortal::hide` and applies to all overlays.
 
 ## Consequences
 
-- `Popover`, `PopoverSurface`, and `ContextMenu` are installed as **non-modal** overlays.
+- `Popover` and `PopoverSurface` are installed as **non-modal** overlays.
 - Menu-like overlays (DropdownMenu / ContextMenu / Menubar / Select) are non-modal overlays that
   typically opt into consuming outside pointer-down events to avoid underlay activation on dismiss.
 - Modal widgets (command palette, dialog, sheet) continue to use barrier-backed layers.
 - Components can implement outside press dismissal purely in the component layer using the
   existing event + bounds logic, without requiring modal barriers.
+
+## Policy defaults (shadcn mapping)
+
+This ADR defines the **mechanism**. Default behaviors are chosen in the component layer.
+
+The current shadcn-aligned defaults in this repo:
+
+| Component | Overlay kind | `blocks_underlay_input` | Outside-press observer | Consume outside pointer-down | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `Popover` | Non-modal | `false` | Yes | No (click-through) | Outside press closes; underlay click can focus/activate |
+| `HoverCard` | Hover overlay | `false` | No | No | Driven by hover intent; click-through (no outside-press dismissal) |
+| `Tooltip` | Tooltip overlay | `false` | No | No | Pointer-move observed; click-through |
+| `DropdownMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Outside press closes without activating underlay |
+| `ContextMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Same as dropdown menu; open model is component-owned |
+| `Menubar` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Same as dropdown menu; supports nested submenus |
+| `Select` | Non-modal listbox-like menu | `false` | Yes | Yes (non-click-through) | Outside press closes without activating underlay |
+| `Dialog` / `Sheet` | Modal | `true` | N/A | N/A | Barrier-backed; underlay is inert while present |
 
 ## References
 
