@@ -75,7 +75,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | chart | `chart` | Defer | Unreviewed | Not editor-critical |
 | checkbox | `checkbox` | Present | Unreviewed |  |
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
-| command | `command` | Present | Unreviewed | First pass: visual shell + roving list navigation; filtering is app-owned |
+| command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut |
 | context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; audit: `docs/audits/shadcn-context-menu.md` |
 | dialog | `dialog` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
 | drawer | `drawer` | Present | Unreviewed | `sheet` facade (defaults to bottom); overlay policy |
