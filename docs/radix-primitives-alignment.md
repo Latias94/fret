@@ -41,6 +41,25 @@ Radix “primitives” span both mechanism and policy in a web/React setting. In
 | Collection semantics | “Item X of Y”, roles, disabled skipping | Semantics snapshot (ADR 0033) | `fret-ui-kit::primitives::collection` | Collection metadata is required for menus/lists |
 | Active descendant | Highlight moves while focus stays in input | Semantics schema + snapshot + AccessKit mapping (ADR 0073) | `fret-ui-kit::headless::cmdk_selection` + component wiring | Highest-leverage a11y closure item |
 
+## shadcn recipe mapping (component → primitives)
+
+This table maps common shadcn-aligned components/recipes in this repo to the underlying Radix
+concepts and Fret building blocks they depend on.
+
+| shadcn surface | Underlying Radix concept(s) | Fret building blocks | Defaults (outside press / focus) | Code |
+| --- | --- | --- | --- | --- |
+| `Popover` | Popover = Portal + DismissableLayer + FocusScope | `OverlayController` + `OverlayRequest::dismissible_popover` + placement helpers | Outside press closes; click-through by default | `ecosystem/fret-ui-shadcn/src/popover.rs` |
+| `Select` | Menu/Listbox-like overlay | `OverlayRequest::dismissible_menu` + roving + collection semantics | Outside press closes; non-click-through; roving highlight does not commit until activation | `ecosystem/fret-ui-shadcn/src/select.rs` |
+| `Combobox` | Recipe: Popover + Command (cmdk-style) | `Popover` + `CommandPalette` + active-descendant semantics | Outside press closes; click-through; focus stays in input; highlight via `active_descendant` | `ecosystem/fret-ui-shadcn/src/combobox.rs` |
+| `Command` / cmdk | (Not a Radix primitive; common shadcn recipe) | `headless::cmdk_score` + `headless::cmdk_selection` + active-descendant semantics | Focus stays in input; highlight via `active_descendant` | `ecosystem/fret-ui-shadcn/src/command.rs` |
+| `DropdownMenu` | Menu | `OverlayRequest::dismissible_menu` + `primitives::menu`-style policy helpers | Outside press closes; non-click-through; modality-gated initial focus | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` |
+| `ContextMenu` | Menu | `OverlayRequest::dismissible_menu` + `primitives::menu`-style policy helpers | Outside press closes; non-click-through; pointer-anchored open | `ecosystem/fret-ui-shadcn/src/context_menu.rs` |
+| `Menubar` | Menubar + Menu | `OverlayRequest::dismissible_menu` + roving + pointer grace corridor | Outside press closes; non-click-through; submenu safe-hover corridor | `ecosystem/fret-ui-shadcn/src/menubar.rs` |
+| `Dialog` / `Sheet` | Dialog = Portal + FocusScope + modal barrier | Modal overlay roots + focus trap/restore policy | Underlay inert while present | `ecosystem/fret-ui-shadcn/src/dialog.rs`, `ecosystem/fret-ui-shadcn/src/sheet.rs` |
+| `Tooltip` | TooltipProvider + Tooltip | Hover/pointer-move overlays + delay group | Click-through; delay/skip-delay policy | `ecosystem/fret-ui-shadcn/src/tooltip.rs` |
+| `HoverCard` | Hover overlay | Hover intent + anchored overlay | Click-through; hover intent policy | `ecosystem/fret-ui-shadcn/src/hover_card.rs` |
+| `Sonner` (toasts) | (Not a Radix primitive) | Per-window toast layer orchestration | Click-through; dismissal timers | `ecosystem/fret-ui-shadcn/src/sonner.rs` |
+
 ## Code entry points (practical)
 
 - Overlay substrate + outside-press observation (mechanism): `crates/fret-ui/src/tree/mod.rs`

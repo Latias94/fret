@@ -81,7 +81,9 @@ impl Combobox {
             disabled: false,
             a11y_label: None,
             search_enabled: true,
-            consume_outside_pointer_events: true,
+            // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
+            // (ADR 0069)
+            consume_outside_pointer_events: false,
         }
     }
 

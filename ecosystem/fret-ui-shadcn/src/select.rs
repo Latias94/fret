@@ -1545,14 +1545,13 @@ fn select_impl<H: UiHost>(
                         vec![wrapper]
                     });
 
-                    let mut request = OverlayRequest::dismissible_popover(
+                    let mut request = OverlayRequest::dismissible_menu(
                         trigger_id,
                         trigger_id,
                         open,
                         OverlayPresence::instant(true),
                         overlay_children,
                     );
-                    request.consume_outside_pointer_events = true;
                     request.root_name = Some(overlay_root_name);
                     request.initial_focus = list_focus_id_out.get();
                     OverlayController::request(cx, request);

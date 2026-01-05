@@ -12,7 +12,7 @@ use fret_ui::element::{
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::overlay_placement::{anchored_panel_bounds_sized, Align, Side};
+use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -23,7 +23,7 @@ use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::roving_focus_group;
-use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
+use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Space};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -2341,19 +2341,17 @@ impl MenubarMenuEntries {
                         (children, Some(dismissible_on_pointer_move))
                     });
 
-                    let mut request = OverlayRequest::dismissible_popover(
+                    let request = menu::root::dismissible_menu_request(
+                        cx,
                         trigger_id,
                         trigger_id,
                         open,
                         OverlayPresence::instant(true),
                         overlay_children,
+                        overlay_root_name,
+                        content_focus_id.get(),
+                        dismissible_on_pointer_move,
                     );
-                    request.consume_outside_pointer_events = true;
-                    request.root_name = Some(overlay_root_name);
-                    request.dismissible_on_pointer_move = dismissible_on_pointer_move;
-                    if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
-                        request.initial_focus = content_focus_id.get();
-                    }
                     OverlayController::request(cx, request);
                 }
 

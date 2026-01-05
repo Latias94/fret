@@ -146,6 +146,7 @@ The current shadcn-aligned defaults in this repo:
 | Component | Overlay kind | `blocks_underlay_input` | Outside-press observer | Consume outside pointer-down | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `Popover` | Non-modal | `false` | Yes | No (click-through) | Outside press closes; underlay click can focus/activate |
+| `Combobox` | Non-modal | `false` | Yes | No (click-through) | Popover + Command recipe; outside press closes; underlay click can focus/activate |
 | `HoverCard` | Hover overlay | `false` | No | No | Driven by hover intent; click-through (no outside-press dismissal) |
 | `Tooltip` | Tooltip overlay | `false` | No | No | Pointer-move observed; click-through |
 | `DropdownMenu` | Non-modal menu | `false` | Yes | Yes (non-click-through) | Outside press closes without activating underlay |

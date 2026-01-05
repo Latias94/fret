@@ -41,7 +41,7 @@ Key upstream behaviors/surfaces:
 
 ### Dismissal & focus
 
-- Pass: Non-modal dismissible popover via `window_overlays` (outside press + Escape).
+- Pass: Non-modal dismissible menu via `window_overlays` (outside press + Escape; non-click-through).
 - Pass: On open, focus moves to the first focusable descendant in the menu (via overlay policy),
   enabling keyboard navigation.
 - Pass: Selecting an item dispatches the command (if any) and closes the menu.

@@ -131,6 +131,22 @@ impl OverlayRequest {
         }
     }
 
+    /// Dismissible overlay with non-click-through outside press behavior.
+    ///
+    /// This matches Radix-aligned "menu-like" overlays where an outside click closes the overlay
+    /// without activating the underlay (ADR 0069).
+    pub fn dismissible_menu(
+        id: GlobalElementId,
+        trigger: GlobalElementId,
+        open: Model<bool>,
+        presence: OverlayPresence,
+        children: Vec<AnyElement>,
+    ) -> Self {
+        let mut req = Self::dismissible_popover(id, trigger, open, presence, children);
+        req.consume_outside_pointer_events = true;
+        req
+    }
+
     pub fn modal(
         id: GlobalElementId,
         trigger: Option<GlobalElementId>,

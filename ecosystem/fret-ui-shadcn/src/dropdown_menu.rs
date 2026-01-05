@@ -25,7 +25,7 @@ use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
+use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Space};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
 
@@ -2090,19 +2090,17 @@ impl DropdownMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
-                let mut request = OverlayRequest::dismissible_popover(
+                let request = menu::root::dismissible_menu_request(
+                    cx,
                     trigger_id,
                     trigger_id,
                     open,
                     OverlayPresence::instant(true),
                     overlay_children,
+                    overlay_root_name,
+                    content_focus_id.get(),
+                    dismissible_on_pointer_move,
                 );
-                request.consume_outside_pointer_events = true;
-                request.dismissible_on_pointer_move = dismissible_on_pointer_move;
-                request.root_name = Some(overlay_root_name);
-                if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
-                    request.initial_focus = content_focus_id.get();
-                }
                 OverlayController::request(cx, request);
             }
 

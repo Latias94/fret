@@ -40,7 +40,8 @@ examples in `repo-ref/ui`.
 ### Selection & dismissal
 
 - Pass: Selecting an item commits `model` and closes the overlay.
-- Pass: Outside press dismissal is delegated to the shared dismissible popover infra (ADR 0069).
+- Pass: Outside press dismissal is delegated to the shared dismissible overlay infra (ADR 0069).
+- Pass: Select behaves like a Radix-style menu overlay: outside pointer-down is consumed (non-click-through).
 
 ### Visual parity (shadcn)
 
