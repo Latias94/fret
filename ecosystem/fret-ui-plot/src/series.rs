@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::cartesian::DataPoint;
+use crate::cartesian::{DataPoint, DataRect};
 
 /// A data source for a single XY series.
 ///
@@ -20,6 +20,15 @@ pub trait SeriesData: Send + Sync + 'static {
 
     /// Optional fast-path for slice-backed data.
     fn as_slice(&self) -> Option<&[DataPoint]> {
+        None
+    }
+
+    /// Optional bounds hint for the series.
+    ///
+    /// This is used to avoid scanning large datasets (especially getter-backed series) when
+    /// computing plot domains. Implementations should ignore non-finite points when computing the
+    /// hint.
+    fn bounds_hint(&self) -> Option<DataRect> {
         None
     }
 
@@ -49,9 +58,11 @@ impl Series {
     }
 
     pub fn from_points_sorted(points: Vec<DataPoint>, sorted_by_x: bool) -> Self {
+        let bounds = DataRect::from_points(points.iter().copied());
         Self::new(OwnedSeriesData {
             points,
             sorted_by_x,
+            bounds,
         })
     }
 }
@@ -78,13 +89,16 @@ impl std::ops::Deref for Series {
 pub struct OwnedSeriesData {
     points: Vec<DataPoint>,
     sorted_by_x: bool,
+    bounds: Option<DataRect>,
 }
 
 impl OwnedSeriesData {
     pub fn new(points: Vec<DataPoint>) -> Self {
+        let bounds = DataRect::from_points(points.iter().copied());
         Self {
             points,
             sorted_by_x: false,
+            bounds,
         }
     }
 }
@@ -102,6 +116,10 @@ impl SeriesData for OwnedSeriesData {
         Some(&self.points)
     }
 
+    fn bounds_hint(&self) -> Option<DataRect> {
+        self.bounds
+    }
+
     fn is_sorted_by_x(&self) -> bool {
         self.sorted_by_x
     }
@@ -112,6 +130,7 @@ pub struct GetterSeriesData {
     len: usize,
     get: Arc<dyn Fn(usize) -> DataPoint + Send + Sync + 'static>,
     sorted_by_x: bool,
+    bounds: Option<DataRect>,
 }
 
 impl GetterSeriesData {
@@ -120,11 +139,17 @@ impl GetterSeriesData {
             len,
             get: Arc::new(get),
             sorted_by_x: false,
+            bounds: None,
         }
     }
 
     pub fn sorted_by_x(mut self, sorted: bool) -> Self {
         self.sorted_by_x = sorted;
+        self
+    }
+
+    pub fn bounds_hint(mut self, bounds: DataRect) -> Self {
+        self.bounds = Some(bounds);
         self
     }
 }
@@ -134,6 +159,7 @@ impl fmt::Debug for GetterSeriesData {
         f.debug_struct("GetterSeriesData")
             .field("len", &self.len)
             .field("sorted_by_x", &self.sorted_by_x)
+            .field("bounds", &self.bounds)
             .finish()
     }
 }
@@ -145,6 +171,10 @@ impl SeriesData for GetterSeriesData {
 
     fn get(&self, index: usize) -> Option<DataPoint> {
         (index < self.len).then(|| (self.get)(index))
+    }
+
+    fn bounds_hint(&self) -> Option<DataRect> {
+        self.bounds
     }
 
     fn is_sorted_by_x(&self) -> bool {
