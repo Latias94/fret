@@ -3,6 +3,7 @@ use fret_runtime::ModelHost;
 
 use crate::cartesian::{DataPoint, DataRect};
 use crate::retained::{LinePlotCanvas, LinePlotModel};
+use crate::series::Series;
 
 pub struct LineChart<T> {
     data: Vec<T>,
@@ -44,6 +45,8 @@ impl<T> LineChart<T> {
         let mut x_max: Option<f32> = None;
         let mut y_min: Option<f32> = None;
         let mut y_max: Option<f32> = None;
+        let mut sorted_by_x = true;
+        let mut last_x: Option<f32> = None;
 
         for item in &self.data {
             let Some(x) = (self.x)(item) else {
@@ -60,6 +63,13 @@ impl<T> LineChart<T> {
             x_max = Some(x_max.map_or(x, |v| v.max(x)));
             y_min = Some(y_min.map_or(y, |v| v.min(y)));
             y_max = Some(y_max.map_or(y, |v| v.max(y)));
+
+            if let Some(prev) = last_x {
+                if x < prev {
+                    sorted_by_x = false;
+                }
+            }
+            last_x = Some(x);
 
             points.push(DataPoint { x, y });
         }
@@ -87,7 +97,7 @@ impl<T> LineChart<T> {
 
         LinePlotModel {
             data_bounds: bounds,
-            points,
+            points: Series::from_points_sorted(points, sorted_by_x),
         }
     }
 

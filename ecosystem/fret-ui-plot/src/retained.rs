@@ -15,11 +15,12 @@ use std::hash::{Hash, Hasher};
 use crate::cartesian::{DataPoint, DataRect, PlotTransform};
 use crate::plot::axis::linear_ticks;
 use crate::plot::grid::GridLines;
+use crate::series::{Series, SeriesData};
 
 #[derive(Debug, Clone)]
 pub struct LinePlotModel {
     pub data_bounds: DataRect,
-    pub points: Vec<DataPoint>,
+    pub points: Series,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -219,7 +220,7 @@ impl LinePlotCanvas {
         let (commands, samples) = self
             .model
             .read(cx.app, |_app, m| {
-                decimate_polyline(transform, &m.points, cx.scale_factor)
+                decimate_polyline(transform, &*m.points, cx.scale_factor)
             })
             .ok()?;
 
@@ -441,7 +442,7 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                                 viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
                                 data: m.data_bounds,
                             };
-                            decimate_samples(transform, &m.points, scale_factor)
+                            decimate_samples(transform, &*m.points, scale_factor)
                         })
                         .unwrap_or_default(),
                 )
@@ -839,7 +840,7 @@ fn hash_value<T: Hash>(v: &T) -> u64 {
 
 fn decimate_samples(
     transform: PlotTransform,
-    points: &[DataPoint],
+    points: &dyn SeriesData,
     scale_factor: f32,
 ) -> Vec<SamplePoint> {
     let (_commands, samples) = decimate_polyline(transform, points, scale_factor);
@@ -852,7 +853,7 @@ fn decimate_samples(
 /// preserve spikes while bounding the output size to O(plot_width_px).
 fn decimate_polyline(
     transform: PlotTransform,
-    points: &[DataPoint],
+    points: &dyn SeriesData,
     scale_factor: f32,
 ) -> (Vec<fret_core::PathCommand>, Vec<SamplePoint>) {
     let mut commands: Vec<fret_core::PathCommand> = Vec::new();
@@ -962,21 +963,44 @@ fn decimate_polyline(
         segment.clear();
     };
 
-    for (idx, p) in points.iter().copied().enumerate() {
-        if !p.x.is_finite() || !p.y.is_finite() {
-            flush_segment(&mut segment);
-            continue;
+    if let Some(slice) = points.as_slice() {
+        for (idx, p) in slice.iter().copied().enumerate() {
+            if !p.x.is_finite() || !p.y.is_finite() {
+                flush_segment(&mut segment);
+                continue;
+            }
+            let px = transform.data_to_px(p);
+            if !px.x.0.is_finite() || !px.y.0.is_finite() {
+                flush_segment(&mut segment);
+                continue;
+            }
+            segment.push(SamplePoint {
+                index: idx,
+                data: p,
+                plot_px: px,
+            });
         }
-        let px = transform.data_to_px(p);
-        if !px.x.0.is_finite() || !px.y.0.is_finite() {
-            flush_segment(&mut segment);
-            continue;
+    } else {
+        for idx in 0..points.len() {
+            let Some(p) = points.get(idx) else {
+                flush_segment(&mut segment);
+                continue;
+            };
+            if !p.x.is_finite() || !p.y.is_finite() {
+                flush_segment(&mut segment);
+                continue;
+            }
+            let px = transform.data_to_px(p);
+            if !px.x.0.is_finite() || !px.y.0.is_finite() {
+                flush_segment(&mut segment);
+                continue;
+            }
+            segment.push(SamplePoint {
+                index: idx,
+                data: p,
+                plot_px: px,
+            });
         }
-        segment.push(SamplePoint {
-            index: idx,
-            data: p,
-            plot_px: px,
-        });
     }
 
     flush_segment(&mut segment);
