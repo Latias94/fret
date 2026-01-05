@@ -1857,6 +1857,9 @@ impl MenubarMenuEntries {
                                     let submenu_entries_for_panel = submenu_entries.clone();
                                     let open_for_submenu = open_for_submenu.clone();
                                     let group_active = group_active_for_submenu.clone();
+                                    let menu_key_for_switch = menu_key_for_overlay.clone();
+                                    let trigger_registry_for_switch =
+                                        trigger_registry_for_overlay.clone();
                                     let text_style = text_style_for_submenu.clone();
                                     let submenu_models_for_panel = submenu_for_panel.clone();
                                     let item_ring = item_ring;
@@ -1876,6 +1879,10 @@ impl MenubarMenuEntries {
                                         move |cx| {
                                             let content_focus_id_for_panel =
                                                 content_focus_id_for_children_for_submenu.clone();
+                                            let group_active_for_switch = group_active.clone();
+                                            let menu_key_for_switch = menu_key_for_switch.clone();
+                                            let trigger_registry_for_switch =
+                                                trigger_registry_for_switch.clone();
                                             let roving = menu::content::menu_roving_group_apg_prefix_typeahead(
                                                         cx,
                                                         RovingFlexProps {
@@ -1970,6 +1977,10 @@ impl MenubarMenuEntries {
                                                                         let close_on_select = item.close_on_select;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
+                                                                        let menu_key =
+                                                                            menu_key_for_switch.clone();
+                                                                        let trigger_registry =
+                                                                            trigger_registry_for_switch.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
                                                                         let value = item.value.clone();
                                                                         let checked = item.checked.clone();
@@ -1977,6 +1988,13 @@ impl MenubarMenuEntries {
 
                                                                         out.push(cx.keyed(value.clone(), move |cx| {
                                                                             cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                                                menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                                                                    cx,
+                                                                                    item_id,
+                                                                                    group_active.clone(),
+                                                                                    trigger_registry.clone(),
+                                                                                    menu_key.clone(),
+                                                                                );
                                                                                 menu::sub_content::wire_item(
                                                                                     cx,
                                                                                     item_id,
@@ -2079,6 +2097,10 @@ impl MenubarMenuEntries {
                                                                         let close_on_select = item.close_on_select;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
+                                                                        let menu_key =
+                                                                            menu_key_for_switch.clone();
+                                                                        let trigger_registry =
+                                                                            trigger_registry_for_switch.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
                                                                         let value = item.value.clone();
                                                                         let group_value = item.group_value.clone();
@@ -2086,6 +2108,13 @@ impl MenubarMenuEntries {
 
                                                                         out.push(cx.keyed(value.clone(), move |cx| {
                                                                             cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                                                menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                                                                    cx,
+                                                                                    item_id,
+                                                                                    group_active.clone(),
+                                                                                    trigger_registry.clone(),
+                                                                                    menu_key.clone(),
+                                                                                );
                                                                                 menu::sub_content::wire_item(
                                                                                     cx,
                                                                                     item_id,
@@ -2194,6 +2223,10 @@ impl MenubarMenuEntries {
                                                                         let variant = item.variant;
                                                                         let open = open_for_submenu.clone();
                                                                         let group_active = group_active.clone();
+                                                                        let menu_key =
+                                                                            menu_key_for_switch.clone();
+                                                                        let trigger_registry =
+                                                                            trigger_registry_for_switch.clone();
                                                                         let submenu_for_key = submenu_models_for_panel.clone();
                                                                         let value = item.value.clone();
                                                                         let pad_left =
@@ -2202,6 +2235,13 @@ impl MenubarMenuEntries {
 
                                                                         out.push(cx.keyed(value.clone(), move |cx| {
                                                                             cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                                                menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                                                                    cx,
+                                                                                    item_id,
+                                                                                    group_active.clone(),
+                                                                                    trigger_registry.clone(),
+                                                                                    menu_key.clone(),
+                                                                                );
                                                                                 menu::sub_content::wire_item(
                                                                                     cx,
                                                                                     item_id,
@@ -2303,6 +2343,13 @@ impl MenubarMenuEntries {
                                                             out
                                                         },
                                                     );
+                                            menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                                cx,
+                                                roving.id,
+                                                group_active_for_switch,
+                                                trigger_registry_for_switch,
+                                                menu_key_for_switch,
+                                            );
                                             if content_focus_id_for_panel.get().is_none() {
                                                 content_focus_id_for_panel.set(Some(roving.id));
                                             }
