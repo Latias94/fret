@@ -555,6 +555,149 @@ mod tests {
     }
 
     #[test]
+    fn active_descendant_is_not_emitted_when_not_reachable_under_modal_barrier() {
+        let window = AppWindowId::default();
+        let underlay_root = node(1);
+        let underlay_list = node(2);
+        let underlay_item = node(3);
+
+        let modal_root = node(10);
+        let input = node(11);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        // The focused input lives in the modal barrier layer, but it (incorrectly) points its
+        // active descendant at an underlay list item. The bridge must not emit that association.
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![
+                SemanticsRoot {
+                    root: underlay_root,
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: modal_root,
+                    visible: true,
+                    blocks_underlay_input: true,
+                    hit_testable: true,
+                    z_index: 1,
+                },
+            ],
+            barrier_root: Some(modal_root),
+            focus: Some(input),
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: underlay_root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: underlay_list,
+                    parent: Some(underlay_root),
+                    role: SemanticsRole::ListBox,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Underlay list".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: underlay_item,
+                    parent: Some(underlay_list),
+                    role: SemanticsRole::ListBoxOption,
+                    bounds,
+                    flags: SemanticsFlags {
+                        selected: true,
+                        ..SemanticsFlags::default()
+                    },
+                    active_descendant: None,
+                    pos_in_set: Some(1),
+                    set_size: Some(1),
+                    label: Some("Underlay item".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: modal_root,
+                    parent: None,
+                    role: SemanticsRole::Dialog,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Modal".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                },
+                SemanticsNode {
+                    id: input,
+                    parent: Some(modal_root),
+                    role: SemanticsRole::TextField,
+                    bounds,
+                    flags: SemanticsFlags {
+                        focused: true,
+                        ..SemanticsFlags::default()
+                    },
+                    active_descendant: Some(underlay_item),
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Command input".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions {
+                        focus: true,
+                        set_value: true,
+                        ..SemanticsActions::default()
+                    },
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let input_id = to_accesskit_id(input);
+
+        let input_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == input_id).then_some(n))
+            .expect("input node present");
+
+        assert_eq!(
+            input_node.active_descendant(),
+            None,
+            "active_descendant must be suppressed when it points under the modal barrier"
+        );
+    }
+
+    #[test]
     fn list_item_pos_in_set_and_set_size_are_emitted() {
         let window = AppWindowId::default();
         let root = node(1);
