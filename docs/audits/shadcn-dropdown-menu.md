@@ -52,16 +52,17 @@ Key upstream behaviors/surfaces:
 ### Visual parity (shadcn)
 
 - Partial: Menu background/foreground now align with popover tokens (`bg-popover text-popover-foreground`).
-- Partial: Hover/pressed/focused highlight uses `accent` tokens; deeper parity (inset variants,
-  checkmark spacing, icon alignment) is still pending.
+- Pass: Hover/pressed/focused highlight uses `accent` tokens (Radix `data-[highlighted]`-style outcome).
+- Pass: `inset` is supported for items/labels (left padding parity with upstream `data-inset`).
+- Pass: Leading icons are aligned within a fixed 16×16 slot; when any row provides a leading icon,
+  the menu reserves the slot across the panel for consistent label alignment.
 - Pass: Checkbox/radio indicators render the `ids::ui::CHECK` icon in a fixed 16×16 slot.
 
 ### Missing surfaces (significant)
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- A shared convention for leading icons (consumer-provided today).
-- A first-class “active item” highlight state (beyond focus ring) for closer visual parity.
+- A first-class API for “leading icon + shortcut” ergonomics (icons are supported, but composition is still consumer-driven).
 
 ### Submenus
 

@@ -1017,7 +1017,7 @@ impl MenubarMenuEntries {
                 });
                 let trigger_bg = if is_open {
                     Some(bg_open)
-                } else if st.hovered || st.pressed {
+                } else if st.hovered || st.pressed || st.focused {
                     Some(alpha_mul(bg_hover, 0.8))
                 } else {
                     None
@@ -1316,7 +1316,7 @@ impl MenubarMenuEntries {
                                                                     }
 
                                                                     let mut bg = Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed {
+                                                                    if st.hovered || st.pressed || st.focused {
                                                                         bg = alpha_mul(
                                                                             theme.colors.menu_item_hover,
                                                                             0.9,
@@ -1443,7 +1443,7 @@ impl MenubarMenuEntries {
                                                                     }
 
                                                                     let mut bg = Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed {
+                                                                    if st.hovered || st.pressed || st.focused {
                                                                         bg = alpha_mul(
                                                                             theme.colors.menu_item_hover,
                                                                             0.9,
@@ -1577,7 +1577,7 @@ impl MenubarMenuEntries {
                                                                      }
 
                                                                     let mut bg = Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed {
+                                                                    if st.hovered || st.pressed || st.focused || expanded.unwrap_or(false) {
                                                                         bg = alpha_mul(
                                                                             theme.colors.menu_item_hover,
                                                                             0.9,
@@ -1678,7 +1678,7 @@ impl MenubarMenuEntries {
 
                                                                     let mut bg =
                                                                         Color::TRANSPARENT;
-                                                                    if st.hovered || st.pressed {
+                                                                    if st.hovered || st.pressed || st.focused {
                                                                         bg = alpha_mul(
                                                                             theme
                                                                                 .colors
@@ -1996,7 +1996,7 @@ impl MenubarMenuEntries {
                                                                                 }
 
                                                                                 let mut bg = Color::TRANSPARENT;
-                                                                                if st.hovered || st.pressed {
+                                                                                if st.hovered || st.pressed || st.focused {
                                                                                     bg = alpha_mul(
                                                                                         theme.colors.menu_item_hover,
                                                                                         0.9,
@@ -2110,7 +2110,7 @@ impl MenubarMenuEntries {
                                                                                 }
 
                                                                                 let mut bg = Color::TRANSPARENT;
-                                                                                if st.hovered || st.pressed {
+                                                                                if st.hovered || st.pressed || st.focused {
                                                                                     bg = alpha_mul(
                                                                                         theme.colors.menu_item_hover,
                                                                                         0.9,
@@ -2212,7 +2212,7 @@ impl MenubarMenuEntries {
                                                                                 }
 
                                                                                 let mut bg = Color::TRANSPARENT;
-                                                                                if st.hovered || st.pressed {
+                                                                                if st.hovered || st.pressed || st.focused {
                                                                                     bg = alpha_mul(
                                                                                         theme.colors.menu_item_hover,
                                                                                         0.9,

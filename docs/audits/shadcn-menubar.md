@@ -49,12 +49,13 @@ Key upstream behaviors/surfaces:
   higher-fidelity slots are still text-based or consumer-provided (see missing surfaces).
 - Pass: `inset` is supported for items/labels (left padding parity with upstream `data-inset`).
 - Pass: Submenu triggers render a right chevron (`ids::ui::CHEVRON_RIGHT`) to match upstream affordance.
+- Pass: Leading icons are aligned within a fixed 16×16 slot; when any row provides a leading icon,
+  the menu reserves the slot across the panel for consistent label alignment.
 
 ## Missing surfaces (significant)
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- Consistent leading icon slot sizing/alignment across all item variants (currently consumer-provided).
 - Destructive item variant styling.
 
 ## Validation
