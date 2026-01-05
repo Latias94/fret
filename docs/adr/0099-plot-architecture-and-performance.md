@@ -152,6 +152,24 @@ Split state into:
 This avoids storing long-lived preferences in a global UI context (ImPlot/egui-style) while still
 supporting persistence in editor apps.
 
+#### Input/Output contract (recommended)
+
+To enable linking plots, building inspectors, and persisting view preferences without leaking plot
+internals, plots should expose:
+
+- **Input state** (`PlotState`, caller-owned, optional):
+  - A `Model<PlotState>` that the caller can pass into the plot widget.
+  - Stores long-lived user preferences: view bounds (auto vs manual), hidden/pinned series, query
+    regions, etc.
+  - This mirrors ImPlot’s "set-next" and egui_plot’s ID-keyed state, but keeps the state explicitly
+    owned and managed by the application.
+- **Output state** (`PlotOutput`, caller-owned, optional):
+  - A `Model<PlotOutput>` that the plot widget writes to whenever interaction-derived values change.
+  - Contains a monotonic `revision` plus a compact snapshot (view bounds, cursor/hover in data space,
+    active query selection, etc.).
+  - Intended as an observation point only. Application code should not mutate `PlotOutput` directly;
+    use `PlotState` to control the plot instead.
+
 ### E) 3D UI bridge shape (P0/P1)
 
 `fret-ui-plot3d` provides:
@@ -215,6 +233,7 @@ Defer until the CPU+cache baseline proves insufficient, then introduce via a ded
 - Add a “series data adapter” trait that supports slices + getters without allocation.
 - Lock an explicit decimation policy and add unit tests for it (correctness on spikes, monotonicity, NaNs).
 - Add a plot stress/perf harness integrated with ADR 0096 (large-series + interaction scenarios).
+- Standardize plot state IO: caller-owned `PlotState` + widget-written `PlotOutput` snapshots.
 
 ### P1 (feature growth without entropy explosion)
 
