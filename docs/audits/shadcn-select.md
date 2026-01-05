@@ -47,8 +47,9 @@ examples in `repo-ref/ui`.
 - Pass: Selected option shows a trailing checkmark (`ids::ui::CHECK`) and selection background.
 - Pass: Structural rows are supported via `SelectEntry` (`SelectLabel`, `SelectGroup`,
   `SelectSeparator`) rendered inside the listbox.
-- Partial: Upstream includes scroll buttons (`SelectScrollUpButton` / `SelectScrollDownButton`) and
-  richer content positioning modes (`item-aligned` vs `popper`).
+- Pass: Scroll buttons (`SelectScrollUpButton` / `SelectScrollDownButton`) are rendered for
+  overflowing lists and scroll the viewport without dismissing the overlay.
+- Partial: Upstream supports richer content positioning modes (`item-aligned` vs `popper`).
 
 ## Validation
 
@@ -56,5 +57,4 @@ examples in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- Add scroll buttons aligned with the upstream taxonomy.
-- Align trigger-side typeahead behavior when closed (Radix trigger typeahead updates selection).
+- Consider supporting Radix `position="item-aligned"` for Select content.

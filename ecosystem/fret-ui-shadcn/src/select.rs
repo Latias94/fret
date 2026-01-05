@@ -3,13 +3,15 @@ use std::time::Duration;
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
+    Overflow, PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
+    ScrollProps, ScrollbarProps, ScrollbarStyle, SemanticsProps, SizeStyle, StackProps, TextProps,
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -18,7 +20,6 @@ use fret_ui_kit::declarative::chrome as decl_chrome;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::{roving_focus, typeahead};
 use fret_ui_kit::overlay;
@@ -35,6 +36,205 @@ use fret_ui_kit::{
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn select_scroll_with_buttons<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: Theme,
+    item_step: Px,
+    content: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.height = Length::Fill;
+                layout
+            },
+            direction: fret_core::Axis::Vertical,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
+        },
+        move |cx| {
+            let handle =
+                cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+
+            let scrollbar_w = theme
+                .metric_by_key("metric.scrollbar.width")
+                .unwrap_or(theme.metrics.scrollbar_width);
+            let thumb = theme
+                .color_by_key("scrollbar.thumb.background")
+                .unwrap_or(theme.colors.scrollbar_thumb);
+            let thumb_hover = theme
+                .color_by_key("scrollbar.thumb.hover.background")
+                .unwrap_or(
+                    theme
+                        .color_by_key("scrollbar.thumb.background")
+                        .unwrap_or(theme.colors.scrollbar_thumb_hover),
+                );
+
+            let scroll_button_h = theme
+                .metric_by_key("component.select.scroll_button_height")
+                .unwrap_or(Px(24.0));
+
+            let max = handle.max_offset();
+            let offset = handle.offset();
+            let has_scroll = max.y.0 > 0.0;
+            let show_up = has_scroll && offset.y.0 > 0.0;
+            let show_down = has_scroll && offset.y.0 < max.y.0;
+
+            let scroll_button = |cx: &mut ElementContext<'_, H>,
+                                 icon: fret_icons::IconId,
+                                 label: &'static str,
+                                 dir: f32| {
+                let handle = handle.clone();
+                let theme = theme.clone();
+                cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Px(scroll_button_h);
+                            layout
+                        },
+                        enabled: true,
+                        focusable: false,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::Button),
+                            label: Some(Arc::from(label)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, st| {
+                        cx.pressable_add_on_activate(Arc::new(
+                            move |host, action_cx, _reason| {
+                                let prev = handle.offset();
+                                let next = Point::new(prev.x, Px(prev.y.0 + item_step.0 * dir));
+                                handle.scroll_to_offset(next);
+                                host.request_redraw(action_cx.window);
+                            },
+                        ));
+
+                        let mut bg = Color::TRANSPARENT;
+                        if st.hovered || st.pressed {
+                            bg = alpha_mul(theme.colors.selection_background, 0.25);
+                        }
+
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Fill;
+                                    layout
+                                },
+                                padding: Edges::all(Px(0.0)),
+                                background: Some(bg),
+                                shadow: None,
+                                border: Edges::all(Px(0.0)),
+                                border_color: None,
+                                corner_radii: Corners::all(theme.metrics.radius_sm),
+                            },
+                            |cx| {
+                                vec![cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: Px(0.0),
+                                        padding: Edges::all(Px(0.0)),
+                                        justify: MainAlign::Center,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    |cx| {
+                                        vec![decl_icon::icon_with(
+                                            cx,
+                                            icon,
+                                            Some(Px(16.0)),
+                                            Some(ColorRef::Color(
+                                                theme
+                                                    .color_by_key("muted-foreground")
+                                                    .unwrap_or(theme.colors.text_muted),
+                                            )),
+                                        )]
+                                    },
+                                )]
+                            },
+                        )]
+                    },
+                )
+            };
+
+            let handle_for_stack = handle.clone();
+            let stack = cx.stack_props(
+                StackProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                },
+                move |cx| {
+                    let mut scroll_layout = LayoutStyle::default();
+                    scroll_layout.size.width = Length::Fill;
+                    scroll_layout.size.height = Length::Fill;
+                    scroll_layout.overflow = Overflow::Clip;
+
+                    let scroll = cx.scroll(
+                        ScrollProps {
+                            layout: scroll_layout,
+                            scroll_handle: Some(handle_for_stack.clone()),
+                            ..Default::default()
+                        },
+                        content,
+                    );
+
+                    let scroll_id = scroll.id;
+                    let mut out = vec![scroll];
+                    out.push(cx.scrollbar(ScrollbarProps {
+                        layout: LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                top: Some(Px(0.0)),
+                                right: Some(Px(0.0)),
+                                bottom: Some(Px(0.0)),
+                                left: None,
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(scrollbar_w),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        scroll_target: Some(scroll_id),
+                        scroll_handle: handle_for_stack,
+                        style: ScrollbarStyle {
+                            thumb,
+                            thumb_hover,
+                            thumb_idle_alpha: 0.65,
+                        },
+                    }));
+                    out
+                },
+            );
+
+            let mut out = Vec::new();
+            if show_up {
+                out.push(scroll_button(cx, ids::ui::CHEVRON_UP, "Scroll up", -1.0));
+            }
+            out.push(stack);
+            if show_down {
+                out.push(scroll_button(cx, ids::ui::CHEVRON_DOWN, "Scroll down", 1.0));
+            }
+            out
+        },
+    )
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -855,19 +1055,20 @@ fn select_impl<H: UiHost>(
                                         padding: Edges::all(Px(0.0)),
                                         background: Some(theme_for_overlay.colors.panel_background),
                                         shadow: Some(shadow),
-                                        border: Edges::all(border_width),
-                                        border_color: Some(border),
-                                        corner_radii: Corners::all(radius),
-                                    },
-                                    |cx| {
-                                        vec![decl_scroll::overflow_scrollbar(
-                                            cx,
-                                            LayoutRefinement::default().w_full().h_full(),
-                                            |cx| {
-                                                vec![cx.semantics(
-                                                    SemanticsProps {
-                                                        layout: LayoutStyle::default(),
-                                                        role: SemanticsRole::ListBox,
+                                    border: Edges::all(border_width),
+                                    border_color: Some(border),
+                                    corner_radii: Corners::all(radius),
+                                },
+                                |cx| {
+                                    vec![select_scroll_with_buttons(
+                                        cx,
+                                        theme_for_overlay.clone(),
+                                        item_h,
+                                        |cx| {
+                                            vec![cx.semantics(
+                                                SemanticsProps {
+                                                    layout: LayoutStyle::default(),
+                                                    role: SemanticsRole::ListBox,
                                                         ..Default::default()
                                                     },
                                                     |cx| {
@@ -1099,7 +1300,8 @@ fn select_impl<H: UiHost>(
                         open,
                         OverlayPresence::instant(true),
                         overlay_children,
-                    );
+                    )
+                    .consume_outside_pointer_events(true);
                     request.root_name = Some(overlay_root_name);
                     OverlayController::request(cx, request);
             }
@@ -1717,5 +1919,122 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn select_scroll_buttons_scroll_without_dismissing() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..50)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        // Third frame: allow the scroll handle to observe content overflow.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let scroll_down = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll down"))
+            .expect("scroll down button");
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll up")
+            }),
+            "expected scroll up to be hidden at the top"
+        );
+
+        let down_bounds = ui
+            .debug_node_bounds(scroll_down.id)
+            .expect("scroll down bounds");
+        let click = Point::new(
+            Px(down_bounds.origin.x.0 + down_bounds.size.width.0 * 0.5),
+            Px(down_bounds.origin.y.0 + down_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open.clone(),
+            items,
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll up")
+            }),
+            "expected scroll up to appear after scrolling down"
+        );
     }
 }
