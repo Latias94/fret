@@ -14,7 +14,7 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
-use fret_core::{Edges, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D};
+use fret_core::{Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
 use fret_ui::element::{
@@ -23,6 +23,8 @@ use fret_ui::element::{
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
+
+use crate::overlay_motion;
 
 fn tooltip_text_fg(theme: &Theme) -> fret_core::Color {
     theme
@@ -47,42 +49,6 @@ fn tooltip_text_style(theme: &Theme) -> TextStyle {
         line_height: Some(line_height),
         letter_spacing_em: None,
     }
-}
-
-fn tooltip_slide_insets(side: Side, slide: Px) -> Edges {
-    match side {
-        Side::Top => Edges {
-            bottom: slide,
-            ..Edges::all(Px(0.0))
-        },
-        Side::Bottom => Edges {
-            top: slide,
-            ..Edges::all(Px(0.0))
-        },
-        Side::Left => Edges {
-            right: slide,
-            ..Edges::all(Px(0.0))
-        },
-        Side::Right => Edges {
-            left: slide,
-            ..Edges::all(Px(0.0))
-        },
-    }
-}
-
-fn tooltip_slide_transform(side: Side, opacity: f32) -> Transform2D {
-    // shadcn/ui v4 uses `slide-in-from-*-2` (8px) keyed off `data-side`.
-    // We approximate that by allocating extra wrapper insets and translating the content inside
-    // the wrapper, keeping hit-test bounds stable.
-    let slide = Px(8.0);
-    let t = 1.0 - opacity.clamp(0.0, 1.0);
-    let offset = match side {
-        Side::Top => Point::new(Px(0.0), Px(slide.0 * t)),
-        Side::Bottom => Point::new(Px(0.0), Px(-slide.0 * t)),
-        Side::Left => Point::new(Px(slide.0 * t), Px(0.0)),
-        Side::Right => Point::new(Px(-slide.0 * t), Px(0.0)),
-    };
-    Transform2D::translation(offset)
 }
 
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
@@ -427,7 +393,7 @@ impl Tooltip {
 
                         let mut wrapper_insets =
                             popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                        let slide_insets = tooltip_slide_insets(layout.side, Px(8.0));
+                        let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
                         wrapper_insets.top.0 += slide_insets.top.0;
                         wrapper_insets.right.0 += slide_insets.right.0;
                         wrapper_insets.bottom.0 += slide_insets.bottom.0;
@@ -521,7 +487,7 @@ impl Tooltip {
 
                 let placed = layout.rect;
                 let mut wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                let slide_insets = tooltip_slide_insets(layout.side, Px(8.0));
+                let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
                 wrapper_insets.top.0 += slide_insets.top.0;
                 wrapper_insets.right.0 += slide_insets.right.0;
                 wrapper_insets.bottom.0 += slide_insets.bottom.0;
@@ -560,15 +526,9 @@ impl Tooltip {
                     arrow.then_some(arrow_size),
                 );
 
-                // shadcn/ui v4 uses a small zoom-in (95% -> 100%) plus opacity transitions.
-                // We approximate that with a fade-driven zoom transform around a popper-style
-                // transform origin (Radix exposes this via `--radix-*-transform-origin`).
-                let scale = 0.95 + 0.05 * opacity.clamp(0.0, 1.0);
-                let zoom = Transform2D::translation(origin)
-                    * Transform2D::scale_uniform(scale)
-                    * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)));
+                let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
                 let slide = if opening {
-                    tooltip_slide_transform(layout.side, opacity)
+                    overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
                 } else {
                     Transform2D::IDENTITY
                 };
@@ -734,7 +694,7 @@ mod tests {
         ContainerProps, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps,
         TextProps,
     };
-    use fret_ui::overlay_placement::{anchored_panel_bounds_sized, Align, Side};
+    use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -822,10 +782,12 @@ mod tests {
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
 
-                vec![Tooltip::new(trigger, content)
-                    .open_delay_frames(30)
-                    .close_delay_frames(30)
-                    .into_element(cx)]
+                vec![
+                    Tooltip::new(trigger, content)
+                        .open_delay_frames(30)
+                        .close_delay_frames(30)
+                        .into_element(cx),
+                ]
             });
 
         ui.set_root(root);
@@ -957,9 +919,11 @@ mod tests {
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
-                            vec![Tooltip::new(trigger, content)
-                                .close_delay_frames(2)
-                                .into_element(cx)]
+                            vec![
+                                Tooltip::new(trigger, content)
+                                    .close_delay_frames(2)
+                                    .into_element(cx),
+                            ]
                         })
                 },
             );
@@ -1171,85 +1135,88 @@ mod tests {
         ) {
             OverlayController::begin_frame(app, window);
 
-            let root = fret_ui::declarative::render_root(
-                ui,
-                app,
-                services,
-                window,
-                bounds,
-                "test",
-                |cx| {
-                    TooltipProvider::new()
-                        .delay_duration_frames(10)
-                        .skip_delay_duration_frames(30)
-                        .with(cx, |cx| {
-                            vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
-                                let trigger_1 = cx.pressable_with_id(
-                                    PressableProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Px(Px(120.0));
-                                            layout.size.height = Length::Px(Px(40.0));
-                                            layout
-                                        },
-                                        enabled: true,
-                                        focusable: true,
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::Button),
-                                            label: Some(Arc::from("trigger_1")),
+            let root =
+                fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "test",
+                    |cx| {
+                        TooltipProvider::new()
+                            .delay_duration_frames(10)
+                            .skip_delay_duration_frames(30)
+                            .with(cx, |cx| {
+                                vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                                    let trigger_1 = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(Arc::from("trigger_1")),
+                                                ..Default::default()
+                                            },
                                             ..Default::default()
                                         },
-                                        ..Default::default()
-                                    },
-                                    |cx, _st, _id| {
-                                        vec![cx
-                                            .container(ContainerProps::default(), |_cx| Vec::new())]
-                                    },
-                                );
-
-                                let trigger_2 = cx.pressable_with_id(
-                                    PressableProps {
-                                        layout: {
-                                            let mut layout = LayoutStyle::default();
-                                            layout.size.width = Length::Px(Px(120.0));
-                                            layout.size.height = Length::Px(Px(40.0));
-                                            layout
+                                        |cx, _st, _id| {
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
                                         },
-                                        enabled: true,
-                                        focusable: true,
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::Button),
-                                            label: Some(Arc::from("trigger_2")),
+                                    );
+
+                                    let trigger_2 = cx.pressable_with_id(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Px(Px(120.0));
+                                                layout.size.height = Length::Px(Px(40.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: true,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(Arc::from("trigger_2")),
+                                                ..Default::default()
+                                            },
                                             ..Default::default()
                                         },
-                                        ..Default::default()
-                                    },
-                                    |cx, _st, _id| {
-                                        vec![cx
-                                            .container(ContainerProps::default(), |_cx| Vec::new())]
-                                    },
-                                );
+                                        |cx, _st, _id| {
+                                            vec![cx.container(ContainerProps::default(), |_cx| {
+                                                Vec::new()
+                                            })]
+                                        },
+                                    );
 
-                                let content_1 = TooltipContent::new(vec![
-                                    cx.text_props(TextProps::new("tip_1"))
-                                ])
-                                .into_element(cx);
-                                content_1_id_out.set(Some(content_1.id));
+                                    let content_1 = TooltipContent::new(vec![
+                                        cx.text_props(TextProps::new("tip_1")),
+                                    ])
+                                    .into_element(cx);
+                                    content_1_id_out.set(Some(content_1.id));
 
-                                let content_2 = TooltipContent::new(vec![
-                                    cx.text_props(TextProps::new("tip_2"))
-                                ])
-                                .into_element(cx);
-                                content_2_id_out.set(Some(content_2.id));
+                                    let content_2 = TooltipContent::new(vec![
+                                        cx.text_props(TextProps::new("tip_2")),
+                                    ])
+                                    .into_element(cx);
+                                    content_2_id_out.set(Some(content_2.id));
 
-                                vec![
-                                    Tooltip::new(trigger_1, content_1).into_element(cx),
-                                    Tooltip::new(trigger_2, content_2).into_element(cx),
-                                ]
-                            })]
-                        })
-                },
-            );
+                                    vec![
+                                        Tooltip::new(trigger_1, content_1).into_element(cx),
+                                        Tooltip::new(trigger_2, content_2).into_element(cx),
+                                    ]
+                                })]
+                            })
+                    },
+                );
 
             ui.set_root(root);
             OverlayController::render(ui, app, services, window, bounds);
@@ -1431,11 +1398,13 @@ mod tests {
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
-                            vec![Tooltip::new(trigger, content)
-                                .open_delay_frames(0)
-                                .close_delay_frames(0)
-                                .disable_hoverable_content(false)
-                                .into_element(cx)]
+                            vec![
+                                Tooltip::new(trigger, content)
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .disable_hoverable_content(false)
+                                    .into_element(cx),
+                            ]
                         })
                 },
             );
@@ -1597,13 +1566,15 @@ mod tests {
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
-                            vec![Tooltip::new(trigger, content)
-                                .open_delay_frames(0)
-                                .close_delay_frames(0)
-                                .side(TooltipSide::Top)
-                                .side_offset(Px(120.0))
-                                .disable_hoverable_content(true)
-                                .into_element(cx)]
+                            vec![
+                                Tooltip::new(trigger, content)
+                                    .open_delay_frames(0)
+                                    .close_delay_frames(0)
+                                    .side(TooltipSide::Top)
+                                    .side_offset(Px(120.0))
+                                    .disable_hoverable_content(true)
+                                    .into_element(cx),
+                            ]
                         })
                 },
             );

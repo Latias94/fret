@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{
     FontId, FontWeight, Point, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
-    Transform2D,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -23,19 +22,7 @@ use fret_ui_kit::{
 };
 
 use crate::layout as shadcn_layout;
-
-fn popover_slide_delta(side: Side, opacity: f32) -> (Px, Px) {
-    // shadcn/ui v4 uses `slide-in-from-*-2` (8px) keyed off `data-side`.
-    // We model this by shifting the wrapper layout, keeping interactive hit-testing aligned.
-    let slide = Px(8.0);
-    let t = 1.0 - opacity.clamp(0.0, 1.0);
-    match side {
-        Side::Top => (Px(0.0), Px(slide.0 * t)),
-        Side::Bottom => (Px(0.0), Px(-slide.0 * t)),
-        Side::Left => (Px(slide.0 * t), Px(0.0)),
-        Side::Right => (Px(-slide.0 * t), Px(0.0)),
-    }
-}
+use crate::overlay_motion;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
@@ -276,21 +263,11 @@ impl Popover {
                         anchor,
                         arrow.then_some(arrow_size),
                     );
-                    let (slide_dx, slide_dy) = if opening {
-                        popover_slide_delta(layout.side, opacity)
-                    } else {
-                        (Px(0.0), Px(0.0))
-                    };
-                    let origin =
-                        Point::new(Px(origin.x.0 + slide_dx.0), Px(origin.y.0 + slide_dy.0));
+                    let slide =
+                        overlay_motion::shadcn_enter_slide_offset(layout.side, opacity, opening);
+                    let origin = Point::new(Px(origin.x.0 + slide.x.0), Px(origin.y.0 + slide.y.0));
 
-                    // shadcn/ui v4 uses a small zoom-in (95% -> 100%) plus opacity transitions.
-                    // We approximate that with a fade-driven zoom transform around a popper-style
-                    // transform origin (Radix exposes this via `--radix-*-transform-origin`).
-                    let scale = 0.95 + 0.05 * opacity.clamp(0.0, 1.0);
-                    let zoom = Transform2D::translation(origin)
-                        * Transform2D::scale_uniform(scale)
-                        * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)));
+                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
 
                     let bg = theme
                         .color_by_key("popover")
@@ -303,9 +280,9 @@ impl Popover {
                     let mut wrapper_layout =
                         popper_content::popper_wrapper_layout(placed, wrapper_insets);
                     wrapper_layout.inset.left =
-                        wrapper_layout.inset.left.map(|v| Px(v.0 + slide_dx.0));
+                        wrapper_layout.inset.left.map(|v| Px(v.0 + slide.x.0));
                     wrapper_layout.inset.top =
-                        wrapper_layout.inset.top.map(|v| Px(v.0 + slide_dy.0));
+                        wrapper_layout.inset.top.map(|v| Px(v.0 + slide.y.0));
 
                     let wrapper = cx.container(
                         ContainerProps {
@@ -638,8 +615,8 @@ mod tests {
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
     use fret_runtime::FrameId;
-    use fret_ui::element::PressableProps;
     use fret_ui::UiTree;
+    use fret_ui::element::PressableProps;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[derive(Default)]
@@ -817,63 +794,65 @@ mod tests {
                         let trigger_id_out = trigger_id_out.clone();
                         move |cx| {
                             let popover_content_id_out = popover_content_id_out.clone();
-                            vec![Popover::new(open.clone())
-                                .side(PopoverSide::Bottom)
-                                .into_element(
-                                    cx,
-                                    |cx| {
-                                        cx.pressable_with_id(
-                                            PressableProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Px(Px(120.0));
-                                                    layout.size.height = Length::Px(Px(40.0));
-                                                    layout.position =
+                            vec![
+                                Popover::new(open.clone())
+                                    .side(PopoverSide::Bottom)
+                                    .into_element(
+                                        cx,
+                                        |cx| {
+                                            cx.pressable_with_id(
+                                                PressableProps {
+                                                    layout: {
+                                                        let mut layout = LayoutStyle::default();
+                                                        layout.size.width = Length::Px(Px(120.0));
+                                                        layout.size.height = Length::Px(Px(40.0));
+                                                        layout.position =
                                                         fret_ui::element::PositionStyle::Absolute;
-                                                    layout.inset.top = Some(Px(20.0));
-                                                    layout.inset.left = Some(Px(10.0));
-                                                    layout
+                                                        layout.inset.top = Some(Px(20.0));
+                                                        layout.inset.left = Some(Px(10.0));
+                                                        layout
+                                                    },
+                                                    enabled: true,
+                                                    focusable: true,
+                                                    ..Default::default()
                                                 },
-                                                enabled: true,
-                                                focusable: true,
-                                                ..Default::default()
-                                            },
-                                            |cx, _st, id| {
-                                                cx.pressable_toggle_bool(&open);
-                                                trigger_id_out.set(Some(id));
-                                                vec![cx
-                                                    .container(ContainerProps::default(), |_cx| {
-                                                        Vec::new()
-                                                    })]
-                                            },
-                                        )
-                                    },
-                                    move |cx| {
-                                        let focusable = cx.pressable_with_id(
-                                            PressableProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Px(Px(220.0));
-                                                    layout.size.height = Length::Px(Px(120.0));
-                                                    layout
+                                                |cx, _st, id| {
+                                                    cx.pressable_toggle_bool(&open);
+                                                    trigger_id_out.set(Some(id));
+                                                    vec![cx.container(
+                                                        ContainerProps::default(),
+                                                        |_cx| Vec::new(),
+                                                    )]
                                                 },
-                                                enabled: true,
-                                                focusable: true,
-                                                ..Default::default()
-                                            },
-                                            |cx, _st, _id| {
-                                                vec![cx
-                                                    .container(ContainerProps::default(), |_cx| {
-                                                        Vec::new()
-                                                    })]
-                                            },
-                                        );
-                                        let content =
-                                            PopoverContent::new(vec![focusable]).into_element(cx);
-                                        popover_content_id_out.set(Some(content.id));
-                                        content
-                                    },
-                                )]
+                                            )
+                                        },
+                                        move |cx| {
+                                            let focusable = cx.pressable_with_id(
+                                                PressableProps {
+                                                    layout: {
+                                                        let mut layout = LayoutStyle::default();
+                                                        layout.size.width = Length::Px(Px(220.0));
+                                                        layout.size.height = Length::Px(Px(120.0));
+                                                        layout
+                                                    },
+                                                    enabled: true,
+                                                    focusable: true,
+                                                    ..Default::default()
+                                                },
+                                                |cx, _st, _id| {
+                                                    vec![cx.container(
+                                                        ContainerProps::default(),
+                                                        |_cx| Vec::new(),
+                                                    )]
+                                                },
+                                            );
+                                            let content = PopoverContent::new(vec![focusable])
+                                                .into_element(cx);
+                                            popover_content_id_out.set(Some(content.id));
+                                            content
+                                        },
+                                    ),
+                            ]
                         }
                     },
                 );

@@ -1,5 +1,5 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{Edges, Point, Px, Size, Transform2D};
+use fret_core::{Px, Size, Transform2D};
 use fret_ui::element::{
     AnyElement, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow, SizeStyle,
     VisualTransformProps,
@@ -17,42 +17,7 @@ use fret_ui_kit::{
 };
 
 use crate::layout as shadcn_layout;
-
-fn hover_card_slide_insets(side: Side, slide: Px) -> Edges {
-    match side {
-        Side::Top => Edges {
-            bottom: slide,
-            ..Edges::all(Px(0.0))
-        },
-        Side::Bottom => Edges {
-            top: slide,
-            ..Edges::all(Px(0.0))
-        },
-        Side::Left => Edges {
-            right: slide,
-            ..Edges::all(Px(0.0))
-        },
-        Side::Right => Edges {
-            left: slide,
-            ..Edges::all(Px(0.0))
-        },
-    }
-}
-
-fn hover_card_slide_transform(side: Side, opacity: f32) -> Transform2D {
-    // shadcn/ui v4 uses `slide-in-from-*-2` (8px) keyed off `data-side`.
-    // We approximate that by allocating extra wrapper insets and translating the content inside
-    // the wrapper, keeping hit-test bounds stable.
-    let slide = Px(8.0);
-    let t = 1.0 - opacity.clamp(0.0, 1.0);
-    let offset = match side {
-        Side::Top => Point::new(Px(0.0), Px(slide.0 * t)),
-        Side::Bottom => Point::new(Px(0.0), Px(-slide.0 * t)),
-        Side::Left => Point::new(Px(slide.0 * t), Px(0.0)),
-        Side::Right => Point::new(Px(-slide.0 * t), Px(0.0)),
-    };
-    Transform2D::translation(offset)
-}
+use crate::overlay_motion;
 
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme
@@ -291,7 +256,7 @@ impl HoverCard {
 
                 let placed = layout.rect;
                 let mut wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
-                let slide_insets = hover_card_slide_insets(layout.side, Px(8.0));
+                let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
                 wrapper_insets.top.0 += slide_insets.top.0;
                 wrapper_insets.right.0 += slide_insets.right.0;
                 wrapper_insets.bottom.0 += slide_insets.bottom.0;
@@ -303,15 +268,9 @@ impl HoverCard {
                     arrow.then_some(arrow_size),
                 );
 
-                // shadcn/ui v4 uses a small zoom-in (95% -> 100%) plus opacity transitions.
-                // We approximate that with a fade-driven zoom transform around a popper-style
-                // transform origin (Radix exposes this via `--radix-*-transform-origin`).
-                let scale = 0.95 + 0.05 * opacity.clamp(0.0, 1.0);
-                let zoom = Transform2D::translation(origin)
-                    * Transform2D::scale_uniform(scale)
-                    * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)));
+                let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
                 let slide = if opening {
-                    hover_card_slide_transform(layout.side, opacity)
+                    overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
                 } else {
                     Transform2D::IDENTITY
                 };

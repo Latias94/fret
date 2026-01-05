@@ -39,6 +39,7 @@ pub mod kbd;
 pub mod label;
 mod layout;
 pub mod menubar;
+mod overlay_motion;
 pub mod pagination;
 pub mod popover;
 mod popper_arrow;
