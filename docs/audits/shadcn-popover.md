@@ -39,6 +39,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   wiring via `Popover::anchor_element(...)`.
   (`Popover::into_element_with_anchor(...)` passes the resolved anchor rect to the content closure,
   which covers common sizing recipes like "content width follows trigger".)
+- Pass: Anchor overrides are treated as dismissable branches, so interacting with the anchor does
+  not trigger outside-press dismissal.
 
 ### Placement & collision
 
