@@ -10,13 +10,16 @@ use fret_launch::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui_plot::cartesian::DataPoint;
-use fret_ui_plot::retained::{LinePlotCanvas, LinePlotStyle, LineSeries};
+use fret_ui_plot::retained::{LinePlotCanvas, LinePlotStyle, LineSeries, PlotOutput, PlotState};
 use fret_ui_plot::series::Series;
 
 struct PlotDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     plot: fret_runtime::Model<fret_ui_plot::retained::LinePlotModel>,
+    plot_state: fret_runtime::Model<PlotState>,
+    plot_output: fret_runtime::Model<PlotOutput>,
+    last_logged_output_revision: u64,
 }
 
 #[derive(Default)]
@@ -64,6 +67,8 @@ impl PlotDemoDriver {
                 LineSeries::new("signal B", Series::from_points_sorted(series1, true)),
                 LineSeries::new("signal C", Series::from_points_sorted(series2, true)),
             ]));
+        let plot_state = app.models_mut().insert(PlotState::default());
+        let plot_output = app.models_mut().insert(PlotOutput::default());
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -72,6 +77,9 @@ impl PlotDemoDriver {
             ui,
             root: None,
             plot,
+            plot_state,
+            plot_output,
+            last_logged_output_revision: 0,
         }
     }
 }
@@ -103,6 +111,27 @@ impl WinitAppDriver for PlotDemoDriver {
             }
             _ => {
                 state.ui.dispatch_event(app, services, event);
+                if matches!(
+                    event,
+                    Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
+                ) {
+                    let output = state
+                        .plot_output
+                        .read(app, |_app, o| *o)
+                        .unwrap_or_default();
+                    if output.revision != state.last_logged_output_revision {
+                        state.last_logged_output_revision = output.revision;
+                        if let Some(query) = output.snapshot.query {
+                            tracing::info!(
+                                "query: x=[{:.3}, {:.3}], y=[{:.3}, {:.3}]",
+                                query.x_min,
+                                query.x_max,
+                                query.y_min,
+                                query.y_max
+                            );
+                        }
+                    }
+                }
             }
         }
     }
@@ -125,7 +154,10 @@ impl WinitAppDriver for PlotDemoDriver {
                 border: Some(theme.colors.panel_border),
                 ..Default::default()
             };
-            let canvas = LinePlotCanvas::new(state.plot.clone()).style(style);
+            let canvas = LinePlotCanvas::new(state.plot.clone())
+                .style(style)
+                .state(state.plot_state.clone())
+                .output(state.plot_output.clone());
             let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
             state.ui.set_root(node);
             node

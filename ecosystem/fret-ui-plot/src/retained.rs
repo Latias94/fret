@@ -516,6 +516,53 @@ pub struct ScatterPlotLayer {
 
 pub type ScatterPlotCanvas = PlotCanvas<ScatterPlotLayer>;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlotHoverOutput {
+    pub series_id: SeriesId,
+    pub data: DataPoint,
+}
+
+/// A caller-owned output snapshot for plot interaction state.
+///
+/// This is intended for building higher-level behaviors such as linked plots, inspectors, and
+/// multi-pane coordination without requiring direct access to the plot internals.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlotOutputSnapshot {
+    pub view_bounds: DataRect,
+    pub cursor: Option<DataPoint>,
+    pub hover: Option<PlotHoverOutput>,
+    pub query: Option<DataRect>,
+}
+
+/// Plot output state written by the plot widget.
+///
+/// Callers are expected to treat this as write-only from the widget side (i.e. do not mutate it
+/// directly from application code). Use it as an observation point for interaction.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlotOutput {
+    pub revision: u64,
+    pub snapshot: PlotOutputSnapshot,
+}
+
+impl Default for PlotOutput {
+    fn default() -> Self {
+        Self {
+            revision: 0,
+            snapshot: PlotOutputSnapshot {
+                view_bounds: DataRect {
+                    x_min: 0.0,
+                    x_max: 1.0,
+                    y_min: 0.0,
+                    y_max: 1.0,
+                },
+                cursor: None,
+                hover: None,
+                query: None,
+            },
+        }
+    }
+}
+
 /// Persistent plot interaction state owned by the caller (optional).
 ///
 /// This mirrors common plotting libraries (e.g. ImPlot / egui_plot) where plot view state and user
@@ -557,6 +604,8 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     hover: Option<PlotHover>,
     plot_state: PlotState,
     plot_state_model: Option<Model<PlotState>>,
+    plot_output: PlotOutput,
+    plot_output_model: Option<Model<PlotOutput>>,
     legend_hover: Option<SeriesId>,
     cursor_px: Option<Point>,
     last_scale_factor: f32,
@@ -594,6 +643,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             hover: None,
             plot_state: PlotState::default(),
             plot_state_model: None,
+            plot_output: PlotOutput::default(),
+            plot_output_model: None,
             legend_hover: None,
             cursor_px: None,
             last_scale_factor: 1.0,
@@ -621,6 +672,11 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self
     }
 
+    pub fn output(mut self, output: Model<PlotOutput>) -> Self {
+        self.plot_output_model = Some(output);
+        self
+    }
+
     pub fn create_node<H: UiHost>(ui: &mut fret_ui::UiTree<H>, canvas: Self) -> fret_core::NodeId {
         ui.create_node_retained(canvas)
     }
@@ -645,6 +701,22 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         } else {
             f(&mut self.plot_state);
             true
+        }
+    }
+
+    fn publish_plot_output<H: UiHost>(&mut self, app: &mut H, snapshot: PlotOutputSnapshot) {
+        if self.plot_output.snapshot == snapshot {
+            return;
+        }
+
+        self.plot_output.revision = self.plot_output.revision.wrapping_add(1);
+        self.plot_output.snapshot = snapshot;
+
+        if let Some(model) = &self.plot_output_model {
+            let next = self.plot_output;
+            let _ = model.update(app, |s, _cx| {
+                *s = next;
+            });
         }
     }
 
@@ -1596,6 +1668,31 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         let layout = PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
         let state = self.read_plot_state(cx.app);
         let view_bounds = self.current_view_bounds(cx.app, &state);
+
+        let cursor_data = self.cursor_px.and_then(|cursor_px| {
+            if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+                return None;
+            }
+            let transform = PlotTransform {
+                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
+                data: view_bounds,
+            };
+            let data = transform.px_to_data(cursor_px);
+            (data.x.is_finite() && data.y.is_finite()).then_some(data)
+        });
+
+        self.publish_plot_output(
+            cx.app,
+            PlotOutputSnapshot {
+                view_bounds,
+                cursor: cursor_data,
+                hover: self.hover.map(|h| PlotHoverOutput {
+                    series_id: h.series_id,
+                    data: h.data,
+                }),
+                query: state.query,
+            },
+        );
 
         self.rebuild_axis_labels_if_needed(cx, layout, view_bounds, theme.revision, font_stack_key);
         self.rebuild_legend_if_needed(cx, theme.revision, font_stack_key);
