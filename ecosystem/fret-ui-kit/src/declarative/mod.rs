@@ -7,6 +7,7 @@ pub mod focus_scope;
 pub mod hover_intent;
 pub mod list;
 pub mod model_watch;
+pub mod overlay_motion;
 pub mod prelude;
 pub mod presence;
 pub mod scheduling;
