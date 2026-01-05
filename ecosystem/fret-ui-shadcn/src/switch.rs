@@ -59,6 +59,12 @@ fn switch_thumb_bg(theme: &Theme) -> Color {
         .unwrap_or(theme.colors.surface_background)
 }
 
+fn switch_ring_color(theme: &Theme) -> Color {
+    theme
+        .color_by_key("ring")
+        .unwrap_or(theme.colors.focus_ring)
+}
+
 #[derive(Clone)]
 pub struct Switch {
     model: Model<bool>,
@@ -115,10 +121,11 @@ impl Switch {
             let w = switch_track_w(&theme);
             let h = switch_track_h(&theme);
             let thumb = switch_thumb(&theme);
-            let pad = switch_padding(&theme);
+            let pad_x = switch_padding(&theme);
 
             let radius = Px((h.0 * 0.5).max(0.0));
-            let ring = decl_style::focus_ring(&theme, radius);
+            let mut ring = decl_style::focus_ring(&theme, radius);
+            ring.color = alpha_mul(switch_ring_color(&theme), 0.5);
 
             let layout = LayoutRefinement::default()
                 .w_px(MetricRef::Px(w))
@@ -148,11 +155,19 @@ impl Switch {
                     bg = alpha_mul(bg, if on { 0.9 } else { 0.7 });
                 }
 
+                let border_color = if st.focused {
+                    switch_ring_color(&theme)
+                } else {
+                    Color::TRANSPARENT
+                };
+
                 let mut chrome_props = decl_style::container_props(
                     &theme,
                     ChromeRefinement::default()
                         .bg(ColorRef::Color(bg))
                         .rounded(Radius::Full)
+                        .border_1()
+                        .border_color(ColorRef::Color(border_color))
                         .merge(chrome.clone()),
                     LayoutRefinement::default(),
                 );
@@ -174,16 +189,17 @@ impl Switch {
                 };
 
                 let children = move |cx: &mut ElementContext<'_, H>| {
+                    let pad_y = Px(((h.0 - thumb.0) * 0.5).max(0.0));
                     let x = if on {
-                        Px((w.0 - pad.0 - thumb.0).max(0.0))
+                        Px((w.0 - pad_x.0 - thumb.0).max(0.0))
                     } else {
-                        pad
+                        pad_x
                     };
 
                     let thumb_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            top: Some(pad),
+                            top: Some(pad_y),
                             left: Some(x),
                             ..Default::default()
                         },
@@ -223,4 +239,130 @@ impl Switch {
 
 pub fn switch<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement {
     Switch::new(model).into_element(cx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
+        PathStyle, Point, Px, Rect, Scene, Size as CoreSize, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+    };
+    use fret_ui::tree::UiTree;
+
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &CoreTextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: CoreSize::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn switch_toggles_model_on_click_and_exposes_checked_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-switch-toggles-model-on-click",
+            |cx| vec![Switch::new(model.clone()).into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Switch)
+            .expect("switch semantics node");
+        assert_eq!(node.flags.checked, Some(false));
+
+        let switch_node = ui.children(root)[0];
+        let switch_bounds = ui.debug_node_bounds(switch_node).expect("switch bounds");
+        let position = Point::new(
+            Px(switch_bounds.origin.x.0 + switch_bounds.size.width.0 * 0.5),
+            Px(switch_bounds.origin.y.0 + switch_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&model), Some(true));
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        assert!(!scene.ops().is_empty());
+    }
 }
