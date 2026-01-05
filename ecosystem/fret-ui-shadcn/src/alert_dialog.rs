@@ -273,12 +273,17 @@ impl AlertDialogContent {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
+        let stack = fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default().gap(Space::N4),
+            move |_cx| children,
+        );
         let container = cx.container(
             ContainerProps {
                 shadow: Some(shadow),
                 ..props
             },
-            move |_cx| children,
+            move |_cx| vec![stack],
         );
 
         cx.semantics(
@@ -309,7 +314,12 @@ impl AlertDialogHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        let stack = fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default().gap(Space::N1p5),
+            move |_cx| children,
+        );
+        cx.container(props, move |_cx| vec![stack])
     }
 }
 
@@ -331,7 +341,15 @@ impl AlertDialogFooter {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        let stack = fret_ui_kit::declarative::stack::hstack(
+            cx,
+            fret_ui_kit::declarative::stack::HStackProps::default()
+                .gap(Space::N2)
+                .justify_end()
+                .items_center(),
+            move |_cx| children,
+        );
+        cx.container(props, move |_cx| vec![stack])
     }
 }
 
