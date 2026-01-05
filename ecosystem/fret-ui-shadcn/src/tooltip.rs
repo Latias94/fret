@@ -14,10 +14,13 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
-use fret_core::{Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
-use fret_ui::element::{AnyElement, HoverRegionProps, LayoutStyle, Overflow, TextProps};
+use fret_ui::element::{
+    AnyElement, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow, SizeStyle,
+    TextProps, VisualTransformProps,
+};
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -422,13 +425,17 @@ impl Tooltip {
                 tooltip_provider::note_closed(cx, now);
             }
 
+            let presence = OverlayController::fade_presence(cx, update.open, 4);
+            let overlay_presence = OverlayPresence::from_fade(update.open, presence);
+
             let out = vec![trigger];
-            if !update.open {
+            if !overlay_presence.present {
                 return out;
             }
 
             let tooltip_id = cx.root_id();
             let overlay_root_name = OverlayController::tooltip_root_name(tooltip_id);
+            let opacity = presence.opacity;
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
@@ -500,14 +507,54 @@ impl Tooltip {
                     },
                 );
 
-                vec![wrapper]
+                let wrapper_origin = Point::new(
+                    Px(placed.origin.x.0 - wrapper_insets.left.0),
+                    Px(placed.origin.y.0 - wrapper_insets.top.0),
+                );
+                let wrapper_size = Size::new(
+                    Px(placed.size.width.0 + wrapper_insets.left.0 + wrapper_insets.right.0),
+                    Px(placed.size.height.0 + wrapper_insets.top.0 + wrapper_insets.bottom.0),
+                );
+                let center = Point::new(
+                    Px(wrapper_origin.x.0 + wrapper_size.width.0 * 0.5),
+                    Px(wrapper_origin.y.0 + wrapper_size.height.0 * 0.5),
+                );
+
+                // shadcn/ui v4 uses a small zoom-in (95% -> 100%) plus opacity transitions.
+                // We approximate that with a fade-driven zoom transform about the wrapper center.
+                let scale = 0.95 + 0.05 * opacity.clamp(0.0, 1.0);
+                let zoom = Transform2D::translation(center)
+                    * Transform2D::scale_uniform(scale)
+                    * Transform2D::translation(Point::new(Px(-center.x.0), Px(-center.y.0)));
+
+                let overlay_layout = LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                vec![cx.opacity_props(
+                    OpacityProps {
+                        layout: overlay_layout.clone(),
+                        opacity,
+                    },
+                    move |cx| {
+                        vec![cx.visual_transform_props(
+                            VisualTransformProps {
+                                layout: overlay_layout,
+                                transform: zoom,
+                            },
+                            move |_cx| vec![wrapper],
+                        )]
+                    },
+                )]
             });
 
-            let mut request = OverlayRequest::tooltip(
-                tooltip_id,
-                OverlayPresence::instant(true),
-                overlay_children,
-            );
+            let mut request =
+                OverlayRequest::tooltip(tooltip_id, overlay_presence, overlay_children);
             request.root_name = Some(overlay_root_name);
             if !disable_hoverable_content {
                 let last_pointer = last_pointer.clone();

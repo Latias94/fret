@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    FontId, FontWeight, Point, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
+    Transform2D,
+};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, SemanticsProps,
-    SizeStyle, TextProps,
+    SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -254,6 +257,25 @@ impl Popover {
 
                     let placed = layout.rect;
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                    let wrapper_origin = Point::new(
+                        Px(placed.origin.x.0 - wrapper_insets.left.0),
+                        Px(placed.origin.y.0 - wrapper_insets.top.0),
+                    );
+                    let wrapper_size = Size::new(
+                        Px(placed.size.width.0 + wrapper_insets.left.0 + wrapper_insets.right.0),
+                        Px(placed.size.height.0 + wrapper_insets.top.0 + wrapper_insets.bottom.0),
+                    );
+                    let center = Point::new(
+                        Px(wrapper_origin.x.0 + wrapper_size.width.0 * 0.5),
+                        Px(wrapper_origin.y.0 + wrapper_size.height.0 * 0.5),
+                    );
+
+                    // shadcn/ui v4 uses a small zoom-in (95% -> 100%) plus opacity transitions.
+                    // We approximate that with a fade-driven zoom transform about the wrapper center.
+                    let scale = 0.95 + 0.05 * opacity.clamp(0.0, 1.0);
+                    let zoom = Transform2D::translation(center)
+                        * Transform2D::scale_uniform(scale)
+                        * Transform2D::translation(Point::new(Px(-center.x.0), Px(-center.y.0)));
 
                     let bg = theme
                         .color_by_key("popover")
@@ -300,10 +322,18 @@ impl Popover {
                     };
                     vec![cx.opacity_props(
                         OpacityProps {
-                            layout: opacity_layout,
+                            layout: opacity_layout.clone(),
                             opacity,
                         },
-                        |_cx| vec![wrapper],
+                        move |cx| {
+                            vec![cx.visual_transform_props(
+                                VisualTransformProps {
+                                    layout: opacity_layout,
+                                    transform: zoom,
+                                },
+                                move |_cx| vec![wrapper],
+                            )]
+                        },
                     )]
                 });
 
