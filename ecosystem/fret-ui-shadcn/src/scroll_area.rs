@@ -1,4 +1,5 @@
 use fret_ui::element::AnyElement;
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::scroll;
@@ -8,6 +9,7 @@ pub struct ScrollArea {
     children: Vec<AnyElement>,
     show_scrollbar: bool,
     layout: LayoutRefinement,
+    scroll_handle: Option<ScrollHandle>,
 }
 
 impl ScrollArea {
@@ -16,6 +18,7 @@ impl ScrollArea {
             children,
             show_scrollbar: true,
             layout: LayoutRefinement::default(),
+            scroll_handle: None,
         }
     }
 
@@ -29,9 +32,24 @@ impl ScrollArea {
         self
     }
 
+    pub fn scroll_handle(mut self, handle: ScrollHandle) -> Self {
+        self.scroll_handle = Some(handle);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let children = self.children;
-        scroll::overflow_scroll(cx, self.layout, self.show_scrollbar, move |_cx| children)
+        if let Some(handle) = self.scroll_handle {
+            scroll::overflow_scroll_with_handle(
+                cx,
+                self.layout,
+                self.show_scrollbar,
+                handle,
+                move |_cx| children,
+            )
+        } else {
+            scroll::overflow_scroll(cx, self.layout, self.show_scrollbar, move |_cx| children)
+        }
     }
 }
 

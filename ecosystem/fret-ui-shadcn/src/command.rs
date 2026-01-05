@@ -16,6 +16,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps, TextProps,
 };
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -25,6 +26,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::cmdk_score;
 use fret_ui_kit::headless::cmdk_selection;
 use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::layout as shadcn_layout;
@@ -1355,9 +1357,9 @@ impl CommandPalette {
                 })
                 .collect();
 
-            let active_descendant = active_idx
-                .and_then(|idx| row_ids.get(idx).copied())
-                .and_then(|row| cx.node_for_element(row));
+            let active_opt = active_desc::active_option_for_index(cx, &row_ids, active_idx);
+            let active_descendant = active_opt.map(|opt| opt.node);
+            let active_row_element = active_opt.map(|opt| opt.element);
 
             let border = border(&theme);
             let mut wrapper = decl_style::container_props(
@@ -1559,34 +1561,45 @@ impl CommandPalette {
                 })
             } else {
                 let scroll = self.scroll;
+                let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
                 cx.semantics(
                     fret_ui::element::SemanticsProps {
                         role: SemanticsRole::ListBox,
                         ..Default::default()
                     },
                     move |cx| {
-                        vec![
-                            ScrollArea::new(vec![cx.flex(
-                                FlexProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout.size.min_height = Some(Px(0.0));
-                                        layout
-                                    },
-                                    direction: fret_core::Axis::Vertical,
-                                    gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Stretch,
-                                    wrap: false,
-                                    ..Default::default()
+                        let scroll_area = ScrollArea::new(vec![cx.flex(
+                            FlexProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.min_height = Some(Px(0.0));
+                                    layout
                                 },
-                                move |_cx| rows,
-                            )])
-                            .refine_layout(scroll)
-                            .into_element(cx),
-                        ]
+                                direction: fret_core::Axis::Vertical,
+                                gap: Px(0.0),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Stretch,
+                                wrap: false,
+                                ..Default::default()
+                            },
+                            move |_cx| rows,
+                        )])
+                        .scroll_handle(scroll_handle.clone())
+                        .refine_layout(scroll)
+                        .into_element(cx);
+
+                        if let Some(active_row_element) = active_row_element {
+                            let _ = active_desc::scroll_active_element_into_view_y(
+                                cx,
+                                &scroll_handle,
+                                scroll_area.id,
+                                active_row_element,
+                            );
+                        }
+
+                        vec![scroll_area]
                     },
                 )
             };
@@ -1886,6 +1899,159 @@ mod tests {
         assert!(
             active_node.flags.selected,
             "highlighted row should be selected"
+        );
+    }
+
+    #[test]
+    fn cmdk_scrolls_active_option_into_view_while_focus_stays_in_input() {
+        fn rects_intersect(a: Rect, b: Rect) -> bool {
+            let ax1 = a.origin.x.0;
+            let ay1 = a.origin.y.0;
+            let ax2 = ax1 + a.size.width.0;
+            let ay2 = ay1 + a.size.height.0;
+
+            let bx1 = b.origin.x.0;
+            let by1 = b.origin.y.0;
+            let bx2 = bx1 + b.size.width.0;
+            let by2 = by1 + b.size.height.0;
+
+            ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1
+        }
+
+        fn find_scroll_viewport(ui: &UiTree<App>, node: fret_core::NodeId, target_h: Px) -> Rect {
+            let path = ui.debug_node_path(node);
+            for &ancestor in path.iter().rev() {
+                let Some(bounds) = ui.debug_node_bounds(ancestor) else {
+                    continue;
+                };
+                if (bounds.size.height.0 - target_h.0).abs() <= 0.5 {
+                    return bounds;
+                }
+            }
+            panic!("expected a scroll viewport ancestor with height ~= {target_h:?}");
+        }
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<String>,
+            items: Vec<CommandItem>,
+        ) -> fret_core::NodeId {
+            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "cmdk",
+                |cx| {
+                    vec![
+                        CommandPalette::new(model, items)
+                            .refine_scroll_layout(
+                                LayoutRefinement::default()
+                                    .h_px(MetricRef::Px(Px(40.0)))
+                                    .max_h(MetricRef::Px(Px(40.0))),
+                            )
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(String::new());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<CommandItem> = (0..12)
+            .map(|i| {
+                CommandItem::new(format!("Item {i}")).on_select(CommandId::new(format!("i{i}")))
+            })
+            .collect();
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            items.clone(),
+        );
+
+        let input = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable text input");
+        ui.set_focus(Some(input));
+
+        // Move highlight down to the end of the list without moving focus away from the input.
+        for _ in 0..11 {
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &fret_core::Event::KeyDown {
+                    key: KeyCode::ArrowDown,
+                    modifiers: Modifiers::default(),
+                    repeat: false,
+                },
+            );
+        }
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focus = snap.focus.expect("focus");
+        assert_eq!(focus, input, "focus should remain on the input node");
+
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::TextField && n.id == focus)
+            .expect("focused text field node");
+
+        let active = input
+            .active_descendant
+            .expect("active_descendant should be set");
+        let active_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == active)
+            .expect("active_descendant should reference a node in the snapshot");
+
+        assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
+        assert_eq!(active_node.label.as_deref(), Some("Item 11"));
+
+        let viewport = find_scroll_viewport(&ui, active, Px(40.0));
+        assert!(
+            rects_intersect(viewport, active_node.bounds),
+            "expected active option to intersect the scroll viewport after scroll-into-view"
         );
     }
 
