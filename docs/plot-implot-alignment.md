@@ -65,7 +65,7 @@ This contract is documented in ADR 0099.
 ## Axes
 
 - [x] Nice ticks (1/2/5 * 10^n)
-- [~] Time axis + formatting (seconds-based baseline)
+- [~] Time axis + formatting (UTC seconds baseline)
 - [ ] Log axis
 - [ ] Axis formatters (custom label callbacks)
 - [ ] Multi-axes (dual Y, etc.)

@@ -10,7 +10,7 @@ use fret_launch::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 use fret_ui_plot::cartesian::DataPoint;
-use fret_ui_plot::plot::axis::{AxisLabelFormat, TimeAxisFormat};
+use fret_ui_plot::plot::axis::{AxisLabelFormat, TimeAxisFormat, TimeAxisPresentation};
 use fret_ui_plot::retained::{
     LinePlotStyle, PlotOutput, PlotState, ShadedPlotCanvas, ShadedPlotModel, ShadedSeries,
 };
@@ -153,7 +153,10 @@ impl WinitAppDriver for ShadedDemoDriver {
             };
             let canvas = ShadedPlotCanvas::new(state.plot.clone())
                 .style(style)
-                .x_axis_format(AxisLabelFormat::TimeSeconds(TimeAxisFormat::default()))
+                .x_axis_format(AxisLabelFormat::TimeSeconds(TimeAxisFormat {
+                    base_seconds: 1_700_000_000.0,
+                    presentation: TimeAxisPresentation::UnixUtc,
+                }))
                 .state(state.plot_state.clone())
                 .output(state.plot_output.clone());
             let node = ShadedPlotCanvas::create_node(&mut state.ui, canvas);

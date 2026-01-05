@@ -52,22 +52,39 @@ impl AxisNumberFormat {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TimeAxisFormat {
-    /// Origin used for formatting. Labels show `x - origin_seconds`.
-    pub origin_seconds: f64,
+    /// Base timestamp in Unix seconds.
+    ///
+    /// When formatting absolute time (e.g. UTC), tick labels are derived from
+    /// `base_seconds + x`.
+    pub base_seconds: f64,
+    pub presentation: TimeAxisPresentation,
 }
 
 impl Default for TimeAxisFormat {
     fn default() -> Self {
         Self {
-            origin_seconds: 0.0,
+            base_seconds: 0.0,
+            presentation: TimeAxisPresentation::Relative,
         }
     }
 }
 
 impl TimeAxisFormat {
     pub fn key(self) -> u64 {
-        u64::from(self.origin_seconds.to_bits())
+        let tag = match self.presentation {
+            TimeAxisPresentation::Relative => 0u64,
+            TimeAxisPresentation::UnixUtc => 1u64,
+        };
+        (u64::from(self.base_seconds.to_bits()) ^ (tag << 1)).wrapping_mul(0x9e3779b97f4a7c15)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimeAxisPresentation {
+    /// Format ticks as relative time offsets (mm:ss, hh:mm:ss, ...).
+    Relative,
+    /// Format ticks as absolute timestamps in UTC (YYYY-MM-DD, HH:MM, ...).
+    UnixUtc,
 }
 
 fn format_number(v: f32, span: f32, fmt: AxisNumberFormat) -> String {
@@ -105,7 +122,16 @@ fn format_time_seconds(v: f32, span: f32, fmt: TimeAxisFormat) -> String {
         return "NA".to_string();
     }
 
-    let t = (v as f64) - fmt.origin_seconds;
+    match fmt.presentation {
+        TimeAxisPresentation::Relative => format_relative_time_seconds(v as f64, span),
+        TimeAxisPresentation::UnixUtc => {
+            let abs = fmt.base_seconds + (v as f64);
+            format_unix_utc_seconds(abs, span)
+        }
+    }
+}
+
+fn format_relative_time_seconds(t: f64, span: f32) -> String {
     if !t.is_finite() {
         return "NA".to_string();
     }
@@ -135,6 +161,64 @@ fn format_time_seconds(v: f32, span: f32, fmt: TimeAxisFormat) -> String {
     } else {
         format!("{sign}{minutes:02}:{seconds:02}")
     }
+}
+
+fn format_unix_utc_seconds(abs_seconds: f64, span: f32) -> String {
+    let Some((year, month, day, hour, minute, second)) = unix_seconds_to_utc_parts(abs_seconds)
+    else {
+        return "NA".to_string();
+    };
+
+    let span = span.abs();
+
+    if span.is_finite() && span < 60.0 {
+        return format!("{hour:02}:{minute:02}:{second:02}");
+    }
+    if span.is_finite() && span < 3600.0 {
+        return format!("{hour:02}:{minute:02}:{second:02}");
+    }
+    if span.is_finite() && span < 86400.0 {
+        return format!("{hour:02}:{minute:02}");
+    }
+
+    if span.is_finite() && span < 86400.0 * 365.0 {
+        return format!("{year:04}-{month:02}-{day:02}");
+    }
+
+    format!("{year:04}-{month:02}")
+}
+
+fn unix_seconds_to_utc_parts(abs_seconds: f64) -> Option<(i32, u32, u32, u32, u32, u32)> {
+    if !abs_seconds.is_finite() {
+        return None;
+    }
+
+    let secs = abs_seconds.floor() as i64;
+    let days = secs.div_euclid(86400);
+    let sec_of_day = secs.rem_euclid(86400) as u32;
+
+    let (year, month, day) = civil_from_days(days);
+    let hour = sec_of_day / 3600;
+    let minute = (sec_of_day / 60) % 60;
+    let second = sec_of_day % 60;
+
+    Some((year, month, day, hour, minute, second))
+}
+
+// Based on Howard Hinnant's "civil_from_days" algorithm (public domain).
+// Interprets day 0 as 1970-01-01 in the proleptic Gregorian calendar.
+fn civil_from_days(days_since_epoch: i64) -> (i32, u32, u32) {
+    let z = days_since_epoch + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 }.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096).div_euclid(365);
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2).div_euclid(153);
+    let d = doy - (153 * mp + 2).div_euclid(5) + 1;
+    let m = mp + if mp < 10 { 3 } else { -9 };
+    let year = (y + (m <= 2) as i64) as i32;
+    (year, m as u32, d as u32)
 }
 
 pub fn nice_ticks(min: f32, max: f32, tick_count: usize) -> Vec<f32> {
@@ -250,15 +334,15 @@ pub fn time_ticks_seconds(min: f32, max: f32, tick_count: usize, fmt: TimeAxisFo
         }
     }
 
-    let origin = fmt.origin_seconds;
-    let min_rel = (min as f64) - origin;
-    let max_rel = (max as f64) - origin;
-    if !min_rel.is_finite() || !max_rel.is_finite() {
+    let base = fmt.base_seconds;
+    let min_abs = (min as f64) + base;
+    let max_abs = (max as f64) + base;
+    if !min_abs.is_finite() || !max_abs.is_finite() {
         return nice_ticks(min, max, tick_count);
     }
 
-    let first_k = (min_rel / step).ceil();
-    let last_k = (max_rel / step).floor();
+    let first_k = (min_abs / step).ceil();
+    let last_k = (max_abs / step).floor();
     if !first_k.is_finite() || !last_k.is_finite() || first_k > last_k {
         return nice_ticks(min, max, tick_count);
     }
@@ -270,7 +354,7 @@ pub fn time_ticks_seconds(min: f32, max: f32, tick_count: usize, fmt: TimeAxisFo
         if k > last_k + 0.5 {
             break;
         }
-        let v = origin + k * step;
+        let v = k * step - base;
         if v.is_finite() {
             out.push(v as f32);
         }
@@ -333,5 +417,17 @@ mod tests {
         assert!(!ticks.is_empty());
         // For a small range, we should still generate second-based ticks (not HH:MM yet).
         assert!(ticks.iter().all(|t| t.is_finite()));
+    }
+
+    #[test]
+    fn unix_utc_formatting_handles_epoch() {
+        let fmt = TimeAxisFormat {
+            base_seconds: 0.0,
+            presentation: TimeAxisPresentation::UnixUtc,
+        };
+        assert_eq!(
+            AxisLabelFormat::TimeSeconds(fmt).format(0.0, 86400.0),
+            "1970-01-01"
+        );
     }
 }
