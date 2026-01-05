@@ -15,11 +15,10 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use crate::cartesian::{DataPoint, DataRect, PlotTransform};
-use crate::plot::axis::{AxisLabelFormat, linear_ticks};
+use crate::plot::axis::{AxisLabelFormat, axis_ticks};
 use crate::plot::decimate::{
     SamplePoint, decimate_polyline, decimate_samples, decimate_shaded_band,
 };
-use crate::plot::grid::GridLines;
 use crate::plot::view::{
     clamp_view_to_data, clamp_zoom_factors, data_rect_from_plot_points, data_rect_key,
     expand_data_bounds, local_from_absolute, pan_view_by_px, sanitize_data_rect, zoom_view_at_px,
@@ -1557,8 +1556,18 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             letter_spacing_em: None,
         };
 
-        let x_ticks = linear_ticks(data_bounds.x_min, data_bounds.x_max, self.style.tick_count);
-        let y_ticks = linear_ticks(data_bounds.y_min, data_bounds.y_max, self.style.tick_count);
+        let x_ticks = axis_ticks(
+            data_bounds.x_min,
+            data_bounds.x_max,
+            self.style.tick_count,
+            self.x_axis_format,
+        );
+        let y_ticks = axis_ticks(
+            data_bounds.y_min,
+            data_bounds.y_max,
+            self.style.tick_count,
+            self.y_axis_format,
+        );
         let x_span = (data_bounds.x_max - data_bounds.x_min).abs();
         let y_span = (data_bounds.y_max - data_bounds.y_min).abs();
 
@@ -2310,33 +2319,65 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         cx.scene.push(SceneOp::PushClipRect { rect: layout.plot });
 
         if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
-            for (a, _) in GridLines::default().x_lines(layout.plot) {
-                let x = Px(a.x.0.round());
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(1),
-                    rect: Rect::new(
-                        Point::new(x, layout.plot.origin.y),
-                        Size::new(Px(1.0), layout.plot.size.height),
-                    ),
-                    background: grid_color,
-                    border: fret_core::Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(Px(0.0)),
-                });
+            // Grid: align to axis ticks so labels and grid are consistent (ImPlot-style).
+            let x_ticks = axis_ticks(
+                view_bounds.x_min,
+                view_bounds.x_max,
+                self.style.tick_count,
+                self.x_axis_format,
+            );
+            let y_ticks = axis_ticks(
+                view_bounds.y_min,
+                view_bounds.y_max,
+                self.style.tick_count,
+                self.y_axis_format,
+            );
+
+            let x_den = view_bounds.x_max - view_bounds.x_min;
+            let y_den = view_bounds.y_max - view_bounds.y_min;
+
+            if x_den != 0.0 && x_den.is_finite() {
+                for v in x_ticks {
+                    let t = (v - view_bounds.x_min) / x_den;
+                    if !t.is_finite() || t < 0.0 || t > 1.0 {
+                        continue;
+                    }
+                    let x = layout.plot.origin.x.0 + layout.plot.size.width.0 * t;
+                    let x = Px(x.round());
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(1),
+                        rect: Rect::new(
+                            Point::new(x, layout.plot.origin.y),
+                            Size::new(Px(1.0), layout.plot.size.height),
+                        ),
+                        background: grid_color,
+                        border: fret_core::Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+                }
             }
-            for (a, _) in GridLines::default().y_lines(layout.plot) {
-                let y = Px(a.y.0.round());
-                cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(1),
-                    rect: Rect::new(
-                        Point::new(layout.plot.origin.x, y),
-                        Size::new(layout.plot.size.width, Px(1.0)),
-                    ),
-                    background: grid_color,
-                    border: fret_core::Edges::all(Px(0.0)),
-                    border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(Px(0.0)),
-                });
+
+            if y_den != 0.0 && y_den.is_finite() {
+                for v in y_ticks {
+                    let t = (v - view_bounds.y_min) / y_den;
+                    if !t.is_finite() || t < 0.0 || t > 1.0 {
+                        continue;
+                    }
+                    let y = layout.plot.origin.y.0 + layout.plot.size.height.0 * (1.0 - t);
+                    let y = Px(y.round());
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(1),
+                        rect: Rect::new(
+                            Point::new(layout.plot.origin.x, y),
+                            Size::new(layout.plot.size.width, Px(1.0)),
+                        ),
+                        background: grid_color,
+                        border: fret_core::Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+                }
             }
 
             let emphasized = self.style.emphasize_hovered_series;
@@ -2683,8 +2724,18 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         }
 
         // Axis labels (P0: evenly spaced ticks).
-        let x_ticks = linear_ticks(view_bounds.x_min, view_bounds.x_max, self.style.tick_count);
-        let y_ticks = linear_ticks(view_bounds.y_min, view_bounds.y_max, self.style.tick_count);
+        let x_ticks = axis_ticks(
+            view_bounds.x_min,
+            view_bounds.x_max,
+            self.style.tick_count,
+            self.x_axis_format,
+        );
+        let y_ticks = axis_ticks(
+            view_bounds.y_min,
+            view_bounds.y_max,
+            self.style.tick_count,
+            self.y_axis_format,
+        );
 
         let x_den = view_bounds.x_max - view_bounds.x_min;
         let y_den = view_bounds.y_max - view_bounds.y_min;
