@@ -26,6 +26,12 @@ pub(super) struct PointerDownOutsideParams<'a> {
     pub(super) event: &'a Event,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub(super) struct PointerDownOutsideOutcome {
+    pub(super) dispatched: bool,
+    pub(super) suppress_hit_test_dispatch: bool,
+}
+
 pub(super) struct KeydownShortcutParams<'a> {
     pub(super) input_ctx: &'a InputContext,
     pub(super) barrier_root: Option<NodeId>,

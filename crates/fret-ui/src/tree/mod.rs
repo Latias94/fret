@@ -31,7 +31,9 @@ use layers::UiLayer;
 pub use layers::UiLayerId;
 pub use paint_cache::PaintCachePolicy;
 use paint_cache::{PaintCacheEntry, PaintCacheKey, PaintCacheState};
-use shortcuts::{KeydownShortcutParams, PendingShortcut, PointerDownOutsideParams};
+use shortcuts::{
+    KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct InvalidationFlags {
@@ -683,7 +685,7 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         services: &mut dyn UiServices,
         params: PointerDownOutsideParams<'_>,
-    ) {
+    ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
         let hit_root = hit.and_then(|n| self.node_root(n));
 
@@ -730,15 +732,22 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
+            let root = layer.root;
+            let consume = layer.consume_pointer_down_outside_events;
             self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
                 params.input_ctx,
-                layer.root,
+                root,
                 params.event,
             );
-            break;
+            return PointerDownOutsideOutcome {
+                dispatched: true,
+                suppress_hit_test_dispatch: consume,
+            };
         }
+
+        PointerDownOutsideOutcome::default()
     }
 
     fn rects_intersect(a: Rect, b: Rect) -> bool {

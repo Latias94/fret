@@ -353,6 +353,7 @@ impl<H: UiHost> UiTree<H> {
         let mut needs_redraw = false;
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
+        let mut pointer_down_outside = PointerDownOutsideOutcome::default();
 
         if let Event::KeyDown {
             key,
@@ -409,7 +410,7 @@ impl<H: UiHost> UiTree<H> {
             let hit = self.hit_test_layers(&active_layers, pos);
 
             if matches!(event, Event::Pointer(PointerEvent::Down { .. })) && captured.is_none() {
-                self.dispatch_pointer_down_outside(
+                pointer_down_outside = self.dispatch_pointer_down_outside(
                     app,
                     services,
                     PointerDownOutsideParams {
@@ -420,6 +421,9 @@ impl<H: UiHost> UiTree<H> {
                         event,
                     },
                 );
+                if pointer_down_outside.dispatched {
+                    needs_redraw = true;
+                }
             }
             let hovered_pressable: Option<crate::elements::GlobalElementId> =
                 declarative::with_window_frame(app, window, |window_frame| {
@@ -559,6 +563,15 @@ impl<H: UiHost> UiTree<H> {
         let Some(mut node_id) = target else {
             return;
         };
+
+        if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
+            && pointer_down_outside.suppress_hit_test_dispatch
+        {
+            if needs_redraw && let Some(window) = self.window {
+                app.request_redraw(window);
+            }
+            return;
+        }
 
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(node_id, event);

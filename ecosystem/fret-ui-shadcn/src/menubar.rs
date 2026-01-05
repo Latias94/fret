@@ -33,6 +33,7 @@ pub struct MenubarItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub inset: bool,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -47,6 +48,7 @@ impl MenubarItem {
             label: label.clone(),
             value: label,
             inset: false,
+            leading: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -66,6 +68,11 @@ impl MenubarItem {
 
     pub fn inset(mut self, inset: bool) -> Self {
         self.inset = inset;
+        self
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
         self
     }
 

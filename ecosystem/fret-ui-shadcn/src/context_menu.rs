@@ -44,6 +44,7 @@ pub struct ContextMenuItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub inset: bool,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -58,6 +59,7 @@ impl ContextMenuItem {
             label: label.clone(),
             value: label,
             inset: false,
+            leading: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -73,6 +75,11 @@ impl ContextMenuItem {
 
     pub fn inset(mut self, inset: bool) -> Self {
         self.inset = inset;
+        self
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
         self
     }
 
@@ -181,6 +188,7 @@ pub struct ContextMenuCheckboxItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub checked: Model<bool>,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -195,6 +203,7 @@ impl ContextMenuCheckboxItem {
             label: label.clone(),
             value: label,
             checked,
+            leading: None,
             disabled: false,
             close_on_select: false,
             command: None,
@@ -205,6 +214,11 @@ impl ContextMenuCheckboxItem {
 
     pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
         self.value = value.into();
+        self
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
         self
     }
 
@@ -259,6 +273,7 @@ impl ContextMenuRadioGroup {
 pub struct ContextMenuRadioItemSpec {
     pub label: Arc<str>,
     pub value: Arc<str>,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -273,12 +288,18 @@ impl ContextMenuRadioItemSpec {
         Self {
             label,
             value,
+            leading: None,
             disabled: false,
             close_on_select: true,
             command: None,
             a11y_label: None,
             trailing: None,
         }
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -311,6 +332,7 @@ impl ContextMenuRadioItemSpec {
             label: self.label,
             value: self.value,
             group_value,
+            leading: self.leading,
             disabled: self.disabled,
             close_on_select: self.close_on_select,
             command: self.command,
@@ -326,6 +348,7 @@ pub struct ContextMenuRadioItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub group_value: Model<Option<Arc<str>>>,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -345,6 +368,7 @@ impl ContextMenuRadioItem {
             label,
             value,
             group_value,
+            leading: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -373,6 +397,11 @@ impl ContextMenuRadioItem {
         self
     }
 
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
+        self
+    }
+
     pub fn trailing(mut self, element: AnyElement) -> Self {
         self.trailing = Some(element);
         self
@@ -398,6 +427,7 @@ fn flatten_entries(into: &mut Vec<ContextMenuEntry>, entries: Vec<ContextMenuEnt
 fn menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
+    leading: Option<AnyElement>,
     trailing: Option<AnyElement>,
     indicator_on: Option<bool>,
     disabled: bool,
@@ -428,7 +458,10 @@ fn menu_row_children<H: UiHost>(
         move |cx| {
             let has_indicator = indicator_on.is_some();
             let mut row: Vec<AnyElement> = Vec::with_capacity(
-                usize::from(has_indicator) + 1 + usize::from(trailing.is_some()),
+                usize::from(has_indicator)
+                    + usize::from(leading.is_some())
+                    + 1
+                    + usize::from(trailing.is_some()),
             );
 
             if let Some(is_on) = indicator_on {
@@ -469,6 +502,10 @@ fn menu_row_children<H: UiHost>(
                         })]
                     },
                 ));
+            }
+
+            if let Some(l) = leading.clone() {
+                row.push(l);
             }
 
             row.push(cx.text_props(TextProps {
@@ -918,6 +955,7 @@ impl ContextMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let pad_left =
                                                             if item.inset { pad_x_inset } else { pad_x };
@@ -969,6 +1007,7 @@ impl ContextMenu {
                                                                     menu_row_children(
                                                                         cx,
                                                                         label.clone(),
+                                                                        leading.clone(),
                                                                         trailing.clone(),
                                                                         None,
                                                                         disabled,
@@ -1001,6 +1040,7 @@ impl ContextMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
@@ -1065,6 +1105,7 @@ impl ContextMenu {
                                                                     menu_row_children(
                                                                         cx,
                                                                         label.clone(),
+                                                                        leading.clone(),
                                                                         trailing.clone(),
                                                                         Some(checked_now),
                                                                         disabled,
@@ -1097,6 +1138,7 @@ impl ContextMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
@@ -1170,6 +1212,7 @@ impl ContextMenu {
                                                                     menu_row_children(
                                                                         cx,
                                                                         label.clone(),
+                                                                        leading.clone(),
                                                                         trailing.clone(),
                                                                         Some(is_selected),
                                                                         disabled,

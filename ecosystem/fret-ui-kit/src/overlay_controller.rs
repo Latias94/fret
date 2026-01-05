@@ -67,6 +67,9 @@ pub struct OverlayRequest {
     ///
     /// This is used to align Radix `DismissableLayerBranch` outcomes across disjoint subtrees.
     pub dismissable_branches: Vec<GlobalElementId>,
+    /// When an outside-press observer is dispatched for this overlay, suppress normal hit-tested
+    /// pointer-down dispatch to underlay widgets for the same event.
+    pub consume_outside_pointer_events: bool,
     pub open: Option<Model<bool>>,
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     pub presence: OverlayPresence,
@@ -83,6 +86,10 @@ impl std::fmt::Debug for OverlayRequest {
             .field("root_name", &self.root_name)
             .field("trigger", &self.trigger)
             .field("dismissable_branches_len", &self.dismissable_branches.len())
+            .field(
+                "consume_outside_pointer_events",
+                &self.consume_outside_pointer_events,
+            )
             .field("open", &self.open)
             .field(
                 "dismissible_on_pointer_move",
@@ -110,6 +117,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: Some(trigger),
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: Some(open),
             dismissible_on_pointer_move: None,
             presence,
@@ -132,6 +140,7 @@ impl OverlayRequest {
             root_name: None,
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: Some(open),
             dismissible_on_pointer_move: None,
             presence,
@@ -152,6 +161,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: None,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: None,
             dismissible_on_pointer_move: None,
             presence,
@@ -168,6 +178,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: Some(trigger),
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence {
@@ -187,6 +198,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: None,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence::hidden(),
@@ -210,6 +222,11 @@ impl OverlayRequest {
 
     pub fn dismissable_branches(mut self, branches: Vec<GlobalElementId>) -> Self {
         self.dismissable_branches = branches;
+        self
+    }
+
+    pub fn consume_outside_pointer_events(mut self, consume: bool) -> Self {
+        self.consume_outside_pointer_events = consume;
         self
     }
 }
@@ -270,6 +287,7 @@ impl OverlayController {
                         root_name,
                         trigger,
                         dismissable_branches: request.dismissable_branches,
+                        consume_outside_pointer_events: request.consume_outside_pointer_events,
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,

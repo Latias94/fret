@@ -60,8 +60,7 @@ fn select_scroll_with_buttons<H: UiHost>(
             wrap: false,
         },
         move |cx| {
-            let handle =
-                cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            let handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
 
             let scrollbar_w = theme
                 .metric_by_key("metric.scrollbar.width")
@@ -111,14 +110,12 @@ fn select_scroll_with_buttons<H: UiHost>(
                         ..Default::default()
                     },
                     move |cx, st| {
-                        cx.pressable_add_on_activate(Arc::new(
-                            move |host, action_cx, _reason| {
-                                let prev = handle.offset();
-                                let next = Point::new(prev.x, Px(prev.y.0 + item_step.0 * dir));
-                                handle.scroll_to_offset(next);
-                                host.request_redraw(action_cx.window);
-                            },
-                        ));
+                        cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                            let prev = handle.offset();
+                            let next = Point::new(prev.x, Px(prev.y.0 + item_step.0 * dir));
+                            handle.scroll_to_offset(next);
+                            host.request_redraw(action_cx.window);
+                        }));
 
                         let mut bg = Color::TRANSPARENT;
                         if st.hovered || st.pressed {
@@ -176,7 +173,10 @@ fn select_scroll_with_buttons<H: UiHost>(
                     layout: {
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Fill;
-                        layout.size.height = Length::Fill;
+                        layout.size.min_height = Some(Px(0.0));
+                        layout.flex.grow = 1.0;
+                        layout.flex.shrink = 1.0;
+                        layout.flex.basis = Length::Px(Px(0.0));
                         layout
                     },
                 },
@@ -927,9 +927,13 @@ fn select_impl<H: UiHost>(
                     let item_h = theme
                         .metric_by_key("component.select.item_height")
                         .unwrap_or(Px(32.0));
-                    let desired_h =
-                        Px((item_h.0 * item_len as f32).min(max_h.0).max(item_h.0));
-                    let desired_w = Px(anchor.size.width.0.max(min_width.0));
+                    let desired_h = Px(
+                        (item_h.0 * item_len as f32)
+                            .min(max_h.0)
+                            .max(item_h.0)
+                            .min(outer.size.height.0),
+                    );
+                    let desired_w = Px(anchor.size.width.0.max(min_width.0).min(outer.size.width.0));
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
                     let side_offset = side_offset_override.unwrap_or_else(|| {
@@ -1301,6 +1305,7 @@ fn select_impl<H: UiHost>(
                         OverlayPresence::instant(true),
                         overlay_children,
                     );
+                    request.consume_outside_pointer_events = true;
                     request.root_name = Some(overlay_root_name);
                     OverlayController::request(cx, request);
             }
@@ -1568,7 +1573,10 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![SelectItem::new("alpha", "Alpha"), SelectItem::new("beta", "Beta")];
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+        ];
 
         let root = render_frame(
             &mut ui,
@@ -1992,10 +2000,27 @@ mod tests {
         let down_bounds = ui
             .debug_node_bounds(scroll_down.id)
             .expect("scroll down bounds");
-        let click = Point::new(
-            Px(down_bounds.origin.x.0 + down_bounds.size.width.0 * 0.5),
-            Px(down_bounds.origin.y.0 + down_bounds.size.height.0 * 0.5),
-        );
+        let click = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(down_bounds.origin.x.0 + down_bounds.size.width.0 * fx),
+                    Px(down_bounds.origin.y.0 + down_bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&scroll_down.id)
+                {
+                    return p;
+                }
+            }
+            panic!("expected scroll down bounds to be hit-testable; bounds={down_bounds:?}");
+        })();
 
         ui.dispatch_event(
             &mut app,

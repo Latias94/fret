@@ -57,7 +57,11 @@ mod tests {
         let effects0 = app.flush_effects();
         assert!(out0.present);
         assert!(out0.animating);
-        assert!(effects0.iter().any(|e| *e == Effect::RequestAnimationFrame(window)));
+        assert!(
+            effects0
+                .iter()
+                .any(|e| *e == Effect::RequestAnimationFrame(window))
+        );
         assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
 
         // 动画进行中：持续请求重绘，但不会重复申请新的 RAF lease。
@@ -69,7 +73,11 @@ mod tests {
         let effects1 = app.flush_effects();
         assert!(out1.present);
         assert!(out1.animating);
-        assert!(!effects1.iter().any(|e| *e == Effect::RequestAnimationFrame(window)));
+        assert!(
+            !effects1
+                .iter()
+                .any(|e| *e == Effect::RequestAnimationFrame(window))
+        );
         assert!(effects1.iter().any(|e| *e == Effect::Redraw(window)));
 
         // 进入稳定 open：不再 animating，因此不再主动请求重绘。
@@ -110,7 +118,11 @@ mod tests {
         let effects = app.flush_effects();
         assert!(out.present);
         assert!(out.animating);
-        assert!(effects.iter().any(|e| *e == Effect::RequestAnimationFrame(window)));
+        assert!(
+            effects
+                .iter()
+                .any(|e| *e == Effect::RequestAnimationFrame(window))
+        );
         assert!(effects.iter().any(|e| *e == Effect::Redraw(window)));
     }
 }

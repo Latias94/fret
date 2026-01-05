@@ -219,6 +219,10 @@ pub fn render<H: UiHost>(
                 Vec::new()
             };
             ui.set_layer_pointer_down_outside_branches(entry.layer, dismissable_branches);
+            ui.set_layer_consume_pointer_down_outside_events(
+                entry.layer,
+                req.consume_outside_pointer_events && open_now,
+            );
 
             // Non-modal overlays are click-through during close transitions:
             // when `present=true` but `open=false`, they must not participate in hit-testing or
@@ -272,6 +276,7 @@ pub fn render<H: UiHost>(
         if focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer) {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
             ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+            ui.set_layer_consume_pointer_down_outside_events(layer, false);
             if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
                 ui,
                 app,
@@ -284,6 +289,7 @@ pub fn render<H: UiHost>(
         } else {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
             ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+            ui.set_layer_consume_pointer_down_outside_events(layer, false);
         }
     }
 

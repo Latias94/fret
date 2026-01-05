@@ -221,10 +221,8 @@ mod tests {
 
         let a = a.expect("a id");
         let b_id = b_id.expect("b id");
-        let a_node =
-            fret_ui::elements::node_for_element(&mut app, window, a).expect("a node");
-        let b_node =
-            fret_ui::elements::node_for_element(&mut app, window, b_id).expect("b node");
+        let a_node = fret_ui::elements::node_for_element(&mut app, window, a).expect("a node");
+        let b_node = fret_ui::elements::node_for_element(&mut app, window, b_id).expect("b node");
 
         ui.set_focus(None);
         assert!(apply_initial_focus_for_overlay(
@@ -238,11 +236,7 @@ mod tests {
 
         ui.set_focus(None);
         assert!(apply_initial_focus_for_overlay(
-            &mut ui,
-            &mut app,
-            window,
-            root,
-            None
+            &mut ui, &mut app, window, root, None
         ));
         assert_eq!(ui.focus(), Some(a_node));
     }
@@ -291,10 +285,10 @@ mod tests {
 
         let trigger = trigger.expect("trigger id");
         let other = other.expect("other id");
-        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger)
-            .expect("trigger node");
-        let other_node = fret_ui::elements::node_for_element(&mut app, window, other)
-            .expect("other node");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+        let other_node =
+            fret_ui::elements::node_for_element(&mut app, window, other).expect("other node");
 
         assert_eq!(
             resolve_restore_focus_node(&ui, &mut app, window, Some(trigger), Some(other_node)),

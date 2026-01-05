@@ -155,7 +155,9 @@ pub fn popper_wrapper_panel_at<H: UiHost>(
     overflow: Overflow,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
-    popper_wrapper_at_with_panel(cx, placed, wrapper_insets, overflow, f, |_cx, panel| vec![panel])
+    popper_wrapper_at_with_panel(cx, placed, wrapper_insets, overflow, f, |_cx, panel| {
+        vec![panel]
+    })
 }
 
 #[cfg(test)]

@@ -225,13 +225,13 @@ pub fn combobox<H: UiHost>(
 
         let mut trigger_layout = decl_style::layout_style(
             &theme,
-            LayoutRefinement::default().min_h(MetricRef::Px(resolved.min_height)).merge(
-                if let Some(w) = width {
+            LayoutRefinement::default()
+                .min_h(MetricRef::Px(resolved.min_height))
+                .merge(if let Some(w) = width {
                     LayoutRefinement::default().w_px(MetricRef::Px(w))
                 } else {
                     LayoutRefinement::default().w_full()
-                },
-            ),
+                }),
         );
         trigger_layout.size.height = Length::Auto;
         trigger_layout.size.min_height = Some(resolved.min_height);

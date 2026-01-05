@@ -60,6 +60,7 @@ pub struct DropdownMenuItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub inset: bool,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -76,6 +77,7 @@ impl DropdownMenuItem {
             label: label.clone(),
             value: label,
             inset: false,
+            leading: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -93,6 +95,11 @@ impl DropdownMenuItem {
 
     pub fn inset(mut self, inset: bool) -> Self {
         self.inset = inset;
+        self
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
         self
     }
 
@@ -138,6 +145,7 @@ pub struct DropdownMenuCheckboxItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub checked: Model<bool>,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -152,6 +160,7 @@ impl DropdownMenuCheckboxItem {
             label: label.clone(),
             value: label,
             checked,
+            leading: None,
             disabled: false,
             close_on_select: false,
             command: None,
@@ -162,6 +171,11 @@ impl DropdownMenuCheckboxItem {
 
     pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
         self.value = value.into();
+        self
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
         self
     }
 
@@ -216,6 +230,7 @@ impl DropdownMenuRadioGroup {
 pub struct DropdownMenuRadioItemSpec {
     pub label: Arc<str>,
     pub value: Arc<str>,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -230,12 +245,18 @@ impl DropdownMenuRadioItemSpec {
         Self {
             label,
             value,
+            leading: None,
             disabled: false,
             close_on_select: true,
             command: None,
             a11y_label: None,
             trailing: None,
         }
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -268,6 +289,7 @@ impl DropdownMenuRadioItemSpec {
             label: self.label,
             value: self.value,
             group_value,
+            leading: self.leading,
             disabled: self.disabled,
             close_on_select: self.close_on_select,
             command: self.command,
@@ -283,6 +305,7 @@ pub struct DropdownMenuRadioItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
     pub group_value: Model<Option<Arc<str>>>,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
@@ -302,6 +325,7 @@ impl DropdownMenuRadioItem {
             label,
             value,
             group_value,
+            leading: None,
             disabled: false,
             close_on_select: true,
             command: None,
@@ -327,6 +351,11 @@ impl DropdownMenuRadioItem {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
         self
     }
 
@@ -435,6 +464,7 @@ fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuE
 fn checkable_menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
+    leading: Option<AnyElement>,
     trailing: Option<AnyElement>,
     indicator_on: bool,
     disabled: bool,
@@ -462,7 +492,9 @@ fn checkable_menu_row_children<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
-            let mut row: Vec<AnyElement> = Vec::with_capacity(3 + usize::from(trailing.is_some()));
+            let mut row: Vec<AnyElement> = Vec::with_capacity(
+                3 + usize::from(leading.is_some()) + usize::from(trailing.is_some()),
+            );
 
             let indicator_fg = if disabled { text_disabled } else { row_fg };
             row.push(cx.flex(
@@ -502,6 +534,10 @@ fn checkable_menu_row_children<H: UiHost>(
                 },
             ));
 
+            if let Some(l) = leading.clone() {
+                row.push(l);
+            }
+
             row.push(cx.text_props(TextProps {
                 layout: {
                     let mut layout = LayoutStyle::default();
@@ -537,6 +573,46 @@ fn checkable_menu_row_children<H: UiHost>(
             )]
         },
     )]
+}
+
+fn submenu_chevron_right_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    fg: fret_core::Color,
+    font_size: Px,
+    font_line_height: Px,
+) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(16.0));
+                layout.size.height = Length::Px(Px(16.0));
+                layout
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        move |cx| {
+            vec![cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: Arc::from(">"),
+                style: Some(TextStyle {
+                    font: FontId::default(),
+                    size: font_size,
+                    weight: FontWeight::MEDIUM,
+                    line_height: Some(font_line_height),
+                    letter_spacing_em: None,
+                }),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                color: Some(fg),
+            })]
+        },
+    )
 }
 
 /// shadcn/ui `Dropdown Menu` (v4).
@@ -981,6 +1057,7 @@ impl DropdownMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_menu.clone();
                                                         let text_style = text_style.clone();
@@ -1059,6 +1136,7 @@ impl DropdownMenu {
                                                                     let children = checkable_menu_row_children(
                                                                         cx,
                                                                         label.clone(),
+                                                                        leading.clone(),
                                                                         trailing.clone(),
                                                                         checked_now,
                                                                         disabled,
@@ -1092,6 +1170,7 @@ impl DropdownMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let open = open_for_menu.clone();
                                                         let text_style = text_style.clone();
@@ -1176,6 +1255,7 @@ impl DropdownMenu {
                                                                     let children = checkable_menu_row_children(
                                                                         cx,
                                                                         label.clone(),
+                                                                        leading.clone(),
                                                                         trailing.clone(),
                                                                         is_selected,
                                                                         disabled,
@@ -1208,6 +1288,7 @@ impl DropdownMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let leading = item.leading.clone();
                                                         let trailing = item.trailing.clone();
                                                         let variant = item.variant;
                                                         let has_submenu = item.submenu.is_some();
@@ -1304,8 +1385,13 @@ impl DropdownMenu {
                                                                         },
                                                                     move |cx| {
                                                                         let mut row: Vec<AnyElement> = Vec::with_capacity(
-                                                                            2 + usize::from(trailing.is_some()),
+                                                                            2 + usize::from(leading.is_some())
+                                                                                + usize::from(trailing.is_some())
+                                                                                + usize::from(has_submenu),
                                                                         );
+                                                                        if let Some(l) = leading.clone() {
+                                                                            row.push(l);
+                                                                        }
                                                                         row.push(cx.text_props(TextProps {
                                                                             layout: {
                                                                                 let mut layout = LayoutStyle::default();
@@ -1321,25 +1407,14 @@ impl DropdownMenu {
 
                                                                         if let Some(t) = trailing.clone() {
                                                                             row.push(t);
-                                                                        } else if has_submenu {
-                                                                            let fg = theme
-                                                                                .color_by_key("muted.foreground")
-                                                                                .or_else(|| theme.color_by_key("muted-foreground"))
-                                                                                .unwrap_or(theme.colors.text_muted);
-                                                                            row.push(cx.text_props(TextProps {
-                                                                                layout: LayoutStyle::default(),
-                                                                                text: Arc::from(">"),
-                                                                                style: Some(TextStyle {
-                                                                                    font: FontId::default(),
-                                                                                    size: font_size,
-                                                                                    weight: FontWeight::MEDIUM,
-                                                                                    line_height: Some(font_line_height),
-                                                                                    letter_spacing_em: None,
-                                                                                }),
-                                                                                wrap: TextWrap::None,
-                                                                                overflow: TextOverflow::Clip,
-                                                                                color: Some(fg),
-                                                                            }));
+                                                                        }
+                                                                        if has_submenu {
+                                                                            row.push(submenu_chevron_right_text(
+                                                                                cx,
+                                                                                if disabled { text_disabled } else { row_fg },
+                                                                                font_size,
+                                                                                font_line_height,
+                                                                            ));
                                                                         }
 
                                                                         vec![cx.flex(
@@ -1566,6 +1641,7 @@ impl DropdownMenu {
                                                                 let disabled = item.disabled;
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
+                                                                let leading = item.leading.clone();
                                                                 let trailing = item.trailing.clone();
                                                                 let open = open_for_submenu.clone();
                                                                 let submenu_for_key =
@@ -1629,6 +1705,7 @@ impl DropdownMenu {
                                                                             let children = checkable_menu_row_children(
                                                                                 cx,
                                                                                 label.clone(),
+                                                                                leading.clone(),
                                                                                 trailing.clone(),
                                                                                 checked_now,
                                                                                 disabled,
@@ -1662,6 +1739,7 @@ impl DropdownMenu {
                                                                 let disabled = item.disabled;
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
+                                                                let leading = item.leading.clone();
                                                                 let trailing = item.trailing.clone();
                                                                 let open = open_for_submenu.clone();
                                                                 let submenu_for_key =
@@ -1730,6 +1808,7 @@ impl DropdownMenu {
                                                                             let children = checkable_menu_row_children(
                                                                                 cx,
                                                                                 label.clone(),
+                                                                                leading.clone(),
                                                                                 trailing.clone(),
                                                                                 is_selected,
                                                                                 disabled,
@@ -1762,6 +1841,7 @@ impl DropdownMenu {
                                                                 let disabled = item.disabled;
                                                                 let close_on_select = item.close_on_select;
                                                                 let command = item.command;
+                                                                let leading = item.leading.clone();
                                                                 let trailing = item.trailing.clone();
                                                                 let variant = item.variant;
                                                                 let pad_left =
@@ -1835,8 +1915,12 @@ impl DropdownMenu {
                                                                                 },
                                                                                 move |cx| {
                                                                                     let mut row: Vec<AnyElement> = Vec::with_capacity(
-                                                                                        1 + usize::from(trailing.is_some()),
+                                                                                        1 + usize::from(leading.is_some())
+                                                                                            + usize::from(trailing.is_some()),
                                                                                     );
+                                                                                    if let Some(l) = leading.clone() {
+                                                                                        row.push(l);
+                                                                                    }
                                                                                     row.push(cx.text_props(TextProps {
                                                                                         layout: {
                                                                                             let mut layout = LayoutStyle::default();
