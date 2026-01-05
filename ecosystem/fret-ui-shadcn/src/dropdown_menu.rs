@@ -29,6 +29,11 @@ use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Overl
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
 
+fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum DropdownMenuAlign {
     #[default]
@@ -1012,6 +1017,7 @@ impl DropdownMenu {
                                                             theme.color_by_key("destructive.background")
                                                         })
                                                         .unwrap_or(theme.colors.text_primary);
+                                                    let destructive_bg = alpha_mul(destructive_fg, 0.12);
 
                                                     let text_style = TextStyle {
                                                         font: fret_core::FontId::default(),
@@ -1415,9 +1421,20 @@ impl DropdownMenu {
                                                                 } else {
                                                                     fg
                                                                 };
-                                                                if st.hovered || st.pressed || st.focused {
-                                                                    row_bg = accent;
-                                                                    row_fg = accent_fg;
+                                                                if st.hovered
+                                                                    || st.pressed
+                                                                    || st.focused
+                                                                    || is_open_submenu
+                                                                {
+                                                                    if variant
+                                                                        == DropdownMenuItemVariant::Destructive
+                                                                    {
+                                                                        row_bg = destructive_bg;
+                                                                        row_fg = destructive_fg;
+                                                                    } else {
+                                                                        row_bg = accent;
+                                                                        row_fg = accent_fg;
+                                                                    }
                                                                 }
 
                                                                 let children = vec![cx.container(
@@ -1579,6 +1596,7 @@ impl DropdownMenu {
                                                 .color_by_key("destructive")
                                                 .or_else(|| theme.color_by_key("destructive.background"))
                                                 .unwrap_or(theme.colors.text_primary);
+                                            let destructive_bg = alpha_mul(destructive_fg, 0.12);
                                             let label_fg = theme
                                                 .color_by_key("muted.foreground")
                                                 .or_else(|| theme.color_by_key("muted-foreground"))
@@ -1964,8 +1982,15 @@ impl DropdownMenu {
                                                                                 fg
                                                                             };
                                                                             if st.hovered || st.pressed || st.focused {
-                                                                                row_bg = accent;
-                                                                                row_fg = accent_fg;
+                                                                                if variant
+                                                                                    == DropdownMenuItemVariant::Destructive
+                                                                                {
+                                                                                    row_bg = destructive_bg;
+                                                                                    row_fg = destructive_fg;
+                                                                                } else {
+                                                                                    row_bg = accent;
+                                                                                    row_fg = accent_fg;
+                                                                                }
                                                                             }
 
                                                                             let children = vec![cx.container(

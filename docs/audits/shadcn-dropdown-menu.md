@@ -53,6 +53,7 @@ Key upstream behaviors/surfaces:
 
 - Partial: Menu background/foreground now align with popover tokens (`bg-popover text-popover-foreground`).
 - Pass: Hover/pressed/focused highlight uses `accent` tokens (Radix `data-[highlighted]`-style outcome).
+- Pass: Destructive item variants keep destructive foreground + use a `destructive/10`-style highlight background.
 - Pass: `inset` is supported for items/labels (left padding parity with upstream `data-inset`).
 - Pass: Leading icons are aligned within a fixed 16×16 slot; when any row provides a leading icon,
   the menu reserves the slot across the panel for consistent label alignment.
