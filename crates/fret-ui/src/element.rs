@@ -256,6 +256,12 @@ pub struct SemanticsProps {
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
     pub active_descendant: Option<NodeId>,
+    /// Declarative-only: element ID of a node which labels this node.
+    ///
+    /// This is an authoring convenience for relationships like `aria-labelledby` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub labelled_by_element: Option<u64>,
 }
 
 impl Default for SemanticsProps {
@@ -270,6 +276,7 @@ impl Default for SemanticsProps {
             expanded: None,
             checked: None,
             active_descendant: None,
+            labelled_by_element: None,
         }
     }
 }

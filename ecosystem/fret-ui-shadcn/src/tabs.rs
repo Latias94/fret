@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::sync::Arc;
 
 use fret_core::{
@@ -307,6 +308,8 @@ impl Tabs {
         let root_props = decl_style::container_props(&theme, chrome, layout);
 
         cx.container(root_props, move |cx| {
+            let selected_tab_element: Cell<Option<u64>> = Cell::new(None);
+            let selected_tab_element = &selected_tab_element;
             let mut children: Vec<AnyElement> = Vec::new();
 
             children.push(cx.semantics(
@@ -386,6 +389,9 @@ impl Tabs {
 
                                     out.push(cx.pressable_with_id_props(move |cx, st, _id| {
                                         cx.pressable_set_option_arc_str(&model, value.clone());
+                                        if active {
+                                            selected_tab_element.set(Some(_id.0));
+                                        }
 
                                         let props = PressableProps {
                                             layout: trigger_layout,
@@ -467,6 +473,7 @@ impl Tabs {
                 SemanticsProps {
                     role: SemanticsRole::TabPanel,
                     label: (!active_label.is_empty()).then_some(active_label),
+                    labelled_by_element: selected_tab_element.get(),
                     ..Default::default()
                 },
                 move |_cx| active_children,
@@ -652,11 +659,25 @@ mod tests {
             "tab list role"
         );
 
+        let selected_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.flags.selected)
+            .expect("selected tab");
+
         let panel = snap
             .nodes
             .iter()
             .find(|n| n.role == SemanticsRole::TabPanel)
             .expect("tab panel");
         assert_eq!(panel.label.as_deref(), Some("Alpha"));
+        assert!(
+            panel.labelled_by.iter().any(|id| *id == selected_tab.id),
+            "tabpanel should be labelled by selected tab"
+        );
+        assert!(
+            selected_tab.controls.iter().any(|id| *id == panel.id),
+            "selected tab should control the active tabpanel"
+        );
     }
 }

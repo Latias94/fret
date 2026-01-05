@@ -94,6 +94,25 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     })
 }
 
+pub(crate) fn element_id_map_for_window<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+) -> HashMap<u64, NodeId> {
+    app.with_global_mut(ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .map(|w| {
+                let mut out = HashMap::with_capacity(w.instances.len());
+                for (node, record) in w.instances.iter() {
+                    out.insert(record.element.0, *node);
+                }
+                out
+            })
+            .unwrap_or_default()
+    })
+}
+
 pub(super) fn layout_style_for_node<H: UiHost>(
     app: &mut H,
     window: AppWindowId,

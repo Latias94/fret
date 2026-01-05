@@ -1081,6 +1081,9 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
+        let element_id_map: HashMap<u64, NodeId> =
+            crate::declarative::frame::element_id_map_for_window(app, window);
+
         let mut barrier_index: Option<usize> = None;
         for (idx, layer) in visible_layers.iter().enumerate() {
             if self.layers[*layer].blocks_underlay_input {
@@ -1151,6 +1154,8 @@ impl<H: UiHost> UiTree<H> {
                 let mut value: Option<String> = None;
                 let mut text_selection: Option<(u32, u32)> = None;
                 let mut text_composition: Option<(u32, u32)> = None;
+                let mut labelled_by: Vec<NodeId> = Vec::new();
+                let mut controls: Vec<NodeId> = Vec::new();
                 let mut actions = fret_core::SemanticsActions {
                     focus: is_focusable || is_text_input,
                     invoke: false,
@@ -1169,6 +1174,7 @@ impl<H: UiHost> UiTree<H> {
                         app,
                         node: id,
                         window: Some(window),
+                        element_id_map: Some(&element_id_map),
                         bounds,
                         children,
                         focus,
@@ -1183,6 +1189,8 @@ impl<H: UiHost> UiTree<H> {
                         active_descendant: &mut active_descendant,
                         pos_in_set: &mut pos_in_set,
                         set_size: &mut set_size,
+                        labelled_by: &mut labelled_by,
+                        controls: &mut controls,
                     };
                     widget.semantics(&mut cx);
                 }
@@ -1214,7 +1222,31 @@ impl<H: UiHost> UiTree<H> {
                     text_selection,
                     text_composition,
                     actions,
+                    labelled_by,
+                    controls,
                 });
+            }
+        }
+
+        // Normalize relation edges: derive the inverse `controls` relation from `labelled_by` so
+        // that authoring can set the minimal edge and still get a bidirectional link (e.g. Tabs).
+        let mut index_by_id: HashMap<NodeId, usize> = HashMap::with_capacity(nodes.len());
+        for (idx, node) in nodes.iter().enumerate() {
+            index_by_id.insert(node.id, idx);
+        }
+        for idx in 0..nodes.len() {
+            let controlled = nodes[idx].id;
+            let controllers = nodes[idx].labelled_by.clone();
+            for controller in controllers {
+                if let Some(&controller_idx) = index_by_id.get(&controller) {
+                    if !nodes[controller_idx]
+                        .controls
+                        .iter()
+                        .any(|id| *id == controlled)
+                    {
+                        nodes[controller_idx].controls.push(controlled);
+                    }
+                }
             }
         }
 

@@ -39,6 +39,11 @@ impl ElementHostWidget {
                 if props.active_descendant.is_some() {
                     cx.set_active_descendant(props.active_descendant);
                 }
+                if let Some(element) = props.labelled_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_labelled_by(node);
+                }
             }
             ElementInstance::TextInput(props) => {
                 let model = props.model.clone();

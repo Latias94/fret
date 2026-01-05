@@ -82,6 +82,20 @@ Fret defines a minimal, stable schema that is sufficient for editor workflows:
 - Roles: `Window`, `Panel`, `Button`, `Tab`, `Menu`, `MenuItem`, `TextField`, `List`, `TreeItem`, `Viewport`, etc.
 - States: `Focused`, `Disabled`, `Selected`, `Expanded`, `Checked`, etc.
 - Actions: `Focus`, `Invoke`, `SetValue` (text), `ScrollBy`, `Increment/Decrement` (optional).
+- Relations (P0, minimal):
+  - `labelled_by`: declare that this node’s accessible name is provided by another node (e.g. a
+    `TabPanel` is labelled by its selected `Tab`).
+  - `controls`: declare that this node controls another node (e.g. the selected `Tab` controls its
+    active `TabPanel`).
+
+Relationship edges are part of the **portable semantics contract**, not platform-specific glue.
+Backends may ignore relations they cannot represent, but `fret-ui` must preserve them in snapshots.
+
+Tabs baseline (P0):
+
+- A tabs widget must expose `TabList` / `Tab` / `TabPanel` roles.
+- The active `TabPanel` must be `labelled_by` the selected `Tab`.
+- The selected `Tab` must `controls` the active `TabPanel`.
 
 This schema is framework-level infrastructure; editor-domain meanings (e.g. “Gizmo Mode”) remain app-owned.
 

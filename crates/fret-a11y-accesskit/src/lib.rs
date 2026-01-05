@@ -263,6 +263,32 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             out.set_active_descendant(to_accesskit_id(active));
         }
 
+        if !node.labelled_by.is_empty() {
+            let labelled_by: Vec<NodeId> = node
+                .labelled_by
+                .iter()
+                .copied()
+                .filter(|id| reachable.contains(id))
+                .map(to_accesskit_id)
+                .collect();
+            if !labelled_by.is_empty() {
+                out.set_labelled_by(labelled_by);
+            }
+        }
+
+        if !node.controls.is_empty() {
+            let controls: Vec<NodeId> = node
+                .controls
+                .iter()
+                .copied()
+                .filter(|id| reachable.contains(id))
+                .map(to_accesskit_id)
+                .collect();
+            if !controls.is_empty() {
+                out.set_controls(controls);
+            }
+        }
+
         if let Some(pos_in_set) = node.pos_in_set.and_then(|p| usize::try_from(p).ok()) {
             out.set_position_in_set(pos_in_set);
         }
@@ -480,6 +506,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -502,6 +530,8 @@ mod tests {
                         set_value: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: list,
@@ -517,6 +547,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: item,
@@ -535,6 +567,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -609,6 +643,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: underlay_list,
@@ -624,6 +660,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: underlay_item,
@@ -642,6 +680,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: modal_root,
@@ -657,6 +697,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -679,6 +721,8 @@ mod tests {
                         set_value: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -738,6 +782,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: list,
@@ -753,6 +799,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: item,
@@ -768,6 +816,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -823,6 +873,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -845,6 +897,8 @@ mod tests {
                         set_value: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -919,6 +973,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -941,6 +997,8 @@ mod tests {
                         set_text_selection: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -1007,6 +1065,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -1029,6 +1089,8 @@ mod tests {
                         set_value: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -1094,6 +1156,8 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -1116,6 +1180,8 @@ mod tests {
                         set_value: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
