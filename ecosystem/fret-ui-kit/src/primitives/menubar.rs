@@ -7,6 +7,8 @@
 //! In Fret the shared menu content/submenu behavior lives in `crate::primitives::menu`; this module
 //! exists as a Radix-named facade for consumers that want to align their mental model with Radix.
 
+pub mod trigger_row;
+
 pub use crate::primitives::menu::*;
 
 pub use crate::primitives::menu::root::dismissible_menu_request as menubar_dismissible_request;

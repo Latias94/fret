@@ -22,6 +22,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Space};
 
@@ -787,17 +788,6 @@ impl Menubar {
     }
 }
 
-#[derive(Clone)]
-struct MenubarActive {
-    trigger: GlobalElementId,
-    open: Model<bool>,
-}
-
-#[derive(Default)]
-struct MenubarGroupState {
-    active: Option<Model<Option<MenubarActive>>>,
-}
-
 #[derive(Default)]
 struct MenubarMenuState {
     open: Option<Model<bool>>,
@@ -893,17 +883,7 @@ impl MenubarMenuEntries {
         let entries = self.entries.clone();
         let align_leading_icons = self.align_leading_icons;
         cx.keyed(key, |cx| {
-            let group_active =
-                cx.with_state_for(group, MenubarGroupState::default, |st| st.active.clone());
-            let group_active = if let Some(group_active) = group_active {
-                group_active
-            } else {
-                let group_active = cx.app.models_mut().insert(None);
-                cx.with_state_for(group, MenubarGroupState::default, |st| {
-                    st.active = Some(group_active.clone());
-                });
-                group_active
-            };
+            let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
 
             let open = cx.with_state(MenubarMenuState::default, |st| st.open.clone());
             let open = if let Some(open) = open {
@@ -947,81 +927,21 @@ impl MenubarMenuEntries {
                 trigger_layout.size.height = Length::Auto;
                 trigger_layout.size.width = Length::Auto;
 
-                let active_value = cx.watch_model(&group_active).cloned().flatten();
-                let is_open = cx.watch_model(&open).copied().unwrap_or(false);
-
-                if active_value
-                    .as_ref()
-                    .is_some_and(|active_value| active_value.trigger != trigger_id)
-                    && is_open
-                {
-                    let _ = cx.app.models_mut().update(&open, |v| *v = false);
-                }
-
-                if active_value
-                    .as_ref()
-                    .is_some_and(|active_value| active_value.trigger == trigger_id)
-                    && !is_open
-                {
-                    let _ = cx.app.models_mut().update(&group_active, |v| *v = None);
-                }
-
-                if active_value.is_none() && is_open {
-                    let open_for_state = open.clone();
-                    let _ = cx.app.models_mut().update(&group_active, |v| {
-                        *v = Some(MenubarActive {
-                            trigger: trigger_id,
-                            open: open_for_state,
-                        });
-                    });
-                }
-
-                let active_value = cx.watch_model(&group_active).cloned().flatten();
-                if enabled
-                    && st.hovered
-                    && !st.pressed
-                    && active_value
-                        .as_ref()
-                        .is_some_and(|active_value| active_value.trigger != trigger_id)
-                {
-                    if let Some(prev) = active_value.as_ref() {
-                        let _ = cx.app.models_mut().update(&prev.open, |v| *v = false);
-                    }
-                    let _ = cx.app.models_mut().update(&open, |v| *v = true);
-                    let open_for_state = open.clone();
-                    let _ = cx.app.models_mut().update(&group_active, |v| {
-                        *v = Some(MenubarActive {
-                            trigger: trigger_id,
-                            open: open_for_state,
-                        });
-                    });
-                }
-
-                let group_active_for_activate = group_active.clone();
-                let open_for_activate = open.clone();
-                cx.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
-                    let cur = host.models_mut().get_cloned(&group_active_for_activate).flatten();
-                    match cur {
-                        Some(cur) if cur.trigger == trigger_id => {
-                            let _ = host.models_mut().update(&open_for_activate, |v| *v = false);
-                            let _ =
-                                host.models_mut().update(&group_active_for_activate, |v| *v = None);
-                        }
-                        prev => {
-                            if let Some(prev) = prev {
-                                let _ = host.models_mut().update(&prev.open, |v| *v = false);
-                            }
-                            let _ = host.models_mut().update(&open_for_activate, |v| *v = true);
-                            let open_for_state = open_for_activate.clone();
-                            let _ = host.models_mut().update(&group_active_for_activate, |v| {
-                                *v = Some(MenubarActive {
-                                    trigger: trigger_id,
-                                    open: open_for_state,
-                                });
-                            });
-                        }
-                    }
-                }));
+                menubar_trigger_row::sync_trigger_row_state(
+                    cx,
+                    group_active.clone(),
+                    trigger_id,
+                    open.clone(),
+                    enabled,
+                    st.hovered,
+                    st.pressed,
+                    st.focused,
+                );
+                cx.pressable_add_on_activate(menubar_trigger_row::toggle_on_activate(
+                    group_active.clone(),
+                    trigger_id,
+                    open.clone(),
+                ));
 
                 let is_open = cx.watch_model(&open).copied().unwrap_or(false);
                 let overlay_root_name = OverlayController::popover_root_name(trigger_id);
