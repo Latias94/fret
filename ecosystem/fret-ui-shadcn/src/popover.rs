@@ -6,8 +6,8 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, OpacityProps, Overflow, SemanticsProps,
-    SizeStyle, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, ElementKind, LayoutStyle, Length, OpacityProps, Overflow,
+    PressableProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -23,6 +23,50 @@ use fret_ui_kit::{
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+
+fn popover_dialog_wrapper<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Option<Arc<str>>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    cx.semantics_with_id(
+        SemanticsProps {
+            role: SemanticsRole::Dialog,
+            label,
+            ..Default::default()
+        },
+        move |cx, _id| f(cx),
+    )
+}
+
+fn popover_dialog_wrapper_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    overlay_root_name: &str,
+) -> fret_ui::elements::GlobalElementId {
+    cx.with_root_name(overlay_root_name, |cx| {
+        let element = popover_dialog_wrapper::<H>(cx, None, |_cx| Vec::new());
+        element.id
+    })
+}
+
+fn apply_popover_trigger_a11y(
+    mut trigger: AnyElement,
+    expanded: bool,
+    dialog_element: fret_ui::elements::GlobalElementId,
+) -> AnyElement {
+    match &mut trigger.kind {
+        ElementKind::Pressable(PressableProps { a11y, .. }) => {
+            a11y.expanded = Some(expanded);
+            a11y.controls_element = Some(dialog_element.0);
+        }
+        ElementKind::Semantics(props) => {
+            props.expanded = Some(expanded);
+            props.controls_element = Some(dialog_element.0);
+        }
+        _ => {}
+    }
+    trigger
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
@@ -192,9 +236,27 @@ impl Popover {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
 
+            #[derive(Default)]
+            struct PopoverA11yState {
+                dialog_id: Option<fret_ui::elements::GlobalElementId>,
+            }
+
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
             let anchor_id = self.anchor_override.unwrap_or(trigger_id);
+            let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+
+            let dialog_id = cx.with_state(PopoverA11yState::default, |st| st.dialog_id);
+            let dialog_id = if let Some(dialog_id) = dialog_id {
+                dialog_id
+            } else {
+                let dialog_id = popover_dialog_wrapper_id::<H>(cx, &overlay_root_name);
+                cx.with_state(PopoverA11yState::default, |st| {
+                    st.dialog_id = Some(dialog_id)
+                });
+                dialog_id
+            };
+            let trigger = apply_popover_trigger_a11y(trigger, is_open, dialog_id);
 
             let presence = OverlayController::fade_presence_with_durations(
                 cx,
@@ -205,7 +267,6 @@ impl Popover {
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
 
             if overlay_presence.present {
-                let overlay_root_name = OverlayController::popover_root_name(trigger_id);
                 let align = self.align;
                 let side = self.side;
                 let align_offset = self.align_offset;
@@ -236,10 +297,16 @@ impl Popover {
                     };
                     let anchor_raw = anchor;
 
-                    let content = content(cx, anchor_raw);
-                    let content_id = content.id;
+                    let inner_id = std::cell::Cell::new(None);
+                    let inner_id_for_scope = inner_id.clone();
+                    let content = popover_dialog_wrapper(cx, None, move |cx| {
+                        let inner = content(cx, anchor_raw);
+                        inner_id_for_scope.set(Some(inner.id));
+                        vec![inner]
+                    });
 
-                    let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
+                    let measure_id = inner_id.get().unwrap_or(content.id);
+                    let last_content_size = cx.last_bounds_for_element(measure_id).map(|r| r.size);
                     let estimated = Size::new(Px(288.0), Px(160.0));
                     let content_size = last_content_size.unwrap_or(estimated);
 
@@ -891,6 +958,115 @@ mod tests {
 
         assert_eq!(app.models().get_copied(&open), Some(false));
         assert_eq!(app.models().get_copied(&underlay_activated), Some(false));
+    }
+
+    #[test]
+    fn popover_trigger_exposes_expanded_and_controls_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let underlay_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let popover_focus_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let popover_content_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        // Frame 1: closed.
+        app.set_frame_id(FrameId(1));
+        let trigger_element = render_popover_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            false,
+            underlay_id,
+            popover_focus_id,
+            popover_content_id.clone(),
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
+            .expect("trigger");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_sem = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == trigger_node)
+            .expect("trigger semantics node");
+        assert_eq!(trigger_sem.flags.expanded, false);
+        assert!(
+            trigger_sem.controls.is_empty(),
+            "closed popover should not expose controls to an unmounted content node"
+        );
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: open.
+        app.set_frame_id(FrameId(2));
+        let _ = render_popover_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            false,
+            Rc::new(Cell::new(None)),
+            Rc::new(Cell::new(None)),
+            popover_content_id,
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_sem = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == trigger_node)
+            .expect("trigger semantics node");
+        assert!(
+            trigger_sem.flags.expanded,
+            "trigger should set expanded=true while the popover is open"
+        );
+        let controlled = trigger_sem.controls.first().copied().expect("controls");
+        let controlled_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == controlled)
+            .expect("controlled node");
+        assert_eq!(controlled_node.role, SemanticsRole::Dialog);
     }
 
     fn render_popover_in_clipped_surface_frame(

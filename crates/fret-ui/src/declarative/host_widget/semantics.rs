@@ -49,6 +49,11 @@ impl ElementHostWidget {
                 {
                     cx.push_described_by(node);
                 }
+                if let Some(element) = props.controls_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_controlled(node);
+                }
             }
             ElementInstance::TextInput(props) => {
                 let model = props.model.clone();
@@ -140,6 +145,11 @@ impl ElementHostWidget {
                     && let Some(node) = cx.resolve_declarative_element(element)
                 {
                     cx.push_described_by(node);
+                }
+                if let Some(element) = props.a11y.controls_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_controlled(node);
                 }
                 cx.set_disabled(!props.enabled);
                 cx.set_focusable(props.enabled);
