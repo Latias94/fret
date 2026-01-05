@@ -1,6 +1,9 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
-use fret_core::{Px, Size};
-use fret_ui::element::{AnyElement, HoverRegionProps, Overflow};
+use fret_core::{Edges, Point, Px, Size, Transform2D};
+use fret_ui::element::{
+    AnyElement, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow, SizeStyle,
+    VisualTransformProps,
+};
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -15,9 +18,46 @@ use fret_ui_kit::{
 
 use crate::layout as shadcn_layout;
 
+fn hover_card_slide_insets(side: Side, slide: Px) -> Edges {
+    match side {
+        Side::Top => Edges {
+            bottom: slide,
+            ..Edges::all(Px(0.0))
+        },
+        Side::Bottom => Edges {
+            top: slide,
+            ..Edges::all(Px(0.0))
+        },
+        Side::Left => Edges {
+            right: slide,
+            ..Edges::all(Px(0.0))
+        },
+        Side::Right => Edges {
+            left: slide,
+            ..Edges::all(Px(0.0))
+        },
+    }
+}
+
+fn hover_card_slide_transform(side: Side, opacity: f32) -> Transform2D {
+    // shadcn/ui v4 uses `slide-in-from-*-2` (8px) keyed off `data-side`.
+    // We approximate that by allocating extra wrapper insets and translating the content inside
+    // the wrapper, keeping hit-test bounds stable.
+    let slide = Px(8.0);
+    let t = 1.0 - opacity.clamp(0.0, 1.0);
+    let offset = match side {
+        Side::Top => Point::new(Px(0.0), Px(slide.0 * t)),
+        Side::Bottom => Point::new(Px(0.0), Px(-slide.0 * t)),
+        Side::Left => Point::new(Px(slide.0 * t), Px(0.0)),
+        Side::Right => Point::new(Px(-slide.0 * t), Px(0.0)),
+    };
+    Transform2D::translation(offset)
+}
+
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme
         .color_by_key("popover")
+        .or_else(|| theme.color_by_key("popover.background"))
         .unwrap_or(theme.colors.panel_background);
     let border = theme
         .color_by_key("border")
@@ -198,9 +238,11 @@ impl HoverCard {
 
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
             let update = hover_intent::drive(cx, hovered, cfg);
+            let presence = OverlayController::fade_presence(cx, update.open, 4);
+            let opacity = presence.opacity;
 
             let out = vec![trigger];
-            if !update.open {
+            if !presence.present {
                 cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
                     st.overlay_hovered = false;
                 });
@@ -247,9 +289,38 @@ impl HoverCard {
                 );
 
                 let placed = layout.rect;
-                let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                let mut wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                let slide_insets = hover_card_slide_insets(layout.side, Px(8.0));
+                wrapper_insets.top.0 += slide_insets.top.0;
+                wrapper_insets.right.0 += slide_insets.right.0;
+                wrapper_insets.bottom.0 += slide_insets.bottom.0;
+                wrapper_insets.left.0 += slide_insets.left.0;
 
-                vec![popper_content::popper_hover_region_at_with_panel(
+                let origin = popper::popper_content_transform_origin(
+                    &layout,
+                    anchor,
+                    arrow.then_some(arrow_size),
+                );
+
+                // shadcn/ui v4 uses a small zoom-in (95% -> 100%) plus opacity transitions.
+                // We approximate that with a fade-driven zoom transform around a popper-style
+                // transform origin (Radix exposes this via `--radix-*-transform-origin`).
+                let scale = 0.95 + 0.05 * opacity.clamp(0.0, 1.0);
+                let zoom = Transform2D::translation(origin)
+                    * Transform2D::scale_uniform(scale)
+                    * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)));
+                let transform = hover_card_slide_transform(layout.side, opacity) * zoom;
+
+                let overlay_layout = LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                let wrapper = popper_content::popper_hover_region_at_with_panel(
                     cx,
                     placed,
                     wrapper_insets,
@@ -277,6 +348,22 @@ impl HoverCard {
                         } else {
                             vec![panel]
                         }
+                    },
+                );
+
+                vec![cx.opacity_props(
+                    OpacityProps {
+                        layout: overlay_layout.clone(),
+                        opacity,
+                    },
+                    move |cx| {
+                        vec![cx.visual_transform_props(
+                            VisualTransformProps {
+                                layout: overlay_layout,
+                                transform,
+                            },
+                            move |_cx| vec![wrapper],
+                        )]
                     },
                 )]
             });
