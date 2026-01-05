@@ -755,8 +755,7 @@ impl CommandList {
                                 let mut out = Vec::with_capacity(items.len());
 
                                 for (idx, item) in items.into_iter().enumerate() {
-                                    let enabled =
-                                        !disabled_flags.get(idx).copied().unwrap_or(true);
+                                    let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
                                     let focusable = tab_stop.is_some_and(|i| i == idx);
 
                                     let query_for_row = query_for_render.clone();
@@ -832,7 +831,7 @@ impl CommandList {
                                 }
 
                                 out
-                            }
+                            },
                         )])
                         .refine_layout(scroll)
                         .into_element(cx),
@@ -1340,11 +1339,11 @@ impl CommandPalette {
                         *count = count.saturating_add(1);
 
                         let active_for_row = active.clone();
-                                cx.keyed((base, occ), |cx| {
-                                    let enabled = disabled_flags.get(idx).copied() == Some(false);
-                                    let selected = active_idx.is_some_and(|i| i == idx);
+                        cx.keyed((base, occ), |cx| {
+                            let enabled = disabled_flags.get(idx).copied() == Some(false);
+                            let selected = active_idx.is_some_and(|i| i == idx);
 
-                                    let label = item.label.clone();
+                            let label = item.label.clone();
                             let value = item.value.clone();
                             let checked = item.checked;
                             let show_checkmark = item.show_checkmark;
@@ -1536,6 +1535,7 @@ impl CommandPalette {
             }
 
             let mut input = input.into_element(cx);
+            let list_labelled_by = Some(input.id.0);
 
             let key_handler = cx.with_state(
                 || {
@@ -1697,64 +1697,65 @@ impl CommandPalette {
                 );
             }
 
-            let list = if row_ids.is_empty() {
-                let fg = theme.colors.text_muted;
-                let text_style = item_text_style(&theme);
-                let empty = self.empty_text;
-                cx.container(ContainerProps::default(), move |cx| {
-                    vec![cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: empty,
-                        style: Some(text_style),
-                        color: Some(fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                    })]
-                })
-            } else {
-                let scroll = self.scroll;
-                let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
-                cx.semantics(
-                    fret_ui::element::SemanticsProps {
-                        role: SemanticsRole::ListBox,
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        let scroll_area = ScrollArea::new(vec![cx.flex(
-                            FlexProps {
-                                layout: {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
-                                    layout.size.min_height = Some(Px(0.0));
-                                    layout
-                                },
-                                direction: fret_core::Axis::Vertical,
-                                gap: Px(0.0),
-                                padding: Edges::all(Px(0.0)),
-                                justify: MainAlign::Start,
-                                align: CrossAlign::Stretch,
-                                wrap: false,
-                                ..Default::default()
+            let list = cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: SemanticsRole::ListBox,
+                    labelled_by_element: list_labelled_by,
+                    ..Default::default()
+                },
+                move |cx| {
+                    if row_ids.is_empty() {
+                        let fg = theme.colors.text_muted;
+                        let text_style = item_text_style(&theme);
+                        let empty = self.empty_text;
+                        return vec![cx.container(ContainerProps::default(), move |cx| {
+                            vec![cx.text_props(TextProps {
+                                layout: LayoutStyle::default(),
+                                text: empty,
+                                style: Some(text_style),
+                                color: Some(fg),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                            })]
+                        })];
+                    }
+
+                    let scroll = self.scroll;
+                    let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+                    let scroll_area = ScrollArea::new(vec![cx.flex(
+                        FlexProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.min_height = Some(Px(0.0));
+                                layout
                             },
-                            move |_cx| rows,
-                        )])
-                        .scroll_handle(scroll_handle.clone())
-                        .refine_layout(scroll)
-                        .into_element(cx);
+                            direction: fret_core::Axis::Vertical,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
+                            ..Default::default()
+                        },
+                        move |_cx| rows,
+                    )])
+                    .scroll_handle(scroll_handle.clone())
+                    .refine_layout(scroll)
+                    .into_element(cx);
 
-                        if let Some(active_row_element) = active_row_element {
-                            let _ = active_desc::scroll_active_element_into_view_y(
-                                cx,
-                                &scroll_handle,
-                                scroll_area.id,
-                                active_row_element,
-                            );
-                        }
+                    if let Some(active_row_element) = active_row_element {
+                        let _ = active_desc::scroll_active_element_into_view_y(
+                            cx,
+                            &scroll_handle,
+                            scroll_area.id,
+                            active_row_element,
+                        );
+                    }
 
-                        vec![scroll_area]
-                    },
-                )
-            };
+                    vec![scroll_area]
+                },
+            );
 
             Command::new(vec![cx.container(wrapper, move |_cx| vec![input]), list])
                 .refine_style(self.chrome)
@@ -2043,6 +2044,20 @@ mod tests {
             .iter()
             .find(|n| n.id == active)
             .expect("active_descendant should reference a node in the snapshot");
+
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        assert!(
+            list.labelled_by.iter().any(|id| *id == input.id),
+            "listbox should be labelled by the focused input"
+        );
+        assert!(
+            input.controls.iter().any(|id| *id == list.id),
+            "focused input should control the listbox"
+        );
 
         assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
         assert_eq!(active_node.label.as_deref(), Some("Beta"));

@@ -678,6 +678,20 @@ mod tests {
         );
         assert_eq!(input.value.as_deref(), Some(""));
 
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        assert!(
+            list.labelled_by.iter().any(|id| *id == input.id),
+            "listbox should be labelled by the combobox input"
+        );
+        assert!(
+            input.controls.iter().any(|id| *id == list.id),
+            "combobox input should control the listbox"
+        );
+
         let active = input
             .active_descendant
             .expect("active_descendant should be set");
