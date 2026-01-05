@@ -982,7 +982,8 @@ mod tests {
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
 
-        for _ in 0..4 {
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 as usize + 1;
+        for _ in 0..settle_frames {
             let _ = render_sheet_frame(
                 &mut ui,
                 &mut app,

@@ -1084,7 +1084,8 @@ mod tests {
 
         // Render a few frames to allow the close animation to finish and the overlay manager to
         // apply focus restore when the layer is uninstalled.
-        for _ in 0..4 {
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 1;
+        for _ in 0..settle_frames {
             let _ = render_dialog_frame(
                 &mut ui,
                 &mut app,
@@ -1208,7 +1209,8 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(false));
 
         // Render a few frames to allow presence to complete and focus restore to apply.
-        for _ in 0..4 {
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 1;
+        for _ in 0..settle_frames {
             let _ = render_dialog_frame(
                 &mut ui,
                 &mut app,

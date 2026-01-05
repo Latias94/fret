@@ -823,7 +823,8 @@ mod tests {
 
         // Render a few frames to allow the close animation to finish and the overlay manager to
         // restore focus when the layer is uninstalled.
-        for frame in 3..=6 {
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 + 1;
+        for frame in 3..=(2 + settle_frames) {
             app.set_frame_id(FrameId(frame));
             let _ = render_alert_dialog_frame(
                 &mut ui,
@@ -951,7 +952,16 @@ mod tests {
         let _ = render_frame(&mut ui, &mut app, &mut services, 2);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
+        let registered_cancel = app
+            .with_global_mut(AlertDialogCancelRegistry::default, |reg, _| {
+                reg.by_open.get(&open.id()).copied()
+            });
         let cancel = cancel_id.get().expect("cancel id");
+        assert_eq!(
+            registered_cancel,
+            Some(cancel),
+            "AlertDialogCancel should register itself for initial focus"
+        );
         let cancel_node =
             fret_ui::elements::node_for_element(&mut app, window, cancel).expect("cancel node");
         assert_eq!(ui.focus(), Some(cancel_node));
@@ -961,8 +971,11 @@ mod tests {
             fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
         let _ = app.models_mut().update(&open, |v| *v = false);
 
-        let _ = render_frame(&mut ui, &mut app, &mut services, 3);
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 + 1;
+        for frame in 3..=(2 + settle_frames) {
+            let _ = render_frame(&mut ui, &mut app, &mut services, frame);
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
         assert_eq!(ui.focus(), Some(trigger_node));
     }
 }
