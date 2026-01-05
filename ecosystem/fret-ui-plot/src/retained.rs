@@ -17,8 +17,8 @@ use crate::cartesian::{DataPoint, DataRect, PlotTransform};
 use crate::plot::axis::linear_ticks;
 use crate::plot::grid::GridLines;
 use crate::plot::view::{
-    clamp_view_to_data, clamp_zoom_factors, data_rect_key, expand_data_bounds, local_from_absolute,
-    pan_view_by_px, sanitize_data_rect, zoom_view_at_px,
+    clamp_view_to_data, clamp_zoom_factors, data_rect_from_plot_points, data_rect_key,
+    expand_data_bounds, local_from_absolute, pan_view_by_px, sanitize_data_rect, zoom_view_at_px,
 };
 use crate::series::{Series, SeriesData};
 
@@ -170,6 +170,8 @@ pub struct LinePlotCanvas {
     view_bounds: Option<DataRect>,
     view_is_auto: bool,
     pan_last_pos: Option<Point>,
+    box_zoom_start: Option<Point>,
+    box_zoom_current: Option<Point>,
     axis_label_key: Option<u64>,
     axis_labels_x: Vec<PreparedText>,
     axis_labels_y: Vec<PreparedText>,
@@ -187,6 +189,8 @@ impl LinePlotCanvas {
             view_bounds: None,
             view_is_auto: true,
             pan_last_pos: None,
+            box_zoom_start: None,
+            box_zoom_current: None,
             axis_label_key: None,
             axis_labels_x: Vec::new(),
             axis_labels_y: Vec::new(),
@@ -294,12 +298,29 @@ impl LinePlotCanvas {
     }
 
     fn ensure_view_bounds<H: UiHost>(&mut self, app: &mut H) -> DataRect {
+        if self.view_is_auto {
+            let data_bounds = self.read_data_bounds(app);
+            let view = if self.style.clamp_to_data_bounds {
+                expand_data_bounds(data_bounds, self.style.overscroll_fraction)
+            } else {
+                data_bounds
+            };
+            self.view_bounds = Some(view);
+            return view;
+        }
+
         if let Some(view) = self.view_bounds {
             let view = sanitize_data_rect(view);
             self.view_bounds = Some(view);
             return view;
         }
 
+        let data_bounds = self.read_data_bounds(app);
+        self.view_bounds = Some(data_bounds);
+        data_bounds
+    }
+
+    fn read_data_bounds<H: UiHost>(&self, app: &mut H) -> DataRect {
         let data_bounds = self
             .model
             .read(app, |_app, m| m.data_bounds)
@@ -309,9 +330,7 @@ impl LinePlotCanvas {
                 y_min: 0.0,
                 y_max: 1.0,
             });
-        let data_bounds = sanitize_data_rect(data_bounds);
-        self.view_bounds = Some(data_bounds);
-        data_bounds
+        sanitize_data_rect(data_bounds)
     }
 
     fn text_style_key(style: &TextStyle) -> u64 {
@@ -452,7 +471,10 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     self.view_is_auto = true;
                     self.view_bounds = None;
                     self.hover = None;
-                    if self.pan_last_pos.take().is_some() {
+                    self.pan_last_pos = None;
+                    self.box_zoom_start = None;
+                    self.box_zoom_current = None;
+                    if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
                     cx.invalidate_self(Invalidation::Paint);
@@ -461,7 +483,9 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 }
             }
             Event::Pointer(PointerEvent::Down {
-                position, button, ..
+                position,
+                button,
+                modifiers,
             }) => {
                 let layout =
                     PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
@@ -475,9 +499,18 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     && position.y.0 <= layout.plot.origin.y.0 + layout.plot.size.height.0;
 
                 if inside && *button == MouseButton::Left {
-                    self.view_is_auto = false;
-                    self.pan_last_pos = Some(*position);
                     self.hover = None;
+                    if modifiers.shift {
+                        let local = local_from_absolute(layout.plot.origin, *position);
+                        self.box_zoom_start = Some(local);
+                        self.box_zoom_current = Some(local);
+                        self.pan_last_pos = None;
+                    } else {
+                        self.view_is_auto = false;
+                        self.pan_last_pos = Some(*position);
+                        self.box_zoom_start = None;
+                        self.box_zoom_current = None;
+                    }
                     cx.request_focus(cx.node);
                     cx.capture_pointer(cx.node);
                     cx.invalidate_self(Invalidation::Paint);
@@ -486,11 +519,65 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 }
             }
             Event::Pointer(PointerEvent::Up { button, .. }) => {
-                if *button == MouseButton::Left && self.pan_last_pos.take().is_some() {
-                    cx.release_pointer_capture();
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                    cx.stop_propagation();
+                if *button == MouseButton::Left {
+                    if self.box_zoom_start.is_some() {
+                        if cx.captured == Some(cx.node) {
+                            cx.release_pointer_capture();
+                        }
+
+                        let layout = PlotLayout::from_bounds(
+                            cx.bounds,
+                            self.style.padding,
+                            self.style.axis_gap,
+                        );
+                        if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
+                            let start = self.box_zoom_start.unwrap_or(Point::new(Px(0.0), Px(0.0)));
+                            let end = self
+                                .box_zoom_current
+                                .unwrap_or(Point::new(Px(0.0), Px(0.0)));
+
+                            let w = (start.x.0 - end.x.0).abs();
+                            let h = (start.y.0 - end.y.0).abs();
+
+                            if w >= 4.0 && h >= 4.0 {
+                                let view_bounds = self.ensure_view_bounds(cx.app);
+                                let view_bounds = sanitize_data_rect(view_bounds);
+                                if let Some(mut next) = data_rect_from_plot_points(
+                                    view_bounds,
+                                    layout.plot.size,
+                                    start,
+                                    end,
+                                ) {
+                                    let data_bounds = self.read_data_bounds(cx.app);
+                                    if self.style.clamp_to_data_bounds {
+                                        next = clamp_view_to_data(
+                                            next,
+                                            data_bounds,
+                                            self.style.overscroll_fraction,
+                                        );
+                                    }
+                                    self.view_is_auto = false;
+                                    self.view_bounds = Some(next);
+                                }
+                            }
+                        }
+
+                        self.box_zoom_start = None;
+                        self.box_zoom_current = None;
+                        self.pan_last_pos = None;
+                        self.hover = None;
+
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    } else if self.pan_last_pos.take().is_some() {
+                        if cx.captured == Some(cx.node) {
+                            cx.release_pointer_capture();
+                        }
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                    }
                 }
             }
             Event::Pointer(PointerEvent::Wheel {
@@ -509,6 +596,9 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     && position.x.0 <= layout.plot.origin.x.0 + layout.plot.size.width.0
                     && position.y.0 <= layout.plot.origin.y.0 + layout.plot.size.height.0;
                 if !inside {
+                    return;
+                }
+                if self.box_zoom_start.is_some() {
                     return;
                 }
 
@@ -534,16 +624,7 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 else {
                     return;
                 };
-                let data_bounds =
-                    self.model
-                        .read(cx.app, |_app, m| m.data_bounds)
-                        .unwrap_or(DataRect {
-                            x_min: 0.0,
-                            x_max: 1.0,
-                            y_min: 0.0,
-                            y_max: 1.0,
-                        });
-                let data_bounds = sanitize_data_rect(data_bounds);
+                let data_bounds = self.read_data_bounds(cx.app);
                 let next = if self.style.clamp_to_data_bounds {
                     clamp_view_to_data(next, data_bounds, self.style.overscroll_fraction)
                 } else {
@@ -564,6 +645,16 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     return;
                 }
 
+                if self.box_zoom_start.is_some() {
+                    self.box_zoom_current =
+                        Some(local_from_absolute(layout.plot.origin, *position));
+                    self.hover = None;
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
                 if let Some(last) = self.pan_last_pos {
                     let dx_px = position.x.0 - last.x.0;
                     let dy_px = position.y.0 - last.y.0;
@@ -574,16 +665,7 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     else {
                         return;
                     };
-                    let data_bounds =
-                        self.model
-                            .read(cx.app, |_app, m| m.data_bounds)
-                            .unwrap_or(DataRect {
-                                x_min: 0.0,
-                                x_max: 1.0,
-                                y_min: 0.0,
-                                y_max: 1.0,
-                            });
-                    let data_bounds = sanitize_data_rect(data_bounds);
+                    let data_bounds = self.read_data_bounds(cx.app);
                     let next = if self.style.clamp_to_data_bounds {
                         clamp_view_to_data(next, data_bounds, self.style.overscroll_fraction)
                     } else {
@@ -712,6 +794,11 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
             a: 0.65,
             ..theme.colors.accent
         });
+        let selection_border = crosshair_color;
+        let selection_fill = Color {
+            a: (crosshair_color.a * 0.18).clamp(0.06, 0.22),
+            ..crosshair_color
+        };
         let tooltip_background = self
             .style
             .tooltip_background
@@ -736,25 +823,10 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
 
         let layout = PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
 
-        let data_bounds = self
-            .model
-            .read(cx.app, |_app, m| m.data_bounds)
-            .unwrap_or(DataRect {
-                x_min: 0.0,
-                x_max: 1.0,
-                y_min: 0.0,
-                y_max: 1.0,
-            });
-        let data_bounds = sanitize_data_rect(data_bounds);
+        let data_bounds = self.read_data_bounds(cx.app);
 
         let view_bounds = if self.view_is_auto {
-            let view = if self.style.clamp_to_data_bounds {
-                expand_data_bounds(data_bounds, self.style.overscroll_fraction)
-            } else {
-                data_bounds
-            };
-            self.view_bounds = Some(view);
-            view
+            self.ensure_view_bounds(cx.app)
         } else {
             let view = self.view_bounds.unwrap_or(data_bounds);
             let view = sanitize_data_rect(view);
@@ -1029,6 +1101,31 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                     text: tt.blob,
                     color: tooltip_text_color,
                 });
+            }
+
+            if let (Some(start), Some(end)) = (self.box_zoom_start, self.box_zoom_current) {
+                let x0 = start.x.0.min(end.x.0).clamp(0.0, layout.plot.size.width.0);
+                let x1 = start.x.0.max(end.x.0).clamp(0.0, layout.plot.size.width.0);
+                let y0 = start.y.0.min(end.y.0).clamp(0.0, layout.plot.size.height.0);
+                let y1 = start.y.0.max(end.y.0).clamp(0.0, layout.plot.size.height.0);
+                let w = x1 - x0;
+                let h = y1 - y0;
+                if w >= 1.0 && h >= 1.0 {
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(5),
+                        rect: Rect::new(
+                            Point::new(
+                                Px(layout.plot.origin.x.0 + x0),
+                                Px(layout.plot.origin.y.0 + y0),
+                            ),
+                            Size::new(Px(w), Px(h)),
+                        ),
+                        background: selection_fill,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: selection_border,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+                }
             }
         }
     }

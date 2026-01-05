@@ -214,6 +214,58 @@ pub fn zoom_view_at_px(
     }))
 }
 
+pub fn data_rect_from_plot_points(
+    view: DataRect,
+    viewport: Size,
+    a: Point,
+    b: Point,
+) -> Option<DataRect> {
+    let view = sanitize_data_rect(view);
+
+    let viewport_w = viewport.width.0;
+    let viewport_h = viewport.height.0;
+    if !viewport_w.is_finite() || !viewport_h.is_finite() || viewport_w <= 0.0 || viewport_h <= 0.0
+    {
+        return None;
+    }
+
+    let w = view.x_max - view.x_min;
+    let h = view.y_max - view.y_min;
+    if !w.is_finite() || !h.is_finite() || w == 0.0 || h == 0.0 {
+        return None;
+    }
+
+    let x0 = a.x.0.min(b.x.0).clamp(0.0, viewport_w);
+    let x1 = a.x.0.max(b.x.0).clamp(0.0, viewport_w);
+    let y0 = a.y.0.min(b.y.0).clamp(0.0, viewport_h);
+    let y1 = a.y.0.max(b.y.0).clamp(0.0, viewport_h);
+
+    let nx0 = x0 / viewport_w;
+    let nx1 = x1 / viewport_w;
+    let ny0 = y0 / viewport_h;
+    let ny1 = y1 / viewport_h;
+
+    if !nx0.is_finite() || !nx1.is_finite() || !ny0.is_finite() || !ny1.is_finite() {
+        return None;
+    }
+
+    let dx0 = view.x_min + nx0 * w;
+    let dx1 = view.x_min + nx1 * w;
+    let dy0 = view.y_min + (1.0 - ny0) * h;
+    let dy1 = view.y_min + (1.0 - ny1) * h;
+
+    if !dx0.is_finite() || !dx1.is_finite() || !dy0.is_finite() || !dy1.is_finite() {
+        return None;
+    }
+
+    Some(sanitize_data_rect(DataRect {
+        x_min: dx0.min(dx1),
+        x_max: dx0.max(dx1),
+        y_min: dy0.min(dy1),
+        y_max: dy0.max(dy1),
+    }))
+}
+
 pub fn clamp_zoom_factors(zoom: f32) -> f32 {
     zoom.clamp(0.05, 20.0)
 }
