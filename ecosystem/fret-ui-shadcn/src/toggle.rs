@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Edges, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps, TextProps,
+    AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -331,12 +331,7 @@ impl Toggle {
                 enabled: !disabled,
                 focusable: true,
                 focus_ring: Some(ring),
-                a11y: PressableA11y {
-                    role: Some(SemanticsRole::Button),
-                    label: a11y_label,
-                    selected: on,
-                    ..Default::default()
-                },
+                a11y: fret_ui_kit::primitives::toggle::toggle_a11y(a11y_label, on),
                 ..Default::default()
             };
 
