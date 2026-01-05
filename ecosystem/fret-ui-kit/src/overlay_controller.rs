@@ -385,6 +385,15 @@ impl OverlayController {
         presence::fade_presence(cx, open, fade_ticks)
     }
 
+    pub fn fade_presence_with_durations<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_ticks: u64,
+        close_ticks: u64,
+    ) -> PresenceOutput {
+        presence::fade_presence_with_durations(cx, open, open_ticks, close_ticks)
+    }
+
     pub fn toast_store<H: UiHost>(app: &mut H) -> Model<window_overlays::ToastStore> {
         window_overlays::toast_store(app)
     }

@@ -27,6 +27,16 @@ pub fn fade_presence<H: UiHost>(
     crate::declarative::presence::fade_presence(cx, open, fade_ticks)
 }
 
+/// Drive a fade presence transition with separate open/close durations.
+pub fn fade_presence_with_durations<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+) -> PresenceOutput {
+    crate::declarative::presence::fade_presence_with_durations(cx, open, open_ticks, close_ticks)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

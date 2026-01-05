@@ -3,6 +3,11 @@ use fret_ui::overlay_placement::Side;
 
 pub(crate) const SHADCN_SLIDE_PX: Px = Px(8.0);
 
+// These ticks assume a ~60fps frame clock (12 ~= 200ms).
+pub(crate) const SHADCN_MOTION_TICKS_200: u64 = 12;
+pub(crate) const SHADCN_MOTION_TICKS_300: u64 = 18;
+pub(crate) const SHADCN_MOTION_TICKS_500: u64 = 30;
+
 pub(crate) fn shadcn_slide_insets(side: Side) -> Edges {
     match side {
         Side::Top => Edges {

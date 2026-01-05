@@ -19,14 +19,16 @@ pub struct PresenceOutput {
 /// time-source agnostic: the caller supplies a monotonic `tick` (typically frame count).
 #[derive(Debug, Clone, Copy)]
 pub struct FadePresence {
-    fade_ticks: u64,
+    open_ticks: u64,
+    close_ticks: u64,
     phase: Phase,
 }
 
 impl Default for FadePresence {
     fn default() -> Self {
         Self {
-            fade_ticks: 4,
+            open_ticks: 4,
+            close_ticks: 4,
             phase: Phase::Hidden,
         }
     }
@@ -34,11 +36,34 @@ impl Default for FadePresence {
 
 impl FadePresence {
     pub fn fade_ticks(&self) -> u64 {
-        self.fade_ticks
+        self.open_ticks
     }
 
     pub fn set_fade_ticks(&mut self, fade_ticks: u64) {
-        self.fade_ticks = fade_ticks.max(1);
+        let ticks = fade_ticks.max(1);
+        self.open_ticks = ticks;
+        self.close_ticks = ticks;
+    }
+
+    pub fn open_ticks(&self) -> u64 {
+        self.open_ticks
+    }
+
+    pub fn close_ticks(&self) -> u64 {
+        self.close_ticks
+    }
+
+    pub fn set_open_ticks(&mut self, open_ticks: u64) {
+        self.open_ticks = open_ticks.max(1);
+    }
+
+    pub fn set_close_ticks(&mut self, close_ticks: u64) {
+        self.close_ticks = close_ticks.max(1);
+    }
+
+    pub fn set_durations(&mut self, open_ticks: u64, close_ticks: u64) {
+        self.open_ticks = open_ticks.max(1);
+        self.close_ticks = close_ticks.max(1);
     }
 
     pub fn update(&mut self, open: bool, tick: u64) -> PresenceOutput {
@@ -58,7 +83,6 @@ impl FadePresence {
             }
         }
 
-        let fade = self.fade_ticks.max(1);
         match self.phase {
             Phase::Hidden => PresenceOutput {
                 present: false,
@@ -71,6 +95,7 @@ impl FadePresence {
                 animating: false,
             },
             Phase::Opening { start_tick } => {
+                let fade = self.open_ticks.max(1);
                 let elapsed = tick.saturating_sub(start_tick).saturating_add(1);
                 let t = (elapsed as f32 / fade as f32).clamp(0.0, 1.0);
                 let opacity = smoothstep(t);
@@ -90,6 +115,7 @@ impl FadePresence {
                 }
             }
             Phase::Closing { start_tick } => {
+                let fade = self.close_ticks.max(1);
                 let elapsed = tick.saturating_sub(start_tick).saturating_add(1);
                 let t = (elapsed as f32 / fade as f32).clamp(0.0, 1.0);
                 let opacity = smoothstep(1.0 - t);

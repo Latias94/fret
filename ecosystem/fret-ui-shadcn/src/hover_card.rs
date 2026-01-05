@@ -204,7 +204,12 @@ impl HoverCard {
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
             let update = hover_intent::drive(cx, hovered, cfg);
             let opening = update.open;
-            let presence = OverlayController::fade_presence(cx, update.open, 4);
+            let presence = OverlayController::fade_presence_with_durations(
+                cx,
+                opening,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+            );
             let opacity = presence.opacity;
 
             let out = vec![trigger];

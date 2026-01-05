@@ -185,7 +185,12 @@ impl Popover {
             let trigger_id = trigger.id;
             let anchor_id = self.anchor_override.unwrap_or(trigger_id);
 
-            let presence = OverlayController::fade_presence(cx, is_open, 4);
+            let presence = OverlayController::fade_presence_with_durations(
+                cx,
+                is_open,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+            );
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
 
             if overlay_presence.present {

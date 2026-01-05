@@ -433,7 +433,12 @@ impl Tooltip {
             }
 
             let opening = update.open;
-            let presence = OverlayController::fade_presence(cx, update.open, 4);
+            let presence = OverlayController::fade_presence_with_durations(
+                cx,
+                opening,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+            );
             let overlay_presence = OverlayPresence::from_fade(update.open, presence);
 
             let out = vec![trigger];

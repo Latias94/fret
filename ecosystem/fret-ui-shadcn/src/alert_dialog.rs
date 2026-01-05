@@ -92,7 +92,12 @@ impl AlertDialog {
             let id = trigger.id;
             let overlay_root_name = OverlayController::modal_root_name(id);
 
-            let presence = OverlayController::fade_presence(cx, is_open, 4);
+            let presence = OverlayController::fade_presence_with_durations(
+                cx,
+                is_open,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+            );
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
 
             if overlay_presence.present {

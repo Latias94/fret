@@ -9,7 +9,8 @@ struct FadePresenceDriverState {
     last_app_tick: u64,
     last_frame_tick: u64,
     tick: u64,
-    configured_fade_ticks: u64,
+    configured_open_ticks: u64,
+    configured_close_ticks: u64,
     presence: FadePresence,
     lease: Option<ContinuousFrames>,
 }
@@ -25,13 +26,23 @@ pub fn fade_presence<H: UiHost>(
     open: bool,
     fade_ticks: u64,
 ) -> PresenceOutput {
+    fade_presence_with_durations(cx, open, fade_ticks, fade_ticks)
+}
+
+pub fn fade_presence_with_durations<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+) -> PresenceOutput {
     let app_tick = cx.app.tick_id().0;
     let frame_tick = cx.frame_id.0;
 
     let (output, start_lease, stop_lease) = cx.with_state(FadePresenceDriverState::default, |st| {
-        if st.configured_fade_ticks != fade_ticks {
-            st.configured_fade_ticks = fade_ticks;
-            st.presence.set_fade_ticks(fade_ticks);
+        if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
+            st.configured_open_ticks = open_ticks;
+            st.configured_close_ticks = close_ticks;
+            st.presence.set_durations(open_ticks, close_ticks);
         }
 
         // Prefer the runner-owned monotonic clocks when they advance.
