@@ -1,8 +1,9 @@
 use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, SceneOp};
 use fret_core::{
-    Event, FontId, FontWeight, PathConstraints, PathId, PathStyle, PointerEvent, SemanticsRole,
-    TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap, UiServices,
+    Event, FontId, FontWeight, KeyCode, MouseButton, PathConstraints, PathId, PathStyle,
+    PointerEvent, SemanticsRole, TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle,
+    TextWrap, UiServices,
 };
 use fret_runtime::{Model, TextFontStackKey};
 use fret_ui::UiHost;
@@ -79,6 +80,7 @@ struct CachedPath {
     viewport_w_bits: u32,
     viewport_h_bits: u32,
     stroke_width: Px,
+    view_key: u64,
     samples: Vec<SamplePoint>,
 }
 
@@ -154,6 +156,9 @@ pub struct LinePlotCanvas {
     cached_path: Option<CachedPath>,
     hover: Option<HoverState>,
     last_scale_factor: f32,
+    view_bounds: Option<DataRect>,
+    view_is_auto: bool,
+    pan_last_pos: Option<Point>,
     axis_label_key: Option<u64>,
     axis_labels_x: Vec<PreparedText>,
     axis_labels_y: Vec<PreparedText>,
@@ -168,6 +173,9 @@ impl LinePlotCanvas {
             cached_path: None,
             hover: None,
             last_scale_factor: 1.0,
+            view_bounds: None,
+            view_is_auto: true,
+            pan_last_pos: None,
             axis_label_key: None,
             axis_labels_x: Vec::new(),
             axis_labels_y: Vec::new(),
@@ -188,12 +196,13 @@ impl LinePlotCanvas {
         &mut self,
         cx: &mut PaintCx<'_, H>,
         plot: Rect,
-        data_bounds: DataRect,
+        view_bounds: DataRect,
     ) -> Option<PathId> {
         let model_revision = self.model.revision(cx.app).unwrap_or(0);
         let scale_factor_bits = cx.scale_factor.to_bits();
         let viewport_w_bits = plot.size.width.0.to_bits();
         let viewport_h_bits = plot.size.height.0.to_bits();
+        let view_key = Self::data_rect_key(view_bounds);
 
         let needs_rebuild = self.cached_path.as_ref().is_none_or(|c| {
             c.model_revision != model_revision
@@ -201,6 +210,7 @@ impl LinePlotCanvas {
                 || c.viewport_w_bits != viewport_w_bits
                 || c.viewport_h_bits != viewport_h_bits
                 || c.stroke_width != self.style.stroke_width
+                || c.view_key != view_key
         });
 
         if !needs_rebuild {
@@ -214,7 +224,7 @@ impl LinePlotCanvas {
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform = PlotTransform {
             viewport: local_viewport,
-            data: data_bounds,
+            data: view_bounds,
         };
 
         let (commands, samples) = self
@@ -244,6 +254,7 @@ impl LinePlotCanvas {
             viewport_w_bits,
             viewport_h_bits,
             stroke_width: self.style.stroke_width,
+            view_key,
             samples,
         });
         Some(id)
@@ -269,6 +280,82 @@ impl LinePlotCanvas {
 
     fn hash_f32_bits(state: u64, v: f32) -> u64 {
         Self::hash_u64(state, u64::from(v.to_bits()))
+    }
+
+    fn data_rect_key(bounds: DataRect) -> u64 {
+        let mut key = 0u64;
+        key = Self::hash_f32_bits(key, bounds.x_min);
+        key = Self::hash_f32_bits(key, bounds.x_max);
+        key = Self::hash_f32_bits(key, bounds.y_min);
+        key = Self::hash_f32_bits(key, bounds.y_max);
+        key
+    }
+
+    fn sanitize_data_rect(bounds: DataRect) -> DataRect {
+        let mut x0 = bounds.x_min;
+        let mut x1 = bounds.x_max;
+        let mut y0 = bounds.y_min;
+        let mut y1 = bounds.y_max;
+
+        if !x0.is_finite() || !x1.is_finite() || !y0.is_finite() || !y1.is_finite() {
+            return DataRect {
+                x_min: 0.0,
+                x_max: 1.0,
+                y_min: 0.0,
+                y_max: 1.0,
+            };
+        }
+
+        if x0 > x1 {
+            std::mem::swap(&mut x0, &mut x1);
+        }
+        if y0 > y1 {
+            std::mem::swap(&mut y0, &mut y1);
+        }
+
+        let min_span = 1.0e-6_f32;
+
+        let w = x1 - x0;
+        if !w.is_finite() || w.abs() < min_span {
+            let cx = (x0 + x1) * 0.5;
+            x0 = cx - 0.5;
+            x1 = cx + 0.5;
+        }
+
+        let h = y1 - y0;
+        if !h.is_finite() || h.abs() < min_span {
+            let cy = (y0 + y1) * 0.5;
+            y0 = cy - 0.5;
+            y1 = cy + 0.5;
+        }
+
+        DataRect {
+            x_min: x0,
+            x_max: x1,
+            y_min: y0,
+            y_max: y1,
+        }
+    }
+
+    fn ensure_view_bounds<H: UiHost>(&mut self, app: &mut H) -> DataRect {
+        if let Some(view) = self.view_bounds {
+            let view = Self::sanitize_data_rect(view);
+            self.view_bounds = Some(view);
+            return view;
+        }
+
+        let data_bounds = self
+            .model
+            .read(app, |_app, m| m.data_bounds)
+            .unwrap_or(DataRect {
+                x_min: 0.0,
+                x_max: 1.0,
+                y_min: 0.0,
+                y_max: 1.0,
+            });
+        let data_bounds = Self::sanitize_data_rect(data_bounds);
+        self.view_bounds = Some(data_bounds);
+        data_bounds
     }
 
     fn text_style_key(style: &TextStyle) -> u64 {
@@ -398,84 +485,276 @@ impl LinePlotCanvas {
 
 impl<H: UiHost> Widget<H> for LinePlotCanvas {
     fn event(&mut self, cx: &mut fret_ui::retained_bridge::EventCx<'_, H>, event: &Event) {
-        let Event::Pointer(PointerEvent::Move { position, .. }) = event else {
-            return;
-        };
-
-        let layout = PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
-        if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
-            return;
-        }
-
-        let model_revision = self.model.revision(cx.app).unwrap_or(0);
-        let scale_factor = self.last_scale_factor;
-        let scale_factor_bits = scale_factor.to_bits();
-        let viewport_w_bits = layout.plot.size.width.0.to_bits();
-        let viewport_h_bits = layout.plot.size.height.0.to_bits();
-
-        let inside = position.x.0 >= layout.plot.origin.x.0
-            && position.y.0 >= layout.plot.origin.y.0
-            && position.x.0 <= layout.plot.origin.x.0 + layout.plot.size.width.0
-            && position.y.0 <= layout.plot.origin.y.0 + layout.plot.size.height.0;
-
-        let next_hover = if inside {
-            let local = Point::new(
-                Px(position.x.0 - layout.plot.origin.x.0),
-                Px(position.y.0 - layout.plot.origin.y.0),
-            );
-
-            let threshold = self.style.hover_threshold.0.max(0.0);
-            let threshold2 = threshold * threshold;
-
-            let samples: Cow<'_, [SamplePoint]> = if let Some(cached) = self.cached_path.as_ref()
-                && cached.model_revision == model_revision
-                && cached.scale_factor_bits == scale_factor_bits
-                && cached.viewport_w_bits == viewport_w_bits
-                && cached.viewport_h_bits == viewport_h_bits
-            {
-                Cow::Borrowed(cached.samples.as_slice())
-            } else {
-                Cow::Owned(
-                    self.model
-                        .read(cx.app, |_app, m| {
-                            let transform = PlotTransform {
-                                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
-                                data: m.data_bounds,
-                            };
-                            decimate_samples(transform, &*m.points, scale_factor)
-                        })
-                        .unwrap_or_default(),
-                )
-            };
-
-            let mut best: Option<(SamplePoint, f32)> = None;
-            for s in samples.iter().copied() {
-                let dx = s.plot_px.x.0 - local.x.0;
-                let dy = s.plot_px.y.0 - local.y.0;
-                let d2 = dx * dx + dy * dy;
-                if !d2.is_finite() {
-                    continue;
-                }
-                if best.map_or(true, |b| d2 < b.1) {
-                    best = Some((s, d2));
+        match event {
+            Event::KeyDown { key, modifiers, .. } => {
+                let plain = !modifiers.shift
+                    && !modifiers.ctrl
+                    && !modifiers.alt
+                    && !modifiers.alt_gr
+                    && !modifiers.meta;
+                if plain && *key == KeyCode::KeyR {
+                    self.view_is_auto = true;
+                    self.view_bounds = None;
+                    self.hover = None;
+                    if self.pan_last_pos.take().is_some() {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
                 }
             }
+            Event::Pointer(PointerEvent::Down {
+                position, button, ..
+            }) => {
+                let layout =
+                    PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
+                if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+                    return;
+                }
 
-            best.and_then(|(s, d2)| {
-                (d2 <= threshold2).then_some(HoverState {
-                    index: s.index,
-                    data: s.data,
-                    plot_px: s.plot_px,
-                })
-            })
-        } else {
-            None
-        };
+                let inside = position.x.0 >= layout.plot.origin.x.0
+                    && position.y.0 >= layout.plot.origin.y.0
+                    && position.x.0 <= layout.plot.origin.x.0 + layout.plot.size.width.0
+                    && position.y.0 <= layout.plot.origin.y.0 + layout.plot.size.height.0;
 
-        if self.hover != next_hover {
-            self.hover = next_hover;
-            cx.invalidate_self(Invalidation::Paint);
-            cx.request_redraw();
+                if inside && *button == MouseButton::Left {
+                    self.view_is_auto = false;
+                    self.pan_last_pos = Some(*position);
+                    self.hover = None;
+                    cx.request_focus(cx.node);
+                    cx.capture_pointer(cx.node);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                }
+            }
+            Event::Pointer(PointerEvent::Up { button, .. }) => {
+                if *button == MouseButton::Left && self.pan_last_pos.take().is_some() {
+                    cx.release_pointer_capture();
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                }
+            }
+            Event::Pointer(PointerEvent::Wheel {
+                position,
+                delta,
+                modifiers,
+            }) => {
+                let layout =
+                    PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
+                if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+                    return;
+                }
+
+                let inside = position.x.0 >= layout.plot.origin.x.0
+                    && position.y.0 >= layout.plot.origin.y.0
+                    && position.x.0 <= layout.plot.origin.x.0 + layout.plot.size.width.0
+                    && position.y.0 <= layout.plot.origin.y.0 + layout.plot.size.height.0;
+                if !inside {
+                    return;
+                }
+
+                let delta_y = delta.y.0;
+                if !delta_y.is_finite() {
+                    return;
+                }
+
+                let zoom = 2.0_f32.powf(delta_y * 0.0025).clamp(0.05, 20.0);
+                let (zoom_x, zoom_y) = if modifiers.shift {
+                    (zoom, 1.0)
+                } else if modifiers.ctrl {
+                    (1.0, zoom)
+                } else {
+                    (zoom, zoom)
+                };
+
+                let view_bounds = self.ensure_view_bounds(cx.app);
+                let view_bounds = Self::sanitize_data_rect(view_bounds);
+
+                let viewport_w = layout.plot.size.width.0;
+                let viewport_h = layout.plot.size.height.0;
+                if !viewport_w.is_finite()
+                    || !viewport_h.is_finite()
+                    || viewport_w <= 0.0
+                    || viewport_h <= 0.0
+                {
+                    return;
+                }
+
+                let local = Point::new(
+                    Px(position.x.0 - layout.plot.origin.x.0),
+                    Px(position.y.0 - layout.plot.origin.y.0),
+                );
+
+                let transform = PlotTransform {
+                    viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
+                    data: view_bounds,
+                };
+                let anchor = transform.px_to_data(local);
+
+                let w = view_bounds.x_max - view_bounds.x_min;
+                let h = view_bounds.y_max - view_bounds.y_min;
+                if !w.is_finite() || !h.is_finite() || w == 0.0 || h == 0.0 {
+                    return;
+                }
+
+                let rx = (anchor.x - view_bounds.x_min) / w;
+                let ry = (anchor.y - view_bounds.y_min) / h;
+                if !rx.is_finite() || !ry.is_finite() {
+                    return;
+                }
+
+                let new_w = w / zoom_x;
+                let new_h = h / zoom_y;
+                if !new_w.is_finite() || !new_h.is_finite() {
+                    return;
+                }
+
+                let x_min = anchor.x - rx * new_w;
+                let y_min = anchor.y - ry * new_h;
+                let next = Self::sanitize_data_rect(DataRect {
+                    x_min,
+                    x_max: x_min + new_w,
+                    y_min,
+                    y_max: y_min + new_h,
+                });
+
+                self.view_is_auto = false;
+                self.view_bounds = Some(next);
+                cx.request_focus(cx.node);
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
+            Event::Pointer(PointerEvent::Move { position, .. }) => {
+                let layout =
+                    PlotLayout::from_bounds(cx.bounds, self.style.padding, self.style.axis_gap);
+                if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+                    return;
+                }
+
+                if let Some(last) = self.pan_last_pos {
+                    let viewport_w = layout.plot.size.width.0;
+                    let viewport_h = layout.plot.size.height.0;
+                    if viewport_w.is_finite()
+                        && viewport_h.is_finite()
+                        && viewport_w > 0.0
+                        && viewport_h > 0.0
+                    {
+                        let dx_px = position.x.0 - last.x.0;
+                        let dy_px = position.y.0 - last.y.0;
+
+                        let view_bounds = self.ensure_view_bounds(cx.app);
+                        let view_bounds = Self::sanitize_data_rect(view_bounds);
+                        let w = view_bounds.x_max - view_bounds.x_min;
+                        let h = view_bounds.y_max - view_bounds.y_min;
+
+                        if dx_px.is_finite() && dy_px.is_finite() && w.is_finite() && h.is_finite()
+                        {
+                            let dx_data = (dx_px / viewport_w) * w;
+                            let dy_data = (dy_px / viewport_h) * h;
+
+                            let next = Self::sanitize_data_rect(DataRect {
+                                x_min: view_bounds.x_min - dx_data,
+                                x_max: view_bounds.x_max - dx_data,
+                                y_min: view_bounds.y_min + dy_data,
+                                y_max: view_bounds.y_max + dy_data,
+                            });
+
+                            self.view_bounds = Some(next);
+                            self.view_is_auto = false;
+                            self.pan_last_pos = Some(*position);
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+                }
+
+                let inside = position.x.0 >= layout.plot.origin.x.0
+                    && position.y.0 >= layout.plot.origin.y.0
+                    && position.x.0 <= layout.plot.origin.x.0 + layout.plot.size.width.0
+                    && position.y.0 <= layout.plot.origin.y.0 + layout.plot.size.height.0;
+
+                let next_hover = if inside {
+                    let model_revision = self.model.revision(cx.app).unwrap_or(0);
+                    let scale_factor = self.last_scale_factor;
+                    let scale_factor_bits = scale_factor.to_bits();
+                    let viewport_w_bits = layout.plot.size.width.0.to_bits();
+                    let viewport_h_bits = layout.plot.size.height.0.to_bits();
+
+                    let view_bounds = self.ensure_view_bounds(cx.app);
+                    let view_bounds = Self::sanitize_data_rect(view_bounds);
+                    let view_key = Self::data_rect_key(view_bounds);
+
+                    let local = Point::new(
+                        Px(position.x.0 - layout.plot.origin.x.0),
+                        Px(position.y.0 - layout.plot.origin.y.0),
+                    );
+
+                    let threshold = self.style.hover_threshold.0.max(0.0);
+                    let threshold2 = threshold * threshold;
+
+                    let samples: Cow<'_, [SamplePoint]> = if let Some(cached) =
+                        self.cached_path.as_ref()
+                        && cached.model_revision == model_revision
+                        && cached.scale_factor_bits == scale_factor_bits
+                        && cached.viewport_w_bits == viewport_w_bits
+                        && cached.viewport_h_bits == viewport_h_bits
+                        && cached.view_key == view_key
+                    {
+                        Cow::Borrowed(cached.samples.as_slice())
+                    } else {
+                        Cow::Owned(
+                            self.model
+                                .read(cx.app, |_app, m| {
+                                    let transform = PlotTransform {
+                                        viewport: Rect::new(
+                                            Point::new(Px(0.0), Px(0.0)),
+                                            layout.plot.size,
+                                        ),
+                                        data: view_bounds,
+                                    };
+                                    decimate_samples(transform, &*m.points, scale_factor)
+                                })
+                                .unwrap_or_default(),
+                        )
+                    };
+
+                    let mut best: Option<(SamplePoint, f32)> = None;
+                    for s in samples.iter().copied() {
+                        let dx = s.plot_px.x.0 - local.x.0;
+                        let dy = s.plot_px.y.0 - local.y.0;
+                        let d2 = dx * dx + dy * dy;
+                        if !d2.is_finite() {
+                            continue;
+                        }
+                        if best.map_or(true, |b| d2 < b.1) {
+                            best = Some((s, d2));
+                        }
+                    }
+
+                    best.and_then(|(s, d2)| {
+                        (d2 <= threshold2).then_some(HoverState {
+                            index: s.index,
+                            data: s.data,
+                            plot_px: s.plot_px,
+                        })
+                    })
+                } else {
+                    None
+                };
+
+                if self.hover != next_hover {
+                    self.hover = next_hover;
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
+            }
+            _ => {}
         }
     }
 
@@ -544,8 +823,19 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 y_min: 0.0,
                 y_max: 1.0,
             });
+        let data_bounds = Self::sanitize_data_rect(data_bounds);
 
-        self.rebuild_axis_labels_if_needed(cx, layout, data_bounds, theme.revision, font_stack_key);
+        let view_bounds = if self.view_is_auto {
+            self.view_bounds = Some(data_bounds);
+            data_bounds
+        } else {
+            let view = self.view_bounds.unwrap_or(data_bounds);
+            let view = Self::sanitize_data_rect(view);
+            self.view_bounds = Some(view);
+            view
+        };
+
+        self.rebuild_axis_labels_if_needed(cx, layout, view_bounds, theme.revision, font_stack_key);
 
         // Grid + series + hover are clipped to the plot area.
         cx.scene.push(SceneOp::PushClipRect { rect: layout.plot });
@@ -580,7 +870,7 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
                 });
             }
 
-            if let Some(path) = self.rebuild_path_if_needed(cx, layout.plot, data_bounds) {
+            if let Some(path) = self.rebuild_path_if_needed(cx, layout.plot, view_bounds) {
                 cx.scene.push(SceneOp::Path {
                     order: DrawOrder(2),
                     origin: layout.plot.origin,
@@ -663,11 +953,11 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
         }
 
         // Axis labels (P0: evenly spaced ticks).
-        let x_ticks = linear_ticks(data_bounds.x_min, data_bounds.x_max, self.style.tick_count);
-        let y_ticks = linear_ticks(data_bounds.y_min, data_bounds.y_max, self.style.tick_count);
+        let x_ticks = linear_ticks(view_bounds.x_min, view_bounds.x_max, self.style.tick_count);
+        let y_ticks = linear_ticks(view_bounds.y_min, view_bounds.y_max, self.style.tick_count);
 
-        let x_den = data_bounds.x_max - data_bounds.x_min;
-        let y_den = data_bounds.y_max - data_bounds.y_min;
+        let x_den = view_bounds.x_max - view_bounds.x_min;
+        let y_den = view_bounds.y_max - view_bounds.y_min;
 
         for (i, label) in self.axis_labels_x.iter().enumerate() {
             let Some(v) = x_ticks.get(i).copied() else {
@@ -676,7 +966,7 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
             if x_den == 0.0 || !x_den.is_finite() {
                 continue;
             }
-            let t = (v - data_bounds.x_min) / x_den;
+            let t = (v - view_bounds.x_min) / x_den;
             if !t.is_finite() {
                 continue;
             }
@@ -704,7 +994,7 @@ impl<H: UiHost> Widget<H> for LinePlotCanvas {
             if y_den == 0.0 || !y_den.is_finite() {
                 continue;
             }
-            let t = (v - data_bounds.y_min) / y_den;
+            let t = (v - view_bounds.y_min) / y_den;
             if !t.is_finite() {
                 continue;
             }
