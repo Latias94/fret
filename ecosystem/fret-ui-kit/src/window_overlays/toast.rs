@@ -153,7 +153,11 @@ pub struct ToastStore {
 }
 
 impl ToastStore {
-    pub fn set_window_max_toasts(&mut self, window: AppWindowId, max_toasts: Option<usize>) -> bool {
+    pub fn set_window_max_toasts(
+        &mut self,
+        window: AppWindowId,
+        max_toasts: Option<usize>,
+    ) -> bool {
         let max_toasts = max_toasts.unwrap_or(0);
         let prev = self.max_toasts_by_window.get(&window).copied().unwrap_or(0);
         if prev == max_toasts {
@@ -307,10 +311,9 @@ impl ToastStore {
             return Vec::new();
         };
 
-        let active: Vec<ToastId> = toasts
+        let active: Vec<&ToastEntry> = toasts
             .iter()
             .filter(|t| t.open && t.remove_token.is_none())
-            .map(|t| t.id)
             .collect();
 
         let mut need = active.len().saturating_sub(max);
@@ -319,14 +322,27 @@ impl ToastStore {
         }
 
         let mut evicted = Vec::new();
-        for id in active {
+
+        // Prefer evicting auto-closing toasts first; keep pinned toasts around when possible.
+        for toast in &active {
             if need == 0 {
                 break;
             }
-            if id == keep {
+            if toast.id == keep || toast.auto_close_remaining.is_none() {
                 continue;
             }
-            evicted.push(id);
+            evicted.push(toast.id);
+            need = need.saturating_sub(1);
+        }
+
+        for toast in &active {
+            if need == 0 {
+                break;
+            }
+            if toast.id == keep || toast.auto_close_remaining.is_some() {
+                continue;
+            }
+            evicted.push(toast.id);
             need = need.saturating_sub(1);
         }
         evicted
@@ -823,15 +839,24 @@ mod tests {
         );
         assert_eq!(out1.id, id);
         assert_eq!(out1.cancel_auto, None);
-        assert_eq!(out1.schedule_auto, Some((TimerToken(10), TOAST_AUTO_CLOSE_TICK)));
+        assert_eq!(
+            out1.schedule_auto,
+            Some((TimerToken(10), TOAST_AUTO_CLOSE_TICK))
+        );
 
         let toast = store.toasts_for_window(window)[0].clone();
         assert_eq!(toast.id, id);
         assert_eq!(toast.title.as_ref(), "Done");
         assert_eq!(toast.variant, ToastVariant::Success);
         assert_eq!(toast.auto_close_token, Some(TimerToken(10)));
-        assert_eq!(toast.action.as_ref().map(|a| a.label.as_ref()), Some("Undo"));
-        assert_eq!(toast.cancel.as_ref().map(|a| a.label.as_ref()), Some("Cancel"));
+        assert_eq!(
+            toast.action.as_ref().map(|a| a.label.as_ref()),
+            Some("Undo")
+        );
+        assert_eq!(
+            toast.cancel.as_ref().map(|a| a.label.as_ref()),
+            Some("Cancel")
+        );
     }
 
     #[test]
@@ -863,5 +888,41 @@ mod tests {
         assert_eq!(out0.evicted, Vec::new());
         assert_eq!(out1.evicted, Vec::new());
         assert_eq!(out2.evicted, vec![out0.id]);
+    }
+
+    #[test]
+    fn toast_max_toasts_prefers_evicting_auto_closing_toasts_over_pinned() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+        store.set_window_max_toasts(window, Some(2));
+
+        let pinned = store.upsert_toast(window, ToastRequest::new("Pinned").duration(None), None);
+        let auto0 = store.upsert_toast(
+            window,
+            ToastRequest::new("Auto0").duration(Some(Duration::from_secs(3))),
+            None,
+        );
+        let auto1 = store.upsert_toast(
+            window,
+            ToastRequest::new("Auto1").duration(Some(Duration::from_secs(3))),
+            None,
+        );
+
+        assert_eq!(pinned.evicted, Vec::new());
+        assert_eq!(auto0.evicted, Vec::new());
+        assert_eq!(auto1.evicted, vec![auto0.id]);
+    }
+
+    #[test]
+    fn toast_max_toasts_evicts_pinned_when_all_are_pinned() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+        store.set_window_max_toasts(window, Some(1));
+
+        let a = store.upsert_toast(window, ToastRequest::new("A").duration(None), None);
+        let b = store.upsert_toast(window, ToastRequest::new("B").duration(None), None);
+
+        assert_eq!(a.evicted, Vec::new());
+        assert_eq!(b.evicted, vec![a.id]);
     }
 }
