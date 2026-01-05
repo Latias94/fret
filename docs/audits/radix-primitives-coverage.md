@@ -38,14 +38,12 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 - `tabs` -> `ecosystem/fret-ui-kit/src/primitives/tabs.rs`
 - `toggle` -> `ecosystem/fret-ui-kit/src/primitives/toggle.rs`
 - `toggle-group` -> `ecosystem/fret-ui-kit/src/primitives/toggle_group.rs`
+- `tooltip` -> `ecosystem/fret-ui-kit/src/primitives/tooltip.rs` (facade over provider + delay-group + popper)
 - `visually-hidden` -> `ecosystem/fret-ui-kit/src/primitives/visually_hidden.rs`
 
 ### Partially implemented (split / naming drift)
 
-- `tooltip` -> currently split into:
-  - `ecosystem/fret-ui-kit/src/primitives/tooltip_provider.rs`
-  - `ecosystem/fret-ui-kit/src/primitives/tooltip_delay_group.rs`
-  - (missing) a Radix-named `primitives/tooltip.rs` facade that composes provider + delay + popper.
+None currently tracked.
 
 ### Implemented in shadcn layer (should downshift)
 
