@@ -521,6 +521,7 @@ fn menu_row_children<H: UiHost>(
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(16.0));
                             layout.size.height = Length::Px(Px(16.0));
+                            layout.flex.shrink = 0.0;
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
@@ -555,12 +556,16 @@ fn menu_row_children<H: UiHost>(
                 layout: {
                     let mut layout = LayoutStyle::default();
                     layout.size.width = Length::Fill;
+                    layout.size.min_width = Some(Px(0.0));
+                    layout.flex.grow = 1.0;
+                    layout.flex.shrink = 1.0;
+                    layout.flex.basis = Length::Px(Px(0.0));
                     layout
                 },
                 text: label.clone(),
                 style: Some(text_style.clone()),
                 wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
+                overflow: TextOverflow::Clip,
                 color: Some(if disabled { text_disabled } else { row_fg }),
             }));
 
@@ -605,6 +610,7 @@ fn submenu_chevron_right_icon<H: UiHost>(
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(16.0));
                 layout.size.height = Length::Px(Px(16.0));
+                layout.flex.shrink = 0.0;
                 layout
             },
             direction: fret_core::Axis::Horizontal,
@@ -632,6 +638,7 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(16.0));
                 layout.size.height = Length::Px(Px(16.0));
+                layout.flex.shrink = 0.0;
                 layout
             },
             direction: fret_core::Axis::Horizontal,
@@ -652,6 +659,7 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(16.0));
                 layout.size.height = Length::Px(Px(16.0));
+                layout.flex.shrink = 0.0;
                 layout
             },
             direction: fret_core::Axis::Horizontal,
@@ -798,7 +806,7 @@ fn context_menu_submenu_panel<H: UiHost>(
                                         letter_spacing_em: None,
                                     }),
                                     wrap: TextWrap::None,
-                                    overflow: TextOverflow::Ellipsis,
+                                    overflow: TextOverflow::Clip,
                                     color: Some(label_fg),
                                 })]
                             },
@@ -813,6 +821,13 @@ fn context_menu_submenu_panel<H: UiHost>(
                                     let mut layout = LayoutStyle::default();
                                     layout.size.width = Length::Fill;
                                     layout.size.height = Length::Px(Px(1.0));
+                                    // new-york-v4: `Separator` uses `-mx-1 my-1`.
+                                    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                    layout.margin.right =
+                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                    layout.margin.top = fret_ui::element::MarginEdge::Px(Px(4.0));
+                                    layout.margin.bottom =
+                                        fret_ui::element::MarginEdge::Px(Px(4.0));
                                     layout
                                 },
                                 padding: Edges::all(Px(0.0)),
@@ -1548,7 +1563,7 @@ impl ContextMenu {
                                                                         letter_spacing_em: None,
                                                                     }),
                                                                     wrap: TextWrap::None,
-                                                                    overflow: TextOverflow::Ellipsis,
+                                                                    overflow: TextOverflow::Clip,
                                                                     color: Some(label_fg),
                                                                 })]
                                                             },
@@ -1569,6 +1584,15 @@ impl ContextMenu {
                                                                     layout.size.width = Length::Fill;
                                                                     layout.size.height =
                                                                         Length::Px(Px(1.0));
+                                                                    // new-york-v4: `Separator` uses `-mx-1 my-1`.
+                                                                    layout.margin.left =
+                                                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                    layout.margin.right =
+                                                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                    layout.margin.top =
+                                                                        fret_ui::element::MarginEdge::Px(Px(4.0));
+                                                                    layout.margin.bottom =
+                                                                        fret_ui::element::MarginEdge::Px(Px(4.0));
                                                                     layout
                                                                 },
                                                                 padding: Edges::all(Px(0.0)),
@@ -1975,27 +1999,118 @@ impl ContextMenu {
 
                     let mut children = vec![content];
                     let desired = Size::new(Px(192.0), Px(1.0e9));
+                    let submenu_open_value = cx
+                        .app
+                        .models_mut()
+                        .read(&submenu_for_panel.open_value, |v| v.clone())
+                        .ok()
+                        .flatten();
+                    let submenu_is_open = submenu_open_value.is_some();
+                    let submenu_motion = OverlayController::transition_with_durations_and_easing(
+                        cx,
+                        submenu_is_open,
+                        overlay_motion::SHADCN_MOTION_TICKS_100,
+                        overlay_motion::SHADCN_MOTION_TICKS_100,
+                        overlay_motion::shadcn_ease,
+                    );
+
                     let open_submenu = menu::sub::with_open_submenu(
                         cx,
                         &submenu_for_panel,
                         outer,
                         desired,
-                        |_cx, open_value, geometry| (open_value, geometry.floating),
+                        |_cx, open_value, geometry| (open_value, geometry),
                     );
 
-                    if let Some((open_value, placed)) = open_submenu {
+                    #[derive(Default)]
+                    struct SubmenuLast {
+                        open_value: Option<Arc<str>>,
+                        geometry: Option<menu::sub::MenuSubmenuGeometry>,
+                    }
+
+                    let (last_value, last_geometry) = cx.with_state(SubmenuLast::default, |st| {
+                        if let Some((open_value, geometry)) = open_submenu.as_ref() {
+                            st.open_value = Some(open_value.clone());
+                            st.geometry = Some(*geometry);
+                        }
+                        (st.open_value.clone(), st.geometry)
+                    });
+
+                    if submenu_motion.present {
+                        let open_value = open_submenu
+                            .as_ref()
+                            .map(|(open_value, _)| open_value.clone())
+                            .or(last_value);
+                        let geometry = open_submenu
+                            .map(|(_, geometry)| geometry)
+                            .or(last_geometry);
+
+                        let (Some(open_value), Some(geometry)) = (open_value, geometry) else {
+                            return (children, Some(dismissible_on_pointer_move));
+                        };
+
                         if let Some(submenu_entries) =
                             find_submenu_entries_by_value(&entries_for_submenu, open_value.as_ref())
                         {
-                            children.push(context_menu_submenu_panel(
+                            let submenu_panel = context_menu_submenu_panel(
                                 cx,
-                                placed,
+                                geometry.floating,
                                 submenu_entries,
                                 open_for_submenu.clone(),
                                 typeahead_timeout_ticks,
                                 align_leading_icons,
                                 submenu_for_panel.clone(),
-                            ));
+                            );
+
+                            let side =
+                                overlay_motion::anchored_side(geometry.reference, geometry.floating);
+                            let origin = overlay_motion::shadcn_transform_origin_for_anchored_rect(
+                                geometry.reference,
+                                geometry.floating,
+                                side,
+                            );
+                            let zoom = overlay_motion::shadcn_zoom_transform(
+                                origin,
+                                submenu_motion.progress,
+                            );
+                            let slide = overlay_motion::shadcn_enter_slide_transform(
+                                side,
+                                submenu_motion.progress,
+                                true,
+                            );
+                            let transform = slide * zoom;
+
+                            let opacity_layout = LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            };
+                            let opacity = submenu_motion.progress;
+                            let submenu_panel = cx.interactivity_gate(
+                                submenu_motion.present,
+                                submenu_is_open,
+                                move |cx| {
+                                    vec![cx.opacity_props(
+                                        OpacityProps {
+                                            layout: opacity_layout.clone(),
+                                            opacity,
+                                        },
+                                        move |cx| {
+                                            vec![cx.visual_transform_props(
+                                                VisualTransformProps {
+                                                    layout: opacity_layout,
+                                                    transform,
+                                                },
+                                                move |_cx| vec![submenu_panel],
+                                            )]
+                                        },
+                                    )]
+                                },
+                            );
+                            children.push(submenu_panel);
                         }
                     }
 

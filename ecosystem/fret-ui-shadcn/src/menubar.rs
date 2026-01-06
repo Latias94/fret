@@ -508,6 +508,7 @@ fn menu_row_children<H: UiHost>(
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(16.0));
                             layout.size.height = Length::Px(Px(16.0));
+                            layout.flex.shrink = 0.0;
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
@@ -542,6 +543,10 @@ fn menu_row_children<H: UiHost>(
                 layout: {
                     let mut layout = LayoutStyle::default();
                     layout.size.width = Length::Fill;
+                    layout.size.min_width = Some(Px(0.0));
+                    layout.flex.grow = 1.0;
+                    layout.flex.shrink = 1.0;
+                    layout.flex.basis = Length::Px(Px(0.0));
                     layout
                 },
                 text: label.clone(),
@@ -586,6 +591,7 @@ fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(16.0));
                 layout.size.height = Length::Px(Px(16.0));
+                layout.flex.shrink = 0.0;
                 layout
             },
             direction: fret_core::Axis::Horizontal,
@@ -606,6 +612,7 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(16.0));
                 layout.size.height = Length::Px(Px(16.0));
+                layout.flex.shrink = 0.0;
                 layout
             },
             direction: fret_core::Axis::Horizontal,
@@ -630,6 +637,7 @@ fn submenu_chevron_right_text<H: UiHost>(
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(16.0));
                 layout.size.height = Length::Px(Px(16.0));
+                layout.flex.shrink = 0.0;
                 layout
             },
             direction: fret_core::Axis::Horizontal,
@@ -1155,18 +1163,27 @@ impl MenubarMenuEntries {
                                                                      MenubarEntry::Separator => {
                                                                          out.push(cx.container(
                                                                              ContainerProps {
-                                                                    layout: {
-                                                                        let mut layout =
-                                                                            LayoutStyle::default();
-                                                                        layout.size.width =
-                                                                            Length::Fill;
-                                                                        layout.size.height =
-                                                                            Length::Px(Px(1.0));
-                                                                        layout
-                                                                    },
-                                                                    background: Some(border),
-                                                                    ..Default::default()
-                                                                },
+                                                                 layout: {
+                                                                     let mut layout =
+                                                                         LayoutStyle::default();
+                                                                     layout.size.width =
+                                                                         Length::Fill;
+                                                                     layout.size.height =
+                                                                         Length::Px(Px(1.0));
+                                                                     // new-york-v4: `Separator` uses `-mx-1 my-1`.
+                                                                     layout.margin.left =
+                                                                         fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                     layout.margin.right =
+                                                                         fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                     layout.margin.top =
+                                                                         fret_ui::element::MarginEdge::Px(Px(4.0));
+                                                                     layout.margin.bottom =
+                                                                         fret_ui::element::MarginEdge::Px(Px(4.0));
+                                                                     layout
+                                                                 },
+                                                                 background: Some(border),
+                                                                 ..Default::default()
+                                                             },
                                                                 |_| Vec::new(),
                                                             ));
                                                         }
@@ -1908,6 +1925,11 @@ impl MenubarMenuEntries {
                                                                                         Length::Fill;
                                                                                     layout.size.height =
                                                                                         Length::Px(Px(1.0));
+                                                                                    // new-york-v4: `Separator` uses `-mx-1 my-1`.
+                                                                                    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                                    layout.margin.right = fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                                    layout.margin.top = fret_ui::element::MarginEdge::Px(Px(4.0));
+                                                                                    layout.margin.bottom = fret_ui::element::MarginEdge::Px(Px(4.0));
                                                                                     layout
                                                                                 },
                                                                                 background: Some(border),
