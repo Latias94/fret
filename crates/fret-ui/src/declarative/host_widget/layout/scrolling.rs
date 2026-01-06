@@ -15,7 +15,8 @@ impl ElementHostWidget {
             self.element,
             crate::element::VirtualListState::default,
             |state| {
-                state.metrics.ensure(
+                state.metrics.ensure_with_mode(
+                    props.measure_mode,
                     props.len,
                     props.estimate_row_height,
                     props.gap,

@@ -1,6 +1,7 @@
 use fret_core::Px;
 use std::sync::Arc;
 
+use crate::element::VirtualListMeasureMode;
 use crate::scroll::ScrollStrategy;
 
 const VIRTUALIZER_PX_SCALE: f32 = 64.0;
@@ -55,8 +56,18 @@ pub struct VirtualListMetrics {
     estimate: Px,
     gap: Px,
     scroll_margin: Px,
+    mode: VirtualListMeasureMode,
     inner: virtualizer::Virtualizer<crate::ItemKey>,
     keys_signature: (u64, usize),
+    fixed: FixedMetrics,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct FixedMetrics {
+    count: usize,
+    estimate_units: u32,
+    gap_units: u32,
+    padding_start_units: u32,
 }
 
 impl Default for VirtualListMetrics {
@@ -66,18 +77,47 @@ impl Default for VirtualListMetrics {
             estimate: Px(0.0),
             gap: Px(0.0),
             scroll_margin: Px(0.0),
+            mode: VirtualListMeasureMode::Measured,
             inner: virtualizer::Virtualizer::new(options),
             keys_signature: (0, 0),
+            fixed: FixedMetrics {
+                count: 0,
+                estimate_units: 0,
+                gap_units: 0,
+                padding_start_units: 0,
+            },
         }
     }
 }
 
 impl VirtualListMetrics {
+    pub fn ensure_with_mode(
+        &mut self,
+        mode: VirtualListMeasureMode,
+        len: usize,
+        estimate: Px,
+        gap: Px,
+        scroll_margin: Px,
+    ) {
+        match mode {
+            VirtualListMeasureMode::Measured => {
+                self.ensure_measured(len, estimate, gap, scroll_margin)
+            }
+            VirtualListMeasureMode::Fixed => self.ensure_fixed(len, estimate, gap, scroll_margin),
+        }
+    }
+
     pub fn ensure(&mut self, len: usize, estimate: Px, gap: Px, scroll_margin: Px) {
+        self.ensure_measured(len, estimate, gap, scroll_margin);
+    }
+
+    fn ensure_fixed(&mut self, len: usize, estimate: Px, gap: Px, scroll_margin: Px) {
         let estimate = Px(estimate.0.max(0.0));
         let gap = Px(gap.0.max(0.0));
         let scroll_margin = Px(scroll_margin.0.max(0.0));
-        if self.inner.options().count == len
+
+        if self.mode == VirtualListMeasureMode::Fixed
+            && self.fixed.count == len
             && self.estimate == estimate
             && self.gap == gap
             && self.scroll_margin == scroll_margin
@@ -85,6 +125,33 @@ impl VirtualListMetrics {
             return;
         }
 
+        self.mode = VirtualListMeasureMode::Fixed;
+        self.estimate = estimate;
+        self.gap = gap;
+        self.scroll_margin = scroll_margin;
+
+        self.fixed = FixedMetrics {
+            count: len,
+            estimate_units: px_to_units_u32(estimate),
+            gap_units: px_to_units_u32(gap),
+            padding_start_units: px_to_units_u32(scroll_margin),
+        };
+    }
+
+    fn ensure_measured(&mut self, len: usize, estimate: Px, gap: Px, scroll_margin: Px) {
+        let estimate = Px(estimate.0.max(0.0));
+        let gap = Px(gap.0.max(0.0));
+        let scroll_margin = Px(scroll_margin.0.max(0.0));
+        if self.mode == VirtualListMeasureMode::Measured
+            && self.inner.options().count == len
+            && self.estimate == estimate
+            && self.gap == gap
+            && self.scroll_margin == scroll_margin
+        {
+            return;
+        }
+
+        self.mode = VirtualListMeasureMode::Measured;
         self.estimate = estimate;
         self.gap = gap;
         self.scroll_margin = scroll_margin;
@@ -109,6 +176,11 @@ impl VirtualListMetrics {
             return;
         }
 
+        if self.mode == VirtualListMeasureMode::Fixed {
+            self.keys_signature = signature;
+            return;
+        }
+
         let keys = Arc::new(keys.to_vec());
         let mut options = self.inner.options().clone();
         options.get_item_key = Arc::new({
@@ -120,7 +192,25 @@ impl VirtualListMetrics {
     }
 
     pub fn total_height(&self) -> Px {
-        units_u64_to_px(self.inner.total_size())
+        match self.mode {
+            VirtualListMeasureMode::Measured => units_u64_to_px(self.inner.total_size()),
+            VirtualListMeasureMode::Fixed => {
+                let count = self.fixed.count as u64;
+                if count == 0 {
+                    return Px(0.0);
+                }
+
+                let estimate = self.fixed.estimate_units as u64;
+                let gap = self.fixed.gap_units as u64;
+                let padding_start = self.fixed.padding_start_units as u64;
+
+                let gaps = count.saturating_sub(1);
+                let total_units = padding_start
+                    .saturating_add(count.saturating_mul(estimate))
+                    .saturating_add(gaps.saturating_mul(gap));
+                units_u64_to_px(total_units)
+            }
+        }
     }
 
     pub fn virtual_item(&self, index: usize, key: crate::ItemKey) -> VirtualItem {
@@ -149,61 +239,149 @@ impl VirtualListMetrics {
     }
 
     pub fn height_at(&self, index: usize) -> Px {
-        self.inner
-            .item_size(index)
-            .map(units_u32_to_px)
-            .unwrap_or(Px(0.0))
+        match self.mode {
+            VirtualListMeasureMode::Measured => self
+                .inner
+                .item_size(index)
+                .map(units_u32_to_px)
+                .unwrap_or(Px(0.0)),
+            VirtualListMeasureMode::Fixed => {
+                if index >= self.fixed.count {
+                    return Px(0.0);
+                }
+                units_u32_to_px(self.fixed.estimate_units)
+            }
+        }
     }
 
     pub fn offset_for_index(&self, index: usize) -> Px {
-        if index >= self.inner.options().count {
-            return self.total_height();
+        match self.mode {
+            VirtualListMeasureMode::Measured => {
+                if index >= self.inner.options().count {
+                    return self.total_height();
+                }
+                self.inner
+                    .item_start(index)
+                    .map(units_u64_to_px)
+                    .unwrap_or(Px(0.0))
+            }
+            VirtualListMeasureMode::Fixed => {
+                if index >= self.fixed.count {
+                    return self.total_height();
+                }
+
+                let stride =
+                    (self.fixed.estimate_units as u64).saturating_add(self.fixed.gap_units as u64);
+                let start_units = (self.fixed.padding_start_units as u64)
+                    .saturating_add((index as u64).saturating_mul(stride));
+                units_u64_to_px(start_units)
+            }
         }
-        self.inner
-            .item_start(index)
-            .map(units_u64_to_px)
-            .unwrap_or(Px(0.0))
     }
 
     pub fn end_for_index(&self, index: usize) -> Px {
-        if index >= self.inner.options().count {
-            return self.total_height();
+        match self.mode {
+            VirtualListMeasureMode::Measured => {
+                if index >= self.inner.options().count {
+                    return self.total_height();
+                }
+                self.inner
+                    .item_end(index)
+                    .map(units_u64_to_px)
+                    .unwrap_or(Px(0.0))
+            }
+            VirtualListMeasureMode::Fixed => {
+                if index >= self.fixed.count {
+                    return self.total_height();
+                }
+                let start = px_to_units_u64(self.offset_for_index(index));
+                let end = start.saturating_add(self.fixed.estimate_units as u64);
+                units_u64_to_px(end)
+            }
         }
-        self.inner
-            .item_end(index)
-            .map(units_u64_to_px)
-            .unwrap_or(Px(0.0))
     }
 
     pub fn index_for_offset(&self, offset: Px) -> usize {
-        if self.inner.options().count == 0 {
-            return 0;
+        match self.mode {
+            VirtualListMeasureMode::Measured => {
+                if self.inner.options().count == 0 {
+                    return 0;
+                }
+                if offset.0 >= self.total_height().0 {
+                    return self.inner.options().count;
+                }
+                self.inner
+                    .index_at_offset(px_to_units_u64(offset))
+                    .unwrap_or(0)
+            }
+            VirtualListMeasureMode::Fixed => {
+                let count = self.fixed.count;
+                if count == 0 {
+                    return 0;
+                }
+                if offset.0 >= self.total_height().0 {
+                    return count;
+                }
+
+                let offset_units = px_to_units_u64(offset);
+                let padding_start = self.fixed.padding_start_units as u64;
+                if offset_units <= padding_start {
+                    return 0;
+                }
+                let stride =
+                    (self.fixed.estimate_units as u64).saturating_add(self.fixed.gap_units as u64);
+                if stride == 0 {
+                    return 0;
+                }
+
+                let adjusted = offset_units.saturating_sub(padding_start);
+                let idx = adjusted / stride;
+                (idx as usize).min(count)
+            }
         }
-        if offset.0 >= self.total_height().0 {
-            return self.inner.options().count;
-        }
-        self.inner
-            .index_at_offset(px_to_units_u64(offset))
-            .unwrap_or(0)
     }
 
     pub fn end_index_for_offset(&self, offset: Px) -> usize {
-        if self.inner.options().count == 0 {
-            return 0;
-        }
-        let idx = self.index_for_offset(offset);
-        if idx >= self.inner.options().count {
-            return self.inner.options().count;
-        }
-        let start = self.offset_for_index(idx).0;
-        if start < offset.0 {
-            idx.saturating_add(1).min(self.inner.options().count)
-        } else {
-            idx
+        match self.mode {
+            VirtualListMeasureMode::Measured => {
+                if self.inner.options().count == 0 {
+                    return 0;
+                }
+                let idx = self.index_for_offset(offset);
+                if idx >= self.inner.options().count {
+                    return self.inner.options().count;
+                }
+                let start = self.offset_for_index(idx).0;
+                if start < offset.0 {
+                    idx.saturating_add(1).min(self.inner.options().count)
+                } else {
+                    idx
+                }
+            }
+            VirtualListMeasureMode::Fixed => {
+                let count = self.fixed.count;
+                if count == 0 {
+                    return 0;
+                }
+                let idx = self.index_for_offset(offset);
+                if idx >= count {
+                    return count;
+                }
+                let start = self.offset_for_index(idx).0;
+                if start < offset.0 {
+                    idx.saturating_add(1).min(count)
+                } else {
+                    idx
+                }
+            }
         }
     }
 
     pub fn set_measured_height(&mut self, index: usize, height: Px) -> bool {
+        if self.mode == VirtualListMeasureMode::Fixed {
+            return false;
+        }
+
         let Some(old_units) = self.inner.item_size(index) else {
             return false;
         };
@@ -221,10 +399,8 @@ impl VirtualListMetrics {
 
     pub fn clamp_offset(&self, mut offset_y: Px, viewport_h: Px) -> Px {
         let viewport_h = Px(viewport_h.0.max(0.0));
-        let max_offset_units = self
-            .inner
-            .total_size()
-            .saturating_sub(px_to_units_u64(viewport_h));
+        let total = px_to_units_u64(self.total_height());
+        let max_offset_units = total.saturating_sub(px_to_units_u64(viewport_h));
         let max_offset = units_u64_to_px(max_offset_units);
         offset_y = Px(offset_y.0.max(0.0));
         Px(offset_y.0.min(max_offset.0))
@@ -242,19 +418,20 @@ impl VirtualListMetrics {
         overscan: usize,
     ) -> Option<VirtualRange> {
         let viewport_h = Px(viewport_h.0.max(0.0));
-        let count = self.inner.options().count;
+        let count = match self.mode {
+            VirtualListMeasureMode::Measured => self.inner.options().count,
+            VirtualListMeasureMode::Fixed => self.fixed.count,
+        };
         if viewport_h.0 <= 0.0 || count == 0 {
             return None;
         }
 
-        let offset_units = px_to_units_u64(offset_y);
-        let viewport_units = px_to_units_u32(viewport_h);
-        let visible = self.inner.visible_range_for(offset_units, viewport_units);
-        if visible.is_empty() {
+        let start = self.index_for_offset(offset_y);
+        if start >= count {
             return None;
         }
-        let start = visible.start_index;
-        let end = visible.end_index.saturating_sub(1);
+        let end_exclusive = self.end_index_for_offset(Px(offset_y.0 + viewport_h.0));
+        let end = end_exclusive.saturating_sub(1).min(count.saturating_sub(1));
 
         Some(VirtualRange {
             start_index: start,
@@ -276,7 +453,10 @@ impl VirtualListMetrics {
             return current_offset_y;
         }
 
-        let count = self.inner.options().count;
+        let count = match self.mode {
+            VirtualListMeasureMode::Measured => self.inner.options().count,
+            VirtualListMeasureMode::Fixed => self.fixed.count,
+        };
         if count == 0 {
             return current_offset_y;
         }
@@ -316,7 +496,7 @@ impl VirtualListMetrics {
         scroll_margin: Px,
     ) {
         let len = heights.len();
-        self.ensure(len, estimate, gap, scroll_margin);
+        self.ensure_measured(len, estimate, gap, scroll_margin);
 
         let mut entries = Vec::new();
         for (index, height) in heights.into_iter().enumerate() {
@@ -397,5 +577,36 @@ mod tests {
             metrics.scroll_offset_for_item(9, Px(20.0), Px(0.0), ScrollStrategy::Nearest),
             Px(80.0)
         );
+    }
+
+    #[test]
+    fn fixed_mode_range_math_matches_uniform_metrics() {
+        let mut metrics = VirtualListMetrics::default();
+        metrics.ensure_with_mode(
+            VirtualListMeasureMode::Fixed,
+            100,
+            Px(10.0),
+            Px(0.0),
+            Px(0.0),
+        );
+
+        assert!((metrics.total_height().0 - 1000.0).abs() < 0.01);
+        assert!((metrics.offset_for_index(0).0 - 0.0).abs() < 0.01);
+        assert!((metrics.offset_for_index(6).0 - 60.0).abs() < 0.01);
+        assert!((metrics.offset_for_index(100).0 - 1000.0).abs() < 0.01);
+
+        assert_eq!(metrics.index_for_offset(Px(0.0)), 0);
+        assert_eq!(metrics.index_for_offset(Px(0.1)), 0);
+        assert_eq!(metrics.index_for_offset(Px(9.9)), 0);
+        assert_eq!(metrics.index_for_offset(Px(10.0)), 1);
+        assert_eq!(metrics.index_for_offset(Px(59.9)), 5);
+        assert_eq!(metrics.index_for_offset(Px(60.0)), 6);
+        assert_eq!(metrics.end_index_for_offset(Px(50.0)), 5);
+        assert_eq!(metrics.end_index_for_offset(Px(50.1)), 6);
+
+        let r0 = metrics.visible_range(Px(0.0), Px(25.0), 0).expect("range");
+        assert_eq!(r0.start_index, 0);
+        assert_eq!(r0.end_index, 2);
+        assert_eq!(r0.count, 100);
     }
 }

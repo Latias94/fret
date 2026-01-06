@@ -1296,7 +1296,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     options.scroll_margin,
                 );
 
-                state.metrics.ensure(
+                state.metrics.ensure_with_mode(
+                    options.measure_mode,
                     len,
                     options.estimate_row_height,
                     options.gap,
