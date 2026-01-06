@@ -35,6 +35,12 @@ fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c
 }
 
+fn is_dark_background(theme: &Theme) -> bool {
+    let bg = theme.color_required("background");
+    let luma = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
+    luma < 0.5
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum DropdownMenuAlign {
     #[default]
@@ -1103,7 +1109,17 @@ impl DropdownMenu {
                                                     let icon_muted_fg =
                                                         theme.color_required("muted-foreground");
                                                     let destructive_fg = theme.color_required("destructive");
-                                                    let destructive_bg = alpha_mul(destructive_fg, 0.10);
+                                                    let destructive_bg_alpha =
+                                                        if is_dark_background(&theme) { 0.20 } else { 0.10 };
+                                                    let destructive_bg = theme
+                                                        .color_by_key(if destructive_bg_alpha >= 0.2 {
+                                                            "destructive/20"
+                                                        } else {
+                                                            "destructive/10"
+                                                        })
+                                                        .unwrap_or_else(|| {
+                                                            alpha_mul(destructive_fg, destructive_bg_alpha)
+                                                        });
 
                                                     let text_style = TextStyle {
                                                         font: fret_core::FontId::default(),
@@ -1763,7 +1779,17 @@ impl DropdownMenu {
                                             let text_disabled =
                                                 alpha_mul(theme.color_required("foreground"), 0.5);
                                             let destructive_fg = theme.color_required("destructive");
-                                            let destructive_bg = alpha_mul(destructive_fg, 0.10);
+                                            let destructive_bg_alpha =
+                                                if is_dark_background(&theme) { 0.20 } else { 0.10 };
+                                            let destructive_bg = theme
+                                                .color_by_key(if destructive_bg_alpha >= 0.2 {
+                                                    "destructive/20"
+                                                } else {
+                                                    "destructive/10"
+                                                })
+                                                .unwrap_or_else(|| {
+                                                    alpha_mul(destructive_fg, destructive_bg_alpha)
+                                                });
                                             let label_fg = theme.color_required("muted-foreground");
 
                                             let text_style = TextStyle {
