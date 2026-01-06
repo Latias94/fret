@@ -215,8 +215,6 @@ impl DataGrid {
                     layout: stack_layout,
                 },
                 move |cx| {
-                    let stack_id = cx.root_id();
-
                     let col_widths = col_widths.clone();
 
                     let header = {
@@ -271,7 +269,7 @@ impl DataGrid {
                         cx.wheel_region(
                             WheelRegionProps {
                                 axis: ScrollAxis::Y,
-                                scroll_target: Some(stack_id),
+                                scroll_target: None,
                                 scroll_handle: row_handle.base_handle().clone(),
                                 ..Default::default()
                             },
@@ -419,7 +417,7 @@ impl DataGrid {
                         out.push(cx.scrollbar(ScrollbarProps {
                             layout: scrollbar_layout,
                             axis: ScrollbarAxis::Vertical,
-                            scroll_target: Some(stack_id),
+                            scroll_target: None,
                             scroll_handle: row_handle.base_handle().clone(),
                             style: ScrollbarStyle {
                                 thumb,
@@ -452,7 +450,7 @@ impl DataGrid {
                         out.push(cx.scrollbar(ScrollbarProps {
                             layout: scrollbar_layout,
                             axis: ScrollbarAxis::Horizontal,
-                            scroll_target: Some(stack_id),
+                            scroll_target: None,
                             scroll_handle: col_handle.base_handle().clone(),
                             style: ScrollbarStyle {
                                 thumb,
