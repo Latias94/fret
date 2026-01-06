@@ -18,7 +18,7 @@ use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::plot::axis::{AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
 use crate::plot::decimate::{
     SamplePoint, decimate_polyline, decimate_samples, decimate_shaded_band, device_point_budget,
-    view_x_range,
+    view_x_range, visible_sorted_slice,
 };
 use crate::plot::view::{
     clamp_view_to_data_scaled, clamp_zoom_factors, data_rect_from_plot_points_scaled,
@@ -258,6 +258,166 @@ impl ScatterPlotModel {
             |s| s.y_axis,
             |s| &s.data,
         );
+        let y2 = bounds_right.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+
+        Self {
+            data_bounds: primary,
+            data_bounds_y2: y2,
+            series,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ErrorBar {
+    pub neg: f64,
+    pub pos: f64,
+}
+
+impl ErrorBar {
+    pub fn symmetric(v: f64) -> Self {
+        let v = v.abs();
+        Self { neg: v, pos: v }
+    }
+
+    pub fn new(neg: f64, pos: f64) -> Self {
+        Self {
+            neg: neg.abs(),
+            pos: pos.abs(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ErrorBarsSeries {
+    pub id: SeriesId,
+    pub label: Arc<str>,
+    /// Center points (X,Y).
+    pub data: Series,
+    pub y_axis: YAxis,
+    pub stroke_color: Option<Color>,
+    /// Optional per-point error bars in X.
+    ///
+    /// The slice is indexed by point index and is expected to match `data.len()`.
+    pub x_errors: Option<Arc<[ErrorBar]>>,
+    /// Optional per-point error bars in Y.
+    ///
+    /// The slice is indexed by point index and is expected to match `data.len()`.
+    pub y_errors: Option<Arc<[ErrorBar]>>,
+    /// Error bar cap half-length in plot pixels.
+    pub cap_size: Px,
+    pub show_caps: bool,
+    /// Cross marker radius in plot pixels.
+    pub marker_radius: Px,
+    pub show_markers: bool,
+}
+
+impl ErrorBarsSeries {
+    pub fn new(label: impl Into<Arc<str>>, data: Series) -> Self {
+        let label = label.into();
+        Self {
+            id: SeriesId::from_label(&label),
+            label,
+            data,
+            y_axis: YAxis::Left,
+            stroke_color: None,
+            x_errors: None,
+            y_errors: None,
+            cap_size: Px(6.0),
+            show_caps: true,
+            marker_radius: Px(4.0),
+            show_markers: true,
+        }
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.stroke_color = Some(color);
+        self
+    }
+
+    pub fn id(mut self, id: SeriesId) -> Self {
+        self.id = id;
+        self
+    }
+
+    pub fn y_axis(mut self, axis: YAxis) -> Self {
+        self.y_axis = axis;
+        self
+    }
+
+    pub fn x_errors(mut self, errors: Arc<[ErrorBar]>) -> Self {
+        self.x_errors = Some(errors);
+        self
+    }
+
+    pub fn y_errors(mut self, errors: Arc<[ErrorBar]>) -> Self {
+        self.y_errors = Some(errors);
+        self
+    }
+
+    pub fn cap_size(mut self, cap: Px) -> Self {
+        self.cap_size = cap;
+        self
+    }
+
+    pub fn show_caps(mut self, show: bool) -> Self {
+        self.show_caps = show;
+        self
+    }
+
+    pub fn marker_radius(mut self, radius: Px) -> Self {
+        self.marker_radius = radius;
+        self
+    }
+
+    pub fn show_markers(mut self, show: bool) -> Self {
+        self.show_markers = show;
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ErrorBarsPlotModel {
+    pub data_bounds: DataRect,
+    pub data_bounds_y2: Option<DataRect>,
+    pub series: Vec<ErrorBarsSeries>,
+}
+
+impl ErrorBarsPlotModel {
+    pub fn from_series(series: Vec<ErrorBarsSeries>) -> Self {
+        let bounds_all = compute_data_bounds_from_error_bars_series(&series, |_| true);
+        let bounds_left =
+            compute_data_bounds_from_error_bars_series(&series, |s| s.y_axis == YAxis::Left);
+        let bounds_right =
+            compute_data_bounds_from_error_bars_series(&series, |s| s.y_axis == YAxis::Right);
+
+        let fallback = DataRect {
+            x_min: 0.0,
+            x_max: 1.0,
+            y_min: 0.0,
+            y_max: 1.0,
+        };
+
+        let x_source = bounds_all
+            .or(bounds_left)
+            .or(bounds_right)
+            .unwrap_or(fallback);
+        let y_source = bounds_left.or(bounds_right).unwrap_or(x_source);
+
+        let primary = sanitize_data_rect(DataRect {
+            x_min: x_source.x_min,
+            x_max: x_source.x_max,
+            y_min: y_source.y_min,
+            y_max: y_source.y_max,
+        });
+
         let y2 = bounds_right.map(|b| {
             sanitize_data_rect(DataRect {
                 x_min: primary.x_min,
@@ -1072,6 +1232,125 @@ fn scatter_marker_commands(samples: &[SamplePoint], radius: Px) -> Vec<fret_core
     out
 }
 
+fn error_bars_commands(
+    series: &ErrorBarsSeries,
+    transform: PlotTransform,
+    view_bounds: DataRect,
+) -> Vec<fret_core::PathCommand> {
+    let len = series.data.len();
+    if len == 0 {
+        return Vec::new();
+    }
+
+    let cap = series.cap_size.0.max(0.0);
+    let marker = series.marker_radius.0.max(0.0);
+
+    let view_x_min = view_bounds.x_min.min(view_bounds.x_max);
+    let view_x_max = view_bounds.x_min.max(view_bounds.x_max);
+
+    let mut out: Vec<fret_core::PathCommand> = Vec::new();
+
+    let mut push_point = |idx: usize, p: DataPoint| {
+        if !p.x.is_finite() || !p.y.is_finite() {
+            return;
+        }
+
+        let Some(x_px) = transform.data_x_to_px(p.x) else {
+            return;
+        };
+
+        if let Some(y_err) = series.y_errors.as_ref().and_then(|e| e.get(idx).copied()) {
+            let y0 = p.y - y_err.neg.abs();
+            let y1 = p.y + y_err.pos.abs();
+
+            if let (Some(y0_px), Some(y1_px)) =
+                (transform.data_y_to_px(y0), transform.data_y_to_px(y1))
+            {
+                out.push(fret_core::PathCommand::MoveTo(Point::new(x_px, y0_px)));
+                out.push(fret_core::PathCommand::LineTo(Point::new(x_px, y1_px)));
+
+                if series.show_caps && cap > 0.0 {
+                    let x0 = Px(x_px.0 - cap);
+                    let x1 = Px(x_px.0 + cap);
+                    out.push(fret_core::PathCommand::MoveTo(Point::new(x0, y0_px)));
+                    out.push(fret_core::PathCommand::LineTo(Point::new(x1, y0_px)));
+                    out.push(fret_core::PathCommand::MoveTo(Point::new(x0, y1_px)));
+                    out.push(fret_core::PathCommand::LineTo(Point::new(x1, y1_px)));
+                }
+            }
+        }
+
+        if let Some(x_err) = series.x_errors.as_ref().and_then(|e| e.get(idx).copied()) {
+            if let Some(y_px) = transform.data_y_to_px(p.y) {
+                let x0 = p.x - x_err.neg.abs();
+                let x1 = p.x + x_err.pos.abs();
+
+                if let (Some(x0_px), Some(x1_px)) =
+                    (transform.data_x_to_px(x0), transform.data_x_to_px(x1))
+                {
+                    out.push(fret_core::PathCommand::MoveTo(Point::new(x0_px, y_px)));
+                    out.push(fret_core::PathCommand::LineTo(Point::new(x1_px, y_px)));
+
+                    if series.show_caps && cap > 0.0 {
+                        let y0 = Px(y_px.0 - cap);
+                        let y1 = Px(y_px.0 + cap);
+                        out.push(fret_core::PathCommand::MoveTo(Point::new(x0_px, y0)));
+                        out.push(fret_core::PathCommand::LineTo(Point::new(x0_px, y1)));
+                        out.push(fret_core::PathCommand::MoveTo(Point::new(x1_px, y0)));
+                        out.push(fret_core::PathCommand::LineTo(Point::new(x1_px, y1)));
+                    }
+                }
+            }
+        }
+
+        if series.show_markers && marker > 0.0 {
+            let Some(y_px) = transform.data_y_to_px(p.y) else {
+                return;
+            };
+
+            out.push(fret_core::PathCommand::MoveTo(Point::new(
+                Px(x_px.0 - marker),
+                y_px,
+            )));
+            out.push(fret_core::PathCommand::LineTo(Point::new(
+                Px(x_px.0 + marker),
+                y_px,
+            )));
+            out.push(fret_core::PathCommand::MoveTo(Point::new(
+                x_px,
+                Px(y_px.0 - marker),
+            )));
+            out.push(fret_core::PathCommand::LineTo(Point::new(
+                x_px,
+                Px(y_px.0 + marker),
+            )));
+        }
+    };
+
+    let data = &series.data;
+    if let Some(slice) = data.as_slice() {
+        if data.is_sorted_by_x() {
+            let (base, visible) = visible_sorted_slice(slice, view_x_min, view_x_max);
+            for (i, p) in visible.iter().copied().enumerate() {
+                push_point(base + i, p);
+            }
+        } else {
+            for (idx, p) in slice.iter().copied().enumerate() {
+                push_point(idx, p);
+            }
+        }
+    } else {
+        for idx in 0..data.len() {
+            let Some(p) = data.get(idx) else {
+                continue;
+            };
+            push_point(idx, p);
+        }
+    }
+
+    out
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseReadoutMode {
     /// Show mouse coordinates as a tooltip near the cursor.
@@ -1454,6 +1733,13 @@ pub struct ScatterPlotLayer {
 }
 
 pub type ScatterPlotCanvas = PlotCanvas<ScatterPlotLayer>;
+
+#[derive(Debug, Default)]
+pub struct ErrorBarsPlotLayer {
+    cached_paths: Vec<CachedPath>,
+}
+
+pub type ErrorBarsPlotCanvas = PlotCanvas<ErrorBarsPlotLayer>;
 
 #[derive(Debug, Default)]
 pub struct StairsPlotLayer {
@@ -2102,6 +2388,12 @@ impl PlotCanvas<LinePlotLayer> {
 impl PlotCanvas<ScatterPlotLayer> {
     pub fn new(model: Model<ScatterPlotModel>) -> Self {
         Self::with_layer(model, ScatterPlotLayer::default())
+    }
+}
+
+impl PlotCanvas<ErrorBarsPlotLayer> {
+    pub fn new(model: Model<ErrorBarsPlotModel>) -> Self {
+        Self::with_layer(model, ErrorBarsPlotLayer::default())
     }
 }
 
@@ -6110,6 +6402,277 @@ impl PlotLayer for ScatterPlotLayer {
     }
 }
 
+impl PlotLayer for ErrorBarsPlotLayer {
+    type Model = ErrorBarsPlotModel;
+
+    fn data_bounds(model: &Self::Model) -> DataRect {
+        model.data_bounds
+    }
+
+    fn data_bounds_y2(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y2
+    }
+
+    fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
+        model
+            .series
+            .iter()
+            .map(|s| SeriesMeta {
+                id: s.id,
+                label: s.label.clone(),
+                y_axis: s.y_axis,
+                stroke_color: s.stroke_color,
+            })
+            .collect()
+    }
+
+    fn series_label(model: &Self::Model, series_id: SeriesId) -> Option<String> {
+        model
+            .series
+            .iter()
+            .find(|s| s.id == series_id)
+            .map(|s| s.label.to_string())
+    }
+
+    fn series_y_axis(model: &Self::Model, series_id: SeriesId) -> YAxis {
+        model
+            .series
+            .iter()
+            .find(|s| s.id == series_id)
+            .map(|s| s.y_axis)
+            .unwrap_or(YAxis::Left)
+    }
+
+    fn cursor_readout(
+        model: &Self::Model,
+        args: PlotCursorReadoutArgs<'_>,
+    ) -> Vec<PlotCursorReadoutRow> {
+        let PlotCursorReadoutArgs {
+            x,
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            scale_factor,
+            hidden,
+        } = args;
+
+        if !x.is_finite() {
+            return Vec::new();
+        }
+
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let view_x = view_x_range(transform);
+        let view_x = (view_x.start().is_finite() && view_x.end().is_finite()).then_some(view_x);
+        let budget = device_point_budget(transform, scale_factor);
+
+        let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
+        for s in &model.series {
+            if hidden.contains(&s.id) {
+                continue;
+            }
+            let y = cursor_readout_y_at_x(&*s.data, x, view_x.clone(), budget);
+            out.push(PlotCursorReadoutRow {
+                series_id: s.id,
+                label: s.label.clone(),
+                y_axis: s.y_axis,
+                y,
+            });
+        }
+        out
+    }
+
+    fn paint_paths<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+    ) -> Vec<(SeriesId, PathId, Color)> {
+        let PlotPaintArgs {
+            model_revision,
+            plot,
+            view_bounds,
+            view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
+            style,
+            hidden,
+        } = args;
+
+        let scale_factor_bits = cx.scale_factor.to_bits();
+        let viewport_w_bits = plot.size.width.0.to_bits();
+        let viewport_h_bits = plot.size.height.0.to_bits();
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+
+        let series = &model.series;
+        let series_count = series.len();
+
+        if series_count == 0 {
+            for cached in self.cached_paths.drain(..) {
+                if let Some(id) = cached.id {
+                    cx.services.path().release(id);
+                }
+            }
+            return Vec::new();
+        }
+
+        let cached_ok = self.cached_paths.len() == series_count
+            && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                series.get(i).is_some_and(|s| {
+                    let expected_view_key = if s.y_axis == YAxis::Right {
+                        view_key_y2.unwrap_or(view_key_y1)
+                    } else {
+                        view_key_y1
+                    };
+                    s.id == c.series_id && c.view_key == expected_view_key
+                }) && c.model_revision == model_revision
+                    && c.scale_factor_bits == scale_factor_bits
+                    && c.viewport_w_bits == viewport_w_bits
+                    && c.viewport_h_bits == viewport_h_bits
+                    && c.stroke_width == style.stroke_width
+            });
+
+        if cached_ok {
+            let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
+            for (i, s) in series.iter().enumerate() {
+                if hidden.contains(&s.id) {
+                    continue;
+                }
+                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                    continue;
+                };
+                let color = resolve_series_color(i, style, series_count, s.stroke_color);
+                out.push((s.id, id, color));
+            }
+            return out;
+        }
+
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                cx.services.path().release(id);
+            }
+        }
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+        let transform_y1 = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y2_scale,
+        });
+
+        let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
+            width: style.stroke_width,
+        });
+        let constraints = PathConstraints {
+            scale_factor: cx.scale_factor,
+        };
+
+        let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
+        self.cached_paths = Vec::with_capacity(series_count);
+
+        for (series_index, s) in series.iter().enumerate() {
+            let series_id = s.id;
+            if hidden.contains(&series_id) {
+                let view_key = if s.y_axis == YAxis::Right {
+                    view_key_y2.unwrap_or(view_key_y1)
+                } else {
+                    view_key_y1
+                };
+                self.cached_paths.push(CachedPath {
+                    id: None,
+                    series_id,
+                    model_revision,
+                    scale_factor_bits,
+                    viewport_w_bits,
+                    viewport_h_bits,
+                    stroke_width: style.stroke_width,
+                    view_key,
+                    samples: Vec::new(),
+                });
+                continue;
+            }
+
+            let transform = if s.y_axis == YAxis::Right {
+                transform_y2.unwrap_or(transform_y1)
+            } else {
+                transform_y1
+            };
+            let view_key = if s.y_axis == YAxis::Right {
+                view_key_y2.unwrap_or(view_key_y1)
+            } else {
+                view_key_y1
+            };
+            let view = if s.y_axis == YAxis::Right {
+                view_bounds_y2.unwrap_or(view_bounds)
+            } else {
+                view_bounds
+            };
+
+            let samples = decimate_samples(transform, &*s.data, cx.scale_factor, series_id);
+            let commands = error_bars_commands(s, transform, view);
+            let id = if commands.is_empty() {
+                None
+            } else {
+                let (id, _metrics) = cx
+                    .services
+                    .path()
+                    .prepare(&commands, path_style, constraints);
+                Some(id)
+            };
+
+            self.cached_paths.push(CachedPath {
+                id,
+                series_id,
+                model_revision,
+                scale_factor_bits,
+                viewport_w_bits,
+                viewport_h_bits,
+                stroke_width: style.stroke_width,
+                view_key,
+                samples,
+            });
+
+            if let Some(id) = id {
+                let color = resolve_series_color(series_index, style, series_count, s.stroke_color);
+                out.push((series_id, id, color));
+            }
+        }
+
+        out
+    }
+
+    fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover> {
+        let series: Vec<(SeriesId, YAxis, &dyn SeriesData)> = model
+            .series
+            .iter()
+            .map(|s| (s.id, s.y_axis, &*s.data))
+            .collect();
+        hit_test_series_data(&self.cached_paths, &series, args)
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                services.path().release(id);
+            }
+        }
+    }
+}
+
 impl PlotLayer for StairsPlotLayer {
     type Model = LinePlotModel;
 
@@ -8272,6 +8835,81 @@ fn compute_data_bounds_from_series_data_by_axis<T>(
             continue;
         };
 
+        out = Some(out.map_or(bounds, |acc| acc.union(bounds)));
+    }
+
+    out
+}
+
+fn compute_data_bounds_from_error_bars_series(
+    series: &[ErrorBarsSeries],
+    include: impl Fn(&ErrorBarsSeries) -> bool,
+) -> Option<DataRect> {
+    let mut out: Option<DataRect> = None;
+
+    for s in series {
+        if !include(s) {
+            continue;
+        }
+
+        let x_errors = s.x_errors.as_deref();
+        let y_errors = s.y_errors.as_deref();
+        let data = &s.data;
+
+        let mut bounds: Option<DataRect> = None;
+
+        let mut consider = |idx: usize, p: DataPoint| {
+            if !p.x.is_finite() || !p.y.is_finite() {
+                return;
+            }
+
+            let mut x_min = p.x;
+            let mut x_max = p.x;
+            let mut y_min = p.y;
+            let mut y_max = p.y;
+
+            if let Some(e) = x_errors.and_then(|e| e.get(idx)) {
+                let neg = e.neg.abs();
+                let pos = e.pos.abs();
+                if neg.is_finite() && pos.is_finite() {
+                    x_min = x_min.min(p.x - neg);
+                    x_max = x_max.max(p.x + pos);
+                }
+            }
+            if let Some(e) = y_errors.and_then(|e| e.get(idx)) {
+                let neg = e.neg.abs();
+                let pos = e.pos.abs();
+                if neg.is_finite() && pos.is_finite() {
+                    y_min = y_min.min(p.y - neg);
+                    y_max = y_max.max(p.y + pos);
+                }
+            }
+
+            let rect = DataRect {
+                x_min,
+                x_max,
+                y_min,
+                y_max,
+            };
+            bounds = Some(bounds.map_or(rect, |acc| acc.union(rect)));
+        };
+
+        if let Some(slice) = data.as_slice() {
+            for (idx, p) in slice.iter().copied().enumerate() {
+                consider(idx, p);
+            }
+        } else {
+            for idx in 0..data.len() {
+                let Some(p) = data.get(idx) else {
+                    continue;
+                };
+                consider(idx, p);
+            }
+        }
+
+        let Some(bounds) = bounds else {
+            continue;
+        };
         out = Some(out.map_or(bounds, |acc| acc.union(bounds)));
     }
 

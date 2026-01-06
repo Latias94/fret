@@ -498,7 +498,11 @@ pub(crate) fn device_point_budget(transform: PlotTransform, scale_factor: f32) -
     (device_w as usize).saturating_mul(2).max(64)
 }
 
-fn visible_sorted_slice(points: &[DataPoint], x_min: f64, x_max: f64) -> (usize, &[DataPoint]) {
+pub(crate) fn visible_sorted_slice(
+    points: &[DataPoint],
+    x_min: f64,
+    x_max: f64,
+) -> (usize, &[DataPoint]) {
     if points.is_empty() {
         return (0, points);
     }

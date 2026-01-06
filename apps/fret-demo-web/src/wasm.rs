@@ -13,6 +13,7 @@ enum Demo {
     PlotDemo,
     BarsDemo,
     AreaDemo,
+    ErrorBarsDemo,
     HeatmapDemo,
     ShadedDemo,
     StairsDemo,
@@ -37,6 +38,9 @@ fn select_demo() -> Demo {
     }
     if hash.contains("area_demo") || search.contains("demo=area_demo") {
         return Demo::AreaDemo;
+    }
+    if hash.contains("error_bars_demo") || search.contains("demo=error_bars_demo") {
+        return Demo::ErrorBarsDemo;
     }
     if hash.contains("heatmap_demo") || search.contains("demo=heatmap_demo") {
         return Demo::HeatmapDemo;
@@ -87,6 +91,13 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::area_demo::build_runner_config();
             config.main_window_title = "fret-demo area_demo (web)".to_string();
             let driver = fret_examples::area_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::ErrorBarsDemo => {
+            let app = fret_examples::error_bars_demo::build_app();
+            let mut config = fret_examples::error_bars_demo::build_runner_config();
+            config.main_window_title = "fret-demo error_bars_demo (web)".to_string();
+            let driver = fret_examples::error_bars_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::HeatmapDemo => {

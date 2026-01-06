@@ -65,7 +65,7 @@ This contract is documented in ADR 0099.
 - [x] Shaded band (fill between upper/lower series)
 - [x] Stairs / Step
 - [x] Heatmap (quad-based, portable)
-- [ ] Error bars
+- [x] Error bars
 - [ ] Candlesticks / OHLC
 
 ## Axes
