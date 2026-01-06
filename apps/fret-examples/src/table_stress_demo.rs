@@ -47,6 +47,8 @@ struct TableStressWindowState {
     profile_frames_left: u64,
     exit_after_frames: Option<u64>,
     alloc_prev: alloc_profile::AllocProfileSnapshot,
+    alloc_last_calls: u64,
+    alloc_last_bytes: u64,
 }
 
 #[derive(Default)]
@@ -111,6 +113,8 @@ impl TableStressDriver {
             profile_frames_left,
             exit_after_frames,
             alloc_prev,
+            alloc_last_calls: 0,
+            alloc_last_bytes: 0,
         }
     }
 
@@ -310,18 +314,14 @@ impl WinitAppDriver for TableStressDriver {
                     let table_state = state.table_state.clone();
                     let rows = state.rows.clone();
 
-                    let alloc = alloc_profile::snapshot();
-                    let alloc_delta_calls = alloc.alloc_calls.saturating_sub(state.alloc_prev.alloc_calls);
-                    let alloc_delta_bytes = alloc.alloc_bytes.saturating_sub(state.alloc_prev.alloc_bytes);
-
                     let header: Arc<str> = Arc::from(format!(
                         "Table stress demo | rows={} | selected={} | sorting={} | items_rev={} | alloc/frame={} ({} B) | [S]=toggle sort | [R]=bump items_rev | [Home]/[End] | [Esc]=close",
                         rows.len(),
                         selected,
                         sorting,
                         items_revision,
-                        alloc_delta_calls,
-                        alloc_delta_bytes
+                        state.alloc_last_calls,
+                        state.alloc_last_bytes
                     ));
 
                     vec![cx.container(
@@ -412,7 +412,16 @@ impl WinitAppDriver for TableStressDriver {
         frame.paint_all(scene);
         let paint_elapsed = paint_started.elapsed();
 
-        state.alloc_prev = alloc_profile::snapshot();
+        let alloc_after = alloc_profile::snapshot();
+        let alloc_delta_calls = alloc_after
+            .alloc_calls
+            .saturating_sub(state.alloc_prev.alloc_calls);
+        let alloc_delta_bytes = alloc_after
+            .alloc_bytes
+            .saturating_sub(state.alloc_prev.alloc_bytes);
+        state.alloc_prev = alloc_after;
+        state.alloc_last_calls = alloc_delta_calls;
+        state.alloc_last_bytes = alloc_delta_bytes;
 
         state.frame = state.frame.saturating_add(1);
         if state.profile_frames_left > 0 {
@@ -420,12 +429,14 @@ impl WinitAppDriver for TableStressDriver {
             let since_start = state.started_at.elapsed();
             let frame_elapsed = frame_started.elapsed();
             tracing::info!(
-                "table_stress_demo: frame={} since_start={:.2}ms total={:.2}ms layout={:.2}ms paint={:.2}ms",
+                "table_stress_demo: frame={} since_start={:.2}ms total={:.2}ms layout={:.2}ms paint={:.2}ms alloc={} ({} B)",
                 state.frame,
                 since_start.as_secs_f64() * 1000.0,
                 frame_elapsed.as_secs_f64() * 1000.0,
                 layout_elapsed.as_secs_f64() * 1000.0,
-                paint_elapsed.as_secs_f64() * 1000.0
+                paint_elapsed.as_secs_f64() * 1000.0,
+                state.alloc_last_calls,
+                state.alloc_last_bytes
             );
         }
 
