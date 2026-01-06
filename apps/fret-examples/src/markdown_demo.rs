@@ -332,7 +332,7 @@ Network image (demo-only; fetched by the host's image hook):
                         let mut props = SvgIconProps::new(fret_ui::SvgSource::Id(svg));
                         props.layout = size;
                         props.fit = SvgFit::Contain;
-                        props.color = theme.colors.text_primary;
+                        props.color = theme.color_required("foreground");
                         return cx.svg_icon_props(props);
                     }
                     RemoteImageState::ReadySvg { svg: None, .. } => return cx.spinner(),
@@ -393,7 +393,7 @@ Network image (demo-only; fetched by the host's image hook):
                     let mut props = SvgIconProps::new(fret_ui::SvgSource::Id(demo_svg));
                     props.layout = size;
                     props.fit = SvgFit::Contain;
-                    props.color = theme.colors.text_primary;
+                    props.color = theme.color_required("foreground");
                     cx.svg_icon_props(props)
                 }
                 _ => render_image_placeholder(
@@ -427,7 +427,7 @@ Network image (demo-only; fetched by the host's image hook):
                     vec![cx.container(
                         ContainerProps {
                             layout: root_layout,
-                            background: Some(theme.colors.surface_background),
+                            background: Some(theme.color_required("background")),
                             ..Default::default()
                         },
                         |cx| {
@@ -436,7 +436,9 @@ Network image (demo-only; fetched by the host's image hook):
                                     layout: root_layout,
                                     direction: fret_core::Axis::Vertical,
                                     gap: Px(12.0),
-                                    padding: fret_core::Edges::all(theme.metrics.padding_md),
+                                    padding: fret_core::Edges::all(
+                                        theme.metric_required("metric.padding.md"),
+                                    ),
                                     justify: MainAlign::Start,
                                     align: fret_ui::element::CrossAlign::Stretch,
                                     wrap: false,
@@ -462,7 +464,9 @@ Network image (demo-only; fetched by the host's image hook):
                                                             layout
                                                         },
                                                         padding: fret_core::Edges::all(
-                                                            theme.metrics.padding_md,
+                                                            theme.metric_required(
+                                                                "metric.padding.md",
+                                                            ),
                                                         ),
                                                         ..Default::default()
                                                     },
@@ -527,7 +531,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
                 layout: Default::default(),
                 text: text.clone(),
                 style: None,
-                color: Some(theme.colors.text_muted),
+                color: Some(theme.color_required("muted-foreground")),
                 wrap: fret_core::TextWrap::Word,
                 overflow: fret_core::TextOverflow::Clip,
             })]
@@ -538,7 +542,7 @@ fn render_image_placeholder<H: fret_ui::UiHost>(
         layout: Default::default(),
         text,
         style: None,
-        color: Some(theme.colors.text_muted),
+        color: Some(theme.color_required("muted-foreground")),
         wrap: fret_core::TextWrap::Word,
         overflow: fret_core::TextOverflow::Clip,
     })
