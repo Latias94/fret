@@ -54,14 +54,16 @@ pub fn code_block<H: UiHost>(
     show_line_numbers: bool,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
+    let bg = theme.color_required("card");
+    let border = theme.color_required("border");
     let props = decl_style::container_props(
         &theme,
         ChromeRefinement::default()
             .p(Space::N2)
             .rounded(Radius::Md)
             .border_1()
-            .bg(ColorRef::Color(theme.colors.panel_background))
-            .border_color(ColorRef::Color(theme.colors.panel_border)),
+            .bg(ColorRef::Color(bg))
+            .border_color(ColorRef::Color(border)),
         LayoutRefinement::default().w_full(),
     );
 
@@ -113,19 +115,20 @@ fn render_code_line_with_number<H: UiHost>(
 ) -> AnyElement {
     let number_style = TextStyle {
         font: FontId::monospace(),
-        size: theme.metrics.mono_font_size,
+        size: theme.metric_required("metric.font.mono_size"),
         weight: FontWeight::NORMAL,
-        line_height: Some(theme.metrics.mono_font_line_height),
+        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
         letter_spacing_em: None,
     };
 
     stack::hstack(cx, stack::HStackProps::default().gap(Space::N2), |cx| {
         let number = Arc::<str>::from(format!("{line_no:>width$}", width = width));
+        let muted = theme.color_required("muted-foreground");
         let number_el = cx.text_props(TextProps {
             layout: Default::default(),
             text: number,
             style: Some(number_style),
-            color: Some(theme.colors.text_muted),
+            color: Some(muted),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
         });
@@ -142,9 +145,9 @@ fn render_code_line<H: UiHost>(
 ) -> AnyElement {
     let text_style = TextStyle {
         font: FontId::monospace(),
-        size: theme.metrics.mono_font_size,
+        size: theme.metric_required("metric.font.mono_size"),
         weight: FontWeight::NORMAL,
-        line_height: Some(theme.metrics.mono_font_line_height),
+        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
         letter_spacing_em: None,
     };
 
@@ -154,9 +157,10 @@ fn render_code_line<H: UiHost>(
         segments
             .into_iter()
             .map(|(text, highlight)| {
+                let fg = theme.color_required("foreground");
                 let color = highlight
                     .and_then(|h| syntax_color(theme, h))
-                    .unwrap_or(theme.colors.text_primary);
+                    .unwrap_or(fg);
                 cx.text_props(TextProps {
                     layout: Default::default(),
                     text: Arc::<str>::from(text),
@@ -178,14 +182,17 @@ fn syntax_color(theme: &Theme, highlight: &str) -> Option<Color> {
 
     let fallback = highlight.split('.').next().unwrap_or(highlight);
     match fallback {
-        "comment" => Some(theme.colors.text_muted),
-        "string" => Some(theme.colors.viewport_gizmo_y),
-        "number" | "boolean" | "constant" => Some(theme.colors.viewport_rotate_gizmo),
-        "keyword" | "operator" => Some(theme.colors.accent),
-        "type" | "constructor" => Some(theme.colors.viewport_marker),
-        "function" => Some(theme.colors.viewport_drag_line_orbit),
-        "property" | "variable" => Some(theme.colors.text_primary),
-        "punctuation" => Some(theme.colors.text_muted),
+        "comment" => Some(theme.color_required("muted-foreground")),
+        "keyword" | "operator" => Some(theme.color_required("primary")),
+        "property" | "variable" => Some(theme.color_required("foreground")),
+        "punctuation" => Some(theme.color_required("muted-foreground")),
+
+        // These are still treated as editor-ish baseline tokens until a dedicated SyntaxTheme
+        // subsystem lands.
+        "string" => Some(theme.color_required("color.viewport.gizmo.y")),
+        "number" | "boolean" | "constant" => Some(theme.color_required("color.viewport.rotate_gizmo")),
+        "type" | "constructor" => Some(theme.color_required("color.viewport.marker")),
+        "function" => Some(theme.color_required("color.viewport.drag_line.orbit")),
         _ => None,
     }
 }
