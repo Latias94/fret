@@ -31,38 +31,34 @@ fn sidebar_width_icon(theme: &Theme) -> Px {
 
 fn sidebar_bg(theme: &Theme) -> Color {
     theme
-        .color_by_key("sidebar.background")
+        .color_by_key("sidebar-background")
         .or_else(|| theme.color_by_key("sidebar"))
         .unwrap_or(theme.colors.panel_background)
 }
 
 fn sidebar_fg(theme: &Theme) -> Color {
     theme
-        .color_by_key("sidebar.foreground")
-        .or_else(|| theme.color_by_key("sidebar-foreground"))
+        .color_by_key("sidebar-foreground")
         .unwrap_or(theme.colors.text_primary)
 }
 
 fn sidebar_border(theme: &Theme) -> Color {
     theme
-        .color_by_key("sidebar.border")
-        .or_else(|| theme.color_by_key("sidebar-border"))
+        .color_by_key("sidebar-border")
         .or_else(|| theme.color_by_key("border"))
         .unwrap_or(theme.colors.panel_border)
 }
 
 fn sidebar_accent(theme: &Theme) -> Color {
     theme
-        .color_by_key("sidebar.accent")
-        .or_else(|| theme.color_by_key("sidebar-accent"))
+        .color_by_key("sidebar-accent")
         .or_else(|| theme.color_by_key("accent"))
         .unwrap_or(theme.colors.hover_background)
 }
 
 fn sidebar_accent_fg(theme: &Theme) -> Color {
     theme
-        .color_by_key("sidebar.accent.foreground")
-        .or_else(|| theme.color_by_key("sidebar-accent-foreground"))
+        .color_by_key("sidebar-accent-foreground")
         .or_else(|| theme.color_by_key("accent-foreground"))
         .unwrap_or(theme.colors.text_primary)
 }
@@ -536,13 +532,13 @@ impl SidebarMenuButton {
         let chrome = ChromeRefinement::default()
             .bg(ColorRef::Color(
                 theme
-                    .color_by_key("popover.background")
+                    .color_by_key("popover")
                     .unwrap_or(theme.colors.menu_background),
             ))
             .border_1()
             .border_color(ColorRef::Color(
                 theme
-                    .color_by_key("popover.border")
+                    .color_by_key("border")
                     .unwrap_or(theme.colors.menu_border),
             ))
             .rounded(Radius::Md)

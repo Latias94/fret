@@ -340,7 +340,7 @@ impl Popover {
 
                     let bg = theme
                         .color_by_key("popover")
-                        .or_else(|| theme.color_by_key("popover.background"))
+                        .or_else(|| theme.color_by_key("popover"))
                         .unwrap_or(theme.colors.panel_background);
                     let border = theme
                         .color_by_key("border")
@@ -480,7 +480,7 @@ impl PopoverAnchor {
 fn popover_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme
         .color_by_key("popover")
-        .or_else(|| theme.color_by_key("popover.background"))
+        .or_else(|| theme.color_by_key("popover"))
         .unwrap_or(theme.colors.panel_background);
     let border = theme
         .color_by_key("border")
@@ -595,7 +595,7 @@ impl PopoverTitle {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
-            .color_by_key("popover.foreground")
+            .color_by_key("popover-foreground")
             .or_else(|| theme.color_by_key("popover-foreground"))
             .or_else(|| theme.color_by_key("foreground"))
             .unwrap_or(theme.colors.text_primary);
@@ -640,7 +640,7 @@ impl PopoverDescription {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
-            .color_by_key("muted.foreground")
+            .color_by_key("muted-foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_muted);
 

@@ -244,7 +244,7 @@ impl FieldDescription {
         let theme = Theme::global(&*cx.app).clone();
 
         let fg = theme
-            .color_by_key("muted.foreground")
+            .color_by_key("muted-foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_muted);
         let px = theme
@@ -288,7 +288,7 @@ impl FieldError {
 
         let fg = theme
             .color_by_key("destructive")
-            .or_else(|| theme.color_by_key("destructive.foreground"))
+            .or_else(|| theme.color_by_key("destructive-foreground"))
             .or_else(|| theme.color_by_key("destructive-foreground"))
             .unwrap_or(theme.colors.viewport_gizmo_x);
         let px = theme

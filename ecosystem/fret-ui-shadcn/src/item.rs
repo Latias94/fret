@@ -396,7 +396,7 @@ impl ItemDescription {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
-            .color_by_key("muted.foreground")
+            .color_by_key("muted-foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_muted);
         let px = theme

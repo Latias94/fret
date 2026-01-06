@@ -11,7 +11,9 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::switch::{switch_a11y, switch_checked_from_optional_bool, toggle_optional_bool};
+use fret_ui_kit::primitives::switch::{
+    switch_a11y, switch_checked_from_optional_bool, toggle_optional_bool,
+};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {

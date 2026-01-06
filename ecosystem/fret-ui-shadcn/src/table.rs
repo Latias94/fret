@@ -48,13 +48,13 @@ fn border_color(theme: &Theme) -> fret_core::Color {
 fn muted_bg(theme: &Theme) -> fret_core::Color {
     theme
         .color_by_key("muted")
-        .or_else(|| theme.color_by_key("muted.background"))
+        .or_else(|| theme.color_by_key("muted"))
         .unwrap_or(theme.colors.hover_background)
 }
 
 fn muted_fg(theme: &Theme) -> fret_core::Color {
     theme
-        .color_by_key("muted.foreground")
+        .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted-foreground"))
         .unwrap_or(theme.colors.text_muted)
 }

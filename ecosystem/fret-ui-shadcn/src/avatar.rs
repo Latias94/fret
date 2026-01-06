@@ -258,7 +258,7 @@ impl AvatarFallback {
                 .color_by_key("muted")
                 .unwrap_or(theme.colors.panel_background);
             let fg = theme
-                .color_by_key("muted.foreground")
+                .color_by_key("muted-foreground")
                 .or_else(|| theme.color_by_key("muted-foreground"))
                 .unwrap_or(theme.colors.text_muted);
 

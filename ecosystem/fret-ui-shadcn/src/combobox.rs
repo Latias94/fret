@@ -250,7 +250,7 @@ pub fn combobox<H: UiHost>(
             .unwrap_or(theme.colors.surface_background);
         let bg_hover = theme
             .color_by_key("accent")
-            .or_else(|| theme.color_by_key("accent.background"))
+            .or_else(|| theme.color_by_key("accent"))
             .unwrap_or(theme.colors.hover_background);
         let bg_pressed = theme.colors.selection_background;
         let fg = theme
@@ -258,7 +258,7 @@ pub fn combobox<H: UiHost>(
             .unwrap_or(theme.colors.text_primary);
         let fg_hover = theme
             .color_by_key("accent-foreground")
-            .or_else(|| theme.color_by_key("accent.foreground"))
+            .or_else(|| theme.color_by_key("accent-foreground"))
             .unwrap_or(fg);
         let border = theme
             .color_by_key("input")

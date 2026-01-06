@@ -191,7 +191,7 @@ impl ContextMenuShortcut {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
-            .color_by_key("muted.foreground")
+            .color_by_key("muted-foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_muted);
 
@@ -745,20 +745,20 @@ fn context_menu_submenu_panel<H: UiHost>(
     let radius_sm = theme.metrics.radius_sm;
     let text_disabled = theme.colors.text_disabled;
     let label_fg = theme
-        .color_by_key("muted.foreground")
+        .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted-foreground"))
         .unwrap_or(theme.colors.text_muted);
     let accent = theme
         .color_by_key("accent")
         .unwrap_or(theme.colors.hover_background);
     let accent_fg = theme
-        .color_by_key("accent.foreground")
+        .color_by_key("accent-foreground")
         .or_else(|| theme.color_by_key("accent-foreground"))
         .unwrap_or(theme.colors.text_primary);
     let fg = theme.colors.text_primary;
     let destructive_fg = theme
         .color_by_key("destructive")
-        .or_else(|| theme.color_by_key("destructive.background"))
+        .or_else(|| theme.color_by_key("destructive"))
         .unwrap_or(fg);
     let destructive_bg = alpha_mul(destructive_fg, 0.12);
 
@@ -1443,20 +1443,20 @@ impl ContextMenu {
                     let radius_sm = theme.metrics.radius_sm;
                     let text_disabled = theme.colors.text_disabled;
                     let label_fg = theme
-                        .color_by_key("muted.foreground")
+                        .color_by_key("muted-foreground")
                         .or_else(|| theme.color_by_key("muted-foreground"))
                         .unwrap_or(theme.colors.text_muted);
                     let accent = theme
                         .color_by_key("accent")
                         .unwrap_or(theme.colors.hover_background);
                     let accent_fg = theme
-                        .color_by_key("accent.foreground")
+                        .color_by_key("accent-foreground")
                         .or_else(|| theme.color_by_key("accent-foreground"))
                         .unwrap_or(theme.colors.text_primary);
                     let fg = theme.colors.text_primary;
                     let destructive_fg = theme
                         .color_by_key("destructive")
-                        .or_else(|| theme.color_by_key("destructive.background"))
+                        .or_else(|| theme.color_by_key("destructive"))
                         .unwrap_or(fg);
                     let destructive_bg = alpha_mul(destructive_fg, 0.12);
 

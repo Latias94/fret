@@ -160,7 +160,7 @@ impl DataTable {
             let header_row = {
                 let header_bg = theme
                     .color_by_key("muted")
-                    .or_else(|| theme.color_by_key("muted.background"))
+                    .or_else(|| theme.color_by_key("muted"))
                     .unwrap_or(theme.colors.panel_background);
                 let header_chrome = ChromeRefinement::default()
                     .bg(ColorRef::Color(header_bg))

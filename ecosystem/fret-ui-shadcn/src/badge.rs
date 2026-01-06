@@ -50,15 +50,15 @@ fn fg_for(theme: &Theme, variant: BadgeVariant) -> Color {
     match variant {
         BadgeVariant::Default => theme
             .color_by_key("primary-foreground")
-            .or_else(|| theme.color_by_key("primary.foreground"))
+            .or_else(|| theme.color_by_key("primary-foreground"))
             .unwrap_or(theme.colors.text_primary),
         BadgeVariant::Secondary => theme
             .color_by_key("secondary-foreground")
-            .or_else(|| theme.color_by_key("secondary.foreground"))
+            .or_else(|| theme.color_by_key("secondary-foreground"))
             .unwrap_or(theme.colors.text_primary),
         BadgeVariant::Destructive => theme
             .color_by_key("destructive-foreground")
-            .or_else(|| theme.color_by_key("destructive.foreground"))
+            .or_else(|| theme.color_by_key("destructive-foreground"))
             .unwrap_or(theme.colors.text_primary),
         BadgeVariant::Outline => theme
             .color_by_key("foreground")

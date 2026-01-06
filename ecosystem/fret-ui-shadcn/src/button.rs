@@ -68,7 +68,7 @@ fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color
     let bg_primary = theme.color_by_key("primary").unwrap_or(theme.colors.accent);
     let fg_primary = theme
         .color_by_key("primary-foreground")
-        .or_else(|| theme.color_by_key("primary.foreground"))
+        .or_else(|| theme.color_by_key("primary-foreground"))
         .unwrap_or(theme.colors.text_primary);
 
     let bg_secondary = theme
@@ -76,7 +76,7 @@ fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color
         .unwrap_or(theme.colors.panel_background);
     let fg_secondary = theme
         .color_by_key("secondary-foreground")
-        .or_else(|| theme.color_by_key("secondary.foreground"))
+        .or_else(|| theme.color_by_key("secondary-foreground"))
         .unwrap_or(theme.colors.text_primary);
 
     let bg_destructive = theme
@@ -84,7 +84,7 @@ fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color
         .unwrap_or(theme.colors.selection_background);
     let fg_destructive = theme
         .color_by_key("destructive-foreground")
-        .or_else(|| theme.color_by_key("destructive.foreground"))
+        .or_else(|| theme.color_by_key("destructive-foreground"))
         .unwrap_or(theme.colors.text_primary);
 
     let fg_default = theme
@@ -93,7 +93,7 @@ fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color
 
     let bg_accent = theme
         .color_by_key("accent")
-        .or_else(|| theme.color_by_key("accent.background"))
+        .or_else(|| theme.color_by_key("accent"))
         .unwrap_or(theme.colors.hover_background);
 
     let bg_background = theme

@@ -1173,7 +1173,7 @@ fn select_impl<H: UiHost>(
                                                                         SelectRow::Label(label) => {
                                                                             let theme = Theme::global(&*cx.app).clone();
                                                                             let fg = theme
-                                                                                .color_by_key("muted.foreground")
+                                                                                .color_by_key("muted-foreground")
                                                                                 .or_else(|| theme.color_by_key("muted-foreground"))
                                                                                 .unwrap_or(theme.colors.text_muted);
 
@@ -1338,11 +1338,11 @@ fn select_impl<H: UiHost>(
                                                                                     // new-york-v4: items highlight on focus/hover via `bg-accent`.
                                                                                     let bg_accent = theme
                                                                                         .color_by_key("accent")
-                                                                                        .or_else(|| theme.color_by_key("accent.background"))
+                                                                                        .or_else(|| theme.color_by_key("accent"))
                                                                                         .unwrap_or(theme.colors.hover_background);
                                                                                     let fg_accent = theme
                                                                                         .color_by_key("accent-foreground")
-                                                                                        .or_else(|| theme.color_by_key("accent.foreground"))
+                                                                                        .or_else(|| theme.color_by_key("accent-foreground"))
                                                                                         .unwrap_or(theme.colors.text_primary);
 
                                                                                     let mut bg = Color::TRANSPARENT;
@@ -1952,16 +1952,18 @@ mod tests {
         let effects = app.flush_effects();
         let token = effects
             .iter()
-                .find_map(|e| match e {
-                    Effect::SetTimer { token, after, .. }
-                        if *after
-                            == Duration::from_millis(radix_select::SELECT_TYPEAHEAD_CLEAR_TIMEOUT_MS) =>
-                    {
-                        Some(*token)
-                    }
-                    _ => None,
-                })
-                .expect("typeahead clear timer token");
+            .find_map(|e| match e {
+                Effect::SetTimer { token, after, .. }
+                    if *after
+                        == Duration::from_millis(
+                            radix_select::SELECT_TYPEAHEAD_CLEAR_TIMEOUT_MS,
+                        ) =>
+                {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("typeahead clear timer token");
 
         ui.dispatch_event(
             &mut app,

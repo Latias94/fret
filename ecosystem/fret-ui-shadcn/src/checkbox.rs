@@ -48,7 +48,7 @@ fn checkbox_bg_checked(theme: &Theme) -> Color {
 fn checkbox_fg_checked(theme: &Theme) -> Color {
     theme
         .color_by_key("primary-foreground")
-        .or_else(|| theme.color_by_key("primary.foreground"))
+        .or_else(|| theme.color_by_key("primary-foreground"))
         .unwrap_or(theme.colors.text_primary)
 }
 

@@ -82,7 +82,7 @@ fn tabs_list_bg(theme: &Theme) -> Color {
 
 fn tabs_list_fg_muted(theme: &Theme) -> Color {
     theme
-        .color_by_key("muted.foreground")
+        .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted-foreground"))
         .unwrap_or(theme.colors.text_muted)
 }

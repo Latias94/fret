@@ -201,7 +201,7 @@ impl MenubarShortcut {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
-            .color_by_key("muted.foreground")
+            .color_by_key("muted-foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_muted);
 
@@ -1119,7 +1119,7 @@ impl MenubarMenuEntries {
                         let pad_y = MetricRef::space(Space::N2).resolve(&theme);
                         let destructive_fg = theme
                             .color_by_key("destructive")
-                            .or_else(|| theme.color_by_key("destructive.background"))
+                            .or_else(|| theme.color_by_key("destructive"))
                             .unwrap_or(fg);
                         let destructive_bg = alpha_mul(destructive_fg, 0.12);
 

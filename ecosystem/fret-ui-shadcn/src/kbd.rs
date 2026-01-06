@@ -43,7 +43,7 @@ pub fn kbd<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>)
     let props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
 
     let fg = theme
-        .color_by_key("muted.foreground")
+        .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted-foreground"))
         .unwrap_or(theme.colors.text_muted);
 

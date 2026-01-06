@@ -48,7 +48,7 @@ fn accent(theme: &Theme) -> Color {
 
 fn accent_fg(theme: &Theme) -> Color {
     theme
-        .color_by_key("accent.foreground")
+        .color_by_key("accent-foreground")
         .or_else(|| theme.color_by_key("accent-foreground"))
         .unwrap_or(theme.colors.text_primary)
 }

@@ -49,7 +49,7 @@ fn border_color(theme: &Theme) -> Color {
 fn muted_bg(theme: &Theme) -> Color {
     theme
         .color_by_key("muted")
-        .or_else(|| theme.color_by_key("muted.background"))
+        .or_else(|| theme.color_by_key("muted"))
         .unwrap_or(theme.colors.hover_background)
 }
 
@@ -61,7 +61,7 @@ fn row_height_px(theme: &Theme) -> Px {
 
 fn scrollbar_width(theme: &Theme) -> Px {
     theme
-        .metric_by_key("metric.scrollbar.width")
+        .metric_by_key("fret.scrollbar.width")
         .unwrap_or(theme.metrics.scrollbar_width)
 }
 

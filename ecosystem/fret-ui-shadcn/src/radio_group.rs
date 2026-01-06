@@ -769,7 +769,9 @@ mod tests {
             true,
         );
 
-        let _ = app.models_mut().update(&model, |v| *v = Some(Arc::from("alpha")));
+        let _ = app
+            .models_mut()
+            .update(&model, |v| *v = Some(Arc::from("alpha")));
 
         ui.dispatch_event(
             &mut app,
@@ -852,7 +854,9 @@ mod tests {
             true,
         );
 
-        let _ = app.models_mut().update(&model, |v| *v = Some(Arc::from("alpha")));
+        let _ = app
+            .models_mut()
+            .update(&model, |v| *v = Some(Arc::from("alpha")));
 
         ui.dispatch_event(
             &mut app,

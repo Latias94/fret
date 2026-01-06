@@ -50,7 +50,7 @@ fn toggle_bg_hover(theme: &Theme) -> Color {
 
 fn toggle_fg_muted(theme: &Theme) -> Color {
     theme
-        .color_by_key("muted.foreground")
+        .color_by_key("muted-foreground")
         .or_else(|| theme.color_by_key("muted-foreground"))
         .unwrap_or(theme.colors.text_muted)
 }
@@ -68,7 +68,7 @@ fn toggle_bg_on(theme: &Theme) -> Color {
 fn toggle_fg_on(theme: &Theme) -> Color {
     theme
         .color_by_key("accent-foreground")
-        .or_else(|| theme.color_by_key("accent.foreground"))
+        .or_else(|| theme.color_by_key("accent-foreground"))
         .unwrap_or(theme.colors.text_primary)
 }
 

@@ -27,7 +27,7 @@ const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme
         .color_by_key("popover")
-        .or_else(|| theme.color_by_key("popover.background"))
+        .or_else(|| theme.color_by_key("popover"))
         .unwrap_or(theme.colors.panel_background);
     let border = theme
         .color_by_key("border")

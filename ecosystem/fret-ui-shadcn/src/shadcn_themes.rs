@@ -2,7 +2,7 @@
 //!
 //! The upstream shadcn/ui project ships theme definitions as CSS variable sets (HSL/OKLCH).
 //! Fret's runtime theme system is token-based (see `fret_ui::ThemeConfig`), so we convert those
-//! CSS variables into `ThemeConfig` maps and rely on `Theme::apply_config` to parse/alias them.
+//! CSS variables into `ThemeConfig` maps and rely on `Theme::apply_config` to parse them.
 
 use std::collections::HashMap;
 
@@ -98,11 +98,7 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     let mut metrics: HashMap<String, f32> = HashMap::new();
     if let Some(radius) = colors.remove("radius") {
         if let Some(px) = parse_css_length_px(&radius) {
-            // Match shadcn's default border-radius recipe:
-            // lg = var(--radius), md = var(--radius) - 2px, sm = var(--radius) - 4px.
-            metrics.insert("metric.radius.lg".to_string(), px);
-            metrics.insert("metric.radius.md".to_string(), (px - 2.0).max(0.0));
-            metrics.insert("metric.radius.sm".to_string(), (px - 4.0).max(0.0));
+            metrics.insert("radius".to_string(), px);
         }
     }
 
@@ -112,17 +108,11 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     //
     // Note: keep this small and scoped to ergonomic, high-signal tokens; component-specific
     // deviations should live in the component implementations and audit doc.
+    metrics.entry("fret.padding.sm".to_string()).or_insert(8.0);
+    metrics.entry("fret.padding.md".to_string()).or_insert(10.0);
+    metrics.entry("font.size".to_string()).or_insert(14.0);
     metrics
-        .entry("metric.padding.sm".to_string())
-        .or_insert(8.0);
-    metrics
-        .entry("metric.padding.md".to_string())
-        .or_insert(10.0);
-    metrics
-        .entry("metric.font.size".to_string())
-        .or_insert(14.0);
-    metrics
-        .entry("metric.font.line_height".to_string())
+        .entry("font.line_height".to_string())
         .or_insert(20.0);
 
     metrics

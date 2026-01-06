@@ -432,7 +432,7 @@ impl DropdownMenuShortcut {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
-            .color_by_key("muted.foreground")
+            .color_by_key("muted-foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_muted);
 
@@ -1001,17 +1001,17 @@ impl DropdownMenu {
                     let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
                     let bg = theme
                         .color_by_key("popover")
-                        .or_else(|| theme.color_by_key("popover.background"))
+                        .or_else(|| theme.color_by_key("popover"))
                         .unwrap_or(theme.colors.panel_background);
                     let fg = theme
-                        .color_by_key("popover.foreground")
+                        .color_by_key("popover-foreground")
                         .or_else(|| theme.color_by_key("popover-foreground"))
                         .unwrap_or(theme.colors.text_primary);
                     let accent = theme
                         .color_by_key("accent")
                         .unwrap_or(theme.colors.hover_background);
                     let accent_fg = theme
-                        .color_by_key("accent.foreground")
+                        .color_by_key("accent-foreground")
                         .or_else(|| theme.color_by_key("accent-foreground"))
                         .unwrap_or(theme.colors.text_primary);
 
@@ -1115,13 +1115,13 @@ impl DropdownMenu {
                                                     let radius_sm = theme.metrics.radius_sm;
                                                     let text_disabled = theme.colors.text_disabled;
                                                     let icon_muted_fg = theme
-                                                        .color_by_key("muted.foreground")
+                                                        .color_by_key("muted-foreground")
                                                         .or_else(|| theme.color_by_key("muted-foreground"))
                                                         .unwrap_or(theme.colors.text_muted);
                                                     let destructive_fg = theme
                                                         .color_by_key("destructive")
                                                         .or_else(|| {
-                                                            theme.color_by_key("destructive.background")
+                                                            theme.color_by_key("destructive")
                                                         })
                                                         .unwrap_or(theme.colors.text_primary);
                                                     let destructive_bg = alpha_mul(destructive_fg, 0.10);
@@ -1142,7 +1142,7 @@ impl DropdownMenu {
                                                         match entry {
                                                     DropdownMenuEntry::Label(label) => {
                                                         let fg = theme
-                                                            .color_by_key("muted.foreground")
+                                                            .color_by_key("muted-foreground")
                                                             .or_else(|| theme.color_by_key("muted-foreground"))
                                                             .unwrap_or(theme.colors.text_muted);
                                                         let text = label.text.clone();
@@ -1787,11 +1787,11 @@ impl DropdownMenu {
                                             let text_disabled = theme.colors.text_disabled;
                                             let destructive_fg = theme
                                                 .color_by_key("destructive")
-                                                .or_else(|| theme.color_by_key("destructive.background"))
+                                                .or_else(|| theme.color_by_key("destructive"))
                                                 .unwrap_or(theme.colors.text_primary);
                                             let destructive_bg = alpha_mul(destructive_fg, 0.10);
                                             let label_fg = theme
-                                                .color_by_key("muted.foreground")
+                                                .color_by_key("muted-foreground")
                                                 .or_else(|| theme.color_by_key("muted-foreground"))
                                                 .unwrap_or(theme.colors.text_muted);
 
