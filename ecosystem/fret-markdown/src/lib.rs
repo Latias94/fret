@@ -206,6 +206,14 @@ pub struct LinkInfo {
     pub text: Arc<str>,
 }
 
+#[derive(Debug, Clone)]
+pub struct ImageInfo {
+    pub src: Arc<str>,
+    pub alt: Arc<str>,
+    pub title: Option<Arc<str>>,
+    pub is_svg: bool,
+}
+
 pub type HeadingRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, HeadingInfo) -> AnyElement;
 pub type ParagraphRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, ParagraphInfo) -> AnyElement;
@@ -222,6 +230,7 @@ pub type TableRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, TableInfo
 pub type ThematicBreakRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, ThematicBreakInfo) -> AnyElement;
 pub type LinkRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, LinkInfo) -> AnyElement;
+pub type ImageRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, ImageInfo) -> AnyElement;
 pub type OnLinkActivate =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason, LinkInfo) + 'static>;
 
@@ -278,6 +287,12 @@ pub struct MarkdownComponents<H: UiHost> {
     pub table: Option<Arc<TableRenderer<H>>>,
     pub thematic_break: Option<Arc<ThematicBreakRenderer<H>>>,
     pub link: Option<Arc<LinkRenderer<H>>>,
+    /// Render an inline image (`![alt](src "title")`).
+    ///
+    /// Notes:
+    /// - `fret-markdown` does not fetch images. The host is responsible for loading and caching.
+    /// - See `ecosystem/fret-app-kit` helpers for integrating `ImageAssetCache` / `SvgAssetCache`.
+    pub image: Option<Arc<ImageRenderer<H>>>,
     pub on_link_activate: Option<OnLinkActivate>,
 }
 
@@ -294,6 +309,7 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
             table: None,
             thematic_break: None,
             link: None,
+            image: None,
             on_link_activate: None,
         }
     }
@@ -1430,9 +1446,24 @@ struct InlineStyle {
     link: Option<Arc<str>>,
 }
 
+fn is_likely_svg_src(src: &str) -> bool {
+    let s = src.trim();
+    if s.is_empty() {
+        return false;
+    }
+    let lower = s.to_ascii_lowercase();
+    lower.ends_with(".svg") || lower.starts_with("data:image/svg+xml")
+}
+
+#[derive(Debug, Clone)]
+enum InlinePieceKind {
+    Text(String),
+    Image(ImageInfo),
+}
+
 #[derive(Debug, Clone)]
 struct InlinePiece {
-    text: String,
+    kind: InlinePieceKind,
     style: InlineStyle,
 }
 
@@ -1475,6 +1506,7 @@ fn inline_pieces_from_events_impl(
     let mut pieces: Vec<InlinePiece> = Vec::new();
 
     let mut wrapper_depth = 0usize;
+    let mut image_stack: Vec<(Arc<str>, Option<Arc<str>>, String)> = Vec::new();
 
     for event in events {
         match event {
@@ -1489,6 +1521,24 @@ fn inline_pieces_from_events_impl(
 
         if require_wrapper && wrapper_depth == 0 {
             continue;
+        }
+
+        if let Some((_src, _title, alt_buf)) = image_stack.last_mut() {
+            match event {
+                Event::Text(t) | Event::Code(t) => {
+                    alt_buf.push_str(t.as_ref());
+                    continue;
+                }
+                Event::SoftBreak => {
+                    alt_buf.push(' ');
+                    continue;
+                }
+                Event::HardBreak => {
+                    alt_buf.push('\n');
+                    continue;
+                }
+                _ => {}
+            }
         }
 
         match event {
@@ -1506,13 +1556,35 @@ fn inline_pieces_from_events_impl(
             Event::End(TagEnd::Link) => {
                 link_stack.pop();
             }
-            Event::Start(Tag::Image { dest_url, .. }) => {
-                // Render images as their alt text styled as a link to the image URL. The actual
-                // image loading is intentionally delegated to the host.
-                link_stack.push(Arc::<str>::from(dest_url.to_string()));
+            Event::Start(Tag::Image {
+                dest_url, title, ..
+            }) => {
+                let src = Arc::<str>::from(dest_url.to_string());
+                let title = if title.is_empty() {
+                    None
+                } else {
+                    Some(Arc::<str>::from(title.to_string()))
+                };
+                image_stack.push((src, title, String::new()));
             }
             Event::End(TagEnd::Image) => {
-                link_stack.pop();
+                if let Some((src, title, alt)) = image_stack.pop() {
+                    pieces.push(InlinePiece {
+                        kind: InlinePieceKind::Image(ImageInfo {
+                            is_svg: is_likely_svg_src(&src),
+                            src,
+                            alt: Arc::<str>::from(alt),
+                            title,
+                        }),
+                        style: InlineStyle {
+                            strong: false,
+                            emphasis: false,
+                            strikethrough: false,
+                            code: false,
+                            link: None,
+                        },
+                    });
+                }
             }
             Event::Text(t) => push_inline_text(
                 &mut pieces,
@@ -1597,11 +1669,13 @@ fn push_inline_text(pieces: &mut Vec<InlinePiece>, text: &str, style: InlineStyl
     if let Some(last) = pieces.last_mut()
         && last.style == style
     {
-        last.text.push_str(text);
+        if let InlinePieceKind::Text(t) = &mut last.kind {
+            t.push_str(text);
+        }
         return;
     }
     pieces.push(InlinePiece {
-        text: text.to_string(),
+        kind: InlinePieceKind::Text(text.to_string()),
         style,
     });
 }
@@ -1618,14 +1692,19 @@ fn render_inline_flow<H: UiHost>(
     let mut cur: Vec<InlinePiece> = Vec::new();
 
     for piece in pieces {
-        let splits: Vec<&str> = piece.text.split('\n').collect();
-        for (i, split) in splits.iter().enumerate() {
-            if !split.is_empty() {
-                cur.extend(split_piece_into_tokens(split, &piece.style));
+        match &piece.kind {
+            InlinePieceKind::Text(text) => {
+                let splits: Vec<&str> = text.split('\n').collect();
+                for (i, split) in splits.iter().enumerate() {
+                    if !split.is_empty() {
+                        cur.extend(split_piece_into_tokens(split, &piece.style));
+                    }
+                    if i + 1 < splits.len() {
+                        lines.push(std::mem::take(&mut cur));
+                    }
+                }
             }
-            if i + 1 < splits.len() {
-                lines.push(std::mem::take(&mut cur));
-            }
+            InlinePieceKind::Image(_) => cur.push(piece.clone()),
         }
     }
     lines.push(cur);
@@ -1671,7 +1750,19 @@ fn render_inline_token<H: UiHost>(
     base: &InlineBaseStyle,
     piece: InlinePiece,
 ) -> AnyElement {
-    let (font, size, line_height) = if piece.style.code {
+    let (kind, style) = (piece.kind, piece.style);
+
+    let text = match kind {
+        InlinePieceKind::Image(info) => {
+            if let Some(render) = &components.image {
+                return render(cx, info);
+            }
+            return render_image_placeholder(cx, theme, markdown_theme, components, info);
+        }
+        InlinePieceKind::Text(text) => text,
+    };
+
+    let (font, size, line_height) = if style.code {
         (
             FontId::monospace(),
             theme.metrics.mono_font_size,
@@ -1681,21 +1772,21 @@ fn render_inline_token<H: UiHost>(
         (base.font.clone(), base.size, base.line_height)
     };
 
-    let weight = if piece.style.strong {
+    let weight = if style.strong {
         FontWeight::SEMIBOLD
     } else {
         base.weight
     };
 
-    let color = if piece.style.link.is_some() {
+    let color = if style.link.is_some() {
         markdown_theme.link
-    } else if piece.style.strikethrough {
+    } else if style.strikethrough {
         markdown_theme.muted
     } else {
         base.color
     };
 
-    if piece.style.code {
+    if style.code {
         let mut props = ContainerProps::default();
         props.padding = Edges {
             top: markdown_theme.inline_code_padding_y,
@@ -1710,7 +1801,7 @@ fn render_inline_token<H: UiHost>(
         return cx.container(props, |cx| {
             vec![cx.text_props(TextProps {
                 layout: Default::default(),
-                text: Arc::<str>::from(piece.text),
+                text: Arc::<str>::from(text),
                 style: Some(TextStyle {
                     font,
                     size,
@@ -1725,21 +1816,21 @@ fn render_inline_token<H: UiHost>(
         });
     }
 
-    if let Some(href) = piece.style.link.clone() {
+    if let Some(href) = style.link.clone() {
         let href = href.clone();
         if let Some(render) = &components.link {
             return render(
                 cx,
                 LinkInfo {
                     href,
-                    text: Arc::<str>::from(piece.text),
+                    text: Arc::<str>::from(text.clone()),
                 },
             );
         }
 
         if let Some(on_link_activate) = components.on_link_activate.clone() {
-            let link_text = Arc::<str>::from(piece.text.trim_end().to_string());
-            let display_text = Arc::<str>::from(piece.text);
+            let link_text = Arc::<str>::from(text.trim_end().to_string());
+            let display_text = Arc::<str>::from(text.clone());
 
             let mut props = PressableProps::default();
             props.a11y.role = Some(SemanticsRole::Button);
@@ -1781,7 +1872,7 @@ fn render_inline_token<H: UiHost>(
 
     cx.text_props(TextProps {
         layout: Default::default(),
-        text: Arc::<str>::from(piece.text),
+        text: Arc::<str>::from(text),
         style: Some(TextStyle {
             font,
             size,
@@ -1795,13 +1886,95 @@ fn render_inline_token<H: UiHost>(
     })
 }
 
+fn render_image_placeholder<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
+    info: ImageInfo,
+) -> AnyElement {
+    let label = if info.alt.trim().is_empty() {
+        Arc::<str>::from("[image]".to_string())
+    } else {
+        Arc::<str>::from(format!("[image: {}]", info.alt.trim()))
+    };
+
+    if let Some(render) = &components.link {
+        return render(
+            cx,
+            LinkInfo {
+                href: info.src,
+                text: label,
+            },
+        );
+    }
+
+    if let Some(on_link_activate) = components.on_link_activate.clone() {
+        let href = info.src.clone();
+        let link_text = label.clone();
+        let display_text = label.clone();
+
+        let mut props = PressableProps::default();
+        props.a11y.role = Some(SemanticsRole::Button);
+        props.a11y.label = Some(link_text.clone());
+
+        return cx.pressable(props, |cx, _state| {
+            let href = href.clone();
+            let activate_text = link_text.clone();
+            let display_text = display_text.clone();
+            let on_link_activate = on_link_activate.clone();
+            cx.pressable_on_activate(Arc::new(move |host, cx, reason| {
+                on_link_activate(
+                    host,
+                    cx,
+                    reason,
+                    LinkInfo {
+                        href: href.clone(),
+                        text: activate_text.clone(),
+                    },
+                );
+            }));
+
+            vec![cx.text_props(TextProps {
+                layout: Default::default(),
+                text: display_text.clone(),
+                style: Some(TextStyle {
+                    font: FontId::default(),
+                    size: theme.metrics.font_size,
+                    weight: FontWeight::NORMAL,
+                    line_height: Some(theme.metrics.font_line_height),
+                    letter_spacing_em: None,
+                }),
+                color: Some(markdown_theme.link),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })]
+        });
+    }
+
+    cx.text_props(TextProps {
+        layout: Default::default(),
+        text: label,
+        style: Some(TextStyle {
+            font: FontId::default(),
+            size: theme.metrics.font_size,
+            weight: FontWeight::NORMAL,
+            line_height: Some(theme.metrics.font_line_height),
+            letter_spacing_em: None,
+        }),
+        color: Some(markdown_theme.muted),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    })
+}
+
 fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> {
     if text.trim().is_empty() {
         return Vec::new();
     }
     if style.code {
         return vec![InlinePiece {
-            text: text.to_string(),
+            kind: InlinePieceKind::Text(text.to_string()),
             style: style.clone(),
         }];
     }
@@ -1814,7 +1987,7 @@ fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> 
             token.push(' ');
         }
         out.push(InlinePiece {
-            text: token,
+            kind: InlinePieceKind::Text(token),
             style: style.clone(),
         });
     }
@@ -1824,11 +1997,19 @@ fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> 
 fn coalesce_link_runs(pieces: Vec<InlinePiece>) -> Vec<InlinePiece> {
     let mut out: Vec<InlinePiece> = Vec::new();
     for piece in pieces {
+        let mut merged = false;
         if let Some(last) = out.last_mut()
             && last.style == piece.style
             && last.style.link.is_some()
         {
-            last.text.push_str(&piece.text);
+            if let (InlinePieceKind::Text(last_text), InlinePieceKind::Text(cur_text)) =
+                (&mut last.kind, &piece.kind)
+            {
+                last_text.push_str(cur_text);
+                merged = true;
+            }
+        }
+        if merged {
             continue;
         }
         out.push(piece);
@@ -1972,6 +2153,26 @@ mod tests {
                 .iter()
                 .any(|e| matches!(e, Event::Start(Tag::Strikethrough)))
         );
+    }
+
+    #[test]
+    fn pulldown_parses_image_and_collects_alt_text() {
+        let events = parse_events("![alt **bold** `code`](https://example.com/a.png \"t\")\n");
+        let pieces = inline_pieces_from_events_unwrapped(&events);
+
+        let imgs: Vec<_> = pieces
+            .iter()
+            .filter_map(|p| match &p.kind {
+                InlinePieceKind::Image(info) => Some(info),
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(imgs.len(), 1);
+        assert_eq!(imgs[0].src.as_ref(), "https://example.com/a.png");
+        assert_eq!(imgs[0].alt.as_ref(), "alt bold code");
+        assert_eq!(imgs[0].title.as_deref(), Some("t"));
+        assert!(!imgs[0].is_svg);
     }
 
     #[test]
