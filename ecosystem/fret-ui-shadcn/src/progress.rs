@@ -8,8 +8,14 @@ use fret_ui_kit::primitives::progress as radix_progress;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 #[derive(Clone)]
+enum ProgressModel {
+    Determinate(Model<f32>),
+    Optional(Model<Option<f32>>),
+}
+
+#[derive(Clone)]
 pub struct Progress {
-    model: Model<f32>,
+    model: ProgressModel,
     min: f32,
     max: f32,
     chrome: ChromeRefinement,
@@ -19,7 +25,21 @@ pub struct Progress {
 impl Progress {
     pub fn new(model: Model<f32>) -> Self {
         Self {
-            model,
+            model: ProgressModel::Determinate(model),
+            min: 0.0,
+            max: 100.0,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates a progress indicator with an optional value.
+    ///
+    /// When the value is `None`, the indicator renders as 0% (matching shadcn/ui's
+    /// `value || 0` behavior).
+    pub fn new_opt(model: Model<Option<f32>>) -> Self {
+        Self {
+            model: ProgressModel::Optional(model),
             min: 0.0,
             max: 100.0,
             chrome: ChromeRefinement::default(),
@@ -41,6 +61,13 @@ impl Progress {
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
         self
+    }
+
+    fn value<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Option<f32> {
+        match &self.model {
+            ProgressModel::Determinate(model) => Some(cx.watch_model(model).copied().unwrap_or(self.min)),
+            ProgressModel::Optional(model) => cx.watch_model(model).copied().flatten(),
+        }
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -67,8 +94,10 @@ impl Progress {
                 .or_else(|| theme.color_by_key("input"))
                 .unwrap_or(theme.colors.panel_border);
 
-            let v = cx.watch_model(&self.model).copied().unwrap_or(self.min);
-            let t = radix_progress::normalize_progress(v, self.min, self.max);
+            let v = self.value(cx);
+            let t = v
+                .map(|v| radix_progress::normalize_progress(v, self.min, self.max))
+                .unwrap_or(0.0);
 
             let base_layout = LayoutRefinement::default()
                 .w_full()
