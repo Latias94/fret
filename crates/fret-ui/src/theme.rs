@@ -339,24 +339,12 @@ impl Theme {
         self.author = cfg.author.clone();
         self.url = cfg.url.clone();
 
+        assert_no_legacy_theme_keys(cfg);
+
         let mut changed = false;
 
         let mut next_colors = default_color_tokens(self.colors);
         let mut next_metrics = default_metric_tokens(self.metrics);
-
-        macro_rules! apply_color {
-            ($key:literal, $field:expr) => {
-                if let Some(v) = cfg.colors.get($key) {
-                    if let Some(c) = parse_color_to_linear(v) {
-                        next_colors.insert($key.to_string(), c);
-                        if $field != c {
-                            $field = c;
-                            changed = true;
-                        }
-                    }
-                }
-            };
-        }
 
         macro_rules! apply_semantic_color {
             ($key:literal, $set:expr) => {
@@ -398,14 +386,12 @@ impl Theme {
                 self.colors.surface_background = c;
                 changed = true;
             }
-            next_colors.insert("color.surface.background".to_string(), c);
         });
         apply_semantic_color!("foreground", |c| {
             if self.colors.text_primary != c {
                 self.colors.text_primary = c;
                 changed = true;
             }
-            next_colors.insert("color.text.primary".to_string(), c);
         });
         apply_semantic_color!("border", |c| {
             if self.colors.panel_border != c {
@@ -420,265 +406,121 @@ impl Theme {
                 self.colors.list_border = c;
                 changed = true;
             }
-            next_colors.insert("color.panel.border".to_string(), c);
-            next_colors.insert("color.menu.border".to_string(), c);
-            next_colors.insert("color.list.border".to_string(), c);
         });
         apply_semantic_color!("input", |c| {
-            if self.colors.panel_border != c {
-                self.colors.panel_border = c;
-                changed = true;
+            if !cfg.colors.contains_key("border") {
+                if self.colors.panel_border != c {
+                    self.colors.panel_border = c;
+                    changed = true;
+                }
+                if self.colors.menu_border != c {
+                    self.colors.menu_border = c;
+                    changed = true;
+                }
+                if self.colors.list_border != c {
+                    self.colors.list_border = c;
+                    changed = true;
+                }
             }
-            next_colors.insert("color.panel.border".to_string(), c);
         });
         apply_semantic_color!("ring", |c| {
             if self.colors.focus_ring != c {
                 self.colors.focus_ring = c;
                 changed = true;
             }
-            next_colors.insert("color.focus.ring".to_string(), c);
         });
         apply_semantic_color!("card", |c| {
             if self.colors.panel_background != c {
                 self.colors.panel_background = c;
                 changed = true;
             }
-            next_colors.insert("color.panel.background".to_string(), c);
+            if !cfg.colors.contains_key("fret.list.background") && self.colors.list_background != c
+            {
+                self.colors.list_background = c;
+                changed = true;
+            }
         });
         apply_semantic_color!("popover", |c| {
             if self.colors.menu_background != c {
                 self.colors.menu_background = c;
                 changed = true;
             }
-            next_colors.insert("color.menu.background".to_string(), c);
         });
         apply_semantic_color!("muted-foreground", |c| {
             if self.colors.text_muted != c {
                 self.colors.text_muted = c;
                 changed = true;
             }
-            next_colors.insert("color.text.muted".to_string(), c);
         });
         apply_semantic_color!("accent", |c| {
             if self.colors.hover_background != c {
                 self.colors.hover_background = c;
                 changed = true;
             }
-            next_colors.insert("color.hover.background".to_string(), c);
+            if !cfg.colors.contains_key("fret.menu.item.hover") && self.colors.menu_item_hover != c
+            {
+                self.colors.menu_item_hover = c;
+                changed = true;
+            }
+            if !cfg.colors.contains_key("fret.list.row.hover") && self.colors.list_row_hover != c {
+                self.colors.list_row_hover = c;
+                changed = true;
+            }
         });
         apply_semantic_color!("primary", |c| {
             if self.colors.accent != c {
                 self.colors.accent = c;
                 changed = true;
             }
-            next_colors.insert("color.accent".to_string(), c);
+            if !cfg.colors.contains_key("selection") {
+                let selection = with_alpha(c, 0.4);
+                if self.colors.selection_background != selection {
+                    self.colors.selection_background = selection;
+                    changed = true;
+                }
+            }
         });
 
         apply_semantic_metric!("radius", |px| {
-            if self.metrics.radius_sm != px {
-                self.metrics.radius_sm = px;
+            if self.metrics.radius_lg != px {
+                self.metrics.radius_lg = px;
                 changed = true;
             }
-            next_metrics.insert("metric.radius.sm".to_string(), px);
+            let md = Px((px.0 - 2.0).max(0.0));
+            let sm = Px((px.0 - 4.0).max(0.0));
+            if self.metrics.radius_md != md {
+                self.metrics.radius_md = md;
+                changed = true;
+            }
+            if self.metrics.radius_sm != sm {
+                self.metrics.radius_sm = sm;
+                changed = true;
+            }
         });
         apply_semantic_metric!("font.size", |px| {
             if self.metrics.font_size != px {
                 self.metrics.font_size = px;
                 changed = true;
             }
-            next_metrics.insert("metric.font.size".to_string(), px);
         });
         apply_semantic_metric!("mono_font.size", |px| {
             if self.metrics.mono_font_size != px {
                 self.metrics.mono_font_size = px;
                 changed = true;
             }
-            next_metrics.insert("metric.font.mono_size".to_string(), px);
         });
         apply_semantic_metric!("font.line_height", |px| {
             if self.metrics.font_line_height != px {
                 self.metrics.font_line_height = px;
                 changed = true;
             }
-            next_metrics.insert("metric.font.line_height".to_string(), px);
         });
         apply_semantic_metric!("mono_font.line_height", |px| {
             if self.metrics.mono_font_line_height != px {
                 self.metrics.mono_font_line_height = px;
                 changed = true;
             }
-            next_metrics.insert("metric.font.mono_line_height".to_string(), px);
         });
-
-        // Now apply legacy dotted keys (they remain supported during the migration window).
-        apply_color!("color.surface.background", self.colors.surface_background);
-        apply_color!("color.panel.background", self.colors.panel_background);
-        apply_color!("color.panel.border", self.colors.panel_border);
-
-        apply_color!("color.text.primary", self.colors.text_primary);
-        apply_color!("color.text.muted", self.colors.text_muted);
-        apply_color!("color.text.disabled", self.colors.text_disabled);
-
-        apply_color!("color.accent", self.colors.accent);
-        apply_color!(
-            "color.selection.background",
-            self.colors.selection_background
-        );
-        apply_color!("color.hover.background", self.colors.hover_background);
-        apply_color!("color.focus.ring", self.colors.focus_ring);
-
-        apply_color!("color.menu.background", self.colors.menu_background);
-        apply_color!("color.menu.border", self.colors.menu_border);
-        apply_color!("color.menu.item.hover", self.colors.menu_item_hover);
-        apply_color!("color.menu.item.selected", self.colors.menu_item_selected);
-
-        apply_color!("color.list.background", self.colors.list_background);
-        apply_color!("color.list.border", self.colors.list_border);
-        apply_color!("color.list.row.hover", self.colors.list_row_hover);
-        apply_color!("color.list.row.selected", self.colors.list_row_selected);
-
-        apply_color!("color.scrollbar.track", self.colors.scrollbar_track);
-        apply_color!("color.scrollbar.thumb", self.colors.scrollbar_thumb);
-        apply_color!(
-            "color.scrollbar.thumb.hover",
-            self.colors.scrollbar_thumb_hover
-        );
-
-        apply_color!(
-            "color.viewport.selection.fill",
-            self.colors.viewport_selection_fill
-        );
-        apply_color!(
-            "color.viewport.selection.stroke",
-            self.colors.viewport_selection_stroke
-        );
-        apply_color!("color.viewport.marker", self.colors.viewport_marker);
-        apply_color!(
-            "color.viewport.drag_line.pan",
-            self.colors.viewport_drag_line_pan
-        );
-        apply_color!(
-            "color.viewport.drag_line.orbit",
-            self.colors.viewport_drag_line_orbit
-        );
-        apply_color!("color.viewport.gizmo.x", self.colors.viewport_gizmo_x);
-        apply_color!("color.viewport.gizmo.y", self.colors.viewport_gizmo_y);
-        apply_color!(
-            "color.viewport.gizmo.handle.background",
-            self.colors.viewport_gizmo_handle_background
-        );
-        apply_color!(
-            "color.viewport.gizmo.handle.border",
-            self.colors.viewport_gizmo_handle_border
-        );
-        apply_color!(
-            "color.viewport.rotate_gizmo",
-            self.colors.viewport_rotate_gizmo
-        );
-
-        // Migration bridge: if a theme provides semantic keys but not the legacy dotted keys, keep
-        // the dotted tokens synchronized so legacy callsites remain consistent during the refactor.
-        macro_rules! backfill_color_from_alias {
-            ($canonical:literal, $field:expr, [$($alias:literal),+ $(,)?]) => {
-                if !cfg.colors.contains_key($canonical) {
-                    for alias in [$($alias),+] {
-                        if let Some(v) = cfg.colors.get(alias)
-                            && let Some(c) = parse_color_to_linear(v)
-                        {
-                            next_colors.insert($canonical.to_string(), c);
-                            if $field != c {
-                                $field = c;
-                                changed = true;
-                            }
-                            break;
-                        }
-                    }
-                }
-            };
-        }
-
-        backfill_color_from_alias!(
-            "color.surface.background",
-            self.colors.surface_background,
-            ["background"]
-        );
-        backfill_color_from_alias!(
-            "color.text.primary",
-            self.colors.text_primary,
-            ["foreground"]
-        );
-        backfill_color_from_alias!(
-            "color.panel.border",
-            self.colors.panel_border,
-            ["border", "input", "input.border"]
-        );
-        backfill_color_from_alias!("color.focus.ring", self.colors.focus_ring, ["ring"]);
-        backfill_color_from_alias!(
-            "color.panel.background",
-            self.colors.panel_background,
-            ["card", "card.background", "popover", "popover.background"]
-        );
-        backfill_color_from_alias!(
-            "color.text.muted",
-            self.colors.text_muted,
-            ["muted-foreground", "muted.foreground"]
-        );
-        backfill_color_from_alias!(
-            "color.menu.background",
-            self.colors.menu_background,
-            [
-                "popover",
-                "popover.background",
-                "card",
-                "card.background",
-                "background"
-            ]
-        );
-        backfill_color_from_alias!(
-            "color.menu.border",
-            self.colors.menu_border,
-            ["popover.border", "border", "input", "input.border"]
-        );
-        backfill_color_from_alias!(
-            "color.menu.item.hover",
-            self.colors.menu_item_hover,
-            ["accent", "accent.background", "muted", "muted.background"]
-        );
-        backfill_color_from_alias!(
-            "color.list.background",
-            self.colors.list_background,
-            ["background", "card", "card.background"]
-        );
-        backfill_color_from_alias!(
-            "color.list.border",
-            self.colors.list_border,
-            ["border", "input", "input.border"]
-        );
-        backfill_color_from_alias!(
-            "color.list.row.hover",
-            self.colors.list_row_hover,
-            ["accent", "accent.background", "muted", "muted.background"]
-        );
-        backfill_color_from_alias!(
-            "color.list.row.selected",
-            self.colors.list_row_selected,
-            [
-                "accent",
-                "accent.background",
-                "primary",
-                "primary.background"
-            ]
-        );
-        backfill_color_from_alias!(
-            "color.accent",
-            self.colors.accent,
-            [
-                "primary",
-                "primary.background",
-                "accent",
-                "accent.background"
-            ]
-        );
 
         // Ensure the semantic keys remain present and mirror the resolved typed baseline.
         next_colors.insert("background".to_string(), self.colors.surface_background);
@@ -770,8 +612,10 @@ impl Theme {
         }
 
         // Ensure the semantic metric keys remain present and mirror the resolved typed baseline.
-        next_metrics.insert("radius".to_string(), self.metrics.radius_sm);
-        next_metrics.insert("radius.lg".to_string(), self.metrics.radius_md);
+        next_metrics.insert("radius".to_string(), self.metrics.radius_lg);
+        next_metrics.insert("radius.sm".to_string(), self.metrics.radius_sm);
+        next_metrics.insert("radius.md".to_string(), self.metrics.radius_md);
+        next_metrics.insert("radius.lg".to_string(), self.metrics.radius_lg);
         next_metrics.insert("font.size".to_string(), self.metrics.font_size);
         next_metrics.insert("mono_font.size".to_string(), self.metrics.mono_font_size);
         next_metrics.insert(
@@ -784,18 +628,12 @@ impl Theme {
         );
 
         for (k, v) in &cfg.colors {
-            if next_colors.contains_key(k) {
-                continue;
-            }
             if let Some(c) = parse_color_to_linear(v) {
                 next_colors.insert(k.clone(), c);
             }
         }
 
         for (k, v) in &cfg.metrics {
-            if next_metrics.contains_key(k) {
-                continue;
-            }
             next_metrics.insert(k.clone(), Px(*v));
         }
 
@@ -1057,6 +895,15 @@ fn parse_oklch_to_linear(s: &str) -> Option<Color> {
         b: b_lin.clamp(0.0, 1.0),
         a: alpha,
     })
+}
+
+fn with_alpha(mut color: Color, alpha: f32) -> Color {
+    color.a = alpha;
+    color
+}
+
+fn assert_no_legacy_theme_keys(_cfg: &ThemeConfig) {
+    // TODO: enforce/diagnose legacy keys once the theme config migration settles.
 }
 
 #[cfg(test)]
