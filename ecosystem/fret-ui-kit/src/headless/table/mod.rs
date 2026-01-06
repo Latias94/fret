@@ -48,7 +48,11 @@ pub use row_pinning::{
     RowPinPosition, RowPinningState, center_row_keys, is_row_pinned, is_some_rows_pinned, pin_row,
     pin_rows,
 };
-pub use row_selection::{RowSelectionState, is_row_selected, select_rows_fn};
+pub use row_selection::{
+    RowSelectionState, is_all_rows_selected, is_row_selected, is_some_rows_selected,
+    select_rows_fn, selected_flat_row_count, selected_root_row_count,
+    toggle_all_page_rows_selected, toggle_all_rows_selected,
+};
 pub use sorting::{
     SortSpec, SortingState, sort_for_column, sort_row_model, toggle_sort_for_column,
 };

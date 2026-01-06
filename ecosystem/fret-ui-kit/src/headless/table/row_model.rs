@@ -494,6 +494,49 @@ impl<'a, TData> Table<'a, TData> {
         })
     }
 
+    pub fn is_all_rows_selected(&self) -> bool {
+        super::is_all_rows_selected(self.filtered_row_model(), &self.state.row_selection)
+    }
+
+    pub fn is_some_rows_selected(&self) -> bool {
+        super::is_some_rows_selected(self.filtered_row_model(), &self.state.row_selection)
+    }
+
+    pub fn is_all_page_rows_selected(&self) -> bool {
+        super::is_all_rows_selected(self.row_model(), &self.state.row_selection)
+    }
+
+    pub fn is_some_page_rows_selected(&self) -> bool {
+        if self.is_all_page_rows_selected() {
+            return false;
+        }
+        super::selected_flat_row_count(self.row_model(), &self.state.row_selection) > 0
+    }
+
+    pub fn filtered_row_count(&self) -> usize {
+        self.filtered_row_model().root_rows().len()
+    }
+
+    pub fn filtered_flat_row_count(&self) -> usize {
+        self.filtered_row_model().flat_rows().len()
+    }
+
+    pub fn filtered_selected_row_count(&self) -> usize {
+        super::selected_root_row_count(self.filtered_row_model(), &self.state.row_selection)
+    }
+
+    pub fn filtered_selected_flat_row_count(&self) -> usize {
+        super::selected_flat_row_count(self.filtered_row_model(), &self.state.row_selection)
+    }
+
+    pub fn toggled_all_rows_selected(&self, value: Option<bool>) -> super::RowSelectionState {
+        super::toggle_all_rows_selected(self.filtered_row_model(), &self.state.row_selection, value)
+    }
+
+    pub fn toggled_all_page_rows_selected(&self, value: Option<bool>) -> super::RowSelectionState {
+        super::toggle_all_page_rows_selected(self.row_model(), &self.state.row_selection, value)
+    }
+
     pub fn faceted_row_model(&self, column_id: &str) -> Option<&RowModel<'a, TData>> {
         let column_index = self.column_index(column_id)?;
 
@@ -1377,5 +1420,88 @@ mod tests {
         assert_eq!(labels.get(&2).copied(), Some("B"));
 
         assert_eq!(table.faceted_min_max_u64("status"), Some((1, 2)));
+    }
+
+    #[test]
+    fn table_row_selection_page_toggle_and_indeterminate_queries() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = (0..10).map(|i| Item { value: i }).collect::<Vec<_>>();
+        let mut state = TableState::default();
+        state.pagination = PaginationState {
+            page_index: 0,
+            page_size: 3,
+        };
+
+        let table = Table::builder(&data).state(state).build();
+        assert!(!table.is_all_page_rows_selected());
+        assert!(!table.is_some_page_rows_selected());
+
+        let selection = table.toggled_all_page_rows_selected(None);
+        let table2 = Table::builder(&data)
+            .state(TableState {
+                pagination: table.state().pagination,
+                row_selection: selection,
+                ..TableState::default()
+            })
+            .build();
+        assert!(table2.is_all_page_rows_selected());
+        assert!(!table2.is_some_page_rows_selected());
+
+        let selection = table2.toggled_all_page_rows_selected(None);
+        assert!(selection.is_empty());
+    }
+
+    #[test]
+    fn table_row_selection_filtered_selected_counts_match_filtered_rows() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            status: Arc<str>,
+        }
+
+        let data = vec![
+            Item { status: "A".into() },
+            Item { status: "B".into() },
+            Item { status: "A".into() },
+        ];
+
+        let status = ColumnDef::new("status").filter_by(|it: &Item, q| it.status.as_ref() == q);
+
+        let mut state = TableState::default();
+        state.column_filters = vec![ColumnFilter {
+            column: "status".into(),
+            value: "A".into(),
+        }];
+        state.row_selection = [RowKey::from_index(0)].into_iter().collect();
+
+        let table = Table::builder(&data)
+            .columns(vec![status])
+            .state(state)
+            .build();
+
+        assert_eq!(table.filtered_row_count(), 2);
+        assert_eq!(table.filtered_selected_row_count(), 1);
+        assert_eq!(table.filtered_selected_flat_row_count(), 1);
+        assert!(table.is_some_rows_selected());
+        assert!(!table.is_all_rows_selected());
+
+        let selection = table.toggled_all_rows_selected(Some(true));
+        let table2 = Table::builder(&data)
+            .columns(vec![
+                ColumnDef::new("status").filter_by(|it: &Item, q| it.status.as_ref() == q),
+            ])
+            .state(TableState {
+                column_filters: table.state().column_filters.clone(),
+                row_selection: selection,
+                ..TableState::default()
+            })
+            .build();
+
+        assert!(table2.is_all_rows_selected());
+        assert!(!table2.is_some_rows_selected());
     }
 }

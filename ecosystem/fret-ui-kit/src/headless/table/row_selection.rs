@@ -9,6 +9,94 @@ pub fn is_row_selected(row_key: RowKey, selection: &RowSelectionState) -> bool {
     selection.contains(&row_key)
 }
 
+pub fn selected_flat_row_count<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+) -> usize {
+    row_model
+        .flat_rows()
+        .iter()
+        .filter_map(|&i| row_model.row(i).map(|r| r.key))
+        .filter(|k| is_row_selected(*k, selection))
+        .count()
+}
+
+pub fn selected_root_row_count<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+) -> usize {
+    row_model
+        .root_rows()
+        .iter()
+        .filter_map(|&i| row_model.row(i).map(|r| r.key))
+        .filter(|k| is_row_selected(*k, selection))
+        .count()
+}
+
+pub fn is_all_rows_selected<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+) -> bool {
+    if row_model.flat_rows().is_empty() {
+        return false;
+    }
+    if selection.is_empty() {
+        return false;
+    }
+    row_model
+        .flat_rows()
+        .iter()
+        .filter_map(|&i| row_model.row(i).map(|r| r.key))
+        .all(|k| is_row_selected(k, selection))
+}
+
+pub fn is_some_rows_selected<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+) -> bool {
+    let total = row_model.flat_rows().len();
+    if total == 0 {
+        return false;
+    }
+    let selected = selected_flat_row_count(row_model, selection);
+    selected > 0 && selected < total
+}
+
+pub fn toggle_all_rows_selected<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+    value: Option<bool>,
+) -> RowSelectionState {
+    let mut next = selection.clone();
+    let value = value.unwrap_or_else(|| !is_all_rows_selected(row_model, selection));
+
+    if value {
+        for &i in row_model.flat_rows() {
+            let Some(row) = row_model.row(i) else {
+                continue;
+            };
+            next.insert(row.key);
+        }
+    } else {
+        for &i in row_model.flat_rows() {
+            let Some(row) = row_model.row(i) else {
+                continue;
+            };
+            next.remove(&row.key);
+        }
+    }
+
+    next
+}
+
+pub fn toggle_all_page_rows_selected<'a, TData>(
+    page_row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+    value: Option<bool>,
+) -> RowSelectionState {
+    toggle_all_rows_selected(page_row_model, selection, value)
+}
+
 /// TanStack-compatible `selectRowsFn`: returns a [`RowModel`] containing only selected rows in the
 /// `rows` tree, while keeping `flat_rows` and `rows_by_key` for all selected rows discovered during
 /// traversal (including selected sub-rows whose parents are not selected).
@@ -195,5 +283,20 @@ mod tests {
         assert_eq!(selected.flat_rows().len(), 0);
         assert_eq!(selected.arena().len(), 0);
         assert!(selected.rows_by_key().is_empty());
+    }
+
+    #[test]
+    fn toggle_all_rows_selected_selects_and_deselects_flat_rows() {
+        let data = make_people(5, 0);
+        let table = Table::builder(&data).build();
+        let model = table.core_row_model();
+
+        let selection = RowSelectionState::default();
+        let selection = toggle_all_rows_selected(model, &selection, Some(true));
+        assert!(is_all_rows_selected(model, &selection));
+
+        let selection = toggle_all_rows_selected(model, &selection, Some(false));
+        assert!(selection.is_empty());
+        assert!(!is_some_rows_selected(model, &selection));
     }
 }
