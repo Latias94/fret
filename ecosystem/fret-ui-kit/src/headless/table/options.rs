@@ -1,5 +1,5 @@
 /// Headless table options (TanStack-aligned semantics, Rust-native API).
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct TableOptions {
     /// If enabled, filtering is assumed to be done externally (e.g. server-side).
     ///
@@ -13,4 +13,24 @@ pub struct TableOptions {
     ///
     /// When `true`, `row_model()` returns `pre_pagination_row_model()`.
     pub manual_pagination: bool,
+    /// If enabled, expanded row handling is assumed to be done externally.
+    ///
+    /// When `true`, `expanded_row_model()` returns `pre_expanded_row_model()`.
+    pub manual_expanding: bool,
+    /// When true, pagination counts expanded rows (children) as part of the page.
+    ///
+    /// This mirrors TanStack's `paginateExpandedRows` behavior.
+    pub paginate_expanded_rows: bool,
+}
+
+impl Default for TableOptions {
+    fn default() -> Self {
+        Self {
+            manual_filtering: false,
+            manual_sorting: false,
+            manual_pagination: false,
+            manual_expanding: false,
+            paginate_expanded_rows: true,
+        }
+    }
 }

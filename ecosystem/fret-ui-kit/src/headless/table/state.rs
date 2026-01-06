@@ -1,6 +1,6 @@
 use super::{
     ColumnFiltersState, ColumnOrderState, ColumnPinningState, ColumnSizingInfoState,
-    ColumnSizingState, ColumnVisibilityState, GlobalFilterState, PaginationState,
+    ColumnSizingState, ColumnVisibilityState, ExpandingState, GlobalFilterState, PaginationState,
     RowSelectionState, SortingState,
 };
 
@@ -10,6 +10,7 @@ pub struct TableState {
     pub column_filters: ColumnFiltersState,
     pub global_filter: GlobalFilterState,
     pub pagination: PaginationState,
+    pub expanding: ExpandingState,
     pub row_selection: RowSelectionState,
     pub column_visibility: ColumnVisibilityState,
     pub column_order: ColumnOrderState,
@@ -25,6 +26,7 @@ impl Default for TableState {
             column_filters: ColumnFiltersState::default(),
             global_filter: GlobalFilterState::default(),
             pagination: PaginationState::default(),
+            expanding: ExpandingState::default(),
             row_selection: RowSelectionState::default(),
             column_visibility: ColumnVisibilityState::default(),
             column_order: ColumnOrderState::default(),
