@@ -69,38 +69,51 @@ Decorations are drawn as separate scene ops associated with text runs (not as in
 ### 3) Markdown theme token namespace (optional, with fallbacks)
 
 `fret-markdown` will resolve styling through `Theme::color_by_key` / `Theme::metric_by_key` first,
-then fall back to existing typed theme surfaces (`theme.colors`, `theme.metrics`).
+then fall back to semantic theme keys (`Theme::color_required`) and baseline metric tokens
+(`Theme::metric_required`).
 
 We standardize the following lookup order:
 
 1. `fret.markdown.*` (canonical, Fret-owned namespace)
 2. `markdown.*` (compatibility keys for third-party theme reuse)
-3. Typed fallbacks (`theme.colors.*` / `theme.metrics.*`)
+3. Semantic fallbacks (e.g. `foreground`, `muted-foreground`, `primary`, `border`, `card`, `muted`)
+4. Baseline metric fallbacks (e.g. `metric.padding.sm`, `metric.padding.md`, `metric.font.line_height`)
 
 We standardize the following optional tokens (names are canonical keys):
 
 Colors:
 
-- `markdown.text` (fallback: `theme.colors.text_primary`)
-- `markdown.muted` (fallback: `theme.colors.text_muted`)
-- `markdown.link` (fallback: `theme.colors.accent`)
-- `markdown.link_underline` (fallback: `markdown.link` or text color)
-- `markdown.inline_code.fg` (fallback: `markdown.text`)
-- `markdown.inline_code.bg` (fallback: `theme.colors.hover_background`)
-- `markdown.blockquote.border` (fallback: `theme.colors.panel_border`)
-- `markdown.hr` (fallback: `theme.colors.panel_border`)
-- `markdown.table.border` (fallback: `theme.colors.panel_border`)
-- `markdown.table.header_bg` (fallback: `theme.colors.panel_background`)
-- `markdown.task.checked` (fallback: `theme.colors.accent`)
-- `markdown.task.unchecked` (fallback: `theme.colors.text_muted`)
+- `markdown.muted` (fallback: `muted-foreground`)
+- `markdown.link` (fallback: `primary`)
+- `markdown.hr` (fallback: `border`)
+- `markdown.inline_code.fg` (fallback: `foreground`)
+- `markdown.inline_code.bg` (fallback: `accent`)
+- `markdown.blockquote.border` (fallback: `border`)
+- `markdown.table.border` (fallback: `border`)
+- `markdown.table.header_bg` (fallback: `muted`)
+- `markdown.task.checked` (fallback: `primary`)
+- `markdown.task.unchecked` (fallback: `muted-foreground`)
+
+Math (optional; only used when the `mathjax-svg` feature is enabled):
+
+- `markdown.math.inline.fg` (fallback: `markdown.inline_code.fg`)
+- `markdown.math.inline.bg` (fallback: `markdown.inline_code.bg`)
+- `markdown.math.inline.height` (fallback: `metric.font.line_height`)
+- `markdown.math.block.fg` (fallback: `foreground`)
+- `markdown.math.block.bg` (fallback: `card`)
+- `markdown.math.block.height` (fallback: `metric.font.line_height`)
 
 Metrics:
 
-- `markdown.block.gap` (fallback: existing default spacing scale)
-- `markdown.inline_code.padding_x`
-- `markdown.inline_code.padding_y`
-- `markdown.blockquote.border_width`
-- `markdown.blockquote.padding`
+- `markdown.inline_code.padding_x` (fallback: `Px(3.0)`)
+- `markdown.inline_code.padding_y` (fallback: `Px(1.0)`)
+- `markdown.blockquote.border_width` (fallback: `Px(3.0)`)
+- `markdown.blockquote.padding` (fallback: `metric.padding.sm`)
+- `markdown.table.cell.padding_x` (fallback: `metric.padding.sm`)
+- `markdown.table.cell.padding_y` (fallback: `metric.padding.sm * 0.5`)
+- `markdown.math.inline.padding_x` (fallback: `markdown.inline_code.padding_x`)
+- `markdown.math.inline.padding_y` (fallback: `markdown.inline_code.padding_y`)
+- `markdown.math.block.padding` (fallback: `metric.padding.md`)
 
 Notes:
 

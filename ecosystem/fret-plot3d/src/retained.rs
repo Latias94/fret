@@ -316,12 +316,15 @@ impl<H: UiHost> Widget<H> for Plot3dCanvas {
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         cx.observe_model(&self.model, Invalidation::Paint);
 
-        let theme = cx.theme().snapshot();
+        let theme = cx.theme();
         let background = self
             .style
             .background
-            .unwrap_or(theme.colors.panel_background);
-        let border = self.style.border.unwrap_or(theme.colors.panel_border);
+            .unwrap_or_else(|| theme.color_required("card"));
+        let border = self
+            .style
+            .border
+            .unwrap_or_else(|| theme.color_required("border"));
         let border_width = self.style.border_width;
 
         let bounds = cx.bounds;

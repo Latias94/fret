@@ -136,12 +136,7 @@ impl WinitAppDriver for HeatmapDemoDriver {
         } = context;
 
         let root = state.root.get_or_insert_with(|| {
-            let theme = fret_ui::Theme::global(&*app).snapshot();
-            let style = LinePlotStyle {
-                background: Some(theme.colors.panel_background),
-                border: Some(theme.colors.panel_border),
-                ..Default::default()
-            };
+            let style = LinePlotStyle::default();
 
             let canvas = HeatmapPlotCanvas::new(state.plot.clone())
                 .style(style)

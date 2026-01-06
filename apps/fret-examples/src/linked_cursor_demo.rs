@@ -271,12 +271,7 @@ impl WinitAppDriver for LinkedCursorDemoDriver {
         );
 
         let top_root = state.top_root.get_or_insert_with(|| {
-            let theme = fret_ui::Theme::global(&*app).snapshot();
-            let style = LinePlotStyle {
-                background: Some(theme.colors.panel_background),
-                border: Some(theme.colors.panel_border),
-                ..Default::default()
-            };
+            let style = LinePlotStyle::default();
             let canvas = LinePlotCanvas::new(state.top_plot.clone())
                 .style(style)
                 .state(state.top_state.clone())
@@ -287,12 +282,7 @@ impl WinitAppDriver for LinkedCursorDemoDriver {
         });
 
         let bottom_root = state.bottom_root.get_or_insert_with(|| {
-            let theme = fret_ui::Theme::global(&*app).snapshot();
-            let style = LinePlotStyle {
-                background: Some(theme.colors.panel_background),
-                border: Some(theme.colors.panel_border),
-                ..Default::default()
-            };
+            let style = LinePlotStyle::default();
             let canvas = AreaPlotCanvas::new(state.bottom_plot.clone())
                 .style(style)
                 .state(state.bottom_state.clone())

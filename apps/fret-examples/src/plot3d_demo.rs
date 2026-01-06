@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
-use fret_core::{AppWindowId, Event, RenderTargetId, geometry::Px};
+use fret_core::{AppWindowId, Event, RenderTargetId};
 use fret_launch::{
     EngineFrameUpdate, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     run_app,
@@ -218,12 +218,7 @@ impl WinitAppDriver for Plot3dDemoDriver {
         } = context;
 
         let root = state.root.get_or_insert_with(|| {
-            let theme = fret_ui::Theme::global(&*app).snapshot();
-            let style = Plot3dStyle {
-                background: Some(theme.colors.panel_background),
-                border: Some(theme.colors.panel_border),
-                border_width: Px(1.0),
-            };
+            let style = Plot3dStyle::default();
             let canvas = Plot3dCanvas::new(state.plot.clone()).style(style);
             let node = Plot3dCanvas::create_node(&mut state.ui, canvas);
             state.ui.set_root(node);
