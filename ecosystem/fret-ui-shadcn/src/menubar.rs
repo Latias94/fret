@@ -8,8 +8,9 @@ use fret_core::{
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, OpacityProps,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, SizeStyle,
+    TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
@@ -25,6 +26,8 @@ use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Space};
+
+use crate::overlay_motion;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -961,6 +964,18 @@ impl MenubarMenuEntries {
                 ));
 
                 let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+                let motion = OverlayController::transition_with_durations_and_easing(
+                    cx,
+                    is_open,
+                    overlay_motion::SHADCN_MOTION_TICKS_100,
+                    overlay_motion::SHADCN_MOTION_TICKS_100,
+                    overlay_motion::shadcn_ease,
+                );
+                let overlay_presence = OverlayPresence {
+                    present: motion.present,
+                    interactive: is_open,
+                };
+                let opacity = motion.progress;
                 let overlay_root_name = OverlayController::popover_root_name(trigger_id);
                 let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
                 let submenu = cx.with_root_name(&overlay_root_name, |cx| {
@@ -988,7 +1003,7 @@ impl MenubarMenuEntries {
                     ..Default::default()
                 };
 
-                if is_open && enabled {
+                if overlay_presence.present && enabled {
                     let side_offset = self.menu.side_offset;
                     let window_margin = self.menu.window_margin;
                     let typeahead_timeout_ticks = self.menu.typeahead_timeout_ticks;
@@ -1021,6 +1036,18 @@ impl MenubarMenuEntries {
                             Side::Bottom,
                             Align::Start,
                         );
+                        let origin = overlay_motion::shadcn_transform_origin_for_anchored_rect(
+                            anchor,
+                            placed,
+                            Side::Bottom,
+                        );
+                        let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                        let slide = overlay_motion::shadcn_enter_slide_transform(
+                            Side::Bottom,
+                            opacity,
+                            true,
+                        );
+                        let transform = slide * zoom;
 
                         let mut flat: Vec<MenubarEntry> = Vec::new();
                         flatten_entries(&mut flat, entries.iter().cloned().collect());
@@ -1764,6 +1791,30 @@ impl MenubarMenuEntries {
                             },
                         );
 
+                        let opacity_layout = LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
+                        let content = cx.opacity_props(
+                            OpacityProps {
+                                layout: opacity_layout.clone(),
+                                opacity,
+                            },
+                            move |cx| {
+                                vec![cx.visual_transform_props(
+                                    VisualTransformProps {
+                                        layout: opacity_layout,
+                                        transform,
+                                    },
+                                    move |_cx| vec![content],
+                                )]
+                            },
+                        );
+
                         let dismissible_on_pointer_move =
                             menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
 
@@ -2371,7 +2422,7 @@ impl MenubarMenuEntries {
                         trigger_id,
                         trigger_id,
                         open,
-                        OverlayPresence::instant(true),
+                        overlay_presence,
                         overlay_children,
                         overlay_root_name,
                         content_focus_id.get(),
