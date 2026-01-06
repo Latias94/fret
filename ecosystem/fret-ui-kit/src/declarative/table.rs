@@ -195,6 +195,7 @@ pub fn table_virtualized<H: UiHost, TData>(
     let mut list_options = fret_ui::element::VirtualListOptions::new(row_h, props.overscan);
     list_options.items_revision = items_revision;
     list_options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
+    list_options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
 
     let rendered_rows = Cell::new(0usize);
 

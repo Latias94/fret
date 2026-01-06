@@ -922,6 +922,7 @@ pub struct VirtualListProps {
     pub items_revision: u64,
     pub estimate_row_height: Px,
     pub measure_mode: VirtualListMeasureMode,
+    pub key_cache: VirtualListKeyCacheMode,
     pub overscan: usize,
     pub scroll_margin: Px,
     pub gap: Px,
@@ -939,12 +940,27 @@ pub enum VirtualListMeasureMode {
     Fixed,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum VirtualListKeyCacheMode {
+    /// Cache the full `index -> key` mapping so we can:
+    /// - restore scroll anchor across reorder
+    /// - provide stable keys to measured virtualization
+    #[default]
+    AllKeys,
+    /// Do not cache `index -> key`. Keys are computed on-demand for visible items only.
+    ///
+    /// This is intended for very large fixed-height lists (e.g. tables) where caching the full
+    /// key map can dominate startup time and memory.
+    VisibleOnly,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct VirtualListOptions {
     pub axis: fret_core::Axis,
     pub items_revision: u64,
     pub estimate_row_height: Px,
     pub measure_mode: VirtualListMeasureMode,
+    pub key_cache: VirtualListKeyCacheMode,
     pub overscan: usize,
     pub scroll_margin: Px,
     pub gap: Px,
@@ -957,6 +973,7 @@ impl VirtualListOptions {
             items_revision: 0,
             estimate_row_height,
             measure_mode: VirtualListMeasureMode::Measured,
+            key_cache: VirtualListKeyCacheMode::AllKeys,
             overscan,
             scroll_margin: Px(0.0),
             gap: Px(0.0),
@@ -980,6 +997,8 @@ pub struct VirtualListState {
     pub viewport_h: Px,
     pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
     pub(crate) items_revision: u64,
+    pub(crate) items_len: usize,
+    pub(crate) key_cache: VirtualListKeyCacheMode,
     pub(crate) keys: Vec<crate::ItemKey>,
 }
 
