@@ -211,6 +211,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0070-virtualization-contract.md`
 - `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
+- `docs/adr/0100-markdown-rendering-streaming-and-injection.md`
 - `docs/adr/0065-icon-system-and-asset-packaging.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
