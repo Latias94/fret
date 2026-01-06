@@ -12,6 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
 
@@ -215,6 +216,7 @@ impl DataGrid {
                     layout: stack_layout,
                 },
                 move |cx| {
+                    let theme = Theme::global(&*cx.app).clone();
                     let col_widths = col_widths.clone();
 
                     let header = {
@@ -257,11 +259,8 @@ impl DataGrid {
                                     let text = headers.get(col).cloned().unwrap_or(Arc::from(""));
                                     let width =
                                         header_col_widths.get(col).copied().unwrap_or(Px(160.0));
-                                    fixed_width_container(
-                                        cx,
-                                        width,
-                                        TableHead::new(text).into_element(cx),
-                                    )
+                                    let head = TableHead::new(text).into_element(cx);
+                                    fixed_width_container(cx, width, head)
                                 },
                             )]
                         });
@@ -376,11 +375,8 @@ impl DataGrid {
                                                     .get(col)
                                                     .copied()
                                                     .unwrap_or(Px(160.0));
-                                                fixed_width_container(
-                                                    cx,
-                                                    width,
-                                                    TableCell::new(cell).into_element(cx),
-                                                )
+                                                let cell = TableCell::new(cell).into_element(cx);
+                                                fixed_width_container(cx, width, cell)
                                             },
                                         )]
                                     })]

@@ -100,7 +100,10 @@ pub use context_menu::{
 #[cfg(feature = "datagrid")]
 pub use data_grid::{DataGrid, DataGridRowState};
 #[cfg(feature = "datagrid")]
-pub use data_table::{DataTable, DataTableRowState};
+pub use data_table::{
+    DataTable, DataTableColumnOption, DataTableGlobalFilterInput, DataTableRowState,
+    DataTableViewOptions,
+};
 pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 };
