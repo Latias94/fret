@@ -843,6 +843,9 @@ fn render_mdstream_block_with_events<H: UiHost>(
             if let Some(render) = &components.table {
                 render(cx, info)
             } else {
+                // Intentionally not using fret-ui-kit's TanStack-inspired table:
+                // it is a data-grid with fixed-row virtualized layout (sorting/resizing/pinning),
+                // while Markdown tables need content-driven, multi-line cell layout.
                 render_pulldown_events_root(cx, theme, markdown_theme, components, events)
             }
         }
