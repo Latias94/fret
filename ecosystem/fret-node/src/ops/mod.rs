@@ -1,6 +1,7 @@
 //! Undoable graph edit operations.
 
 mod apply;
+mod build;
 
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +11,7 @@ use crate::core::{
 };
 
 pub use apply::{ApplyError, apply_op, apply_transaction};
+pub use build::GraphOpBuilderExt;
 
 /// A reversible edit operation.
 ///
@@ -119,3 +121,6 @@ impl GraphTransaction {
         self.ops.push(op);
     }
 }
+
+#[cfg(test)]
+mod tests;
