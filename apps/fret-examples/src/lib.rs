@@ -29,6 +29,7 @@ pub mod shaded_demo;
 pub mod sonner_demo;
 pub mod stacked_bars_demo;
 pub mod stairs_demo;
+pub mod stems_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_demo;
 #[cfg(not(target_arch = "wasm32"))]

@@ -82,6 +82,7 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 ## Plot types (P1)
 
 - [x] Line plot
+- [x] Stems plot
 - [x] Scatter plot (markers)
 - [x] Bars plot (filled rectangles)
 - [x] Grouped bars (bar groups)
@@ -125,6 +126,7 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 - [x] `stairs_demo` (desktop + web)
 - [x] `shaded_demo` (desktop + web)
 - [x] `linked_cursor_demo` (desktop + web)
+- [x] `stems_demo` (desktop + web)
 - [x] Desktop-only stress harness (large datasets)
 - [x] Linked plots demo (covered by `linked_cursor_demo`)
 

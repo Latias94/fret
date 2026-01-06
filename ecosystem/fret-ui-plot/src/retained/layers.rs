@@ -1009,6 +1009,19 @@ impl PlotCanvas<LinePlotLayer> {
 }
 
 #[derive(Debug, Default)]
+pub struct StemsPlotLayer {
+    cached_paths: Vec<CachedPath>,
+}
+
+pub type StemsPlotCanvas = PlotCanvas<StemsPlotLayer>;
+
+impl PlotCanvas<StemsPlotLayer> {
+    pub fn new(model: Model<StemsPlotModel>) -> Self {
+        Self::with_layer(model, StemsPlotLayer::default())
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct ScatterPlotLayer {
     cached_paths: Vec<CachedPath>,
 }
@@ -1732,6 +1745,475 @@ impl PlotLayer for LinePlotLayer {
             .map(|s| (s.id, s.y_axis, &*s.data))
             .collect();
         hit_test_polyline_series_data(&self.cached_paths, &series, args)
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                services.path().release(id);
+            }
+        }
+    }
+}
+
+impl PlotLayer for StemsPlotLayer {
+    type Model = StemsPlotModel;
+
+    fn data_bounds(model: &Self::Model) -> DataRect {
+        model.data_bounds
+    }
+
+    fn data_bounds_y2(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y2
+    }
+
+    fn data_bounds_y3(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y3
+    }
+
+    fn data_bounds_y4(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y4
+    }
+
+    fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
+        model
+            .series
+            .iter()
+            .map(|s| SeriesMeta {
+                id: s.id,
+                label: s.label.clone(),
+                y_axis: s.y_axis,
+                stroke_color: s.stroke_color,
+            })
+            .collect()
+    }
+
+    fn series_label(model: &Self::Model, series_id: SeriesId) -> Option<String> {
+        model
+            .series
+            .iter()
+            .find(|s| s.id == series_id)
+            .map(|s| s.label.to_string())
+    }
+
+    fn series_y_axis(model: &Self::Model, series_id: SeriesId) -> YAxis {
+        model
+            .series
+            .iter()
+            .find(|s| s.id == series_id)
+            .map(|s| s.y_axis)
+            .unwrap_or(YAxis::Left)
+    }
+
+    fn cursor_readout(
+        model: &Self::Model,
+        args: PlotCursorReadoutArgs<'_>,
+    ) -> Vec<PlotCursorReadoutRow> {
+        let PlotCursorReadoutArgs {
+            x,
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            scale_factor,
+            hidden,
+        } = args;
+
+        if !x.is_finite() {
+            return Vec::new();
+        }
+
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let view_x = view_x_range(transform);
+        let view_x = (view_x.start().is_finite() && view_x.end().is_finite()).then_some(view_x);
+        let budget = device_point_budget(transform, scale_factor);
+
+        let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
+        for s in &model.series {
+            if hidden.contains(&s.id) {
+                continue;
+            }
+            let y = cursor_readout_y_at_x(&*s.data, x, view_x.clone(), budget);
+            out.push(PlotCursorReadoutRow {
+                series_id: s.id,
+                label: s.label.clone(),
+                y_axis: s.y_axis,
+                y,
+            });
+        }
+        out
+    }
+
+    fn paint_paths<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+    ) -> Vec<(SeriesId, PathId, Color)> {
+        let PlotPaintArgs {
+            model_revision,
+            plot,
+            view_bounds,
+            view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
+            x_scale,
+            y_scale,
+            y2_scale,
+            y3_scale,
+            y4_scale,
+            style,
+            hidden,
+        } = args;
+
+        let scale_factor_bits = cx.scale_factor.to_bits();
+        let viewport_w_bits = plot.size.width.0.to_bits();
+        let viewport_h_bits = plot.size.height.0.to_bits();
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
+
+        let series = &model.series;
+        let series_count = series.len();
+
+        if series_count == 0 {
+            for cached in self.cached_paths.drain(..) {
+                if let Some(id) = cached.id {
+                    cx.services.path().release(id);
+                }
+            }
+            return Vec::new();
+        }
+
+        let cached_ok = self.cached_paths.len() == series_count
+            && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                series.get(i).is_some_and(|s| {
+                    let expected_view_key = view_key_for_axis(s.y_axis);
+                    let expected_stroke_width = resolve_stroke_width(style, s.stroke_width);
+                    s.id == c.series_id
+                        && c.view_key == expected_view_key
+                        && c.stroke_width == expected_stroke_width
+                }) && c.model_revision == model_revision
+                    && c.scale_factor_bits == scale_factor_bits
+                    && c.viewport_w_bits == viewport_w_bits
+                    && c.viewport_h_bits == viewport_h_bits
+            });
+
+        if cached_ok {
+            let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
+            for (i, s) in series.iter().enumerate() {
+                if hidden.contains(&s.id) {
+                    continue;
+                }
+                let Some(id) = self.cached_paths.get(i).and_then(|c| c.id) else {
+                    continue;
+                };
+                let color = resolve_series_color(i, style, series_count, s.stroke_color);
+                out.push((s.id, id, color));
+            }
+            return out;
+        }
+
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.id {
+                cx.services.path().release(id);
+            }
+        }
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+        let transform_y1 = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y2_scale,
+        });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
+
+        let constraints = PathConstraints {
+            scale_factor: cx.scale_factor,
+        };
+
+        let mut out: Vec<(SeriesId, PathId, Color)> = Vec::with_capacity(series_count);
+        self.cached_paths = Vec::with_capacity(series_count);
+
+        for (series_index, s) in series.iter().enumerate() {
+            let stroke_width = resolve_stroke_width(style, s.stroke_width);
+            let series_id = s.id;
+            let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
+                width: stroke_width,
+            });
+
+            if hidden.contains(&series_id) {
+                let view_key = view_key_for_axis(s.y_axis);
+                self.cached_paths.push(CachedPath {
+                    id: None,
+                    series_id,
+                    model_revision,
+                    scale_factor_bits,
+                    viewport_w_bits,
+                    viewport_h_bits,
+                    stroke_width,
+                    marker_radius: Px(0.0),
+                    marker_shape: MarkerShape::default(),
+                    cap_size: Px(0.0),
+                    view_key,
+                    samples: Vec::new(),
+                });
+                continue;
+            }
+
+            let transform = transform_for_axis(s.y_axis);
+            let view_key = view_key_for_axis(s.y_axis);
+
+            let baseline_y = f64::from(s.baseline);
+            let baseline_y_px = transform.data_y_to_px(baseline_y);
+
+            let samples = decimate_points(transform, &*s.data, cx.scale_factor, series_id);
+            let mut commands: Vec<fret_core::PathCommand> = Vec::new();
+            commands.reserve(samples.len().saturating_mul(2));
+
+            if let Some(y0) = baseline_y_px {
+                for sp in &samples {
+                    let x = sp.plot_px.x;
+                    let y = sp.plot_px.y;
+                    if !x.0.is_finite() || !y.0.is_finite() {
+                        continue;
+                    }
+                    commands.push(fret_core::PathCommand::MoveTo(Point::new(x, y0)));
+                    commands.push(fret_core::PathCommand::LineTo(Point::new(x, y)));
+                }
+            }
+
+            let id = if commands.is_empty() || stroke_width.0 <= 0.0 {
+                None
+            } else {
+                let (id, _metrics) = cx
+                    .services
+                    .path()
+                    .prepare(&commands, path_style, constraints);
+                Some(id)
+            };
+
+            self.cached_paths.push(CachedPath {
+                id,
+                series_id,
+                model_revision,
+                scale_factor_bits,
+                viewport_w_bits,
+                viewport_h_bits,
+                stroke_width,
+                marker_radius: Px(0.0),
+                marker_shape: MarkerShape::default(),
+                cap_size: Px(0.0),
+                view_key,
+                samples,
+            });
+
+            if let Some(id) = id {
+                let color = resolve_series_color(series_index, style, series_count, s.stroke_color);
+                out.push((series_id, id, color));
+            }
+        }
+
+        out
+    }
+
+    fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover> {
+        let PlotHitTestArgs {
+            model_revision,
+            plot_size,
+            view_bounds,
+            view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
+            x_scale,
+            y_scale,
+            y2_scale,
+            y3_scale,
+            y4_scale,
+            scale_factor,
+            local,
+            style,
+            hover_threshold,
+            hidden,
+            pinned,
+        } = args;
+
+        let threshold = hover_threshold.0.max(0.0);
+        let threshold2 = threshold * threshold;
+
+        let scale_factor_bits = scale_factor.to_bits();
+        let viewport_w_bits = plot_size.width.0.to_bits();
+        let viewport_h_bits = plot_size.height.0.to_bits();
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
+
+        let series = &model.series;
+        let series_count = series.len();
+        if series_count == 0 {
+            return None;
+        }
+
+        let cached_ok = self.cached_paths.len() == series_count
+            && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                series.get(i).is_some_and(|s| {
+                    let expected_view_key = view_key_for_axis(s.y_axis);
+                    let expected_stroke_width = resolve_stroke_width(style, s.stroke_width);
+                    s.id == c.series_id
+                        && c.view_key == expected_view_key
+                        && c.stroke_width == expected_stroke_width
+                }) && c.model_revision == model_revision
+                    && c.scale_factor_bits == scale_factor_bits
+                    && c.viewport_w_bits == viewport_w_bits
+                    && c.viewport_h_bits == viewport_h_bits
+            });
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size);
+        let transform_y1 = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y2_scale,
+        });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
+
+        let mut best: Option<(PlotHover, f32)> = None;
+        let mut consider_stem = |series: &StemsSeries, sp: SamplePoint| {
+            let transform = transform_for_axis(series.y_axis);
+            let baseline_y = f64::from(series.baseline);
+            let Some(y0) = transform.data_y_to_px(baseline_y) else {
+                return;
+            };
+
+            let a = Point::new(sp.plot_px.x, y0);
+            let b = sp.plot_px;
+            let Some((q, _t)) = point_segment_closest_px(local, a, b) else {
+                return;
+            };
+
+            let dx = q.x.0 - local.x.0;
+            let dy = q.y.0 - local.y.0;
+            let d2 = dx * dx + dy * dy;
+            if !d2.is_finite() {
+                return;
+            }
+
+            let hover = PlotHover {
+                series_id: sp.series_id,
+                index: sp.index,
+                data: sp.data,
+                plot_px: sp.plot_px,
+                value: None,
+            };
+
+            if best.is_none_or(|b| d2 < b.1) {
+                best = Some((hover, d2));
+            }
+        };
+
+        if cached_ok {
+            for (series_index, s) in series.iter().enumerate() {
+                let cached = &self.cached_paths[series_index];
+                if hidden.contains(&cached.series_id) {
+                    continue;
+                }
+                if let Some(pinned) = pinned
+                    && cached.series_id != pinned
+                {
+                    continue;
+                }
+                for sp in cached.samples.iter().copied() {
+                    consider_stem(s, sp);
+                }
+            }
+        } else {
+            for s in series {
+                if hidden.contains(&s.id) {
+                    continue;
+                }
+                if let Some(pinned) = pinned
+                    && s.id != pinned
+                {
+                    continue;
+                }
+                let transform = transform_for_axis(s.y_axis);
+                let samples = decimate_points(transform, &*s.data, scale_factor, s.id);
+                for sp in samples.into_iter() {
+                    consider_stem(s, sp);
+                }
+            }
+        }
+
+        best.and_then(|(hover, d2)| (d2 <= threshold2).then_some(hover))
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {

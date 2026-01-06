@@ -30,6 +30,7 @@ hash or query string:
 - `?demo=histogram_demo` (or `#histogram_demo`)
 - `?demo=shaded_demo` (or `#shaded_demo`)
 - `?demo=stairs_demo` (or `#stairs_demo`)
+- `?demo=stems_demo` (or `#stems_demo`)
 - `?demo=linked_cursor_demo` (or `#linked_cursor_demo`)
 
 ## Debug teardown
