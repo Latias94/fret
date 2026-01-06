@@ -6,6 +6,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
 
 use crate::headless::presence::PresenceOutput;
+use crate::headless::transition::TransitionOutput;
 use crate::primitives::presence;
 use crate::window_overlays;
 
@@ -462,6 +463,48 @@ impl OverlayController {
         close_ticks: u64,
     ) -> PresenceOutput {
         presence::fade_presence_with_durations(cx, open, open_ticks, close_ticks)
+    }
+
+    /// Drive a general transition timeline using the UI runtime's monotonic frame clock.
+    ///
+    /// This is the generalized form of `fade_presence*` and is useful for driving multiple
+    /// properties (opacity/scale/translation) with a shared open/close timeline.
+    pub fn transition<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        ticks: u64,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition(cx, open, ticks)
+    }
+
+    /// Drive a general transition timeline with separate open/close durations.
+    pub fn transition_with_durations<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_ticks: u64,
+        close_ticks: u64,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition_with_durations(cx, open, open_ticks, close_ticks)
+    }
+
+    /// Drive a transition timeline with an explicit easing function.
+    ///
+    /// This enables CSS-style easing (e.g. cubic-bezier) while staying deterministic and
+    /// renderer-agnostic.
+    pub fn transition_with_durations_and_easing<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_ticks: u64,
+        close_ticks: u64,
+        ease: fn(f32) -> f32,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition_with_durations_and_easing(
+            cx,
+            open,
+            open_ticks,
+            close_ticks,
+            ease,
+        )
     }
 
     pub fn toast_store<H: UiHost>(app: &mut H) -> Model<window_overlays::ToastStore> {
