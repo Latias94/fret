@@ -23,6 +23,7 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
+use crate::primitives::dialog as dialog_prim;
 pub use crate::primitives::popper::{Align, LayoutDirection, Side};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -163,6 +164,50 @@ pub fn popover_request(
     request
 }
 
+/// Builds an overlay request for a Radix-style popover, adding an optional anchor subtree as a
+/// dismissable branch.
+///
+/// This is a convenience for the common Radix `PopoverAnchor` outcome: the placement anchor may
+/// live outside the trigger subtree, but should still be treated as "inside" for outside press /
+/// focus outside decisions.
+pub fn popover_request_with_anchor(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    anchor: Option<GlobalElementId>,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    options: PopoverOptions,
+    children: Vec<AnyElement>,
+) -> OverlayRequest {
+    let mut request = popover_request(id, trigger, open, presence, options, children);
+    if let Some(anchor) = anchor
+        && anchor != trigger
+    {
+        request.dismissable_branches.push(anchor);
+    }
+    request
+}
+
+/// Convenience helper to assemble modal popover overlay children in a Radix-like order: barrier
+/// then content.
+///
+/// This delegates to the Dialog barrier helpers, since Radix Popover's modal variant shares the
+/// same "hide others + block outside pointer events" outcome.
+pub fn popover_modal_layer_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    barrier_children: Vec<AnyElement>,
+    content: AnyElement,
+) -> Vec<AnyElement> {
+    dialog_prim::modal_dialog_layer_children(
+        cx,
+        open,
+        dialog_prim::DialogOptions::default(),
+        barrier_children,
+        content,
+    )
+}
+
 /// Builds an overlay request for a Radix-style non-modal popover.
 ///
 /// This is click-through by default (outside press closes the popover but still allows underlay
@@ -202,7 +247,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::{ElementKind, LayoutStyle, PressableProps};
+    use fret_ui::element::{AnyElement, ElementKind, LayoutStyle, PressableProps};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -293,5 +338,40 @@ mod tests {
             req.root_name.as_deref(),
             Some(popover_modal_root_name(id).as_str())
         );
+    }
+
+    #[test]
+    fn popover_request_with_anchor_adds_dismissable_branch() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let id = GlobalElementId(0x111);
+        let trigger = GlobalElementId(0x222);
+        let anchor = GlobalElementId(0x333);
+
+        let req = popover_request_with_anchor(
+            id,
+            trigger,
+            Some(anchor),
+            open,
+            OverlayPresence::instant(true),
+            PopoverOptions::default(),
+            Vec::new(),
+        );
+        assert_eq!(req.dismissable_branches, vec![anchor]);
+    }
+
+    #[test]
+    fn popover_modal_layer_children_wraps_with_barrier() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+        let open = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let content: AnyElement = cx.container(Default::default(), |_cx| Vec::new());
+            let children =
+                popover_modal_layer_children::<App>(cx, open.clone(), Vec::new(), content);
+            assert_eq!(children.len(), 2);
+        });
     }
 }

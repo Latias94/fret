@@ -46,6 +46,7 @@ Fret does not use React context. Instead, popover behavior is composed via:
 
 ## Follow-ups (recommended)
 
-- Add a Radix-named `PopoverContent` wiring helper (focus + dismiss hooks) for non-shadcn users who
-  want to build their own visual skins on top of the same policy.
+- Pass: A Radix-named `PopoverContent` wiring helper exists for non-shadcn users:
+  `popover_request_with_anchor(...)` for `DismissableLayerBranch` alignment and
+  `popover_modal_layer_children(...)` for the modal barrier outcome.
 
