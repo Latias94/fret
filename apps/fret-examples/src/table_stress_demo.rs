@@ -13,7 +13,7 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::headless::table::{
-    ColumnFilter, ColumnPinningState, RowKey, SortSpec, TableState,
+    ColumnDef, ColumnFilter, ColumnPinningState, RowKey, SortSpec, TableState,
     contains_ascii_case_insensitive, create_column_helper,
 };
 use std::sync::Arc;
@@ -43,12 +43,18 @@ struct TableStressWindowState {
     ui: UiTree<App>,
     table_state: Model<TableState>,
     rows: Arc<[DemoRow]>,
+    columns: Arc<[ColumnDef<DemoRow>]>,
     items_revision: Model<u64>,
     scroll: VirtualListScrollHandle,
     started_at: Instant,
     frame: u64,
     profile_frames_left: u64,
     exit_after_frames: Option<u64>,
+    col_label_id: Arc<str>,
+    col_label_name: Arc<str>,
+    col_label_role: Arc<str>,
+    col_label_score: Arc<str>,
+    empty_text: Arc<str>,
     alloc_prev: alloc_profile::AllocProfileSnapshot,
     alloc_last_calls: u64,
     alloc_last_bytes: u64,
@@ -111,6 +117,23 @@ impl TableStressDriver {
         let table_state = app.models_mut().insert(table_state);
         let items_revision = app.models_mut().insert(1u64);
 
+        let helper = create_column_helper::<DemoRow>();
+        let columns: Arc<[ColumnDef<DemoRow>]> = Arc::from(
+            vec![
+                helper.clone().accessor("id", |r| r.id),
+                helper
+                    .clone()
+                    .accessor("name", |r| r.name.clone())
+                    .filter_by(|row, q| contains_ascii_case_insensitive(row.name.as_ref(), q)),
+                helper
+                    .clone()
+                    .accessor("role", |r| r.role.clone())
+                    .filter_by(|row, q| contains_ascii_case_insensitive(row.role.as_ref(), q)),
+                helper.accessor("score", |r| r.score),
+            ]
+            .into_boxed_slice(),
+        );
+
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
@@ -121,12 +144,18 @@ impl TableStressDriver {
             ui,
             table_state,
             rows,
+            columns,
             items_revision,
             scroll: VirtualListScrollHandle::new(),
             started_at,
             frame: 0,
             profile_frames_left,
             exit_after_frames,
+            col_label_id: Arc::from("ID"),
+            col_label_name: Arc::from("Name"),
+            col_label_role: Arc::from("Role"),
+            col_label_score: Arc::from("Score"),
+            empty_text: Arc::from(""),
             alloc_prev,
             alloc_last_calls: 0,
             alloc_last_bytes: 0,
@@ -337,6 +366,12 @@ impl WinitAppDriver for TableStressDriver {
         let alloc_before_frame = alloc_profile::snapshot();
 
         let render_started = Instant::now();
+        let columns = state.columns.clone();
+        let col_label_id = state.col_label_id.clone();
+        let col_label_name = state.col_label_name.clone();
+        let col_label_role = state.col_label_role.clone();
+        let col_label_score = state.col_label_score.clone();
+        let empty_text = state.empty_text.clone();
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("table-stress-demo", |cx| {
@@ -348,35 +383,20 @@ impl WinitAppDriver for TableStressDriver {
                         .models()
                         .read(&state.table_state, |st| {
                             let selected = st.row_selection.len();
-                            let sorting = st
-                                .sorting
-                                .first()
-                                .map(|s| {
-                                    format!(
-                                        "{}:{}",
-                                        s.column.as_ref(),
-                                        if s.desc { "desc" } else { "asc" }
-                                    )
-                                })
-                                .unwrap_or_else(|| "<none>".to_string());
+                            let sorting = st.sorting.first().map(|s| (s.column.clone(), s.desc));
                             let role_filter = st
                                 .column_filters
                                 .iter()
                                 .find(|f| f.column.as_ref() == "role")
-                                .map(|f| f.value.as_ref().to_string())
-                                .unwrap_or_else(|| "<none>".to_string());
-                            let global_filter = st
-                                .global_filter
-                                .as_ref()
-                                .map(|v| v.as_ref().to_string())
-                                .unwrap_or_else(|| "<none>".to_string());
+                                .map(|f| f.value.clone());
+                            let global_filter = st.global_filter.clone();
                             (selected, sorting, role_filter, global_filter)
                         })
                         .unwrap_or((
                             0,
-                            "<none>".to_string(),
-                            "<none>".to_string(),
-                            "<none>".to_string(),
+                            None,
+                            None,
+                            None,
                         ));
                     let items_revision = cx
                         .app
@@ -397,29 +417,26 @@ impl WinitAppDriver for TableStressDriver {
                     table_slot.flex.basis = Length::Px(Px(0.0));
                     table_slot.overflow = Overflow::Clip;
 
-                    let helper = create_column_helper::<DemoRow>();
-                    let columns = vec![
-                        helper.clone().accessor("id", |r| r.id),
-                        helper
-                            .clone()
-                            .accessor("name", |r| r.name.clone())
-                            .filter_by(|row, q| contains_ascii_case_insensitive(row.name.as_ref(), q)),
-                        helper
-                            .clone()
-                            .accessor("role", |r| r.role.clone())
-                            .filter_by(|row, q| contains_ascii_case_insensitive(row.role.as_ref(), q)),
-                        helper.accessor("score", |r| r.score),
-                    ];
-
                     let scroll = state.scroll.clone();
                     let table_state = state.table_state.clone();
                     let rows = state.rows.clone();
 
+                    let sorting_col = sorting.as_ref().map(|(c, _)| c.as_ref()).unwrap_or("<none>");
+                    let sorting_dir = sorting
+                        .as_ref()
+                        .map(|(_, desc)| if *desc { "desc" } else { "asc" })
+                        .unwrap_or("");
+                    let sorting_sep = if sorting.is_some() { ":" } else { "" };
+                    let role_filter = role_filter.as_deref().unwrap_or("<none>");
+                    let global_filter = global_filter.as_deref().unwrap_or("<none>");
+
                     let header: Arc<str> = Arc::from(format!(
-                        "Table stress demo | rows={} | selected={} | sorting={} | role_filter={} | global_filter={} | items_rev={} | alloc/frame={} ({} B) render={} ({} B) layout={} ({} B) paint={} ({} B) | [S]=toggle sort | [F]=toggle role filter | [G]=toggle global filter | [C]=clear filters | [R]=bump items_rev | [Home]/[End] | [Esc]=close",
+                        "Table stress demo | rows={} | selected={} | sorting={}{}{} | role_filter={} | global_filter={} | items_rev={} | alloc/frame={} ({} B) render={} ({} B) layout={} ({} B) paint={} ({} B) | [S]=toggle sort | [F]=toggle role filter | [G]=toggle global filter | [C]=clear filters | [R]=bump items_rev | [Home]/[End] | [Esc]=close",
                         rows.len(),
                         selected,
-                        sorting,
+                        sorting_col,
+                        sorting_sep,
+                        sorting_dir,
                         role_filter,
                         global_filter,
                         items_revision,
@@ -469,7 +486,7 @@ impl WinitAppDriver for TableStressDriver {
                                                 vec![fret_ui_kit::declarative::table::table_virtualized(
                                                     cx,
                                                     &rows,
-                                                    columns.clone(),
+                                                    columns.as_ref(),
                                                     table_state.clone(),
                                                     &scroll,
                                                     items_revision,
@@ -481,10 +498,10 @@ impl WinitAppDriver for TableStressDriver {
                                                     |_row| None,
                                                     |cx, col, _sort| {
                                                         let label: Arc<str> = match col.id.as_ref() {
-                                                            "id" => Arc::from("ID"),
-                                                            "name" => Arc::from("Name"),
-                                                            "role" => Arc::from("Role"),
-                                                            "score" => Arc::from("Score"),
+                                                            "id" => col_label_id.clone(),
+                                                            "name" => col_label_name.clone(),
+                                                            "role" => col_label_role.clone(),
+                                                            "score" => col_label_score.clone(),
                                                             _ => Arc::from(col.id.as_ref()),
                                                         };
                                                         vec![cx.text(label)]
@@ -495,7 +512,7 @@ impl WinitAppDriver for TableStressDriver {
                                                             "name" => row.original.name.clone(),
                                                             "role" => row.original.role.clone(),
                                                             "score" => row.original.score_text.clone(),
-                                                            _ => Arc::from(""),
+                                                            _ => empty_text.clone(),
                                                         };
                                                         vec![cx.text(text)]
                                                     },

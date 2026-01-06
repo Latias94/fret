@@ -294,7 +294,7 @@ impl WinitAppDriver for TableDemoDriver {
                                                 vec![fret_ui_kit::declarative::table::table_virtualized(
                                                     cx,
                                                     &rows,
-                                                    columns.clone(),
+                                                    &columns,
                                                     table_state.clone(),
                                                     &scroll,
                                                     1,
