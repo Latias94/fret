@@ -3,7 +3,9 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, PressableProps, StackProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, OpacityProps, PressableProps, StackProps,
+};
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -81,24 +83,30 @@ impl Collapsible {
 
             // Radix/shadcn-like behavior keeps content mounted during close animations. We
             // approximate the height transition by mapping transition progress to a clipped height.
+            let last_height = collapsible_motion::last_measured_height_for(cx, state_id);
+            let wants_measurement = is_open && last_height.0 <= 0.0;
+
+            // Radix measures content size to drive open/close animations. In Fret we first mount a
+            // hidden, off-flow wrapper to populate the cached height, then start the transition.
+            let motion_open = is_open && !wants_measurement;
             let motion = transition::drive_transition_with_durations_and_easing(
                 cx,
-                is_open,
+                motion_open,
                 8,
                 8,
                 overlay_motion::shadcn_ease,
             );
 
-            let last_height = collapsible_motion::last_measured_height_for(cx, state_id);
             let (should_render_content, wrapper) =
                 collapsible_motion::collapsible_height_wrapper_refinement(
-                    is_open,
+                    motion_open,
                     force_mount_content,
                     true,
                     motion,
                     last_height,
                 );
-            let content = should_render_content.then(|| content(cx));
+            let should_build_content = wants_measurement || should_render_content;
+            let content = should_build_content.then(|| content(cx));
             let layout = self.layout;
 
             let stack = cx.stack_props(
@@ -114,29 +122,56 @@ impl Collapsible {
                     if let Some(content) = content {
                         let theme = fret_ui::Theme::global(&*cx.app);
 
-                        let wrapper_layout =
-                            fret_ui_kit::declarative::style::layout_style(theme, wrapper);
+                        let (wrapper_refinement, opacity) = if wants_measurement {
+                            (
+                                collapsible_motion::collapsible_measurement_wrapper_refinement(),
+                                0.0,
+                            )
+                        } else {
+                            (wrapper, 1.0)
+                        };
+
+                        let wrapper_layout = fret_ui_kit::declarative::style::layout_style(
+                            theme,
+                            wrapper_refinement,
+                        );
 
                         let wrapper_el = cx.keyed("collapsible-content", |cx| {
-                            cx.stack_props(
-                                StackProps {
+                            cx.container(
+                                ContainerProps {
                                     layout: wrapper_layout,
+                                    ..Default::default()
                                 },
-                                move |_cx| vec![content],
+                                move |cx| {
+                                    vec![cx.opacity_props(
+                                        OpacityProps {
+                                            layout: LayoutStyle::default(),
+                                            opacity,
+                                        },
+                                        move |_cx| vec![content],
+                                    )]
+                                },
                             )
                         });
                         let wrapper_id = wrapper_el.id;
 
-                        // Update the cached content height once the collapsible is fully open and
-                        // not animating. This gives subsequent close/open transitions a stable
-                        // target.
-                        let _ = collapsible_motion::update_measured_height_if_open_for(
-                            cx,
-                            state_id,
-                            wrapper_id,
-                            is_open,
-                            motion.animating,
-                        );
+                        if wants_measurement {
+                            let _ =
+                                collapsible_motion::update_measured_size_from_element_if_open_for(
+                                    cx, state_id, wrapper_id, is_open,
+                                );
+                        } else {
+                            // Update the cached content height once the collapsible is fully open and
+                            // not animating. This gives subsequent close/open transitions a stable
+                            // target (and supports content changes while open).
+                            let _ = collapsible_motion::update_measured_height_if_open_for(
+                                cx,
+                                state_id,
+                                wrapper_id,
+                                is_open,
+                                motion.animating,
+                            );
+                        }
 
                         children.push(wrapper_el);
                     }
