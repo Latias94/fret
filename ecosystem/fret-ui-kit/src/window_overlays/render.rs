@@ -252,6 +252,32 @@ pub fn render<H: UiHost>(
             // the outside-press observer pass.
             OverlayLayer::non_modal_dismissible(true, open_now).apply(ui, entry.layer);
 
+            // Radix-aligned focus restore: when a non-modal overlay closes but remains mounted for
+            // a close transition (`present=true`), restore focus deterministically if focus is
+            // currently inside the overlay layer (or has been cleared by the layer hide).
+            //
+            // This mirrors the existing "restore on unmount" policy below, but triggers on the
+            // open -> closed edge so recipes can animate out without deferring focus restoration.
+            let closing = entry.open && !open_now;
+            if closing
+                && (req.consume_outside_pointer_events
+                    || focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, entry.layer))
+            {
+                let focus_in_layer =
+                    focus_now.is_some_and(|n| ui.node_layer(n) == Some(entry.layer));
+                if focus_now.is_none() || focus_in_layer {
+                    if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+                        ui,
+                        app,
+                        window,
+                        Some(req.trigger),
+                        entry.restore_focus,
+                    ) {
+                        ui.set_focus(Some(node));
+                    }
+                }
+            }
+
             let opening = open_now && (!entry.open || created);
             if opening {
                 should_focus_initial = true;
@@ -269,8 +295,8 @@ pub fn render<H: UiHost>(
         }
     }
 
-    let to_hide_popovers: Vec<(UiLayerId, GlobalElementId, bool, Option<NodeId>)> =
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+    let to_hide_popovers: Vec<(UiLayerId, GlobalElementId, bool, Option<NodeId>)> = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
             let mut out: Vec<(UiLayerId, GlobalElementId, bool, Option<NodeId>)> = Vec::new();
             for ((w, id), active) in overlays.popovers.iter() {
                 if *w != window || seen_popovers.contains(id) {

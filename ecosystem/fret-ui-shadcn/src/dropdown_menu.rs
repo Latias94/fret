@@ -4,14 +4,14 @@ use std::sync::Arc;
 
 use fret_core::{
     Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle,
-    TextWrap,
+    TextWrap, Transform2D,
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps,
-    SizeStyle, TextProps,
+    OpacityProps, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
+    SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
@@ -27,6 +27,7 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Space};
 
+use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
@@ -830,6 +831,19 @@ impl DropdownMenu {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
+            let motion = OverlayController::transition_with_durations_and_easing(
+                cx,
+                is_open,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::shadcn_ease,
+            );
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: is_open,
+            };
+            let opacity = motion.progress;
+            let opening = is_open;
             let arrow = self.arrow;
             let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
                 theme
@@ -854,7 +868,7 @@ impl DropdownMenu {
                     menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
                 });
 
-            if is_open {
+            if overlay_presence.present {
                 let align = self.align;
                 let side = self.side;
                 let side_offset = self.side_offset;
@@ -958,6 +972,18 @@ impl DropdownMenu {
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
                     let extra_left = wrapper_insets.left;
                     let extra_top = wrapper_insets.top;
+                    let origin = popper::popper_content_transform_origin(
+                        &layout,
+                        anchor,
+                        arrow.then_some(arrow_size),
+                    );
+                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                    let slide = if opening {
+                        overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
+                    } else {
+                        Transform2D::IDENTITY
+                    };
+                    let transform = slide * zoom;
 
                     let border = theme
                         .color_by_key("border")
@@ -1638,6 +1664,30 @@ impl DropdownMenu {
                         },
                     );
 
+                    let opacity_layout = LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    let content = cx.opacity_props(
+                        OpacityProps {
+                            layout: opacity_layout.clone(),
+                            opacity,
+                        },
+                        move |cx| {
+                            vec![cx.visual_transform_props(
+                                VisualTransformProps {
+                                    layout: opacity_layout,
+                                    transform,
+                                },
+                                move |_cx| vec![content],
+                            )]
+                        },
+                    );
+
                     let dismissible_on_pointer_move =
                         menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
 
@@ -2241,7 +2291,7 @@ impl DropdownMenu {
                     trigger_id,
                     trigger_id,
                     open,
-                    OverlayPresence::instant(true),
+                    overlay_presence,
                     overlay_children,
                     overlay_root_name,
                     content_focus_id.get(),
