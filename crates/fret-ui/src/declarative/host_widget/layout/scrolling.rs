@@ -118,83 +118,86 @@ impl ElementHostWidget {
         let mut measured_updates: Vec<(fret_core::NodeId, usize, Px)> =
             Vec::with_capacity(cx.children.len());
 
-        if props.measure_items {
-            for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
-                let idx = item.index;
-                let start = metrics.offset_for_index(idx);
-                let origin = match axis {
-                    fret_core::Axis::Vertical => {
-                        let y = cx.bounds.origin.y.0 + start.0 - offset.0;
-                        fret_core::Point::new(cx.bounds.origin.x, Px(y))
-                    }
-                    fret_core::Axis::Horizontal => {
-                        let x = cx.bounds.origin.x.0 + start.0 - offset.0;
-                        fret_core::Point::new(Px(x), cx.bounds.origin.y)
-                    }
-                };
-
-                let measure_bounds = match axis {
-                    fret_core::Axis::Vertical => {
-                        Rect::new(origin, Size::new(size.width, Px(1.0e9)))
-                    }
-                    fret_core::Axis::Horizontal => {
-                        Rect::new(origin, Size::new(Px(1.0e9), size.height))
-                    }
-                };
-                let measured = cx.layout_in(child, measure_bounds);
-                let measured_extent = match axis {
-                    fret_core::Axis::Vertical => Px(measured.height.0.max(0.0)),
-                    fret_core::Axis::Horizontal => Px(measured.width.0.max(0.0)),
-                };
-
-                measured_updates.push((child, idx, measured_extent));
-            }
-
-            let mut any_measured_change = false;
-            for (_, idx, measured_extent) in &measured_updates {
-                if metrics.set_measured_height(*idx, *measured_extent) {
-                    any_measured_change = true;
-                }
-            }
-
-            if any_measured_change {
-                needs_redraw = true;
-
-                if !is_probe_layout
-                    && let (Some(anchor), Some(anchor_offset_in_viewport)) =
-                        (anchor, anchor_offset_in_viewport)
-                {
-                    let desired =
-                        Px(metrics.offset_for_index(anchor).0 + anchor_offset_in_viewport.0);
-                    offset = metrics.clamp_offset(desired, viewport);
-
-                    let prev = props.scroll_handle.offset();
-                    let prev_axis = match axis {
-                        fret_core::Axis::Vertical => prev.y,
-                        fret_core::Axis::Horizontal => prev.x,
-                    };
-                    if (prev_axis.0 - offset.0).abs() > 0.01 {
-                        needs_redraw = true;
-                    }
-                    match axis {
+        match props.measure_mode {
+            crate::element::VirtualListMeasureMode::Measured => {
+                for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
+                    let idx = item.index;
+                    let start = metrics.offset_for_index(idx);
+                    let origin = match axis {
                         fret_core::Axis::Vertical => {
-                            props
-                                .scroll_handle
-                                .set_offset(fret_core::Point::new(prev.x, offset));
+                            let y = cx.bounds.origin.y.0 + start.0 - offset.0;
+                            fret_core::Point::new(cx.bounds.origin.x, Px(y))
                         }
                         fret_core::Axis::Horizontal => {
-                            props
-                                .scroll_handle
-                                .set_offset(fret_core::Point::new(offset, prev.y));
+                            let x = cx.bounds.origin.x.0 + start.0 - offset.0;
+                            fret_core::Point::new(Px(x), cx.bounds.origin.y)
+                        }
+                    };
+
+                    let measure_bounds = match axis {
+                        fret_core::Axis::Vertical => {
+                            Rect::new(origin, Size::new(size.width, Px(1.0e9)))
+                        }
+                        fret_core::Axis::Horizontal => {
+                            Rect::new(origin, Size::new(Px(1.0e9), size.height))
+                        }
+                    };
+                    let measured = cx.layout_in(child, measure_bounds);
+                    let measured_extent = match axis {
+                        fret_core::Axis::Vertical => Px(measured.height.0.max(0.0)),
+                        fret_core::Axis::Horizontal => Px(measured.width.0.max(0.0)),
+                    };
+
+                    measured_updates.push((child, idx, measured_extent));
+                }
+
+                let mut any_measured_change = false;
+                for (_, idx, measured_extent) in &measured_updates {
+                    if metrics.set_measured_height(*idx, *measured_extent) {
+                        any_measured_change = true;
+                    }
+                }
+
+                if any_measured_change {
+                    needs_redraw = true;
+
+                    if !is_probe_layout
+                        && let (Some(anchor), Some(anchor_offset_in_viewport)) =
+                            (anchor, anchor_offset_in_viewport)
+                    {
+                        let desired =
+                            Px(metrics.offset_for_index(anchor).0 + anchor_offset_in_viewport.0);
+                        offset = metrics.clamp_offset(desired, viewport);
+
+                        let prev = props.scroll_handle.offset();
+                        let prev_axis = match axis {
+                            fret_core::Axis::Vertical => prev.y,
+                            fret_core::Axis::Horizontal => prev.x,
+                        };
+                        if (prev_axis.0 - offset.0).abs() > 0.01 {
+                            needs_redraw = true;
+                        }
+                        match axis {
+                            fret_core::Axis::Vertical => {
+                                props
+                                    .scroll_handle
+                                    .set_offset(fret_core::Point::new(prev.x, offset));
+                            }
+                            fret_core::Axis::Horizontal => {
+                                props
+                                    .scroll_handle
+                                    .set_offset(fret_core::Point::new(offset, prev.y));
+                            }
                         }
                     }
                 }
             }
-        } else {
-            for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
-                let idx = item.index;
-                let estimated_extent = metrics.height_at(idx);
-                measured_updates.push((child, idx, estimated_extent));
+            crate::element::VirtualListMeasureMode::Fixed => {
+                for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
+                    let idx = item.index;
+                    let estimated_extent = metrics.height_at(idx);
+                    measured_updates.push((child, idx, estimated_extent));
+                }
             }
         }
 

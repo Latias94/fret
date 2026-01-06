@@ -1386,7 +1386,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     len,
                     items_revision: options.items_revision,
                     estimate_row_height: options.estimate_row_height,
-                    measure_items: options.measure_items,
+                    measure_mode: options.measure_mode,
                     overscan: options.overscan,
                     scroll_margin: options.scroll_margin,
                     gap: options.gap,
