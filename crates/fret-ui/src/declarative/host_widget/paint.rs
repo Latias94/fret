@@ -397,7 +397,7 @@ impl ElementHostWidget {
                 let base = props
                     .color
                     .or_else(|| theme.color_by_key("muted-foreground"))
-                    .unwrap_or(theme.colors.text_muted);
+                    .unwrap_or_else(|| theme.color_required("muted-foreground"));
 
                 let n = props.dot_count.clamp(1, 32) as usize;
 

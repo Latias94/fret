@@ -99,6 +99,7 @@ pub struct TableBuilder<'a, TData> {
     get_row_key: Option<GetRowKeyFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     state: super::TableState,
+    options: super::TableOptions,
 }
 
 impl<'a, TData> TableBuilder<'a, TData> {
@@ -109,6 +110,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_row_key: None,
             get_sub_rows: None,
             state: super::TableState::default(),
+            options: super::TableOptions::default(),
         }
     }
 
@@ -119,6 +121,36 @@ impl<'a, TData> TableBuilder<'a, TData> {
 
     pub fn state(mut self, state: super::TableState) -> Self {
         self.state = state;
+        self
+    }
+
+    pub fn options(mut self, options: super::TableOptions) -> Self {
+        self.options = options;
+        self
+    }
+
+    pub fn manual_filtering(mut self, manual: bool) -> Self {
+        self.options.manual_filtering = manual;
+        self
+    }
+
+    pub fn manual_sorting(mut self, manual: bool) -> Self {
+        self.options.manual_sorting = manual;
+        self
+    }
+
+    pub fn manual_pagination(mut self, manual: bool) -> Self {
+        self.options.manual_pagination = manual;
+        self
+    }
+
+    pub fn manual_expanding(mut self, manual: bool) -> Self {
+        self.options.manual_expanding = manual;
+        self
+    }
+
+    pub fn paginate_expanded_rows(mut self, enabled: bool) -> Self {
+        self.options.paginate_expanded_rows = enabled;
         self
     }
 
@@ -149,10 +181,13 @@ pub struct Table<'a, TData> {
     get_row_key: GetRowKeyFn<'a, TData>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     state: super::TableState,
+    options: super::TableOptions,
     core_row_model: OnceCell<RowModel<'a, TData>>,
     filtered_row_model: OnceCell<RowModel<'a, TData>>,
     sorted_row_model: OnceCell<RowModel<'a, TData>>,
+    expanded_row_model: OnceCell<RowModel<'a, TData>>,
     paginated_row_model: OnceCell<RowModel<'a, TData>>,
+    expanded_paginated_row_model: OnceCell<RowModel<'a, TData>>,
     selected_row_model: OnceCell<RowModel<'a, TData>>,
 }
 
@@ -171,10 +206,13 @@ impl<'a, TData> Table<'a, TData> {
             get_row_key,
             get_sub_rows: builder.get_sub_rows,
             state: builder.state,
+            options: builder.options,
             core_row_model: OnceCell::new(),
             filtered_row_model: OnceCell::new(),
             sorted_row_model: OnceCell::new(),
+            expanded_row_model: OnceCell::new(),
             paginated_row_model: OnceCell::new(),
+            expanded_paginated_row_model: OnceCell::new(),
             selected_row_model: OnceCell::new(),
         }
     }
@@ -193,6 +231,10 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn state(&self) -> &super::TableState {
         &self.state
+    }
+
+    pub fn options(&self) -> super::TableOptions {
+        self.options
     }
 
     pub fn ordered_columns(&self) -> Vec<&super::ColumnDef<TData>> {
@@ -233,6 +275,9 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn filtered_row_model(&self) -> &RowModel<'a, TData> {
+        if self.options.manual_filtering {
+            return self.pre_filtered_row_model();
+        }
         self.filtered_row_model.get_or_init(|| {
             super::filter_row_model(
                 self.pre_filtered_row_model(),
@@ -248,6 +293,9 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn sorted_row_model(&self) -> &RowModel<'a, TData> {
+        if self.options.manual_sorting {
+            return self.pre_sorted_row_model();
+        }
         self.sorted_row_model.get_or_init(|| {
             super::sort_row_model(
                 self.pre_sorted_row_model(),
@@ -258,13 +306,47 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn pre_pagination_row_model(&self) -> &RowModel<'a, TData> {
+        if self.options.paginate_expanded_rows {
+            self.expanded_row_model()
+        } else {
+            self.sorted_row_model()
+        }
+    }
+
+    pub fn pre_expanded_row_model(&self) -> &RowModel<'a, TData> {
         self.sorted_row_model()
     }
 
-    pub fn row_model(&self) -> &RowModel<'a, TData> {
-        self.paginated_row_model.get_or_init(|| {
-            super::paginate_row_model(self.pre_pagination_row_model(), self.state.pagination)
+    pub fn expanded_row_model(&self) -> &RowModel<'a, TData> {
+        if !self.options.paginate_expanded_rows {
+            return self.pre_expanded_row_model();
+        }
+        if self.options.manual_expanding {
+            return self.pre_expanded_row_model();
+        }
+        if self.state.expanding.is_empty() {
+            return self.pre_expanded_row_model();
+        }
+        self.expanded_row_model.get_or_init(|| {
+            super::expand_row_model(self.pre_expanded_row_model(), &self.state.expanding)
         })
+    }
+
+    pub fn row_model(&self) -> &RowModel<'a, TData> {
+        if self.options.manual_pagination {
+            return self.pre_pagination_row_model();
+        }
+        if self.options.paginate_expanded_rows {
+            return self.paginated_row_model.get_or_init(|| {
+                super::paginate_row_model(self.pre_pagination_row_model(), self.state.pagination)
+            });
+        }
+
+        let paginated = self.paginated_row_model.get_or_init(|| {
+            super::paginate_row_model(self.pre_pagination_row_model(), self.state.pagination)
+        });
+        self.expanded_paginated_row_model
+            .get_or_init(|| super::expand_row_model(paginated, &self.state.expanding))
     }
 
     pub fn pre_selected_row_model(&self) -> &RowModel<'a, TData> {
@@ -395,7 +477,10 @@ fn build_core_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::{PaginationState, SortSpec, TableState, create_column_helper};
+    use crate::headless::table::{
+        PaginationState, SortSpec, TableOptions, TableState, create_column_helper,
+    };
+    use std::sync::Arc;
 
     #[derive(Debug, Clone)]
     struct Person {
@@ -591,5 +676,293 @@ mod tests {
         let table = Table::builder(&data).columns(columns).state(state).build();
         assert_eq!(table.column_size("value"), Some(120.0));
         assert_eq!(table.column_size("missing"), None);
+    }
+
+    #[derive(Debug, Clone)]
+    struct TreeNode {
+        id: u64,
+        children: Vec<TreeNode>,
+    }
+
+    #[test]
+    fn expanding_default_is_collapsed_and_does_not_allocate() {
+        let data = vec![
+            TreeNode {
+                id: 1,
+                children: vec![
+                    TreeNode {
+                        id: 10,
+                        children: Vec::new(),
+                    },
+                    TreeNode {
+                        id: 11,
+                        children: Vec::new(),
+                    },
+                ],
+            },
+            TreeNode {
+                id: 2,
+                children: vec![TreeNode {
+                    id: 20,
+                    children: Vec::new(),
+                }],
+            },
+        ];
+
+        let table = Table::builder(&data)
+            .get_row_key(|n, _i, _parent| RowKey(n.id))
+            .get_sub_rows(|n, _i| Some(n.children.as_slice()))
+            .build();
+
+        let pre = table.pre_expanded_row_model();
+        let expanded = table.expanded_row_model();
+        assert!(
+            std::ptr::eq(pre, expanded),
+            "empty expanding should not allocate"
+        );
+        assert_eq!(expanded.root_rows().len(), 2, "collapsed shows only roots");
+    }
+
+    #[test]
+    fn expanding_flattens_visible_rows_under_expanded_parents() {
+        let data = vec![
+            TreeNode {
+                id: 1,
+                children: vec![
+                    TreeNode {
+                        id: 10,
+                        children: Vec::new(),
+                    },
+                    TreeNode {
+                        id: 11,
+                        children: Vec::new(),
+                    },
+                ],
+            },
+            TreeNode {
+                id: 2,
+                children: vec![TreeNode {
+                    id: 20,
+                    children: Vec::new(),
+                }],
+            },
+        ];
+
+        let mut state = TableState::default();
+        state.expanding = [RowKey(1)].into_iter().collect();
+
+        let table = Table::builder(&data)
+            .get_row_key(|n, _i, _parent| RowKey(n.id))
+            .get_sub_rows(|n, _i| Some(n.children.as_slice()))
+            .state(state)
+            .build();
+
+        let expanded = table.expanded_row_model();
+        let keys = expanded
+            .root_rows()
+            .iter()
+            .filter_map(|&i| expanded.row(i).map(|r| r.key.0))
+            .collect::<Vec<_>>();
+
+        assert_eq!(keys, vec![1, 10, 11, 2]);
+    }
+
+    #[test]
+    fn paginate_expanded_rows_true_counts_children_in_pages() {
+        let data = vec![
+            TreeNode {
+                id: 1,
+                children: vec![
+                    TreeNode {
+                        id: 10,
+                        children: Vec::new(),
+                    },
+                    TreeNode {
+                        id: 11,
+                        children: Vec::new(),
+                    },
+                ],
+            },
+            TreeNode {
+                id: 2,
+                children: vec![TreeNode {
+                    id: 20,
+                    children: Vec::new(),
+                }],
+            },
+        ];
+
+        let mut state = TableState::default();
+        state.expanding = [RowKey(1)].into_iter().collect();
+        state.pagination = PaginationState {
+            page_index: 0,
+            page_size: 2,
+        };
+
+        let table = Table::builder(&data)
+            .get_row_key(|n, _i, _parent| RowKey(n.id))
+            .get_sub_rows(|n, _i| Some(n.children.as_slice()))
+            .state(state)
+            .build();
+
+        let model = table.row_model();
+        let keys = model
+            .root_rows()
+            .iter()
+            .filter_map(|&i| model.row(i).map(|r| r.key.0))
+            .collect::<Vec<_>>();
+        assert_eq!(keys, vec![1, 10]);
+    }
+
+    #[test]
+    fn paginate_expanded_rows_false_expands_within_parent_page() {
+        let data = vec![
+            TreeNode {
+                id: 1,
+                children: vec![
+                    TreeNode {
+                        id: 10,
+                        children: Vec::new(),
+                    },
+                    TreeNode {
+                        id: 11,
+                        children: Vec::new(),
+                    },
+                ],
+            },
+            TreeNode {
+                id: 2,
+                children: vec![TreeNode {
+                    id: 20,
+                    children: Vec::new(),
+                }],
+            },
+        ];
+
+        let mut state = TableState::default();
+        state.expanding = [RowKey(1)].into_iter().collect();
+        state.pagination = PaginationState {
+            page_index: 0,
+            page_size: 1,
+        };
+
+        let table = Table::builder(&data)
+            .get_row_key(|n, _i, _parent| RowKey(n.id))
+            .get_sub_rows(|n, _i| Some(n.children.as_slice()))
+            .state(state)
+            .options(TableOptions {
+                paginate_expanded_rows: false,
+                ..Default::default()
+            })
+            .build();
+
+        let model = table.row_model();
+        let keys = model
+            .root_rows()
+            .iter()
+            .filter_map(|&i| model.row(i).map(|r| r.key.0))
+            .collect::<Vec<_>>();
+        assert_eq!(keys, vec![1, 10, 11]);
+    }
+
+    #[test]
+    fn manual_filtering_skips_filtered_row_model() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            label: Arc<str>,
+        }
+
+        let data = vec![
+            Item {
+                label: Arc::from("a"),
+            },
+            Item {
+                label: Arc::from("b"),
+            },
+        ];
+
+        let helper = create_column_helper::<Item>();
+        let columns = vec![
+            helper
+                .accessor("label", |it| it.label.clone())
+                .filter_by(|row, q| row.label.as_ref() == q),
+        ];
+
+        let mut state = TableState::default();
+        state.global_filter = Some(Arc::from("b"));
+
+        let table = Table::builder(&data)
+            .columns(columns)
+            .state(state)
+            .options(TableOptions {
+                manual_filtering: true,
+                ..Default::default()
+            })
+            .build();
+
+        assert!(std::ptr::eq(
+            table.filtered_row_model(),
+            table.core_row_model()
+        ));
+    }
+
+    #[test]
+    fn manual_sorting_skips_sorted_row_model() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            value: i32,
+        }
+
+        let data = vec![Item { value: 2 }, Item { value: 1 }];
+        let helper = create_column_helper::<Item>();
+        let columns = vec![helper.accessor("value", |it| it.value)];
+
+        let mut state = TableState::default();
+        state.sorting = vec![SortSpec {
+            column: "value".into(),
+            desc: false,
+        }];
+
+        let table = Table::builder(&data)
+            .columns(columns)
+            .state(state)
+            .options(TableOptions {
+                manual_sorting: true,
+                ..Default::default()
+            })
+            .build();
+
+        assert!(std::ptr::eq(
+            table.sorted_row_model(),
+            table.pre_sorted_row_model()
+        ));
+    }
+
+    #[test]
+    fn manual_pagination_skips_row_model() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            value: i32,
+        }
+
+        let data = (0..20).map(|i| Item { value: i }).collect::<Vec<_>>();
+        let mut state = TableState::default();
+        state.pagination = PaginationState {
+            page_index: 1,
+            page_size: 5,
+        };
+
+        let table = Table::builder(&data)
+            .state(state)
+            .options(TableOptions {
+                manual_pagination: true,
+                ..Default::default()
+            })
+            .build();
+
+        assert!(std::ptr::eq(
+            table.row_model(),
+            table.pre_pagination_row_model()
+        ));
     }
 }

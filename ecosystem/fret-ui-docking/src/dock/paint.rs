@@ -89,10 +89,7 @@ pub(super) fn paint_dock(
             } else if is_hovered {
                 hover_bg
             } else {
-                Color {
-                    a: 0.0,
-                    ..panel_bg
-                }
+                Color { a: 0.0, ..panel_bg }
             };
 
             scene.push(SceneOp::Quad {
@@ -312,15 +309,9 @@ pub(super) fn paint_drop_overlay(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
                 rect: zone,
-                background: Color {
-                    a: 0.10,
-                    ..primary
-                },
+                background: Color { a: 0.10, ..primary },
                 border: Edges::all(Px(3.0)),
-                border_color: Color {
-                    a: 0.85,
-                    ..primary
-                },
+                border_color: Color { a: 0.85, ..primary },
                 corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
             });
         }
@@ -334,15 +325,9 @@ pub(super) fn paint_drop_overlay(
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(9_990),
                     rect: tab_bar,
-                    background: Color {
-                        a: 0.14,
-                        ..primary
-                    },
+                    background: Color { a: 0.14, ..primary },
                     border: Edges::all(Px(1.0)),
-                    border_color: Color {
-                        a: 0.45,
-                        ..primary
-                    },
+                    border_color: Color { a: 0.45, ..primary },
                     corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                 });
                 if let Some(i) = target.insert_index {
@@ -355,15 +340,9 @@ pub(super) fn paint_drop_overlay(
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(10_000),
                         rect: marker,
-                        background: Color {
-                            a: 0.85,
-                            ..primary
-                        },
+                        background: Color { a: 0.85, ..primary },
                         border: Edges::all(Px(1.0)),
-                        border_color: Color {
-                            a: 1.0,
-                            ..primary
-                        },
+                        border_color: Color { a: 1.0, ..primary },
                         corner_radii: fret_core::Corners::all(Px(3.0)),
                     });
 
@@ -383,10 +362,7 @@ pub(super) fn paint_drop_overlay(
                         scene.push(SceneOp::Quad {
                             order: fret_core::DrawOrder(10_001),
                             rect: cap,
-                            background: Color {
-                                a: 0.92,
-                                ..primary
-                            },
+                            background: Color { a: 0.92, ..primary },
                             border: Edges::all(Px(0.0)),
                             border_color: Color::TRANSPARENT,
                             corner_radii: fret_core::Corners::all(Px(2.0)),
@@ -400,15 +376,9 @@ pub(super) fn paint_drop_overlay(
             scene.push(SceneOp::Quad {
                 order: fret_core::DrawOrder(10_000),
                 rect: overlay,
-                background: Color {
-                    a: 0.16,
-                    ..primary
-                },
+                background: Color { a: 0.16, ..primary },
                 border: Edges::all(Px(2.0)),
-                border_color: Color {
-                    a: 0.85,
-                    ..primary
-                },
+                border_color: Color { a: 0.85, ..primary },
                 corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
             });
         }

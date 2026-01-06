@@ -2,6 +2,7 @@ use super::ElementHostWidget;
 use crate::declarative::mount::node_for_element_in_window_frame;
 use crate::declarative::paint_helpers::scrollbar_thumb_rect;
 use crate::declarative::paint_helpers::scrollbar_thumb_rect_horizontal;
+use crate::declarative::paint_helpers::scrollbar_track_padding_px;
 use crate::declarative::prelude::*;
 
 pub(super) fn handle_scrollbar<H: UiHost>(
@@ -90,7 +91,9 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                         })
                     {
                         if is_horizontal {
-                            let max_thumb_x = (bounds.size.width.0 - thumb.size.width.0).max(0.0);
+                            let pad = scrollbar_track_padding_px(bounds.size.width.0);
+                            let inner = (bounds.size.width.0 - pad * 2.0).max(0.0);
+                            let max_thumb_x = (inner - thumb.size.width.0).max(0.0);
                             if max_thumb_x > 0.0 {
                                 let delta_x = position.x.0 - state.drag_start_pointer.0;
                                 let scale = max_offset.0 / max_thumb_x;
@@ -106,7 +109,9 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                                 state.hovered = true;
                             }
                         } else {
-                            let max_thumb_y = (bounds.size.height.0 - thumb.size.height.0).max(0.0);
+                            let pad = scrollbar_track_padding_px(bounds.size.height.0);
+                            let inner = (bounds.size.height.0 - pad * 2.0).max(0.0);
+                            let max_thumb_y = (inner - thumb.size.height.0).max(0.0);
                             if max_thumb_y > 0.0 {
                                 let delta_y = position.y.0 - state.drag_start_pointer.0;
                                 let scale = max_offset.0 / max_thumb_y;
@@ -205,10 +210,12 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                     } else if bounds.contains(position) {
                         // Page to the click position (center the thumb on the pointer).
                         if is_horizontal {
-                            let max_thumb_x = (bounds.size.width.0 - thumb.size.width.0).max(0.0);
+                            let pad = scrollbar_track_padding_px(bounds.size.width.0);
+                            let inner = (bounds.size.width.0 - pad * 2.0).max(0.0);
+                            let max_thumb_x = (inner - thumb.size.width.0).max(0.0);
                             if max_thumb_x > 0.0 {
-                                let click_x = (position.x.0 - bounds.origin.x.0)
-                                    .clamp(0.0, bounds.size.width.0);
+                                let click_x =
+                                    (position.x.0 - bounds.origin.x.0 - pad).clamp(0.0, inner);
                                 let thumb_left =
                                     (click_x - thumb.size.width.0 * 0.5).clamp(0.0, max_thumb_x);
                                 let t = thumb_left / max_thumb_x;
@@ -218,10 +225,12 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                                 did_change_offset = true;
                             }
                         } else {
-                            let max_thumb_y = (bounds.size.height.0 - thumb.size.height.0).max(0.0);
+                            let pad = scrollbar_track_padding_px(bounds.size.height.0);
+                            let inner = (bounds.size.height.0 - pad * 2.0).max(0.0);
+                            let max_thumb_y = (inner - thumb.size.height.0).max(0.0);
                             if max_thumb_y > 0.0 {
-                                let click_y = (position.y.0 - bounds.origin.y.0)
-                                    .clamp(0.0, bounds.size.height.0);
+                                let click_y =
+                                    (position.y.0 - bounds.origin.y.0 - pad).clamp(0.0, inner);
                                 let thumb_top =
                                     (click_y - thumb.size.height.0 * 0.5).clamp(0.0, max_thumb_y);
                                 let t = thumb_top / max_thumb_y;
