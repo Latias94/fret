@@ -11,8 +11,8 @@ use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, ScrollProps, SizeStyle, StackProps,
-    TextProps,
+    OpacityProps, Overflow, PositionStyle, PressableA11y, PressableProps, ScrollProps, SizeStyle,
+    StackProps, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
@@ -22,6 +22,7 @@ use fret_ui_kit::declarative::chrome as decl_chrome;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::{roving_focus, typeahead};
 use fret_ui_kit::overlay;
@@ -33,7 +34,8 @@ use fret_ui_kit::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
 };
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    Space,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -589,6 +591,17 @@ fn select_impl<H: UiHost>(
         let theme = Theme::global(&*cx.app).clone();
         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
         let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+        let motion = OverlayController::transition_with_durations_and_easing(
+            cx,
+            is_open,
+            overlay_motion::SHADCN_MOTION_TICKS_100,
+            overlay_motion::SHADCN_MOTION_TICKS_100,
+            overlay_motion::shadcn_ease,
+        );
+        let overlay_presence = OverlayPresence {
+            present: motion.present,
+            interactive: is_open,
+        };
         let arrow_size = arrow_size_override.unwrap_or_else(|| {
             theme
                 .metric_by_key("component.select.arrow_size")
@@ -781,50 +794,7 @@ fn select_impl<H: UiHost>(
                         return true;
                     }
 
-                    let key_to_ascii = |key: fret_core::KeyCode| -> Option<char> {
-                        use fret_core::KeyCode;
-                        Some(match key {
-                            KeyCode::KeyA => 'a',
-                            KeyCode::KeyB => 'b',
-                            KeyCode::KeyC => 'c',
-                            KeyCode::KeyD => 'd',
-                            KeyCode::KeyE => 'e',
-                            KeyCode::KeyF => 'f',
-                            KeyCode::KeyG => 'g',
-                            KeyCode::KeyH => 'h',
-                            KeyCode::KeyI => 'i',
-                            KeyCode::KeyJ => 'j',
-                            KeyCode::KeyK => 'k',
-                            KeyCode::KeyL => 'l',
-                            KeyCode::KeyM => 'm',
-                            KeyCode::KeyN => 'n',
-                            KeyCode::KeyO => 'o',
-                            KeyCode::KeyP => 'p',
-                            KeyCode::KeyQ => 'q',
-                            KeyCode::KeyR => 'r',
-                            KeyCode::KeyS => 's',
-                            KeyCode::KeyT => 't',
-                            KeyCode::KeyU => 'u',
-                            KeyCode::KeyV => 'v',
-                            KeyCode::KeyW => 'w',
-                            KeyCode::KeyX => 'x',
-                            KeyCode::KeyY => 'y',
-                            KeyCode::KeyZ => 'z',
-                            KeyCode::Digit0 => '0',
-                            KeyCode::Digit1 => '1',
-                            KeyCode::Digit2 => '2',
-                            KeyCode::Digit3 => '3',
-                            KeyCode::Digit4 => '4',
-                            KeyCode::Digit5 => '5',
-                            KeyCode::Digit6 => '6',
-                            KeyCode::Digit7 => '7',
-                            KeyCode::Digit8 => '8',
-                            KeyCode::Digit9 => '9',
-                            _ => return None,
-                        })
-                    };
-
-                    let Some(ch) = key_to_ascii(it.key) else {
+                    let Some(ch) = fret_core::keycode_to_ascii_lowercase(it.key) else {
                         return false;
                     };
 
@@ -920,7 +890,7 @@ fn select_impl<H: UiHost>(
             let listbox_controls_element: Cell<Option<u64>> = Cell::new(None);
             let listbox_controls_element = &listbox_controls_element;
 
-            if is_open
+            if motion.present
                 && enabled
                 && let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id)
             {
@@ -970,6 +940,19 @@ fn select_impl<H: UiHost>(
 
                     let placed = layout.rect;
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                    let origin = overlay_motion::shadcn_transform_origin_for_anchored_rect(
+                        anchor,
+                        placed,
+                        side.into(),
+                    );
+                    let zoom = overlay_motion::shadcn_zoom_transform(origin, motion.progress);
+                    let slide = overlay_motion::shadcn_enter_slide_transform(
+                        side.into(),
+                        motion.progress,
+                        is_open,
+                    );
+                    let transform = slide * zoom;
+                    let opacity = motion.progress;
 
                     let theme_for_overlay = theme.clone();
                     let text_style_for_overlay = text_style.clone();
@@ -1090,7 +1073,7 @@ fn select_impl<H: UiHost>(
                         let arrow_bg = theme_for_overlay.colors.panel_background;
                         let arrow_border = border;
 
-                        let wrapper =
+                        let content =
                             popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
                                 let arrow_el = popper_arrow::diamond_arrow_element(
                                     cx,
@@ -1237,50 +1220,7 @@ fn select_impl<H: UiHost>(
                                                                 true
                                                             }
                                                             _ => {
-                                                                let key_to_ascii = |key: fret_core::KeyCode| -> Option<char> {
-                                                                    use fret_core::KeyCode;
-                                                                    Some(match key {
-                                                                        KeyCode::KeyA => 'a',
-                                                                        KeyCode::KeyB => 'b',
-                                                                        KeyCode::KeyC => 'c',
-                                                                        KeyCode::KeyD => 'd',
-                                                                        KeyCode::KeyE => 'e',
-                                                                        KeyCode::KeyF => 'f',
-                                                                        KeyCode::KeyG => 'g',
-                                                                        KeyCode::KeyH => 'h',
-                                                                        KeyCode::KeyI => 'i',
-                                                                        KeyCode::KeyJ => 'j',
-                                                                        KeyCode::KeyK => 'k',
-                                                                        KeyCode::KeyL => 'l',
-                                                                        KeyCode::KeyM => 'm',
-                                                                        KeyCode::KeyN => 'n',
-                                                                        KeyCode::KeyO => 'o',
-                                                                        KeyCode::KeyP => 'p',
-                                                                        KeyCode::KeyQ => 'q',
-                                                                        KeyCode::KeyR => 'r',
-                                                                        KeyCode::KeyS => 's',
-                                                                        KeyCode::KeyT => 't',
-                                                                        KeyCode::KeyU => 'u',
-                                                                        KeyCode::KeyV => 'v',
-                                                                        KeyCode::KeyW => 'w',
-                                                                        KeyCode::KeyX => 'x',
-                                                                        KeyCode::KeyY => 'y',
-                                                                        KeyCode::KeyZ => 'z',
-                                                                        KeyCode::Digit0 => '0',
-                                                                        KeyCode::Digit1 => '1',
-                                                                        KeyCode::Digit2 => '2',
-                                                                        KeyCode::Digit3 => '3',
-                                                                        KeyCode::Digit4 => '4',
-                                                                        KeyCode::Digit5 => '5',
-                                                                        KeyCode::Digit6 => '6',
-                                                                        KeyCode::Digit7 => '7',
-                                                                        KeyCode::Digit8 => '8',
-                                                                        KeyCode::Digit9 => '9',
-                                                                        _ => return None,
-                                                                    })
-                                                                };
-
-                                                                let Some(ch) = key_to_ascii(it.key) else {
+                                                                let Some(ch) = fret_core::keycode_to_ascii_lowercase(it.key) else {
                                                                     return false;
                                                                 };
 
@@ -1687,14 +1627,38 @@ fn select_impl<H: UiHost>(
                                 }
                             });
 
-                        vec![barrier, wrapper]
+                        let opacity_layout = LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
+                        let animated = cx.opacity_props(
+                            OpacityProps {
+                                layout: opacity_layout.clone(),
+                                opacity,
+                            },
+                            move |cx| {
+                                vec![cx.visual_transform_props(
+                                    VisualTransformProps {
+                                        layout: opacity_layout,
+                                        transform,
+                                    },
+                                    move |_cx| vec![content],
+                                )]
+                            },
+                        );
+
+                        vec![barrier, animated]
                     });
 
                     let mut request = radix_select::modal_select_request(
                         trigger_id,
                         trigger_id,
                         open,
-                        OverlayPresence::instant(true),
+                        overlay_presence,
                         overlay_children,
                     );
                     request.initial_focus = list_focus_id_out.get();
