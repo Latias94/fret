@@ -1,5 +1,14 @@
 use super::prelude::*;
 
+// Radix ScrollArea includes the scrollbar's padding (main axis) in thumb sizing/offset math.
+// In shadcn/ui v4 the default scrollbar uses `p-px` (1px), so we mirror that by default.
+// See `repo-ref/primitives/packages/react/scroll-area/src/scroll-area.tsx` (`getThumbSize`).
+const RADIX_SCROLLBAR_PADDING_PX: f32 = 1.0;
+
+pub(super) fn scrollbar_track_padding_px(track_main_axis: f32) -> f32 {
+    RADIX_SCROLLBAR_PADDING_PX.min(track_main_axis.max(0.0) * 0.5)
+}
+
 pub(super) fn scrollbar_thumb_rect(
     track: Rect,
     viewport_h: Px,
@@ -14,14 +23,19 @@ pub(super) fn scrollbar_thumb_rect(
     }
 
     let track_h = track.size.height.0;
+    let pad = scrollbar_track_padding_px(track_h);
+    let inner_track_h = (track_h - pad * 2.0).max(0.0);
+    if inner_track_h <= 0.0 {
+        return None;
+    }
     // Minimum of 18 matches macOS minimum and Radix ScrollArea defaults.
-    let min_thumb_h = 18.0f32.min(track_h);
+    let min_thumb_h = 18.0f32.min(inner_track_h);
     let ratio = (viewport_h.0 / content_h.0).clamp(0.0, 1.0);
-    let thumb_h = (track_h * ratio).max(min_thumb_h).min(track_h);
-    let max_thumb_y = (track_h - thumb_h).max(0.0);
+    let thumb_h = (inner_track_h * ratio).max(min_thumb_h).min(inner_track_h);
+    let max_thumb_y = (inner_track_h - thumb_h).max(0.0);
 
     let t = (offset_y.0.max(0.0).min(max_offset.0)) / max_offset.0;
-    let y = track.origin.y.0 + max_thumb_y * t;
+    let y = track.origin.y.0 + pad + max_thumb_y * t;
 
     Some(Rect::new(
         fret_core::Point::new(track.origin.x, Px(y)),
@@ -43,14 +57,19 @@ pub(super) fn scrollbar_thumb_rect_horizontal(
     }
 
     let track_w = track.size.width.0;
+    let pad = scrollbar_track_padding_px(track_w);
+    let inner_track_w = (track_w - pad * 2.0).max(0.0);
+    if inner_track_w <= 0.0 {
+        return None;
+    }
     // Minimum of 18 matches macOS minimum and Radix ScrollArea defaults.
-    let min_thumb_w = 18.0f32.min(track_w);
+    let min_thumb_w = 18.0f32.min(inner_track_w);
     let ratio = (viewport_w.0 / content_w.0).clamp(0.0, 1.0);
-    let thumb_w = (track_w * ratio).max(min_thumb_w).min(track_w);
-    let max_thumb_x = (track_w - thumb_w).max(0.0);
+    let thumb_w = (inner_track_w * ratio).max(min_thumb_w).min(inner_track_w);
+    let max_thumb_x = (inner_track_w - thumb_w).max(0.0);
 
     let t = (offset_x.0.max(0.0).min(max_offset.0)) / max_offset.0;
-    let x = track.origin.x.0 + max_thumb_x * t;
+    let x = track.origin.x.0 + pad + max_thumb_x * t;
 
     Some(Rect::new(
         fret_core::Point::new(Px(x), track.origin.y),

@@ -574,7 +574,10 @@ fn scroll_thumb_drag_updates_offset() {
 
             let mut stack_layout = crate::element::LayoutStyle::default();
             stack_layout.size.width = crate::element::Length::Fill;
-            stack_layout.size.height = crate::element::Length::Px(Px(20.0));
+            // Ensure the scrollbar has enough room for Radix-style padding + 18px minimum thumb.
+            // With very small tracks, Radix clamps the thumb to the available space and dragging
+            // cannot change the scroll offset.
+            stack_layout.size.height = crate::element::Length::Fill;
 
             vec![cx.stack_props(
                 crate::element::StackProps {
@@ -598,7 +601,16 @@ fn scroll_thumb_drag_updates_offset() {
                                     gap: Px(0.0),
                                     ..Default::default()
                                 },
-                                |cx| vec![cx.text("a"), cx.text("b"), cx.text("c")],
+                                |cx| {
+                                    vec![
+                                        cx.text("a"),
+                                        cx.text("b"),
+                                        cx.text("c"),
+                                        cx.text("d"),
+                                        cx.text("e"),
+                                        cx.text("f"),
+                                    ]
+                                },
                             )]
                         },
                     );
@@ -644,10 +656,33 @@ fn scroll_thumb_drag_updates_offset() {
     let scrollbar_bounds = ui
         .debug_node_bounds(scrollbar_node)
         .expect("scrollbar bounds");
-    let down_pos = fret_core::Point::new(
-        Px(scrollbar_bounds.origin.x.0 + 1.0),
-        Px(scrollbar_bounds.origin.y.0 + 2.0),
+    let thumb = crate::declarative::paint_helpers::scrollbar_thumb_rect(
+        scrollbar_bounds,
+        scroll_handle.viewport_size().height,
+        scroll_handle.content_size().height,
+        scroll_handle.offset().y,
+    )
+    .expect("thumb rect");
+    let pad = crate::declarative::paint_helpers::scrollbar_track_padding_px(
+        scrollbar_bounds.size.height.0,
     );
+    let inner = (scrollbar_bounds.size.height.0 - pad * 2.0).max(0.0);
+    let max_thumb_y = inner - thumb.size.height.0;
+    assert!(
+        scroll_handle.max_offset().y.0 > 0.0,
+        "expected overflow for drag test (viewport={:?} content={:?})",
+        scroll_handle.viewport_size().height,
+        scroll_handle.content_size().height
+    );
+    assert!(
+        max_thumb_y > 0.0,
+        "expected thumb travel (bounds_h={} pad={} inner={} thumb_h={})",
+        scrollbar_bounds.size.height.0,
+        pad,
+        inner,
+        thumb.size.height.0
+    );
+    let down_pos = fret_core::Point::new(Px(thumb.origin.x.0 + 1.0), Px(thumb.origin.y.0 + 1.0));
     let move_pos = fret_core::Point::new(down_pos.x, Px(down_pos.y.0 + 8.0));
     ui.dispatch_event(
         &mut app,
@@ -658,6 +693,11 @@ fn scroll_thumb_drag_updates_offset() {
             modifiers: fret_core::Modifiers::default(),
             pointer_type: fret_core::PointerType::Mouse,
         }),
+    );
+    assert_eq!(
+        ui.captured(),
+        Some(scrollbar_node),
+        "expected thumb down to capture the pointer on the scrollbar node"
     );
     ui.dispatch_event(
         &mut app,
@@ -731,7 +771,8 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
 
             let mut stack_layout = crate::element::LayoutStyle::default();
             stack_layout.size.width = crate::element::Length::Fill;
-            stack_layout.size.height = crate::element::Length::Px(Px(20.0));
+            // Ensure the scrollbar track has enough room for Radix-aligned padding + min thumb.
+            stack_layout.size.height = crate::element::Length::Px(Px(30.0));
 
             vec![cx.stack_props(
                 crate::element::StackProps {
