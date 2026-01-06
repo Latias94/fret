@@ -6,7 +6,7 @@
 //!
 //! This module provides reusable math for those effects so component wrappers don't drift.
 
-use fret_core::{Edges, Point, Px, Transform2D};
+use fret_core::{Edges, Point, Px, Rect, Transform2D};
 use fret_ui::overlay_placement::Side;
 
 pub const SHADCN_SLIDE_PX: Px = Px(8.0);
@@ -87,4 +87,53 @@ pub fn shadcn_zoom_transform(origin: Point, opacity: f32) -> Transform2D {
     Transform2D::translation(origin)
         * Transform2D::scale_uniform(scale)
         * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
+}
+
+/// Infer the anchored placement side from the relative positions of the reference and floating
+/// rects.
+///
+/// This is a geometry-only heuristic used by shadcn-style overlays (including submenus) to pick
+/// the slide direction when we don't have a full Popper placement result.
+pub fn anchored_side(reference: Rect, floating: Rect) -> Side {
+    let ref_center_x = reference.origin.x.0 + reference.size.width.0 * 0.5;
+    let ref_center_y = reference.origin.y.0 + reference.size.height.0 * 0.5;
+    let float_center_x = floating.origin.x.0 + floating.size.width.0 * 0.5;
+    let float_center_y = floating.origin.y.0 + floating.size.height.0 * 0.5;
+
+    let dx = float_center_x - ref_center_x;
+    let dy = float_center_y - ref_center_y;
+
+    if dx.abs() >= dy.abs() {
+        if dx >= 0.0 { Side::Right } else { Side::Left }
+    } else if dy >= 0.0 {
+        Side::Bottom
+    } else {
+        Side::Top
+    }
+}
+
+/// Compute a popper-like transform origin for an anchored floating rect, expressed in the local
+/// coordinate space of the floating rect.
+///
+/// This mirrors Radix's `--radix-*-transform-origin` outcome in a renderer-agnostic way.
+pub fn shadcn_transform_origin_for_anchored_rect(
+    reference: Rect,
+    floating: Rect,
+    side: Side,
+) -> Point {
+    let w = floating.size.width.0.max(0.0);
+    let h = floating.size.height.0.max(0.0);
+
+    let ref_center_x = reference.origin.x.0 + reference.size.width.0 * 0.5;
+    let ref_center_y = reference.origin.y.0 + reference.size.height.0 * 0.5;
+
+    let local_x = (ref_center_x - floating.origin.x.0).clamp(0.0, w);
+    let local_y = (ref_center_y - floating.origin.y.0).clamp(0.0, h);
+
+    match side {
+        Side::Right => Point::new(Px(0.0), Px(local_y)),
+        Side::Left => Point::new(Px(w), Px(local_y)),
+        Side::Top => Point::new(Px(local_x), Px(h)),
+        Side::Bottom => Point::new(Px(local_x), Px(0.0)),
+    }
 }

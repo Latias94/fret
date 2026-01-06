@@ -9,9 +9,9 @@ use fret_core::{
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    OpacityProps, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
-    SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    OpacityProps, Overflow, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
+    ScrollProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
@@ -1693,15 +1693,56 @@ impl DropdownMenu {
 
                     let mut children = vec![content];
                     let desired = Size::new(Px(192.0), Px(1.0e9));
+                    let submenu_open_value = cx
+                        .app
+                        .models_mut()
+                        .read(&submenu_for_panel.open_value, |v| v.clone())
+                        .ok()
+                        .flatten();
+                    let submenu_is_open = submenu_open_value.is_some();
+                    let submenu_motion = OverlayController::transition_with_durations_and_easing(
+                        cx,
+                        submenu_is_open,
+                        overlay_motion::SHADCN_MOTION_TICKS_100,
+                        overlay_motion::SHADCN_MOTION_TICKS_100,
+                        overlay_motion::shadcn_ease,
+                    );
+
                     let open_submenu = menu::sub::with_open_submenu(
                         cx,
                         &submenu_for_panel,
                         outer,
                         desired,
-                        |_cx, open_value, geometry| (open_value, geometry.floating),
+                        |_cx, open_value, geometry| (open_value, geometry),
                     );
 
-                    if let Some((open_value, placed)) = open_submenu {
+                    #[derive(Default)]
+                    struct SubmenuLast {
+                        open_value: Option<Arc<str>>,
+                        geometry: Option<menu::sub::MenuSubmenuGeometry>,
+                    }
+
+                    let (last_value, last_geometry) = cx.with_state(SubmenuLast::default, |st| {
+                        if let Some((open_value, geometry)) = open_submenu.as_ref() {
+                            st.open_value = Some(open_value.clone());
+                            st.geometry = Some(*geometry);
+                        }
+                        (st.open_value.clone(), st.geometry)
+                    });
+
+                    if submenu_motion.present {
+                        let open_value = open_submenu
+                            .as_ref()
+                            .map(|(open_value, _)| open_value.clone())
+                            .or(last_value);
+                        let geometry = open_submenu
+                            .map(|(_, geometry)| geometry)
+                            .or(last_geometry);
+
+                        let (Some(open_value), Some(geometry)) = (open_value, geometry) else {
+                            return (children, Some(dismissible_on_pointer_move));
+                        };
+
                         let submenu_entries = entries_for_submenu.iter().find_map(|e| {
                             let DropdownMenuEntry::Item(item) = e else {
                                 return None;
@@ -1802,7 +1843,7 @@ impl DropdownMenu {
                                             let submenu_models_for_panel = submenu_for_panel.clone();
                                             let submenu_panel = menu::sub_content::submenu_panel_at(
                                                 cx,
-                                                placed,
+                                                geometry.floating,
                                                 move |layout| ContainerProps {
                                                     layout,
                                                     padding: Edges::all(Px(4.0)),
@@ -2278,6 +2319,58 @@ impl DropdownMenu {
                                                     )]
                                                 },
                                             );
+
+                                        let side = overlay_motion::anchored_side(
+                                            geometry.reference,
+                                            geometry.floating,
+                                        );
+                                        let origin =
+                                            overlay_motion::shadcn_transform_origin_for_anchored_rect(
+                                                geometry.reference,
+                                                geometry.floating,
+                                                side,
+                                            );
+                                        let zoom = overlay_motion::shadcn_zoom_transform(
+                                            origin,
+                                            submenu_motion.progress,
+                                        );
+                                        let slide = overlay_motion::shadcn_enter_slide_transform(
+                                            side,
+                                            submenu_motion.progress,
+                                            true,
+                                        );
+                                        let transform = slide * zoom;
+
+                                        let opacity_layout = LayoutStyle {
+                                            size: SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        };
+                                        let opacity = submenu_motion.progress;
+                                        let submenu_panel = cx.interactivity_gate(
+                                            submenu_motion.present,
+                                            submenu_is_open,
+                                            move |cx| {
+                                                vec![cx.opacity_props(
+                                                    OpacityProps {
+                                                        layout: opacity_layout.clone(),
+                                                        opacity,
+                                                    },
+                                                    move |cx| {
+                                                        vec![cx.visual_transform_props(
+                                                            VisualTransformProps {
+                                                                layout: opacity_layout,
+                                                                transform,
+                                                            },
+                                                            move |_cx| vec![submenu_panel],
+                                                        )]
+                                                    },
+                                                )]
+                                            },
+                                        );
 
                                         children.push(submenu_panel);
                                     }
@@ -3509,7 +3602,7 @@ mod tests {
 
         ui.dispatch_event(&mut app, &mut services, &Event::Timer { token: timer });
 
-        // Sixth frame: after the close timer fires, the submenu closes.
+        // Sixth frame: after the close timer fires, the submenu begins closing.
         let _ = render_frame(
             &mut ui,
             &mut app,
@@ -3526,6 +3619,24 @@ mod tests {
             ],
         );
 
+        for _ in 0..overlay_motion::SHADCN_MOTION_TICKS_100 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                vec![
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("More").submenu(vec![
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Alpha")),
+                        DropdownMenuEntry::Item(DropdownMenuItem::new("Sub Beta")),
+                    ])),
+                    DropdownMenuEntry::Item(DropdownMenuItem::new("Other")),
+                ],
+            );
+        }
+
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(
             !snap
@@ -3533,7 +3644,7 @@ mod tests {
                 .iter()
                 .any(|n| n.role == SemanticsRole::MenuItem
                     && n.label.as_deref() == Some("Sub Alpha")),
-            "submenu should close after the close delay timer fires"
+            "submenu should unmount after the close transition completes"
         );
     }
 
