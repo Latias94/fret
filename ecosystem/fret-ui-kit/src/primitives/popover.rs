@@ -25,9 +25,59 @@ use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 pub use crate::primitives::popper::{Align, LayoutDirection, Side};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PopoverVariant {
+    #[default]
+    NonModal,
+    Modal,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PopoverOptions {
+    pub variant: PopoverVariant,
+    pub consume_outside_pointer_events: bool,
+    pub initial_focus: Option<GlobalElementId>,
+}
+
+impl Default for PopoverOptions {
+    fn default() -> Self {
+        Self {
+            variant: PopoverVariant::NonModal,
+            consume_outside_pointer_events: false,
+            initial_focus: None,
+        }
+    }
+}
+
+impl PopoverOptions {
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.variant = if modal {
+            PopoverVariant::Modal
+        } else {
+            PopoverVariant::NonModal
+        };
+        self
+    }
+
+    pub fn consume_outside_pointer_events(mut self, consume: bool) -> Self {
+        self.consume_outside_pointer_events = consume;
+        self
+    }
+
+    pub fn initial_focus(mut self, element: GlobalElementId) -> Self {
+        self.initial_focus = Some(element);
+        self
+    }
+}
+
 /// Stable per-overlay root naming convention for popover-like overlays.
 pub fn popover_root_name(id: GlobalElementId) -> String {
     OverlayController::popover_root_name(id)
+}
+
+/// Stable per-overlay root naming convention for popover-like overlays (modal variant).
+pub fn popover_modal_root_name(id: GlobalElementId) -> String {
+    OverlayController::modal_root_name(id)
 }
 
 /// A minimal semantics wrapper matching Radix `PopoverContent` (`role="dialog"`).
@@ -84,6 +134,39 @@ pub fn apply_popover_trigger_a11y(
     trigger
 }
 
+/// Builds an overlay request for a Radix-style popover.
+///
+/// This supports the two Radix outcomes:
+/// - non-modal popover (`variant=NonModal`): click-through by default (ADR 0069)
+/// - modal popover (`variant=Modal`): uses the shared modal overlay mechanism
+pub fn popover_request(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    options: PopoverOptions,
+    children: Vec<AnyElement>,
+) -> OverlayRequest {
+    let mut request = match options.variant {
+        PopoverVariant::NonModal => OverlayRequest::dismissible_popover(
+            id,
+            trigger,
+            open,
+            presence,
+            children,
+        ),
+        PopoverVariant::Modal => OverlayRequest::modal(id, Some(trigger), open, presence, children),
+    };
+
+    request.root_name = Some(match options.variant {
+        PopoverVariant::NonModal => popover_root_name(id),
+        PopoverVariant::Modal => popover_modal_root_name(id),
+    });
+    request.consume_outside_pointer_events = options.consume_outside_pointer_events;
+    request.initial_focus = options.initial_focus;
+    request
+}
+
 /// Builds an overlay request for a Radix-style non-modal popover.
 ///
 /// This is click-through by default (outside press closes the popover but still allows underlay
@@ -94,10 +177,14 @@ pub fn dismissible_popover_request(
     presence: OverlayPresence,
     children: Vec<AnyElement>,
 ) -> OverlayRequest {
-    let mut request =
-        OverlayRequest::dismissible_popover(trigger, trigger, open, presence, children);
-    request.root_name = Some(popover_root_name(trigger));
-    request
+    popover_request(
+        trigger,
+        trigger,
+        open,
+        presence,
+        PopoverOptions::default(),
+        children,
+    )
 }
 
 /// Requests a Radix-style non-modal popover overlay for the current window.
@@ -105,6 +192,11 @@ pub fn request_dismissible_popover<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     request: OverlayRequest,
 ) {
+    OverlayController::request(cx, request);
+}
+
+/// Requests a Radix-style popover overlay for the current window.
+pub fn request_popover<H: UiHost>(cx: &mut ElementContext<'_, H>, request: OverlayRequest) {
     OverlayController::request(cx, request);
 }
 
@@ -164,5 +256,43 @@ mod tests {
         );
         let expected = popover_root_name(GlobalElementId(0x123));
         assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
+    }
+
+    #[test]
+    fn popover_request_propagates_options_and_chooses_kind() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let id = GlobalElementId(0x111);
+        let trigger = GlobalElementId(0x222);
+        let focus = GlobalElementId(0x333);
+
+        let req = popover_request(
+            id,
+            trigger,
+            open.clone(),
+            OverlayPresence::instant(true),
+            PopoverOptions::default()
+                .consume_outside_pointer_events(true)
+                .initial_focus(focus),
+            Vec::new(),
+        );
+        assert_eq!(req.kind, crate::OverlayKind::NonModalDismissible);
+        assert_eq!(req.consume_outside_pointer_events, true);
+        assert_eq!(req.initial_focus, Some(focus));
+        assert_eq!(req.root_name.as_deref(), Some(popover_root_name(id).as_str()));
+
+        let req = popover_request(
+            id,
+            trigger,
+            open,
+            OverlayPresence::instant(true),
+            PopoverOptions::default().modal(true),
+            Vec::new(),
+        );
+        assert_eq!(req.kind, crate::OverlayKind::Modal);
+        assert_eq!(
+            req.root_name.as_deref(),
+            Some(popover_modal_root_name(id).as_str())
+        );
     }
 }

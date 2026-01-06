@@ -41,13 +41,11 @@ Fret does not use React context. Instead, popover behavior is composed via:
 - Pass: Dismissal (escape/outside/focus-outside) is handled by the shared window overlay policy.
 - Pass: Custom anchor is supported by treating the anchor element as a dismissable branch and
   using its bounds for placement.
-- Partial: The Radix `modal` variant is modeled by the shared modal overlay request mechanism, but
-  the facade does not yet expose a first-class `modal` builder for popover specifically.
+- Pass: The Radix `modal` variant is exposed via `PopoverOptions` (`variant=Modal`) and is wired
+  through to the shared modal overlay request mechanism.
 
 ## Follow-ups (recommended)
 
-- Add a small `PopoverOptions` builder in `primitives::popover` to explicitly model:
-  `modal`, `initial_focus`, and "consume outside pointer events" (menu-like vs click-through).
 - Add a Radix-named `PopoverContent` wiring helper (focus + dismiss hooks) for non-shadcn users who
   want to build their own visual skins on top of the same policy.
 

@@ -81,6 +81,7 @@ pub struct Popover {
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
     consume_outside_pointer_events: bool,
+    modal: bool,
     auto_focus: bool,
     initial_focus: Option<fret_ui::elements::GlobalElementId>,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
@@ -95,6 +96,7 @@ impl std::fmt::Debug for Popover {
             .field("align_offset", &self.align_offset)
             .field("side_offset", &self.side_offset)
             .field("window_margin_override", &self.window_margin_override)
+            .field("modal", &self.modal)
             .field("auto_focus", &self.auto_focus)
             .field("initial_focus", &self.initial_focus)
             .finish()
@@ -114,6 +116,7 @@ impl Popover {
             arrow_size_override: None,
             arrow_padding_override: None,
             consume_outside_pointer_events: false,
+            modal: false,
             auto_focus: false,
             initial_focus: None,
             anchor_override: None,
@@ -169,6 +172,17 @@ impl Popover {
     /// Default: `false` (click-through).
     pub fn consume_outside_pointer_events(mut self, consume: bool) -> Self {
         self.consume_outside_pointer_events = consume;
+        self
+    }
+
+    /// Enables a Radix-style "modal popover" variant.
+    ///
+    /// This installs the popover content in the shared modal overlay layer, blocking interaction
+    /// with the underlay.
+    ///
+    /// Default: `false` (non-modal popover).
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = modal;
         self
     }
 
@@ -399,18 +413,21 @@ impl Popover {
                     Some(trigger_id)
                 };
 
-                let mut request = radix_popover::dismissible_popover_request(
+                let mut request = radix_popover::popover_request(
+                    trigger_id,
                     trigger_id,
                     self.open,
                     overlay_presence,
+                    radix_popover::PopoverOptions::default()
+                        .modal(self.modal)
+                        .consume_outside_pointer_events(self.consume_outside_pointer_events),
                     overlay_children,
                 );
                 if anchor_id != trigger_id {
                     request.dismissable_branches.push(anchor_id);
                 }
-                request.consume_outside_pointer_events = self.consume_outside_pointer_events;
                 request.initial_focus = initial_focus;
-                radix_popover::request_dismissible_popover(cx, request);
+                radix_popover::request_popover(cx, request);
             }
 
             let dialog_id_for_trigger = dialog_id_for_trigger.get();
