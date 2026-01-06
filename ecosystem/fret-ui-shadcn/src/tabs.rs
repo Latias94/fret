@@ -131,6 +131,7 @@ fn tabs_trigger_border_width(theme: &Theme) -> Px {
 }
 
 pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
+use fret_ui_kit::primitives::tabs as radix_tabs;
 
 #[derive(Debug, Clone)]
 pub struct TabsItem {
@@ -423,6 +424,34 @@ impl Tabs {
                                     let text_style = text_style.clone();
 
                                     out.push(cx.pressable_with_id_props(move |cx, st, _id| {
+                                        let value_for_pointer = value.clone();
+                                        let model_for_pointer = model.clone();
+
+                                        cx.pressable_add_on_pointer_down(Arc::new(
+                                            move |host, _cx, down| {
+                                                use fret_ui::action::PressablePointerDownResult as R;
+
+                                                match radix_tabs::tabs_trigger_pointer_down_action(
+                                                    down.pointer_type,
+                                                    down.button,
+                                                    down.modifiers,
+                                                    item_disabled,
+                                                ) {
+                                                    radix_tabs::TabsTriggerPointerDownAction::Select => {
+                                                        let _ = host.models_mut().update(
+                                                            &model_for_pointer,
+                                                            |v| *v = Some(value_for_pointer.clone()),
+                                                        );
+                                                        R::Continue
+                                                    }
+                                                    radix_tabs::TabsTriggerPointerDownAction::PreventFocus => {
+                                                        R::SkipDefault
+                                                    }
+                                                    radix_tabs::TabsTriggerPointerDownAction::Ignore => R::Continue,
+                                                }
+                                            },
+                                        ));
+
                                         cx.pressable_set_option_arc_str(&model, value.clone());
                                         if active {
                                             selected_tab_element.set(Some(_id.0));
@@ -586,7 +615,8 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Modifiers, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService,
+        AppWindowId, Modifiers, MouseButton, Point, PointerType, Px, Rect, SemanticsRole, Size,
+        SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
@@ -671,6 +701,113 @@ mod tests {
     fn bump_frame(app: &mut App) {
         app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    #[test]
+    fn tabs_trigger_mouse_down_selects_immediately_like_radix() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let _root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            TabsActivationMode::Manual,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
+            .expect("beta tab");
+
+        let click = Point::new(
+            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
+            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+    }
+
+    #[test]
+    fn tabs_trigger_ctrl_click_does_not_select_or_focus() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let _root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            TabsActivationMode::Manual,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
+            .expect("beta tab");
+
+        let click = Point::new(
+            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
+            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+        );
+
+        let mut modifiers = Modifiers::default();
+        modifiers.ctrl = true;
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: click,
+                button: MouseButton::Left,
+                modifiers,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
     }
 
     fn render_force_mount_frame(

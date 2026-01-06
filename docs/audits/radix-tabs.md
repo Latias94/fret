@@ -29,6 +29,8 @@ Fret does not use React context. Instead, tabs behavior is composed via:
 - Pass: Controlled selection via `Model<Option<Arc<str>>>` (Radix `value`).
 - Pass: `orientation` and `activationMode` outcomes are modeled as enums.
 - Pass: Active index derivation skips disabled items (roving focus parity).
+- Pass: `TabsTrigger` selects on left mouse down and suppresses focus for other mouse downs
+  (Radix `onMouseDown` behavior).
 - Partial: Semantics roles (`TabList` / `Tab` / `TabPanel`) exist in the runtime; the current
   shadcn-aligned `Tabs` recipe wires these roles explicitly.
 - Partial: `TabsContent` `forceMount` is not exposed as a dedicated Radix-named primitive surface
