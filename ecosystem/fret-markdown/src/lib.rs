@@ -393,6 +393,13 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
     }
 }
 
+impl<H: UiHost> MarkdownComponents<H> {
+    pub fn with_open_url(mut self) -> Self {
+        self.on_link_activate = Some(on_link_activate_open_url());
+        self
+    }
+}
+
 fn render_heading<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
