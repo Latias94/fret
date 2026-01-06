@@ -17,7 +17,8 @@ use std::sync::Arc;
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::plot::axis::{AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
 use crate::plot::decimate::{
-    SamplePoint, decimate_polyline, decimate_samples, decimate_shaded_band,
+    SamplePoint, decimate_polyline, decimate_samples, decimate_shaded_band, device_point_budget,
+    view_x_range,
 };
 use crate::plot::view::{
     clamp_view_to_data_scaled, clamp_zoom_factors, data_rect_from_plot_points_scaled,
@@ -682,6 +683,144 @@ fn interpolate_y_at_x(series: &dyn SeriesData, x: f64) -> Option<f64> {
     }
 }
 
+/// Estimates a series' Y value at the given X coordinate for cursor readouts.
+///
+/// Strategy:
+/// - If the series reports `sorted_by_x`, we do an O(log N) lookup + linear interpolation.
+/// - Otherwise, we first try `SeriesData::sample_range` (view-dependent, bounded by `budget`) and
+///   interpolate within the sampled polyline.
+/// - As a last resort we do a budgeted scan to find the nearest-X point (O(budget)).
+fn cursor_readout_y_at_x(
+    series: &dyn SeriesData,
+    x: f64,
+    view_x_range: Option<std::ops::RangeInclusive<f64>>,
+    budget: usize,
+) -> Option<f64> {
+    if !x.is_finite() {
+        return None;
+    }
+
+    if series.is_sorted_by_x() {
+        return interpolate_y_at_x(series, x);
+    }
+
+    if let Some(view_x_range) = view_x_range
+        && view_x_range.start().is_finite()
+        && view_x_range.end().is_finite()
+        && let Some(sampled) = series.sample_range(view_x_range, budget.max(2))
+    {
+        return interpolate_sampled_y_at_x(sampled, x);
+    }
+
+    nearest_point_y_by_x_budgeted(series, x, budget)
+}
+
+fn interpolate_sampled_y_at_x(mut points: Vec<DataPoint>, x: f64) -> Option<f64> {
+    points.retain(|p| p.x.is_finite() && p.y.is_finite());
+    if points.is_empty() {
+        return None;
+    }
+
+    points.sort_by(|a, b| a.x.total_cmp(&b.x));
+
+    let right = points.partition_point(|p| p.x < x);
+    if right == 0 {
+        return Some(points[0].y);
+    }
+    if right >= points.len() {
+        return Some(points[points.len().saturating_sub(1)].y);
+    }
+
+    let a = points[right - 1];
+    let b = points[right];
+    if a.x == b.x {
+        return Some(a.y);
+    }
+
+    let t = (x - a.x) / (b.x - a.x);
+    if !t.is_finite() {
+        return None;
+    }
+    Some(a.y + (b.y - a.y) * t)
+}
+
+fn nearest_point_y_by_x_budgeted(series: &dyn SeriesData, x: f64, budget: usize) -> Option<f64> {
+    let len = series.len();
+    if len == 0 || !x.is_finite() {
+        return None;
+    }
+
+    let budget = budget.max(1).min(len);
+    let stride = ((len + budget - 1) / budget).max(1);
+
+    let mut best_dx = f64::INFINITY;
+    let mut best_y: Option<f64> = None;
+
+    for idx in (0..len).step_by(stride) {
+        let Some(p) = series.get(idx) else {
+            continue;
+        };
+        if !p.x.is_finite() || !p.y.is_finite() {
+            continue;
+        }
+
+        let dx = (p.x - x).abs();
+        if dx < best_dx {
+            best_dx = dx;
+            best_y = Some(p.y);
+        }
+    }
+
+    best_y
+}
+
+#[cfg(test)]
+mod cursor_readout_value_tests {
+    use super::*;
+
+    #[test]
+    fn unsorted_series_returns_nearest_x_point() {
+        let series = Series::from_points(vec![
+            DataPoint { x: 10.0, y: 10.0 },
+            DataPoint { x: 0.0, y: 0.0 },
+            DataPoint { x: 5.0, y: 5.0 },
+        ]);
+
+        let y = cursor_readout_y_at_x(&*series, 5.1, Some(0.0..=10.0), 64).unwrap();
+        assert!((y - 5.0).abs() < 1.0e-9);
+    }
+
+    #[test]
+    fn unsorted_sample_range_is_sorted_before_interpolation() {
+        struct UnsortedSampleRange;
+
+        impl SeriesData for UnsortedSampleRange {
+            fn len(&self) -> usize {
+                0
+            }
+
+            fn get(&self, _index: usize) -> Option<DataPoint> {
+                None
+            }
+
+            fn sample_range(
+                &self,
+                _x_range: std::ops::RangeInclusive<f64>,
+                _budget: usize,
+            ) -> Option<Vec<DataPoint>> {
+                Some(vec![
+                    DataPoint { x: 2.0, y: 20.0 },
+                    DataPoint { x: 0.0, y: 0.0 },
+                    DataPoint { x: 1.0, y: 10.0 },
+                ])
+            }
+        }
+
+        let y = cursor_readout_y_at_x(&UnsortedSampleRange, 1.5, Some(0.0..=2.0), 16).unwrap();
+        assert!((y - 15.0).abs() < 1.0e-9);
+    }
+}
+
 fn lower_bound_valid_by_x(series: &dyn SeriesData, x: f64) -> Option<usize> {
     let len = series.len();
     if len == 0 {
@@ -1193,6 +1332,17 @@ pub struct PlotCursorReadoutRow {
     pub y: Option<f64>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct PlotCursorReadoutArgs<'a> {
+    pub x: f64,
+    pub plot_size: Size,
+    pub view_bounds: DataRect,
+    pub x_scale: AxisScale,
+    pub y_scale: AxisScale,
+    pub scale_factor: f32,
+    pub hidden: &'a HashSet<SeriesId>,
+}
+
 pub trait PlotLayer {
     type Model: Clone + 'static;
 
@@ -1215,8 +1365,7 @@ pub trait PlotLayer {
     /// The default implementation returns no rows.
     fn cursor_readout(
         _model: &Self::Model,
-        _x: f64,
-        _hidden: &HashSet<SeriesId>,
+        _args: PlotCursorReadoutArgs<'_>,
     ) -> Vec<PlotCursorReadoutRow> {
         Vec::new()
     }
@@ -4944,9 +5093,18 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             let linked_x = linked_x.expect("checked above");
 
             let hidden = &state.hidden_series;
+            let readout_args = PlotCursorReadoutArgs {
+                x: linked_x,
+                plot_size: layout.plot.size,
+                view_bounds,
+                x_scale: self.x_scale,
+                y_scale: self.y_scale,
+                scale_factor: cx.scale_factor,
+                hidden,
+            };
             let mut readout_rows = self
                 .model
-                .read(cx.app, |_app, m| L::cursor_readout(m, linked_x, hidden))
+                .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
                 .unwrap_or_default();
             apply_readout_policy(
                 &mut readout_rows,
@@ -5187,11 +5345,18 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let cursor_data = cursor_data?;
 
                     let hidden = &state.hidden_series;
+                    let readout_args = PlotCursorReadoutArgs {
+                        x: cursor_data.x,
+                        plot_size: layout.plot.size,
+                        view_bounds,
+                        x_scale: self.x_scale,
+                        y_scale: self.y_scale,
+                        scale_factor: cx.scale_factor,
+                        hidden,
+                    };
                     let mut readout_rows = self
                         .model
-                        .read(cx.app, |_app, m| {
-                            L::cursor_readout(m, cursor_data.x, hidden)
-                        })
+                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
                         .unwrap_or_default();
 
                     if let Some(pinned) = state.pinned_series {
@@ -5254,9 +5419,18 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     );
 
                     let hidden = &state.hidden_series;
+                    let readout_args = PlotCursorReadoutArgs {
+                        x: linked_x,
+                        plot_size: layout.plot.size,
+                        view_bounds,
+                        x_scale: self.x_scale,
+                        y_scale: self.y_scale,
+                        scale_factor: cx.scale_factor,
+                        hidden,
+                    };
                     let mut readout_rows = self
                         .model
-                        .read(cx.app, |_app, m| L::cursor_readout(m, linked_x, hidden))
+                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
                         .unwrap_or_default();
                     apply_readout_policy(
                         &mut readout_rows,
@@ -5447,19 +5621,38 @@ impl PlotLayer for LinePlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f64,
-        hidden: &HashSet<SeriesId>,
+        args: PlotCursorReadoutArgs<'_>,
     ) -> Vec<PlotCursorReadoutRow> {
+        let PlotCursorReadoutArgs {
+            x,
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            scale_factor,
+            hidden,
+        } = args;
+
         if !x.is_finite() {
             return Vec::new();
         }
+
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let view_x = view_x_range(transform);
+        let view_x = (view_x.start().is_finite() && view_x.end().is_finite()).then_some(view_x);
+        let budget = device_point_budget(transform, scale_factor);
 
         let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
         for s in &model.series {
             if hidden.contains(&s.id) {
                 continue;
             }
-            let y = interpolate_y_at_x(&*s.data, x);
+            let y = cursor_readout_y_at_x(&*s.data, x, view_x.clone(), budget);
             out.push(PlotCursorReadoutRow {
                 series_id: s.id,
                 label: s.label.clone(),
@@ -5693,19 +5886,38 @@ impl PlotLayer for ScatterPlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f64,
-        hidden: &HashSet<SeriesId>,
+        args: PlotCursorReadoutArgs<'_>,
     ) -> Vec<PlotCursorReadoutRow> {
+        let PlotCursorReadoutArgs {
+            x,
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            scale_factor,
+            hidden,
+        } = args;
+
         if !x.is_finite() {
             return Vec::new();
         }
+
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let view_x = view_x_range(transform);
+        let view_x = (view_x.start().is_finite() && view_x.end().is_finite()).then_some(view_x);
+        let budget = device_point_budget(transform, scale_factor);
 
         let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
         for s in &model.series {
             if hidden.contains(&s.id) {
                 continue;
             }
-            let y = interpolate_y_at_x(&*s.data, x);
+            let y = cursor_readout_y_at_x(&*s.data, x, view_x.clone(), budget);
             out.push(PlotCursorReadoutRow {
                 series_id: s.id,
                 label: s.label.clone(),
@@ -5941,19 +6153,38 @@ impl PlotLayer for StairsPlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f64,
-        hidden: &HashSet<SeriesId>,
+        args: PlotCursorReadoutArgs<'_>,
     ) -> Vec<PlotCursorReadoutRow> {
+        let PlotCursorReadoutArgs {
+            x,
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            scale_factor,
+            hidden,
+        } = args;
+
         if !x.is_finite() {
             return Vec::new();
         }
+
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let view_x = view_x_range(transform);
+        let view_x = (view_x.start().is_finite() && view_x.end().is_finite()).then_some(view_x);
+        let budget = device_point_budget(transform, scale_factor);
 
         let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
         for s in &model.series {
             if hidden.contains(&s.id) {
                 continue;
             }
-            let y = interpolate_y_at_x(&*s.data, x);
+            let y = cursor_readout_y_at_x(&*s.data, x, view_x.clone(), budget);
             out.push(PlotCursorReadoutRow {
                 series_id: s.id,
                 label: s.label.clone(),
@@ -6190,19 +6421,38 @@ impl PlotLayer for BarsPlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f64,
-        hidden: &HashSet<SeriesId>,
+        args: PlotCursorReadoutArgs<'_>,
     ) -> Vec<PlotCursorReadoutRow> {
+        let PlotCursorReadoutArgs {
+            x,
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            scale_factor,
+            hidden,
+        } = args;
+
         if !x.is_finite() {
             return Vec::new();
         }
+
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let view_x = view_x_range(transform);
+        let view_x = (view_x.start().is_finite() && view_x.end().is_finite()).then_some(view_x);
+        let budget = device_point_budget(transform, scale_factor);
 
         let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
         for s in &model.series {
             if hidden.contains(&s.id) {
                 continue;
             }
-            let y = interpolate_y_at_x(&*s.data, x);
+            let y = cursor_readout_y_at_x(&*s.data, x, view_x.clone(), budget);
             out.push(PlotCursorReadoutRow {
                 series_id: s.id,
                 label: s.label.clone(),
@@ -6737,19 +6987,38 @@ impl PlotLayer for AreaPlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f64,
-        hidden: &HashSet<SeriesId>,
+        args: PlotCursorReadoutArgs<'_>,
     ) -> Vec<PlotCursorReadoutRow> {
+        let PlotCursorReadoutArgs {
+            x,
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            scale_factor,
+            hidden,
+        } = args;
+
         if !x.is_finite() {
             return Vec::new();
         }
+
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let view_x = view_x_range(transform);
+        let view_x = (view_x.start().is_finite() && view_x.end().is_finite()).then_some(view_x);
+        let budget = device_point_budget(transform, scale_factor);
 
         let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
         for s in &model.series {
             if hidden.contains(&s.id) {
                 continue;
             }
-            let y = interpolate_y_at_x(&*s.data, x);
+            let y = cursor_readout_y_at_x(&*s.data, x, view_x.clone(), budget);
             out.push(PlotCursorReadoutRow {
                 series_id: s.id,
                 label: s.label.clone(),
@@ -7164,12 +7433,31 @@ impl PlotLayer for ShadedPlotLayer {
 
     fn cursor_readout(
         model: &Self::Model,
-        x: f64,
-        hidden: &HashSet<SeriesId>,
+        args: PlotCursorReadoutArgs<'_>,
     ) -> Vec<PlotCursorReadoutRow> {
+        let PlotCursorReadoutArgs {
+            x,
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            scale_factor,
+            hidden,
+        } = args;
+
         if !x.is_finite() {
             return Vec::new();
         }
+
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let view_x = view_x_range(transform);
+        let view_x = (view_x.start().is_finite() && view_x.end().is_finite()).then_some(view_x);
+        let budget = device_point_budget(transform, scale_factor);
 
         let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
         for s in &model.series {
@@ -7177,8 +7465,8 @@ impl PlotLayer for ShadedPlotLayer {
                 continue;
             }
 
-            let upper_y = interpolate_y_at_x(&*s.upper, x);
-            let lower_y = interpolate_y_at_x(&*s.lower, x);
+            let upper_y = cursor_readout_y_at_x(&*s.upper, x, view_x.clone(), budget);
+            let lower_y = cursor_readout_y_at_x(&*s.lower, x, view_x.clone(), budget);
 
             out.push(PlotCursorReadoutRow {
                 series_id: s.id,

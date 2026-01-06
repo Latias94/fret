@@ -32,7 +32,7 @@ This contract is documented in ADR 0099.
 - [x] Query/zoom drag shows range readout tooltip
 - [x] Crosshair visible when cursor is inside plot
 - [x] Mouse position readout (overlay or tooltip) when cursor is inside plot
-- [~] Series value readout (cursor X -> per-series Y; currently implemented via sorted-by-x interpolation)
+- [x] Series value readout (cursor X -> per-series Y; sorted-by-x interpolation, else view-sampled/budgeted fallback)
 - [x] Tooltip/readout uses axis formatters (consistent units/time)
 - [x] Legend interaction: hide/solo/pin (basic)
 - [x] Cursor linking across plots (vertical cursor + per-series readout at X)
@@ -101,6 +101,6 @@ This contract is documented in ADR 0099.
 
 ## Next steps (recommended order)
 
-1. Cursor linking UX (vertical cursor + per-series readout at X).
-2. Axis formatting (time + custom formatters).
-3. Expand plot type set (heatmap, error bars, candlesticks).
+1. Axis formatting (time + custom formatters).
+2. Expand plot type set (error bars, candlesticks).
+3. Keyboard shortcuts matrix (document + align with ImPlot defaults).

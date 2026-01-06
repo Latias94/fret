@@ -479,13 +479,18 @@ pub(crate) fn decimate_samples(
     samples
 }
 
-fn view_x_range(transform: PlotTransform) -> std::ops::RangeInclusive<f64> {
+/// Returns the visible X range in data space for the given plot transform.
+pub(crate) fn view_x_range(transform: PlotTransform) -> std::ops::RangeInclusive<f64> {
     let x0 = transform.data.x_min;
     let x1 = transform.data.x_max;
     if x0 <= x1 { x0..=x1 } else { x1..=x0 }
 }
 
-fn device_point_budget(transform: PlotTransform, scale_factor: f32) -> usize {
+/// Returns a reasonable point budget for view-dependent sampling.
+///
+/// This is tuned for generator-like series that can cheaply resample by X range and for
+/// downsampling strategies that bucket by device-pixel X.
+pub(crate) fn device_point_budget(transform: PlotTransform, scale_factor: f32) -> usize {
     let w = transform.viewport.size.width.0.max(0.0);
     let device_w = (w * scale_factor.max(1.0)).max(1.0);
     // Roughly "2 points per device pixel" is usually enough to preserve spikes after min/max
