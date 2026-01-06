@@ -77,7 +77,9 @@ pub fn select_open_key_suppresses_activate(key: KeyCode) -> bool {
 }
 
 /// Radix-like select typeahead clear timeout (in milliseconds).
-pub const SELECT_TYPEAHEAD_CLEAR_TIMEOUT_MS: u64 = 500;
+///
+/// Upstream Radix resets the typeahead search 1 second after it was last updated.
+pub const SELECT_TYPEAHEAD_CLEAR_TIMEOUT_MS: u64 = 1000;
 
 /// Timer-driven typeahead query state (Radix-style).
 #[derive(Debug, Default)]

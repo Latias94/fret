@@ -1,5 +1,3 @@
-use std::cell::Cell;
-use std::sync::{Arc, Mutex};
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
@@ -35,6 +33,8 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     Space,
 };
+use std::cell::Cell;
+use std::sync::{Arc, Mutex};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -1952,13 +1952,16 @@ mod tests {
         let effects = app.flush_effects();
         let token = effects
             .iter()
-            .find_map(|e| match e {
-                Effect::SetTimer { token, after, .. } if *after == Duration::from_millis(500) => {
-                    Some(*token)
-                }
-                _ => None,
-            })
-            .expect("typeahead clear timer token");
+                .find_map(|e| match e {
+                    Effect::SetTimer { token, after, .. }
+                        if *after
+                            == Duration::from_millis(radix_select::SELECT_TYPEAHEAD_CLEAR_TIMEOUT_MS) =>
+                    {
+                        Some(*token)
+                    }
+                    _ => None,
+                })
+                .expect("typeahead clear timer token");
 
         ui.dispatch_event(
             &mut app,
