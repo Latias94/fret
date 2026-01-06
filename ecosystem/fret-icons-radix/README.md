@@ -14,6 +14,7 @@ The SVG assets in `assets/icons/*.svg` are derived from the upstream Radix Icons
 
 - `ui.check` -> `check.svg`
 - `ui.chevron.down` -> `chevron-down.svg`
+- `ui.chevron.up` -> `chevron-up.svg`
 - `ui.close` -> `cross-1.svg`
 - `ui.search` -> `magnifying-glass.svg`
 - `ui.settings` -> `gear.svg`
@@ -29,6 +30,7 @@ This crate also registers a small vendor namespace (for convenience in app code)
 
 - `radix.check` -> `check.svg`
 - `radix.chevron-down` -> `chevron-down.svg`
+- `radix.chevron-up` -> `chevron-up.svg`
 - `radix.cross-1` -> `cross-1.svg`
 - `radix.magnifying-glass` -> `magnifying-glass.svg`
 - `radix.gear` -> `gear.svg`
