@@ -16,7 +16,121 @@ pub(super) fn handle_pressable<H: UiHost>(
             fret_core::PointerEvent::Move { .. } => {
                 cx.set_cursor_icon(CursorIcon::Pointer);
             }
-            fret_core::PointerEvent::Down { button, .. } => {
+            fret_core::PointerEvent::Down {
+                position,
+                button,
+                modifiers,
+                pointer_type,
+            } => {
+                let hook = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::action::PressableActionHooks::default,
+                    |hooks| hooks.on_pointer_down.clone(),
+                );
+
+                if let Some(h) = hook {
+                    struct PressablePointerHookHost<'a, H: UiHost> {
+                        app: &'a mut H,
+                        window: AppWindowId,
+                        node: NodeId,
+                        bounds: Rect,
+                        input_ctx: &'a fret_runtime::InputContext,
+                        requested_focus: &'a mut Option<NodeId>,
+                        requested_capture: &'a mut Option<Option<NodeId>>,
+                        requested_cursor: &'a mut Option<fret_core::CursorIcon>,
+                    }
+
+                    impl<H: UiHost> action::UiActionHost for PressablePointerHookHost<'_, H> {
+                        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                            self.app.models_mut()
+                        }
+
+                        fn push_effect(&mut self, effect: Effect) {
+                            self.app.push_effect(effect);
+                        }
+
+                        fn request_redraw(&mut self, window: AppWindowId) {
+                            self.app.request_redraw(window);
+                        }
+
+                        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                            self.app.next_timer_token()
+                        }
+                    }
+
+                    impl<H: UiHost> action::UiFocusActionHost for PressablePointerHookHost<'_, H> {
+                        fn request_focus(&mut self, target: crate::GlobalElementId) {
+                            let Some(node) = crate::elements::with_window_state(
+                                &mut *self.app,
+                                self.window,
+                                |window_state| window_state.node_entry(target).map(|e| e.node),
+                            ) else {
+                                return;
+                            };
+                            *self.requested_focus = Some(node);
+                        }
+                    }
+
+                    impl<H: UiHost> action::UiPointerActionHost for PressablePointerHookHost<'_, H> {
+                        fn bounds(&self) -> Rect {
+                            self.bounds
+                        }
+
+                        fn capture_pointer(&mut self) {
+                            *self.requested_capture = Some(Some(self.node));
+                        }
+
+                        fn release_pointer_capture(&mut self) {
+                            *self.requested_capture = Some(None);
+                        }
+
+                        fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {
+                            if !self.input_ctx.caps.ui.cursor_icons {
+                                return;
+                            }
+                            *self.requested_cursor = Some(icon);
+                        }
+                    }
+
+                    let down = action::PointerDownCx {
+                        position: *position,
+                        button: *button,
+                        modifiers: *modifiers,
+                        pointer_type: *pointer_type,
+                    };
+
+                    let mut host = PressablePointerHookHost {
+                        app: &mut *cx.app,
+                        window,
+                        node: cx.node,
+                        bounds: cx.bounds,
+                        input_ctx: &cx.input_ctx,
+                        requested_focus: &mut cx.requested_focus,
+                        requested_capture: &mut cx.requested_capture,
+                        requested_cursor: &mut cx.requested_cursor,
+                    };
+
+                    match h(
+                        &mut host,
+                        action::ActionCx {
+                            window,
+                            target: this.element,
+                        },
+                        down,
+                    ) {
+                        action::PressablePointerDownResult::Continue => {}
+                        action::PressablePointerDownResult::SkipDefault => {
+                            return;
+                        }
+                        action::PressablePointerDownResult::SkipDefaultAndStopPropagation => {
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+                }
+
                 if *button != MouseButton::Left {
                     return;
                 }

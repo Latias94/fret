@@ -20,6 +20,17 @@ pub enum ActivateReason {
     Keyboard,
 }
 
+/// Result of a component-owned `Pressable` pointer down hook.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PressablePointerDownResult {
+    /// Continue with the default `Pressable` pointer down behavior (focus, capture, pressed state).
+    Continue,
+    /// Skip the default behavior but allow the event to keep propagating.
+    SkipDefault,
+    /// Skip the default behavior and stop propagation at this pressable.
+    SkipDefaultAndStopPropagation,
+}
+
 /// Why an overlay is requesting dismissal.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DismissReason {
@@ -149,10 +160,15 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
 }
 
 pub type OnActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason) + 'static>;
+pub type OnPressablePointerDown = Arc<
+    dyn Fn(&mut dyn UiPointerActionHost, ActionCx, PointerDownCx) -> PressablePointerDownResult
+        + 'static,
+>;
 
 #[derive(Default)]
 pub(crate) struct PressableActionHooks {
     pub on_activate: Option<OnActivate>,
+    pub on_pointer_down: Option<OnPressablePointerDown>,
 }
 
 pub type OnHoverChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;

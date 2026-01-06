@@ -9,9 +9,9 @@ use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 use crate::action::OnHoverChange;
 use crate::action::{
     DismissibleActionHooks, KeyActionHooks, OnActivate, OnDismissRequest, OnDismissiblePointerMove,
-    OnKeyDown, OnPointerDown, OnPointerMove, OnPointerUp, OnRovingActiveChange, OnRovingNavigate,
-    OnRovingTypeahead, OnTimer, PointerActionHooks, PressableActionHooks,
-    PressableHoverActionHooks, RovingActionHooks, TimerActionHooks,
+    OnKeyDown, OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown,
+    OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead, OnTimer, PointerActionHooks,
+    PressableActionHooks, PressableHoverActionHooks, RovingActionHooks, TimerActionHooks,
 };
 use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
@@ -554,6 +554,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let pressed = cx.window_state.pressed_pressable == Some(id);
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
+            cx.pressable_clear_on_pointer_down();
             cx.pressable_clear_on_hover_change();
             let (props, children) = f(
                 cx,
@@ -596,6 +597,46 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     pub fn pressable_clear_on_activate(&mut self) {
         self.with_state(PressableActionHooks::default, |hooks| {
             hooks.on_activate = None;
+        });
+    }
+
+    /// Register a component-owned pointer down handler for the current pressable element.
+    ///
+    /// This is a policy hook mechanism (ADR 0074): components can opt into Radix-style "select on
+    /// mouse down" semantics without changing the default click-like activation behavior.
+    pub fn pressable_on_pointer_down(&mut self, handler: OnPressablePointerDown) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_down = Some(handler);
+        });
+    }
+
+    pub fn pressable_add_on_pointer_down(&mut self, handler: OnPressablePointerDown) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_down = match hooks.on_pointer_down.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, down| {
+                        let prev_result = prev(host, cx, down);
+                        let next_result = next(host, cx, down);
+                        use crate::action::PressablePointerDownResult as R;
+                        match (prev_result, next_result) {
+                            (R::SkipDefaultAndStopPropagation, _)
+                            | (_, R::SkipDefaultAndStopPropagation) => {
+                                R::SkipDefaultAndStopPropagation
+                            }
+                            (R::SkipDefault, _) | (_, R::SkipDefault) => R::SkipDefault,
+                            _ => R::Continue,
+                        }
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_clear_on_pointer_down(&mut self) {
+        self.with_state(PressableActionHooks::default, |hooks| {
+            hooks.on_pointer_down = None;
         });
     }
 
