@@ -3,12 +3,10 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Edges, MouseButton, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
-    Transform2D,
+    Edges, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap, Transform2D,
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
-use fret_ui::action::PointerDownCx;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     OpacityProps, PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps,
@@ -23,6 +21,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::context_menu as radix_context_menu;
 use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -1271,21 +1270,7 @@ impl ContextMenu {
             menu::trigger::wire_open_on_shift_f10(cx, trigger_id, self.open.clone());
 
             let open = self.open;
-            let open_for_pointer = open.clone();
-            let pointer_policy = Arc::new(move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                                           _cx: fret_ui::action::ActionCx,
-                                           down: PointerDownCx| {
-                let is_right_click = down.button == MouseButton::Right;
-                let is_macos_ctrl_click =
-                    cfg!(target_os = "macos") && down.button == MouseButton::Left && down.modifiers.ctrl;
-
-                if !is_right_click && !is_macos_ctrl_click {
-                    return false;
-                }
-
-                let _ = host.models_mut().update(&open_for_pointer, |v| *v = true);
-                true
-            });
+            let pointer_policy = radix_context_menu::context_menu_pointer_down_policy(open.clone());
 
             let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
                 cx.pointer_region_on_pointer_down(pointer_policy);
