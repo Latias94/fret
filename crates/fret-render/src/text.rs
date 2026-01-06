@@ -1246,7 +1246,9 @@ fn layout_text(
             && layout_lines.len() == 1
             && let Some(max_w) = max_width_px
             && let Some(line) = layout_lines.get_mut(0)
-            && line.w > max_w
+            // Avoid spurious ellipses caused by subpixel layout rounding (especially visible in
+            // list rows where the remaining gap makes the truncation look "wrong").
+            && line.w > max_w + 0.5
         {
             let ellipsis_text = "…";
             let (ellipsis_w, ellipsis_glyphs) = {
@@ -1285,7 +1287,7 @@ fn layout_text(
                     continue;
                 }
                 let right = (g.x + g.w).max(0.0);
-                if right <= available_w {
+                if right <= available_w + 0.5 {
                     cut_end = cut_end.max(g.end.min(slice.len()));
                 }
             }
