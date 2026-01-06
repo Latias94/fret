@@ -7,8 +7,6 @@ pub mod dismissible;
 pub mod focus_scope;
 pub mod hover_intent;
 pub mod list;
-#[cfg(feature = "table")]
-pub mod table;
 pub mod model_watch;
 pub mod overlay_motion;
 pub mod prelude;
