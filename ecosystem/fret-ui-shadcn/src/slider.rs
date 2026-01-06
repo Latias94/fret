@@ -188,21 +188,58 @@ pub fn slider<H: UiHost>(
     });
 
     cx.scope(|cx| {
+        #[derive(Default)]
+        struct DragIndexState {
+            model: Option<Model<usize>>,
+        }
+
+        let drag_index_model = cx.with_state(DragIndexState::default, |st| st.model.clone());
+        let drag_index_model = if let Some(drag_index_model) = drag_index_model {
+            drag_index_model
+        } else {
+            let drag_index_model = cx.app.models_mut().insert(0usize);
+            cx.with_state(DragIndexState::default, |st| {
+                st.model = Some(drag_index_model.clone());
+            });
+            drag_index_model
+        };
+
         let root_layout = decl_style::layout_style(&theme, layout.relative().w_full());
         let root_h = style.thumb_size.0.max(style.track_height.0).max(0.0);
 
         let mut semantics_layout = root_layout;
         semantics_layout.size.height = Length::Px(Px(root_h));
 
-        let value = cx
+        let values = cx
             .watch_model(&model)
-            .read_ref(|values| values.first().copied())
+            .read_ref(|values| values.clone())
             .ok()
-            .flatten()
-            .unwrap_or(min);
-        let t = radix_slider::normalize_value(value, min, max);
+            .unwrap_or_else(|| vec![min]);
+        let mut values_sorted = values;
+        if values_sorted.is_empty() {
+            values_sorted.push(min);
+        }
+        values_sorted.sort_by(|a, b| a.total_cmp(b));
+
+        let active_index = cx.app.models().get_cloned(&drag_index_model).unwrap_or(0);
+        let active_index = active_index.min(values_sorted.len().saturating_sub(1));
+        let active_value = values_sorted.get(active_index).copied().unwrap_or(min);
+
+        let percentages: Vec<f32> = values_sorted
+            .iter()
+            .copied()
+            .map(|value| radix_slider::normalize_value(value, min, max))
+            .collect();
+        let values_count = percentages.len();
+        let range_start_t = if values_count > 1 {
+            percentages.iter().copied().reduce(f32::min).unwrap_or(0.0)
+        } else {
+            0.0
+        };
+        let range_end_t = percentages.iter().copied().reduce(f32::max).unwrap_or(0.0);
+
         let mut semantics =
-            radix_slider::slider_root_semantics(a11y_label.clone(), value, disabled);
+            radix_slider::slider_root_semantics(a11y_label.clone(), active_value, disabled);
         semantics.layout = semantics_layout;
 
         let min_value = min;
@@ -211,6 +248,8 @@ pub fn slider<H: UiHost>(
         let thumb_size = style.thumb_size;
         let model_on_down = model.clone();
         let model_on_move = model.clone();
+        let drag_index_on_down = drag_index_model.clone();
+        let drag_index_on_move = drag_index_model.clone();
 
         cx.semantics_with_id(semantics, |cx, semantics_id| {
             let on_down = Arc::new(
@@ -224,7 +263,7 @@ pub fn slider<H: UiHost>(
                     host.capture_pointer();
 
                     let bounds = host.bounds();
-                    radix_slider::update_single_slider_model_from_pointer_x(
+                    let next_index = radix_slider::start_slider_drag_from_pointer_x(
                         host,
                         &model_on_down,
                         bounds,
@@ -233,7 +272,11 @@ pub fn slider<H: UiHost>(
                         max_value,
                         step_value,
                         thumb_size,
+                        0,
                     );
+                    let _ = host
+                        .models_mut()
+                        .update(&drag_index_on_down, |idx| *idx = next_index);
                     host.request_redraw(cx.window);
                     true
                 },
@@ -247,7 +290,11 @@ pub fn slider<H: UiHost>(
                     }
 
                     let bounds = host.bounds();
-                    radix_slider::update_single_slider_model_from_pointer_x(
+                    let value_index_to_change = host
+                        .models_mut()
+                        .get_cloned(&drag_index_on_move)
+                        .unwrap_or(0);
+                    let next_index = radix_slider::update_slider_model_from_pointer_x(
                         host,
                         &model_on_move,
                         bounds,
@@ -256,7 +303,12 @@ pub fn slider<H: UiHost>(
                         max_value,
                         step_value,
                         thumb_size,
+                        value_index_to_change,
+                        0,
                     );
+                    let _ = host
+                        .models_mut()
+                        .update(&drag_index_on_move, |idx| *idx = next_index);
                     host.request_redraw(cx.window);
                     true
                 },
@@ -274,6 +326,7 @@ pub fn slider<H: UiHost>(
             );
 
             let model_on_key = model.clone();
+            let drag_index_on_key = drag_index_model.clone();
             cx.key_on_key_down_for(
                 semantics_id,
                 Arc::new(move |host, cx, down| {
@@ -291,11 +344,22 @@ pub fn slider<H: UiHost>(
                         1.0
                     };
 
-                    let cur = host
+                    let mut values = host
                         .models_mut()
-                        .read(&model_on_key, |v| v.first().copied())
-                        .ok()
-                        .flatten()
+                        .get_cloned(&model_on_key)
+                        .unwrap_or_else(|| vec![min_value]);
+                    if values.is_empty() {
+                        values.push(min_value);
+                    }
+
+                    let value_index_to_change = host
+                        .models_mut()
+                        .get_cloned(&drag_index_on_key)
+                        .unwrap_or(0)
+                        .min(values.len().saturating_sub(1));
+                    let cur = values
+                        .get(value_index_to_change)
+                        .copied()
                         .unwrap_or(min_value);
 
                     let next = match down.key {
@@ -306,16 +370,28 @@ pub fn slider<H: UiHost>(
                         _ => return false,
                     };
 
-                    let v = radix_slider::snap_value(next, min_value, max_value, step);
-                    let mut values = host
-                        .models_mut()
-                        .get_cloned(&model_on_key)
-                        .unwrap_or_default();
-                    if values.is_empty() {
-                        values.push(min_value);
+                    let commit_index = match down.key {
+                        fret_core::KeyCode::Home => 0,
+                        fret_core::KeyCode::End => values.len().saturating_sub(1),
+                        _ => value_index_to_change,
+                    };
+
+                    if let Some(update) = radix_slider::update_multi_thumb_values(
+                        &values,
+                        next,
+                        commit_index,
+                        min_value,
+                        max_value,
+                        step,
+                        0,
+                    ) {
+                        let _ = host
+                            .models_mut()
+                            .update(&model_on_key, |values| *values = update.values);
+                        let _ = host.models_mut().update(&drag_index_on_key, |idx| {
+                            *idx = update.value_index_to_change;
+                        });
                     }
-                    values[0] = v;
-                    let _ = host.models_mut().update(&model_on_key, |dst| *dst = values);
                     host.request_redraw(cx.window);
                     true
                 }),
@@ -373,14 +449,15 @@ pub fn slider<H: UiHost>(
                     .last_bounds_for_element(cx.root_id())
                     .map(|b| (b.size.width.0 - style.thumb_size.0.max(0.0)).max(0.0))
                     .unwrap_or(0.0);
-                let fill_w = track_w * t;
-                let thumb_left = track_w * t;
+                let thumb_lefts: Vec<f32> =
+                    percentages.iter().copied().map(|t| track_w * t).collect();
+                let fill_w = track_w * (range_end_t - range_start_t).max(0.0);
 
                 let range = ContainerProps {
                     layout: LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: fret_ui::element::InsetStyle {
-                            left: Some(thumb_r),
+                            left: Some(Px(thumb_r.0 + track_w * range_start_t)),
                             top: Some(Px(track_top)),
                             ..Default::default()
                         },
@@ -399,35 +476,39 @@ pub fn slider<H: UiHost>(
                     corner_radii: Corners::all(Px(style.track_height.0.max(0.0) * 0.5)),
                 };
 
-                let thumb = ContainerProps {
-                    layout: LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: fret_ui::element::InsetStyle {
-                            left: Some(Px(thumb_left)),
-                            top: Some(Px(thumb_top)),
-                            ..Default::default()
-                        },
-                        size: fret_ui::element::SizeStyle {
-                            width: Length::Px(style.thumb_size),
-                            height: Length::Px(style.thumb_size),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    padding: Edges::all(Px(0.0)),
-                    background: Some(style.thumb_background),
-                    shadow: None,
-                    border: style.thumb_border,
-                    border_color: Some(style.thumb_border_color),
-                    corner_radii: Corners::all(thumb_r),
-                };
-
                 vec![cx.container(root_container, |cx| {
-                    vec![
+                    let mut out = vec![
                         cx.container(track, |_| Vec::new()),
                         cx.container(range, |_| Vec::new()),
-                        cx.container(thumb, |_| Vec::new()),
-                    ]
+                    ];
+
+                    for thumb_left in thumb_lefts {
+                        let thumb = ContainerProps {
+                            layout: LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: fret_ui::element::InsetStyle {
+                                    left: Some(Px(thumb_left)),
+                                    top: Some(Px(thumb_top)),
+                                    ..Default::default()
+                                },
+                                size: fret_ui::element::SizeStyle {
+                                    width: Length::Px(style.thumb_size),
+                                    height: Length::Px(style.thumb_size),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            padding: Edges::all(Px(0.0)),
+                            background: Some(style.thumb_background),
+                            shadow: None,
+                            border: style.thumb_border,
+                            border_color: Some(style.thumb_border_color),
+                            corner_radii: Corners::all(thumb_r),
+                        };
+                        out.push(cx.container(thumb, |_| Vec::new()));
+                    }
+
+                    out
                 })]
             })]
         })
@@ -549,5 +630,69 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
         assert!(!scene.ops().is_empty());
+    }
+
+    #[test]
+    fn slider_updates_closest_thumb_when_multi_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(60.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(vec![10.0, 90.0]);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-slider-updates-closest-thumb-when-multi-value",
+            |cx| {
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let slider_node = ui.children(root)[0];
+        let slider_bounds = ui.debug_node_bounds(slider_node).expect("slider bounds");
+        let position = Point::new(
+            Px(slider_bounds.origin.x.0 + slider_bounds.size.width.0 - 1.0),
+            Px(slider_bounds.origin.y.0 + slider_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let values = app.models().get_cloned(&model).unwrap_or_default();
+        assert_eq!(values.len(), 2);
+        assert!(
+            (values[0] - 10.0).abs() < 0.01,
+            "expected first thumb≈10, got {}",
+            values[0]
+        );
+        assert!(
+            (values[1] - 100.0).abs() < 0.01,
+            "expected second thumb≈100, got {}",
+            values[1]
+        );
     }
 }

@@ -26,5 +26,6 @@ Key upstream concepts:
 - Pass: shadcn `Slider` uses `primitives::slider` for semantics value formatting and pointer update.
 - Pass: Headless multi-thumb modeling is available (`closest_value_index`, sorting, minimum steps
   between thumbs).
-- Partial: Higher-level recipes still use the single-thumb surface; multi-thumb pointer wiring
-  requires tracking `value_index_to_change` across drag (Radix `valueIndexToChangeRef`).
+- Pass: Multi-thumb pointer wiring is available (start + move update return `value_index_to_change`).
+- Partial: Semantics are still root-level; Radix exposes `role="slider"` per thumb (a11y alignment
+  deferred).
