@@ -313,6 +313,9 @@ impl Tabs {
             LayoutRefinement::default().h_px(MetricRef::Px(list_height)),
         );
         list_props.padding = Edges::all(list_padding);
+        // new-york-v4: `TabsList` uses `w-fit` (do not stretch to full width).
+        // If the parent container happens to be a flex with `align-items: stretch`, opt out.
+        list_props.layout.flex.align_self = Some(CrossAlign::Start);
 
         let active_label = active_idx
             .and_then(|active| items.get(active))
