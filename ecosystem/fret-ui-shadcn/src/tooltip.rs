@@ -491,8 +491,8 @@ impl Tooltip {
             let presence = OverlayController::fade_presence_with_durations(
                 cx,
                 opening,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
             );
             let overlay_presence = OverlayPresence::from_fade(update.open, presence);
 
@@ -1828,7 +1828,7 @@ mod tests {
 
         // Frame 3: close begins immediately (close_delay=0), but Presence keeps the layer mounted
         // while fading out. Assert that it becomes hidden by the end of the fade-out.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 + 1;
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
         for frame in 3..=(2 + settle_frames) {
             app.set_frame_id(FrameId(frame));
             render_frame(

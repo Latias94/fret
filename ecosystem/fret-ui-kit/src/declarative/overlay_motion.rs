@@ -11,7 +11,8 @@ use fret_ui::overlay_placement::Side;
 
 pub const SHADCN_SLIDE_PX: Px = Px(8.0);
 
-// These ticks assume a ~60fps frame clock (12 ~= 200ms).
+// These ticks assume a ~60fps frame clock.
+pub const SHADCN_MOTION_TICKS_100: u64 = 6;
 pub const SHADCN_MOTION_TICKS_200: u64 = 12;
 pub const SHADCN_MOTION_TICKS_300: u64 = 18;
 pub const SHADCN_MOTION_TICKS_500: u64 = 30;
@@ -82,4 +83,3 @@ pub fn shadcn_zoom_transform(origin: Point, opacity: f32) -> Transform2D {
         * Transform2D::scale_uniform(scale)
         * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
 }
-

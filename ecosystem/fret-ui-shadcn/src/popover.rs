@@ -237,8 +237,8 @@ impl Popover {
             let presence = OverlayController::fade_presence_with_durations(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
             );
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
             let dialog_id_for_trigger: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =

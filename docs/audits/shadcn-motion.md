@@ -46,6 +46,7 @@ Fret does not have CSS animation events. Motion is composed from:
 
 `overlay_motion.rs` provides frame-count presets assuming ~60fps:
 
+- `SHADCN_MOTION_TICKS_100` (~100ms)
 - `SHADCN_MOTION_TICKS_200` (~200ms)
 - `SHADCN_MOTION_TICKS_300` (~300ms)
 - `SHADCN_MOTION_TICKS_500` (~500ms)
@@ -63,4 +64,3 @@ Fret does not have CSS animation events. Motion is composed from:
   recipes where used (e.g. NavigationMenu).
 - Consider a shared "timeline" headless helper (progress + easing + open/close durations) if more
   components need coordinated multi-property transitions beyond opacity.
-

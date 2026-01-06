@@ -99,13 +99,14 @@ impl AlertDialog {
             let presence = OverlayController::fade_presence_with_durations(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
             );
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
 
-            let content_element_for_trigger: std::cell::Cell<Option<fret_ui::elements::GlobalElementId>> =
-                std::cell::Cell::new(None);
+            let content_element_for_trigger: std::cell::Cell<
+                Option<fret_ui::elements::GlobalElementId>,
+            > = std::cell::Cell::new(None);
 
             if overlay_presence.present {
                 if is_open {
@@ -244,8 +245,9 @@ impl AlertDialog {
                     overlay_children,
                 );
                 request.root_name = Some(overlay_root_name);
-                request.initial_focus =
-                    is_open.then(|| radix_alert_dialog::cancel_element_for_open_model(cx, open_id)).flatten();
+                request.initial_focus = is_open
+                    .then(|| radix_alert_dialog::cancel_element_for_open_model(cx, open_id))
+                    .flatten();
                 radix_dialog::request_modal_dialog(cx, request);
             } else {
                 radix_alert_dialog::clear_cancel_for_open_model(cx, open_id);
@@ -833,7 +835,7 @@ mod tests {
 
         // Render a few frames to allow the close animation to finish and the overlay manager to
         // restore focus when the layer is uninstalled.
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 + 1;
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
         for frame in 3..=(2 + settle_frames) {
             app.set_frame_id(FrameId(frame));
             let _ = render_alert_dialog_frame(
@@ -972,7 +974,7 @@ mod tests {
             fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
         let _ = app.models_mut().update(&open, |v| *v = false);
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 + 1;
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
         for frame in 3..=(2 + settle_frames) {
             let _ = render_frame(&mut ui, &mut app, &mut services, frame);
             ui.layout_all(&mut app, &mut services, bounds, 1.0);

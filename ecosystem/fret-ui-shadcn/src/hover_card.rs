@@ -199,9 +199,10 @@ impl HoverCard {
         cx.hover_region(HoverRegionProps { layout }, move |cx, hovered| {
             let hover_card_id = cx.root_id();
 
-            let overlay_hovered = cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
-                st.overlay_hovered
-            });
+            let overlay_hovered =
+                cx.with_state_for(hover_card_id, HoverCardSharedState::default, |st| {
+                    st.overlay_hovered
+                });
             let focused = cx.is_focused_element(trigger_id);
             let hovered = radix_hover_card::hover_card_hovered(hovered, overlay_hovered, focused);
 
@@ -211,8 +212,8 @@ impl HoverCard {
             let presence = OverlayController::fade_presence_with_durations(
                 cx,
                 opening,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
-                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
             );
             let opacity = presence.opacity;
 
@@ -342,7 +343,8 @@ impl HoverCard {
                 )]
             });
 
-            let request = radix_hover_card::hover_card_request(hover_card_id, trigger_id, overlay_children);
+            let request =
+                radix_hover_card::hover_card_request(hover_card_id, trigger_id, overlay_children);
             radix_hover_card::request_hover_card(cx, request);
 
             out
@@ -830,7 +832,7 @@ mod tests {
             }),
         );
 
-        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 + 1;
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
         for i in 0..settle_frames {
             app.set_frame_id(FrameId(3 + i));
             render_hover_card_focus_frame(

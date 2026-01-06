@@ -7,10 +7,12 @@ use fret_core::{
 use fret_runtime::{Model, ModelId};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, PressableA11y, PressableProps, SemanticsProps, SizeStyle, TextProps,
-    VisualTransformProps,
+    PositionStyle, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticsProps,
+    SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_icons::ids;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -18,7 +20,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Size as ComponentSize, Space,
+    Radius, Space,
 };
 
 use crate::layout as shadcn_layout;
@@ -409,25 +411,16 @@ impl DialogClose {
                 .color_by_key("muted.foreground")
                 .or_else(|| theme.color_by_key("muted-foreground"))
                 .unwrap_or(theme.colors.text_muted);
-            let bg_hover = theme
-                .color_by_key("accent")
-                .or_else(|| theme.color_by_key("accent.background"))
-                .unwrap_or(theme.colors.hover_background);
-            let bg_active = theme.colors.selection_background;
 
             let a11y_label: Arc<str> = Arc::from("Close");
             let open = self.open.clone();
 
-            let size = ComponentSize::Medium;
-            let radius = size.control_radius(&theme);
-            let icon_button_size = size.icon_button_size(&theme);
+            let radius = Px(2.0);
 
             let base_layout = LayoutRefinement::default()
                 .absolute()
                 .top(Space::N4)
                 .right(Space::N4)
-                .min_w(MetricRef::Px(icon_button_size))
-                .min_h(MetricRef::Px(icon_button_size))
                 .merge(self.layout);
             let pressable_layout = decl_style::layout_style(&theme, base_layout);
 
@@ -440,17 +433,11 @@ impl DialogClose {
                 let hovered = st.hovered;
                 let pressed = st.pressed;
 
-                let bg = if pressed {
-                    bg_active
-                } else if hovered {
-                    bg_hover
-                } else {
-                    Color::TRANSPARENT
-                };
-
-                let mut chrome = ChromeRefinement::default().rounded(Radius::Sm);
+                // new-york-v4: `rounded-xs opacity-70 hover:opacity-100` (no default hover bg).
+                let mut chrome = ChromeRefinement::default();
+                chrome.radius = Some(MetricRef::Px(radius));
                 if !user_bg_override {
-                    chrome.background = Some(ColorRef::Color(bg));
+                    chrome.background = Some(ColorRef::Color(Color::TRANSPARENT));
                 }
                 chrome = chrome.merge(user_chrome.clone());
 
@@ -458,11 +445,25 @@ impl DialogClose {
                     decl_style::container_props(&theme, chrome, LayoutRefinement::default());
                 chrome_props.layout.size = pressable_layout.size;
 
+                let ring_color = theme
+                    .color_by_key("ring")
+                    .unwrap_or(theme.colors.focus_ring);
+                let ring_offset_bg = theme
+                    .color_by_key("ring-offset-background")
+                    .unwrap_or(theme.colors.surface_background);
+
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: true,
                     focusable: true,
-                    focus_ring: Some(decl_style::focus_ring(&theme, radius)),
+                    focus_ring: Some(RingStyle {
+                        placement: RingPlacement::Outset,
+                        width: Px(2.0),
+                        offset: Px(2.0),
+                        color: ring_color,
+                        offset_color: Some(ring_offset_bg),
+                        corner_radii: Corners::all(radius),
+                    }),
                     a11y: PressableA11y {
                         label: Some(a11y_label.clone()),
                         ..Default::default()
@@ -471,21 +472,14 @@ impl DialogClose {
                 };
 
                 let children = move |cx: &mut ElementContext<'_, H>| {
-                    let icon_px = Px(size.control_text_px(&theme).0 + 2.0);
-                    let icon = cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: Arc::from("×"),
-                        style: Some(TextStyle {
-                            font: FontId::default(),
-                            size: icon_px,
-                            weight: FontWeight::MEDIUM,
-                            line_height: None,
-                            letter_spacing_em: None,
-                        }),
-                        color: Some(fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                    });
+                    let opacity = if hovered || pressed { 1.0 } else { 0.7 };
+                    let icon = decl_icon::icon_with(
+                        cx,
+                        ids::ui::CLOSE,
+                        Some(Px(16.0)),
+                        Some(ColorRef::Color(fg)),
+                    );
+                    let icon = cx.opacity(opacity, move |_cx| vec![icon]);
 
                     vec![fret_ui_kit::declarative::stack::hstack(
                         cx,
