@@ -5,6 +5,7 @@ use std::sync::Arc;
 use fret_core::{
     Axis, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
+use fret_runtime::Effect;
 use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
@@ -318,6 +319,43 @@ pub type LinkRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, LinkInfo) 
 pub type OnLinkActivate =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason, LinkInfo) + 'static>;
 
+/// A conservative allowlist for `Effect::OpenUrl` to avoid surprising/suspicious schemes in UI.
+///
+/// This is intentionally strict:
+/// - allow: `http://`, `https://`, `mailto:`
+/// - deny: `javascript:`, `data:`, `file:`, empty, whitespace-only
+pub fn is_safe_open_url(url: &str) -> bool {
+    let url = url.trim();
+    if url.is_empty() {
+        return false;
+    }
+
+    let lower = url.to_ascii_lowercase();
+    if lower.starts_with("javascript:")
+        || lower.starts_with("data:")
+        || lower.starts_with("file:")
+        || lower.starts_with("vbscript:")
+    {
+        return false;
+    }
+
+    lower.starts_with("http://") || lower.starts_with("https://") || lower.starts_with("mailto:")
+}
+
+/// Convenience: open links via the runner's `Effect::OpenUrl` plumbing (desktop/web).
+///
+/// Usage:
+/// - `components.on_link_activate = Some(fret_markdown::on_link_activate_open_url());`
+pub fn on_link_activate_open_url() -> OnLinkActivate {
+    Arc::new(|host, _cx, _reason, link| {
+        if !is_safe_open_url(&link.href) {
+            return;
+        }
+        host.push_effect(Effect::OpenUrl {
+            url: link.href.to_string(),
+        });
+    })
+}
 #[derive(Clone)]
 pub struct MarkdownComponents<H: UiHost> {
     pub heading: Option<Arc<HeadingRenderer<H>>>,
@@ -2000,5 +2038,18 @@ mod tests {
     fn pulldown_counts_list_items() {
         let events = parse_events("- a\n- b\n");
         assert_eq!(count_top_level_list_items(&events), 2);
+    }
+
+    #[test]
+    fn open_url_filter_is_conservative() {
+        assert!(is_safe_open_url("https://example.com"));
+        assert!(is_safe_open_url("http://example.com"));
+        assert!(is_safe_open_url("mailto:test@example.com"));
+
+        assert!(!is_safe_open_url(""));
+        assert!(!is_safe_open_url("   "));
+        assert!(!is_safe_open_url("javascript:alert(1)"));
+        assert!(!is_safe_open_url("data:text/html;base64,PHNjcmlwdD4="));
+        assert!(!is_safe_open_url("file:///etc/passwd"));
     }
 }
