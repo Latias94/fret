@@ -84,6 +84,8 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 - [x] Line plot
 - [x] Scatter plot (markers)
 - [x] Bars plot (filled rectangles)
+- [x] Grouped bars (bar groups)
+- [x] Stacked bars (positive/negative stacks)
 - [x] Histogram plot
 - [x] Area (fill to baseline)
 - [x] Shaded band (fill between upper/lower series)
@@ -115,6 +117,8 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 
 - [x] `plot_demo` (desktop + web)
 - [x] `bars_demo` (desktop + web)
+- [x] `grouped_bars_demo` (desktop + web)
+- [x] `stacked_bars_demo` (desktop + web)
 - [x] `area_demo` (desktop + web)
 - [x] `heatmap_demo` (desktop + web)
 - [x] `histogram_demo` (desktop + web)

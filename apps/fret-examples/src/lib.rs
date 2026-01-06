@@ -9,6 +9,7 @@ pub mod docking_demo;
 pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod first_frame_smoke_demo;
+pub mod grouped_bars_demo;
 pub mod heatmap_demo;
 pub mod histogram_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -26,6 +27,7 @@ pub mod plot_stress_demo;
 pub mod shaded_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sonner_demo;
+pub mod stacked_bars_demo;
 pub mod stairs_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_demo;

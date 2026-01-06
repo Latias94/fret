@@ -12,6 +12,8 @@ enum Demo {
     ComponentsGallery,
     PlotDemo,
     BarsDemo,
+    GroupedBarsDemo,
+    StackedBarsDemo,
     AreaDemo,
     CandlestickDemo,
     ErrorBarsDemo,
@@ -37,6 +39,12 @@ fn select_demo() -> Demo {
     }
     if hash.contains("bars_demo") || search.contains("demo=bars_demo") {
         return Demo::BarsDemo;
+    }
+    if hash.contains("grouped_bars_demo") || search.contains("demo=grouped_bars_demo") {
+        return Demo::GroupedBarsDemo;
+    }
+    if hash.contains("stacked_bars_demo") || search.contains("demo=stacked_bars_demo") {
+        return Demo::StackedBarsDemo;
     }
     if hash.contains("area_demo") || search.contains("demo=area_demo") {
         return Demo::AreaDemo;
@@ -92,6 +100,20 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::bars_demo::build_runner_config();
             config.main_window_title = "fret-demo bars_demo (web)".to_string();
             let driver = fret_examples::bars_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::GroupedBarsDemo => {
+            let app = fret_examples::grouped_bars_demo::build_app();
+            let mut config = fret_examples::grouped_bars_demo::build_runner_config();
+            config.main_window_title = "fret-demo grouped_bars_demo (web)".to_string();
+            let driver = fret_examples::grouped_bars_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::StackedBarsDemo => {
+            let app = fret_examples::stacked_bars_demo::build_app();
+            let mut config = fret_examples::stacked_bars_demo::build_runner_config();
+            config.main_window_title = "fret-demo stacked_bars_demo (web)".to_string();
+            let driver = fret_examples::stacked_bars_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::AreaDemo => {

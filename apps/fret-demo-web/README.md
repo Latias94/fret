@@ -21,6 +21,8 @@ hash or query string:
 
 - `?demo=plot_demo` (or `#plot_demo`)
 - `?demo=bars_demo` (or `#bars_demo`)
+- `?demo=grouped_bars_demo` (or `#grouped_bars_demo`)
+- `?demo=stacked_bars_demo` (or `#stacked_bars_demo`)
 - `?demo=area_demo` (or `#area_demo`)
 - `?demo=candlestick_demo` (or `#candlestick_demo`)
 - `?demo=error_bars_demo` (or `#error_bars_demo`)

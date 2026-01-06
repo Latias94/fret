@@ -3908,7 +3908,13 @@ impl PlotLayer for BarsPlotLayer {
             let view_key = view_key_for_axis(s.y_axis);
 
             let samples = decimate_points(transform, &*s.data, cx.scale_factor, series_id);
-            let commands = bars_path_commands(transform, &samples, s.bar_width, s.baseline);
+            let commands = bars_path_commands_with_baselines(
+                transform,
+                &samples,
+                s.bar_width,
+                s.baseline,
+                s.baseline_by_index.as_deref(),
+            );
 
             let id = if commands.is_empty() {
                 None
@@ -5770,6 +5776,16 @@ fn bars_path_commands(
     bar_width: f32,
     baseline: f32,
 ) -> Vec<fret_core::PathCommand> {
+    bars_path_commands_with_baselines(transform, samples, bar_width, baseline, None)
+}
+
+fn bars_path_commands_with_baselines(
+    transform: PlotTransform,
+    samples: &[SamplePoint],
+    bar_width: f32,
+    baseline: f32,
+    baselines: Option<&[f64]>,
+) -> Vec<fret_core::PathCommand> {
     if samples.is_empty() {
         return Vec::new();
     }
@@ -5786,6 +5802,9 @@ fn bars_path_commands(
     for s in samples {
         let x = s.data.x;
         let y = s.data.y;
+        let baseline = baselines
+            .and_then(|b| b.get(s.index).copied())
+            .unwrap_or(baseline);
         if !x.is_finite() || !y.is_finite() || !baseline.is_finite() {
             continue;
         }
