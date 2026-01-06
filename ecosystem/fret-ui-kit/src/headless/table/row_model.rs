@@ -99,6 +99,7 @@ pub struct TableBuilder<'a, TData> {
     get_row_key: Option<GetRowKeyFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     state: super::TableState,
+    options: super::TableOptions,
 }
 
 impl<'a, TData> TableBuilder<'a, TData> {
@@ -109,6 +110,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_row_key: None,
             get_sub_rows: None,
             state: super::TableState::default(),
+            options: super::TableOptions::default(),
         }
     }
 
@@ -119,6 +121,26 @@ impl<'a, TData> TableBuilder<'a, TData> {
 
     pub fn state(mut self, state: super::TableState) -> Self {
         self.state = state;
+        self
+    }
+
+    pub fn options(mut self, options: super::TableOptions) -> Self {
+        self.options = options;
+        self
+    }
+
+    pub fn manual_filtering(mut self, manual: bool) -> Self {
+        self.options.manual_filtering = manual;
+        self
+    }
+
+    pub fn manual_sorting(mut self, manual: bool) -> Self {
+        self.options.manual_sorting = manual;
+        self
+    }
+
+    pub fn manual_pagination(mut self, manual: bool) -> Self {
+        self.options.manual_pagination = manual;
         self
     }
 
@@ -149,6 +171,7 @@ pub struct Table<'a, TData> {
     get_row_key: GetRowKeyFn<'a, TData>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     state: super::TableState,
+    options: super::TableOptions,
     core_row_model: OnceCell<RowModel<'a, TData>>,
     filtered_row_model: OnceCell<RowModel<'a, TData>>,
     sorted_row_model: OnceCell<RowModel<'a, TData>>,
@@ -171,6 +194,7 @@ impl<'a, TData> Table<'a, TData> {
             get_row_key,
             get_sub_rows: builder.get_sub_rows,
             state: builder.state,
+            options: builder.options,
             core_row_model: OnceCell::new(),
             filtered_row_model: OnceCell::new(),
             sorted_row_model: OnceCell::new(),
@@ -193,6 +217,10 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn state(&self) -> &super::TableState {
         &self.state
+    }
+
+    pub fn options(&self) -> super::TableOptions {
+        self.options
     }
 
     pub fn ordered_columns(&self) -> Vec<&super::ColumnDef<TData>> {
@@ -233,6 +261,9 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn filtered_row_model(&self) -> &RowModel<'a, TData> {
+        if self.options.manual_filtering {
+            return self.pre_filtered_row_model();
+        }
         self.filtered_row_model.get_or_init(|| {
             super::filter_row_model(
                 self.pre_filtered_row_model(),
@@ -248,6 +279,9 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn sorted_row_model(&self) -> &RowModel<'a, TData> {
+        if self.options.manual_sorting {
+            return self.pre_sorted_row_model();
+        }
         self.sorted_row_model.get_or_init(|| {
             super::sort_row_model(
                 self.pre_sorted_row_model(),
@@ -262,6 +296,9 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn row_model(&self) -> &RowModel<'a, TData> {
+        if self.options.manual_pagination {
+            return self.pre_pagination_row_model();
+        }
         self.paginated_row_model.get_or_init(|| {
             super::paginate_row_model(self.pre_pagination_row_model(), self.state.pagination)
         })
@@ -395,7 +432,10 @@ fn build_core_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::{PaginationState, SortSpec, TableState, create_column_helper};
+    use crate::headless::table::{
+        PaginationState, SortSpec, TableOptions, TableState, create_column_helper,
+    };
+    use std::sync::Arc;
 
     #[derive(Debug, Clone)]
     struct Person {
@@ -591,5 +631,106 @@ mod tests {
         let table = Table::builder(&data).columns(columns).state(state).build();
         assert_eq!(table.column_size("value"), Some(120.0));
         assert_eq!(table.column_size("missing"), None);
+    }
+
+    #[test]
+    fn manual_filtering_skips_filtered_row_model() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            label: Arc<str>,
+        }
+
+        let data = vec![
+            Item {
+                label: Arc::from("a"),
+            },
+            Item {
+                label: Arc::from("b"),
+            },
+        ];
+
+        let helper = create_column_helper::<Item>();
+        let columns = vec![
+            helper
+                .accessor("label", |it| it.label.clone())
+                .filter_by(|row, q| row.label.as_ref() == q),
+        ];
+
+        let mut state = TableState::default();
+        state.global_filter = Some(Arc::from("b"));
+
+        let table = Table::builder(&data)
+            .columns(columns)
+            .state(state)
+            .options(TableOptions {
+                manual_filtering: true,
+                ..Default::default()
+            })
+            .build();
+
+        assert!(std::ptr::eq(
+            table.filtered_row_model(),
+            table.core_row_model()
+        ));
+    }
+
+    #[test]
+    fn manual_sorting_skips_sorted_row_model() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            value: i32,
+        }
+
+        let data = vec![Item { value: 2 }, Item { value: 1 }];
+        let helper = create_column_helper::<Item>();
+        let columns = vec![helper.accessor("value", |it| it.value)];
+
+        let mut state = TableState::default();
+        state.sorting = vec![SortSpec {
+            column: "value".into(),
+            desc: false,
+        }];
+
+        let table = Table::builder(&data)
+            .columns(columns)
+            .state(state)
+            .options(TableOptions {
+                manual_sorting: true,
+                ..Default::default()
+            })
+            .build();
+
+        assert!(std::ptr::eq(
+            table.sorted_row_model(),
+            table.pre_sorted_row_model()
+        ));
+    }
+
+    #[test]
+    fn manual_pagination_skips_row_model() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            value: i32,
+        }
+
+        let data = (0..20).map(|i| Item { value: i }).collect::<Vec<_>>();
+        let mut state = TableState::default();
+        state.pagination = PaginationState {
+            page_index: 1,
+            page_size: 5,
+        };
+
+        let table = Table::builder(&data)
+            .state(state)
+            .options(TableOptions {
+                manual_pagination: true,
+                ..Default::default()
+            })
+            .build();
+
+        assert!(std::ptr::eq(
+            table.row_model(),
+            table.pre_pagination_row_model()
+        ));
     }
 }

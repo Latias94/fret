@@ -11,6 +11,7 @@ mod column_visibility;
 mod filtering;
 mod flat_row_order;
 mod memo;
+mod options;
 mod pagination;
 mod row_model;
 mod row_selection;
@@ -28,6 +29,7 @@ pub use filtering::{
     filter_row_model,
 };
 pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_order};
+pub use options::TableOptions;
 pub use pagination::{PaginationState, paginate_row_model};
 pub use row_model::{Row, RowIndex, RowKey, RowModel, Table, TableBuilder};
 pub use row_selection::{RowSelectionState, is_row_selected, select_rows_fn};
