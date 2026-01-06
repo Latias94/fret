@@ -21,7 +21,7 @@ pub use column_sizing::{ColumnSizingState, column_size};
 pub use column_sizing_info::ColumnSizingInfoState;
 pub use column_visibility::{ColumnVisibilityState, is_column_visible, visible_columns};
 pub use pagination::{PaginationState, paginate_row_model};
-pub use row_model::{Row, RowId, RowIndex, RowModel, Table, TableBuilder};
+pub use row_model::{Row, RowIndex, RowKey, RowModel, Table, TableBuilder};
 pub use row_selection::{RowSelectionState, is_row_selected, select_rows_fn};
 pub use sorting::{SortSpec, SortingState, sort_row_model};
 pub use state::TableState;

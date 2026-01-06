@@ -26,7 +26,7 @@ pub fn paginate_row_model<'a, TData>(
         return RowModel {
             root_rows: Vec::new(),
             flat_rows: Vec::new(),
-            rows_by_id: row_model.rows_by_id().clone(),
+            rows_by_key: row_model.rows_by_key().clone(),
             arena: row_model.arena().to_vec(),
         };
     }
@@ -64,7 +64,7 @@ pub fn paginate_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::headless::table::Table;
+    use crate::headless::table::{RowKey, Table};
 
     #[derive(Debug, Clone)]
     struct Item {
@@ -89,11 +89,17 @@ mod tests {
         let ids = paged
             .root_rows()
             .iter()
-            .filter_map(|&i| paged.row(i).map(|r| r.id.as_ref().to_string()))
+            .filter_map(|&i| paged.row(i).map(|r| r.key.0))
             .collect::<Vec<_>>();
-        assert_eq!(ids, vec!["2", "3"]);
+        assert_eq!(ids, vec![2, 3]);
         assert_eq!(paged.flat_rows().len(), 2);
-        assert!(paged.row_by_id("0").is_some(), "rows_by_id remains full");
-        assert!(paged.row_by_id("4").is_some(), "rows_by_id remains full");
+        assert!(
+            paged.row_by_key(RowKey::from_index(0)).is_some(),
+            "rows_by_key remains full"
+        );
+        assert!(
+            paged.row_by_key(RowKey::from_index(4)).is_some(),
+            "rows_by_key remains full"
+        );
     }
 }
