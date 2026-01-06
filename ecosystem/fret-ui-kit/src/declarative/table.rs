@@ -117,11 +117,32 @@ struct SortKey {
 }
 
 #[derive(Default)]
-struct FlatRowOrderCache {
+struct Memo<TDeps, TValue> {
+    deps: Option<TDeps>,
+    value: Option<TValue>,
+}
+
+impl<TDeps: PartialEq, TValue> Memo<TDeps, TValue> {
+    fn get_or_compute(&mut self, deps: TDeps, f: impl FnOnce() -> TValue) -> (&TValue, bool) {
+        let should_recompute = self.deps.as_ref().map_or(true, |d| d != &deps);
+        if should_recompute {
+            self.deps = Some(deps);
+            self.value = Some(f());
+        }
+        (self.value.as_ref().expect("memo value"), should_recompute)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+struct FlatRowOrderDeps {
     items_revision: u64,
     data_len: usize,
     sorting: Vec<SortKey>,
-    order: Arc<[usize]>,
+}
+
+#[derive(Default)]
+struct FlatRowOrderCache {
+    memo: Memo<FlatRowOrderDeps, Arc<[usize]>>,
 }
 
 fn compute_flat_row_order<TData>(
@@ -217,28 +238,28 @@ pub fn table_virtualized<H: UiHost, TData>(
         .collect::<Vec<_>>();
 
     let row_order = cx.with_state(FlatRowOrderCache::default, |cache| {
-        if cache.items_revision != items_revision
-            || cache.data_len != data.len()
-            || cache.sorting != sorting_key
-        {
-            cache.items_revision = items_revision;
-            cache.data_len = data.len();
-            cache.sorting = sorting_key.clone();
-            let started = Instant::now();
-            cache.order = compute_flat_row_order(data, &columns, &cache.sorting);
-            let elapsed = started.elapsed();
+        let deps = FlatRowOrderDeps {
+            items_revision,
+            data_len: data.len(),
+            sorting: sorting_key.clone(),
+        };
 
-            if profile {
-                tracing::info!(
-                    "table_virtualized: recompute row_order len={} sorting={} took {:.2}ms",
-                    data.len(),
-                    cache.sorting.len(),
-                    elapsed.as_secs_f64() * 1000.0
-                );
-            }
+        let started = Instant::now();
+        let (order, recomputed) = cache.memo.get_or_compute(deps, || {
+            compute_flat_row_order(data, &columns, &sorting_key)
+        });
+        let elapsed = started.elapsed();
+
+        if profile && recomputed {
+            tracing::info!(
+                "table_virtualized: recompute row_order len={} sorting={} took {:.2}ms",
+                data.len(),
+                sorting_key.len(),
+                elapsed.as_secs_f64() * 1000.0
+            );
         }
 
-        cache.order.clone()
+        order.clone()
     });
 
     let page_size = state_value.pagination.page_size;
