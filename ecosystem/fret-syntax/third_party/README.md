@@ -43,6 +43,17 @@ For each source, the original license text is vendored under `third_party/licens
   - Source: `coder3101/tree-sitter-proto` @ `3ef027b83540` (MPL-2.0)
 - `languages/graphql/*.scm`
   - Source: `nvim-treesitter/nvim-treesitter` @ `b033ab331ca0` (Apache-2.0)
+- `languages/python/*.scm`
+  - Source: `tree-sitter/tree-sitter-python` @ `bffb65a8cfe4` (MIT)
+- `languages/ruby/*.scm`
+  - Source: `tree-sitter/tree-sitter-ruby` @ `71bd32fb7607` (MIT)
+- `languages/dart/*.scm`
+  - Source: `nvim-treesitter/nvim-treesitter` @ `b033ab331ca0` (Apache-2.0)
+- `languages/kotlin/*.scm`
+  - Source: `nvim-treesitter/nvim-treesitter` @ `b033ab331ca0` (Apache-2.0)
+- `languages/lua/*.scm`
+  - Source: `nvim-treesitter/nvim-treesitter` @ `b033ab331ca0` (Apache-2.0)
+- `languages/php/*.scm`
+  - Source: `nvim-treesitter/nvim-treesitter` @ `b033ab331ca0` (Apache-2.0)
 - `languages/markdown/*.scm`, `languages/markdown_inline/*.scm`
   - Source: `gpui-component` @ `c78cec71784c` (Apache-2.0)
-

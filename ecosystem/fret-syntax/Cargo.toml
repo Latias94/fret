@@ -14,6 +14,7 @@ tree-sitter-languages = [
     "lang-cmake",
     "lang-cpp",
     "lang-css",
+    "lang-dart",
     "lang-diff",
     "lang-elixir",
     "lang-embedded-template",
@@ -23,8 +24,11 @@ tree-sitter-languages = [
     "lang-java",
     "lang-javascript",
     "lang-json",
+    "lang-kotlin",
+    "lang-lua",
     "lang-make",
     "lang-md",
+    "lang-php",
     "lang-proto",
     "lang-python",
     "lang-ruby",
@@ -44,6 +48,7 @@ lang-c-sharp = ["dep:tree-sitter-c-sharp"]
 lang-cmake = ["dep:tree-sitter-cmake"]
 lang-cpp = ["dep:tree-sitter-cpp"]
 lang-css = ["dep:tree-sitter-css"]
+lang-dart = ["dep:tree-sitter-dart-orchard"]
 lang-diff = ["dep:tree-sitter-diff"]
 lang-elixir = ["dep:tree-sitter-elixir"]
 lang-embedded-template = ["dep:tree-sitter-embedded-template"]
@@ -53,8 +58,11 @@ lang-html = ["dep:tree-sitter-html"]
 lang-java = ["dep:tree-sitter-java"]
 lang-javascript = ["dep:tree-sitter-javascript", "dep:tree-sitter-jsdoc"]
 lang-json = ["dep:tree-sitter-json"]
+lang-kotlin = ["dep:tree-sitter-kotlin-ng"]
+lang-lua = ["dep:tree-sitter-lua"]
 lang-make = ["dep:tree-sitter-make"]
 lang-md = ["dep:tree-sitter-md"]
+lang-php = ["dep:tree-sitter-php"]
 lang-proto = ["dep:tree-sitter-proto"]
 lang-python = ["dep:tree-sitter-python"]
 lang-ruby = ["dep:tree-sitter-ruby"]
@@ -78,6 +86,7 @@ tree-sitter-c-sharp = { workspace = true, optional = true }
 tree-sitter-cmake = { workspace = true, optional = true }
 tree-sitter-cpp = { workspace = true, optional = true }
 tree-sitter-css = { workspace = true, optional = true }
+tree-sitter-dart-orchard = { workspace = true, optional = true }
 tree-sitter-diff = { workspace = true, optional = true }
 tree-sitter-elixir = { workspace = true, optional = true }
 tree-sitter-embedded-template = { workspace = true, optional = true }
@@ -88,9 +97,12 @@ tree-sitter-java = { workspace = true, optional = true }
 tree-sitter-javascript = { workspace = true, optional = true }
 tree-sitter-jsdoc = { workspace = true, optional = true }
 tree-sitter-json = { workspace = true, optional = true }
+tree-sitter-kotlin-ng = { workspace = true, optional = true }
+tree-sitter-lua = { workspace = true, optional = true }
 tree-sitter-make = { workspace = true, optional = true }
 tree-sitter-md = { workspace = true, optional = true }
 tree-sitter-proto = { workspace = true, optional = true }
+tree-sitter-php = { workspace = true, optional = true }
 tree-sitter-python = { workspace = true, optional = true }
 tree-sitter-ruby = { workspace = true, optional = true }
 tree-sitter-rust = { workspace = true, optional = true }

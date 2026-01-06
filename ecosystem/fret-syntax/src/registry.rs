@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 
 use tree_sitter_highlight::{Highlight, HighlightConfiguration};
 
-pub const HIGHLIGHT_NAMES: [&str; 40] = [
+pub const HIGHLIGHT_NAMES: &[&str] = &[
     "attribute",
     "boolean",
     "comment",
@@ -44,6 +44,62 @@ pub const HIGHLIGHT_NAMES: [&str; 40] = [
     "variable",
     "variable.special",
     "variant",
+    "character",
+    "character.special",
+    "comment.documentation",
+    "comment.unused",
+    "constant.builtin",
+    "constant.macro",
+    "diff.minus",
+    "diff.plus",
+    "error",
+    "field",
+    "float",
+    "function.builtin",
+    "function.call",
+    "function.macro",
+    "function.method",
+    "function.method.call",
+    "function.special",
+    "import",
+    "include",
+    "keyword.conditional",
+    "keyword.conditional.ternary",
+    "keyword.coroutine",
+    "keyword.directive",
+    "keyword.exception",
+    "keyword.function",
+    "keyword.import",
+    "keyword.modifier",
+    "keyword.operator",
+    "keyword.repeat",
+    "keyword.return",
+    "keyword.type",
+    "method",
+    "method.call",
+    "module",
+    "module.builtin",
+    "namespace",
+    "number.float",
+    "parameter",
+    "property.definition",
+    "storageclass",
+    "string.documentation",
+    "string.regexp",
+    "string.special.path",
+    "tag.error",
+    "text.danger",
+    "text.note",
+    "text.reference",
+    "text.uri",
+    "text.warning",
+    "type.builtin",
+    "type.definition",
+    "type.qualifier",
+    "variable.builtin",
+    "variable.member",
+    "variable.parameter",
+    "variable.parameter.builtin",
 ];
 
 thread_local! {
@@ -90,6 +146,8 @@ pub fn supported_languages() -> &'static [&'static str] {
         out.push("cmake");
         #[cfg(feature = "lang-css")]
         out.push("css");
+        #[cfg(feature = "lang-dart")]
+        out.push("dart");
         #[cfg(feature = "lang-diff")]
         out.push("diff");
         #[cfg(feature = "lang-elixir")]
@@ -112,8 +170,14 @@ pub fn supported_languages() -> &'static [&'static str] {
         out.push("graphql");
         #[cfg(feature = "lang-java")]
         out.push("java");
+        #[cfg(feature = "lang-kotlin")]
+        out.push("kotlin");
+        #[cfg(feature = "lang-lua")]
+        out.push("lua");
         #[cfg(feature = "lang-make")]
         out.push("make");
+        #[cfg(feature = "lang-php")]
+        out.push("php");
         #[cfg(feature = "lang-proto")]
         out.push("proto");
         #[cfg(feature = "lang-ruby")]
@@ -154,6 +218,8 @@ fn normalize_language_name(language: &str) -> &str {
         "markdown"
     } else if s.eq_ignore_ascii_case("yml") {
         "yaml"
+    } else if s.eq_ignore_ascii_case("kt") || s.eq_ignore_ascii_case("kts") {
+        "kotlin"
     } else if s.eq_ignore_ascii_case("py") {
         "python"
     } else if s.eq_ignore_ascii_case("rb") {
@@ -191,6 +257,8 @@ pub fn config_for(language: &str) -> Option<&'static HighlightConfiguration> {
         "cmake" => Some(cmake_config()),
         #[cfg(feature = "lang-css")]
         "css" => Some(css_config()),
+        #[cfg(feature = "lang-dart")]
+        "dart" => Some(dart_config()),
         #[cfg(feature = "lang-diff")]
         "diff" => Some(diff_config()),
         #[cfg(feature = "lang-elixir")]
@@ -213,12 +281,18 @@ pub fn config_for(language: &str) -> Option<&'static HighlightConfiguration> {
         "graphql" => Some(graphql_config()),
         #[cfg(feature = "lang-java")]
         "java" => Some(java_config()),
+        #[cfg(feature = "lang-kotlin")]
+        "kotlin" => Some(kotlin_config()),
+        #[cfg(feature = "lang-lua")]
+        "lua" => Some(lua_config()),
         #[cfg(feature = "lang-make")]
         "make" => Some(make_config()),
         #[cfg(feature = "lang-zig")]
         "zig" => Some(zig_config()),
         #[cfg(feature = "lang-md")]
         "markdown" => Some(markdown_config()),
+        #[cfg(feature = "lang-php")]
+        "php" => Some(php_config()),
         #[cfg(feature = "lang-proto")]
         "proto" => Some(proto_config()),
         #[cfg(feature = "lang-python")]
@@ -251,7 +325,7 @@ fn bash_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid bash highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -268,7 +342,7 @@ fn c_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid c highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -285,7 +359,7 @@ fn cpp_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid cpp highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -302,7 +376,7 @@ fn csharp_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid csharp highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -319,7 +393,7 @@ fn cmake_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid cmake highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -336,7 +410,24 @@ fn css_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid css highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-dart")]
+fn dart_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_dart_orchard::LANGUAGE.into(),
+            "dart",
+            include_str!("../languages/dart/highlights.scm"),
+            include_str!("../languages/dart/injections.scm"),
+            "",
+        )
+        .expect("valid dart highlight queries");
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -353,7 +444,7 @@ fn diff_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid diff highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -370,7 +461,7 @@ fn elixir_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid elixir highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -387,7 +478,7 @@ fn embedded_template_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid embedded-template highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -404,7 +495,7 @@ fn rust_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid rust highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -421,7 +512,7 @@ fn json_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid json highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -438,7 +529,7 @@ fn javascript_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid javascript highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -455,7 +546,7 @@ fn typescript_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid typescript highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -472,7 +563,7 @@ fn html_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid html highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -489,7 +580,7 @@ fn go_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid go highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -506,7 +597,7 @@ fn graphql_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid graphql highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -523,7 +614,41 @@ fn java_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid java highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-kotlin")]
+fn kotlin_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_kotlin_ng::LANGUAGE.into(),
+            "kotlin",
+            include_str!("../languages/kotlin/highlights.scm"),
+            include_str!("../languages/kotlin/injections.scm"),
+            "",
+        )
+        .expect("valid kotlin highlight queries");
+        cfg.configure(HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-lua")]
+fn lua_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_lua::LANGUAGE.into(),
+            "lua",
+            include_str!("../languages/lua/highlights.scm"),
+            include_str!("../languages/lua/injections.scm"),
+            "",
+        )
+        .expect("valid lua highlight queries");
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -540,7 +665,7 @@ fn make_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid make highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -557,7 +682,7 @@ fn zig_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid zig highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -574,7 +699,24 @@ fn markdown_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid markdown highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-php")]
+fn php_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_php::LANGUAGE_PHP.into(),
+            "php",
+            include_str!("../languages/php/highlights.scm"),
+            include_str!("../languages/php/injections.scm"),
+            "",
+        )
+        .expect("valid php highlight queries");
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -591,7 +733,7 @@ fn proto_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid proto highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -608,7 +750,7 @@ fn python_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid python highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -625,7 +767,7 @@ fn ruby_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid ruby highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -642,7 +784,7 @@ fn scala_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid scala highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -659,7 +801,7 @@ fn sql_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid sql highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -676,7 +818,7 @@ fn swift_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid swift highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -693,7 +835,7 @@ fn yaml_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid yaml highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
@@ -710,7 +852,7 @@ fn toml_config() -> &'static HighlightConfiguration {
             "",
         )
         .expect("valid toml highlight queries");
-        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg.configure(HIGHLIGHT_NAMES);
         cfg
     })
 }
