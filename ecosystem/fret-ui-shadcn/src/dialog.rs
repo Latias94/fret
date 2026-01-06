@@ -29,7 +29,7 @@ fn default_overlay_color() -> Color {
         r: 0.0,
         g: 0.0,
         b: 0.0,
-        a: 0.8,
+        a: 0.5,
     }
 }
 
@@ -116,8 +116,9 @@ impl Dialog {
             );
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
 
-            let content_element_for_trigger: std::cell::Cell<Option<fret_ui::elements::GlobalElementId>> =
-                std::cell::Cell::new(None);
+            let content_element_for_trigger: std::cell::Cell<
+                Option<fret_ui::elements::GlobalElementId>,
+            > = std::cell::Cell::new(None);
 
             if overlay_presence.present {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
@@ -259,7 +260,9 @@ impl Dialog {
                 });
 
                 if let Some(content_element) = content_element_for_trigger.get() {
-                    cx.with_state(DialogA11yState::default, |st| st.content_element = Some(content_element));
+                    cx.with_state(DialogA11yState::default, |st| {
+                        st.content_element = Some(content_element)
+                    });
                 }
 
                 let request = radix_dialog::modal_dialog_request(
