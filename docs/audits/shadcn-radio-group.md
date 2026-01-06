@@ -27,6 +27,7 @@ examples in `repo-ref/ui`.
 
 - Pass: Arrow-key roving navigation is implemented via `RovingFlex` + `cx.roving_nav_apg()`.
 - Pass: Selection commits via `cx.roving_select_option_arc_str(...)` (Radix RadioGroup behavior).
+- Pass: Enter key presses are consumed to match Radix/WAI-ARIA expectations; Space activates items.
 - Pass: Supports Radix `orientation` outcomes (`RadioGroupOrientation::Vertical` / `Horizontal`).
 - Pass: `loop_navigation(true)` defaults to looping behavior (Radix `loop` default).
 

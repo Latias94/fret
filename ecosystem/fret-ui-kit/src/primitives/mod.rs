@@ -37,6 +37,7 @@ pub mod dropdown_menu;
 pub mod focus_scope;
 pub mod hover_card;
 pub mod hover_intent;
+pub mod keyboard;
 pub mod label;
 pub mod menu;
 pub mod menubar;

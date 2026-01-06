@@ -251,7 +251,7 @@ impl RadioGroup {
                                 let pressable_item_value = item.value.clone();
                                 let model = model.clone();
                                 let text_style = text_style.clone();
-                                out.push(cx.pressable(
+                                out.push(cx.pressable_with_id(
                                     PressableProps {
                                         layout: pressable_layout,
                                         enabled: item_enabled,
@@ -264,7 +264,11 @@ impl RadioGroup {
                                         .with_collection_position(idx, items.len()),
                                         ..Default::default()
                                     },
-                                    move |cx, st| {
+                                    move |cx, st, id| {
+                                        cx.key_add_on_key_down_for(
+                                            id,
+                                            fret_ui_kit::primitives::keyboard::consume_enter_key_handler(),
+                                        );
                                         cx.pressable_set_option_arc_str(
                                             &model,
                                             pressable_item_value.clone(),
@@ -704,5 +708,171 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("gamma"));
+    }
+
+    #[test]
+    fn radio_group_does_not_select_on_enter_key() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+
+        let _ = app.models_mut().update(&model, |v| *v = Some(Arc::from("alpha")));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyUp {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+    }
+
+    #[test]
+    fn radio_group_selects_on_space_key() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+
+        let _ = app.models_mut().update(&model, |v| *v = Some(Arc::from("alpha")));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyUp {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
     }
 }
