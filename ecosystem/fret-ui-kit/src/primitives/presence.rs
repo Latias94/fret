@@ -60,7 +60,7 @@ mod tests {
         app.set_tick_id(TickId(1));
         app.set_frame_id(FrameId(1));
 
-        // 第一次进入 opening：需要动画帧 + 重绘请求。
+        // First call enters the opening phase: request animation frames + redraw.
         let out0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
             fade_presence(cx, true, 3)
         });
@@ -74,7 +74,7 @@ mod tests {
         );
         assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
 
-        // 动画进行中：持续请求重绘，但不会重复申请新的 RAF lease。
+        // While animating: keep requesting redraw, but do not reacquire a new RAF lease.
         app.set_tick_id(TickId(2));
         app.set_frame_id(FrameId(2));
         let out1 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
@@ -90,7 +90,7 @@ mod tests {
         );
         assert!(effects1.iter().any(|e| *e == Effect::Redraw(window)));
 
-        // 进入稳定 open：不再 animating，因此不再主动请求重绘。
+        // Stable open: no longer animating, so no more redraw requests.
         app.set_tick_id(TickId(3));
         app.set_frame_id(FrameId(3));
         let out2 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
