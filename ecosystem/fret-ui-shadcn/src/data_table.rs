@@ -4,7 +4,8 @@ use fret_core::geometry::Edges;
 use fret_core::{Color, Px};
 use fret_runtime::CommandId;
 use fret_ui::element::{
-    AnyElement, ColumnProps, GridProps, LayoutStyle, Length, MainAlign, Overflow,
+    AnyElement, ColumnProps, GridProps, LayoutStyle, Length, MainAlign, Overflow, ScrollAxis,
+    WheelRegionProps,
 };
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -129,47 +130,6 @@ impl DataTable {
             let theme = Theme::global(&*cx.app).clone();
             let border = border_color(&theme);
 
-            let header_row = {
-                let header_chrome = ChromeRefinement::default()
-                    .border_1()
-                    .border_color(ColorRef::Color(border));
-                let mut props = decl_style::container_props(
-                    &theme,
-                    header_chrome,
-                    LayoutRefinement::default().w_full(),
-                );
-                props.border = Edges {
-                    top: Px(0.0),
-                    right: Px(0.0),
-                    bottom: Px(1.0),
-                    left: Px(0.0),
-                };
-
-                let header_cells: Vec<AnyElement> = headers
-                    .iter()
-                    .cloned()
-                    .map(|h| TableHead::new(h).into_element(cx))
-                    .collect();
-
-                let header_theme = theme.clone();
-                cx.container(props, move |cx| {
-                    let grid = GridProps {
-                        cols,
-                        gap: Px(0.0),
-                        padding: Edges::all(Px(0.0)),
-                        justify: MainAlign::Start,
-                        layout: decl_style::layout_style(
-                            &header_theme,
-                            LayoutRefinement::default().w_full(),
-                        ),
-                        ..Default::default()
-                    };
-
-                    let header_cells = header_cells.clone();
-                    vec![cx.grid(grid, move |_cx| header_cells)]
-                })
-            };
-
             let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
             let mut options = fret_ui::element::VirtualListOptions::new(row_height, overscan);
             options.items_revision = items_revision;
@@ -195,6 +155,58 @@ impl DataTable {
                         .into_element(cx)
                 },
             );
+            let body_id = body.id;
+
+            let header_row = {
+                let header_chrome = ChromeRefinement::default()
+                    .border_1()
+                    .border_color(ColorRef::Color(border));
+                let mut props = decl_style::container_props(
+                    &theme,
+                    header_chrome,
+                    LayoutRefinement::default().w_full(),
+                );
+                props.border = Edges {
+                    top: Px(0.0),
+                    right: Px(0.0),
+                    bottom: Px(1.0),
+                    left: Px(0.0),
+                };
+
+                let header_cells: Vec<AnyElement> = headers
+                    .iter()
+                    .cloned()
+                    .map(|h| TableHead::new(h).into_element(cx))
+                    .collect();
+
+                let header_theme = theme.clone();
+                let header = cx.container(props, move |cx| {
+                    let grid = GridProps {
+                        cols,
+                        gap: Px(0.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        layout: decl_style::layout_style(
+                            &header_theme,
+                            LayoutRefinement::default().w_full(),
+                        ),
+                        ..Default::default()
+                    };
+
+                    let header_cells = header_cells.clone();
+                    vec![cx.grid(grid, move |_cx| header_cells)]
+                });
+
+                cx.wheel_region(
+                    WheelRegionProps {
+                        axis: ScrollAxis::Y,
+                        scroll_target: Some(body_id),
+                        scroll_handle: scroll_handle.base_handle().clone(),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![header],
+                )
+            };
 
             let col = ColumnProps {
                 layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),

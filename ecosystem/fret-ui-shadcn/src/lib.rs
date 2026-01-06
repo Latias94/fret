@@ -24,6 +24,8 @@ pub mod combobox;
 pub mod command;
 pub mod context_menu;
 #[cfg(feature = "datagrid")]
+pub mod data_grid;
+#[cfg(feature = "datagrid")]
 pub mod data_table;
 pub mod dialog;
 pub mod drawer;
@@ -50,6 +52,7 @@ pub mod resizable;
 pub mod scroll_area;
 pub mod select;
 pub mod separator;
+pub mod shadcn_themes;
 pub mod sheet;
 pub mod sidebar;
 pub mod skeleton;
@@ -63,7 +66,6 @@ pub mod textarea;
 pub mod toggle;
 pub mod toggle_group;
 pub mod tooltip;
-pub mod shadcn_themes;
 
 pub use accordion::{
     Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger,
@@ -95,6 +97,8 @@ pub use context_menu::{
     ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
     ContextMenuShortcut,
 };
+#[cfg(feature = "datagrid")]
+pub use data_grid::{DataGrid, DataGridRowState};
 #[cfg(feature = "datagrid")]
 pub use data_table::{DataTable, DataTableRowState};
 pub use dialog::{
