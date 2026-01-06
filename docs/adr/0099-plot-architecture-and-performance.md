@@ -155,6 +155,12 @@ In `fret-ui-plot`, prefer a split between:
   - caching keys and invalidation,
   - pointer/scroll/key input -> plot actions,
   - legend/tooltip/crosshair policy.
+  - suggested internal split (current codebase):
+    - `retained/canvas.rs`: widget + event routing + scene emission
+    - `retained/layout.rs`: plot/axis region geometry + hit testing
+    - `retained/state.rs`: `PlotState` / `PlotOutput` + snapshots
+    - `retained/models.rs`: `*Series` / `*PlotModel` data types
+    - `retained/style.rs`: `LinePlotStyle` and related styling enums
 
 This matches the “headless core + thin renderer bridge” approach in ADR 0097.
 

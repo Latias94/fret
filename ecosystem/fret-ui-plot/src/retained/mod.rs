@@ -4,7 +4,9 @@
 
 mod canvas;
 mod layout;
+mod models;
 mod state;
+mod style;
 
 pub use canvas::*;
 pub use state::*;
