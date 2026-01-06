@@ -1,6 +1,6 @@
 use super::{
-    ColumnOrderState, ColumnSizingState, ColumnVisibilityState, PaginationState, RowSelectionState,
-    SortingState,
+    ColumnOrderState, ColumnPinningState, ColumnSizingInfoState, ColumnSizingState,
+    ColumnVisibilityState, PaginationState, RowSelectionState, SortingState,
 };
 
 #[derive(Debug, Clone)]
@@ -11,6 +11,8 @@ pub struct TableState {
     pub column_visibility: ColumnVisibilityState,
     pub column_order: ColumnOrderState,
     pub column_sizing: ColumnSizingState,
+    pub column_sizing_info: ColumnSizingInfoState,
+    pub column_pinning: ColumnPinningState,
 }
 
 impl Default for TableState {
@@ -22,6 +24,8 @@ impl Default for TableState {
             column_visibility: ColumnVisibilityState::default(),
             column_order: ColumnOrderState::default(),
             column_sizing: ColumnSizingState::default(),
+            column_sizing_info: ColumnSizingInfoState::default(),
+            column_pinning: ColumnPinningState::default(),
         }
     }
 }

@@ -4,7 +4,9 @@
 
 mod column;
 mod column_ordering;
+mod column_pinning;
 mod column_sizing;
+mod column_sizing_info;
 mod column_visibility;
 mod pagination;
 mod row_model;
@@ -14,7 +16,9 @@ mod state;
 
 pub use column::{ColumnDef, ColumnHelper, ColumnId, SortCmpFn, create_column_helper};
 pub use column_ordering::{ColumnOrderState, order_columns};
+pub use column_pinning::{ColumnPinningState, split_pinned_columns};
 pub use column_sizing::{ColumnSizingState, column_size};
+pub use column_sizing_info::ColumnSizingInfoState;
 pub use column_visibility::{ColumnVisibilityState, is_column_visible, visible_columns};
 pub use pagination::{PaginationState, paginate_row_model};
 pub use row_model::{Row, RowId, RowIndex, RowModel, Table, TableBuilder};

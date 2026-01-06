@@ -193,6 +193,17 @@ impl<'a, TData> Table<'a, TData> {
             .collect()
     }
 
+    pub fn pinned_visible_columns(
+        &self,
+    ) -> (
+        Vec<&super::ColumnDef<TData>>,
+        Vec<&super::ColumnDef<TData>>,
+        Vec<&super::ColumnDef<TData>>,
+    ) {
+        let visible = self.visible_columns();
+        super::split_pinned_columns(visible.as_slice(), &self.state.column_pinning)
+    }
+
     pub fn column_size(&self, id: &str) -> Option<f32> {
         let col = self.column(id)?;
         super::column_size(&self.state.column_sizing, &col.id)
