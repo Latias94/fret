@@ -204,6 +204,11 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     axis_labels_y2: Vec<PreparedText>,
     axis_labels_y3: Vec<PreparedText>,
     axis_labels_y4: Vec<PreparedText>,
+    axis_lock_indicator_x: Option<PreparedText>,
+    axis_lock_indicator_y: Option<PreparedText>,
+    axis_lock_indicator_y2: Option<PreparedText>,
+    axis_lock_indicator_y3: Option<PreparedText>,
+    axis_lock_indicator_y4: Option<PreparedText>,
     legend_key: Option<u64>,
     legend_entries: Vec<LegendEntry>,
     tooltip_text: Option<PreparedText>,
@@ -573,6 +578,11 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             axis_labels_y2: Vec::new(),
             axis_labels_y3: Vec::new(),
             axis_labels_y4: Vec::new(),
+            axis_lock_indicator_x: None,
+            axis_lock_indicator_y: None,
+            axis_lock_indicator_y2: None,
+            axis_lock_indicator_y3: None,
+            axis_lock_indicator_y4: None,
             legend_key: None,
             legend_entries: Vec::new(),
             tooltip_text: None,
@@ -3865,6 +3875,187 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             }
         }
 
+        // Axis lock indicators (P0: lightweight discoverability).
+        let lock_indicator = |lock: AxisLock| match (lock.pan, lock.zoom) {
+            (false, false) => None,
+            (true, true) => Some("L"),
+            (true, false) => Some("P"),
+            (false, true) => Some("Z"),
+        };
+
+        let font_size = cx
+            .theme()
+            .metric_by_key("font.size")
+            .unwrap_or(cx.theme().metrics.font_size);
+        let indicator_style = TextStyle {
+            font: FontId::default(),
+            size: Px((font_size.0 * 0.85).max(9.0)),
+            weight: FontWeight::BOLD,
+            line_height: None,
+            letter_spacing_em: None,
+        };
+        let indicator_constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+
+        let mut update_indicator =
+            |cache: &mut Option<PreparedText>, token: Option<&'static str>| {
+                let Some(token) = token else {
+                    if let Some(prev) = cache.take() {
+                        cx.services.text().release(prev.blob);
+                    }
+                    return;
+                };
+
+                let mut key = 0u64;
+                key = Self::hash_u64(key, theme.revision);
+                key = Self::hash_u64(key, font_stack_key);
+                key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
+                for b in token.as_bytes() {
+                    key = Self::hash_u64(key, u64::from(*b));
+                }
+                key = Self::hash_u64(key, Self::text_style_key(&indicator_style));
+
+                let needs = cache.as_ref().is_none_or(|t| t.key != key);
+                if needs {
+                    if let Some(prev) = cache.take() {
+                        cx.services.text().release(prev.blob);
+                    }
+                    let (blob, metrics) =
+                        cx.services
+                            .text()
+                            .prepare(token, &indicator_style, indicator_constraints);
+                    *cache = Some(PreparedText { blob, metrics, key });
+                }
+            };
+
+        update_indicator(&mut self.axis_lock_indicator_x, lock_indicator(self.lock_x));
+        update_indicator(&mut self.axis_lock_indicator_y, lock_indicator(self.lock_y));
+        update_indicator(
+            &mut self.axis_lock_indicator_y2,
+            self.show_y2_axis
+                .then_some(self.lock_y2)
+                .and_then(lock_indicator),
+        );
+        update_indicator(
+            &mut self.axis_lock_indicator_y3,
+            self.show_y3_axis
+                .then_some(self.lock_y3)
+                .and_then(lock_indicator),
+        );
+        update_indicator(
+            &mut self.axis_lock_indicator_y4,
+            self.show_y4_axis
+                .then_some(self.lock_y4)
+                .and_then(lock_indicator),
+        );
+
+        let indicator_margin = Px(3.0);
+        if let Some(t) = self.axis_lock_indicator_x {
+            let rect = layout.x_axis;
+            if rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0 {
+                let top = rect.origin.y.0 + rect.size.height.0
+                    - indicator_margin.0
+                    - t.metrics.size.height.0;
+                let origin = Point::new(
+                    Px(rect.origin.x.0 + indicator_margin.0),
+                    Px(top.max(rect.origin.y.0) + t.metrics.baseline.0),
+                );
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(11),
+                    origin,
+                    text: t.blob,
+                    color: label_color,
+                });
+            }
+        }
+
+        if let Some(t) = self.axis_lock_indicator_y {
+            let rect = layout.y_axis_left;
+            if rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0 {
+                let top = rect.origin.y.0 + indicator_margin.0;
+                let origin = Point::new(
+                    Px(rect.origin.x.0 + indicator_margin.0),
+                    Px(top + t.metrics.baseline.0),
+                );
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(11),
+                    origin,
+                    text: t.blob,
+                    color: label_color,
+                });
+            }
+        }
+
+        if self.show_y2_axis {
+            if let Some(t) = self.axis_lock_indicator_y2 {
+                let rect = layout.y_axis_right;
+                if rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0 {
+                    let top = rect.origin.y.0 + indicator_margin.0;
+                    let origin_x = rect.origin.x.0 + rect.size.width.0
+                        - indicator_margin.0
+                        - t.metrics.size.width.0;
+                    let origin = Point::new(
+                        Px(origin_x.max(rect.origin.x.0)),
+                        Px(top + t.metrics.baseline.0),
+                    );
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(11),
+                        origin,
+                        text: t.blob,
+                        color: label_color,
+                    });
+                }
+            }
+        }
+
+        if self.show_y3_axis {
+            if let Some(t) = self.axis_lock_indicator_y3 {
+                let rect = layout.y_axis_right2;
+                if rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0 {
+                    let top = rect.origin.y.0 + indicator_margin.0;
+                    let origin_x = rect.origin.x.0 + rect.size.width.0
+                        - indicator_margin.0
+                        - t.metrics.size.width.0;
+                    let origin = Point::new(
+                        Px(origin_x.max(rect.origin.x.0)),
+                        Px(top + t.metrics.baseline.0),
+                    );
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(11),
+                        origin,
+                        text: t.blob,
+                        color: label_color,
+                    });
+                }
+            }
+        }
+
+        if self.show_y4_axis {
+            if let Some(t) = self.axis_lock_indicator_y4 {
+                let rect = layout.y_axis_right3;
+                if rect.size.width.0 > 0.0 && rect.size.height.0 > 0.0 {
+                    let top = rect.origin.y.0 + indicator_margin.0;
+                    let origin_x = rect.origin.x.0 + rect.size.width.0
+                        - indicator_margin.0
+                        - t.metrics.size.width.0;
+                    let origin = Point::new(
+                        Px(origin_x.max(rect.origin.x.0)),
+                        Px(top + t.metrics.baseline.0),
+                    );
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(11),
+                        origin,
+                        text: t.blob,
+                        color: label_color,
+                    });
+                }
+            }
+        }
+
         // Tooltip (P0: drawn in the same scene; can be moved to overlays later).
         //
         // Behavior:
@@ -4452,6 +4643,21 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         self.layer.cleanup_resources(services);
         self.clear_axis_label_cache(services);
         self.clear_legend_cache(services);
+        if let Some(t) = self.axis_lock_indicator_x.take() {
+            services.text().release(t.blob);
+        }
+        if let Some(t) = self.axis_lock_indicator_y.take() {
+            services.text().release(t.blob);
+        }
+        if let Some(t) = self.axis_lock_indicator_y2.take() {
+            services.text().release(t.blob);
+        }
+        if let Some(t) = self.axis_lock_indicator_y3.take() {
+            services.text().release(t.blob);
+        }
+        if let Some(t) = self.axis_lock_indicator_y4.take() {
+            services.text().release(t.blob);
+        }
         if let Some(t) = self.tooltip_text.take() {
             services.text().release(t.blob);
         }
