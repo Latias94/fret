@@ -30,11 +30,10 @@ Fret does not use React context. Instead, toggle-group behavior is composed via:
 
 - Pass: `single` / `multiple` selection outcomes are supported by shadcn recipes.
 - Pass: `orientation` + `loop` outcomes are supported via `RovingFlex` + APG navigation.
-- Note: A11y does not currently model Radix's `radio` vs `pressed` distinction; Fret's shadcn layer
-  exposes a button-like semantics outcome today.
+- Pass: Item semantics matches Radix outcomes: `single` mode uses `RadioButton` + `checked`, while
+  `multiple` mode uses a button-like `selected` flag (pressed).
 
 ## Follow-ups (recommended)
 
 - Consider adding a semantics mapping for single mode to use `SemanticsRole::RadioGroup` +
   `SemanticsRole::RadioButton` if strict parity is required.
-
