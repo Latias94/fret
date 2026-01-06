@@ -107,7 +107,7 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 ## Styling
 
 - [x] Theme-derived defaults
-- [ ] Per-series style overrides beyond color (line style, marker style)
+- [~] Per-series style overrides beyond color (stroke width; scatter marker radius)
 - [ ] Dashes / joins / caps (likely requires renderer/path contract follow-up)
 
 ## Demos

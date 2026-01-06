@@ -28,6 +28,7 @@ pub struct LineSeries {
     pub data: Series,
     pub y_axis: YAxis,
     pub stroke_color: Option<Color>,
+    pub stroke_width: Option<Px>,
 }
 
 impl LineSeries {
@@ -39,11 +40,17 @@ impl LineSeries {
             data,
             y_axis: YAxis::Left,
             stroke_color: None,
+            stroke_width: None,
         }
     }
 
     pub fn color(mut self, color: Color) -> Self {
         self.stroke_color = Some(color);
+        self
+    }
+
+    pub fn stroke_width(mut self, width: Px) -> Self {
+        self.stroke_width = Some(width);
         self
     }
 
@@ -217,6 +224,8 @@ pub struct ScatterSeries {
     pub data: Series,
     pub y_axis: YAxis,
     pub stroke_color: Option<Color>,
+    pub stroke_width: Option<Px>,
+    pub marker_radius: Option<Px>,
 }
 
 impl ScatterSeries {
@@ -228,11 +237,23 @@ impl ScatterSeries {
             data,
             y_axis: YAxis::Left,
             stroke_color: None,
+            stroke_width: None,
+            marker_radius: None,
         }
     }
 
     pub fn color(mut self, color: Color) -> Self {
         self.stroke_color = Some(color);
+        self
+    }
+
+    pub fn stroke_width(mut self, width: Px) -> Self {
+        self.stroke_width = Some(width);
+        self
+    }
+
+    pub fn marker_radius(mut self, radius: Px) -> Self {
+        self.marker_radius = Some(radius);
         self
     }
 
@@ -427,6 +448,7 @@ pub struct ErrorBarsSeries {
     pub data: Series,
     pub y_axis: YAxis,
     pub stroke_color: Option<Color>,
+    pub stroke_width: Option<Px>,
     /// Optional per-point error bars in X.
     ///
     /// The slice is indexed by point index and is expected to match `data.len()`.
@@ -452,6 +474,7 @@ impl ErrorBarsSeries {
             data,
             y_axis: YAxis::Left,
             stroke_color: None,
+            stroke_width: None,
             x_errors: None,
             y_errors: None,
             cap_size: Px(6.0),
@@ -463,6 +486,11 @@ impl ErrorBarsSeries {
 
     pub fn color(mut self, color: Color) -> Self {
         self.stroke_color = Some(color);
+        self
+    }
+
+    pub fn stroke_width(mut self, width: Px) -> Self {
+        self.stroke_width = Some(width);
         self
     }
 
@@ -676,6 +704,7 @@ pub struct CandlestickSeries {
     pub up_fill: Option<Color>,
     pub down_fill: Option<Color>,
     pub wick_color: Option<Color>,
+    pub stroke_width: Option<Px>,
 }
 
 impl CandlestickSeries {
@@ -700,6 +729,7 @@ impl CandlestickSeries {
             up_fill: None,
             down_fill: None,
             wick_color: None,
+            stroke_width: None,
         }
     }
 
@@ -730,6 +760,11 @@ impl CandlestickSeries {
 
     pub fn wick_color(mut self, color: Color) -> Self {
         self.wick_color = Some(color);
+        self
+    }
+
+    pub fn stroke_width(mut self, width: Px) -> Self {
+        self.stroke_width = Some(width);
         self
     }
 }
@@ -1065,6 +1100,7 @@ pub struct AreaSeries {
     pub fill_color: Option<Color>,
     pub fill_alpha: f32,
     pub stroke_color: Option<Color>,
+    pub stroke_width: Option<Px>,
     pub baseline: f32,
 }
 
@@ -1079,6 +1115,7 @@ impl AreaSeries {
             fill_color: None,
             fill_alpha: 0.22,
             stroke_color: None,
+            stroke_width: None,
             baseline: 0.0,
         }
     }
@@ -1095,6 +1132,11 @@ impl AreaSeries {
 
     pub fn stroke(mut self, color: Color) -> Self {
         self.stroke_color = Some(color);
+        self
+    }
+
+    pub fn stroke_width(mut self, width: Px) -> Self {
+        self.stroke_width = Some(width);
         self
     }
 
@@ -1241,6 +1283,7 @@ pub struct ShadedSeries {
     pub fill_color: Option<Color>,
     pub fill_alpha: f32,
     pub stroke_color: Option<Color>,
+    pub stroke_width: Option<Px>,
 }
 
 impl ShadedSeries {
@@ -1255,6 +1298,7 @@ impl ShadedSeries {
             fill_color: None,
             fill_alpha: 0.18,
             stroke_color: None,
+            stroke_width: None,
         }
     }
 
@@ -1270,6 +1314,11 @@ impl ShadedSeries {
 
     pub fn stroke(mut self, color: Color) -> Self {
         self.stroke_color = Some(color);
+        self
+    }
+
+    pub fn stroke_width(mut self, width: Px) -> Self {
+        self.stroke_width = Some(width);
         self
     }
 

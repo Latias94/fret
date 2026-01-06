@@ -26,8 +26,9 @@ use crate::plot::decimate::{
 use crate::plot::view::data_rect_key_scaled;
 use crate::series::{SeriesData, SeriesId};
 
-struct SeriesStyle {
+struct ResolvedSeriesStyle {
     stroke_color: Color,
+    stroke_width: Px,
 }
 
 const SERIES_PALETTE: [Color; 10] = [
@@ -105,19 +106,40 @@ pub(super) fn resolve_series_color(
     override_color.unwrap_or(SERIES_PALETTE[series_index % SERIES_PALETTE.len()])
 }
 
+fn resolve_stroke_width(plot_style: LinePlotStyle, override_width: Option<Px>) -> Px {
+    let Some(w) = override_width else {
+        return plot_style.stroke_width;
+    };
+    if !w.0.is_finite() {
+        return plot_style.stroke_width;
+    }
+    Px(w.0.max(0.0))
+}
+
+fn resolve_marker_radius(override_radius: Option<Px>, stroke_width: Px) -> Px {
+    let Some(r) = override_radius else {
+        return Px((stroke_width.0 * 3.0).clamp(2.0, 6.0));
+    };
+    if !r.0.is_finite() {
+        return Px((stroke_width.0 * 3.0).clamp(2.0, 6.0));
+    }
+    Px(r.0.max(0.0))
+}
+
 fn series_style(
     series: &LineSeries,
     series_index: usize,
     plot_style: LinePlotStyle,
     series_count: usize,
-) -> SeriesStyle {
-    SeriesStyle {
+) -> ResolvedSeriesStyle {
+    ResolvedSeriesStyle {
         stroke_color: resolve_series_color(
             series_index,
             plot_style,
             series_count,
             series.stroke_color,
         ),
+        stroke_width: resolve_stroke_width(plot_style, series.stroke_width),
     }
 }
 
@@ -689,6 +711,7 @@ struct CachedPath {
     viewport_w_bits: u32,
     viewport_h_bits: u32,
     stroke_width: Px,
+    marker_radius: Px,
     view_key: u64,
     samples: Vec<SamplePoint>,
 }
@@ -1457,13 +1480,15 @@ impl PlotLayer for LinePlotLayer {
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
                     let expected_view_key = view_key_for_axis(s.y_axis);
+                    let expected_stroke_width = resolve_stroke_width(style, s.stroke_width);
 
-                    s.id == c.series_id && c.view_key == expected_view_key
+                    s.id == c.series_id
+                        && c.view_key == expected_view_key
+                        && c.stroke_width == expected_stroke_width
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
                     && c.viewport_h_bits == viewport_h_bits
-                    && c.stroke_width == style.stroke_width
             });
 
         if cached_ok {
@@ -1520,9 +1545,6 @@ impl PlotLayer for LinePlotLayer {
             YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
         };
 
-        let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
-            width: style.stroke_width,
-        });
         let constraints = PathConstraints {
             scale_factor: cx.scale_factor,
         };
@@ -1531,6 +1553,11 @@ impl PlotLayer for LinePlotLayer {
         self.cached_paths = Vec::with_capacity(series_count);
 
         for (series_index, s) in series.iter().enumerate() {
+            let resolved = series_style(s, series_index, style, series_count);
+            let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
+                width: resolved.stroke_width,
+            });
+
             let series_id = s.id;
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
@@ -1541,7 +1568,8 @@ impl PlotLayer for LinePlotLayer {
                     scale_factor_bits,
                     viewport_w_bits,
                     viewport_h_bits,
-                    stroke_width: style.stroke_width,
+                    stroke_width: resolved.stroke_width,
+                    marker_radius: Px(0.0),
                     view_key,
                     samples: Vec::new(),
                 });
@@ -1570,14 +1598,14 @@ impl PlotLayer for LinePlotLayer {
                 scale_factor_bits,
                 viewport_w_bits,
                 viewport_h_bits,
-                stroke_width: style.stroke_width,
+                stroke_width: resolved.stroke_width,
+                marker_radius: Px(0.0),
                 view_key,
                 samples,
             });
 
             if let Some(id) = id {
-                let style = series_style(s, series_index, style, series_count);
-                out.push((series_id, id, style.stroke_color));
+                out.push((series_id, id, resolved.stroke_color));
             }
         }
 
@@ -1748,12 +1776,18 @@ impl PlotLayer for ScatterPlotLayer {
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
                     let expected_view_key = view_key_for_axis(s.y_axis);
-                    s.id == c.series_id && c.view_key == expected_view_key
+                    let expected_stroke_width = resolve_stroke_width(style, s.stroke_width);
+                    let expected_marker_radius =
+                        resolve_marker_radius(s.marker_radius, expected_stroke_width);
+
+                    s.id == c.series_id
+                        && c.view_key == expected_view_key
+                        && c.stroke_width == expected_stroke_width
+                        && c.marker_radius == expected_marker_radius
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
                     && c.viewport_h_bits == viewport_h_bits
-                    && c.stroke_width == style.stroke_width
             });
 
         if cached_ok {
@@ -1810,10 +1844,6 @@ impl PlotLayer for ScatterPlotLayer {
             YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
         };
 
-        let marker_radius = Px((style.stroke_width.0 * 3.0).clamp(2.0, 6.0));
-        let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
-            width: style.stroke_width,
-        });
         let constraints = PathConstraints {
             scale_factor: cx.scale_factor,
         };
@@ -1823,6 +1853,12 @@ impl PlotLayer for ScatterPlotLayer {
 
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
+            let stroke_width = resolve_stroke_width(style, s.stroke_width);
+            let marker_radius = resolve_marker_radius(s.marker_radius, stroke_width);
+            let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
+                width: stroke_width,
+            });
+
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
@@ -1832,7 +1868,8 @@ impl PlotLayer for ScatterPlotLayer {
                     scale_factor_bits,
                     viewport_w_bits,
                     viewport_h_bits,
-                    stroke_width: style.stroke_width,
+                    stroke_width,
+                    marker_radius,
                     view_key,
                     samples: Vec::new(),
                 });
@@ -1861,7 +1898,8 @@ impl PlotLayer for ScatterPlotLayer {
                 scale_factor_bits,
                 viewport_w_bits,
                 viewport_h_bits,
-                stroke_width: style.stroke_width,
+                stroke_width,
+                marker_radius,
                 view_key,
                 samples,
             });
@@ -2039,12 +2077,15 @@ impl PlotLayer for ErrorBarsPlotLayer {
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
                     let expected_view_key = view_key_for_axis(s.y_axis);
-                    s.id == c.series_id && c.view_key == expected_view_key
+                    let expected_stroke_width = resolve_stroke_width(style, s.stroke_width);
+
+                    s.id == c.series_id
+                        && c.view_key == expected_view_key
+                        && c.stroke_width == expected_stroke_width
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
                     && c.viewport_h_bits == viewport_h_bits
-                    && c.stroke_width == style.stroke_width
             });
 
         if cached_ok {
@@ -2101,9 +2142,6 @@ impl PlotLayer for ErrorBarsPlotLayer {
             YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
         };
 
-        let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
-            width: style.stroke_width,
-        });
         let constraints = PathConstraints {
             scale_factor: cx.scale_factor,
         };
@@ -2113,6 +2151,11 @@ impl PlotLayer for ErrorBarsPlotLayer {
 
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
+            let stroke_width = resolve_stroke_width(style, s.stroke_width);
+            let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
+                width: stroke_width,
+            });
+
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
@@ -2122,7 +2165,8 @@ impl PlotLayer for ErrorBarsPlotLayer {
                     scale_factor_bits,
                     viewport_w_bits,
                     viewport_h_bits,
-                    stroke_width: style.stroke_width,
+                    stroke_width,
+                    marker_radius: Px(0.0),
                     view_key,
                     samples: Vec::new(),
                 });
@@ -2151,7 +2195,8 @@ impl PlotLayer for ErrorBarsPlotLayer {
                 scale_factor_bits,
                 viewport_w_bits,
                 viewport_h_bits,
-                stroke_width: style.stroke_width,
+                stroke_width,
+                marker_radius: Px(0.0),
                 view_key,
                 samples,
             });
@@ -2335,12 +2380,14 @@ impl PlotLayer for CandlestickPlotLayer {
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
                     let expected_view_key = view_key_for_axis(s.y_axis);
-                    s.id == c.series_id && c.view_key == expected_view_key
+                    let expected_stroke_width = resolve_stroke_width(style, s.stroke_width);
+                    s.id == c.series_id
+                        && c.view_key == expected_view_key
+                        && c.stroke_width == expected_stroke_width
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
                     && c.viewport_h_bits == viewport_h_bits
-                    && c.stroke_width == style.stroke_width
             });
 
         let default_up = Color {
@@ -2437,9 +2484,6 @@ impl PlotLayer for CandlestickPlotLayer {
             YAxis::Right3 => view_bounds_y4.unwrap_or(view_bounds),
         };
 
-        let wick_style = PathStyle::Stroke(fret_core::StrokeStyle {
-            width: style.stroke_width,
-        });
         let fill_style = PathStyle::Fill(fret_core::FillStyle::default());
         let constraints = PathConstraints {
             scale_factor: cx.scale_factor,
@@ -2451,6 +2495,11 @@ impl PlotLayer for CandlestickPlotLayer {
 
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
+            let stroke_width = resolve_stroke_width(style, s.stroke_width);
+            let wick_style = PathStyle::Stroke(fret_core::StrokeStyle {
+                width: stroke_width,
+            });
+
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedCandlestickPath {
@@ -2462,7 +2511,7 @@ impl PlotLayer for CandlestickPlotLayer {
                     scale_factor_bits,
                     viewport_w_bits,
                     viewport_h_bits,
-                    stroke_width: style.stroke_width,
+                    stroke_width,
                     view_key,
                     samples: Vec::new(),
                 });
@@ -2475,7 +2524,7 @@ impl PlotLayer for CandlestickPlotLayer {
 
             let samples = decimate_samples(transform, &*s.close_series, cx.scale_factor, series_id);
             let (wick_cmds, up_cmds, down_cmds) =
-                candlestick_paths(s, transform, view, cx.scale_factor, style.stroke_width);
+                candlestick_paths(s, transform, view, cx.scale_factor, stroke_width);
 
             let wick_id = if wick_cmds.is_empty() {
                 None
@@ -2514,7 +2563,7 @@ impl PlotLayer for CandlestickPlotLayer {
                 scale_factor_bits,
                 viewport_w_bits,
                 viewport_h_bits,
-                stroke_width: style.stroke_width,
+                stroke_width,
                 view_key,
                 samples,
             });
@@ -2596,12 +2645,19 @@ impl PlotLayer for CandlestickPlotLayer {
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|(id, axis, _data)| {
                     let expected_view_key = view_key_for_axis(*axis);
-                    *id == c.series_id && c.view_key == expected_view_key
+                    let expected_stroke_width = model
+                        .series
+                        .get(i)
+                        .map(|s| resolve_stroke_width(style, s.stroke_width))
+                        .unwrap_or(style.stroke_width);
+
+                    *id == c.series_id
+                        && c.view_key == expected_view_key
+                        && c.stroke_width == expected_stroke_width
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
                     && c.viewport_h_bits == viewport_h_bits
-                    && c.stroke_width == style.stroke_width
             });
 
         let mut best: Option<(SamplePoint, f32)> = None;
@@ -2852,12 +2908,15 @@ impl PlotLayer for StairsPlotLayer {
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
                     let expected_view_key = view_key_for_axis(s.y_axis);
-                    s.id == c.series_id && c.view_key == expected_view_key
+                    let expected_stroke_width = resolve_stroke_width(style, s.stroke_width);
+
+                    s.id == c.series_id
+                        && c.view_key == expected_view_key
+                        && c.stroke_width == expected_stroke_width
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
                     && c.viewport_h_bits == viewport_h_bits
-                    && c.stroke_width == style.stroke_width
             });
 
         if cached_ok {
@@ -2914,9 +2973,6 @@ impl PlotLayer for StairsPlotLayer {
             YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
         };
 
-        let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
-            width: style.stroke_width,
-        });
         let constraints = PathConstraints {
             scale_factor: cx.scale_factor,
         };
@@ -2925,6 +2981,11 @@ impl PlotLayer for StairsPlotLayer {
         self.cached_paths = Vec::with_capacity(series_count);
 
         for (series_index, s) in series.iter().enumerate() {
+            let resolved = series_style(s, series_index, style, series_count);
+            let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
+                width: resolved.stroke_width,
+            });
+
             let series_id = s.id;
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
@@ -2935,7 +2996,8 @@ impl PlotLayer for StairsPlotLayer {
                     scale_factor_bits,
                     viewport_w_bits,
                     viewport_h_bits,
-                    stroke_width: style.stroke_width,
+                    stroke_width: resolved.stroke_width,
+                    marker_radius: Px(0.0),
                     view_key,
                     samples: Vec::new(),
                 });
@@ -2966,14 +3028,14 @@ impl PlotLayer for StairsPlotLayer {
                 scale_factor_bits,
                 viewport_w_bits,
                 viewport_h_bits,
-                stroke_width: style.stroke_width,
+                stroke_width: resolved.stroke_width,
+                marker_radius: Px(0.0),
                 view_key,
                 samples,
             });
 
             if let Some(id) = id {
-                let style = series_style(s, series_index, style, series_count);
-                out.push((series_id, id, style.stroke_color));
+                out.push((series_id, id, resolved.stroke_color));
             }
         }
 
@@ -3226,6 +3288,7 @@ impl PlotLayer for BarsPlotLayer {
                     viewport_w_bits,
                     viewport_h_bits,
                     stroke_width: style.stroke_width,
+                    marker_radius: Px(0.0),
                     view_key,
                     samples: Vec::new(),
                 });
@@ -3256,6 +3319,7 @@ impl PlotLayer for BarsPlotLayer {
                 viewport_w_bits,
                 viewport_h_bits,
                 stroke_width: style.stroke_width,
+                marker_radius: Px(0.0),
                 view_key,
                 samples,
             });
@@ -3743,7 +3807,7 @@ impl PlotLayer for AreaPlotLayer {
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
                     && c.viewport_h_bits == viewport_h_bits
-                    && c.stroke_width == style.stroke_width
+                    && c.stroke_width == resolve_stroke_width(style, s.stroke_width)
                     && {
                         let expected_view_key = view_key_for_axis(s.y_axis);
                         c.view_key == expected_view_key
@@ -3815,9 +3879,6 @@ impl PlotLayer for AreaPlotLayer {
         });
 
         let fill_style = PathStyle::Fill(fret_core::FillStyle::default());
-        let stroke_style = PathStyle::Stroke(fret_core::StrokeStyle {
-            width: style.stroke_width,
-        });
         let constraints = PathConstraints {
             scale_factor: cx.scale_factor,
         };
@@ -3827,6 +3888,11 @@ impl PlotLayer for AreaPlotLayer {
 
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
+            let stroke_width = resolve_stroke_width(style, s.stroke_width);
+            let stroke_style = PathStyle::Stroke(fret_core::StrokeStyle {
+                width: stroke_width,
+            });
+
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedAreaPath {
@@ -3837,7 +3903,7 @@ impl PlotLayer for AreaPlotLayer {
                     scale_factor_bits,
                     viewport_w_bits,
                     viewport_h_bits,
-                    stroke_width: style.stroke_width,
+                    stroke_width,
                     view_key,
                     baseline_bits: s.baseline.to_bits(),
                     fill_alpha_bits: s.fill_alpha.to_bits(),
@@ -3884,7 +3950,7 @@ impl PlotLayer for AreaPlotLayer {
                 Some(id)
             };
 
-            let stroke_id = if line_commands.is_empty() || style.stroke_width.0 <= 0.0 {
+            let stroke_id = if line_commands.is_empty() || stroke_width.0 <= 0.0 {
                 None
             } else {
                 let (id, _metrics) =
@@ -3902,7 +3968,7 @@ impl PlotLayer for AreaPlotLayer {
                 scale_factor_bits,
                 viewport_w_bits,
                 viewport_h_bits,
-                stroke_width: style.stroke_width,
+                stroke_width,
                 view_key,
                 baseline_bits: s.baseline.to_bits(),
                 fill_alpha_bits: s.fill_alpha.to_bits(),
@@ -3988,7 +4054,7 @@ impl PlotLayer for AreaPlotLayer {
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
                     && c.viewport_h_bits == viewport_h_bits
-                    && c.stroke_width == style.stroke_width
+                    && c.stroke_width == resolve_stroke_width(style, s.stroke_width)
                     && {
                         let expected_view_key = view_key_for_axis(s.y_axis);
                         c.view_key == expected_view_key
@@ -4255,7 +4321,7 @@ impl PlotLayer for ShadedPlotLayer {
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
                     && c.viewport_h_bits == viewport_h_bits
-                    && c.stroke_width == style.stroke_width
+                    && c.stroke_width == resolve_stroke_width(style, s.stroke_width)
                     && {
                         let expected_view_key = view_key_for_axis(s.y_axis);
                         c.view_key == expected_view_key
@@ -4339,9 +4405,6 @@ impl PlotLayer for ShadedPlotLayer {
         };
 
         let fill_style = PathStyle::Fill(fret_core::FillStyle::default());
-        let stroke_style = PathStyle::Stroke(fret_core::StrokeStyle {
-            width: style.stroke_width,
-        });
         let constraints = PathConstraints {
             scale_factor: cx.scale_factor,
         };
@@ -4351,6 +4414,11 @@ impl PlotLayer for ShadedPlotLayer {
 
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
+            let stroke_width = resolve_stroke_width(style, s.stroke_width);
+            let stroke_style = PathStyle::Stroke(fret_core::StrokeStyle {
+                width: stroke_width,
+            });
+
             if hidden.contains(&series_id) {
                 let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedShadedPath {
@@ -4362,7 +4430,7 @@ impl PlotLayer for ShadedPlotLayer {
                     scale_factor_bits,
                     viewport_w_bits,
                     viewport_h_bits,
-                    stroke_width: style.stroke_width,
+                    stroke_width,
                     view_key,
                     fill_alpha_bits: s.fill_alpha.to_bits(),
                     samples: Vec::new(),
@@ -4386,7 +4454,7 @@ impl PlotLayer for ShadedPlotLayer {
                 Some(id)
             };
 
-            let upper_stroke_id = if upper_line_commands.is_empty() || style.stroke_width.0 <= 0.0 {
+            let upper_stroke_id = if upper_line_commands.is_empty() || stroke_width.0 <= 0.0 {
                 None
             } else {
                 let (id, _metrics) =
@@ -4396,7 +4464,7 @@ impl PlotLayer for ShadedPlotLayer {
                 Some(id)
             };
 
-            let lower_stroke_id = if lower_line_commands.is_empty() || style.stroke_width.0 <= 0.0 {
+            let lower_stroke_id = if lower_line_commands.is_empty() || stroke_width.0 <= 0.0 {
                 None
             } else {
                 let (id, _metrics) =
@@ -4415,7 +4483,7 @@ impl PlotLayer for ShadedPlotLayer {
                 scale_factor_bits,
                 viewport_w_bits,
                 viewport_h_bits,
-                stroke_width: style.stroke_width,
+                stroke_width,
                 view_key,
                 fill_alpha_bits: s.fill_alpha.to_bits(),
                 samples,
@@ -4504,7 +4572,7 @@ impl PlotLayer for ShadedPlotLayer {
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
                     && c.viewport_h_bits == viewport_h_bits
-                    && c.stroke_width == style.stroke_width
+                    && c.stroke_width == resolve_stroke_width(style, s.stroke_width)
                     && {
                         let expected_view_key = view_key_for_axis(s.y_axis);
                         c.view_key == expected_view_key
@@ -4732,7 +4800,7 @@ fn hit_test_polyline_series_data(
         y4_scale,
         scale_factor,
         local,
-        style,
+        style: _style,
         hover_threshold,
         hidden,
         pinned,
@@ -4770,7 +4838,6 @@ fn hit_test_polyline_series_data(
                 && c.scale_factor_bits == scale_factor_bits
                 && c.viewport_w_bits == viewport_w_bits
                 && c.viewport_h_bits == viewport_h_bits
-                && c.stroke_width == style.stroke_width
         });
 
     let transform_y1 = PlotTransform {
@@ -4924,7 +4991,7 @@ fn hit_test_series_data(
         y4_scale,
         scale_factor,
         local,
-        style,
+        style: _style,
         hover_threshold,
         hidden,
         pinned,
@@ -4962,7 +5029,6 @@ fn hit_test_series_data(
                 && c.scale_factor_bits == scale_factor_bits
                 && c.viewport_w_bits == viewport_w_bits
                 && c.viewport_h_bits == viewport_h_bits
-                && c.stroke_width == style.stroke_width
         });
 
     let mut best: Option<(SamplePoint, f32)> = None;
