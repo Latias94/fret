@@ -2,6 +2,10 @@ use std::collections::HashSet;
 
 use crate::cartesian::{DataPoint, DataRect};
 use crate::series::SeriesId;
+use fret_core::geometry::Px;
+use fret_core::scene::Color;
+
+use super::models::YAxis;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlotHoverOutput {
@@ -93,6 +97,8 @@ pub struct PlotState {
     pub pinned_series: Option<SeriesId>,
     /// Optional user query selection in data space.
     pub query: Option<DataRect>,
+    /// Plot overlays owned by the caller (e.g. reference lines).
+    pub overlays: PlotOverlays,
 }
 
 impl Default for PlotState {
@@ -110,6 +116,69 @@ impl Default for PlotState {
             hidden_series: HashSet::new(),
             pinned_series: None,
             query: None,
+            overlays: PlotOverlays::default(),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InfLineX {
+    pub x: f64,
+    pub color: Option<Color>,
+    pub width: Px,
+}
+
+impl InfLineX {
+    pub fn new(x: f64) -> Self {
+        Self {
+            x,
+            color: None,
+            width: Px(1.0),
+        }
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    pub fn width(mut self, width: Px) -> Self {
+        self.width = width;
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InfLineY {
+    pub y: f64,
+    pub axis: YAxis,
+    pub color: Option<Color>,
+    pub width: Px,
+}
+
+impl InfLineY {
+    pub fn new(y: f64, axis: YAxis) -> Self {
+        Self {
+            y,
+            axis,
+            color: None,
+            width: Px(1.0),
+        }
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    pub fn width(mut self, width: Px) -> Self {
+        self.width = width;
+        self
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct PlotOverlays {
+    pub inf_lines_x: Vec<InfLineX>,
+    pub inf_lines_y: Vec<InfLineY>,
 }

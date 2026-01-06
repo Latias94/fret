@@ -19,6 +19,7 @@ Status symbols:
 
 - Input state: `PlotState` (caller-owned, optional)
 - Output state: `PlotOutput` (widget-written snapshot, optional)
+- Overlays/annotations: `PlotState.overlays` (caller-owned; ADR 0103)
 - Multi-plot linking: `LinkedPlotGroup`
 
 This contract is documented in ADR 0099.
@@ -40,6 +41,7 @@ This contract is documented in ADR 0099.
 - [x] Linked cursor readout supports pinned/hover filtering
 - [x] Selection/query linking across plots (built on top of `LinkedPlotGroup`)
 - [x] Line hover uses nearest segment distance (not just sampled points)
+- [x] Infinite reference lines (InfLines overlays, caller-owned)
 - [~] Keyboard shortcuts matrix (documented; partially aligned with ImPlot defaults)
 
 See also `docs/plot-axis-interactions.md` for axis-region routing, fit behavior, and lock shortcuts.
@@ -127,6 +129,7 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 - [x] `shaded_demo` (desktop + web)
 - [x] `linked_cursor_demo` (desktop + web)
 - [x] `stems_demo` (desktop + web)
+- [x] `inf_lines_demo` (desktop + web)
 - [x] Desktop-only stress harness (large datasets)
 - [x] Linked plots demo (covered by `linked_cursor_demo`)
 

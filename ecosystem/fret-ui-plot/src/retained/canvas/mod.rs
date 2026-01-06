@@ -3378,6 +3378,116 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 });
             }
 
+            // Infinite reference lines (caller-owned overlays).
+            let overlays = &state.overlays;
+            if !overlays.inf_lines_x.is_empty() || !overlays.inf_lines_y.is_empty() {
+                let default_color = Color {
+                    a: (crosshair_color.a * 0.45).clamp(0.05, 1.0),
+                    ..crosshair_color
+                };
+
+                let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+                let transform_x = PlotTransform {
+                    viewport: local_viewport,
+                    data: view_bounds,
+                    x_scale: self.x_scale,
+                    y_scale: self.y_scale,
+                };
+
+                let transform_for_y_axis = |axis: YAxis| -> Option<PlotTransform> {
+                    match axis {
+                        YAxis::Left => Some(PlotTransform {
+                            viewport: local_viewport,
+                            data: view_bounds,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                        }),
+                        YAxis::Right if self.show_y2_axis => {
+                            view_bounds_y2.map(|b| PlotTransform {
+                                viewport: local_viewport,
+                                data: b,
+                                x_scale: self.x_scale,
+                                y_scale: self.y2_scale,
+                            })
+                        }
+                        YAxis::Right2 if self.show_y3_axis => {
+                            view_bounds_y3.map(|b| PlotTransform {
+                                viewport: local_viewport,
+                                data: b,
+                                x_scale: self.x_scale,
+                                y_scale: self.y3_scale,
+                            })
+                        }
+                        YAxis::Right3 if self.show_y4_axis => {
+                            view_bounds_y4.map(|b| PlotTransform {
+                                viewport: local_viewport,
+                                data: b,
+                                x_scale: self.x_scale,
+                                y_scale: self.y4_scale,
+                            })
+                        }
+                        _ => None,
+                    }
+                };
+
+                for line in &overlays.inf_lines_x {
+                    if !line.x.is_finite() {
+                        continue;
+                    }
+                    let Some(x_px) = transform_x.data_x_to_px(line.x) else {
+                        continue;
+                    };
+
+                    let w = line.width.0.max(1.0).min(layout.plot.size.width.0.max(1.0));
+                    let left = (x_px.0 - w * 0.5).clamp(0.0, layout.plot.size.width.0 - w);
+                    let x = Px((layout.plot.origin.x.0 + left).round());
+
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(3),
+                        rect: Rect::new(
+                            Point::new(x, layout.plot.origin.y),
+                            Size::new(Px(w), layout.plot.size.height),
+                        ),
+                        background: line.color.unwrap_or(default_color),
+                        border: fret_core::Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+                }
+
+                for line in &overlays.inf_lines_y {
+                    if !line.y.is_finite() {
+                        continue;
+                    }
+                    let Some(transform) = transform_for_y_axis(line.axis) else {
+                        continue;
+                    };
+                    let Some(y_px) = transform.data_y_to_px(line.y) else {
+                        continue;
+                    };
+
+                    let h = line
+                        .width
+                        .0
+                        .max(1.0)
+                        .min(layout.plot.size.height.0.max(1.0));
+                    let top = (y_px.0 - h * 0.5).clamp(0.0, layout.plot.size.height.0 - h);
+                    let y = Px((layout.plot.origin.y.0 + top).round());
+
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(3),
+                        rect: Rect::new(
+                            Point::new(layout.plot.origin.x, y),
+                            Size::new(layout.plot.size.width, Px(h)),
+                        ),
+                        background: line.color.unwrap_or(default_color),
+                        border: fret_core::Edges::all(Px(0.0)),
+                        border_color: Color::TRANSPARENT,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+                }
+            }
+
             if let Some(cursor) = self.cursor_px {
                 let x = Px((layout.plot.origin.x.0 + cursor.x.0).round());
                 let y = Px((layout.plot.origin.y.0 + cursor.y.0).round());

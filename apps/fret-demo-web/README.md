@@ -32,6 +32,7 @@ hash or query string:
 - `?demo=stairs_demo` (or `#stairs_demo`)
 - `?demo=stems_demo` (or `#stems_demo`)
 - `?demo=linked_cursor_demo` (or `#linked_cursor_demo`)
+- `?demo=inf_lines_demo` (or `#inf_lines_demo`)
 
 ## Debug teardown
 

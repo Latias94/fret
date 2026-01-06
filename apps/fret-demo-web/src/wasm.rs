@@ -23,6 +23,7 @@ enum Demo {
     StairsDemo,
     StemsDemo,
     LinkedCursorDemo,
+    InfLinesDemo,
 }
 
 fn select_demo() -> Demo {
@@ -73,6 +74,9 @@ fn select_demo() -> Demo {
     }
     if hash.contains("linked_cursor_demo") || search.contains("demo=linked_cursor_demo") {
         return Demo::LinkedCursorDemo;
+    }
+    if hash.contains("inf_lines_demo") || search.contains("demo=inf_lines_demo") {
+        return Demo::InfLinesDemo;
     }
 
     Demo::ComponentsGallery
@@ -181,6 +185,13 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::linked_cursor_demo::build_runner_config();
             config.main_window_title = "fret-demo linked_cursor_demo (web)".to_string();
             let driver = fret_examples::linked_cursor_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::InfLinesDemo => {
+            let app = fret_examples::inf_lines_demo::build_app();
+            let mut config = fret_examples::inf_lines_demo::build_runner_config();
+            config.main_window_title = "fret-demo inf_lines_demo (web)".to_string();
+            let driver = fret_examples::inf_lines_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
     }

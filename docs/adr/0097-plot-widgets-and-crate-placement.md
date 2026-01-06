@@ -1,6 +1,6 @@
 # ADR 0097: Plot Widgets and Crate Placement (`fret-ui-plot`)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -94,6 +94,11 @@ This ADR covers 2D plots rendered via portable scene primitives.
 If we want "real 3D" (depth-correct, GPU-friendly), we should treat Plot3D as an embedded viewport surface
 and follow the existing engine viewport architecture. The UI-facing crate lives in
 `ecosystem/fret-ui-plot3d`; see ADR 0098.
+
+## Overlays / annotations
+
+Plot annotations (e.g. infinite reference lines, spans, callouts) are implemented as caller-owned overlays
+stored in `PlotState`. See ADR 0103.
 
 ## Alternatives
 
