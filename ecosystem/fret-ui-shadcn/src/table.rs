@@ -16,11 +16,11 @@ fn table_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.table.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or(theme.metrics.font_size);
+        .unwrap_or_else(|| theme.metric_required("font.size"));
     let line_height = theme
         .metric_by_key("component.table.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or(theme.metrics.font_line_height);
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
     TextStyle {
         font: FontId::default(),
@@ -40,29 +40,19 @@ fn row_min_h(theme: &Theme) -> MetricRef {
 }
 
 fn border_color(theme: &Theme) -> fret_core::Color {
-    theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border)
+    theme.color_required("border")
 }
 
 fn muted_bg(theme: &Theme) -> fret_core::Color {
-    theme
-        .color_by_key("muted")
-        .or_else(|| theme.color_by_key("muted.background"))
-        .unwrap_or(theme.colors.hover_background)
+    theme.color_required("muted")
 }
 
 fn muted_fg(theme: &Theme) -> fret_core::Color {
-    theme
-        .color_by_key("muted.foreground")
-        .or_else(|| theme.color_by_key("muted-foreground"))
-        .unwrap_or(theme.colors.text_muted)
+    theme.color_required("muted-foreground")
 }
 
 fn foreground(theme: &Theme) -> fret_core::Color {
-    theme
-        .color_by_key("foreground")
-        .unwrap_or(theme.colors.text_primary)
+    theme.color_required("foreground")
 }
 
 /// shadcn/ui `Table` root.

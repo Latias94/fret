@@ -76,19 +76,13 @@ fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> 
 }
 
 fn tooltip_text_fg(theme: &Theme) -> fret_core::Color {
-    theme
-        .color_by_key("background")
-        .unwrap_or(theme.colors.surface_background)
+    theme.color_required("background")
 }
 
 fn tooltip_text_style(theme: &Theme) -> TextStyle {
     // new-york-v4 uses `text-xs` for tooltips (base is `text-sm`).
-    let base_px = theme
-        .metric_by_key("font.size")
-        .unwrap_or(theme.metrics.font_size);
-    let base_line_height = theme
-        .metric_by_key("font.line_height")
-        .unwrap_or(theme.metrics.font_line_height);
+    let base_px = theme.metric_required("font.size");
+    let base_line_height = theme.metric_required("font.line_height");
 
     let px = theme
         .metric_by_key("component.tooltip.text_px")
@@ -108,9 +102,7 @@ fn tooltip_text_style(theme: &Theme) -> TextStyle {
 
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
     // shadcn/ui v4 (2025-09-22): tooltip uses `bg-foreground text-background`.
-    let bg = theme
-        .color_by_key("foreground")
-        .unwrap_or(theme.colors.text_primary);
+    let bg = theme.color_required("foreground");
 
     ChromeRefinement::default()
         .rounded(Radius::Md)
@@ -328,11 +320,9 @@ impl Tooltip {
         let arrow_padding = self.arrow_padding_override.unwrap_or_else(|| {
             theme
                 .metric_by_key("component.tooltip.arrow_padding")
-                .unwrap_or(theme.metrics.radius_sm)
+                .unwrap_or_else(|| MetricRef::radius(Radius::Sm).resolve(&theme))
         });
-        let arrow_bg = theme
-            .color_by_key("foreground")
-            .unwrap_or(theme.colors.text_primary);
+        let arrow_bg = theme.color_required("foreground");
 
         let align = self.align;
         let side = self.side;
