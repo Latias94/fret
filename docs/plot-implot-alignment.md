@@ -53,8 +53,8 @@ This contract is documented in ADR 0099.
 
 - [x] CPU decimation bounded by viewport pixels (min/max per X bucket)
 - [x] Cached paths keyed by `(SeriesId, model_revision, viewport_px, scale, view_bounds, style_key)`
-- [ ] Separate decimation strategies per plot type (line vs bars vs points)
-- [ ] Optional hit-test acceleration for monotonic-X series (binary search / interval trees)
+- [x] Separate decimation strategies per plot type (polyline vs point bucket sampling)
+- [x] Optional hit-test acceleration for monotonic-X series (windowed slice scan)
 
 ## Plot types (P1)
 

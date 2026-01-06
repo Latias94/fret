@@ -17,8 +17,8 @@ use std::sync::Arc;
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::plot::axis::{AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
 use crate::plot::decimate::{
-    SamplePoint, decimate_polyline, decimate_samples, decimate_shaded_band, device_point_budget,
-    view_x_range, visible_sorted_slice,
+    SamplePoint, decimate_points, decimate_polyline, decimate_samples, decimate_shaded_band,
+    device_point_budget, view_x_range, visible_sorted_slice,
 };
 use crate::plot::view::{
     clamp_view_to_data_scaled, clamp_zoom_factors, data_rect_from_plot_points_scaled,
@@ -1432,18 +1432,14 @@ fn scatter_marker_commands(samples: &[SamplePoint], radius: Px) -> Vec<fret_core
 fn error_bars_commands(
     series: &ErrorBarsSeries,
     transform: PlotTransform,
-    view_bounds: DataRect,
+    samples: &[SamplePoint],
 ) -> Vec<fret_core::PathCommand> {
-    let len = series.data.len();
-    if len == 0 {
+    if samples.is_empty() {
         return Vec::new();
     }
 
     let cap = series.cap_size.0.max(0.0);
     let marker = series.marker_radius.0.max(0.0);
-
-    let view_x_min = view_bounds.x_min.min(view_bounds.x_max);
-    let view_x_max = view_bounds.x_min.max(view_bounds.x_max);
 
     let mut out: Vec<fret_core::PathCommand> = Vec::new();
 
@@ -1524,25 +1520,8 @@ fn error_bars_commands(
         }
     };
 
-    let data = &series.data;
-    if let Some(slice) = data.as_slice() {
-        if data.is_sorted_by_x() {
-            let (base, visible) = visible_sorted_slice(slice, view_x_min, view_x_max);
-            for (i, p) in visible.iter().copied().enumerate() {
-                push_point(base + i, p);
-            }
-        } else {
-            for (idx, p) in slice.iter().copied().enumerate() {
-                push_point(idx, p);
-            }
-        }
-    } else {
-        for idx in 0..data.len() {
-            let Some(p) = data.get(idx) else {
-                continue;
-            };
-            push_point(idx, p);
-        }
+    for s in samples {
+        push_point(s.index, s.data);
     }
 
     out
@@ -6703,7 +6682,7 @@ impl PlotLayer for ScatterPlotLayer {
                 view_key_y1
             };
 
-            let samples = decimate_samples(transform, &*s.data, cx.scale_factor, series_id);
+            let samples = decimate_points(transform, &*s.data, cx.scale_factor, series_id);
             let commands = scatter_marker_commands(&samples, marker_radius);
             let id = if commands.is_empty() {
                 None
@@ -6742,7 +6721,7 @@ impl PlotLayer for ScatterPlotLayer {
             .iter()
             .map(|s| (s.id, s.y_axis, &*s.data))
             .collect();
-        hit_test_polyline_series_data(&self.cached_paths, &series, args)
+        hit_test_series_data(&self.cached_paths, &series, args)
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
@@ -6968,14 +6947,9 @@ impl PlotLayer for ErrorBarsPlotLayer {
             } else {
                 view_key_y1
             };
-            let view = if s.y_axis == YAxis::Right {
-                view_bounds_y2.unwrap_or(view_bounds)
-            } else {
-                view_bounds
-            };
 
-            let samples = decimate_samples(transform, &*s.data, cx.scale_factor, series_id);
-            let commands = error_bars_commands(s, transform, view);
+            let samples = decimate_points(transform, &*s.data, cx.scale_factor, series_id);
+            let commands = error_bars_commands(s, transform, &samples);
             let id = if commands.is_empty() {
                 None
             } else {
@@ -7979,7 +7953,7 @@ impl PlotLayer for BarsPlotLayer {
                 view_key_y1
             };
 
-            let samples = decimate_samples(transform, &*s.data, cx.scale_factor, series_id);
+            let samples = decimate_points(transform, &*s.data, cx.scale_factor, series_id);
             let commands = bars_path_commands(transform, &samples, s.bar_width, s.baseline);
 
             let id = if commands.is_empty() {
@@ -9470,6 +9444,52 @@ fn hit_test_polyline_series_data(
             } else {
                 transform_y1
             };
+
+            // Fast path for monotonic-X slice-backed series: only consider a small X window around
+            // the cursor instead of scanning all visible samples.
+            if data.is_sorted_by_x()
+                && let Some(slice) = data.as_slice()
+                && threshold.is_finite()
+                && threshold > 0.0
+            {
+                let left = Px(local.x.0 - threshold);
+                let right = Px(local.x.0 + threshold);
+                let x0 = transform.px_to_data(Point::new(left, local.y)).x;
+                let x1 = transform.px_to_data(Point::new(right, local.y)).x;
+                if x0.is_finite() && x1.is_finite() {
+                    let x_min = x0.min(x1);
+                    let x_max = x0.max(x1);
+                    let (base, window) = visible_sorted_slice(slice, x_min, x_max);
+
+                    let mut prev: Option<SamplePoint> = None;
+                    for (i, p) in window.iter().copied().enumerate() {
+                        if !p.x.is_finite() || !p.y.is_finite() {
+                            prev = None;
+                            continue;
+                        }
+                        let plot_px = transform.data_to_px(p);
+                        if !plot_px.x.0.is_finite() || !plot_px.y.0.is_finite() {
+                            prev = None;
+                            continue;
+                        }
+
+                        let s = SamplePoint {
+                            series_id,
+                            index: base + i,
+                            data: p,
+                            plot_px,
+                            connects_to_prev: prev.is_some(),
+                        };
+                        if let Some(p) = prev {
+                            consider_hover_segment(&mut best, local, p, s, transform);
+                        }
+                        consider_hover_point(&mut best, local, s);
+                        prev = Some(s);
+                    }
+                    continue;
+                }
+            }
+
             let samples = decimate_samples(transform, data, scale_factor, series_id);
             let mut prev: Option<SamplePoint> = None;
             for s in samples.into_iter() {
@@ -9591,6 +9611,41 @@ fn hit_test_series_data(
             } else {
                 transform_y1
             };
+
+            // Fast path for monotonic-X slice-backed series.
+            if data.is_sorted_by_x()
+                && let Some(slice) = data.as_slice()
+                && threshold.is_finite()
+                && threshold > 0.0
+            {
+                let left = Px(local.x.0 - threshold);
+                let right = Px(local.x.0 + threshold);
+                let x0 = transform.px_to_data(Point::new(left, local.y)).x;
+                let x1 = transform.px_to_data(Point::new(right, local.y)).x;
+                if x0.is_finite() && x1.is_finite() {
+                    let x_min = x0.min(x1);
+                    let x_max = x0.max(x1);
+                    let (base, window) = visible_sorted_slice(slice, x_min, x_max);
+                    for (i, p) in window.iter().copied().enumerate() {
+                        if !p.x.is_finite() || !p.y.is_finite() {
+                            continue;
+                        }
+                        let plot_px = transform.data_to_px(p);
+                        if !plot_px.x.0.is_finite() || !plot_px.y.0.is_finite() {
+                            continue;
+                        }
+                        consider_sample(SamplePoint {
+                            series_id,
+                            index: base + i,
+                            data: p,
+                            plot_px,
+                            connects_to_prev: false,
+                        });
+                    }
+                    continue;
+                }
+            }
+
             for sample in decimate_samples(transform, data, scale_factor, series_id) {
                 consider_sample(sample);
             }
