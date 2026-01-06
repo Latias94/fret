@@ -26,6 +26,10 @@ pub struct TableOptions {
     pub keep_pinned_rows: bool,
     /// Whether to allow column hiding at the table level (TanStack `enableHiding`).
     pub enable_hiding: bool,
+    /// Whether to allow column ordering at the table level (TanStack `enableColumnOrdering`).
+    pub enable_column_ordering: bool,
+    /// Whether to allow column pinning at the table level (TanStack `enablePinning`).
+    pub enable_column_pinning: bool,
 }
 
 impl Default for TableOptions {
@@ -38,6 +42,8 @@ impl Default for TableOptions {
             paginate_expanded_rows: true,
             keep_pinned_rows: true,
             enable_hiding: true,
+            enable_column_ordering: true,
+            enable_column_pinning: true,
         }
     }
 }

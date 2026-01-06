@@ -2,11 +2,55 @@ use std::collections::HashSet;
 
 use super::{ColumnDef, ColumnId};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColumnPinPosition {
+    Left,
+    Right,
+}
+
 /// TanStack-compatible column pinning state.
 #[derive(Debug, Clone, Default)]
 pub struct ColumnPinningState {
     pub left: Vec<ColumnId>,
     pub right: Vec<ColumnId>,
+}
+
+pub fn is_column_pinned(
+    state: &ColumnPinningState,
+    column: &ColumnId,
+) -> Option<ColumnPinPosition> {
+    if state.left.iter().any(|c| c.as_ref() == column.as_ref()) {
+        return Some(ColumnPinPosition::Left);
+    }
+    if state.right.iter().any(|c| c.as_ref() == column.as_ref()) {
+        return Some(ColumnPinPosition::Right);
+    }
+    None
+}
+
+pub fn pin_column(
+    state: &mut ColumnPinningState,
+    column: &ColumnId,
+    position: Option<ColumnPinPosition>,
+) {
+    state.left.retain(|c| c.as_ref() != column.as_ref());
+    state.right.retain(|c| c.as_ref() != column.as_ref());
+
+    match position {
+        None => {}
+        Some(ColumnPinPosition::Left) => state.left.push(column.clone()),
+        Some(ColumnPinPosition::Right) => state.right.push(column.clone()),
+    }
+}
+
+pub fn pinned_column(
+    state: &ColumnPinningState,
+    column: &ColumnId,
+    position: Option<ColumnPinPosition>,
+) -> ColumnPinningState {
+    let mut next = state.clone();
+    pin_column(&mut next, column, position);
+    next
 }
 
 pub fn split_pinned_columns<'c, TData>(
@@ -92,5 +136,35 @@ mod tests {
             right.iter().map(|c| c.id.as_ref()).collect::<Vec<_>>(),
             vec!["a"]
         );
+    }
+
+    #[test]
+    fn pin_column_moves_between_sides_and_unpins() {
+        let mut state = ColumnPinningState {
+            left: vec!["a".into()],
+            right: vec!["b".into()],
+        };
+
+        pin_column(
+            &mut state,
+            &ColumnId::from("a"),
+            Some(ColumnPinPosition::Right),
+        );
+        assert!(state.left.is_empty());
+        assert_eq!(
+            state.right.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["b", "a"]
+        );
+        assert_eq!(
+            is_column_pinned(&state, &ColumnId::from("a")),
+            Some(ColumnPinPosition::Right)
+        );
+
+        pin_column(&mut state, &ColumnId::from("b"), None);
+        assert_eq!(
+            state.right.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["a"]
+        );
+        assert_eq!(is_column_pinned(&state, &ColumnId::from("b")), None);
     }
 }

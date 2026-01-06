@@ -164,6 +164,16 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    pub fn enable_column_ordering(mut self, enabled: bool) -> Self {
+        self.options.enable_column_ordering = enabled;
+        self
+    }
+
+    pub fn enable_column_pinning(mut self, enabled: bool) -> Self {
+        self.options.enable_column_pinning = enabled;
+        self
+    }
+
     pub fn get_row_key(
         mut self,
         f: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'a,
@@ -453,6 +463,61 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn ordered_columns(&self) -> Vec<&super::ColumnDef<TData>> {
         super::order_columns(&self.columns, &self.state.column_order)
+    }
+
+    pub fn column_order(&self) -> &super::ColumnOrderState {
+        &self.state.column_order
+    }
+
+    pub fn column_pinning(&self) -> &super::ColumnPinningState {
+        &self.state.column_pinning
+    }
+
+    pub fn column_can_order(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(self.options.enable_column_ordering && col.enable_ordering)
+    }
+
+    pub fn column_can_pin(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(self.options.enable_column_pinning && col.enable_pinning)
+    }
+
+    pub fn column_pin_position(&self, column_id: &str) -> Option<super::ColumnPinPosition> {
+        let col = self.column(column_id)?;
+        super::is_column_pinned(&self.state.column_pinning, &col.id)
+    }
+
+    pub fn toggled_column_order_move(
+        &self,
+        column_id: &str,
+        to_index: usize,
+    ) -> Option<super::ColumnOrderState> {
+        let col = self.column(column_id)?;
+        if !(self.options.enable_column_ordering && col.enable_ordering) {
+            return Some(self.state.column_order.clone());
+        }
+        Some(super::moved_column(
+            &self.state.column_order,
+            &col.id,
+            to_index,
+        ))
+    }
+
+    pub fn toggled_column_pinning(
+        &self,
+        column_id: &str,
+        position: Option<super::ColumnPinPosition>,
+    ) -> Option<super::ColumnPinningState> {
+        let col = self.column(column_id)?;
+        if !(self.options.enable_column_pinning && col.enable_pinning) {
+            return Some(self.state.column_pinning.clone());
+        }
+        Some(super::pinned_column(
+            &self.state.column_pinning,
+            &col.id,
+            position,
+        ))
     }
 
     pub fn visible_columns(&self) -> Vec<&super::ColumnDef<TData>> {
@@ -881,8 +946,8 @@ mod tests {
     use super::*;
     use crate::headless::table::is_column_visible;
     use crate::headless::table::{
-        ColumnDef, ColumnFilter, ColumnId, PaginationState, SortSpec, TableOptions, TableState,
-        create_column_helper,
+        ColumnDef, ColumnFilter, ColumnId, ColumnPinPosition, PaginationState, SortSpec,
+        TableOptions, TableState, create_column_helper,
     };
     use std::sync::Arc;
 
@@ -1750,5 +1815,67 @@ mod tests {
 
         assert!(!is_column_visible(&next, &ColumnId::from("a")));
         assert!(is_column_visible(&next, &ColumnId::from("b")));
+    }
+
+    #[test]
+    fn table_column_order_move_respects_enable_column_ordering() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = vec![Item { value: 1 }];
+        let columns = vec![
+            ColumnDef::new("a").enable_ordering(true),
+            ColumnDef::new("b").enable_ordering(false),
+            ColumnDef::new("c").enable_ordering(true),
+        ];
+
+        let mut state = TableState::default();
+        state.column_order = vec!["a".into(), "b".into(), "c".into()];
+        let table = Table::builder(&data).columns(columns).state(state).build();
+
+        let next = table.toggled_column_order_move("a", 2).unwrap();
+        assert_eq!(
+            next.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["b", "c", "a"]
+        );
+
+        let next_b = table.toggled_column_order_move("b", 0).unwrap();
+        assert_eq!(
+            next_b.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["a", "b", "c"]
+        );
+    }
+
+    #[test]
+    fn table_column_pinning_respects_enable_column_pinning() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = vec![Item { value: 1 }];
+        let columns = vec![
+            ColumnDef::new("a").enable_pinning(true),
+            ColumnDef::new("b").enable_pinning(false),
+        ];
+        let table = Table::builder(&data).columns(columns).build();
+
+        let next = table
+            .toggled_column_pinning("a", Some(ColumnPinPosition::Left))
+            .unwrap();
+        assert_eq!(
+            next.left.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["a"]
+        );
+
+        let next_b = table
+            .toggled_column_pinning("b", Some(ColumnPinPosition::Right))
+            .unwrap();
+        assert!(next_b.left.is_empty());
+        assert!(next_b.right.is_empty());
     }
 }

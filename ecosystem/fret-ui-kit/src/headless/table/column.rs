@@ -16,6 +16,8 @@ pub struct ColumnDef<TData> {
     pub facet_key_fn: Option<FacetKeyFn<TData>>,
     pub facet_str_fn: Option<FacetStrFn<TData>>,
     pub enable_hiding: bool,
+    pub enable_ordering: bool,
+    pub enable_pinning: bool,
 }
 
 impl<TData> std::fmt::Debug for ColumnDef<TData> {
@@ -35,6 +37,8 @@ impl<TData> ColumnDef<TData> {
             facet_key_fn: None,
             facet_str_fn: None,
             enable_hiding: true,
+            enable_ordering: true,
+            enable_pinning: true,
         }
     }
 
@@ -62,6 +66,16 @@ impl<TData> ColumnDef<TData> {
 
     pub fn enable_hiding(mut self, enabled: bool) -> Self {
         self.enable_hiding = enabled;
+        self
+    }
+
+    pub fn enable_ordering(mut self, enabled: bool) -> Self {
+        self.enable_ordering = enabled;
+        self
+    }
+
+    pub fn enable_pinning(mut self, enabled: bool) -> Self {
+        self.enable_pinning = enabled;
         self
     }
 }
