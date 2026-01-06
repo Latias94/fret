@@ -147,6 +147,7 @@ pub fn input<H: UiHost>(
     props.text_style = text_style;
     props.layout.size = SizeStyle {
         width: Length::Fill,
+        min_width: Some(fret_core::Px(0.0)),
         min_height: Some(resolved.min_height),
         ..Default::default()
     };
