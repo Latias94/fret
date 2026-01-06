@@ -25,6 +25,7 @@ use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::headless::select_item_aligned as item_aligned;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
+use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::select as radix_select;
@@ -858,10 +859,12 @@ fn select_impl<H: UiHost>(
             let listbox_controls_element: Cell<Option<u64>> = Cell::new(None);
             let listbox_controls_element = &listbox_controls_element;
 
-            if motion.present
-                && enabled
-                && let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id)
-            {
+            if motion.present && enabled {
+                // Anchor bounds are derived from the previous layout pass. When `open=true` before
+                // the first layout (or immediately after a large tree change), the anchor may be
+                // missing for a frame. We still install the modal barrier layer to preserve Radix
+                // Select's "disable outside pointer events" outcome.
+                if let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) {
                     let window_margin = theme
                         .metric_by_key("component.select.window_margin")
                         .unwrap_or(Px(8.0));
@@ -1050,35 +1053,8 @@ fn select_impl<H: UiHost>(
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                         let trigger_state_for_overlay = trigger_state_for_overlay_for_children.clone();
-                        let barrier_layout = LayoutStyle {
-                            position: PositionStyle::Absolute,
-                            inset: InsetStyle {
-                                top: Some(Px(0.0)),
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
-                                left: Some(Px(0.0)),
-                            },
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        };
-
-                        let open_for_barrier = open_for_overlay.clone();
-                        let barrier = cx.pressable(
-                            PressableProps {
-                                layout: barrier_layout,
-                                enabled: true,
-                                focusable: false,
-                                ..Default::default()
-                            },
-                            move |cx, _st| {
-                                cx.pressable_set_bool(&open_for_barrier, false);
-                                Vec::new()
-                            },
-                        );
+                        let barrier =
+                            radix_dialog::modal_barrier(cx, open_for_overlay.clone(), true, Vec::new());
 
                         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
@@ -1694,6 +1670,26 @@ fn select_impl<H: UiHost>(
                     );
                     request.initial_focus = list_focus_id_out.get();
                     radix_select::request_select(cx, request);
+                } else {
+                    let open_for_overlay = open_for_trigger.clone();
+                    let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+                        vec![radix_dialog::modal_barrier(
+                            cx,
+                            open_for_overlay.clone(),
+                            true,
+                            Vec::new(),
+                        )]
+                    });
+
+                    let request = radix_select::modal_select_request(
+                        trigger_id,
+                        trigger_id,
+                        open_for_trigger.clone(),
+                        overlay_presence,
+                        overlay_children,
+                    );
+                    radix_select::request_select(cx, request);
+                }
             }
 
             props.a11y.controls_element = listbox_controls_element.get();
@@ -2388,6 +2384,107 @@ mod tests {
             root, barrier_root,
             "expected listbox to be rooted under the barrier layer"
         );
+    }
+
+    #[test]
+    fn select_open_before_first_layout_installs_modal_barrier_and_blocks_underlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(true);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+        ];
+
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "select",
+            |cx| {
+                let underlay_activated = underlay_activated.clone();
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.inset.top = Some(Px(180.0));
+                            layout.inset.left = Some(Px(240.0));
+                            layout.position = PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_set_bool(&underlay_activated, true);
+                        Vec::new()
+                    },
+                );
+
+                vec![
+                    underlay,
+                    Select::new(model.clone(), open.clone())
+                        .items(items.clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected select to install a modal barrier root"
+        );
+
+        let underlay_point = Point::new(Px(250.0), Px(190.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(app.models().get_copied(&underlay_activated), Some(false));
     }
 
     #[test]
