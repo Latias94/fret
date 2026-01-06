@@ -1,7 +1,8 @@
 param(
     [string[]]$Paths = @(
         "ecosystem/fret-ui-shadcn/src",
-        "ecosystem/fret-ui-kit/src"
+        "ecosystem/fret-ui-kit/src",
+        "apps/fret-examples/src"
     )
 )
 
@@ -42,4 +43,3 @@ $matches = Get-ChildItem -Recurse -File -Path $Paths |
 
 Assert-NoMatches $matches
 exit 0
-
