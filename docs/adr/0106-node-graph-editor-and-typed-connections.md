@@ -1,0 +1,583 @@
+# ADR 0106: Node Graph Editor and Typed Connections (`fret-node`)
+
+Status: Proposed  
+Date: 2026-01-06
+
+## Context
+
+Fret aims to be an editor-grade UI framework. A general-purpose node graph editor is a foundational
+editor primitive that we want to reuse across multiple domains:
+
+- dataflow graphs (generic pipelines and “Dify-like” flows),
+- blueprint-style exec graphs,
+- shader graphs (a stricter, compiler-backed specialization).
+
+Local upstream references show three complementary strengths:
+
+- `repo-ref/imgui-node-editor`: mature interaction protocol (“draw your content, we do the rest”),
+  including link creation/deletion queries, selection, navigation, and persisted editor state hooks.
+- `repo-ref/Graphics/Packages/com.unity.shadergraph`: asset-first graph model, strong slot compatibility
+  rules, graph validation/diagnostics, dynamic slot concretization, unknown-node survival, and migration.
+- `repo-ref/egui-snarl`: small data model + separate UI state + a “viewer” trait that externalizes
+  behavior, including multi-connection interactions.
+
+We want a Fret-native node editor that:
+
+- avoids future large refactors by locking the “hard-to-change” boundaries now,
+- stays consistent with Fret’s layering rules (ADR 0074: component-owned interaction policy),
+- remains extensible enough to support future shader/blueprint/workflow specializations.
+
+Related ADRs:
+
+- Action hooks: `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
+- Commands and palette: `docs/adr/0023-command-metadata-menus-and-palette.md`
+- Shortcut normalization: `docs/adr/0018-key-codes-and-shortcuts.md`
+- Undo/redo transactions (editor scope): `docs/adr/0024-undo-redo-and-edit-transactions.md`
+- Clipboard / drag-and-drop sessions: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+- Inspector protocol (editor scope): `docs/adr/0048-inspector-property-protocol-and-editor-registry.md`
+- Render-transform hit-testing: `docs/adr/0083-render-transform-hit-testing.md`
+- Theme tokens: `docs/adr/0032-style-tokens-and-theme-resolution.md`
+- Crate boundaries: `docs/adr/0093-crate-structure-core-backends-apps.md`
+
+## Goals
+
+- Provide an editor-grade **node graph UI** for Fret with stable, reusable contracts.
+- Support **typed connections** and **constraint-driven graph validation** without coupling to a
+  specific domain (shader/blueprint/workflow).
+- Support long-lived assets: stable IDs, serialization, and an explicit migration pipeline.
+- Keep `crates/fret-ui` mechanism-only: the node editor is a policy-heavy component in `ecosystem/`.
+
+## Non-Goals
+
+- Shipping a full ShaderGraph clone in the framework layer.
+- Baking a specific type system (shader precision/space, JSON schema, etc.) into the core model.
+- Guaranteeing compile-time typing for runtime node payloads (pluginability and migration take priority).
+
+## Decision
+
+### 1) Crate placement and feature policy
+
+We introduce a new workspace crate:
+
+- `ecosystem/fret-node`
+
+Feature policy:
+
+- Default features include `fret-ui` integration (`default = ["fret-ui"]`).
+- A `headless` feature exists for non-UI usage (graph model + schema + rules only).
+  `headless` must not depend on `crates/fret-ui`.
+
+Rationale:
+
+- This is a policy-heavy editor component (ADR 0074), not a mechanism-only runtime feature.
+- Default-on UI integration optimizes for Fret’s primary use case while keeping an escape hatch for
+  CLI tools, server-side validation, and alternative front-ends.
+
+### 2) Hard boundary: Model vs Rules vs UI
+
+`fret-node` is organized as three conceptual layers (not necessarily three crates initially):
+
+1. **Graph Model (data + ops)**: pure graph state, stable IDs, serialization, and undoable edits.
+2. **Schema + Type/Constraint System**: node definitions, port/type descriptors, connection planning,
+   and graph validation diagnostics.
+3. **Editor UI** (optional via `fret-ui` feature): interaction state machine, rendering, input routing,
+   and action hooks.
+
+The UI layer must not encode domain semantics. All “can connect?” decisions and all automatic fixes
+flow through the rules layer.
+
+### 3) Graph primitives and stable IDs
+
+The graph model defines:
+
+- `Graph`: the whole document/asset.
+- `GraphId`: stable graph document identifier used for cross-file references and editor-state lookup.
+- `NodeId`, `PortId`, `EdgeId`: stable identifiers persisted in serialized assets.
+- `Node`: `{ kind: NodeKindKey, pos, collapsed, data, ports }` (exact fields may evolve).
+- `Port`: `{ node: NodeId, dir: In|Out, kind: Data|Exec, capacity, type_desc?, ui_hints? }`.
+- `Edge`: `{ id, from: PortId, to: PortId, kind: EdgeKind }`.
+- `Group` and `StickyNote` as first-class model elements (ShaderGraph parity).
+
+ID policy:
+
+- IDs are stable across sessions and independent of in-memory storage order.
+- Copy/paste and graph merges must remap IDs deterministically (no collisions).
+- The graph file includes a schema/version number to support migrations.
+- Ports must not be identified only by positional indices; `PortId` stability is required to preserve
+  connections across port reorderings and schema evolution.
+- Serialization must be deterministic (stable ordering) to support diffs, reviews, and merges.
+
+Concrete encoding (locked):
+
+- `GraphId`, `NodeId`, `PortId`, `EdgeId`, and `SymbolId` are UUIDs (`uuid::Uuid`) serialized via serde as
+  standard UUID strings.
+- `NodeKindKey` is a stable, namespaced string identifier (same convention as `PanelKind` in docking):
+  e.g. `core.math.add`, `core.flow.if`, `plugin.acme.http_request`.
+- `PortKey` is a stable string identifier used for schema-declared ports (and for dynamic ports when needed).
+
+Port key rules (locked):
+
+- `PortKey` identity is stable across releases; do not reuse a removed `PortKey` for a different meaning.
+- Renames are expressed via migrations (old `PortKey` -> new `PortKey` mapping).
+- Dynamic/variadic ports must allocate stable keys that survive reorderings; the recommended strategy is
+  to generate `PortKey` values as `dyn.<uuid>` and store them in the node instance data.
+
+ID generation and remapping (locked):
+
+- New IDs are generated with `Uuid::new_v4()`.
+- ID remapping (copy/paste, duplicate, import/merge) must be deterministic with respect to input order:
+  - build remap tables by iterating source IDs in a stable sort order (UUID bytes),
+  - never rely on hash map iteration order when allocating new IDs.
+- Remapping never changes referenced external identities (e.g. `GraphId` references for subgraphs).
+
+Rationale:
+
+- Mature editors treat graphs as long-lived assets (ShaderGraph).
+- Stable IDs are prerequisite for migration, diffing, diagnostics references, and incremental caches.
+
+### 4) Edge kinds and default connection policies
+
+We explicitly model edge kinds from day one:
+
+- `EdgeKind::Data` (typed value flow)
+- `EdgeKind::Exec` (control flow; no value typing by default)
+
+Default capacity policy (overridable per port via schema/rules):
+
+- `DataIn`: single connection
+- `DataOut`: multi connection
+- `ExecIn`: single connection
+- `ExecOut`: multi connection
+
+Cycle policy is rule-driven:
+
+- The model can represent cycles.
+- Graph rules may forbid cycles by `EdgeKind` (typical: forbid `Data`, allow `Exec`), and must report
+  diagnostics when violated.
+
+Rationale:
+
+- This avoids a later structural rewrite when introducing blueprint/workflow control flow.
+- Different domains need different cycle and capacity rules; this must be a policy decision.
+
+### 5) Schema registry and unknown-node survival
+
+Node definitions are externalized via a registry:
+
+- `NodeKindKey`: stable, namespaced string identifier.
+- `NodeRegistry`: maps `NodeKindKey -> NodeSchema`.
+- `NodeSchema` declares ports, default node data, UI metadata (title/category/keywords/icon), and
+  dynamic port behavior.
+- A stable per-node-kind `PortKey` exists for schema-declared ports so that migrations can rename,
+  reorder, or regroup ports without breaking connections. (Instance ports can still carry generated
+  `PortId`, but schema evolution needs a durable mapping.)
+
+Unknown-node policy:
+
+- Graph deserialization must succeed even when a `NodeKindKey` is missing from the registry.
+- Unknown nodes are preserved as `UnknownNode` with raw payload retained so that saving does not
+  destroy data.
+- The UI must present unknown nodes in a survivable way (read-only or limited edits), and diagnostics
+  must surface “missing node kind” errors.
+
+Rationale:
+
+- This is required for plugin ecosystems, cross-team projects, and forward compatibility.
+
+Node kind versioning and migration (locked):
+
+- Each node instance stores `{ kind: NodeKindKey, kind_version: u32, data: ... }`.
+- Each `NodeSchema` declares `latest_kind_version: u32` and a pure-data migrator that can upgrade
+  `data` (and port keys if needed) from older versions to the latest.
+- A registry may declare `kind_aliases: Vec<NodeKindKey>` to support renames:
+  - loading a node with an alias kind rewrites it to the canonical `NodeKindKey` via migration.
+- When a migrator is missing, the node must remain survivable (UnknownNode behavior), and diagnostics
+  must explain what is missing.
+
+### 6) Typed connections via `TypeDesc` + `ConnectPlan`
+
+We standardize on a runtime, serializable type descriptor:
+
+- `TypeDesc`: a structured description (builtins + parameters + type variables + constraints).
+
+`TypeDesc` MVP builtins (locked):
+
+- Top/special:
+  - `Any`: top type (“accepts anything”).
+  - `Unknown`: inference placeholder (used during partial graphs / unresolved generics).
+  - `Never` (optional): bottom type for “no value can exist” / unreachable.
+  - `Null`: explicit null value (required for JSON/workflow domains).
+- Scalars:
+  - `Bool`, `Int`, `Float`, `String`, `Bytes`.
+- Containers:
+  - `List(T)`.
+  - `Map(K, V)` (MVP may restrict `K = String`, but the descriptor supports general keys).
+- Objects:
+  - `Object { fields: BTreeMap<String, TypeDesc>, open: bool }`.
+    - `open = true` means “this object may contain additional unknown fields”.
+    - `open = false` means “closed record” with an exact field set.
+- Unions:
+  - `Union(Vec<TypeDesc>)`.
+  - `Option(T)` is a syntax sugar for `Union([T, Null])`.
+- Type variables:
+  - `Var(TypeVarId)` with optional constraints (e.g. “must be numeric”, “must be JSON-like”).
+- Extensions:
+  - `Opaque { key: String, params: Vec<TypeDesc> }` for domain-specific types (shader, tools, schemas).
+
+Rationale:
+
+- Dataflow/workflow graphs require structural types (object/list/option/union) to avoid future rewrites.
+- Shader/blueprint specializations must be able to add rich domains without expanding the core enum.
+
+Connection is mediated through a planner:
+
+- `plan_connect(graph, registry, from, to) -> ConnectPlan`
+
+`ConnectPlan` includes:
+
+- decision: `Accept | Reject`
+- diagnostics: reasons and severity
+- optional edits: a small `Vec<GraphOp>` representing auto-fixes, such as:
+  - disconnecting prior edges when connecting into a single-capacity port,
+  - inserting conversion nodes (cast, pack/unpack, enum mapping),
+  - inserting reroute nodes.
+
+Rationale:
+
+- ShaderGraph-level maturity comes from “compatibility + concretization + diagnostics + autofix,” not
+  from the UI alone.
+- `ConnectPlan` aligns with the query/accept flow in `imgui-node-editor` while remaining rules-driven.
+
+Type inference and conversion boundary (locked):
+
+- `TypeDesc` is a data model, not a policy engine:
+  - It does not embed implicit cast tables or “auto-convert” logic.
+  - All compatibility decisions live in the rules layer and are surfaced through `ConnectPlan`.
+- Unification/inference is rules-driven and profile-scoped:
+  - A profile defines how `Var` is solved and how `Unknown` propagates.
+  - A profile defines the “compatibility lattice” for `Any`, `Union`, and open objects.
+- Auto-conversion is expressed as explicit edits:
+  - If a connection requires a conversion, `ConnectPlan` returns `GraphOp` edits that insert a
+    conversion node (or performs a safe rewrite), rather than silently changing runtime semantics.
+- Deterministic shape:
+  - Object fields use stable ordering (`BTreeMap`) to keep serialization and diffing deterministic.
+  - `Union` normalization (dedup/sort/flatten) is performed in a deterministic way by the rules layer.
+
+### 7) Graph validation and diagnostics are first-class
+
+The rules layer exposes:
+
+- `validate_graph(graph, registry) -> Vec<Diagnostic>`
+
+Diagnostics:
+
+- include stable references to `NodeId/PortId/EdgeId`,
+- have severity (`Error|Warning|Info`) and a machine key for filtering/suppression,
+- support “quick fix” actions expressed as `GraphOp` transactions where possible.
+
+Rationale:
+
+- Diagnostics are a core part of the editing experience and a foundation for future compilers/runtimes.
+
+### 8) Undo/redo is op-based and transaction-friendly
+
+All edits flow through `GraphOp`:
+
+- `GraphOp` is the minimal reversible edit unit.
+- Multi-step operations (dragging, paste, connect with autofix) are grouped into transactions and
+  support coalescing (ADR 0024).
+
+Rationale:
+
+- Without op-level correctness, every advanced editor feature (autofix, paste, multi-select moves,
+  batch edits) becomes brittle.
+
+### 9) UI integration: retained canvas + action hooks
+
+The `fret-ui` integration uses:
+
+- `Widget::render_transform` for pan/zoom to keep layout bounds authoritative while transforming
+  paint and hit-testing (ADR 0083).
+- Action hooks for policy:
+  - pointer down/move/up streams for drag interactions,
+  - key handlers for shortcuts and command routing,
+  - context menu triggers and node creation flows (ADR 0074).
+
+Interaction protocol target (inspired by `imgui-node-editor`):
+
+- The widget produces “pending requests” (e.g. `PendingConnect`, `PendingDelete`).
+- The host/controller applies `ConnectPlan`/`GraphOp` transactions and feeds the updated graph back.
+
+Node creation protocol:
+
+- “Create Node” is a command/palette surface (ADR 0023) that can be invoked from:
+  - keyboard (e.g. Space) without hard-coding keys at the widget layer (ADR 0018),
+  - background context menu,
+  - dropping a wire on empty space (wire-drop menu / searcher).
+- When invoked from a wire-drop, the creation surface is provided a context:
+  - source pins (one or many; multi-connect),
+  - desired direction (creating a node to connect to an input vs output),
+  - a type/edge-kind filter derived from `ConnectPlan` so the search results are relevant.
+- The output of the creation surface is a transaction:
+  - add node,
+  - position node near drop point,
+  - connect selected source pins to chosen node ports (with `ConnectPlan` autofix where applicable).
+- Cancel semantics:
+  - A wire drag can be canceled without opening any menu (e.g. secondary button while dragging),
+    to avoid accidental menu opens and to match common editor UX.
+
+Baseline UI capabilities (MVP parity targets):
+
+- selection (single/multi, rectangle selection),
+- pan/zoom + “frame selection” navigation,
+- link creation/deletion with accept/reject feedback,
+- node moving with transaction coalescing,
+- context menus (background/node/port/edge),
+- copy/paste of subgraphs (ADR 0041 alignment).
+
+Planned advanced interaction features (parity with `egui-snarl` / editor expectations):
+
+- multi-connect gestures (bundle connect, yank-reconnect),
+- reroute nodes and wire hit-testing with large-graph performance constraints,
+- node collapse/expand and group dragging,
+- deterministic draw order (z-order) and explicit “bring to front” interactions,
+- wire styling hooks for “execution flow” visualization (animated markers / highlight),
+- configurable wire layer (render behind nodes vs above nodes),
+- configurable background patterns (grid/dots/custom),
+- persisted editor view state (camera, selection, fold states) in a separate editor-state file or
+  per-asset metadata, without mixing with core graph semantics.
+
+Node layout contract:
+
+- Nodes have standard regions (header, inputs, body, outputs, footer) to ensure consistent styling,
+  hit-testing, and extensibility (inspired by `egui-snarl`).
+- Port placement is configurable (inside frame / on edge / outside) as a style/UX choice.
+
+Node presentation contract (Viewer-style):
+
+- The node graph widget does not own domain UI. Instead, a presenter/viewer surface is provided
+  (conceptually similar to `egui-snarl`’s `SnarlViewer`) to render:
+  - node title / header / body / footer content,
+  - per-port content (labels, inline editors, icons),
+  - per-port visuals (pin shape, pin rect/handle size, wire color/style),
+  - context menus (graph background, node, port, edge),
+  - optional on-hover popups (node/pin/edge),
+  - optional wire widgets (small UI at or near the wire midpoint).
+- The presenter may hold extra, non-serialized UI data (e.g. cached measurements, inline editor state),
+  but graph semantics must remain in the serialized `Graph` model.
+
+Zoom and UI scaling policy (locked):
+
+- Viewport zoom is applied via render transforms (ADR 0083) to keep input and paint consistent.
+- The node editor supports a style policy that can choose how different primitives scale with zoom:
+  - wire thickness / arrow markers,
+  - pin size and hit target padding,
+  - background pattern density and line thickness,
+  - optional “clamped” scaling for readability (e.g. do not let text/pins become too small).
+- A “semantic zoom” option is supported via deterministic LOD rules:
+  - hide or simplify node body content below a threshold,
+  - replace rich pin content with compact labels/icons,
+  - keep hit-testing aligned with what is actually rendered.
+
+### 10) Graph profiles (domain specializations without rewrites)
+
+We standardize on an explicit “profile” concept:
+
+- `GraphProfile` selects a registry subset (allowed node kinds) and a ruleset (type/constraints).
+
+Examples:
+
+- `DataflowProfile`: permissive types, optional cycles, no exec edges (initial MVP).
+- `BlueprintProfile`: exec edges + control-flow constraints, optional data typing rules.
+- `ShaderProfile`: strict data types, forbid data cycles, shader-stage constraints, precision/space rules.
+
+Rationale:
+
+- Profiles prevent the “one graph tries to satisfy every domain simultaneously” failure mode.
+- Profiles provide a stable extension seam for future shader/blueprint/workflow projects.
+
+### 11) Extension data hooks (graph- and node-scoped)
+
+We reserve extension hooks similar to ShaderGraph’s graph sub-data pattern:
+
+- Graph-scoped extension data for future needs (blackboard-like inputs, compiler settings, domain
+  metadata), keyed by a stable `ExtKey`.
+- Node-scoped extension data for plugin nodes that need to attach auxiliary metadata without forcing
+  a core schema change.
+
+These extensions must be serializable and survive unknown-kind scenarios.
+
+### 12) Large-graph performance: caches are derived, not serialized
+
+The model layer may maintain derived indexes (e.g. per-node adjacency lists, per-port edge lookups,
+spatial indexes for hit-testing), but:
+
+- derived caches are rebuildable from the serialized canonical state,
+- caches are not part of the stable asset format unless explicitly versioned and justified.
+
+### 13) Graph symbols (blackboard/variables) are first-class
+
+Many graph domains require “graph-scoped inputs”:
+
+- shader properties/keywords (ShaderGraph),
+- blueprint variables,
+- workflow parameters and environment inputs (Dify-like).
+
+We standardize on a symbol concept:
+
+- `SymbolId`: stable per-symbol ID.
+- `Symbol`: `{ id, name, type_desc, default_value?, category?, metadata? }`.
+
+Rules:
+
+- Symbols live at graph scope and are referenced by nodes via `SymbolId` (not by name).
+- Symbols are serializable and participate in migrations (rename, type changes).
+- The UI supports a “blackboard” surface:
+  - add/remove/rename/reorder symbols,
+  - drag a symbol into the graph to create a reference node at a location,
+  - copy/paste across graphs copies symbols into the destination graph when needed.
+
+Implementation note:
+
+- Symbols are a **built-in** graph section (not an optional extension), because they are required
+  across multiple graph domains and must interoperate with copy/paste and node creation flows.
+
+### 14) Dynamic ports and concretization
+
+Some node kinds have ports that depend on node data or graph context:
+
+- variadic nodes (N inputs),
+- polymorphic nodes (ports change type after connections),
+- “function” nodes where ports are derived from a referenced signature,
+- subgraph nodes whose port list mirrors the subgraph interface.
+
+We require a concretization protocol:
+
+- A node kind may declare ports as dynamic and provide a deterministic “concretize” routine.
+- Concretization produces a sequence of `GraphOp`s (add/remove/remap ports, retag types) so it is:
+  - undoable,
+  - serializable as part of edits,
+  - testable.
+- Port identity must remain stable across concretization:
+  - schema-level `PortKey` is used to preserve connections when ports are reordered/renamed,
+- when a port is removed, connected edges must be dropped explicitly with diagnostics.
+
+Concretization scheduling (locked):
+
+- Concretization runs as part of the edit pipeline, not as an ad-hoc UI side effect.
+- Each user action produces a single committed transaction:
+  1) apply direct `GraphOp`s,
+  2) run concretization and validation incrementally to a fixed point (bounded),
+  3) apply derived `GraphOp`s (port changes, edge drops, inserts) within the same transaction.
+- If fixed-point resolution does not converge within a small bound, the transaction is rejected with
+  diagnostics (to prevent infinite oscillation between rules).
+- UI must render from the post-concretized state to avoid one-frame “wrong ports then snap” jitter.
+
+### 15) Editor state persistence is separate from graph semantics
+
+We separate:
+
+- **graph asset state** (the canonical graph document), and
+- **editor view state** (per-user/per-machine).
+
+Editor view state includes:
+
+- camera (pan/zoom), visible rect,
+- selection and focused element (optional),
+- per-node UI state (collapsed/open, z-order),
+- custom zoom levels or input scheme overrides (mouse buttons / smooth zoom).
+
+Persistence:
+
+- Editor state is stored outside the graph asset by default and keyed by `GraphId`:
+  - project scope (recommended): `./.fret/node_graph/view_state/<graph_id>.json`
+  - user scope (optional): OS config directory per ADR 0014.
+- The persistence API supports save reasons / dirty flags (navigation/selection/position/etc.) to
+  allow throttling and reduce churn (inspired by `imgui-node-editor`).
+
+On-disk shape (locked, v1):
+
+- JSON file stored at one of the default locations above.
+- Wrapper object to allow future evolution without breaking older files:
+  - `{ "graph_id": "<uuid>", "state_version": 1, "state": { ... } }`
+- Backward compatibility: loaders may also accept a plain `state` root object when `graph_id` is
+  supplied out-of-band by the caller (mirrors `DockLayoutFileV1`’s wrapper tolerance).
+
+Graph asset on-disk shape (locked, v1):
+
+- Canonical format is JSON via `serde_json` (aligns with docking persistence patterns).
+- Wrapper object is used to allow schema evolution:
+  - `{ "graph_id": "<uuid>", "graph_version": 1, "graph": { ... } }`.
+- Backward compatibility: loaders may also accept a plain `graph` root object (legacy format) and
+  derive `graph_id` from the embedded `GraphId` field.
+
+### 16) Selection is an integration surface (Inspector and commands)
+
+Selection is editor-owned policy but must be exposed as data:
+
+- The node graph widget reports selection changes as explicit events or model updates.
+- Selection can feed an inspector/property panel via the editor-layer protocol (ADR 0048), enabling
+  node/edge properties to be edited without coupling the UI widget to domain logic.
+- Core editing commands are command IDs (ADR 0023), not hard-coded key handlers:
+  - `node_graph.create_node`
+  - `node_graph.delete_selection`
+  - `node_graph.duplicate_selection`
+  - `node_graph.frame_selection`
+  - `node_graph.select_all`
+
+### 17) Clipboard and drag payloads have stable formats
+
+The node graph editor must support:
+
+- copy/paste of a subgraph fragment (nodes + edges + groups + notes + referenced symbols),
+- internal drag payloads for moving nodes and creating connections,
+- compatibility with cross-window internal drag sessions (ADR 0041) when the graph is in a torn-off window.
+
+Clipboard format rules:
+
+- A graph fragment is a deterministic, self-contained serialization that can be pasted into another graph.
+- Pasting remaps `NodeId/PortId/EdgeId` to fresh IDs, and remaps `SymbolId` by copy-in when required.
+
+### 18) Graph references (subgraphs) are explicit and cycle-safe
+
+Reusable subgraphs are a core scaling mechanism (shader subgraphs, workflow subflows, blueprint macros).
+
+Contract:
+
+- A node kind may reference another graph document via `GraphId` (or asset GUID when an asset system exists).
+- Referenced graph interfaces are treated as dynamic ports and must be concretized deterministically.
+- Recursive dependencies must be detected and surfaced as diagnostics, and profiles may forbid them.
+- Copy/paste of subgraph nodes preserves the reference (it does not inline by default).
+
+## Consequences
+
+Pros:
+
+- Strongly reduces the chance of later structural rewrites when adding shader/blueprint/workflow
+  specializations (the model is edge-kind aware; rules are pluggable).
+- Enables “mature editor” behaviors early: diagnostics, unknown node survival, migrations, op-based
+  undo/redo, and rules-driven connect planning.
+- Keeps `crates/fret-ui` stable by using action hooks and a component-layer policy architecture.
+
+Cons:
+
+- Requires upfront design effort (registry, diagnostics, ops, versioning) before “pretty UI” work.
+- Runtime typing is validated by rules and tests, not by Rust’s compile-time generics.
+
+## Alternatives Considered
+
+1) Put the node graph editor into `crates/fret-ui`:
+   rejected (violates ADR 0074; the editor is policy-heavy).
+
+2) Make the graph type-safe via Rust generics (compile-time typing):
+   rejected as the primary model (pluginability, unknown-node survival, and migrations become hard).
+
+3) Bake a single domain type system (shader slots) into core:
+   rejected (we need cross-domain reuse).
+
+## Open Questions
+
+- Whether to standardize on a single on-disk format (JSON/RON) for node assets, or support multiple
+  formats behind a stable serde model.
+- Whether to support additional “compat read” formats (e.g. RON) while keeping JSON as canonical.
+- Whether node graph assets should additionally carry an asset-database GUID alongside `GraphId` (ADR 0026).
