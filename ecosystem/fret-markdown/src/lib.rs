@@ -2,8 +2,10 @@
 
 use std::sync::Arc;
 
-use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, TextProps};
+use fret_core::{Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, Length, ScrollAxis, ScrollProps, TextProps,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{LayoutRefinement, Space};
@@ -151,14 +153,49 @@ impl MarkdownBlock {
                     render_code_block(cx, info, components)
                 }
             }
-            MarkdownBlockKind::Raw { kind, text } => {
-                let info = RawBlockInfo { kind, text };
-                if let Some(render) = &components.raw_block {
-                    render(cx, info)
-                } else {
-                    render_paragraph(cx, theme, info.text)
+            MarkdownBlockKind::Raw { kind, text } => match kind {
+                RawBlockKind::ThematicBreak => {
+                    if let Some(render) = &components.thematic_break {
+                        render(cx, ThematicBreakInfo)
+                    } else {
+                        render_thematic_break(cx, theme)
+                    }
                 }
-            }
+                RawBlockKind::BlockQuote => {
+                    let info = BlockQuoteInfo {
+                        text: strip_blockquote_prefix(&text),
+                    };
+                    if let Some(render) = &components.blockquote {
+                        render(cx, info)
+                    } else {
+                        render_blockquote(cx, theme, components, info)
+                    }
+                }
+                RawBlockKind::List => {
+                    let info = parse_list_info(&text);
+                    if let Some(render) = &components.list {
+                        render(cx, info)
+                    } else {
+                        render_list(cx, theme, info)
+                    }
+                }
+                RawBlockKind::Table => {
+                    let info = TableInfo { text };
+                    if let Some(render) = &components.table {
+                        render(cx, info)
+                    } else {
+                        render_table(cx, theme, info)
+                    }
+                }
+                _ => {
+                    let info = RawBlockInfo { kind, text };
+                    if let Some(render) = &components.raw_block {
+                        render(cx, info)
+                    } else {
+                        render_paragraph(cx, theme, info.text)
+                    }
+                }
+            },
         }
     }
 }
@@ -232,6 +269,26 @@ pub struct RawBlockInfo {
     pub text: Arc<str>,
 }
 
+#[derive(Debug, Clone)]
+pub struct ListInfo {
+    pub ordered: bool,
+    pub start: u32,
+    pub items: Vec<Arc<str>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct BlockQuoteInfo {
+    pub text: Arc<str>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TableInfo {
+    pub text: Arc<str>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ThematicBreakInfo;
+
 pub type HeadingRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, HeadingInfo) -> AnyElement;
 pub type ParagraphRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, ParagraphInfo) -> AnyElement;
@@ -241,6 +298,12 @@ pub type CodeBlockActionsRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, CodeBlockInfo) -> AnyElement;
 pub type RawBlockRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, RawBlockInfo) -> AnyElement;
+pub type ListRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, ListInfo) -> AnyElement;
+pub type BlockQuoteRenderer<H> =
+    dyn for<'a> Fn(&mut ElementContext<'a, H>, BlockQuoteInfo) -> AnyElement;
+pub type TableRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, TableInfo) -> AnyElement;
+pub type ThematicBreakRenderer<H> =
+    dyn for<'a> Fn(&mut ElementContext<'a, H>, ThematicBreakInfo) -> AnyElement;
 
 #[derive(Clone)]
 pub struct MarkdownComponents<H: UiHost> {
@@ -253,6 +316,10 @@ pub struct MarkdownComponents<H: UiHost> {
     /// you own the full code fence rendering (including actions).
     pub code_block_actions: Option<Arc<CodeBlockActionsRenderer<H>>>,
     pub raw_block: Option<Arc<RawBlockRenderer<H>>>,
+    pub list: Option<Arc<ListRenderer<H>>>,
+    pub blockquote: Option<Arc<BlockQuoteRenderer<H>>>,
+    pub table: Option<Arc<TableRenderer<H>>>,
+    pub thematic_break: Option<Arc<ThematicBreakRenderer<H>>>,
 }
 
 impl<H: UiHost> Default for MarkdownComponents<H> {
@@ -263,6 +330,10 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
             code_block: None,
             code_block_actions: None,
             raw_block: None,
+            list: None,
+            blockquote: None,
+            table: None,
+            thematic_break: None,
         }
     }
 }
@@ -472,6 +543,223 @@ fn render_code_block<H: UiHost>(
     stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |_cx| {
         vec![actions, code_view]
     })
+}
+
+fn render_thematic_break<H: UiHost>(cx: &mut ElementContext<'_, H>, theme: &Theme) -> AnyElement {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Px(Px(1.0));
+
+    cx.container(
+        ContainerProps {
+            layout,
+            padding: Edges::all(Px(0.0)),
+            background: Some(theme.colors.panel_border),
+            shadow: None,
+            border: Edges::all(Px(0.0)),
+            border_color: None,
+            corner_radii: Default::default(),
+        },
+        |_cx| Vec::new(),
+    )
+}
+
+fn render_blockquote<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    info: BlockQuoteInfo,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Fill;
+    props.padding = Edges::all(theme.metrics.padding_sm);
+    props.border = Edges {
+        top: Px(0.0),
+        right: Px(0.0),
+        bottom: Px(0.0),
+        left: Px(3.0),
+    };
+    props.border_color = Some(theme.colors.panel_border);
+
+    cx.container(props, |cx| vec![markdown_with(cx, &info.text, components)])
+}
+
+fn render_list<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    info: ListInfo,
+) -> AnyElement {
+    if info.items.is_empty() {
+        return cx.text_props(TextProps {
+            layout: Default::default(),
+            text: Arc::<str>::from(""),
+            style: None,
+            color: Some(theme.colors.text_primary),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+        });
+    }
+
+    stack::vstack(cx, stack::VStackProps::default().gap(Space::N1), |cx| {
+        info.items
+            .into_iter()
+            .enumerate()
+            .map(|(i, text)| {
+                let marker = if info.ordered {
+                    Arc::<str>::from(format!("{}.", info.start.saturating_add(i as u32)))
+                } else {
+                    Arc::<str>::from("•".to_string())
+                };
+
+                stack::hstack(cx, stack::HStackProps::default().gap(Space::N2), |cx| {
+                    let marker_el = cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: marker,
+                        style: None,
+                        color: Some(theme.colors.text_muted),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    });
+                    let text_el = render_paragraph(cx, theme, text);
+                    vec![marker_el, text_el]
+                })
+            })
+            .collect()
+    })
+}
+
+fn render_table<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    info: TableInfo,
+) -> AnyElement {
+    let mut scroll_props = ScrollProps::default();
+    scroll_props.axis = ScrollAxis::X;
+
+    let style = TextStyle {
+        font: FontId::monospace(),
+        size: theme.metrics.mono_font_size,
+        weight: FontWeight::NORMAL,
+        line_height: Some(theme.metrics.mono_font_line_height),
+        letter_spacing_em: None,
+    };
+
+    cx.scroll(scroll_props, |cx| {
+        vec![cx.text_props(TextProps {
+            layout: Default::default(),
+            text: info.text,
+            style: Some(style),
+            color: Some(theme.colors.text_primary),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })]
+    })
+}
+
+fn strip_blockquote_prefix(text: &str) -> Arc<str> {
+    let mut out = String::new();
+    for (i, line) in text.lines().enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        let mut s = line;
+        let mut spaces = 0usize;
+        while spaces < 3 && s.starts_with(' ') {
+            s = &s[1..];
+            spaces += 1;
+        }
+        if let Some(rest) = s.strip_prefix('>') {
+            out.push_str(rest.strip_prefix(' ').unwrap_or(rest));
+        } else {
+            out.push_str(s);
+        }
+    }
+    Arc::<str>::from(out.trim_end().to_string())
+}
+
+fn parse_list_info(text: &str) -> ListInfo {
+    let mut ordered = None::<bool>;
+    let mut start = 1u32;
+    let mut items: Vec<String> = Vec::new();
+    let mut cur: Option<String> = None;
+
+    for line in text.lines() {
+        if let Some((o, num, content)) = parse_list_item_start(line) {
+            if let Some(prev) = cur.take() {
+                if !prev.trim().is_empty() {
+                    items.push(prev.trim_end().to_string());
+                }
+            }
+            if ordered.is_none() {
+                ordered = Some(o);
+                if o {
+                    start = num.max(1);
+                }
+            }
+            cur = Some(content.to_string());
+            continue;
+        }
+
+        if let Some(buf) = cur.as_mut() {
+            let trimmed = line.trim_end();
+            if trimmed.is_empty() {
+                continue;
+            }
+            if !buf.is_empty() {
+                buf.push('\n');
+            }
+            buf.push_str(trimmed.trim_start());
+        }
+    }
+
+    if let Some(prev) = cur.take() {
+        if !prev.trim().is_empty() {
+            items.push(prev.trim_end().to_string());
+        }
+    }
+
+    ListInfo {
+        ordered: ordered.unwrap_or(false),
+        start,
+        items: items.into_iter().map(|s| Arc::<str>::from(s)).collect(),
+    }
+}
+
+fn parse_list_item_start(line: &str) -> Option<(bool, u32, &str)> {
+    let mut s = line;
+    let mut spaces = 0usize;
+    while spaces < 3 && s.starts_with(' ') {
+        s = &s[1..];
+        spaces += 1;
+    }
+
+    let bytes = s.as_bytes();
+    if bytes.len() >= 2 {
+        match bytes[0] {
+            b'-' | b'+' | b'*' if bytes[1] == b' ' || bytes[1] == b'\t' => {
+                return Some((false, 1, s[2..].trim_start()));
+            }
+            _ => {}
+        }
+    }
+
+    let mut i = 0usize;
+    while i < bytes.len() && bytes[i].is_ascii_digit() {
+        i += 1;
+    }
+    if i == 0 || i + 1 >= bytes.len() {
+        return None;
+    }
+    let delim = bytes[i];
+    if delim != b'.' && delim != b')' {
+        return None;
+    }
+    let ws = bytes[i + 1];
+    if ws != b' ' && ws != b'\t' {
+        return None;
+    }
+    let num: u32 = s[..i].parse().ok()?;
+    Some((true, num, s[i + 2..].trim_start()))
 }
 
 #[derive(Debug, Default, Clone)]
@@ -738,5 +1026,28 @@ mod tests {
         let _a2 = state.apply_update(u2);
         assert_eq!(state.committed().len(), 2);
         assert!(state.pending().is_none());
+    }
+
+    #[test]
+    fn parses_list_items() {
+        let info = parse_list_info("- a\n- b\n  c\n");
+        assert!(!info.ordered);
+        assert_eq!(info.items.len(), 2);
+        assert_eq!(info.items[0].as_ref(), "a");
+        assert_eq!(info.items[1].as_ref(), "b\nc");
+
+        let info = parse_list_info("2. a\n3. b\n");
+        assert!(info.ordered);
+        assert_eq!(info.start, 2);
+        assert_eq!(info.items.len(), 2);
+        assert_eq!(info.items[0].as_ref(), "a");
+        assert_eq!(info.items[1].as_ref(), "b");
+    }
+
+    #[test]
+    fn strips_blockquote_prefixes() {
+        let text = Arc::<str>::from("> a\n> b\n  > c\n");
+        let out = strip_blockquote_prefix(&text);
+        assert_eq!(out.as_ref(), "a\nb\nc");
     }
 }
