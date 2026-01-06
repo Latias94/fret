@@ -2045,6 +2045,13 @@ struct PlotLayout {
     x_axis: Rect,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PlotRegion {
+    Plot,
+    XAxis,
+    YAxis(YAxis),
+}
+
 impl PlotLayout {
     fn from_bounds(
         bounds: Rect,
@@ -2117,6 +2124,28 @@ impl PlotLayout {
             y_axis_right3,
             x_axis,
         }
+    }
+
+    fn hit_test_region(&self, position: Point) -> Option<PlotRegion> {
+        if contains_point(self.plot, position) {
+            return Some(PlotRegion::Plot);
+        }
+        if contains_point(self.x_axis, position) {
+            return Some(PlotRegion::XAxis);
+        }
+        if contains_point(self.y_axis_left, position) {
+            return Some(PlotRegion::YAxis(YAxis::Left));
+        }
+        if contains_point(self.y_axis_right, position) {
+            return Some(PlotRegion::YAxis(YAxis::Right));
+        }
+        if contains_point(self.y_axis_right2, position) {
+            return Some(PlotRegion::YAxis(YAxis::Right2));
+        }
+        if contains_point(self.y_axis_right3, position) {
+            return Some(PlotRegion::YAxis(YAxis::Right3));
+        }
+        None
     }
 }
 
@@ -3082,6 +3111,7 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     y3_constraints: AxisConstraints,
     y4_constraints: AxisConstraints,
     pan_button: Option<MouseButton>,
+    pan_target: Option<PlotRegion>,
     pan_start_pos: Option<Point>,
     pan_last_pos: Option<Point>,
     box_zoom_start: Option<Point>,
@@ -3847,6 +3877,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             y3_constraints: AxisConstraints::default(),
             y4_constraints: AxisConstraints::default(),
             pan_button: None,
+            pan_target: None,
             pan_start_pos: None,
             pan_last_pos: None,
             box_zoom_start: None,
@@ -5265,6 +5296,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.hover = None;
                     self.cursor_px = None;
                     self.pan_button = None;
+                    self.pan_target = None;
                     self.pan_start_pos = None;
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
@@ -5289,6 +5321,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.cursor_px = None;
                     self.legend_hover = None;
                     self.pan_button = None;
+                    self.pan_target = None;
                     self.pan_start_pos = None;
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
@@ -5322,6 +5355,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
                     if has_active_drag {
                         self.pan_button = None;
+                        self.pan_target = None;
                         self.pan_start_pos = None;
                         self.pan_last_pos = None;
                         self.box_zoom_start = None;
@@ -5466,14 +5500,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     return;
                 }
 
-                let inside = contains_point(layout.plot, *position);
-                if !inside {
+                let region = layout.hit_test_region(*position);
+                if region.is_none() {
                     return;
                 }
 
                 // ImPlot-compatible box zoom cancel: a distinct button press cancels an active box
                 // selection (default: LMB cancels RMB selection).
-                if self.box_zoom_start.is_some()
+                if region == Some(PlotRegion::Plot)
+                    && self.box_zoom_start.is_some()
                     && let Some(cancel) = self.input_map.box_zoom_cancel
                     && cancel.matches(*button, *modifiers)
                     && self
@@ -5481,6 +5516,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         .is_some_and(|active| active != cancel.button)
                 {
                     self.pan_button = None;
+                    self.pan_target = None;
                     self.pan_start_pos = None;
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
@@ -5516,7 +5552,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     return;
                 }
 
-                self.cursor_px = Some(local_from_absolute(layout.plot.origin, *position));
+                if start_query || start_box_primary || start_box_alt {
+                    if region != Some(PlotRegion::Plot) {
+                        return;
+                    }
+                } else if start_pan && region.is_none() {
+                    return;
+                }
+
+                self.cursor_px = (region == Some(PlotRegion::Plot))
+                    .then(|| local_from_absolute(layout.plot.origin, *position));
                 self.hover = None;
 
                 if start_query {
@@ -5525,6 +5570,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.query_drag_current = Some(local);
                     self.query_drag_button = Some(*button);
                     self.pan_button = None;
+                    self.pan_target = None;
                     self.pan_start_pos = None;
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
@@ -5545,16 +5591,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             .modifiers
                     });
                     self.pan_button = None;
+                    self.pan_target = None;
                     self.pan_start_pos = None;
                     self.pan_last_pos = None;
                     self.query_drag_start = None;
                     self.query_drag_current = None;
                     self.query_drag_button = None;
                 } else {
-                    let _ = self.update_plot_state(cx.app, |s| {
-                        s.view_is_auto = false;
-                    });
                     self.pan_button = Some(*button);
+                    self.pan_target = region;
                     self.pan_start_pos = Some(*position);
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
@@ -5605,52 +5650,234 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             y_axis_right3_gap,
                             x_axis_gap,
                         );
-                        if layout.plot.size.width.0 > 0.0
-                            && layout.plot.size.height.0 > 0.0
-                            && contains_point(layout.plot, *position)
-                        {
-                            let (view, view_y2, view_y3, view_y4) =
-                                self.fit_view_to_data_now(cx.app);
-                            let show_y2_axis = self.show_y2_axis;
-                            let show_y3_axis = self.show_y3_axis;
-                            let show_y4_axis = self.show_y4_axis;
-                            let _ = self.update_plot_state(cx.app, |s| {
-                                s.view_is_auto = false;
-                                s.view_bounds = Some(view);
-                                if show_y2_axis {
-                                    s.view_y2_is_auto = false;
-                                    s.view_bounds_y2 = view_y2;
-                                }
-                                if show_y3_axis {
-                                    s.view_y3_is_auto = false;
-                                    s.view_bounds_y3 = view_y3;
-                                }
-                                if show_y4_axis {
-                                    s.view_y4_is_auto = false;
-                                    s.view_bounds_y4 = view_y4;
-                                }
-                            });
+                        if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
+                            let region = layout.hit_test_region(*position);
+                            if let Some(region) = region {
+                                let (fit, fit_y2, fit_y3, fit_y4) =
+                                    self.fit_view_to_data_now(cx.app);
+                                let show_y2_axis = self.show_y2_axis;
+                                let show_y3_axis = self.show_y3_axis;
+                                let show_y4_axis = self.show_y4_axis;
 
-                            self.hover = None;
-                            self.cursor_px = None;
-                            self.legend_hover = None;
-                            self.pan_button = None;
-                            self.pan_start_pos = None;
-                            self.pan_last_pos = None;
-                            self.box_zoom_start = None;
-                            self.box_zoom_current = None;
-                            self.box_zoom_button = None;
-                            self.box_zoom_required_mods = None;
-                            self.query_drag_button = None;
-                            self.query_drag_start = None;
-                            self.query_drag_current = None;
-                            if cx.captured == Some(cx.node) {
-                                cx.release_pointer_capture();
+                                let state = self.read_plot_state(cx.app);
+                                let current = self.current_view_bounds(cx.app, &state);
+                                let current_y2 =
+                                    self.current_view_bounds_y2(cx.app, &state, current);
+                                let current_y3 =
+                                    self.current_view_bounds_y3(cx.app, &state, current);
+                                let current_y4 =
+                                    self.current_view_bounds_y4(cx.app, &state, current);
+
+                                let lock_x_zoom = self.lock_x.zoom;
+                                let lock_y1_zoom = self.lock_y.zoom;
+                                let lock_y2_zoom = self.lock_y2.zoom;
+                                let lock_y3_zoom = self.lock_y3.zoom;
+                                let lock_y4_zoom = self.lock_y4.zoom;
+
+                                let x_scale = self.x_scale;
+                                let y_scale = self.y_scale;
+                                let y2_scale = self.y2_scale;
+                                let y3_scale = self.y3_scale;
+                                let y4_scale = self.y4_scale;
+
+                                let x_constraints = self.x_constraints;
+                                let y_constraints = self.y_constraints;
+                                let y2_constraints = self.y2_constraints;
+                                let y3_constraints = self.y3_constraints;
+                                let y4_constraints = self.y4_constraints;
+
+                                let _ = self.update_plot_state(cx.app, |s| match region {
+                                    PlotRegion::Plot => {
+                                        s.view_is_auto = false;
+                                        s.view_bounds = Some(fit);
+                                        if show_y2_axis {
+                                            s.view_y2_is_auto = false;
+                                            s.view_bounds_y2 = fit_y2;
+                                        }
+                                        if show_y3_axis {
+                                            s.view_y3_is_auto = false;
+                                            s.view_bounds_y3 = fit_y3;
+                                        }
+                                        if show_y4_axis {
+                                            s.view_y4_is_auto = false;
+                                            s.view_bounds_y4 = fit_y4;
+                                        }
+                                    }
+                                    PlotRegion::XAxis => {
+                                        if lock_x_zoom {
+                                            return;
+                                        }
+
+                                        let mut next = current;
+                                        next.x_min = fit.x_min;
+                                        next.x_max = fit.x_max;
+                                        next = constrain_view_bounds_scaled(
+                                            next,
+                                            x_scale,
+                                            y_scale,
+                                            x_constraints,
+                                            y_constraints,
+                                        );
+
+                                        let next_y2 = current_y2.map(|mut vb| {
+                                            vb.x_min = fit.x_min;
+                                            vb.x_max = fit.x_max;
+                                            constrain_view_bounds_scaled(
+                                                vb,
+                                                x_scale,
+                                                y2_scale,
+                                                x_constraints,
+                                                y2_constraints,
+                                            )
+                                        });
+                                        let next_y3 = current_y3.map(|mut vb| {
+                                            vb.x_min = fit.x_min;
+                                            vb.x_max = fit.x_max;
+                                            constrain_view_bounds_scaled(
+                                                vb,
+                                                x_scale,
+                                                y3_scale,
+                                                x_constraints,
+                                                y3_constraints,
+                                            )
+                                        });
+                                        let next_y4 = current_y4.map(|mut vb| {
+                                            vb.x_min = fit.x_min;
+                                            vb.x_max = fit.x_max;
+                                            constrain_view_bounds_scaled(
+                                                vb,
+                                                x_scale,
+                                                y4_scale,
+                                                x_constraints,
+                                                y4_constraints,
+                                            )
+                                        });
+
+                                        s.view_is_auto = false;
+                                        s.view_bounds = Some(next);
+                                        if show_y2_axis {
+                                            s.view_y2_is_auto = false;
+                                            s.view_bounds_y2 = next_y2;
+                                        }
+                                        if show_y3_axis {
+                                            s.view_y3_is_auto = false;
+                                            s.view_bounds_y3 = next_y3;
+                                        }
+                                        if show_y4_axis {
+                                            s.view_y4_is_auto = false;
+                                            s.view_bounds_y4 = next_y4;
+                                        }
+                                    }
+                                    PlotRegion::YAxis(axis) => match axis {
+                                        YAxis::Left => {
+                                            if lock_y1_zoom {
+                                                return;
+                                            }
+
+                                            let mut next = current;
+                                            next.y_min = fit.y_min;
+                                            next.y_max = fit.y_max;
+                                            next = constrain_view_bounds_scaled(
+                                                next,
+                                                x_scale,
+                                                y_scale,
+                                                x_constraints,
+                                                y_constraints,
+                                            );
+                                            s.view_is_auto = false;
+                                            s.view_bounds = Some(next);
+                                        }
+                                        YAxis::Right => {
+                                            if lock_y2_zoom {
+                                                return;
+                                            }
+                                            let Some(fit_axis) = fit_y2 else {
+                                                return;
+                                            };
+                                            let Some(mut next) = current_y2 else {
+                                                return;
+                                            };
+                                            next.y_min = fit_axis.y_min;
+                                            next.y_max = fit_axis.y_max;
+                                            next = constrain_view_bounds_scaled(
+                                                next,
+                                                x_scale,
+                                                y2_scale,
+                                                x_constraints,
+                                                y2_constraints,
+                                            );
+                                            s.view_y2_is_auto = false;
+                                            s.view_bounds_y2 = Some(next);
+                                        }
+                                        YAxis::Right2 => {
+                                            if lock_y3_zoom {
+                                                return;
+                                            }
+                                            let Some(fit_axis) = fit_y3 else {
+                                                return;
+                                            };
+                                            let Some(mut next) = current_y3 else {
+                                                return;
+                                            };
+                                            next.y_min = fit_axis.y_min;
+                                            next.y_max = fit_axis.y_max;
+                                            next = constrain_view_bounds_scaled(
+                                                next,
+                                                x_scale,
+                                                y3_scale,
+                                                x_constraints,
+                                                y3_constraints,
+                                            );
+                                            s.view_y3_is_auto = false;
+                                            s.view_bounds_y3 = Some(next);
+                                        }
+                                        YAxis::Right3 => {
+                                            if lock_y4_zoom {
+                                                return;
+                                            }
+                                            let Some(fit_axis) = fit_y4 else {
+                                                return;
+                                            };
+                                            let Some(mut next) = current_y4 else {
+                                                return;
+                                            };
+                                            next.y_min = fit_axis.y_min;
+                                            next.y_max = fit_axis.y_max;
+                                            next = constrain_view_bounds_scaled(
+                                                next,
+                                                x_scale,
+                                                y4_scale,
+                                                x_constraints,
+                                                y4_constraints,
+                                            );
+                                            s.view_y4_is_auto = false;
+                                            s.view_bounds_y4 = Some(next);
+                                        }
+                                    },
+                                });
+
+                                self.hover = None;
+                                self.cursor_px = None;
+                                self.legend_hover = None;
+                                self.pan_button = None;
+                                self.pan_target = None;
+                                self.pan_start_pos = None;
+                                self.pan_last_pos = None;
+                                self.box_zoom_start = None;
+                                self.box_zoom_current = None;
+                                self.box_zoom_button = None;
+                                self.box_zoom_required_mods = None;
+                                self.query_drag_button = None;
+                                self.query_drag_start = None;
+                                self.query_drag_current = None;
+                                if cx.captured == Some(cx.node) {
+                                    cx.release_pointer_capture();
+                                }
+                                cx.invalidate_self(Invalidation::Paint);
+                                cx.request_redraw();
+                                cx.stop_propagation();
+                                return;
                             }
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
-                            cx.stop_propagation();
-                            return;
                         }
                     }
 
@@ -6016,6 +6243,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             cx.release_pointer_capture();
                         }
                         self.pan_button = None;
+                        self.pan_target = None;
                         self.pan_last_pos = None;
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
@@ -6048,10 +6276,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     return;
                 }
 
-                let inside = contains_point(layout.plot, *position);
-                if !inside {
+                let Some(region) = layout.hit_test_region(*position) else {
                     return;
-                }
+                };
                 if self.box_zoom_start.is_some() || self.query_drag_start.is_some() {
                     return;
                 }
@@ -6068,19 +6295,43 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 let zoom = clamp_zoom_factors(2.0_f32.powf(delta_y * 0.0025));
-                let (zoom_x_raw, zoom_y_raw) = if modifiers.shift {
-                    (zoom, 1.0)
-                } else if modifiers.ctrl {
-                    (1.0, zoom)
-                } else {
-                    (zoom, zoom)
-                };
+                let mut zoom_x = zoom;
+                let mut zoom_y1 = zoom;
+                let mut zoom_y2 = zoom;
+                let mut zoom_y3 = zoom;
+                let mut zoom_y4 = zoom;
 
-                let mut zoom_x = zoom_x_raw;
-                let mut zoom_y1 = zoom_y_raw;
-                let mut zoom_y2 = zoom_y_raw;
-                let mut zoom_y3 = zoom_y_raw;
-                let mut zoom_y4 = zoom_y_raw;
+                match region {
+                    PlotRegion::Plot => {
+                        if modifiers.shift {
+                            zoom_y1 = 1.0;
+                            zoom_y2 = 1.0;
+                            zoom_y3 = 1.0;
+                            zoom_y4 = 1.0;
+                        } else if modifiers.ctrl {
+                            zoom_x = 1.0;
+                        }
+                    }
+                    PlotRegion::XAxis => {
+                        zoom_y1 = 1.0;
+                        zoom_y2 = 1.0;
+                        zoom_y3 = 1.0;
+                        zoom_y4 = 1.0;
+                    }
+                    PlotRegion::YAxis(axis) => {
+                        zoom_x = 1.0;
+                        zoom_y1 = 1.0;
+                        zoom_y2 = 1.0;
+                        zoom_y3 = 1.0;
+                        zoom_y4 = 1.0;
+                        match axis {
+                            YAxis::Left => zoom_y1 = zoom,
+                            YAxis::Right => zoom_y2 = zoom,
+                            YAxis::Right2 => zoom_y3 = zoom,
+                            YAxis::Right3 => zoom_y4 = zoom,
+                        }
+                    }
+                }
 
                 if self.lock_x.zoom {
                     zoom_x = 1.0;
@@ -6328,6 +6579,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 let pan_active = self.pan_button.is_some()
+                    && self.pan_target.is_some()
                     && (self.pan_start_pos.is_some() || self.pan_last_pos.is_some());
                 if self.box_zoom_start.is_none() && !pan_active {
                     if let Some((legend, rows)) = self.legend_layout(layout)
@@ -6393,7 +6645,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     return;
                 }
 
-                if let Some(start) = self.pan_start_pos {
+                if let Some(start) = self.pan_start_pos
+                    && self.pan_button.is_some()
+                    && let Some(target) = self.pan_target
+                {
                     let last = self.pan_last_pos.unwrap_or(start);
                     self.cursor_px = None;
                     let dx_px_raw = position.x.0 - last.x.0;
@@ -6404,11 +6659,42 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         return;
                     }
 
-                    let dx_px = if self.lock_x.pan { 0.0 } else { dx_px_raw };
-                    let dy_px_y1 = if self.lock_y.pan { 0.0 } else { dy_px_raw };
-                    let dy_px_y2 = if self.lock_y2.pan { 0.0 } else { dy_px_raw };
-                    let dy_px_y3 = if self.lock_y3.pan { 0.0 } else { dy_px_raw };
-                    let dy_px_y4 = if self.lock_y4.pan { 0.0 } else { dy_px_raw };
+                    let mut dx_px = if self.lock_x.pan { 0.0 } else { dx_px_raw };
+                    let mut dy_px_y1 = if self.lock_y.pan { 0.0 } else { dy_px_raw };
+                    let mut dy_px_y2 = if self.lock_y2.pan { 0.0 } else { dy_px_raw };
+                    let mut dy_px_y3 = if self.lock_y3.pan { 0.0 } else { dy_px_raw };
+                    let mut dy_px_y4 = if self.lock_y4.pan { 0.0 } else { dy_px_raw };
+
+                    match target {
+                        PlotRegion::Plot => {}
+                        PlotRegion::XAxis => {
+                            dy_px_y1 = 0.0;
+                            dy_px_y2 = 0.0;
+                            dy_px_y3 = 0.0;
+                            dy_px_y4 = 0.0;
+                        }
+                        PlotRegion::YAxis(axis) => {
+                            dx_px = 0.0;
+                            dy_px_y1 = 0.0;
+                            dy_px_y2 = 0.0;
+                            dy_px_y3 = 0.0;
+                            dy_px_y4 = 0.0;
+                            match axis {
+                                YAxis::Left => {
+                                    dy_px_y1 = if self.lock_y.pan { 0.0 } else { dy_px_raw }
+                                }
+                                YAxis::Right => {
+                                    dy_px_y2 = if self.lock_y2.pan { 0.0 } else { dy_px_raw }
+                                }
+                                YAxis::Right2 => {
+                                    dy_px_y3 = if self.lock_y3.pan { 0.0 } else { dy_px_raw }
+                                }
+                                YAxis::Right3 => {
+                                    dy_px_y4 = if self.lock_y4.pan { 0.0 } else { dy_px_raw }
+                                }
+                            }
+                        }
+                    }
 
                     let no_right_pan = (!self.show_y2_axis || dy_px_y2 == 0.0)
                         && (!self.show_y3_axis || dy_px_y3 == 0.0)

@@ -177,7 +177,8 @@ pub fn build_driver() -> impl WinitAppDriver {
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title:
-            "fret-demo heatmap_demo (Shift+Drag zoom, Alt+Drag query, Q clear query)".to_string(),
+            "fret-demo heatmap_demo (RMB drag zoom, Alt+LMB drag query, LMB double-click fit)"
+                .to_string(),
         main_window_size: winit::dpi::LogicalSize::new(960.0, 640.0),
         ..Default::default()
     }

@@ -261,7 +261,8 @@ pub fn build_app() -> App {
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
         main_window_title:
-            "fret-demo plot_demo (LogX, Shift+Drag zoom, Alt+Drag query, Q clear query)".to_string(),
+            "fret-demo plot_demo (LogX, RMB drag zoom, Alt+LMB drag query, LMB double-click fit)"
+                .to_string(),
         main_window_size: winit::dpi::LogicalSize::new(960.0, 640.0),
         ..Default::default()
     }
