@@ -375,9 +375,16 @@ impl Tabs {
 
                                 let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                                 let pad_y = MetricRef::space(Space::N1).resolve(&theme);
+                                // new-york-v4: trigger uses `h-[calc(100%-1px)]` relative to the list
+                                // content box (after list padding).
+                                let trigger_h = Px(
+                                    (list_height.0 - list_padding.0 * 2.0 - 1.0).max(0.0),
+                                );
                                 let trigger_layout = decl_style::layout_style(
                                     &theme,
-                                    LayoutRefinement::default().flex_1(),
+                                    LayoutRefinement::default()
+                                        .flex_1()
+                                        .h_px(MetricRef::Px(trigger_h)),
                                 );
 
                                 let mut out: Vec<AnyElement> =
@@ -435,6 +442,12 @@ impl Tabs {
 
                                         let children = vec![cx.container(
                                             ContainerProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.width = Length::Fill;
+                                                    layout.size.height = Length::Fill;
+                                                    layout
+                                                },
                                                 padding: Edges {
                                                     top: pad_y,
                                                     right: pad_x,
