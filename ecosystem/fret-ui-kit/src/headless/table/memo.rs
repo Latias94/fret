@@ -13,4 +13,9 @@ impl<TDeps: PartialEq, TValue> Memo<TDeps, TValue> {
         }
         (self.value.as_ref().expect("memo value"), should_recompute)
     }
+
+    pub fn reset(&mut self) {
+        self.deps = None;
+        self.value = None;
+    }
 }

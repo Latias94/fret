@@ -4,11 +4,13 @@ use std::sync::Arc;
 pub type ColumnId = Arc<str>;
 
 pub type SortCmpFn<TData> = Arc<dyn Fn(&TData, &TData) -> Ordering>;
+pub type FilterFn<TData> = Arc<dyn Fn(&TData, &str) -> bool>;
 
 #[derive(Clone)]
 pub struct ColumnDef<TData> {
     pub id: ColumnId,
     pub sort_cmp: Option<SortCmpFn<TData>>,
+    pub filter_fn: Option<FilterFn<TData>>,
 }
 
 impl<TData> std::fmt::Debug for ColumnDef<TData> {
@@ -24,11 +26,17 @@ impl<TData> ColumnDef<TData> {
         Self {
             id: id.into(),
             sort_cmp: None,
+            filter_fn: None,
         }
     }
 
     pub fn sort_by(mut self, cmp: impl Fn(&TData, &TData) -> Ordering + 'static) -> Self {
         self.sort_cmp = Some(Arc::new(cmp));
+        self
+    }
+
+    pub fn filter_by(mut self, f: impl Fn(&TData, &str) -> bool + 'static) -> Self {
+        self.filter_fn = Some(Arc::new(f));
         self
     }
 }

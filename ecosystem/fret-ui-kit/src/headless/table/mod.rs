@@ -8,6 +8,7 @@ mod column_pinning;
 mod column_sizing;
 mod column_sizing_info;
 mod column_visibility;
+mod filtering;
 mod flat_row_order;
 mod memo;
 mod pagination;
@@ -16,12 +17,16 @@ mod row_selection;
 mod sorting;
 mod state;
 
-pub use column::{ColumnDef, ColumnHelper, ColumnId, SortCmpFn, create_column_helper};
+pub use column::{ColumnDef, ColumnHelper, ColumnId, FilterFn, SortCmpFn, create_column_helper};
 pub use column_ordering::{ColumnOrderState, order_columns};
 pub use column_pinning::{ColumnPinningState, split_pinned_columns};
 pub use column_sizing::{ColumnSizingState, column_size};
 pub use column_sizing_info::ColumnSizingInfoState;
 pub use column_visibility::{ColumnVisibilityState, is_column_visible, visible_columns};
+pub use filtering::{
+    ColumnFilter, ColumnFiltersState, GlobalFilterState, contains_ascii_case_insensitive,
+    filter_row_model,
+};
 pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_order};
 pub use pagination::{PaginationState, paginate_row_model};
 pub use row_model::{Row, RowIndex, RowKey, RowModel, Table, TableBuilder};
