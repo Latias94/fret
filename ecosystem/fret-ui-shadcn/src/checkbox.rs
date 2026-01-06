@@ -69,6 +69,7 @@ pub struct Checkbox {
 #[derive(Debug, Clone)]
 enum CheckboxCheckedModel {
     Bool(Model<bool>),
+    OptionalBool(Model<Option<bool>>),
     TriState(Model<CheckedState>),
 }
 
@@ -87,6 +88,20 @@ impl Checkbox {
     pub fn new_tristate(model: Model<CheckedState>) -> Self {
         Self {
             checked: CheckboxCheckedModel::TriState(model),
+            disabled: false,
+            a11y_label: None,
+            on_click: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates a checkbox bound to an optional boolean model.
+    ///
+    /// This maps `None` to the indeterminate state, matching Radix's `"indeterminate"` outcome.
+    pub fn new_optional(model: Model<Option<bool>>) -> Self {
+        Self {
+            checked: CheckboxCheckedModel::OptionalBool(model),
             disabled: false,
             a11y_label: None,
             on_click: None,
@@ -150,6 +165,16 @@ impl Checkbox {
                 cx.pressable_dispatch_command_opt(on_click);
                 match &checked {
                     CheckboxCheckedModel::Bool(model) => cx.pressable_toggle_bool(model),
+                    CheckboxCheckedModel::OptionalBool(model) => {
+                        cx.pressable_update_model(model, |v| {
+                            let next = match *v {
+                                None => Some(true),
+                                Some(true) => Some(false),
+                                Some(false) => Some(true),
+                            };
+                            *v = next;
+                        });
+                    }
                     CheckboxCheckedModel::TriState(model) => {
                         cx.pressable_update_model(model, |v| *v = v.toggle());
                     }
@@ -159,6 +184,13 @@ impl Checkbox {
                 let state = match &checked {
                     CheckboxCheckedModel::Bool(model) => {
                         CheckedState::from(cx.watch_model(model).copied().unwrap_or(false))
+                    }
+                    CheckboxCheckedModel::OptionalBool(model) => {
+                        match cx.watch_model(model).copied().flatten() {
+                            Some(true) => CheckedState::Checked,
+                            Some(false) => CheckedState::Unchecked,
+                            None => CheckedState::Indeterminate,
+                        }
                     }
                     CheckboxCheckedModel::TriState(model) => {
                         cx.watch_model(model).copied().unwrap_or_default()
@@ -256,6 +288,13 @@ impl Checkbox {
 
 pub fn checkbox<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement {
     Checkbox::new(model).into_element(cx)
+}
+
+pub fn checkbox_opt<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<Option<bool>>,
+) -> AnyElement {
+    Checkbox::new_optional(model).into_element(cx)
 }
 
 #[cfg(test)]
@@ -441,5 +480,92 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&model), Some(CheckedState::Checked));
+    }
+
+    #[test]
+    fn checkbox_optional_none_is_indeterminate_and_toggles_to_checked() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(None::<bool>);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-checkbox-optional-none-indeterminate",
+            |cx| vec![Checkbox::new_optional(model.clone()).into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Checkbox)
+            .expect("checkbox semantics node");
+        assert_eq!(node.flags.checked, None);
+
+        let checkbox_node = ui.children(root)[0];
+        let checkbox_bounds = ui
+            .debug_node_bounds(checkbox_node)
+            .expect("checkbox bounds");
+        let position = Point::new(
+            Px(checkbox_bounds.origin.x.0 + checkbox_bounds.size.width.0 * 0.5),
+            Px(checkbox_bounds.origin.y.0 + checkbox_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&model), Some(Some(true)));
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-checkbox-optional-none-indeterminate",
+            |cx| vec![Checkbox::new_optional(model.clone()).into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Checkbox)
+            .expect("checkbox semantics node");
+        assert_eq!(node.flags.checked, Some(true));
     }
 }

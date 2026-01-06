@@ -22,6 +22,8 @@ This audit compares Fret’s shadcn-aligned `Checkbox` against the upstream shad
 ### Interaction
 
 - Pass: Click toggles the bound `Model<bool>`.
+- Pass: Supports optional state via `Checkbox::new_optional(Model<Option<bool>>)` where `None` maps
+  to indeterminate (Radix outcome), and click toggles to `Some(true)`.
 - Pass: Disabled state blocks interaction and applies reduced opacity.
 
 ### Semantics

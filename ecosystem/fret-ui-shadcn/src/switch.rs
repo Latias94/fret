@@ -68,7 +68,7 @@ fn switch_ring_color(theme: &Theme) -> Color {
 
 #[derive(Clone)]
 pub struct Switch {
-    model: Model<bool>,
+    model: SwitchModel,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     on_click: Option<CommandId>,
@@ -76,10 +76,31 @@ pub struct Switch {
     layout: LayoutRefinement,
 }
 
+#[derive(Clone)]
+enum SwitchModel {
+    Determinate(Model<bool>),
+    Optional(Model<Option<bool>>),
+}
+
 impl Switch {
     pub fn new(model: Model<bool>) -> Self {
         Self {
-            model,
+            model: SwitchModel::Determinate(model),
+            disabled: false,
+            a11y_label: None,
+            on_click: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates a switch bound to an optional boolean model.
+    ///
+    /// When the value is `None`, the switch renders as unchecked (matching shadcn/ui's common
+    /// `value || false` usage). Clicking will set the model to `Some(true/false)` thereafter.
+    pub fn new_opt(model: Model<Option<bool>>) -> Self {
+        Self {
+            model: SwitchModel::Optional(model),
             disabled: false,
             a11y_label: None,
             on_click: None,
@@ -141,10 +162,21 @@ impl Switch {
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_opt(on_click);
-                cx.pressable_toggle_bool(&model);
+                match &model {
+                    SwitchModel::Determinate(model) => cx.pressable_toggle_bool(model),
+                    SwitchModel::Optional(model) => {
+                        cx.pressable_update_model(model, |v| {
+                            let cur = v.unwrap_or(false);
+                            *v = Some(!cur);
+                        });
+                    }
+                }
 
                 let theme = Theme::global(&*cx.app).clone();
-                let on = cx.watch_model(&model).copied().unwrap_or(false);
+                let on = match &model {
+                    SwitchModel::Determinate(model) => cx.watch_model(model).copied().unwrap_or(false),
+                    SwitchModel::Optional(model) => cx.watch_model(model).copied().flatten().unwrap_or(false),
+                };
 
                 let mut bg = if on {
                     switch_bg_on(&theme)
@@ -236,6 +268,10 @@ impl Switch {
 
 pub fn switch<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement {
     Switch::new(model).into_element(cx)
+}
+
+pub fn switch_opt<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<Option<bool>>) -> AnyElement {
+    Switch::new_opt(model).into_element(cx)
 }
 
 #[cfg(test)]
@@ -361,5 +397,91 @@ mod tests {
         let mut scene = Scene::default();
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
         assert!(!scene.ops().is_empty());
+    }
+
+    #[test]
+    fn switch_optional_none_toggles_to_some_true() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(None::<bool>);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-switch-opt-toggles-model-on-click",
+            |cx| vec![Switch::new_opt(model.clone()).into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Switch)
+            .expect("switch semantics node");
+        assert_eq!(node.flags.checked, Some(false));
+        assert_eq!(app.models().get_copied(&model), Some(None));
+
+        let switch_node = ui.children(root)[0];
+        let switch_bounds = ui.debug_node_bounds(switch_node).expect("switch bounds");
+        let position = Point::new(
+            Px(switch_bounds.origin.x.0 + switch_bounds.size.width.0 * 0.5),
+            Px(switch_bounds.origin.y.0 + switch_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&model), Some(Some(true)));
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-switch-opt-toggles-model-on-click",
+            |cx| vec![Switch::new_opt(model.clone()).into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Switch)
+            .expect("switch semantics node");
+        assert_eq!(node.flags.checked, Some(true));
     }
 }
