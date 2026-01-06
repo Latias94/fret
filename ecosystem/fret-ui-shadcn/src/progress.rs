@@ -80,19 +80,13 @@ impl Progress {
                 .metric_by_key("component.progress.radius")
                 .unwrap_or_else(|| MetricRef::radius(Radius::Full).resolve(&theme));
 
-            let track_bg = theme
-                .color_by_key("secondary")
-                .or_else(|| theme.color_by_key("muted"))
-                .unwrap_or(theme.colors.panel_background);
-            let fill = theme
-                .color_by_key("primary")
-                .or_else(|| theme.color_by_key("accent"))
-                .unwrap_or(theme.colors.accent);
+            let track_bg = theme.color_required("secondary");
+            let fill = theme.color_required("primary");
 
             let track_border = theme
                 .color_by_key("border")
                 .or_else(|| theme.color_by_key("input"))
-                .unwrap_or(theme.colors.panel_border);
+                .expect("missing theme token: border/input");
 
             let v = self.value(cx);
             let t = v
