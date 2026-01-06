@@ -201,7 +201,8 @@ pub fn slider<H: UiHost>(
             .flatten()
             .unwrap_or(min);
         let t = radix_slider::normalize_value(value, min, max);
-        let mut semantics = radix_slider::slider_root_semantics(a11y_label.clone(), value, disabled);
+        let mut semantics =
+            radix_slider::slider_root_semantics(a11y_label.clone(), value, disabled);
         semantics.layout = semantics_layout;
 
         let min_value = min;
@@ -534,6 +535,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

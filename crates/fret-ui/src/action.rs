@@ -1,5 +1,7 @@
 use crate::UiHost;
-use fret_core::{AppWindowId, Axis, CursorIcon, KeyCode, Modifiers, MouseButton, Point};
+use fret_core::{
+    AppWindowId, Axis, CursorIcon, KeyCode, Modifiers, MouseButton, Point, PointerType,
+};
 use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken, WeakModel};
 use std::any::Any;
 use std::sync::Arc;
@@ -31,6 +33,7 @@ pub struct PointerDownCx {
     pub position: Point,
     pub button: MouseButton,
     pub modifiers: Modifiers,
+    pub pointer_type: PointerType,
 }
 
 /// Pointer move payload for component-owned pointer handlers.
@@ -39,6 +42,7 @@ pub struct PointerMoveCx {
     pub position: Point,
     pub buttons: fret_core::MouseButtons,
     pub modifiers: Modifiers,
+    pub pointer_type: PointerType,
 }
 
 /// Pointer up payload for component-owned pointer handlers.
@@ -47,6 +51,7 @@ pub struct PointerUpCx {
     pub position: Point,
     pub button: MouseButton,
     pub modifiers: Modifiers,
+    pub pointer_type: PointerType,
 }
 
 /// Key down payload for component-owned key handlers.

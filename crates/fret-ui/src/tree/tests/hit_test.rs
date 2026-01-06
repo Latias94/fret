@@ -163,6 +163,7 @@ fn hit_test_can_make_overlay_pointer_transparent() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -205,6 +206,7 @@ fn layer_hit_testable_flag_can_make_overlay_pointer_transparent() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -311,6 +313,7 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
             position: Point::new(Px(45.0), Px(5.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -320,6 +323,7 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
             position: Point::new(Px(45.0), Px(5.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -342,6 +346,7 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
             position: Point::new(Px(5.0), Px(5.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -351,6 +356,7 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
             position: Point::new(Px(5.0), Px(5.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -435,6 +441,7 @@ fn modal_barrier_blocks_underlay_pointer_events_even_when_modal_root_is_pointer_
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -662,6 +669,7 @@ fn modal_barrier_fallback_delivers_transformed_event_coordinates() {
             position: Point::new(Px(45.0), Px(5.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 

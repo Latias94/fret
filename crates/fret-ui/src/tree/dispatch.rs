@@ -914,30 +914,47 @@ impl<H: UiHost> UiTree<H> {
             Event::Pointer(e) => {
                 let e = match e {
                     PointerEvent::Move {
-                        buttons, modifiers, ..
+                        buttons,
+                        modifiers,
+                        pointer_type,
+                        ..
                     } => PointerEvent::Move {
                         position,
                         buttons: *buttons,
                         modifiers: *modifiers,
+                        pointer_type: *pointer_type,
                     },
                     PointerEvent::Down {
-                        button, modifiers, ..
+                        button,
+                        modifiers,
+                        pointer_type,
+                        ..
                     } => PointerEvent::Down {
                         position,
                         button: *button,
                         modifiers: *modifiers,
+                        pointer_type: *pointer_type,
                     },
                     PointerEvent::Up {
-                        button, modifiers, ..
+                        button,
+                        modifiers,
+                        pointer_type,
+                        ..
                     } => PointerEvent::Up {
                         position,
                         button: *button,
                         modifiers: *modifiers,
+                        pointer_type: *pointer_type,
                     },
-                    PointerEvent::Wheel { modifiers, .. } => PointerEvent::Wheel {
+                    PointerEvent::Wheel {
+                        modifiers,
+                        pointer_type,
+                        ..
+                    } => PointerEvent::Wheel {
                         position,
                         delta: delta.unwrap_or(Point::new(Px(0.0), Px(0.0))),
                         modifiers: *modifiers,
+                        pointer_type: *pointer_type,
                     },
                 };
                 Event::Pointer(e)

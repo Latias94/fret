@@ -61,6 +61,7 @@ fn hover_region_reports_hovered_even_when_child_is_pressable() {
             position: pos,
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -468,6 +469,7 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
             position: wheel_pos,
             delta: fret_core::Point::new(Px(0.0), Px(-10.0)),
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -593,6 +595,7 @@ fn scroll_thumb_drag_updates_offset() {
             position: down_pos,
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -605,6 +608,7 @@ fn scroll_thumb_drag_updates_offset() {
                 ..Default::default()
             },
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -614,6 +618,7 @@ fn scroll_thumb_drag_updates_offset() {
             position: move_pos,
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -750,6 +755,7 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
             position: down_pos,
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -762,6 +768,7 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
                 ..Default::default()
             },
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -771,6 +778,7 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
             position: move_pos,
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -1257,6 +1265,7 @@ fn focus_ring_is_focus_visible_only() {
             position: fret_core::Point::new(Px(4.0), Px(4.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     assert_eq!(
@@ -1622,6 +1631,7 @@ fn pressable_dispatches_click_command_when_released_over_self() {
             position,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -1631,6 +1641,7 @@ fn pressable_dispatches_click_command_when_released_over_self() {
             position,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -1650,6 +1661,7 @@ fn pressable_dispatches_click_command_when_released_over_self() {
             position: Point::new(Px(200.0), Px(200.0)),
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 }

@@ -47,6 +47,7 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -56,6 +57,7 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -182,6 +184,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
             position: Point::new(Px(45.0), Px(6.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -209,6 +212,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -298,6 +302,7 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -409,6 +414,7 @@ fn outside_press_observer_can_suppress_hit_test_dispatch() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -418,6 +424,7 @@ fn outside_press_observer_can_suppress_hit_test_dispatch() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -530,6 +537,7 @@ fn outside_press_observer_suppression_respects_dismissable_branches() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -539,6 +547,7 @@ fn outside_press_observer_suppression_respects_dismissable_branches() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 

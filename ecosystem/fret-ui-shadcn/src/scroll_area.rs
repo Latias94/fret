@@ -232,6 +232,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

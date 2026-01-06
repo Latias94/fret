@@ -2515,6 +2515,7 @@ mod tests {
                 ),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

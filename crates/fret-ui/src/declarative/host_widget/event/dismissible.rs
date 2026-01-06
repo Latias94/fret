@@ -72,6 +72,8 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
             position,
             buttons,
             modifiers,
+            pointer_type,
+            ..
         }) => {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
@@ -89,6 +91,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                 position: *position,
                 buttons: *buttons,
                 modifiers: *modifiers,
+                pointer_type: *pointer_type,
             };
 
             let mut host = action::UiActionHostAdapter { app: &mut *cx.app };

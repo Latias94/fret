@@ -402,6 +402,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -411,6 +412,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -464,6 +466,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -473,6 +476,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -531,6 +535,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -540,6 +545,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

@@ -64,6 +64,20 @@ pub enum MouseButton {
     Other(u16),
 }
 
+/// Pointer device classification for unified pointer events.
+///
+/// This is intentionally small and Radix-aligned: it is used by component-layer policies to
+/// distinguish mouse-specific behaviors (e.g. open-on-pointer-down) from touch/pen behaviors
+/// (e.g. open-on-click to avoid scroll-to-open).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PointerType {
+    #[default]
+    Mouse,
+    Touch,
+    Pen,
+    Unknown,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Modifiers {
     pub shift: bool,
@@ -95,21 +109,25 @@ pub enum PointerEvent {
         position: Point,
         buttons: MouseButtons,
         modifiers: Modifiers,
+        pointer_type: PointerType,
     },
     Down {
         position: Point,
         button: MouseButton,
         modifiers: Modifiers,
+        pointer_type: PointerType,
     },
     Up {
         position: Point,
         button: MouseButton,
         modifiers: Modifiers,
+        pointer_type: PointerType,
     },
     Wheel {
         position: Point,
         delta: Point,
         modifiers: Modifiers,
+        pointer_type: PointerType,
     },
 }
 

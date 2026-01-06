@@ -115,6 +115,7 @@ fn resizable_panel_group_drag_updates_fractions_model() {
             position: Point::new(Px(center), Px(20.0)),
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     assert_eq!(ui.captured(), Some(root_id), "expected pointer capture");
@@ -125,6 +126,7 @@ fn resizable_panel_group_drag_updates_fractions_model() {
             position: Point::new(Px(center + 30.0), Px(20.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -134,6 +136,7 @@ fn resizable_panel_group_drag_updates_fractions_model() {
             position: Point::new(Px(center + 30.0), Px(20.0)),
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -203,6 +206,7 @@ fn resizable_panel_group_pushes_growth_through_following_panels() {
             position: Point::new(Px(center), Px(20.0)),
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     assert_eq!(ui.captured(), Some(root_id), "expected pointer capture");
@@ -214,6 +218,7 @@ fn resizable_panel_group_pushes_growth_through_following_panels() {
             position: Point::new(Px(center + 250.0), Px(20.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -223,6 +228,7 @@ fn resizable_panel_group_pushes_growth_through_following_panels() {
             position: Point::new(Px(center + 250.0), Px(20.0)),
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -304,6 +310,7 @@ fn resizable_panel_group_shrink_clamps_to_min_px() {
             position: Point::new(Px(center), Px(20.0)),
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     assert_eq!(ui.captured(), Some(root_id), "expected pointer capture");
@@ -315,6 +322,7 @@ fn resizable_panel_group_shrink_clamps_to_min_px() {
             position: Point::new(Px(center - 250.0), Px(20.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -324,6 +332,7 @@ fn resizable_panel_group_shrink_clamps_to_min_px() {
             position: Point::new(Px(center - 250.0), Px(20.0)),
             button: MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 

@@ -3163,6 +3163,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -3172,6 +3173,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
@@ -3279,6 +3281,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -3288,6 +3291,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
@@ -3359,6 +3363,7 @@ mod tests {
                 position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -3472,6 +3477,7 @@ mod tests {
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         let hover_hit = ui.debug_hit_test(rect_center(more_bounds));
@@ -3568,6 +3574,7 @@ mod tests {
                 position: Point::new(Px(390.0), Px(10.0)),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -3720,6 +3727,7 @@ mod tests {
                 position: rect_center(more_bounds),
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -3796,6 +3804,7 @@ mod tests {
                 position: safe_point,
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

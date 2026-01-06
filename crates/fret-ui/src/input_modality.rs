@@ -106,6 +106,7 @@ mod tests {
                 position: fret_core::Point::new(fret_core::Px(1.0), fret_core::Px(2.0)),
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             })
         ));
         assert_eq!(modality(&mut app, Some(window)), InputModality::Pointer);

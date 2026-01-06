@@ -223,6 +223,7 @@ fn dismissible_popover_closes_on_outside_press() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -232,6 +233,7 @@ fn dismissible_popover_closes_on_outside_press() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -277,6 +279,7 @@ fn dismissible_popover_closes_on_outside_press() {
             position: Point::new(Px(250.0), Px(180.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(false));
@@ -316,6 +319,7 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -325,6 +329,7 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -395,6 +400,7 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             position: Point::new(Px(50.0), Px(50.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -436,6 +442,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -445,6 +452,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -489,6 +497,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -498,6 +507,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
 
@@ -573,6 +583,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -582,6 +593,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -627,6 +639,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -636,6 +649,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
 
@@ -677,6 +691,7 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -686,6 +701,7 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -793,6 +809,7 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -802,6 +819,7 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -966,6 +984,7 @@ fn modal_blocks_underlay_click_and_closes_on_escape() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -975,6 +994,7 @@ fn modal_blocks_underlay_click_and_closes_on_escape() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
 
@@ -1088,6 +1108,7 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -1097,6 +1118,7 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
 
@@ -1203,6 +1225,7 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -1212,6 +1235,7 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
 
@@ -1400,6 +1424,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -1409,6 +1434,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -1479,6 +1505,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -1488,6 +1515,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
 
@@ -1552,6 +1580,7 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -1561,6 +1590,7 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -1630,6 +1660,7 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -1639,6 +1670,7 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: Default::default(),
         }),
     );
 

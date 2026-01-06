@@ -2750,6 +2750,7 @@ mod tests {
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -2759,6 +2760,7 @@ mod tests {
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -2776,6 +2778,7 @@ mod tests {
                 position: edit,
                 buttons: MouseButtons::default(),
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -2913,6 +2916,7 @@ mod tests {
                 position: file_pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -2922,6 +2926,7 @@ mod tests {
                 position: file_pos,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -2973,6 +2978,7 @@ mod tests {
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -2982,6 +2988,7 @@ mod tests {
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -3032,6 +3039,7 @@ mod tests {
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -3041,6 +3049,7 @@ mod tests {
                 position: file,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
