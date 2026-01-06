@@ -24,6 +24,7 @@ Key upstream concepts:
 
 - Pass: Normalization/snap behavior is reusable via `headless::slider`.
 - Pass: shadcn `Slider` uses `primitives::slider` for semantics value formatting and pointer update.
-- Partial: The facade currently focuses on the single-thumb outcome; multi-thumb modeling is still
-  pending.
-
+- Pass: Headless multi-thumb modeling is available (`closest_value_index`, sorting, minimum steps
+  between thumbs).
+- Partial: Higher-level recipes still use the single-thumb surface; multi-thumb pointer wiring
+  requires tracking `value_index_to_change` across drag (Radix `valueIndexToChangeRef`).
