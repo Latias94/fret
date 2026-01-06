@@ -106,6 +106,82 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         }
     }
 
+    // new-york-v4 component defaults are expressed as Tailwind classes in the upstream registry
+    // (e.g. `h-9`, `px-3`, `gap-2`, `focus-visible:ring-[3px]`). Our component library consumes
+    // theme metrics, so we seed those defaults here to reduce per-component drift.
+    //
+    // Note: keep this small and scoped to ergonomic, high-signal tokens; component-specific
+    // deviations should live in the component implementations and audit doc.
+    metrics
+        .entry("metric.padding.sm".to_string())
+        .or_insert(8.0);
+    metrics
+        .entry("metric.padding.md".to_string())
+        .or_insert(10.0);
+    metrics
+        .entry("metric.font.size".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("metric.font.line_height".to_string())
+        .or_insert(20.0);
+
+    metrics
+        .entry("component.ring.width".to_string())
+        .or_insert(3.0);
+    metrics
+        .entry("component.ring.offset".to_string())
+        .or_insert(0.0);
+
+    metrics
+        .entry("component.size.md.input.h".to_string())
+        .or_insert(36.0);
+    metrics
+        .entry("component.size.md.input.px".to_string())
+        .or_insert(12.0);
+    metrics
+        .entry("component.size.md.input.py".to_string())
+        .or_insert(4.0);
+
+    metrics
+        .entry("component.size.md.button.h".to_string())
+        .or_insert(36.0);
+    metrics
+        .entry("component.size.sm.button.h".to_string())
+        .or_insert(32.0);
+    metrics
+        .entry("component.size.lg.button.h".to_string())
+        .or_insert(40.0);
+    metrics
+        .entry("component.size.md.icon_button.size".to_string())
+        .or_insert(36.0);
+    metrics
+        .entry("component.size.sm.icon_button.size".to_string())
+        .or_insert(32.0);
+    metrics
+        .entry("component.size.lg.icon_button.size".to_string())
+        .or_insert(40.0);
+
+    if let Some(ring) = colors.get("ring").cloned() {
+        if let Some(ring_50) = with_oklch_alpha(&ring, 0.5) {
+            colors.insert("ring/50".to_string(), ring_50);
+        }
+    }
+    match scheme {
+        ShadcnColorScheme::Light => {
+            // `bg-transparent` for inputs in light mode.
+            colors.insert("component.input.bg".to_string(), "#00000000".to_string());
+        }
+        ShadcnColorScheme::Dark => {
+            // `dark:bg-input/30` in the upstream Input component.
+            if let Some(input) = colors.get("input").cloned() {
+                colors.insert(
+                    "component.input.bg".to_string(),
+                    with_oklch_alpha(&input, 0.3).unwrap_or(input),
+                );
+            }
+        }
+    }
+
     ThemeConfig {
         name: format!("shadcn/new-york-v4/{}/{}", base.as_str(), scheme.as_str()),
         author: Some("shadcn/ui".to_string()),
@@ -136,4 +212,16 @@ fn parse_css_length_px(s: &str) -> Option<f32> {
         return Some(v);
     }
     None
+}
+
+fn with_oklch_alpha(raw: &str, alpha: f32) -> Option<String> {
+    let alpha = alpha.clamp(0.0, 1.0);
+    let raw = raw.trim();
+    let inner = raw.strip_prefix("oklch(")?.strip_suffix(')')?.trim();
+
+    // `oklch(L C H)` -> `oklch(L C H / XX%)`
+    // `oklch(L C H / YY%)` -> `oklch(L C H / XX%)`
+    let inner = inner.split('/').next()?.trim();
+    let pct = (alpha * 100.0).round().clamp(0.0, 100.0) as u32;
+    Some(format!("oklch({inner} / {pct}%)"))
 }

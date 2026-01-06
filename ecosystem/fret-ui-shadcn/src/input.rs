@@ -4,6 +4,7 @@ use fret_core::{Corners, FontId, NodeId, SemanticsRole, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 
 #[derive(Clone)]
@@ -99,7 +100,14 @@ pub fn input<H: UiHost>(
         &theme,
         fret_ui_kit::Size::default(),
         &Default::default(),
-        InputTokenKeys::none(),
+        InputTokenKeys {
+            bg: Some("component.input.bg"),
+            border: Some("input"),
+            border_focus: Some("ring"),
+            fg: Some("foreground"),
+            selection: Some("primary"),
+            ..InputTokenKeys::none()
+        },
     );
 
     let mut chrome = TextInputStyle::from_theme(theme.snapshot());
@@ -109,7 +117,11 @@ pub fn input<H: UiHost>(
     chrome.background = resolved.background;
     chrome.border_color = resolved.border_color;
     chrome.border_color_focused = resolved.border_color_focused;
+    chrome.focus_ring = Some(decl_style::focus_ring(&theme, resolved.radius));
     chrome.text_color = resolved.text_color;
+    chrome.placeholder_color = theme
+        .color_by_key("muted-foreground")
+        .unwrap_or(chrome.placeholder_color);
     chrome.caret_color = resolved.text_color;
     chrome.selection_color = resolved.selection_color;
 

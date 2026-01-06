@@ -81,6 +81,10 @@ fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color
         .or_else(|| theme.color_by_key("accent.background"))
         .unwrap_or(theme.colors.hover_background);
 
+    let bg_background = theme
+        .color_by_key("background")
+        .unwrap_or(theme.colors.surface_background);
+
     let border = theme
         .color_by_key("border")
         .unwrap_or(theme.colors.panel_border);
@@ -102,22 +106,22 @@ fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color
         ),
         ButtonVariant::Secondary => (
             bg_secondary,
-            alpha_mul(bg_secondary, 0.9),
             alpha_mul(bg_secondary, 0.8),
+            alpha_mul(bg_secondary, 0.7),
             transparent,
             fg_secondary,
         ),
         ButtonVariant::Outline => (
-            transparent,
+            bg_background,
             bg_accent,
-            theme.colors.selection_background,
+            alpha_mul(bg_accent, 0.8),
             border,
             fg_default,
         ),
         ButtonVariant::Ghost => (
             transparent,
             bg_accent,
-            theme.colors.selection_background,
+            alpha_mul(bg_accent, 0.8),
             transparent,
             fg_default,
         ),
@@ -237,11 +241,8 @@ impl Button {
 
             let (bg, bg_hover, bg_active, border_color, fg) = variant_colors(&theme, self.variant);
             let shadow_radius = self.size.component_size().control_radius(&theme);
-            let shadow = matches!(
-                self.variant,
-                ButtonVariant::Default | ButtonVariant::Secondary | ButtonVariant::Outline
-            )
-            .then(|| decl_style::shadow_sm(&theme, shadow_radius));
+            let shadow = (self.variant == ButtonVariant::Outline)
+                .then(|| decl_style::shadow_xs(&theme, shadow_radius));
 
             let size = self.size.component_size();
             let radius = size.control_radius(&theme);

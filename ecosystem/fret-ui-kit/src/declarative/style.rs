@@ -188,7 +188,8 @@ pub fn focus_ring(theme: &Theme, radius: Px) -> RingStyle {
         .metric_by_key("component.ring.offset")
         .unwrap_or(Px(2.0));
     let color = theme
-        .color_by_key("ring")
+        .color_by_key("ring/50")
+        .or_else(|| theme.color_by_key("ring"))
         .unwrap_or(theme.colors.focus_ring);
     let offset_color = theme
         .color_by_key("ring-offset-background")
@@ -199,7 +200,7 @@ pub fn focus_ring(theme: &Theme, radius: Px) -> RingStyle {
         width,
         offset,
         color,
-        offset_color: Some(offset_color),
+        offset_color: (offset.0 > 0.0).then_some(offset_color),
         corner_radii: Corners::all(radius),
     }
 }
