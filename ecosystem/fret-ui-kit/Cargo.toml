@@ -23,5 +23,8 @@ icons = ["dep:fret-icons"]
 # Opinionated declarative helpers that are closer to "recipes" than substrate.
 recipes = ["icons"]
 
+# TanStack-inspired headless table engine (`headless::table`).
+table = []
+
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
