@@ -13,7 +13,7 @@ use fret_launch::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
-use fret_ui::{Invalidation, UiTree};
+use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
     DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,

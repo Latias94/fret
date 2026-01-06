@@ -807,7 +807,7 @@ impl ComponentsGalleryDriver {
                                                                 layout.size.height = Length::Px(Px(72.0));
                                                                 layout.overflow = Overflow::Clip;
                                                                 layout
-                                                            }, 
+                                                            },
                                                             padding: Edges::all(Px(8.0)),
                                                             background: Some(
                                                                 theme.color_required("card"),
