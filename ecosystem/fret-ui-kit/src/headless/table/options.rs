@@ -30,6 +30,8 @@ pub struct TableOptions {
     pub enable_column_ordering: bool,
     /// Whether to allow column pinning at the table level (TanStack `enablePinning`).
     pub enable_column_pinning: bool,
+    /// Whether to allow column resizing at the table level (TanStack `enableColumnResizing`).
+    pub enable_column_resizing: bool,
 }
 
 impl Default for TableOptions {
@@ -44,6 +46,7 @@ impl Default for TableOptions {
             enable_hiding: true,
             enable_column_ordering: true,
             enable_column_pinning: true,
+            enable_column_resizing: true,
         }
     }
 }

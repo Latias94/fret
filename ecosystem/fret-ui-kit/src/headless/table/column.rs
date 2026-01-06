@@ -18,6 +18,10 @@ pub struct ColumnDef<TData> {
     pub enable_hiding: bool,
     pub enable_ordering: bool,
     pub enable_pinning: bool,
+    pub enable_resizing: bool,
+    pub size: f32,
+    pub min_size: f32,
+    pub max_size: f32,
 }
 
 impl<TData> std::fmt::Debug for ColumnDef<TData> {
@@ -39,6 +43,10 @@ impl<TData> ColumnDef<TData> {
             enable_hiding: true,
             enable_ordering: true,
             enable_pinning: true,
+            enable_resizing: true,
+            size: 150.0,
+            min_size: 20.0,
+            max_size: f32::MAX,
         }
     }
 
@@ -76,6 +84,26 @@ impl<TData> ColumnDef<TData> {
 
     pub fn enable_pinning(mut self, enabled: bool) -> Self {
         self.enable_pinning = enabled;
+        self
+    }
+
+    pub fn enable_resizing(mut self, enabled: bool) -> Self {
+        self.enable_resizing = enabled;
+        self
+    }
+
+    pub fn size(mut self, size: f32) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn min_size(mut self, min_size: f32) -> Self {
+        self.min_size = min_size;
+        self
+    }
+
+    pub fn max_size(mut self, max_size: f32) -> Self {
+        self.max_size = max_size;
         self
     }
 }

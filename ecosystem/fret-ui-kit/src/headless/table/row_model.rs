@@ -174,6 +174,11 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    pub fn enable_column_resizing(mut self, enabled: bool) -> Self {
+        self.options.enable_column_resizing = enabled;
+        self
+    }
+
     pub fn get_row_key(
         mut self,
         f: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'a,
@@ -540,7 +545,96 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn column_size(&self, id: &str) -> Option<f32> {
         let col = self.column(id)?;
-        super::column_size(&self.state.column_sizing, &col.id)
+        Some(super::resolved_column_size(&self.state.column_sizing, col))
+    }
+
+    pub fn column_can_resize(&self, id: &str) -> Option<bool> {
+        let col = self.column(id)?;
+        Some(super::column_can_resize(self.options, col))
+    }
+
+    pub fn total_size(&self) -> f32 {
+        self.visible_columns()
+            .into_iter()
+            .map(|c| super::resolved_column_size(&self.state.column_sizing, c))
+            .sum()
+    }
+
+    pub fn pinned_total_sizes(&self) -> (f32, f32, f32) {
+        let (left, center, right) = self.pinned_visible_columns();
+        let sizing = &self.state.column_sizing;
+
+        let left = left
+            .into_iter()
+            .map(|c| super::resolved_column_size(sizing, c))
+            .sum();
+        let center = center
+            .into_iter()
+            .map(|c| super::resolved_column_size(sizing, c))
+            .sum();
+        let right = right
+            .into_iter()
+            .map(|c| super::resolved_column_size(sizing, c))
+            .sum();
+
+        (left, center, right)
+    }
+
+    pub fn left_total_size(&self) -> f32 {
+        self.pinned_total_sizes().0
+    }
+
+    pub fn center_total_size(&self) -> f32 {
+        self.pinned_total_sizes().1
+    }
+
+    pub fn right_total_size(&self) -> f32 {
+        self.pinned_total_sizes().2
+    }
+
+    /// TanStack-aligned: return the start offset (x) for a column within a pinned region.
+    pub fn column_start(&self, column_id: &str, region: super::ColumnSizingRegion) -> Option<f32> {
+        let col = self.column(column_id)?;
+        let sizing = &self.state.column_sizing;
+
+        let (left, center, right) = self.pinned_visible_columns();
+        let mut offset = 0.0;
+
+        match region {
+            super::ColumnSizingRegion::All => {
+                for c in left.into_iter().chain(center).chain(right) {
+                    if c.id.as_ref() == col.id.as_ref() {
+                        return Some(offset);
+                    }
+                    offset += super::resolved_column_size(sizing, c);
+                }
+            }
+            super::ColumnSizingRegion::Left => {
+                for c in left {
+                    if c.id.as_ref() == col.id.as_ref() {
+                        return Some(offset);
+                    }
+                    offset += super::resolved_column_size(sizing, c);
+                }
+            }
+            super::ColumnSizingRegion::Center => {
+                for c in center {
+                    if c.id.as_ref() == col.id.as_ref() {
+                        return Some(offset);
+                    }
+                    offset += super::resolved_column_size(sizing, c);
+                }
+            }
+            super::ColumnSizingRegion::Right => {
+                for c in right {
+                    if c.id.as_ref() == col.id.as_ref() {
+                        return Some(offset);
+                    }
+                    offset += super::resolved_column_size(sizing, c);
+                }
+            }
+        }
+        None
     }
 
     pub fn core_row_model(&self) -> &RowModel<'a, TData> {
@@ -946,8 +1040,8 @@ mod tests {
     use super::*;
     use crate::headless::table::is_column_visible;
     use crate::headless::table::{
-        ColumnDef, ColumnFilter, ColumnId, ColumnPinPosition, PaginationState, SortSpec,
-        TableOptions, TableState, create_column_helper,
+        ColumnDef, ColumnFilter, ColumnId, ColumnPinPosition, ColumnSizingRegion, PaginationState,
+        SortSpec, TableOptions, TableState, create_column_helper,
     };
     use std::sync::Arc;
 
@@ -1877,5 +1971,48 @@ mod tests {
             .unwrap();
         assert!(next_b.left.is_empty());
         assert!(next_b.right.is_empty());
+    }
+
+    #[test]
+    fn table_column_sizing_totals_and_start_offsets_respect_pinning_and_order() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = vec![Item { value: 1 }];
+        let columns = vec![
+            ColumnDef::new("a").size(100.0),
+            ColumnDef::new("b").size(50.0),
+            ColumnDef::new("c").size(25.0),
+        ];
+
+        let mut state = TableState::default();
+        state.column_order = vec!["b".into(), "c".into(), "a".into()];
+        state.column_pinning.left = vec!["b".into()];
+        state.column_pinning.right = vec!["a".into()];
+
+        let table = Table::builder(&data).columns(columns).state(state).build();
+
+        assert_eq!(table.left_total_size(), 50.0);
+        assert_eq!(table.center_total_size(), 25.0);
+        assert_eq!(table.right_total_size(), 100.0);
+        assert_eq!(table.total_size(), 175.0);
+
+        assert_eq!(table.column_start("b", ColumnSizingRegion::All), Some(0.0));
+        assert_eq!(table.column_start("c", ColumnSizingRegion::All), Some(50.0));
+        assert_eq!(table.column_start("a", ColumnSizingRegion::All), Some(75.0));
+
+        assert_eq!(table.column_start("b", ColumnSizingRegion::Left), Some(0.0));
+        assert_eq!(table.column_start("c", ColumnSizingRegion::Left), None);
+        assert_eq!(
+            table.column_start("c", ColumnSizingRegion::Center),
+            Some(0.0)
+        );
+        assert_eq!(
+            table.column_start("a", ColumnSizingRegion::Right),
+            Some(0.0)
+        );
     }
 }
