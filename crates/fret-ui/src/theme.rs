@@ -302,9 +302,19 @@ impl Theme {
         self.extra_colors.get(key).copied()
     }
 
+    pub fn color_required(&self, key: &str) -> Color {
+        self.color_by_key(key)
+            .unwrap_or_else(|| panic!("missing theme color token {key}"))
+    }
+
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
         let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
         self.extra_metrics.get(key).copied()
+    }
+
+    pub fn metric_required(&self, key: &str) -> Px {
+        self.metric_by_key(key)
+            .unwrap_or_else(|| panic!("missing theme metric token {key}"))
     }
 
     pub fn snapshot(&self) -> ThemeSnapshot {
