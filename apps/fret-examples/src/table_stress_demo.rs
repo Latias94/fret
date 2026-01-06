@@ -13,7 +13,8 @@ use fret_ui::element::{
 };
 use fret_ui::{Invalidation, Theme, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::headless::table::{
-    ColumnPinningState, RowKey, SortSpec, TableState, create_column_helper,
+    ColumnFilter, ColumnPinningState, RowKey, SortSpec, TableState,
+    contains_ascii_case_insensitive, create_column_helper,
 };
 use std::sync::Arc;
 use std::time::Instant;
@@ -138,6 +139,46 @@ impl TableStressDriver {
             }
         });
     }
+
+    fn toggle_role_filter(app: &mut App, state: &Model<TableState>) {
+        let _ = app.models_mut().update(state, |st| {
+            let enabled = st
+                .column_filters
+                .iter()
+                .any(|f| f.column.as_ref() == "role" && f.value.as_ref() == "Admin");
+
+            st.column_filters
+                .retain(|f| !(f.column.as_ref() == "role" && f.value.as_ref() == "Admin"));
+            if !enabled {
+                st.column_filters.push(ColumnFilter {
+                    column: "role".into(),
+                    value: "Admin".into(),
+                });
+            }
+
+            st.pagination.page_index = 0;
+        });
+    }
+
+    fn toggle_global_filter(app: &mut App, state: &Model<TableState>) {
+        let _ = app.models_mut().update(state, |st| {
+            if st.global_filter.is_some() {
+                st.global_filter = None;
+            } else {
+                st.global_filter = Some(Arc::from("User 1"));
+            }
+
+            st.pagination.page_index = 0;
+        });
+    }
+
+    fn clear_filters(app: &mut App, state: &Model<TableState>) {
+        let _ = app.models_mut().update(state, |st| {
+            st.column_filters.clear();
+            st.global_filter = None;
+            st.pagination.page_index = 0;
+        });
+    }
 }
 
 impl WinitAppDriver for TableStressDriver {
@@ -219,6 +260,21 @@ impl WinitAppDriver for TableStressDriver {
                     app.request_redraw(window);
                     return;
                 }
+                fret_core::KeyCode::KeyF => {
+                    Self::toggle_role_filter(app, &state.table_state);
+                    app.request_redraw(window);
+                    return;
+                }
+                fret_core::KeyCode::KeyG => {
+                    Self::toggle_global_filter(app, &state.table_state);
+                    app.request_redraw(window);
+                    return;
+                }
+                fret_core::KeyCode::KeyC => {
+                    Self::clear_filters(app, &state.table_state);
+                    app.request_redraw(window);
+                    return;
+                }
                 fret_core::KeyCode::KeyR => {
                     let _ = app
                         .models_mut()
@@ -264,7 +320,7 @@ impl WinitAppDriver for TableStressDriver {
                     cx.observe_model(&state.table_state, Invalidation::Layout);
                     cx.observe_model(&state.items_revision, Invalidation::Layout);
 
-                    let (selected, sorting) = cx
+                    let (selected, sorting, role_filter, global_filter) = cx
                         .app
                         .models()
                         .read(&state.table_state, |st| {
@@ -280,9 +336,25 @@ impl WinitAppDriver for TableStressDriver {
                                     )
                                 })
                                 .unwrap_or_else(|| "<none>".to_string());
-                            (selected, sorting)
+                            let role_filter = st
+                                .column_filters
+                                .iter()
+                                .find(|f| f.column.as_ref() == "role")
+                                .map(|f| f.value.as_ref().to_string())
+                                .unwrap_or_else(|| "<none>".to_string());
+                            let global_filter = st
+                                .global_filter
+                                .as_ref()
+                                .map(|v| v.as_ref().to_string())
+                                .unwrap_or_else(|| "<none>".to_string());
+                            (selected, sorting, role_filter, global_filter)
                         })
-                        .unwrap_or((0, "<none>".to_string()));
+                        .unwrap_or((
+                            0,
+                            "<none>".to_string(),
+                            "<none>".to_string(),
+                            "<none>".to_string(),
+                        ));
                     let items_revision = cx
                         .app
                         .models()
@@ -305,8 +377,14 @@ impl WinitAppDriver for TableStressDriver {
                     let helper = create_column_helper::<DemoRow>();
                     let columns = vec![
                         helper.clone().accessor("id", |r| r.id),
-                        helper.clone().accessor("name", |r| r.name.clone()),
-                        helper.clone().accessor("role", |r| r.role.clone()),
+                        helper
+                            .clone()
+                            .accessor("name", |r| r.name.clone())
+                            .filter_by(|row, q| contains_ascii_case_insensitive(row.name.as_ref(), q)),
+                        helper
+                            .clone()
+                            .accessor("role", |r| r.role.clone())
+                            .filter_by(|row, q| contains_ascii_case_insensitive(row.role.as_ref(), q)),
                         helper.accessor("score", |r| r.score),
                     ];
 
@@ -315,10 +393,12 @@ impl WinitAppDriver for TableStressDriver {
                     let rows = state.rows.clone();
 
                     let header: Arc<str> = Arc::from(format!(
-                        "Table stress demo | rows={} | selected={} | sorting={} | items_rev={} | alloc/frame={} ({} B) | [S]=toggle sort | [R]=bump items_rev | [Home]/[End] | [Esc]=close",
+                        "Table stress demo | rows={} | selected={} | sorting={} | role_filter={} | global_filter={} | items_rev={} | alloc/frame={} ({} B) | [S]=toggle sort | [F]=toggle role filter | [G]=toggle global filter | [C]=clear filters | [R]=bump items_rev | [Home]/[End] | [Esc]=close",
                         rows.len(),
                         selected,
                         sorting,
+                        role_filter,
+                        global_filter,
                         items_revision,
                         state.alloc_last_calls,
                         state.alloc_last_bytes
