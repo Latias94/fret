@@ -413,8 +413,11 @@ fn render_heading<H: UiHost>(
         _ => theme.metrics.font_size,
     };
 
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+
     cx.text_props(TextProps {
-        layout: Default::default(),
+        layout,
         text,
         style: Some(TextStyle {
             font: FontId::default(),
@@ -434,8 +437,11 @@ fn render_paragraph<H: UiHost>(
     theme: &Theme,
     text: Arc<str>,
 ) -> AnyElement {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+
     cx.text_props(TextProps {
-        layout: Default::default(),
+        layout,
         text,
         style: Some(TextStyle {
             font: FontId::default(),
@@ -1851,6 +1857,7 @@ fn render_inline_token<H: UiHost>(
             let display_text = Arc::<str>::from(piece.text);
 
             let mut props = PressableProps::default();
+            props.layout.flex.shrink = 0.0;
             props.a11y.role = Some(SemanticsRole::Button);
             props.a11y.label = Some(link_text.clone());
 
@@ -1870,8 +1877,11 @@ fn render_inline_token<H: UiHost>(
                     );
                 }));
 
+                let mut layout = LayoutStyle::default();
+                layout.flex.shrink = 0.0;
+
                 vec![cx.text_props(TextProps {
-                    layout: Default::default(),
+                    layout,
                     text: display_text.clone(),
                     style: Some(TextStyle {
                         font,
@@ -1888,8 +1898,11 @@ fn render_inline_token<H: UiHost>(
         }
     }
 
+    let mut layout = LayoutStyle::default();
+    layout.flex.shrink = 0.0;
+
     cx.text_props(TextProps {
-        layout: Default::default(),
+        layout,
         text: Arc::<str>::from(piece.text),
         style: Some(TextStyle {
             font,
