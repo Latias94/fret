@@ -98,7 +98,7 @@ and follow the existing engine viewport architecture. The UI-facing crate lives 
 ## Overlays / annotations
 
 Plot annotations (e.g. infinite reference lines, spans, callouts) are implemented as caller-owned overlays
-stored in `PlotState`. See ADR 0104.
+stored in `PlotState`. See ADR 0106.
 
 ## Alternatives
 

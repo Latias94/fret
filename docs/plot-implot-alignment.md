@@ -19,7 +19,7 @@ Status symbols:
 
 - Input state: `PlotState` (caller-owned, optional)
 - Output state: `PlotOutput` (widget-written snapshot, optional)
-- Overlays/annotations: `PlotState.overlays` (caller-owned; ADR 0104)
+- Overlays/annotations: `PlotState.overlays` (caller-owned; ADR 0106)
 - Multi-plot linking: `LinkedPlotGroup`
 
 This contract is documented in ADR 0099.

@@ -1,4 +1,4 @@
-# ADR 0104: Plot Overlays and Annotations (2D, `fret-plot`)
+# ADR 0106: Plot Overlays and Annotations (2D, `fret-plot`)
 
 Status: Proposed
 
