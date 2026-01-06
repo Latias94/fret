@@ -1,16 +1,20 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect};
-use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
+use fret_app_kit::{image_asset_state, svg_asset_state};
+use fret_core::{AppWindowId, Event, ImageColorSpace, Px, Rect, SvgFit, UiServices};
 use fret_launch::{
     WinitAppBuilder, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitWindowContext,
 };
 use fret_markdown as markdown;
 use fret_ui::declarative;
-use fret_ui::element::{ContainerProps, FlexProps, LayoutStyle, Length, MainAlign};
+use fret_ui::element::{
+    AnyElement, ContainerProps, FlexProps, ImageProps, LayoutStyle, Length, MainAlign,
+    PressableProps, SvgIconProps, TextProps,
+};
 use fret_ui::{Invalidation, Theme, UiTree};
-use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::declarative::scroll as decl_scroll;
 use std::sync::Arc;
 
 struct MarkdownDemoWindowState {
@@ -77,6 +81,20 @@ world
 
 - https://example.com
 - [OpenAI](https://openai.com)
+
+## Images
+
+Raster (procedural, cached via `ImageAssetCache`):
+
+![Checkerboard](fret-demo://checkerboard)
+
+SVG (cached via `SvgAssetCache`):
+
+![Demo SVG](fret-demo://demo.svg)
+
+External (not fetched by markdown; click to open):
+
+![Remote](https://example.com/logo.png)
  "##,
         );
 
@@ -91,7 +109,71 @@ world
         bounds: Rect,
         markdown_source: Arc<str>,
     ) {
-        let components = markdown::MarkdownComponents::<App>::default().with_open_url();
+        let demo_svg_bytes = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="0" y="0" width="64" height="64" rx="12" fill="#111827"/><path d="M20 44 L32 20 L44 44 Z" fill="#60A5FA"/></svg>"##;
+        let (_demo_svg_key, demo_svg) =
+            svg_asset_state::use_svg_bytes_cached(app, services, demo_svg_bytes);
+
+        let checker_rgba = Arc::new(checkerboard_rgba8(96, 96));
+
+        let mut components = markdown::MarkdownComponents::<App>::default().with_open_url();
+        let on_link_activate = components.on_link_activate.clone();
+
+        components.image = Some(Arc::new(move |cx, info| {
+            let theme = Theme::global(&*cx.app).clone();
+
+            let mut size = LayoutStyle::default();
+            size.size.width = Length::Px(Px(96.0));
+            size.size.height = Length::Px(Px(96.0));
+
+            match info.src.as_ref() {
+                "fret-demo://checkerboard" => {
+                    let (key, image, status) = image_asset_state::use_rgba8_image_state(
+                        cx.app,
+                        cx.window,
+                        96,
+                        96,
+                        checker_rgba.as_slice(),
+                        ImageColorSpace::Srgb,
+                    );
+                    let _ = key;
+                    let _ = status;
+
+                    if let Some(image) = image {
+                        let mut props = ImageProps::new(image);
+                        props.layout = size;
+                        cx.image_props(props)
+                    } else {
+                        cx.container(
+                            ContainerProps {
+                                layout: size,
+                                ..Default::default()
+                            },
+                            |cx| vec![cx.spinner()],
+                        )
+                    }
+                }
+                "fret-demo://demo.svg" => {
+                    let mut props = SvgIconProps::new(fret_ui::SvgSource::Id(demo_svg));
+                    props.layout = size;
+                    props.fit = SvgFit::Contain;
+                    props.color = theme.colors.text_primary;
+                    cx.svg_icon_props(props)
+                }
+                _ => render_image_placeholder(
+                    cx,
+                    &theme,
+                    on_link_activate.clone(),
+                    markdown::LinkInfo {
+                        href: info.src.clone(),
+                        text: if info.alt.trim().is_empty() {
+                            Arc::<str>::from("[image]".to_string())
+                        } else {
+                            Arc::<str>::from(format!("[image: {}]", info.alt.trim()))
+                        },
+                    },
+                ),
+            }
+        }));
 
         let root =
             declarative::RenderRootContext::new(ui, app, services, window, bounds).render_root(
@@ -165,6 +247,64 @@ world
             );
         ui.set_root(root);
     }
+}
+
+fn checkerboard_rgba8(width: u32, height: u32) -> Vec<u8> {
+    let mut out = vec![0u8; (width * height * 4) as usize];
+    for y in 0..height {
+        for x in 0..width {
+            let i = ((y * width + x) * 4) as usize;
+            let on = ((x / 8) + (y / 8)) % 2 == 0;
+            let (r, g, b) = if on { (240, 240, 240) } else { (24, 24, 24) };
+            out[i] = r;
+            out[i + 1] = g;
+            out[i + 2] = b;
+            out[i + 3] = 255;
+        }
+    }
+    out
+}
+
+fn render_image_placeholder<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    theme: &Theme,
+    on_link_activate: Option<markdown::OnLinkActivate>,
+    link: markdown::LinkInfo,
+) -> AnyElement {
+    let label = link.text.clone();
+
+    let text = Arc::<str>::from(format!("{} ({})", label, link.href));
+    if let Some(on_link_activate) = on_link_activate {
+        let mut props = PressableProps::default();
+        props.a11y.role = Some(fret_core::SemanticsRole::Button);
+        props.a11y.label = Some(label);
+
+        return cx.pressable(props, |cx, _state| {
+            let on_link_activate = on_link_activate.clone();
+            let link = link.clone();
+            cx.pressable_on_activate(Arc::new(move |host, cx, reason| {
+                on_link_activate(host, cx, reason, link.clone());
+            }));
+
+            vec![cx.text_props(TextProps {
+                layout: Default::default(),
+                text: text.clone(),
+                style: None,
+                color: Some(theme.colors.text_muted),
+                wrap: fret_core::TextWrap::Word,
+                overflow: fret_core::TextOverflow::Clip,
+            })]
+        });
+    }
+
+    cx.text_props(TextProps {
+        layout: Default::default(),
+        text,
+        style: None,
+        color: Some(theme.colors.text_muted),
+        wrap: fret_core::TextWrap::Word,
+        overflow: fret_core::TextOverflow::Clip,
+    })
 }
 
 impl WinitAppDriver for MarkdownDemoDriver {
