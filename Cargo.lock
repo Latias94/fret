@@ -1184,6 +1184,7 @@ dependencies = [
  "fret-icons-lucide",
  "fret-launch",
  "fret-markdown",
+ "fret-node",
  "fret-render",
  "fret-runtime",
  "fret-ui",
@@ -1192,6 +1193,7 @@ dependencies = [
  "fret-ui-kit",
  "fret-ui-shadcn",
  "image",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
  "ureq",
@@ -1266,6 +1268,7 @@ name = "fret-node"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-runtime",
  "fret-ui",
  "serde",
  "serde_json",

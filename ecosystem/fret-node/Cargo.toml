@@ -6,7 +6,8 @@ rust-version.workspace = true
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
-fret-ui = { path = "../../crates/fret-ui", optional = true }
+fret-runtime = { path = "../../crates/fret-runtime", optional = true }
+fret-ui = { path = "../../crates/fret-ui", optional = true, features = ["unstable-retained-bridge"] }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -17,7 +18,7 @@ tracing.workspace = true
 default = ["fret-ui"]
 
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
-fret-ui = ["dep:fret-ui"]
+fret-ui = ["dep:fret-ui", "dep:fret-runtime"]
 
 # Builds only the headless graph model + schema + rules (no `fret-ui` dependency).
 headless = []
