@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use super::{ColumnDef, ColumnId, RowIndex, RowKey, RowModel};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SortSpec {
     pub column: ColumnId,
     pub desc: bool,
