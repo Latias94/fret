@@ -662,7 +662,7 @@ mod tests {
             "outline-button-focus-border",
             {
                 let id_out = id_out.clone();
-                |cx| {
+                move |cx| {
                     let el = Button::new("Outline")
                         .variant(ButtonVariant::Outline)
                         .into_element(cx);
@@ -690,7 +690,7 @@ mod tests {
             "outline-button-focus-border",
             {
                 let rendered_out = rendered_out.clone();
-                |cx| {
+                move |cx| {
                     let el = Button::new("Outline")
                         .variant(ButtonVariant::Outline)
                         .into_element(cx);
