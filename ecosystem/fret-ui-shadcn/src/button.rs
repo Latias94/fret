@@ -29,6 +29,8 @@ pub enum ButtonSize {
     Sm,
     Lg,
     Icon,
+    IconSm,
+    IconLg,
 }
 
 impl ButtonSize {
@@ -38,6 +40,8 @@ impl ButtonSize {
             Self::Sm => ComponentSize::Small,
             Self::Lg => ComponentSize::Large,
             Self::Icon => ComponentSize::Medium,
+            Self::IconSm => ComponentSize::Small,
+            Self::IconLg => ComponentSize::Large,
         }
     }
 }
@@ -253,7 +257,11 @@ impl Button {
             };
 
             let mut base_layout = self.layout;
-            if self.size == ButtonSize::Icon {
+            let is_icon_button = matches!(
+                self.size,
+                ButtonSize::Icon | ButtonSize::IconSm | ButtonSize::IconLg
+            );
+            if is_icon_button {
                 let icon = size.icon_button_size(&theme);
                 base_layout = base_layout
                     .min_w(MetricRef::Px(icon))
@@ -274,7 +282,7 @@ impl Button {
             let user_border_override = user_chrome.border_color.is_some();
             let variant = self.variant;
             let text_style = button_text_style(&theme, self.size);
-            let is_icon = self.size == ButtonSize::Icon;
+            let is_icon = is_icon_button;
             let children = self.children;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
@@ -345,6 +353,15 @@ impl Button {
                 };
 
                 let content_children = move |cx: &mut ElementContext<'_, H>| {
+                    let gap = if is_icon {
+                        Space::N0
+                    } else {
+                        match size {
+                            ComponentSize::Small | ComponentSize::XSmall => Space::N1p5,
+                            ComponentSize::Medium | ComponentSize::Large => Space::N2,
+                        }
+                    };
+
                     let content = if children.is_empty() {
                         vec![cx.text_props(TextProps {
                             layout: LayoutStyle::default(),
@@ -363,7 +380,7 @@ impl Button {
                         fret_ui_kit::declarative::stack::HStackProps::default()
                             .justify_center()
                             .items_center()
-                            .gap_x(Space::N2),
+                            .gap_x(gap),
                         |_cx| content,
                     )]
                 };
@@ -383,12 +400,16 @@ impl Button {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use fret_app::App;
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
         Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
         TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
+    use fret_ui::Theme;
+    use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, SizeStyle};
+    use fret_ui::elements;
     use fret_ui::tree::UiTree;
 
     struct FakeServices;
@@ -468,5 +489,59 @@ mod tests {
             Some(SceneOp::PushOpacity { opacity }) if (*opacity - 0.5).abs() < 1e-6
         ));
         assert!(matches!(scene.ops().last(), Some(SceneOp::PopOpacity)));
+    }
+
+    #[test]
+    fn icon_button_sizes_apply_min_dimensions() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        let theme = Theme::global(&app).clone();
+        let expected_sm = fret_ui_kit::Size::Small.icon_button_size(&theme);
+        let expected_md = fret_ui_kit::Size::Medium.icon_button_size(&theme);
+        let expected_lg = fret_ui_kit::Size::Large.icon_button_size(&theme);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(200.0)),
+        );
+
+        let icon_stub = |cx: &mut fret_ui::ElementContext<'_, App>| {
+            cx.container(
+                ContainerProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Px(Px(1.0)),
+                            height: Length::Px(Px(1.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            )
+        };
+
+        for (size, expected) in [
+            (ButtonSize::IconSm, expected_sm),
+            (ButtonSize::Icon, expected_md),
+            (ButtonSize::IconLg, expected_lg),
+        ] {
+            let element =
+                elements::with_element_cx(&mut app, window, bounds, "icon-button-size", |cx| {
+                    Button::new("Icon button")
+                        .size(size)
+                        .children(vec![icon_stub(cx)])
+                        .into_element(cx)
+                });
+
+            let ElementKind::Pressable(props) = &element.kind else {
+                panic!("expected icon button to render as a Pressable");
+            };
+
+            assert_eq!(props.layout.size.min_width, Some(expected));
+            assert_eq!(props.layout.size.min_height, Some(expected));
+        }
     }
 }
