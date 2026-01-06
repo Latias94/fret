@@ -82,14 +82,20 @@ fn tooltip_text_fg(theme: &Theme) -> fret_core::Color {
 }
 
 fn tooltip_text_style(theme: &Theme) -> TextStyle {
+    // new-york-v4 uses `text-xs` for tooltips (base is `text-sm`).
+    let base_px = theme
+        .metric_by_key("font.size")
+        .unwrap_or(theme.metrics.font_size);
+    let base_line_height = theme
+        .metric_by_key("font.line_height")
+        .unwrap_or(theme.metrics.font_line_height);
+
     let px = theme
         .metric_by_key("component.tooltip.text_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or(Px(12.0));
+        .unwrap_or(Px((base_px.0 - 2.0).max(10.0)));
     let line_height = theme
         .metric_by_key("component.tooltip.line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or(Px(16.0));
+        .unwrap_or(Px((base_line_height.0 - 4.0).max(12.0)));
 
     TextStyle {
         font: fret_core::FontId::default(),
@@ -554,7 +560,9 @@ impl Tooltip {
                     Overflow::Visible,
                     move |_cx| vec![content],
                     move |cx, content| {
-                        let arrow_el = popper_arrow::diamond_arrow_element(
+                        // new-york-v4: `size-2.5 rotate-45 rounded-[2px] translate-y-[calc(-50%_-_2px)]`
+                        // (i.e. a slightly outset, lightly rounded diamond).
+                        let arrow_el = popper_arrow::diamond_arrow_element_refined(
                             cx,
                             &layout,
                             wrapper_insets,
@@ -564,6 +572,8 @@ impl Tooltip {
                                 border: None,
                                 border_width: Px(0.0),
                             },
+                            Px(2.0),
+                            Px(2.0),
                         );
 
                         if let Some(arrow_el) = arrow_el {

@@ -31,6 +31,26 @@ pub(crate) fn diamond_arrow_element<H: UiHost>(
     arrow_size: Px,
     style: DiamondArrowStyle,
 ) -> Option<AnyElement> {
+    diamond_arrow_element_refined(
+        cx,
+        layout,
+        wrapper_insets,
+        arrow_size,
+        style,
+        Px(0.0),
+        Px(0.0),
+    )
+}
+
+pub(crate) fn diamond_arrow_element_refined<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: &AnchoredPanelLayout,
+    wrapper_insets: Edges,
+    arrow_size: Px,
+    style: DiamondArrowStyle,
+    corner_radius: Px,
+    outset: Px,
+) -> Option<AnyElement> {
     let arrow = layout.arrow?;
     let placed = layout.rect;
 
@@ -51,6 +71,13 @@ pub(crate) fn diamond_arrow_element<H: UiHost>(
             Px(wrapper_insets.left.0 + placed.size.width.0 - arrow_size.0 * 0.5),
             Px(wrapper_insets.top.0 + arrow.offset.0),
         ),
+    };
+
+    let (left, top) = match arrow.side {
+        Side::Top => (left, Px(top.0 - outset.0)),
+        Side::Bottom => (left, Px(top.0 + outset.0)),
+        Side::Left => (Px(left.0 - outset.0), top),
+        Side::Right => (Px(left.0 + outset.0), top),
     };
 
     let layout = LayoutStyle {
@@ -90,7 +117,7 @@ pub(crate) fn diamond_arrow_element<H: UiHost>(
                     shadow: None,
                     border: Edges::all(style.border_width),
                     border_color,
-                    corner_radii: Corners::all(Px(0.0)),
+                    corner_radii: Corners::all(corner_radius),
                 },
                 |_cx| Vec::new(),
             )]
