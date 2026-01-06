@@ -85,13 +85,23 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                                 viewport,
                                 content,
                                 state.drag_start_offset,
+                                props.style.track_padding,
                             )
                         } else {
-                            scrollbar_thumb_rect(bounds, viewport, content, state.drag_start_offset)
+                            scrollbar_thumb_rect(
+                                bounds,
+                                viewport,
+                                content,
+                                state.drag_start_offset,
+                                props.style.track_padding,
+                            )
                         })
                     {
                         if is_horizontal {
-                            let pad = scrollbar_track_padding_px(bounds.size.width.0);
+                            let pad = scrollbar_track_padding_px(
+                                bounds.size.width.0,
+                                props.style.track_padding,
+                            );
                             let inner = (bounds.size.width.0 - pad * 2.0).max(0.0);
                             let max_thumb_x = (inner - thumb.size.width.0).max(0.0);
                             if max_thumb_x > 0.0 {
@@ -109,7 +119,10 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                                 state.hovered = true;
                             }
                         } else {
-                            let pad = scrollbar_track_padding_px(bounds.size.height.0);
+                            let pad = scrollbar_track_padding_px(
+                                bounds.size.height.0,
+                                props.style.track_padding,
+                            );
                             let inner = (bounds.size.height.0 - pad * 2.0).max(0.0);
                             let max_thumb_y = (inner - thumb.size.height.0).max(0.0);
                             if max_thumb_y > 0.0 {
@@ -187,9 +200,21 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                         handle.offset().y
                     };
                     let thumb = if is_horizontal {
-                        scrollbar_thumb_rect_horizontal(bounds, viewport, content, current_offset)
+                        scrollbar_thumb_rect_horizontal(
+                            bounds,
+                            viewport,
+                            content,
+                            current_offset,
+                            props.style.track_padding,
+                        )
                     } else {
-                        scrollbar_thumb_rect(bounds, viewport, content, current_offset)
+                        scrollbar_thumb_rect(
+                            bounds,
+                            viewport,
+                            content,
+                            current_offset,
+                            props.style.track_padding,
+                        )
                     };
                     let Some(thumb) = thumb else {
                         return;
@@ -210,7 +235,10 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                     } else if bounds.contains(position) {
                         // Page to the click position (center the thumb on the pointer).
                         if is_horizontal {
-                            let pad = scrollbar_track_padding_px(bounds.size.width.0);
+                            let pad = scrollbar_track_padding_px(
+                                bounds.size.width.0,
+                                props.style.track_padding,
+                            );
                             let inner = (bounds.size.width.0 - pad * 2.0).max(0.0);
                             let max_thumb_x = (inner - thumb.size.width.0).max(0.0);
                             if max_thumb_x > 0.0 {
@@ -225,7 +253,10 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                                 did_change_offset = true;
                             }
                         } else {
-                            let pad = scrollbar_track_padding_px(bounds.size.height.0);
+                            let pad = scrollbar_track_padding_px(
+                                bounds.size.height.0,
+                                props.style.track_padding,
+                            );
                             let inner = (bounds.size.height.0 - pad * 2.0).max(0.0);
                             let max_thumb_y = (inner - thumb.size.height.0).max(0.0);
                             if max_thumb_y > 0.0 {

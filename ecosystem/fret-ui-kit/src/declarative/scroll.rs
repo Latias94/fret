@@ -74,7 +74,7 @@ pub fn overflow_scroll<H: UiHost>(
                 style: ScrollbarStyle {
                     thumb,
                     thumb_hover,
-                    thumb_idle_alpha: 0.65,
+                    ..Default::default()
                 },
             }));
         }
@@ -143,7 +143,7 @@ pub fn overflow_scroll_with_handle<H: UiHost>(
                 style: ScrollbarStyle {
                     thumb,
                     thumb_hover,
-                    thumb_idle_alpha: 0.65,
+                    ..Default::default()
                 },
             }));
         }
@@ -223,7 +223,7 @@ pub fn overflow_scroll_with_handle_xy<H: UiHost>(
                 style: ScrollbarStyle {
                     thumb,
                     thumb_hover,
-                    thumb_idle_alpha: 0.65,
+                    ..Default::default()
                 },
             }));
         }
@@ -256,7 +256,7 @@ pub fn overflow_scroll_with_handle_xy<H: UiHost>(
                 style: ScrollbarStyle {
                     thumb,
                     thumb_hover,
-                    thumb_idle_alpha: 0.65,
+                    ..Default::default()
                 },
             }));
         }
@@ -389,7 +389,7 @@ pub fn overflow_scroll_x_content<H: UiHost>(
                 style: ScrollbarStyle {
                     thumb,
                     thumb_hover,
-                    thumb_idle_alpha: 0.65,
+                    ..Default::default()
                 },
             }));
         }

@@ -1094,6 +1094,12 @@ pub struct ScrollbarStyle {
     pub thumb: Color,
     pub thumb_hover: Color,
     pub thumb_idle_alpha: f32,
+    /// Padding (main axis) reserved at both ends of the scrollbar track.
+    ///
+    /// This is part of Radix ScrollArea's thumb sizing/offset math. Component libraries should set
+    /// this to match the visual padding they apply to the scrollbar container (e.g. shadcn/ui v4
+    /// uses `p-px`, so `Px(1.0)`).
+    pub track_padding: Px,
 }
 
 impl Default for ScrollbarStyle {
@@ -1112,6 +1118,7 @@ impl Default for ScrollbarStyle {
                 a: 1.0,
             },
             thumb_idle_alpha: 0.65,
+            track_padding: Px(1.0),
         }
     }
 }

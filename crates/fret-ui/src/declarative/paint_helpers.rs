@@ -1,11 +1,7 @@
 use super::prelude::*;
 
-// Radix ScrollArea includes the scrollbar's padding (main axis) in thumb sizing/offset math.
-// See `repo-ref/primitives/packages/react/scroll-area/src/scroll-area.tsx` (`getThumbSize`).
-const RADIX_SCROLLBAR_PADDING_PX: f32 = 2.0;
-
-pub(super) fn scrollbar_track_padding_px(track_main_axis: f32) -> f32 {
-    RADIX_SCROLLBAR_PADDING_PX.min(track_main_axis.max(0.0) * 0.5)
+pub(super) fn scrollbar_track_padding_px(track_main_axis: f32, padding: Px) -> f32 {
+    padding.0.max(0.0).min(track_main_axis.max(0.0) * 0.5)
 }
 
 pub(super) fn scrollbar_thumb_rect(
@@ -13,6 +9,7 @@ pub(super) fn scrollbar_thumb_rect(
     viewport_h: Px,
     content_h: Px,
     offset_y: Px,
+    track_padding: Px,
 ) -> Option<Rect> {
     let viewport_h = Px(viewport_h.0.max(0.0));
     let content_h = Px(content_h.0.max(0.0));
@@ -22,7 +19,7 @@ pub(super) fn scrollbar_thumb_rect(
     }
 
     let track_h = track.size.height.0;
-    let pad = scrollbar_track_padding_px(track_h);
+    let pad = scrollbar_track_padding_px(track_h, track_padding);
     let inner_track_h = (track_h - pad * 2.0).max(0.0);
     if inner_track_h <= 0.0 {
         return None;
@@ -47,6 +44,7 @@ pub(super) fn scrollbar_thumb_rect_horizontal(
     viewport_w: Px,
     content_w: Px,
     offset_x: Px,
+    track_padding: Px,
 ) -> Option<Rect> {
     let viewport_w = Px(viewport_w.0.max(0.0));
     let content_w = Px(content_w.0.max(0.0));
@@ -56,7 +54,7 @@ pub(super) fn scrollbar_thumb_rect_horizontal(
     }
 
     let track_w = track.size.width.0;
-    let pad = scrollbar_track_padding_px(track_w);
+    let pad = scrollbar_track_padding_px(track_w, track_padding);
     let inner_track_w = (track_w - pad * 2.0).max(0.0);
     if inner_track_w <= 0.0 {
         return None;

@@ -537,7 +537,13 @@ impl ElementHostWidget {
                         return;
                     }
 
-                    scrollbar_thumb_rect_horizontal(cx.bounds, viewport_w, content_w, offset_x)
+                    scrollbar_thumb_rect_horizontal(
+                        cx.bounds,
+                        viewport_w,
+                        content_w,
+                        offset_x,
+                        props.style.track_padding,
+                    )
                 } else {
                     let offset_y = handle.offset().y;
                     let viewport_h = handle.viewport_size().height;
@@ -547,7 +553,13 @@ impl ElementHostWidget {
                         return;
                     }
 
-                    scrollbar_thumb_rect(cx.bounds, viewport_h, content_h, offset_y)
+                    scrollbar_thumb_rect(
+                        cx.bounds,
+                        viewport_h,
+                        content_h,
+                        offset_y,
+                        props.style.track_padding,
+                    )
                 };
 
                 let Some(thumb) = thumb else {

@@ -661,6 +661,7 @@ fn scroll_thumb_drag_updates_offset() {
         scroll_handle.viewport_size().height,
         scroll_handle.content_size().height,
         scroll_handle.offset().y,
+        crate::element::ScrollbarStyle::default().track_padding,
     )
     .expect("thumb rect");
     let down_pos = fret_core::Point::new(Px(thumb.origin.x.0 + 1.0), Px(thumb.origin.y.0 + 1.0));

@@ -418,7 +418,7 @@ impl DataGrid {
                             style: ScrollbarStyle {
                                 thumb,
                                 thumb_hover,
-                                thumb_idle_alpha: 0.65,
+                                ..Default::default()
                             },
                         }));
                     }
@@ -451,7 +451,7 @@ impl DataGrid {
                             style: ScrollbarStyle {
                                 thumb,
                                 thumb_hover,
-                                thumb_idle_alpha: 0.65,
+                                ..Default::default()
                             },
                         }));
                     }
