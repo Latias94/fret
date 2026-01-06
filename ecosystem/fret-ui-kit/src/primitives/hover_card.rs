@@ -35,8 +35,18 @@ pub fn request_hover_card<H: UiHost>(cx: &mut ElementContext<'_, H>, request: Ov
 }
 
 /// Computes whether the hover card should be considered "hovered" for intent/visibility decisions.
-pub fn hover_card_hovered(trigger_hovered: bool, overlay_hovered: bool, focused: bool) -> bool {
-    trigger_hovered || overlay_hovered || focused
+///
+/// Notes:
+/// - Pointer hover is level-triggered: `trigger_hovered || overlay_hovered`.
+/// - Keyboard focus should be treated as an "open affordance" for accessibility flows. In Radix,
+///   pointer-driven focus (mouse down) does *not* keep the hover card open after pointer leave.
+///   Call sites should pass `keyboard_focused` (not just `focused`).
+pub fn hover_card_hovered(
+    trigger_hovered: bool,
+    overlay_hovered: bool,
+    keyboard_focused: bool,
+) -> bool {
+    trigger_hovered || overlay_hovered || keyboard_focused
 }
 
 #[cfg(test)]
