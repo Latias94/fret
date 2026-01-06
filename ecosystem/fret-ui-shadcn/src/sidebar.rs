@@ -17,6 +17,11 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 use crate::hover_card::{HoverCard, HoverCardAlign};
 use crate::layout as shadcn_layout;
 
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a *= mul;
+    c
+}
+
 fn sidebar_width(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.sidebar.width")
