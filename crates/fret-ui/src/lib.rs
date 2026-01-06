@@ -30,7 +30,6 @@ pub(crate) mod text_input;
 mod text_input_style;
 pub mod theme;
 pub mod theme_keys;
-pub(crate) mod theme_registry;
 pub mod tree;
 pub mod virtual_list;
 #[allow(dead_code)]

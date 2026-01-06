@@ -3,91 +3,17 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::OnceLock};
 
 use crate::UiHost;
-use crate::theme_registry::{ThemeTokenKind, canonicalize_token_key};
 use crate::{ThemeColorKey, ThemeMetricKey};
 
+fn with_alpha(color: Color, alpha: f32) -> Color {
+    Color {
+        a: alpha.clamp(0.0, 1.0),
+        ..color
+    }
+}
+
 fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
-    let mut out = HashMap::from([
-        (
-            "color.surface.background".to_string(),
-            colors.surface_background,
-        ),
-        (
-            "color.panel.background".to_string(),
-            colors.panel_background,
-        ),
-        ("color.panel.border".to_string(), colors.panel_border),
-        ("color.text.primary".to_string(), colors.text_primary),
-        ("color.text.muted".to_string(), colors.text_muted),
-        ("color.text.disabled".to_string(), colors.text_disabled),
-        ("color.accent".to_string(), colors.accent),
-        (
-            "color.selection.background".to_string(),
-            colors.selection_background,
-        ),
-        (
-            "color.hover.background".to_string(),
-            colors.hover_background,
-        ),
-        ("color.focus.ring".to_string(), colors.focus_ring),
-        ("color.menu.background".to_string(), colors.menu_background),
-        ("color.menu.border".to_string(), colors.menu_border),
-        ("color.menu.item.hover".to_string(), colors.menu_item_hover),
-        (
-            "color.menu.item.selected".to_string(),
-            colors.menu_item_selected,
-        ),
-        ("color.list.background".to_string(), colors.list_background),
-        ("color.list.border".to_string(), colors.list_border),
-        ("color.list.row.hover".to_string(), colors.list_row_hover),
-        (
-            "color.list.row.selected".to_string(),
-            colors.list_row_selected,
-        ),
-        ("color.scrollbar.track".to_string(), colors.scrollbar_track),
-        ("color.scrollbar.thumb".to_string(), colors.scrollbar_thumb),
-        (
-            "color.scrollbar.thumb.hover".to_string(),
-            colors.scrollbar_thumb_hover,
-        ),
-        (
-            "color.viewport.selection.fill".to_string(),
-            colors.viewport_selection_fill,
-        ),
-        (
-            "color.viewport.selection.stroke".to_string(),
-            colors.viewport_selection_stroke,
-        ),
-        ("color.viewport.marker".to_string(), colors.viewport_marker),
-        (
-            "color.viewport.drag_line.pan".to_string(),
-            colors.viewport_drag_line_pan,
-        ),
-        (
-            "color.viewport.drag_line.orbit".to_string(),
-            colors.viewport_drag_line_orbit,
-        ),
-        (
-            "color.viewport.gizmo.x".to_string(),
-            colors.viewport_gizmo_x,
-        ),
-        (
-            "color.viewport.gizmo.y".to_string(),
-            colors.viewport_gizmo_y,
-        ),
-        (
-            "color.viewport.gizmo.handle.background".to_string(),
-            colors.viewport_gizmo_handle_background,
-        ),
-        (
-            "color.viewport.gizmo.handle.border".to_string(),
-            colors.viewport_gizmo_handle_border,
-        ),
-        (
-            "color.viewport.rotate_gizmo".to_string(),
-            colors.viewport_rotate_gizmo,
-        ),
-    ]);
+    let mut out = HashMap::new();
 
     // shadcn/new-york core semantic palette (canonical names).
     out.insert("background".to_string(), colors.surface_background);
@@ -105,7 +31,6 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
 
     out.insert("popover".to_string(), colors.menu_background);
     out.insert("popover-foreground".to_string(), colors.text_primary);
-    out.insert("popover.border".to_string(), colors.menu_border);
 
     out.insert("muted".to_string(), colors.panel_background);
     out.insert("muted-foreground".to_string(), colors.text_muted);
@@ -122,53 +47,80 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
     out.insert("destructive".to_string(), colors.viewport_gizmo_x);
     out.insert("destructive-foreground".to_string(), colors.text_primary);
 
-    // Common non-core semantic keys used by recipes (kept for the migration window).
+    // shadcn/new-york extension tokens used by the upstream site (optional but stable).
+    out.insert("selection".to_string(), colors.selection_background);
+    out.insert("selection-foreground".to_string(), colors.text_primary);
+
+    // Fret-specific tokens (namespaced).
+    out.insert("fret.text.disabled".to_string(), colors.text_disabled);
+
+    out.insert("fret.menu.background".to_string(), colors.menu_background);
+    out.insert("fret.menu.border".to_string(), colors.menu_border);
+    out.insert("fret.menu.item.hover".to_string(), colors.menu_item_hover);
     out.insert(
-        "selection.background".to_string(),
-        colors.selection_background,
+        "fret.menu.item.selected".to_string(),
+        colors.menu_item_selected,
     );
-    out.insert("input.background".to_string(), colors.panel_background);
-    out.insert("input.foreground".to_string(), colors.text_primary);
-    out.insert("caret".to_string(), colors.text_primary);
-    out.insert("scrollbar.background".to_string(), colors.scrollbar_track);
+
+    out.insert("fret.list.background".to_string(), colors.list_background);
+    out.insert("fret.list.border".to_string(), colors.list_border);
+    out.insert("fret.list.row.hover".to_string(), colors.list_row_hover);
     out.insert(
-        "scrollbar.thumb.background".to_string(),
-        colors.scrollbar_thumb,
+        "fret.list.row.selected".to_string(),
+        colors.list_row_selected,
     );
+
+    out.insert("fret.scrollbar.track".to_string(), colors.scrollbar_track);
+    out.insert("fret.scrollbar.thumb".to_string(), colors.scrollbar_thumb);
     out.insert(
-        "scrollbar.thumb.hover.background".to_string(),
+        "fret.scrollbar.thumb.hover".to_string(),
         colors.scrollbar_thumb_hover,
+    );
+
+    out.insert(
+        "fret.viewport.selection.fill".to_string(),
+        colors.viewport_selection_fill,
+    );
+    out.insert(
+        "fret.viewport.selection.stroke".to_string(),
+        colors.viewport_selection_stroke,
+    );
+    out.insert("fret.viewport.marker".to_string(), colors.viewport_marker);
+    out.insert(
+        "fret.viewport.drag_line.pan".to_string(),
+        colors.viewport_drag_line_pan,
+    );
+    out.insert(
+        "fret.viewport.drag_line.orbit".to_string(),
+        colors.viewport_drag_line_orbit,
+    );
+    out.insert("fret.viewport.gizmo.x".to_string(), colors.viewport_gizmo_x);
+    out.insert("fret.viewport.gizmo.y".to_string(), colors.viewport_gizmo_y);
+    out.insert(
+        "fret.viewport.gizmo.handle.background".to_string(),
+        colors.viewport_gizmo_handle_background,
+    );
+    out.insert(
+        "fret.viewport.gizmo.handle.border".to_string(),
+        colors.viewport_gizmo_handle_border,
+    );
+    out.insert(
+        "fret.viewport.rotate_gizmo".to_string(),
+        colors.viewport_rotate_gizmo,
     );
 
     out
 }
 
 fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
-    let mut out = HashMap::from([
-        ("metric.radius.sm".to_string(), metrics.radius_sm),
-        ("metric.radius.md".to_string(), metrics.radius_md),
-        ("metric.radius.lg".to_string(), metrics.radius_lg),
-        ("metric.padding.sm".to_string(), metrics.padding_sm),
-        ("metric.padding.md".to_string(), metrics.padding_md),
-        (
-            "metric.scrollbar.width".to_string(),
-            metrics.scrollbar_width,
-        ),
-        ("metric.font.size".to_string(), metrics.font_size),
-        ("metric.font.mono_size".to_string(), metrics.mono_font_size),
-        (
-            "metric.font.line_height".to_string(),
-            metrics.font_line_height,
-        ),
-        (
-            "metric.font.mono_line_height".to_string(),
-            metrics.mono_font_line_height,
-        ),
-    ]);
+    let mut out = HashMap::new();
 
-    // shadcn/new-york core semantic metrics (canonical names).
-    out.insert("radius".to_string(), metrics.radius_sm);
-    out.insert("radius.lg".to_string(), metrics.radius_md);
+    // shadcn/new-york core semantic metric(s).
+    //
+    // Matches the upstream contract: sm = radius - 4px, md = radius - 2px, lg = radius.
+    out.insert("radius".to_string(), metrics.radius_lg);
+
+    // Fret typography baseline (framework-level; not part of shadcn's variable set).
     out.insert("font.size".to_string(), metrics.font_size);
     out.insert("mono_font.size".to_string(), metrics.mono_font_size);
     out.insert("font.line_height".to_string(), metrics.font_line_height);
@@ -176,6 +128,11 @@ fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
         "mono_font.line_height".to_string(),
         metrics.mono_font_line_height,
     );
+
+    // Fret layout baseline (namespaced).
+    out.insert("fret.padding.sm".to_string(), metrics.padding_sm);
+    out.insert("fret.padding.md".to_string(), metrics.padding_md);
+    out.insert("fret.scrollbar.width".to_string(), metrics.scrollbar_width);
 
     out
 }
@@ -298,12 +255,10 @@ impl Theme {
     }
 
     pub fn color_by_key(&self, key: &str) -> Option<Color> {
-        let key = canonicalize_token_key(ThemeTokenKind::Color, key);
         self.extra_colors.get(key).copied()
     }
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
-        let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
         self.extra_metrics.get(key).copied()
     }
 
@@ -339,24 +294,12 @@ impl Theme {
         self.author = cfg.author.clone();
         self.url = cfg.url.clone();
 
+        assert_no_legacy_theme_keys(cfg);
+
         let mut changed = false;
 
         let mut next_colors = default_color_tokens(self.colors);
         let mut next_metrics = default_metric_tokens(self.metrics);
-
-        macro_rules! apply_color {
-            ($key:literal, $field:expr) => {
-                if let Some(v) = cfg.colors.get($key) {
-                    if let Some(c) = parse_color_to_linear(v) {
-                        next_colors.insert($key.to_string(), c);
-                        if $field != c {
-                            $field = c;
-                            changed = true;
-                        }
-                    }
-                }
-            };
-        }
 
         macro_rules! apply_semantic_color {
             ($key:literal, $set:expr) => {
@@ -364,19 +307,6 @@ impl Theme {
                     if let Some(c) = parse_color_to_linear(v) {
                         next_colors.insert($key.to_string(), c);
                         $set(c);
-                    }
-                }
-            };
-        }
-
-        macro_rules! apply_metric {
-            ($key:literal, $field:expr) => {
-                if let Some(v) = cfg.metrics.get($key).copied() {
-                    let px = Px(v);
-                    next_metrics.insert($key.to_string(), px);
-                    if $field != px {
-                        $field = px;
-                        changed = true;
                     }
                 }
             };
@@ -398,14 +328,12 @@ impl Theme {
                 self.colors.surface_background = c;
                 changed = true;
             }
-            next_colors.insert("color.surface.background".to_string(), c);
         });
         apply_semantic_color!("foreground", |c| {
             if self.colors.text_primary != c {
                 self.colors.text_primary = c;
                 changed = true;
             }
-            next_colors.insert("color.text.primary".to_string(), c);
         });
         apply_semantic_color!("border", |c| {
             if self.colors.panel_border != c {
@@ -420,382 +348,309 @@ impl Theme {
                 self.colors.list_border = c;
                 changed = true;
             }
-            next_colors.insert("color.panel.border".to_string(), c);
-            next_colors.insert("color.menu.border".to_string(), c);
-            next_colors.insert("color.list.border".to_string(), c);
         });
         apply_semantic_color!("input", |c| {
-            if self.colors.panel_border != c {
-                self.colors.panel_border = c;
-                changed = true;
+            if !cfg.colors.contains_key("border") {
+                if self.colors.panel_border != c {
+                    self.colors.panel_border = c;
+                    changed = true;
+                }
+                if self.colors.menu_border != c {
+                    self.colors.menu_border = c;
+                    changed = true;
+                }
+                if self.colors.list_border != c {
+                    self.colors.list_border = c;
+                    changed = true;
+                }
             }
-            next_colors.insert("color.panel.border".to_string(), c);
         });
         apply_semantic_color!("ring", |c| {
             if self.colors.focus_ring != c {
                 self.colors.focus_ring = c;
                 changed = true;
             }
-            next_colors.insert("color.focus.ring".to_string(), c);
         });
         apply_semantic_color!("card", |c| {
             if self.colors.panel_background != c {
                 self.colors.panel_background = c;
                 changed = true;
             }
-            next_colors.insert("color.panel.background".to_string(), c);
+            if !cfg.colors.contains_key("fret.list.background") && self.colors.list_background != c
+            {
+                self.colors.list_background = c;
+                changed = true;
+            }
         });
         apply_semantic_color!("popover", |c| {
             if self.colors.menu_background != c {
                 self.colors.menu_background = c;
                 changed = true;
             }
-            next_colors.insert("color.menu.background".to_string(), c);
         });
         apply_semantic_color!("muted-foreground", |c| {
             if self.colors.text_muted != c {
                 self.colors.text_muted = c;
                 changed = true;
             }
-            next_colors.insert("color.text.muted".to_string(), c);
         });
         apply_semantic_color!("accent", |c| {
             if self.colors.hover_background != c {
                 self.colors.hover_background = c;
                 changed = true;
             }
-            next_colors.insert("color.hover.background".to_string(), c);
+            if !cfg.colors.contains_key("fret.menu.item.hover") && self.colors.menu_item_hover != c
+            {
+                self.colors.menu_item_hover = c;
+                changed = true;
+            }
+            if !cfg.colors.contains_key("fret.list.row.hover") && self.colors.list_row_hover != c {
+                self.colors.list_row_hover = c;
+                changed = true;
+            }
         });
         apply_semantic_color!("primary", |c| {
             if self.colors.accent != c {
                 self.colors.accent = c;
                 changed = true;
             }
-            next_colors.insert("color.accent".to_string(), c);
+            if !cfg.colors.contains_key("selection") {
+                let selection = with_alpha(c, 0.4);
+                if self.colors.selection_background != selection {
+                    self.colors.selection_background = selection;
+                    changed = true;
+                }
+            }
         });
 
         apply_semantic_metric!("radius", |px| {
-            if self.metrics.radius_sm != px {
-                self.metrics.radius_sm = px;
+            if self.metrics.radius_lg != px {
+                self.metrics.radius_lg = px;
                 changed = true;
             }
-            next_metrics.insert("metric.radius.sm".to_string(), px);
+
+            let md = Px((px.0 - 2.0).max(0.0));
+            let sm = Px((px.0 - 4.0).max(0.0));
+            if self.metrics.radius_md != md {
+                self.metrics.radius_md = md;
+                changed = true;
+            }
+            if self.metrics.radius_sm != sm {
+                self.metrics.radius_sm = sm;
+                changed = true;
+            }
         });
         apply_semantic_metric!("font.size", |px| {
             if self.metrics.font_size != px {
                 self.metrics.font_size = px;
                 changed = true;
             }
-            next_metrics.insert("metric.font.size".to_string(), px);
         });
         apply_semantic_metric!("mono_font.size", |px| {
             if self.metrics.mono_font_size != px {
                 self.metrics.mono_font_size = px;
                 changed = true;
             }
-            next_metrics.insert("metric.font.mono_size".to_string(), px);
         });
         apply_semantic_metric!("font.line_height", |px| {
             if self.metrics.font_line_height != px {
                 self.metrics.font_line_height = px;
                 changed = true;
             }
-            next_metrics.insert("metric.font.line_height".to_string(), px);
         });
         apply_semantic_metric!("mono_font.line_height", |px| {
             if self.metrics.mono_font_line_height != px {
                 self.metrics.mono_font_line_height = px;
                 changed = true;
             }
-            next_metrics.insert("metric.font.mono_line_height".to_string(), px);
         });
 
-        // Now apply legacy dotted keys (they remain supported during the migration window).
-        apply_color!("color.surface.background", self.colors.surface_background);
-        apply_color!("color.panel.background", self.colors.panel_background);
-        apply_color!("color.panel.border", self.colors.panel_border);
-
-        apply_color!("color.text.primary", self.colors.text_primary);
-        apply_color!("color.text.muted", self.colors.text_muted);
-        apply_color!("color.text.disabled", self.colors.text_disabled);
-
-        apply_color!("color.accent", self.colors.accent);
-        apply_color!(
-            "color.selection.background",
-            self.colors.selection_background
-        );
-        apply_color!("color.hover.background", self.colors.hover_background);
-        apply_color!("color.focus.ring", self.colors.focus_ring);
-
-        apply_color!("color.menu.background", self.colors.menu_background);
-        apply_color!("color.menu.border", self.colors.menu_border);
-        apply_color!("color.menu.item.hover", self.colors.menu_item_hover);
-        apply_color!("color.menu.item.selected", self.colors.menu_item_selected);
-
-        apply_color!("color.list.background", self.colors.list_background);
-        apply_color!("color.list.border", self.colors.list_border);
-        apply_color!("color.list.row.hover", self.colors.list_row_hover);
-        apply_color!("color.list.row.selected", self.colors.list_row_selected);
-
-        apply_color!("color.scrollbar.track", self.colors.scrollbar_track);
-        apply_color!("color.scrollbar.thumb", self.colors.scrollbar_thumb);
-        apply_color!(
-            "color.scrollbar.thumb.hover",
-            self.colors.scrollbar_thumb_hover
-        );
-
-        apply_color!(
-            "color.viewport.selection.fill",
-            self.colors.viewport_selection_fill
-        );
-        apply_color!(
-            "color.viewport.selection.stroke",
-            self.colors.viewport_selection_stroke
-        );
-        apply_color!("color.viewport.marker", self.colors.viewport_marker);
-        apply_color!(
-            "color.viewport.drag_line.pan",
-            self.colors.viewport_drag_line_pan
-        );
-        apply_color!(
-            "color.viewport.drag_line.orbit",
-            self.colors.viewport_drag_line_orbit
-        );
-        apply_color!("color.viewport.gizmo.x", self.colors.viewport_gizmo_x);
-        apply_color!("color.viewport.gizmo.y", self.colors.viewport_gizmo_y);
-        apply_color!(
-            "color.viewport.gizmo.handle.background",
-            self.colors.viewport_gizmo_handle_background
-        );
-        apply_color!(
-            "color.viewport.gizmo.handle.border",
-            self.colors.viewport_gizmo_handle_border
-        );
-        apply_color!(
-            "color.viewport.rotate_gizmo",
-            self.colors.viewport_rotate_gizmo
-        );
-
-        // Migration bridge: if a theme provides semantic keys but not the legacy dotted keys, keep
-        // the dotted tokens synchronized so legacy callsites remain consistent during the refactor.
-        macro_rules! backfill_color_from_alias {
-            ($canonical:literal, $field:expr, [$($alias:literal),+ $(,)?]) => {
-                if !cfg.colors.contains_key($canonical) {
-                    for alias in [$($alias),+] {
-                        if let Some(v) = cfg.colors.get(alias)
-                            && let Some(c) = parse_color_to_linear(v)
-                        {
-                            next_colors.insert($canonical.to_string(), c);
-                            if $field != c {
-                                $field = c;
-                                changed = true;
-                            }
-                            break;
-                        }
-                    }
-                }
-            };
-        }
-
-        backfill_color_from_alias!(
-            "color.surface.background",
-            self.colors.surface_background,
-            ["background"]
-        );
-        backfill_color_from_alias!(
-            "color.text.primary",
-            self.colors.text_primary,
-            ["foreground"]
-        );
-        backfill_color_from_alias!(
-            "color.panel.border",
-            self.colors.panel_border,
-            ["border", "input", "input.border"]
-        );
-        backfill_color_from_alias!("color.focus.ring", self.colors.focus_ring, ["ring"]);
-        backfill_color_from_alias!(
-            "color.panel.background",
-            self.colors.panel_background,
-            ["card", "card.background", "popover", "popover.background"]
-        );
-        backfill_color_from_alias!(
-            "color.text.muted",
-            self.colors.text_muted,
-            ["muted-foreground", "muted.foreground"]
-        );
-        backfill_color_from_alias!(
-            "color.menu.background",
-            self.colors.menu_background,
-            [
-                "popover",
-                "popover.background",
-                "card",
-                "card.background",
-                "background"
-            ]
-        );
-        backfill_color_from_alias!(
-            "color.menu.border",
-            self.colors.menu_border,
-            ["popover.border", "border", "input", "input.border"]
-        );
-        backfill_color_from_alias!(
-            "color.menu.item.hover",
-            self.colors.menu_item_hover,
-            ["accent", "accent.background", "muted", "muted.background"]
-        );
-        backfill_color_from_alias!(
-            "color.list.background",
-            self.colors.list_background,
-            ["background", "card", "card.background"]
-        );
-        backfill_color_from_alias!(
-            "color.list.border",
-            self.colors.list_border,
-            ["border", "input", "input.border"]
-        );
-        backfill_color_from_alias!(
-            "color.list.row.hover",
-            self.colors.list_row_hover,
-            ["accent", "accent.background", "muted", "muted.background"]
-        );
-        backfill_color_from_alias!(
-            "color.list.row.selected",
-            self.colors.list_row_selected,
-            [
-                "accent",
-                "accent.background",
-                "primary",
-                "primary.background"
-            ]
-        );
-        backfill_color_from_alias!(
-            "color.accent",
-            self.colors.accent,
-            [
-                "primary",
-                "primary.background",
-                "accent",
-                "accent.background"
-            ]
-        );
-
-        // Ensure the semantic keys remain present and mirror the resolved typed baseline.
-        next_colors.insert("background".to_string(), self.colors.surface_background);
-        next_colors.insert("foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("border".to_string(), self.colors.panel_border);
-        next_colors.insert("input".to_string(), self.colors.panel_border);
-        next_colors.insert("ring".to_string(), self.colors.focus_ring);
-        next_colors.insert(
-            "ring-offset-background".to_string(),
-            self.colors.surface_background,
-        );
-        next_colors.insert("card".to_string(), self.colors.panel_background);
-        next_colors.insert("card-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("popover".to_string(), self.colors.menu_background);
-        next_colors.insert("popover-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("muted".to_string(), self.colors.panel_background);
-        next_colors.insert("muted-foreground".to_string(), self.colors.text_muted);
-        next_colors.insert("accent".to_string(), self.colors.hover_background);
-        next_colors.insert("accent-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("primary".to_string(), self.colors.accent);
-        next_colors.insert("primary-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("secondary".to_string(), self.colors.panel_background);
-        next_colors.insert("secondary-foreground".to_string(), self.colors.text_primary);
-        next_colors.insert("destructive".to_string(), self.colors.viewport_gizmo_x);
-        next_colors.insert(
-            "destructive-foreground".to_string(),
-            self.colors.text_primary,
-        );
-
-        apply_metric!("metric.radius.sm", self.metrics.radius_sm);
-        apply_metric!("metric.radius.md", self.metrics.radius_md);
-        apply_metric!("metric.radius.lg", self.metrics.radius_lg);
-        apply_metric!("metric.padding.sm", self.metrics.padding_sm);
-        apply_metric!("metric.padding.md", self.metrics.padding_md);
-        apply_metric!("metric.scrollbar.width", self.metrics.scrollbar_width);
-        apply_metric!("metric.font.size", self.metrics.font_size);
-        apply_metric!("metric.font.mono_size", self.metrics.mono_font_size);
-        apply_metric!("metric.font.line_height", self.metrics.font_line_height);
-        apply_metric!(
-            "metric.font.mono_line_height",
-            self.metrics.mono_font_line_height
-        );
-
-        // gpui-component compatibility: accept `font.size` / `mono_font.size` when the canonical
-        // `metric.font.*` keys are not present.
-        if !cfg.metrics.contains_key("metric.font.size")
-            && let Some(v) = cfg.metrics.get("font.size").copied()
-        {
-            let px = Px(v);
-            next_metrics.insert("metric.font.size".to_string(), px);
-            next_metrics.insert("font.size".to_string(), px);
-            if self.metrics.font_size != px {
-                self.metrics.font_size = px;
+        apply_semantic_color!("selection", |c| {
+            if self.colors.selection_background != c {
+                self.colors.selection_background = c;
                 changed = true;
             }
-        }
-        if !cfg.metrics.contains_key("metric.font.mono_size")
-            && let Some(v) = cfg.metrics.get("mono_font.size").copied()
+        });
+
+        if !cfg.colors.contains_key("fret.menu.item.selected")
+            && self.colors.menu_item_selected != self.colors.selection_background
         {
-            let px = Px(v);
-            next_metrics.insert("metric.font.mono_size".to_string(), px);
-            next_metrics.insert("mono_font.size".to_string(), px);
-            if self.metrics.mono_font_size != px {
-                self.metrics.mono_font_size = px;
-                changed = true;
-            }
+            self.colors.menu_item_selected = self.colors.selection_background;
+            changed = true;
         }
-        if !cfg.metrics.contains_key("metric.font.line_height")
-            && let Some(v) = cfg.metrics.get("font.line_height").copied()
+        if !cfg.colors.contains_key("fret.list.row.selected")
+            && self.colors.list_row_selected != self.colors.selection_background
         {
-            let px = Px(v);
-            next_metrics.insert("metric.font.line_height".to_string(), px);
-            next_metrics.insert("font.line_height".to_string(), px);
-            if self.metrics.font_line_height != px {
-                self.metrics.font_line_height = px;
-                changed = true;
-            }
-        }
-        if !cfg.metrics.contains_key("metric.font.mono_line_height")
-            && let Some(v) = cfg.metrics.get("mono_font.line_height").copied()
-        {
-            let px = Px(v);
-            next_metrics.insert("metric.font.mono_line_height".to_string(), px);
-            next_metrics.insert("mono_font.line_height".to_string(), px);
-            if self.metrics.mono_font_line_height != px {
-                self.metrics.mono_font_line_height = px;
-                changed = true;
-            }
+            self.colors.list_row_selected = self.colors.selection_background;
+            changed = true;
         }
 
-        // Ensure the semantic metric keys remain present and mirror the resolved typed baseline.
-        next_metrics.insert("radius".to_string(), self.metrics.radius_sm);
-        next_metrics.insert("radius.lg".to_string(), self.metrics.radius_md);
-        next_metrics.insert("font.size".to_string(), self.metrics.font_size);
-        next_metrics.insert("mono_font.size".to_string(), self.metrics.mono_font_size);
-        next_metrics.insert(
-            "font.line_height".to_string(),
-            self.metrics.font_line_height,
-        );
-        next_metrics.insert(
-            "mono_font.line_height".to_string(),
-            self.metrics.mono_font_line_height,
-        );
+        apply_semantic_color!("fret.text.disabled", |c| {
+            if self.colors.text_disabled != c {
+                self.colors.text_disabled = c;
+                changed = true;
+            }
+        });
+
+        apply_semantic_color!("fret.menu.background", |c| {
+            if self.colors.menu_background != c {
+                self.colors.menu_background = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.menu.border", |c| {
+            if self.colors.menu_border != c {
+                self.colors.menu_border = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.menu.item.hover", |c| {
+            if self.colors.menu_item_hover != c {
+                self.colors.menu_item_hover = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.menu.item.selected", |c| {
+            if self.colors.menu_item_selected != c {
+                self.colors.menu_item_selected = c;
+                changed = true;
+            }
+        });
+
+        apply_semantic_color!("fret.list.background", |c| {
+            if self.colors.list_background != c {
+                self.colors.list_background = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.list.border", |c| {
+            if self.colors.list_border != c {
+                self.colors.list_border = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.list.row.hover", |c| {
+            if self.colors.list_row_hover != c {
+                self.colors.list_row_hover = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.list.row.selected", |c| {
+            if self.colors.list_row_selected != c {
+                self.colors.list_row_selected = c;
+                changed = true;
+            }
+        });
+
+        apply_semantic_color!("fret.scrollbar.track", |c| {
+            if self.colors.scrollbar_track != c {
+                self.colors.scrollbar_track = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.scrollbar.thumb", |c| {
+            if self.colors.scrollbar_thumb != c {
+                self.colors.scrollbar_thumb = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.scrollbar.thumb.hover", |c| {
+            if self.colors.scrollbar_thumb_hover != c {
+                self.colors.scrollbar_thumb_hover = c;
+                changed = true;
+            }
+        });
+
+        apply_semantic_color!("fret.viewport.selection.fill", |c| {
+            if self.colors.viewport_selection_fill != c {
+                self.colors.viewport_selection_fill = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.viewport.selection.stroke", |c| {
+            if self.colors.viewport_selection_stroke != c {
+                self.colors.viewport_selection_stroke = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.viewport.marker", |c| {
+            if self.colors.viewport_marker != c {
+                self.colors.viewport_marker = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.viewport.drag_line.pan", |c| {
+            if self.colors.viewport_drag_line_pan != c {
+                self.colors.viewport_drag_line_pan = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.viewport.drag_line.orbit", |c| {
+            if self.colors.viewport_drag_line_orbit != c {
+                self.colors.viewport_drag_line_orbit = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.viewport.gizmo.x", |c| {
+            if self.colors.viewport_gizmo_x != c {
+                self.colors.viewport_gizmo_x = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.viewport.gizmo.y", |c| {
+            if self.colors.viewport_gizmo_y != c {
+                self.colors.viewport_gizmo_y = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.viewport.gizmo.handle.background", |c| {
+            if self.colors.viewport_gizmo_handle_background != c {
+                self.colors.viewport_gizmo_handle_background = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.viewport.gizmo.handle.border", |c| {
+            if self.colors.viewport_gizmo_handle_border != c {
+                self.colors.viewport_gizmo_handle_border = c;
+                changed = true;
+            }
+        });
+        apply_semantic_color!("fret.viewport.rotate_gizmo", |c| {
+            if self.colors.viewport_rotate_gizmo != c {
+                self.colors.viewport_rotate_gizmo = c;
+                changed = true;
+            }
+        });
+
+        apply_semantic_metric!("fret.padding.sm", |px| {
+            if self.metrics.padding_sm != px {
+                self.metrics.padding_sm = px;
+                changed = true;
+            }
+        });
+        apply_semantic_metric!("fret.padding.md", |px| {
+            if self.metrics.padding_md != px {
+                self.metrics.padding_md = px;
+                changed = true;
+            }
+        });
+        apply_semantic_metric!("fret.scrollbar.width", |px| {
+            if self.metrics.scrollbar_width != px {
+                self.metrics.scrollbar_width = px;
+                changed = true;
+            }
+        });
+
+        next_colors = default_color_tokens(self.colors);
+        next_metrics = default_metric_tokens(self.metrics);
 
         for (k, v) in &cfg.colors {
-            if next_colors.contains_key(k) {
-                continue;
-            }
             if let Some(c) = parse_color_to_linear(v) {
                 next_colors.insert(k.clone(), c);
             }
         }
 
         for (k, v) in &cfg.metrics {
-            if next_metrics.contains_key(k) {
-                continue;
-            }
             next_metrics.insert(k.clone(), Px(*v));
         }
 
@@ -810,6 +665,50 @@ impl Theme {
 
         if changed {
             self.revision = self.revision.saturating_add(1);
+        }
+    }
+}
+
+fn assert_no_legacy_theme_keys(cfg: &ThemeConfig) {
+    for key in cfg.colors.keys() {
+        if key.starts_with("color.") {
+            panic!(
+                "legacy theme color key {key} is not supported; use semantic keys (e.g. background) or namespaced keys (e.g. fret.*)"
+            );
+        }
+
+        let is_semantic_alias = matches!(
+            key.split_once('.').map(|(head, _)| head),
+            Some(
+                "background"
+                    | "foreground"
+                    | "border"
+                    | "input"
+                    | "ring"
+                    | "card"
+                    | "popover"
+                    | "primary"
+                    | "secondary"
+                    | "muted"
+                    | "accent"
+                    | "destructive"
+            )
+        );
+        if is_semantic_alias {
+            panic!(
+                "legacy theme alias key {key} is not supported; use canonical shadcn names (e.g. card-foreground) instead"
+            );
+        }
+    }
+
+    for key in cfg.metrics.keys() {
+        if key.starts_with("metric.") {
+            panic!(
+                "legacy theme metric key {key} is not supported; use semantic keys (e.g. radius) or namespaced keys (e.g. fret.*)"
+            );
+        }
+        if matches!(key.as_str(), "radius.sm" | "radius.md" | "radius.lg") {
+            panic!("legacy radius key {key} is not supported; use radius only");
         }
     }
 }
@@ -1068,46 +967,38 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
-    fn shadcn_semantic_palette_aliases_exist_on_default_theme() {
+    fn shadcn_semantic_palette_keys_exist_on_default_theme() {
         let host = crate::test_host::TestHost::default();
         let theme = Theme::global(&host);
 
-        for key in [
-            "background",
-            "foreground",
-            "border",
-            "input",
+        for key in ThemeColorKey::ALL {
+            let name = key.canonical_name();
+            assert!(theme.color_by_key(name).is_some(), "missing {name}");
+        }
+        for key in ThemeMetricKey::ALL {
+            let name = key.canonical_name();
+            assert!(theme.metric_by_key(name).is_some(), "missing {name}");
+        }
+
+        assert!(theme.color_by_key("selection").is_some());
+        assert!(theme.color_by_key("fret.menu.background").is_some());
+        assert!(theme.metric_by_key("fret.padding.sm").is_some());
+
+        for legacy in [
             "input.border",
-            "ring",
-            "ring-offset-background",
-            "card",
             "card.background",
-            "card-foreground",
-            "card.foreground",
-            "primary",
-            "primary.background",
-            "primary-foreground",
-            "primary.foreground",
-            "secondary",
-            "secondary.background",
-            "secondary-foreground",
-            "secondary.foreground",
-            "destructive",
-            "destructive.background",
-            "destructive-foreground",
-            "destructive.foreground",
-            "muted",
-            "muted-foreground",
-            "input.background",
-            "input.foreground",
-            "accent",
-            "accent-foreground",
             "popover.background",
-            "popover.foreground",
-            "popover-foreground",
-            "popover.border",
+            "color.surface.background",
         ] {
-            assert!(theme.color_by_key(key).is_some(), "missing alias {key}");
+            assert!(theme.color_by_key(legacy).is_none(), "legacy key {legacy}");
+        }
+        for legacy in [
+            "metric.radius.sm",
+            "metric.padding.sm",
+            "radius.sm",
+            "radius.lg",
+        ] {
+            assert!(theme.metric_by_key(legacy).is_none(), "legacy key {legacy}");
         }
     }
 
@@ -1128,7 +1019,7 @@ mod tests {
             ..Default::default()
         };
 
-        // No `color.*` keys are provided; typed fields should still change.
+        // 仅提供语义键；typed baseline 仍应改变。
         theme.apply_config(&cfg);
 
         let bg = theme.color_by_key("background").expect("background");
@@ -1203,5 +1094,30 @@ mod tests {
             theme.metric(ThemeMetricKey::Radius),
             theme.metric_by_key("radius").expect("radius")
         );
+    }
+
+    #[test]
+    #[should_panic]
+    fn apply_config_rejects_legacy_color_keys() {
+        let mut theme = Theme::global(&crate::test_host::TestHost::default()).clone();
+        theme.apply_config(&ThemeConfig {
+            name: "Legacy Color".to_string(),
+            colors: HashMap::from([(
+                "color.surface.background".to_string(),
+                "#000000".to_string(),
+            )]),
+            ..ThemeConfig::default()
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn apply_config_rejects_legacy_metric_keys() {
+        let mut theme = Theme::global(&crate::test_host::TestHost::default()).clone();
+        theme.apply_config(&ThemeConfig {
+            name: "Legacy Metric".to_string(),
+            metrics: HashMap::from([("metric.padding.sm".to_string(), 12.0)]),
+            ..ThemeConfig::default()
+        });
     }
 }
