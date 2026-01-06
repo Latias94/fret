@@ -3,6 +3,9 @@ name = "fret-examples"
 version.workspace = true
 edition.workspace = true
 
+[features]
+alloc-profile = []
+
 [dependencies]
 anyhow.workspace = true
 fret-icons = { path = "../../ecosystem/fret-icons" }

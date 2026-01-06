@@ -1,3 +1,5 @@
+#[cfg(not(target_arch = "wasm32"))]
+pub mod alloc_profile;
 pub mod components_gallery;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_arbitration_demo;
@@ -15,5 +17,7 @@ pub mod markdown_demo;
 pub mod sonner_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod table_stress_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;
