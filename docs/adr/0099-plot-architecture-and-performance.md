@@ -54,6 +54,12 @@ The primary integration surface is a retained widget:
 This aligns with Fret’s retained-first direction (ADR 0005 / ADR 0051) while still allowing
 an ergonomic builder API on top if desired.
 
+### 1.25) Input mapping is explicit and configurable
+
+`PlotCanvas` uses a small `PlotInputMap` struct to define pointer chords for pan/fit/box-zoom/query
+and selection modifiers. The default mapping follows ImPlot's `MapInputDefault` (with an optional
+`Shift+LMB` box-zoom alternative for accessibility).
+
 ### 2) Stable identity is mandatory (no index-keyed state)
 
 Series identity must be stable across reordering, filtering, and streaming updates:

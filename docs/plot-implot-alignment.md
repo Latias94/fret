@@ -27,7 +27,7 @@ This contract is documented in ADR 0099.
 
 - [x] Pan (left drag)
 - [x] Zoom (mouse wheel, `Shift`/`Ctrl` axis modifiers)
-- [x] Box zoom (Shift + drag)
+- [x] Box zoom (RMB drag; optional `Shift+LMB` drag)
 - [x] Query selection (Alt + drag) stored in `PlotState.query`
 - [x] Query/zoom drag shows range readout tooltip
 - [x] Crosshair visible when cursor is inside plot
@@ -58,6 +58,8 @@ to ImPlot's default `ImPlotInputMap`.
 | Fit / reset view | `LMB double-click` | `LMB double-click` | `R` remains as an explicit "reset everything" shortcut (also clears hidden/pinned/query). |
 | Clear query selection | N/A (app-owned) | `Q` | `PlotState.query` is application-controlled state. |
 | Restore legend visibility | N/A | `A` | Clears hidden/pinned series. |
+
+The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 
 ## Data & identity
 
@@ -120,5 +122,4 @@ to ImPlot's default `ImPlotInputMap`.
 
 1. Per-series style overrides (line/marker style beyond color).
 2. Dashes / joins / caps (may require renderer/path contract follow-up).
-3. Double-click fit + context menu parity (requires click-count/timestamps in core input events).
-4. Configurable input map (ImPlot-like `InputMap` surface on `PlotCanvas`).
+3. Context menu parity (optional; not tracked yet).

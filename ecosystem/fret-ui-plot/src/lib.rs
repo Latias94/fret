@@ -5,6 +5,7 @@
 
 pub mod cartesian;
 pub mod chart;
+pub mod input_map;
 pub mod linking;
 pub mod plot;
 pub mod retained;
