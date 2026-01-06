@@ -316,6 +316,9 @@ impl Tabs {
         // new-york-v4: `TabsList` uses `w-fit` (do not stretch to full width).
         // If the parent container happens to be a flex with `align-items: stretch`, opt out.
         list_props.layout.flex.align_self = Some(CrossAlign::Start);
+        // new-york-v4: `TabsContent` uses `flex-1` to occupy the remaining space.
+        let tab_panel_layout =
+            decl_style::layout_style(&theme, LayoutRefinement::default().flex_1());
 
         let active_label = active_idx
             .and_then(|active| items.get(active))
@@ -517,6 +520,7 @@ impl Tabs {
             if !force_mount_content {
                 children.push(cx.semantics(
                     SemanticsProps {
+                        layout: tab_panel_layout,
                         role: SemanticsRole::TabPanel,
                         label: (!active_label.is_empty()).then_some(active_label),
                         labelled_by_element: selected_tab_element.get(),
@@ -538,6 +542,7 @@ impl Tabs {
                     children.push(cx.interactivity_gate(active, active, move |cx| {
                         vec![cx.semantics(
                             SemanticsProps {
+                                layout: tab_panel_layout,
                                 role: SemanticsRole::TabPanel,
                                 label: (!label.is_empty()).then_some(label),
                                 labelled_by_element,
