@@ -243,9 +243,9 @@ impl DockSpace {
         dock: &DockManager,
         layout: &std::collections::HashMap<DockNodeId, Rect>,
     ) {
-        self.tab_text_style.size = theme.metrics.font_size;
-        self.tab_close_style.size = theme.metrics.font_size;
-        self.empty_state_style.size = theme.metrics.font_size;
+        self.tab_text_style.size = theme.metric_required("font.size");
+        self.tab_close_style.size = theme.metric_required("font.size");
+        self.empty_state_style.size = theme.metric_required("font.size");
 
         let mut visible_set: HashSet<PanelKey> = HashSet::new();
         for &node_id in layout.keys() {
@@ -294,7 +294,7 @@ impl DockSpace {
             services.text().release(glyph.blob);
         }
 
-        let pad_x = theme.metrics.padding_md;
+        let pad_x = theme.metric_required("metric.padding.md");
         let reserve = Px(DOCK_TAB_CLOSE_SIZE.0 + DOCK_TAB_CLOSE_GAP.0);
         let inner_max_w = Px((DOCK_TAB_W.0 - pad_x.0 * 2.0 - reserve.0).max(0.0));
         let constraints = TextConstraints {
@@ -398,7 +398,7 @@ impl DockSpace {
         scale_factor: f32,
         max_width: Px,
     ) {
-        self.empty_state_style.size = theme.metrics.font_size;
+        self.empty_state_style.size = theme.metric_required("font.size");
         if self.last_empty_state_theme_revision == Some(theme.revision)
             && self.last_empty_state_scale_factor == Some(scale_factor)
         {
@@ -434,13 +434,13 @@ impl DockSpace {
         cx.scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(0),
             rect: cx.bounds,
-            background: theme.colors.panel_background,
+            background: theme.color_required("card"),
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
-        let pad = theme.metrics.padding_md.0.max(0.0);
+        let pad = theme.metric_required("metric.padding.md").0.max(0.0);
         let max_w = Px((cx.bounds.size.width.0 - pad * 2.0).max(0.0));
         self.rebuild_empty_state(cx.services, theme, cx.scale_factor, max_w);
 
@@ -458,7 +458,7 @@ impl DockSpace {
             order: fret_core::DrawOrder(1),
             origin: Point::new(Px(x), Px(y)),
             text: text.blob,
-            color: theme.colors.text_muted,
+            color: theme.color_required("muted-foreground"),
         });
     }
 }
@@ -1869,22 +1869,30 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     .collect();
 
             for (floating, chrome, layout) in &floating_layouts {
+                let border = theme.color_required("border");
+                let surface = theme.color_required("background");
+                let hover_bg = theme.color_required("accent");
+                let fg = theme.color_required("foreground");
+                let fg_muted = theme.color_required("muted-foreground");
+                let radius_md = theme.metric_required("metric.radius.md");
+                let radius_sm = theme.metric_required("metric.radius.sm");
+
                 let border_color = Color {
                     a: 0.85,
-                    ..theme.colors.panel_border
+                    ..border
                 };
                 cx.scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(0),
                     rect: chrome.outer,
-                    background: theme.colors.surface_background,
+                    background: surface,
                     border: Edges::all(DOCK_FLOATING_BORDER),
                     border_color,
-                    corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_md.0.max(6.0))),
+                    corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
                 });
                 cx.scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(1),
                     rect: chrome.title_bar,
-                    background: theme.colors.surface_background,
+                    background: surface,
                     border: Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(Px(0.0)),
@@ -1896,14 +1904,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cx.scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(2),
                         rect: chrome.close_button,
-                        background: theme.colors.hover_background,
+                        background: hover_bg,
                         border: Edges::all(Px(0.0)),
                         border_color: Color::TRANSPARENT,
-                        corner_radii: fret_core::Corners::all(Px(theme
-                            .metrics
-                            .radius_sm
-                            .0
-                            .max(4.0))),
+                        corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                     });
                 }
 
@@ -1914,9 +1918,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         + ((chrome.close_button.size.height.0 - glyph.metrics.size.height.0) * 0.5);
                     let text_y = Px(inner_y + glyph.metrics.baseline.0);
                     let color = if close_hovered || close_pressed {
-                        theme.colors.text_primary
+                        fg
                     } else {
-                        theme.colors.text_muted
+                        fg_muted
                     };
                     cx.scene.push(SceneOp::Text {
                         order: fret_core::DrawOrder(3),
