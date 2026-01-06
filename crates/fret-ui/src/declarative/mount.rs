@@ -122,6 +122,7 @@ pub fn render_root<H: UiHost>(
 
         let window_state = runtime.for_window_mut(window);
         let root_id = crate::elements::global_root(window, root_name);
+        let mut scroll_bindings: Vec<(usize, GlobalElementId)> = Vec::new();
 
         let root_node = window_state
             .node_entry(root_id)
@@ -172,10 +173,18 @@ pub fn render_root<H: UiHost>(
                     window_state,
                     window_frame,
                     child,
+                    &mut scroll_bindings,
                 ));
             }
             ui.set_children(root_node, mounted_children);
         });
+
+        crate::declarative::frame::register_scroll_handle_bindings_batch(
+            app,
+            window,
+            frame_id,
+            scroll_bindings,
+        );
 
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
@@ -256,6 +265,7 @@ fn render_dismissible_root_impl<
 
         let window_state = runtime.for_window_mut(window);
         let root_id = crate::elements::global_root(window, root_name);
+        let mut scroll_bindings: Vec<(usize, GlobalElementId)> = Vec::new();
 
         let root_node = window_state
             .node_entry(root_id)
@@ -306,10 +316,18 @@ fn render_dismissible_root_impl<
                     window_state,
                     window_frame,
                     child,
+                    &mut scroll_bindings,
                 ));
             }
             ui.set_children(root_node, mounted_children);
         });
+
+        crate::declarative::frame::register_scroll_handle_bindings_batch(
+            app,
+            window,
+            frame_id,
+            scroll_bindings,
+        );
 
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
@@ -350,6 +368,7 @@ fn mount_element<H: UiHost>(
     window_state: &mut crate::elements::WindowElementState,
     window_frame: &mut WindowFrame,
     element: AnyElement,
+    scroll_bindings: &mut Vec<(usize, GlobalElementId)>,
 ) -> NodeId {
     let id = element.id;
     let node = window_state
@@ -424,6 +443,8 @@ fn mount_element<H: UiHost>(
         ElementKind::Scrollbar(p) => ElementInstance::Scrollbar(p),
     };
 
+    collect_scroll_handle_bindings(id, &instance, scroll_bindings);
+
     window_frame.instances.insert(
         node,
         ElementRecord {
@@ -442,9 +463,34 @@ fn mount_element<H: UiHost>(
             window_state,
             window_frame,
             child,
+            scroll_bindings,
         ));
     }
     ui.set_children(node, child_nodes);
 
     node
+}
+
+fn collect_scroll_handle_bindings(
+    element: GlobalElementId,
+    instance: &ElementInstance,
+    out: &mut Vec<(usize, GlobalElementId)>,
+) {
+    match instance {
+        ElementInstance::VirtualList(props) => {
+            out.push((props.scroll_handle.base_handle().binding_key(), element));
+        }
+        ElementInstance::Scroll(props) => {
+            if let Some(handle) = props.scroll_handle.as_ref() {
+                out.push((handle.binding_key(), element));
+            }
+        }
+        ElementInstance::WheelRegion(props) => {
+            out.push((props.scroll_handle.binding_key(), element));
+        }
+        ElementInstance::Scrollbar(props) => {
+            out.push((props.scroll_handle.binding_key(), element));
+        }
+        _ => {}
+    }
 }

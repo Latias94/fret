@@ -218,6 +218,123 @@ fn virtual_list_computes_visible_range_after_first_layout_horizontal() {
 }
 
 #[test]
+fn virtual_list_shared_scroll_handle_invalidates_other_bound_lists() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(60.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_pair(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        list_a_id: &mut Option<crate::elements::GlobalElementId>,
+        list_b_id: &mut Option<crate::elements::GlobalElementId>,
+    ) -> Vec<crate::element::AnyElement> {
+        let mut options = crate::element::VirtualListOptions::new(Px(10.0), 0);
+        options.axis = fret_core::Axis::Horizontal;
+
+        let list_a = cx.virtual_list(100, options, scroll_handle, |cx, items| {
+            items
+                .iter()
+                .copied()
+                .map(|item| cx.keyed(item.key, |cx| cx.text("a")))
+                .collect()
+        });
+        *list_a_id = Some(list_a.id);
+
+        let list_b = cx.virtual_list(100, options, scroll_handle, |cx, items| {
+            items
+                .iter()
+                .copied()
+                .map(|item| cx.keyed(item.key, |cx| cx.text("b")))
+                .collect()
+        });
+        *list_b_id = Some(list_b.id);
+
+        vec![list_a, list_b]
+    }
+
+    // Frame 1: mount and measure.
+    let mut list_a_id: Option<crate::elements::GlobalElementId> = None;
+    let mut list_b_id: Option<crate::elements::GlobalElementId> = None;
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp60-vlist-x-sync",
+        |cx| build_pair(cx, &scroll_handle, &mut list_a_id, &mut list_b_id),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    // Frame 2: build visible rows now that viewport is known.
+    app.advance_frame();
+    let prev_list_a_id = list_a_id;
+    let prev_list_b_id = list_b_id;
+    let mut list_a_id: Option<crate::elements::GlobalElementId> = None;
+    let mut list_b_id: Option<crate::elements::GlobalElementId> = None;
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp60-vlist-x-sync",
+        |cx| build_pair(cx, &scroll_handle, &mut list_a_id, &mut list_b_id),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(list_a_id, prev_list_a_id);
+    assert_eq!(list_b_id, prev_list_b_id);
+
+    let before = crate::elements::with_element_state(
+        &mut app,
+        window,
+        list_b_id.unwrap(),
+        crate::element::VirtualListState::default,
+        |s| s.offset_x,
+    );
+    assert_eq!(before, Px(0.0));
+
+    // Scroll the first list; the second list should also be invalidated and updated because it
+    // shares the same `VirtualListScrollHandle`.
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: fret_core::Point::new(Px(5.0), Px(5.0)),
+            delta: fret_core::Point::new(Px(-20.0), Px(0.0)),
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let after = crate::elements::with_element_state(
+        &mut app,
+        window,
+        list_b_id.unwrap(),
+        crate::element::VirtualListState::default,
+        |s| s.offset_x,
+    );
+    assert!(
+        after.0 > before.0,
+        "expected shared scroll to update second list offset: before={:?} after={:?}",
+        before,
+        after
+    );
+}
+
+#[test]
 fn virtual_list_scroll_to_item_keeps_target_visible() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

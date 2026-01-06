@@ -37,6 +37,8 @@ pub(super) fn handle_wheel_region<H: UiHost>(
         return true;
     }
 
+    super::invalidate_scroll_handle_bindings(cx, window, props.scroll_handle.binding_key());
+
     if let Some(target) = props.scroll_target
         && let Some(node) = node_for_element_in_window_frame(&mut *cx.app, window, target)
     {

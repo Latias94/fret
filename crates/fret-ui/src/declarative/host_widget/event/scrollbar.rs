@@ -16,6 +16,7 @@ pub(super) fn handle_scrollbar<H: UiHost>(
     };
 
     let handle = props.scroll_handle.clone();
+    let handle_key = handle.binding_key();
     let scroll_target = props.scroll_target;
     match pe {
         fret_core::PointerEvent::Wheel { delta, .. } => {
@@ -30,6 +31,8 @@ pub(super) fn handle_scrollbar<H: UiHost>(
             } else {
                 handle.set_offset(Point::new(prev.x, Px(prev.y.0 - delta.y.0)));
             }
+
+            super::invalidate_scroll_handle_bindings(cx, window, handle_key);
 
             if let Some(target) = scroll_target
                 && let Some(node) = node_for_element_in_window_frame(&mut *cx.app, window, target)
@@ -124,6 +127,7 @@ pub(super) fn handle_scrollbar<H: UiHost>(
             );
 
             if needs_layout {
+                super::invalidate_scroll_handle_bindings(cx, window, handle_key);
                 cx.invalidate_self(Invalidation::Layout);
                 if let Some(target) = scroll_target
                     && let Some(node) =
@@ -244,6 +248,9 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                 {
                     cx.invalidate(node, Invalidation::Layout);
                     cx.invalidate(node, Invalidation::Paint);
+                }
+                if did_change_offset {
+                    super::invalidate_scroll_handle_bindings(cx, window, handle_key);
                 }
                 cx.invalidate_self(Invalidation::Layout);
                 cx.invalidate_self(Invalidation::Paint);

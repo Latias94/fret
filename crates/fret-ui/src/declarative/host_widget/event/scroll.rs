@@ -71,6 +71,11 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                 },
             );
             if consumed {
+                super::invalidate_scroll_handle_bindings(
+                    cx,
+                    window,
+                    props.scroll_handle.base_handle().binding_key(),
+                );
                 cx.invalidate_self(Invalidation::Layout);
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -126,6 +131,9 @@ pub(super) fn handle_scroll<H: UiHost>(
         };
 
         if consumed {
+            if let Some(handle) = props.scroll_handle.as_ref() {
+                super::invalidate_scroll_handle_bindings(cx, window, handle.binding_key());
+            }
             cx.invalidate_self(Invalidation::Layout);
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
