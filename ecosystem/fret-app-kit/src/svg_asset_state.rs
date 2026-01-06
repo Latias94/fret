@@ -13,6 +13,21 @@ pub fn use_svg_bytes_cached<H: GlobalsHost + TimeHost>(
     host.with_svg_asset_cache(|cache, host| cache.use_svg_bytes(host, services, bytes))
 }
 
+/// Convenience wrapper around `SvgAssetCache::use_svg_bytes` that also reports `SvgAssetStats`.
+pub fn use_svg_bytes_cached_with_stats<H: GlobalsHost + TimeHost>(
+    host: &mut H,
+    services: &mut dyn UiServices,
+    bytes: &[u8],
+) -> (SvgAssetKey, SvgId, SvgAssetStats) {
+    use fret_asset_cache::svg_asset_cache::SvgAssetCacheHostExt as _;
+
+    host.with_svg_asset_cache(|cache, host| {
+        let (key, svg) = cache.use_svg_bytes(host, services, bytes);
+        let stats = cache.stats();
+        (key, svg, stats)
+    })
+}
+
 /// Returns the currently cached svg id for the provided key, if present.
 pub fn svg_from_asset_cache(cache: &SvgAssetCache, key: SvgAssetKey) -> Option<SvgId> {
     cache.svg(key)
@@ -179,6 +194,17 @@ mod tests {
         assert_eq!(id1, id2);
 
         let stats = svg_asset_cache_stats(&mut host);
+        assert_eq!(stats.ready_count, 1);
+    }
+
+    #[test]
+    fn use_svg_bytes_cached_with_stats_reports_stats() {
+        let mut host = TestHost::default();
+        host.set_frame(1);
+        let mut services = FakeUiServices::default();
+
+        let bytes = br#"<svg viewBox="0 0 1 1"></svg>"#;
+        let (_k, _id, stats) = use_svg_bytes_cached_with_stats(&mut host, &mut services, bytes);
         assert_eq!(stats.ready_count, 1);
     }
 }

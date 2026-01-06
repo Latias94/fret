@@ -3,6 +3,8 @@ use fret_core::{AppWindowId, ImageColorSpace, ImageId};
 use fret_runtime::{EffectSink, GlobalsHost, TimeHost};
 use fret_ui_kit::primitives::avatar::AvatarImageLoadingStatus;
 
+use crate::image_asset_state::{ImageLoadingStatus, image_state_from_asset_cache, use_rgba8_image_state};
+
 /// Maps an `ImageAssetCache` entry to Radix-like avatar image loading outcomes.
 ///
 /// Mapping rules:
@@ -14,16 +16,14 @@ pub fn avatar_image_state_from_asset_cache(
     cache: &ImageAssetCache,
     key: ImageAssetKey,
 ) -> (Option<ImageId>, AvatarImageLoadingStatus) {
-    if let Some(image) = cache.image(key) {
-        return (Some(image), AvatarImageLoadingStatus::Loaded);
-    }
-    if cache.error(key).is_some() {
-        return (None, AvatarImageLoadingStatus::Error);
-    }
-    if cache.image_meta(key).is_some() {
-        return (None, AvatarImageLoadingStatus::Loading);
-    }
-    (None, AvatarImageLoadingStatus::Idle)
+    let (image, status) = image_state_from_asset_cache(cache, key);
+    let status = match status {
+        ImageLoadingStatus::Idle => AvatarImageLoadingStatus::Idle,
+        ImageLoadingStatus::Loading => AvatarImageLoadingStatus::Loading,
+        ImageLoadingStatus::Loaded => AvatarImageLoadingStatus::Loaded,
+        ImageLoadingStatus::Error => AvatarImageLoadingStatus::Error,
+    };
+    (image, status)
 }
 
 /// Convenience wrapper around `ImageAssetCache::use_rgba8` that also reports a Radix-like
@@ -36,13 +36,15 @@ pub fn use_rgba8_avatar_image<H: GlobalsHost + TimeHost + EffectSink>(
     rgba: &[u8],
     color_space: ImageColorSpace,
 ) -> (ImageAssetKey, Option<ImageId>, AvatarImageLoadingStatus) {
-    use fret_asset_cache::image_asset_cache::ImageAssetCacheHostExt as _;
-
-    host.with_image_asset_cache(|cache, host| {
-        let (key, image) = cache.use_rgba8(host, window, width, height, rgba, color_space);
-        let (_, status) = avatar_image_state_from_asset_cache(cache, key);
-        (key, image, status)
-    })
+    let (key, image, status) =
+        use_rgba8_image_state(host, window, width, height, rgba, color_space);
+    let status = match status {
+        ImageLoadingStatus::Idle => AvatarImageLoadingStatus::Idle,
+        ImageLoadingStatus::Loading => AvatarImageLoadingStatus::Loading,
+        ImageLoadingStatus::Loaded => AvatarImageLoadingStatus::Loaded,
+        ImageLoadingStatus::Error => AvatarImageLoadingStatus::Error,
+    };
+    (key, image, status)
 }
 
 #[cfg(test)]
@@ -170,14 +172,7 @@ mod tests {
         );
 
         let rgba = [0u8; 4];
-        let (key, _image) = cache.use_rgba8(
-            &mut host,
-            window,
-            1,
-            1,
-            &rgba,
-            ImageColorSpace::Srgb,
-        );
+        let (key, _image) = cache.use_rgba8(&mut host, window, 1, 1, &rgba, ImageColorSpace::Srgb);
         assert_eq!(
             avatar_image_state_from_asset_cache(&cache, key),
             (None, AvatarImageLoadingStatus::Loading)
@@ -219,4 +214,3 @@ mod tests {
         assert_eq!(status, AvatarImageLoadingStatus::Loading);
     }
 }
-
