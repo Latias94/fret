@@ -669,8 +669,9 @@ pub fn render<H: UiHost>(
                     },
                     move |cx| {
                         let mut out: Vec<AnyElement> = Vec::with_capacity(toasts.len());
+                        let base_theme = theme.clone();
                         for toast in toasts {
-                            let theme = theme.clone();
+                            let theme = base_theme.clone();
                             let store = store_for_toasts.clone();
                             let toast_id = toast.id;
                             let open = toast.open;
@@ -950,7 +951,7 @@ pub fn render<H: UiHost>(
                                 fret_ui::element::FlexProps {
                                     layout: fret_ui::element::LayoutStyle::default(),
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: theme.metric_required("metric.padding.sm"),
+                                    gap: toast_padding,
                                     padding: fret_core::Edges::all(fret_core::Px(0.0)),
                                     justify: fret_ui::element::MainAlign::Start,
                                     align: fret_ui::element::CrossAlign::Center,
@@ -1004,7 +1005,7 @@ pub fn render<H: UiHost>(
                                             fret_ui::element::FlexProps {
                                                 layout: fret_ui::element::LayoutStyle::default(),
                                                 direction: fret_core::Axis::Horizontal,
-                                                gap: theme.metric_required("metric.padding.sm"),
+                                                gap: toast_padding,
                                                 padding: fret_core::Edges::all(Px(0.0)),
                                                 justify: fret_ui::element::MainAlign::End,
                                                 align: fret_ui::element::CrossAlign::Center,
