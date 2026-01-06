@@ -3,38 +3,61 @@
   "author": "Fret",
   "url": "https://github.com/Latias94/fret",
   "colors": {
-    "color.surface.background": "#0B1020",
-    "color.panel.background": "#0F172A",
-    "color.panel.border": "#24324D",
-    "color.text.primary": "#E5E7EB",
-    "color.text.muted": "#9CA3AF",
-    "color.text.disabled": "#6B7280",
-    "color.accent": "#60A5FA",
-    "color.selection.background": "#60A5FA4D",
-    "color.hover.background": "#111C33",
-    "color.focus.ring": "#60A5FACC",
-    "color.menu.background": "#0F172A",
-    "color.menu.border": "#24324D",
-    "color.menu.item.hover": "#111C33",
-    "color.menu.item.selected": "#60A5FA4D",
-    "color.list.background": "#0F172A",
-    "color.list.border": "#24324D",
-    "color.list.row.hover": "#111C33",
-    "color.list.row.selected": "#60A5FA4D",
-    "color.scrollbar.track": "#070B14",
-    "color.scrollbar.thumb": "#374151",
-    "color.scrollbar.thumb.hover": "#4B5563"
+    "background": "#0B1020",
+    "foreground": "#E5E7EB",
+    "border": "#24324D",
+    "input": "#24324D",
+    "ring": "#60A5FACC",
+    "ring-offset-background": "#0B1020",
+
+    "card": "#0F172A",
+    "card-foreground": "#E5E7EB",
+
+    "popover": "#0F172A",
+    "popover-foreground": "#E5E7EB",
+
+    "muted": "#0F172A",
+    "muted-foreground": "#9CA3AF",
+
+    "accent": "#111C33",
+    "accent-foreground": "#E5E7EB",
+
+    "primary": "#60A5FA",
+    "primary-foreground": "#FFFFFF",
+
+    "secondary": "#0F172A",
+    "secondary-foreground": "#E5E7EB",
+
+    "destructive": "#EF4444",
+    "destructive-foreground": "#FFFFFF",
+
+    "selection": "#60A5FA4D",
+    "selection-foreground": "#E5E7EB",
+
+    "fret.text.disabled": "#6B7280",
+
+    "fret.menu.background": "#0F172A",
+    "fret.menu.border": "#24324D",
+    "fret.menu.item.hover": "#111C33",
+    "fret.menu.item.selected": "#60A5FA4D",
+
+    "fret.list.background": "#0F172A",
+    "fret.list.border": "#24324D",
+    "fret.list.row.hover": "#111C33",
+    "fret.list.row.selected": "#60A5FA4D",
+
+    "fret.scrollbar.track": "#070B14",
+    "fret.scrollbar.thumb": "#374151",
+    "fret.scrollbar.thumb.hover": "#4B5563"
   },
   "metrics": {
-    "metric.radius.sm": 6.0,
-    "metric.radius.md": 8.0,
-    "metric.radius.lg": 12.0,
-    "metric.padding.sm": 10.0,
-    "metric.padding.md": 12.0,
-    "metric.scrollbar.width": 10.0,
-    "metric.font.size": 13.0,
-    "metric.font.mono_size": 13.0,
-    "metric.font.line_height": 16.0,
-    "metric.font.mono_line_height": 16.0
+    "radius": 12.0,
+    "fret.padding.sm": 10.0,
+    "fret.padding.md": 12.0,
+    "fret.scrollbar.width": 10.0,
+    "font.size": 13.0,
+    "mono_font.size": 13.0,
+    "font.line_height": 16.0,
+    "mono_font.line_height": 16.0
   }
 }
