@@ -526,6 +526,37 @@ impl<'a, TData> Table<'a, TData> {
         })
     }
 
+    pub fn row_is_selected(&self, row_key: RowKey) -> bool {
+        super::is_row_selected(row_key, &self.state.row_selection)
+    }
+
+    pub fn row_is_some_selected(&self, row_key: RowKey) -> bool {
+        self.core_row_model().row_by_key(row_key).is_some_and(|i| {
+            super::row_is_some_selected(self.core_row_model(), &self.state.row_selection, i)
+        })
+    }
+
+    pub fn row_is_all_sub_rows_selected(&self, row_key: RowKey) -> bool {
+        self.core_row_model().row_by_key(row_key).is_some_and(|i| {
+            super::row_is_all_sub_rows_selected(self.core_row_model(), &self.state.row_selection, i)
+        })
+    }
+
+    pub fn toggled_row_selected(
+        &self,
+        row_key: RowKey,
+        value: Option<bool>,
+        select_children: bool,
+    ) -> super::RowSelectionState {
+        super::toggle_row_selected(
+            self.core_row_model(),
+            &self.state.row_selection,
+            row_key,
+            value,
+            select_children,
+        )
+    }
+
     pub fn is_all_rows_selected(&self) -> bool {
         super::is_all_rows_selected(self.filtered_row_model(), &self.state.row_selection)
     }
