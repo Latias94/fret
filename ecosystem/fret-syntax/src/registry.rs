@@ -144,6 +144,8 @@ fn normalize_language_name(language: &str) -> &str {
         "rust"
     } else if s.eq_ignore_ascii_case("sh") {
         "bash"
+    } else if s.eq_ignore_ascii_case("shell") {
+        "bash"
     } else if s.eq_ignore_ascii_case("js") || s.eq_ignore_ascii_case("jsx") {
         "javascript"
     } else if s.eq_ignore_ascii_case("ts") || s.eq_ignore_ascii_case("tsx") {
@@ -156,6 +158,8 @@ fn normalize_language_name(language: &str) -> &str {
         "python"
     } else if s.eq_ignore_ascii_case("rb") {
         "ruby"
+    } else if s.eq_ignore_ascii_case("jsonc") {
+        "json"
     } else if s.eq_ignore_ascii_case("c++") {
         "cpp"
     } else if s.eq_ignore_ascii_case("c#")

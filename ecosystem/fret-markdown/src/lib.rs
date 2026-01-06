@@ -143,14 +143,7 @@ fn parse_blocks(source: &str) -> Vec<Block> {
             (State::None, Event::Start(Tag::CodeBlock(kind))) => {
                 let lang = match kind {
                     CodeBlockKind::Indented => None,
-                    CodeBlockKind::Fenced(info) => {
-                        let info = info.trim();
-                        if info.is_empty() {
-                            None
-                        } else {
-                            Some(Arc::<str>::from(info.to_string()))
-                        }
-                    }
+                    CodeBlockKind::Fenced(info) => parse_fenced_code_language(&info),
                 };
                 state = State::CodeBlock {
                     lang,
@@ -205,6 +198,42 @@ fn parse_blocks(source: &str) -> Vec<Block> {
     }
 
     blocks
+}
+
+fn parse_fenced_code_language(info: &str) -> Option<Arc<str>> {
+    let info = info.trim();
+    if info.is_empty() {
+        return None;
+    }
+
+    let token = info.split_whitespace().next().unwrap_or("");
+    if token.is_empty() {
+        return None;
+    }
+
+    // Common patterns seen in the wild:
+    // - ```rust
+    // - ```rust,ignore
+    // - ```language-rust
+    // - ```{.rust}
+    // - ```{.rust .numberLines}
+    // - ```{#id .rust}
+    let token = token.trim_matches(|c| c == '{' || c == '}');
+    let token = token.strip_prefix("language-").unwrap_or(token);
+    let token = token.strip_prefix("lang-").unwrap_or(token);
+
+    let token = if token.contains('.') {
+        token.split('.').find(|s| !s.is_empty()).unwrap_or(token)
+    } else {
+        token
+    };
+
+    let token = token.split(',').next().unwrap_or(token).trim();
+    if token.is_empty() {
+        return None;
+    }
+
+    Some(Arc::<str>::from(token.to_string()))
 }
 
 fn heading_level_to_u8(level: pulldown_cmark::HeadingLevel) -> u8 {
