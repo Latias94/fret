@@ -24,6 +24,7 @@ use fret_ui::element::{AnyElement, ElementKind, PressableA11y, PressableProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::headless::roving_focus;
 use crate::headless::typeahead;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
@@ -249,6 +250,144 @@ impl SelectTriggerKeyState {
     }
 }
 
+/// Open-state listbox policy for Radix-style select content.
+///
+/// This mirrors Radix outcomes inside `SelectContent`:
+/// - `Escape` closes.
+/// - `Home/End/ArrowUp/ArrowDown` move the active option (skipping disabled).
+/// - `Enter/Space` commits the active option and closes.
+/// - Typeahead search moves the active option (with repeated-search normalization).
+#[derive(Debug, Default)]
+pub struct SelectContentKeyState {
+    active_row: Option<usize>,
+    typeahead: TimedTypeaheadState,
+}
+
+impl SelectContentKeyState {
+    pub fn active_row(&self) -> Option<usize> {
+        self.active_row
+    }
+
+    pub fn set_active_row(&mut self, row: Option<usize>) {
+        self.active_row = row;
+    }
+
+    pub fn reset_on_open(&mut self, initial_active_row: Option<usize>) {
+        self.active_row = initial_active_row;
+        self.typeahead.query.clear();
+        self.typeahead.clear_token = None;
+    }
+
+    pub fn clear_typeahead(&mut self, host: &mut dyn UiActionHost) {
+        self.typeahead.clear_and_cancel(host);
+    }
+
+    pub fn on_timer(&mut self, token: TimerToken) -> bool {
+        self.typeahead.on_timer(token)
+    }
+
+    pub fn handle_key_down_when_open(
+        &mut self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        open: &Model<bool>,
+        value: &Model<Option<Arc<str>>>,
+        values_by_row: &[Option<Arc<str>>],
+        labels_by_row: &[Arc<str>],
+        disabled_by_row: &[bool],
+        key: KeyCode,
+        repeat: bool,
+        loop_navigation: bool,
+    ) -> bool {
+        if repeat {
+            return false;
+        }
+
+        let is_open = host.models_mut().get_copied(open).unwrap_or(false);
+        if !is_open {
+            return false;
+        }
+
+        if key == KeyCode::Space && !self.typeahead.query().is_empty() {
+            return true;
+        }
+
+        let current = self
+            .active_row
+            .or_else(|| roving_focus::first_enabled(disabled_by_row));
+
+        match key {
+            KeyCode::Escape => {
+                let _ = host.models_mut().update(open, |v| *v = false);
+                host.request_redraw(window);
+                true
+            }
+            KeyCode::Home => {
+                self.active_row = roving_focus::first_enabled(disabled_by_row);
+                host.request_redraw(window);
+                true
+            }
+            KeyCode::End => {
+                self.active_row = roving_focus::last_enabled(disabled_by_row);
+                host.request_redraw(window);
+                true
+            }
+            KeyCode::ArrowDown | KeyCode::ArrowUp => {
+                let Some(current) = current else {
+                    return true;
+                };
+                let forward = key == KeyCode::ArrowDown;
+                self.active_row = roving_focus::next_enabled(
+                    disabled_by_row,
+                    current,
+                    forward,
+                    loop_navigation,
+                )
+                .or(Some(current));
+                host.request_redraw(window);
+                true
+            }
+            KeyCode::Enter | KeyCode::Space => {
+                let Some(active_row) = current else {
+                    return true;
+                };
+                let is_disabled = disabled_by_row.get(active_row).copied().unwrap_or(true);
+                if is_disabled {
+                    return true;
+                }
+                if let Some(chosen_value) = values_by_row.get(active_row).cloned().flatten() {
+                    let _ = host
+                        .models_mut()
+                        .update(value, |v| *v = Some(chosen_value.clone()));
+                    let _ = host.models_mut().update(open, |v| *v = false);
+                    host.request_redraw(window);
+                }
+                true
+            }
+            _ => {
+                let timeout = Duration::from_millis(SELECT_TYPEAHEAD_CLEAR_TIMEOUT_MS);
+                let Some(_ch) = self.typeahead.push_key_and_arm_timer(host, window, key, timeout)
+                else {
+                    return false;
+                };
+
+                let next = typeahead::match_prefix_arc_str(
+                    labels_by_row,
+                    disabled_by_row,
+                    self.typeahead.query(),
+                    current,
+                    true,
+                );
+                if next != self.active_row {
+                    self.active_row = next;
+                    host.request_redraw(window);
+                }
+                true
+            }
+        }
+    }
+}
+
 /// Builds an overlay request for a Radix-style select content overlay.
 ///
 /// This uses a modal overlay layer to approximate Radix Select's outside interaction blocking.
@@ -420,5 +559,72 @@ mod tests {
 
         assert!(app.models().get_copied(&open).unwrap_or(false));
         assert!(state.take_suppress_next_activate());
+    }
+
+    #[test]
+    fn content_arrow_navigation_updates_active_row() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+        let value = app.models_mut().insert(None::<Arc<str>>);
+
+        let values_by_row: Vec<Option<Arc<str>>> =
+            vec![Some(Arc::from("alpha")), Some(Arc::from("beta")), Some(Arc::from("gamma"))];
+        let labels_by_row: Vec<Arc<str>> =
+            vec![Arc::from("Alpha"), Arc::from("Beta"), Arc::from("Gamma")];
+        let disabled_by_row = vec![false, true, false];
+
+        let mut state = SelectContentKeyState::default();
+        let mut host = UiActionHostAdapter { app: &mut app };
+
+        assert!(state.handle_key_down_when_open(
+            &mut host,
+            window,
+            &open,
+            &value,
+            &values_by_row,
+            &labels_by_row,
+            &disabled_by_row,
+            KeyCode::ArrowDown,
+            false,
+            true,
+        ));
+        // Skips disabled row 1, so we land on row 2.
+        assert_eq!(state.active_row(), Some(2));
+    }
+
+    #[test]
+    fn content_enter_commits_value_and_closes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+        let value = app.models_mut().insert(None::<Arc<str>>);
+
+        let values_by_row: Vec<Option<Arc<str>>> = vec![Some(Arc::from("beta"))];
+        let labels_by_row: Vec<Arc<str>> = vec![Arc::from("Beta")];
+        let disabled_by_row = vec![false];
+
+        let mut state = SelectContentKeyState::default();
+        state.set_active_row(Some(0));
+
+        let mut host = UiActionHostAdapter { app: &mut app };
+        assert!(state.handle_key_down_when_open(
+            &mut host,
+            window,
+            &open,
+            &value,
+            &values_by_row,
+            &labels_by_row,
+            &disabled_by_row,
+            KeyCode::Enter,
+            false,
+            true,
+        ));
+
+        assert!(!app.models().get_copied(&open).unwrap_or(false));
+        assert_eq!(
+            app.models().get_cloned(&value).flatten().as_deref(),
+            Some("beta")
+        );
     }
 }

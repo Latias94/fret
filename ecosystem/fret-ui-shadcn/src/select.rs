@@ -20,7 +20,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::{roving_focus, typeahead};
+use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::popper;
@@ -664,16 +664,16 @@ fn select_impl<H: UiHost>(
         #[derive(Debug)]
         struct SelectTriggerKeyState {
             trigger: radix_select::SelectTriggerKeyState,
+            content: radix_select::SelectContentKeyState,
             was_open: bool,
-            active_row: Option<usize>,
         }
 
         impl SelectTriggerKeyState {
             fn new() -> Self {
                 Self {
                     trigger: radix_select::SelectTriggerKeyState::default(),
+                    content: radix_select::SelectContentKeyState::default(),
                     was_open: false,
-                    active_row: None,
                 }
             }
         }
@@ -729,7 +729,7 @@ fn select_impl<H: UiHost>(
                     let mut state = state_for_timer
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
-                    state.trigger.on_timer(token)
+                    state.trigger.on_timer(token) || state.content.on_timer(token)
                 }),
             );
 
@@ -971,18 +971,18 @@ fn select_impl<H: UiHost>(
                             if is_open {
                                 if !state.was_open {
                                     state.was_open = true;
-                                    state.active_row = initial_active_row;
+                                    state.content.reset_on_open(initial_active_row);
                                     state.trigger.reset_typeahead_buffer();
-                                } else if state.active_row.is_none() {
-                                    state.active_row = initial_active_row;
-                                }
-                            } else {
-                                state.was_open = false;
-                                state.active_row = None;
+                            } else if state.content.active_row().is_none() {
+                                state.content.set_active_row(initial_active_row);
                             }
+                        } else {
+                            state.was_open = false;
+                            state.content.set_active_row(None);
+                        }
 
-                            state.active_row
-                        };
+                        state.content.active_row()
+                    };
 
                         let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
                         let arrow_bg = theme_for_overlay.colors.panel_background;
@@ -1047,121 +1047,21 @@ fn select_impl<H: UiHost>(
                                                 cx.key_on_key_down_for(
                                                     listbox_id,
                                                     Arc::new(move |host, action_cx, it| {
-                                                        use fret_core::KeyCode;
-
-                                                        if it.repeat {
-                                                            return false;
-                                                        }
-
-                                                        let is_open = host
-                                                            .models_mut()
-                                                            .get_copied(&open_for_key)
-                                                            .unwrap_or(false);
-                                                        if !is_open {
-                                                            return false;
-                                                        }
-
                                                         let mut state = state_for_key
                                                             .lock()
                                                             .unwrap_or_else(|e| e.into_inner());
-
-                                                        if it.key == KeyCode::Space
-                                                            && !state.trigger.typeahead_query().is_empty()
-                                                        {
-                                                            return true;
-                                                        }
-
-                                                        let current = state
-                                                            .active_row
-                                                            .or_else(|| roving_focus::first_enabled(&disabled_for_key));
-
-                                                        match it.key {
-                                                            KeyCode::Escape => {
-                                                                let _ = host
-                                                                    .models_mut()
-                                                                    .update(&open_for_key, |v| *v = false);
-                                                                host.request_redraw(action_cx.window);
-                                                                true
-                                                            }
-                                                            KeyCode::Home => {
-                                                                state.active_row =
-                                                                    roving_focus::first_enabled(&disabled_for_key);
-                                                                host.request_redraw(action_cx.window);
-                                                                true
-                                                            }
-                                                            KeyCode::End => {
-                                                                state.active_row =
-                                                                    roving_focus::last_enabled(&disabled_for_key);
-                                                                host.request_redraw(action_cx.window);
-                                                                true
-                                                            }
-                                                            KeyCode::ArrowDown | KeyCode::ArrowUp => {
-                                                                let Some(current) = current else {
-                                                                    return true;
-                                                                };
-                                                                let forward = it.key == KeyCode::ArrowDown;
-                                                                state.active_row = roving_focus::next_enabled(
-                                                                    &disabled_for_key,
-                                                                    current,
-                                                                    forward,
-                                                                    loop_navigation_for_key,
-                                                                )
-                                                                .or(Some(current));
-                                                                host.request_redraw(action_cx.window);
-                                                                true
-                                                            }
-                                                            KeyCode::Enter | KeyCode::Space => {
-                                                                let Some(active_row) = current else {
-                                                                    return true;
-                                                                };
-                                                                let is_disabled = disabled_for_key
-                                                                    .get(active_row)
-                                                                    .copied()
-                                                                    .unwrap_or(true);
-                                                                if is_disabled {
-                                                                    return true;
-                                                                }
-                                                                if let Some(value) =
-                                                                    values_by_row.get(active_row).cloned().flatten()
-                                                                {
-                                                                    let _ = host
-                                                                        .models_mut()
-                                                                        .update(&model_for_key, |v| {
-                                                                            *v = Some(value.clone())
-                                                                        });
-                                                                    let _ = host
-                                                                        .models_mut()
-                                                                        .update(&open_for_key, |v| *v = false);
-                                                                    host.request_redraw(action_cx.window);
-                                                                }
-                                                                true
-                                                            }
-                                                            _ => {
-                                                                let Some(_ch) = state
-                                                                    .trigger
-                                                                    .push_typeahead_key_and_arm_timer(
-                                                                        host,
-                                                                        action_cx.window,
-                                                                        it.key,
-                                                                    )
-                                                                else {
-                                                                    return false;
-                                                                };
-
-                                                                let next = typeahead::match_prefix_arc_str(
-                                                                    labels_for_key.as_ref(),
-                                                                    disabled_for_key.as_ref(),
-                                                                    state.trigger.typeahead_query(),
-                                                                    current,
-                                                                    true,
-                                                                );
-                                                                if next != state.active_row {
-                                                                    state.active_row = next;
-                                                                    host.request_redraw(action_cx.window);
-                                                                }
-                                                                true
-                                                            }
-                                                        }
+                                                        state.content.handle_key_down_when_open(
+                                                            host,
+                                                            action_cx.window,
+                                                            &open_for_key,
+                                                            &model_for_key,
+                                                            values_by_row.as_ref(),
+                                                            labels_for_key.as_ref(),
+                                                            disabled_for_key.as_ref(),
+                                                            it.key,
+                                                            it.repeat,
+                                                            loop_navigation_for_key,
+                                                        )
                                                     }),
                                                 );
 
@@ -1321,11 +1221,12 @@ fn select_impl<H: UiHost>(
                                                                                                 let mut state = state_for_hover
                                                                                                     .lock()
                                                                                                     .unwrap_or_else(|e| e.into_inner());
-                                                                                                if state.active_row
+                                                                                                if state.content.active_row()
                                                                                                     != Some(row_idx_for_hover)
                                                                                                 {
-                                                                                                    state.active_row =
-                                                                                                        Some(row_idx_for_hover);
+                                                                                                    state.content.set_active_row(
+                                                                                                        Some(row_idx_for_hover),
+                                                                                                    );
                                                                                                     host.request_redraw(
                                                                                                         action_cx.window,
                                                                                                     );
