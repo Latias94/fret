@@ -15,3 +15,4 @@ fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-code-view = { path = "../fret-code-view", default-features = false }
 pulldown-cmark.workspace = true
+mdstream.workspace = true

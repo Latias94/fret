@@ -1201,6 +1201,7 @@ dependencies = [
  "fret-core",
  "fret-ui",
  "fret-ui-kit",
+ "mdstream",
  "pulldown-cmark",
 ]
 
@@ -2021,6 +2022,12 @@ checksum = "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
 dependencies = [
  "regex-automata",
 ]
+
+[[package]]
+name = "mdstream"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f40ba985385a037722f910369b6844b049b9f200544335648446bd825b0341d"
 
 [[package]]
 name = "memchr"

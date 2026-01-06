@@ -8,6 +8,8 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{LayoutRefinement, Space};
 
+pub use mdstream::BlockId;
+
 #[derive(Debug, Clone)]
 pub struct Markdown {
     source: Arc<str>,
@@ -59,6 +61,22 @@ pub fn markdown_blocks<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
     markdown_blocks_with(cx, blocks, &theme, &MarkdownComponents::default())
+}
+
+pub fn markdown_streaming<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    state: &MarkdownStreamingState,
+) -> AnyElement {
+    markdown_blocks(cx, state.view())
+}
+
+pub fn markdown_streaming_with<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    state: &MarkdownStreamingState,
+    components: &MarkdownComponents<H>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    markdown_blocks_with(cx, state.view(), &theme, components)
 }
 
 pub fn markdown_blocks_with<H: UiHost>(
@@ -133,12 +151,17 @@ impl MarkdownBlock {
                     render_code_block(cx, info, components)
                 }
             }
+            MarkdownBlockKind::Raw { kind, text } => {
+                let info = RawBlockInfo { kind, text };
+                if let Some(render) = &components.raw_block {
+                    render(cx, info)
+                } else {
+                    render_paragraph(cx, theme, info.text)
+                }
+            }
         }
     }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BlockId(pub u64);
 
 #[derive(Debug, Clone)]
 pub enum MarkdownBlockKind {
@@ -153,6 +176,22 @@ pub enum MarkdownBlockKind {
         language: Option<Arc<str>>,
         code: Arc<str>,
     },
+    Raw {
+        kind: RawBlockKind,
+        text: Arc<str>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RawBlockKind {
+    ThematicBreak,
+    List,
+    BlockQuote,
+    Table,
+    HtmlBlock,
+    MathBlock,
+    FootnoteDefinition,
+    Unknown,
 }
 
 #[derive(Debug, Clone)]
@@ -187,6 +226,12 @@ pub struct CodeBlockInfo {
     pub code: Arc<str>,
 }
 
+#[derive(Debug, Clone)]
+pub struct RawBlockInfo {
+    pub kind: RawBlockKind,
+    pub text: Arc<str>,
+}
+
 pub type HeadingRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, HeadingInfo) -> AnyElement;
 pub type ParagraphRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, ParagraphInfo) -> AnyElement;
@@ -194,6 +239,8 @@ pub type CodeBlockRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, CodeBlockInfo) -> AnyElement;
 pub type CodeBlockActionsRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, CodeBlockInfo) -> AnyElement;
+pub type RawBlockRenderer<H> =
+    dyn for<'a> Fn(&mut ElementContext<'a, H>, RawBlockInfo) -> AnyElement;
 
 #[derive(Clone)]
 pub struct MarkdownComponents<H: UiHost> {
@@ -205,6 +252,7 @@ pub struct MarkdownComponents<H: UiHost> {
     /// Note: This is only used by the default code block renderer. If you provide `code_block`,
     /// you own the full code fence rendering (including actions).
     pub code_block_actions: Option<Arc<CodeBlockActionsRenderer<H>>>,
+    pub raw_block: Option<Arc<RawBlockRenderer<H>>>,
 }
 
 impl<H: UiHost> Default for MarkdownComponents<H> {
@@ -214,6 +262,7 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
             paragraph: None,
             code_block: None,
             code_block_actions: None,
+            raw_block: None,
         }
     }
 }
@@ -354,7 +403,7 @@ fn parse_blocks(source: &str) -> Vec<MarkdownBlock> {
         .into_iter()
         .enumerate()
         .map(|(i, kind)| MarkdownBlock {
-            id: BlockId(i as u64),
+            id: BlockId((i as u64) + 1),
             kind,
         })
         .collect()
@@ -425,6 +474,225 @@ fn render_code_block<H: UiHost>(
     })
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct MarkdownStreamingState {
+    committed: Vec<MarkdownBlock>,
+    pending: Option<MarkdownBlock>,
+}
+
+impl MarkdownStreamingState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn committed(&self) -> &[MarkdownBlock] {
+        &self.committed
+    }
+
+    pub fn pending(&self) -> Option<&MarkdownBlock> {
+        self.pending.as_ref()
+    }
+
+    pub fn view(&self) -> MarkdownBlocks<'_> {
+        MarkdownBlocks {
+            committed: &self.committed,
+            pending: self.pending.as_ref(),
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.committed.clear();
+        self.pending = None;
+    }
+
+    pub fn apply_update(&mut self, update: mdstream::Update) -> mdstream::AppliedUpdate {
+        if update.reset {
+            self.clear();
+        }
+
+        for block in &update.committed {
+            self.committed.push(convert_mdstream_block(block));
+        }
+
+        self.pending = update.pending.as_ref().map(convert_mdstream_block);
+
+        mdstream::AppliedUpdate {
+            reset: update.reset,
+            invalidated: update.invalidated,
+        }
+    }
+
+    pub fn apply_update_ref(
+        &mut self,
+        update: &mdstream::UpdateRef<'_>,
+    ) -> mdstream::AppliedUpdate {
+        if update.reset {
+            self.clear();
+        }
+
+        for block in update.committed {
+            self.committed.push(convert_mdstream_block(block));
+        }
+
+        self.pending = update.pending.as_ref().map(convert_mdstream_pending_ref);
+
+        mdstream::AppliedUpdate {
+            reset: update.reset,
+            invalidated: update.invalidated.clone(),
+        }
+    }
+}
+
+fn convert_mdstream_pending_ref(p: &mdstream::PendingBlockRef<'_>) -> MarkdownBlock {
+    let raw = p.display.unwrap_or(p.raw);
+    let kind = convert_mdstream_kind(p.kind, raw);
+    MarkdownBlock { id: p.id, kind }
+}
+
+fn convert_mdstream_block(block: &mdstream::Block) -> MarkdownBlock {
+    let raw = block.display_or_raw();
+    let kind = convert_mdstream_kind(block.kind, raw);
+    MarkdownBlock { id: block.id, kind }
+}
+
+fn convert_mdstream_kind(kind: mdstream::BlockKind, raw: &str) -> MarkdownBlockKind {
+    match kind {
+        mdstream::BlockKind::Heading => {
+            if let Some((level, text)) = parse_heading_text(raw) {
+                MarkdownBlockKind::Heading { level, text }
+            } else {
+                MarkdownBlockKind::Raw {
+                    kind: RawBlockKind::Unknown,
+                    text: Arc::<str>::from(raw.trim().to_string()),
+                }
+            }
+        }
+        mdstream::BlockKind::Paragraph => MarkdownBlockKind::Paragraph {
+            text: Arc::<str>::from(normalize_paragraph_text(raw)),
+        },
+        mdstream::BlockKind::CodeFence => {
+            let (language, code) = parse_code_fence_body(raw);
+            MarkdownBlockKind::CodeBlock { language, code }
+        }
+        mdstream::BlockKind::ThematicBreak => MarkdownBlockKind::Raw {
+            kind: RawBlockKind::ThematicBreak,
+            text: Arc::<str>::from(raw.trim().to_string()),
+        },
+        mdstream::BlockKind::List => MarkdownBlockKind::Raw {
+            kind: RawBlockKind::List,
+            text: Arc::<str>::from(raw.trim_end().to_string()),
+        },
+        mdstream::BlockKind::BlockQuote => MarkdownBlockKind::Raw {
+            kind: RawBlockKind::BlockQuote,
+            text: Arc::<str>::from(raw.trim_end().to_string()),
+        },
+        mdstream::BlockKind::Table => MarkdownBlockKind::Raw {
+            kind: RawBlockKind::Table,
+            text: Arc::<str>::from(raw.trim_end().to_string()),
+        },
+        mdstream::BlockKind::HtmlBlock => MarkdownBlockKind::Raw {
+            kind: RawBlockKind::HtmlBlock,
+            text: Arc::<str>::from(raw.trim_end().to_string()),
+        },
+        mdstream::BlockKind::MathBlock => MarkdownBlockKind::Raw {
+            kind: RawBlockKind::MathBlock,
+            text: Arc::<str>::from(raw.trim_end().to_string()),
+        },
+        mdstream::BlockKind::FootnoteDefinition => MarkdownBlockKind::Raw {
+            kind: RawBlockKind::FootnoteDefinition,
+            text: Arc::<str>::from(raw.trim_end().to_string()),
+        },
+        mdstream::BlockKind::Unknown => MarkdownBlockKind::Raw {
+            kind: RawBlockKind::Unknown,
+            text: Arc::<str>::from(raw.trim_end().to_string()),
+        },
+    }
+}
+
+fn normalize_paragraph_text(raw: &str) -> String {
+    raw.split('\n')
+        .map(str::trim_end)
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn parse_heading_text(raw: &str) -> Option<(u8, Arc<str>)> {
+    let mut lines = raw.lines();
+    let first = lines.next()?.trim_end();
+    let second = lines.next().map(str::trim_end);
+
+    // ATX: ### Title
+    let atx = first.trim_start_matches(' ');
+    if let Some(rest) = atx.strip_prefix('#') {
+        let mut level = 1u8;
+        let mut tail = rest;
+        while level < 6 && tail.starts_with('#') {
+            level += 1;
+            tail = &tail[1..];
+        }
+        if !tail.starts_with([' ', '\t']) {
+            return None;
+        }
+        let text = tail.trim();
+        if text.is_empty() {
+            return None;
+        }
+        return Some((level, Arc::<str>::from(text.to_string())));
+    }
+
+    // Setext:
+    // Title
+    // -----
+    if let Some(underline) = second {
+        let underline_trimmed = underline.trim_start_matches(' ').trim_end();
+        if underline_trimmed.chars().all(|c| c == '=') && underline_trimmed.len() >= 2 {
+            let text = first.trim();
+            if text.is_empty() {
+                return None;
+            }
+            return Some((1, Arc::<str>::from(text.to_string())));
+        }
+        if underline_trimmed.chars().all(|c| c == '-') && underline_trimmed.len() >= 2 {
+            let text = first.trim();
+            if text.is_empty() {
+                return None;
+            }
+            return Some((2, Arc::<str>::from(text.to_string())));
+        }
+    }
+
+    None
+}
+
+fn parse_code_fence_body(raw: &str) -> (Option<Arc<str>>, Arc<str>) {
+    let header = mdstream::syntax::parse_code_fence_header_from_block(raw);
+    let language = header
+        .and_then(|h| h.language)
+        .and_then(|lang| parse_fenced_code_language(lang))
+        .or_else(|| {
+            header
+                .and_then(|h| h.language)
+                .map(|s| Arc::<str>::from(s.to_string()))
+        });
+
+    let mut lines = raw.lines();
+    let first = lines.next().unwrap_or("");
+    let mut body_lines: Vec<&str> = lines.collect();
+
+    if let Some(h) = header {
+        if let Some(last) = body_lines.last().copied()
+            && mdstream::syntax::is_code_fence_closing_line(last, h.fence_char, h.fence_len)
+        {
+            body_lines.pop();
+        }
+    }
+
+    let _ = first;
+    let body = body_lines.join("\n");
+    (language, Arc::<str>::from(body))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -450,8 +718,25 @@ mod tests {
     fn assigns_stable_index_ids_for_static_parse() {
         let blocks = parse_blocks("# A\n\nB\n\n```rust\nfn main() {}\n```\n");
         assert_eq!(blocks.len(), 3);
-        assert_eq!(blocks[0].id, BlockId(0));
-        assert_eq!(blocks[1].id, BlockId(1));
-        assert_eq!(blocks[2].id, BlockId(2));
+        assert_eq!(blocks[0].id, BlockId(1));
+        assert_eq!(blocks[1].id, BlockId(2));
+        assert_eq!(blocks[2].id, BlockId(3));
+    }
+
+    #[test]
+    fn mdstream_blocks_apply_incrementally() {
+        let mut stream = mdstream::MdStream::default();
+        let mut state = MarkdownStreamingState::new();
+
+        let u1 = stream.append("Hello\n\n```rust\nfn main() {");
+        let a1 = state.apply_update(u1);
+        assert!(!a1.reset);
+        assert_eq!(state.committed().len(), 1);
+        assert!(state.pending().is_some());
+
+        let u2 = stream.append("}\n```\n");
+        let _a2 = state.apply_update(u2);
+        assert_eq!(state.committed().len(), 2);
+        assert!(state.pending().is_none());
     }
 }

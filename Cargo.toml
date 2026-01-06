@@ -47,6 +47,7 @@ windows-sys = { version = "0.61.0", features = ["Win32_Foundation", "Win32_Syste
 virtualizer = "0.3.0"
 keyboard-types = { version = "0.8.3", features = ["serde"] }
 pulldown-cmark = "0.12"
+mdstream = "0.2.0"
 tree-sitter = "0.25.4"
 tree-sitter-highlight = "0.25.4"
 tree-sitter-bash = "0.23.3"
