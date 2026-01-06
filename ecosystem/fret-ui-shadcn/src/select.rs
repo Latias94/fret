@@ -1346,23 +1346,62 @@ fn select_impl<H: UiHost>(
                                                                                 .or_else(|| theme.color_by_key("muted-foreground"))
                                                                                 .unwrap_or(theme.colors.text_muted);
 
-                                                                            let mut layout = LayoutStyle::default();
-                                                                            layout.size.width = Length::Fill;
+                                                                            let label_text_px = Px(
+                                                                                (theme.metrics.font_size.0 - 2.0)
+                                                                                    .max(10.0),
+                                                                            );
+                                                                            let label_line_height = Px(
+                                                                                (theme
+                                                                                    .metrics
+                                                                                    .font_line_height
+                                                                                    .0
+                                                                                    - 4.0)
+                                                                                    .max(12.0),
+                                                                            );
 
-                                                                            out.push(cx.text_props(TextProps {
-                                                                                layout,
-                                                                                text: label.text,
-                                                                                style: Some(TextStyle {
-                                                                                    font: FontId::default(),
-                                                                                    size: theme.metrics.font_size,
-                                                                                    weight: FontWeight::NORMAL,
-                                                                                    line_height: Some(theme.metrics.font_line_height),
-                                                                                    letter_spacing_em: None,
-                                                                                }),
-                                                                                wrap: TextWrap::None,
-                                                                                overflow: TextOverflow::Ellipsis,
-                                                                                color: Some(fg),
-                                                                            }));
+                                                                            out.push(cx.container(
+                                                                                ContainerProps {
+                                                                                    layout: {
+                                                                                        let mut layout =
+                                                                                            LayoutStyle::default();
+                                                                                        layout.size.width = Length::Fill;
+                                                                                        layout
+                                                                                    },
+                                                                                    // new-york-v4: `px-2 py-1.5`
+                                                                                    padding: Edges {
+                                                                                        top: Px(6.0),
+                                                                                        right: Px(8.0),
+                                                                                        bottom: Px(6.0),
+                                                                                        left: Px(8.0),
+                                                                                    },
+                                                                                    background: None,
+                                                                                    shadow: None,
+                                                                                    border: Edges::all(Px(0.0)),
+                                                                                    border_color: None,
+                                                                                    corner_radii: Corners::all(Px(0.0)),
+                                                                                },
+                                                                                move |cx| {
+                                                                                    let mut layout =
+                                                                                        LayoutStyle::default();
+                                                                                    layout.size.width = Length::Fill;
+                                                                                    vec![cx.text_props(TextProps {
+                                                                                        layout,
+                                                                                        text: label.text,
+                                                                                        style: Some(TextStyle {
+                                                                                            font: FontId::default(),
+                                                                                            size: label_text_px,
+                                                                                            weight: FontWeight::NORMAL,
+                                                                                            line_height: Some(
+                                                                                                label_line_height,
+                                                                                            ),
+                                                                                            letter_spacing_em: None,
+                                                                                        }),
+                                                                                        wrap: TextWrap::None,
+                                                                                        overflow: TextOverflow::Clip,
+                                                                                        color: Some(fg),
+                                                                                    })]
+                                                                                },
+                                                                            ));
                                                                         }
                                                                         SelectRow::Separator => {
                                                                             let theme = Theme::global(&*cx.app).clone();
@@ -1526,7 +1565,7 @@ fn select_impl<H: UiHost>(
                                                                                                 text: item.label.clone(),
                                                                                                 style: Some(text_style.clone()),
                                                                                                 wrap: TextWrap::None,
-                                                                                                overflow: TextOverflow::Ellipsis,
+                                                                                                overflow: TextOverflow::Clip,
                                                                                                 color: Some(fg),
                                                                                             });
 
