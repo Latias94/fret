@@ -40,7 +40,9 @@ Fret models Radix Select outcomes by composing:
   implemented in `ecosystem/fret-ui-kit/src/primitives/select.rs` and consumed by the shadcn select.
 - Pass: Pointer modality details are mapped: mouse opens on `pointerdown`, touch/pen open on
   click-like pointer up (movement threshold) to avoid scroll-to-open.
-- Partial: Item-aligned positioning (Radix `SelectItemAlignedPosition`) is not yet implemented.
+- Pass: Item-aligned positioning (Radix `SelectItemAlignedPosition`) is implemented as reusable
+  headless geometry math in `ecosystem/fret-ui-kit/src/headless/select_item_aligned.rs` and is
+  available to recipes (shadcn select exposes it via `SelectPosition::ItemAligned`).
 
 ## Follow-ups (recommended)
 

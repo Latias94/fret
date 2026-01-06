@@ -25,6 +25,8 @@ examples in `repo-ref/ui`.
 
 - Pass: Exposes `side`/`align` and both `side_offset(...)` + `align_offset(...)`, mapping to
   `PopperContentPlacement`.
+- Pass: Exposes `position(...)` to switch between Radix `item-aligned` and `popper` positioning.
+  Default is `SelectPosition::Popper` to match shadcn/ui v4 examples (`position="popper"`).
 - Pass: Uses per-window overlay roots (portal-like) via `OverlayController`.
 - Pass: Optional diamond arrow rendering (`Select::arrow(true)`).
 
@@ -52,8 +54,8 @@ examples in `repo-ref/ui`.
   `SelectSeparator`) rendered inside the listbox.
 - Pass: Scroll buttons (`SelectScrollUpButton` / `SelectScrollDownButton`) are rendered for
   overflowing lists and scroll the viewport without dismissing the overlay.
-- Pass: Supports both Radix positioning modes: `SelectPosition::ItemAligned` (default) and
-  `SelectPosition::Popper` (enables arrow rendering when requested).
+- Pass: Supports both Radix positioning modes (`SelectPosition::ItemAligned` and
+  `SelectPosition::Popper`). Arrow rendering is only available in popper mode.
 
 ## Validation
 
@@ -61,5 +63,5 @@ examples in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- Consider matching Radix horizontal alignment rules based on the value node + selected item text
-  geometry (Fret currently aligns via `align` + `align_offset` only).
+- Consider exposing a Radix-named `SelectContent`-style wrapper that defaults to item-aligned but
+  still allows opting into popper mode for arrow-based skins.

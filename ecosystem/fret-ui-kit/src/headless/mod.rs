@@ -10,6 +10,7 @@ pub mod presence;
 pub mod roving_focus;
 pub mod safe_hover;
 pub mod scroll_area_visibility;
+pub mod select_item_aligned;
 pub mod slider;
 #[cfg(feature = "table")]
 pub mod table;

@@ -1,7 +1,7 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextOverflow,
+    TextStyle, TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -22,6 +22,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::headless::select_item_aligned as item_aligned;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::popper;
@@ -46,6 +47,8 @@ fn select_scroll_with_buttons<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: Theme,
     item_step: Px,
+    initial_scroll_to_y: Option<Px>,
+    viewport_id_out: &Cell<Option<GlobalElementId>>,
     content: impl FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> Vec<AnyElement>,
 ) -> AnyElement {
     cx.flex(
@@ -65,6 +68,10 @@ fn select_scroll_with_buttons<H: UiHost>(
         },
         move |cx| {
             let handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            if let Some(y) = initial_scroll_to_y {
+                let prev = handle.offset();
+                handle.scroll_to_offset(Point::new(prev.x, y));
+            }
 
             let scroll_button_h = theme
                 .metric_by_key("component.select.scroll_button_height")
@@ -211,6 +218,7 @@ fn select_scroll_with_buttons<H: UiHost>(
                             )]
                         },
                     );
+                    viewport_id_out.set(Some(scroll.id));
 
                     if let Some(active_element) = active_element.get() {
                         let _ = active_desc::scroll_active_element_into_view_y(
@@ -361,6 +369,14 @@ impl From<SelectSeparator> for SelectEntry {
     }
 }
 
+/// Matches Radix Select `position`: item-aligned (default upstream) vs popper.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SelectPosition {
+    ItemAligned,
+    #[default]
+    Popper,
+}
+
 #[derive(Clone)]
 pub struct Select {
     model: Model<Option<Arc<str>>>,
@@ -374,6 +390,7 @@ pub struct Select {
     side: SelectSide,
     align_offset: Px,
     side_offset_override: Option<Px>,
+    position: SelectPosition,
     loop_navigation: bool,
     arrow: bool,
     arrow_size_override: Option<Px>,
@@ -394,6 +411,7 @@ impl Select {
             side: SelectSide::default(),
             align_offset: Px(0.0),
             side_offset_override: None,
+            position: SelectPosition::default(),
             loop_navigation: true,
             arrow: false,
             arrow_size_override: None,
@@ -457,6 +475,11 @@ impl Select {
         self
     }
 
+    pub fn position(mut self, position: SelectPosition) -> Self {
+        self.position = position;
+        self
+    }
+
     /// When `true` (default), roving navigation loops at the ends (Radix `loop` behavior).
     pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
         self.loop_navigation = loop_navigation;
@@ -498,6 +521,7 @@ impl Select {
             self.side,
             self.align_offset,
             self.side_offset_override,
+            self.position,
             self.loop_navigation,
             self.arrow,
             self.arrow_size_override,
@@ -530,6 +554,7 @@ pub fn select<H: UiHost>(
         SelectSide::default(),
         Px(0.0),
         None,
+        SelectPosition::default(),
         true,
         false,
         None,
@@ -550,6 +575,7 @@ fn select_impl<H: UiHost>(
     side: SelectSide,
     align_offset: Px,
     side_offset_override: Option<Px>,
+    position: SelectPosition,
     loop_navigation: bool,
     arrow: bool,
     arrow_size_override: Option<Px>,
@@ -668,6 +694,14 @@ fn select_impl<H: UiHost>(
             pointer: radix_select::SelectTriggerPointerState,
             content: radix_select::SelectContentKeyState,
             was_open: bool,
+            value_node: Option<GlobalElementId>,
+            viewport: Option<GlobalElementId>,
+            listbox: Option<GlobalElementId>,
+            content_panel: Option<GlobalElementId>,
+            selected_item: Option<GlobalElementId>,
+            selected_item_text: Option<GlobalElementId>,
+            pending_item_aligned_scroll_to_y: Option<Px>,
+            did_item_aligned_scroll: bool,
         }
 
         impl SelectTriggerKeyState {
@@ -677,6 +711,14 @@ fn select_impl<H: UiHost>(
                     pointer: radix_select::SelectTriggerPointerState::default(),
                     content: radix_select::SelectContentKeyState::default(),
                     was_open: false,
+                    value_node: None,
+                    viewport: None,
+                    listbox: None,
+                    content_panel: None,
+                    selected_item: None,
+                    selected_item_text: None,
+                    pending_item_aligned_scroll_to_y: None,
+                    did_item_aligned_scroll: false,
                 }
             }
         }
@@ -837,53 +879,174 @@ fn select_impl<H: UiHost>(
                     let desired_w = Px(anchor.size.width.0.max(min_width.0).min(outer.size.width.0));
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
-                    let side_offset = side_offset_override.unwrap_or_else(|| {
-                        theme
-                            .metric_by_key("component.select.popover_offset")
-                            .unwrap_or(Px(6.0))
-                    });
-
                     let border_width = resolved.border_width;
-                    let (arrow_options, arrow_protrusion) =
-                        popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                    let layout = popper::popper_content_layout_sized(
-                        outer,
-                        anchor,
-                        desired,
-                        popper::PopperContentPlacement::new(
-                            LayoutDirection::Ltr,
-                            side.into(),
-                            align.into(),
-                            side_offset,
-                        )
-                        .with_align_offset(align_offset)
-                        .with_arrow(arrow_options, arrow_protrusion),
-                    );
+                    let mut arrow_layout = None;
+                    let mut wrapper_insets = Edges::all(Px(0.0));
+                    let mut motion_side: Side = side.into();
 
-                    let placed = layout.rect;
-                    let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                    let mut item_aligned_rect: Option<Rect> = None;
+                    if position == SelectPosition::ItemAligned {
+                        let (value_node, viewport, listbox, content_panel, selected_item, selected_item_text, did_scroll) =
+                            {
+                                let state = trigger_state
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                (
+                                    state.value_node,
+                                    state.viewport,
+                                    state.listbox,
+                                    state.content_panel,
+                                    state.selected_item,
+                                    state.selected_item_text,
+                                    state.did_item_aligned_scroll,
+                                )
+                            };
+
+                        if let (
+                            Some(value_node),
+                            Some(viewport),
+                            Some(listbox),
+                            Some(content_panel),
+                            Some(selected_item),
+                            Some(selected_item_text),
+                        ) = (
+                            value_node,
+                            viewport,
+                            listbox,
+                            content_panel,
+                            selected_item,
+                            selected_item_text,
+                        ) {
+                            if let (
+                                Some(value_node),
+                                Some(viewport),
+                                Some(listbox),
+                                Some(content),
+                                Some(selected_item),
+                                Some(selected_item_text),
+                            ) = (
+                                overlay::anchor_bounds_for_element(cx, value_node),
+                                overlay::anchor_bounds_for_element(cx, viewport),
+                                overlay::anchor_bounds_for_element(cx, listbox),
+                                overlay::anchor_bounds_for_element(cx, content_panel),
+                                overlay::anchor_bounds_for_element(cx, selected_item),
+                                overlay::anchor_bounds_for_element(cx, selected_item_text),
+                            ) {
+                                let out = item_aligned::select_item_aligned_position(
+                                    item_aligned::SelectItemAlignedInputs {
+                                        direction: LayoutDirection::Ltr,
+                                        window: cx.bounds,
+                                        trigger: anchor,
+                                        content,
+                                        value_node,
+                                        selected_item_text,
+                                        selected_item,
+                                        viewport,
+                                        content_border_top: border_width,
+                                        content_padding_top: Px(0.0),
+                                        content_border_bottom: border_width,
+                                        content_padding_bottom: Px(0.0),
+                                        viewport_padding_top: Px(4.0),
+                                        viewport_padding_bottom: Px(4.0),
+                                        items_height: listbox.size.height,
+                                    },
+                                );
+
+                                if let Some(scroll_to) = out.scroll_to_y
+                                    && !did_scroll
+                                {
+                                    let mut state = trigger_state
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner());
+                                    state.pending_item_aligned_scroll_to_y = Some(scroll_to);
+                                    state.did_item_aligned_scroll = true;
+                                }
+
+                                let margin = item_aligned::SELECT_ITEM_ALIGNED_CONTENT_MARGIN;
+                                let inset_left = out.left.unwrap_or(margin);
+                                let inset_top = if out.top.is_some() {
+                                    margin
+                                } else if out.bottom.is_some() {
+                                    Px(cx.bounds.size.height.0 - margin.0 - out.height.0)
+                                } else {
+                                    margin
+                                };
+
+                                let placed = Rect::new(
+                                    Point::new(inset_left, inset_top),
+                                    fret_core::Size::new(out.width, out.height),
+                                );
+                                motion_side = if placed.origin.y.0 >= anchor.origin.y.0 {
+                                    Side::Bottom
+                                } else {
+                                    Side::Top
+                                };
+                                item_aligned_rect = Some(placed);
+                            }
+                        }
+                    }
+
+                    let placed = if let Some(placed) = item_aligned_rect {
+                        placed
+                    } else {
+                        let side_offset = side_offset_override.unwrap_or_else(|| {
+                            theme
+                                .metric_by_key("component.select.popover_offset")
+                                .unwrap_or(Px(6.0))
+                        });
+
+                        let (arrow_options, arrow_protrusion) =
+                            popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+
+                        let layout = popper::popper_content_layout_sized(
+                            outer,
+                            anchor,
+                            desired,
+                            popper::PopperContentPlacement::new(
+                                LayoutDirection::Ltr,
+                                side.into(),
+                                align.into(),
+                                side_offset,
+                            )
+                            .with_align_offset(align_offset)
+                            .with_arrow(arrow_options, arrow_protrusion),
+                        );
+                        wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                        arrow_layout = Some((layout, arrow_protrusion));
+                        layout.rect
+                    };
+
                     let origin = overlay_motion::shadcn_transform_origin_for_anchored_rect(
                         anchor,
                         placed,
-                        side.into(),
+                        motion_side,
                     );
                     let zoom = overlay_motion::shadcn_zoom_transform(origin, motion.progress);
-                    let slide = overlay_motion::shadcn_enter_slide_transform(
-                        side.into(),
-                        motion.progress,
-                        is_open,
-                    );
+                    let slide =
+                        overlay_motion::shadcn_enter_slide_transform(motion_side, motion.progress, is_open);
                     let transform = slide * zoom;
                     let opacity = motion.progress;
 
                     let theme_for_overlay = theme.clone();
                     let text_style_for_overlay = text_style.clone();
                     let open_for_overlay = open_for_trigger.clone();
+                    let trigger_state_for_overlay = trigger_state.clone();
                     let list_focus_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let list_focus_id_out = &list_focus_id_out_cell;
+                    let viewport_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let viewport_id_out = &viewport_id_out_cell;
+                    let content_panel_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let content_panel_id_out = &content_panel_id_out_cell;
+                    let selected_item_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let selected_item_id_out = &selected_item_id_out_cell;
+                    let selected_item_text_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let selected_item_text_id_out = &selected_item_text_id_out_cell;
+                    let arrow_layout_for_children = arrow_layout.clone();
+                    let trigger_state_for_overlay_for_children = trigger_state_for_overlay.clone();
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                        let trigger_state_for_overlay = trigger_state_for_overlay_for_children.clone();
                         let barrier_layout = LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
@@ -994,20 +1157,28 @@ fn select_impl<H: UiHost>(
                         let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
                         let arrow_bg = theme_for_overlay.colors.panel_background;
                         let arrow_border = border;
+                        let initial_scroll_to_y = {
+                            let mut state = trigger_state_for_overlay
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            state.pending_item_aligned_scroll_to_y.take()
+                        };
 
-                        let content =
-                            popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
-                                let arrow_el = popper_arrow::diamond_arrow_element(
-                                    cx,
-                                    &layout,
-                                    wrapper_insets,
-                                    arrow_size,
-                                    DiamondArrowStyle {
-                                        bg: arrow_bg,
-                                        border: Some(arrow_border),
-                                        border_width,
-                                    },
-                                );
+                        let trigger_state_for_overlay_in_content = trigger_state_for_overlay.clone();
+                        let content = popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
+                                let arrow_el = arrow_layout_for_children.as_ref().and_then(|(layout, _)| {
+                                    popper_arrow::diamond_arrow_element(
+                                        cx,
+                                        layout,
+                                        wrapper_insets,
+                                        arrow_size,
+                                        DiamondArrowStyle {
+                                            bg: arrow_bg,
+                                            border: Some(arrow_border),
+                                            border_width,
+                                        },
+                                    )
+                                });
 
                                 let panel = cx.container(
                                     ContainerProps {
@@ -1028,6 +1199,8 @@ fn select_impl<H: UiHost>(
                                         cx,
                                         theme_for_overlay.clone(),
                                         item_h,
+                                        initial_scroll_to_y,
+                                        viewport_id_out,
                                         move |cx, active_element| {
                                             let disabled_for_key: Arc<[bool]> =
                                                 Arc::from(disabled.clone().into_boxed_slice());
@@ -1042,7 +1215,8 @@ fn select_impl<H: UiHost>(
                                                     .into_boxed_slice(),
                                             );
 
-                                            let state_for_key = trigger_state.clone();
+                                            let state_for_key =
+                                                trigger_state_for_overlay_in_content.clone();
                                             let open_for_key = open_for_overlay.clone();
                                             let model_for_key = model.clone();
                                             let loop_navigation_for_key = loop_navigation;
@@ -1185,7 +1359,8 @@ fn select_impl<H: UiHost>(
 
                                                                             let pos = item_ordinal;
                                                                             item_ordinal = item_ordinal.saturating_add(1);
-                                                                            let state_for_hover = trigger_state.clone();
+                                                                            let state_for_hover =
+                                                                                trigger_state_for_overlay.clone();
                                                                             let row_idx_for_hover = row_idx;
 
                                                                             out.push(cx.pressable_with_id(
@@ -1209,6 +1384,9 @@ fn select_impl<H: UiHost>(
                                                                                     ..Default::default()
                                                                                 },
                                                                                 move |cx, st, id| {
+                                                                                    if is_selected {
+                                                                                        selected_item_id_out.set(Some(id));
+                                                                                    }
                                                                                     if is_active {
                                                                                         active_element.set(Some(id));
                                                                                     }
@@ -1302,20 +1480,38 @@ fn select_impl<H: UiHost>(
                                                                                             corner_radii: Corners::all(theme.metrics.radius_sm),
                                                                                         },
                                                                                         |cx| {
-                                                                                            let text = cx.text_props(TextProps {
-                                                                                                layout: {
-                                                                                                    let mut layout =
-                                                                                                        LayoutStyle::default();
-                                                                                                    layout.size.width =
-                                                                                                        Length::Fill;
-                                                                                                    layout
+                                                                                            let text = cx.container(
+                                                                                                ContainerProps {
+                                                                                                    layout: {
+                                                                                                        let mut layout =
+                                                                                                            LayoutStyle::default();
+                                                                                                        layout.size.width =
+                                                                                                            Length::Fill;
+                                                                                                        layout
+                                                                                                    },
+                                                                                                    ..Default::default()
                                                                                                 },
-                                                                                                text: item.label.clone(),
-                                                                                                style: Some(text_style.clone()),
-                                                                                                wrap: TextWrap::None,
-                                                                                                overflow: TextOverflow::Clip,
-                                                                                                color: Some(fg),
-                                                                                            });
+                                                                                                |cx| {
+                                                                                                    vec![cx.text_props(TextProps {
+                                                                                                        layout: {
+                                                                                                            let mut layout =
+                                                                                                                LayoutStyle::default();
+                                                                                                            layout.size.width =
+                                                                                                                Length::Fill;
+                                                                                                            layout
+                                                                                                        },
+                                                                                                        text: item.label.clone(),
+                                                                                                        style: Some(text_style.clone()),
+                                                                                                        wrap: TextWrap::None,
+                                                                                                        overflow: TextOverflow::Clip,
+                                                                                                        color: Some(fg),
+                                                                                                    })]
+                                                                                                },
+                                                                                            );
+                                                                                            if is_selected {
+                                                                                                selected_item_text_id_out
+                                                                                                    .set(Some(text.id));
+                                                                                            }
 
                                                                                             // Indicator slot matches upstream: absolute at the end, but reserve `pr-8`.
                                                                                             let indicator_size = Px(14.0);
@@ -1439,6 +1635,8 @@ fn select_impl<H: UiHost>(
                                 },
                             );
 
+                                content_panel_id_out.set(Some(panel.id));
+
                                 if let Some(arrow_el) = arrow_el {
                                     vec![arrow_el, panel]
                                 } else {
@@ -1470,6 +1668,20 @@ fn select_impl<H: UiHost>(
                             },
                         );
 
+                        {
+                            let mut state = trigger_state_for_overlay
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            state.viewport = viewport_id_out.get();
+                            state.listbox = list_focus_id_out.get();
+                            state.content_panel = content_panel_id_out.get();
+                            state.selected_item = selected_item_id_out.get();
+                            state.selected_item_text = selected_item_text_id_out.get();
+                            if !is_open {
+                                state.did_item_aligned_scroll = false;
+                            }
+                        }
+
                         vec![barrier, animated]
                     });
 
@@ -1495,6 +1707,8 @@ fn select_impl<H: UiHost>(
                 border_color,
             );
 
+            let state_for_value_node = trigger_state.clone();
+
             let content = move |cx: &mut ElementContext<'_, H>| {
                 vec![cx.flex(
                     FlexProps {
@@ -1512,8 +1726,8 @@ fn select_impl<H: UiHost>(
                     },
                     |cx| {
                         vec![
-                            cx.text_props(TextProps {
-                                layout: {
+                            {
+                                let layout = {
                                     let mut layout = LayoutStyle::default();
                                     layout.size.width = Length::Fill;
                                     layout.size.min_width = Some(Px(0.0));
@@ -1521,13 +1735,36 @@ fn select_impl<H: UiHost>(
                                     layout.flex.shrink = 1.0;
                                     layout.flex.basis = Length::Px(Px(0.0));
                                     layout
-                                },
-                                text: label,
-                                style: Some(text_style.clone()),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Ellipsis,
-                                color: Some(if selected.is_some() { fg } else { fg_muted }),
-                            }),
+                                };
+
+                                let value_node = cx.container(
+                                    ContainerProps {
+                                        layout,
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        vec![cx.text_props(TextProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Fill;
+                                                layout
+                                            },
+                                            text: label,
+                                            style: Some(text_style.clone()),
+                                            wrap: TextWrap::None,
+                                            overflow: TextOverflow::Ellipsis,
+                                            color: Some(if selected.is_some() { fg } else { fg_muted }),
+                                        })]
+                                    },
+                                );
+
+                                let mut state = state_for_value_node
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                state.value_node = Some(value_node.id);
+
+                                value_node
+                            },
                                                         cx.opacity(0.5, |cx| {
                                 vec![decl_icon::icon_with(
                                     cx,
