@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::OnceLock};
 
 use crate::UiHost;
+use crate::{ThemeColorKey, ThemeMetricKey};
 
 fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
     HashMap::from([
@@ -217,6 +218,16 @@ pub struct Theme {
 impl Theme {
     pub fn revision(&self) -> u64 {
         self.revision
+    }
+
+    pub fn color(&self, key: ThemeColorKey) -> Color {
+        self.color_by_key(key.canonical_name())
+            .unwrap_or_else(|| panic!("missing core theme color key {}", key.canonical_name()))
+    }
+
+    pub fn metric(&self, key: ThemeMetricKey) -> Px {
+        self.metric_by_key(key.canonical_name())
+            .unwrap_or_else(|| panic!("missing core theme metric key {}", key.canonical_name()))
     }
 
     pub fn color_by_key(&self, key: &str) -> Option<Color> {
@@ -893,6 +904,7 @@ mod tests {
     use super::Theme;
     use super::ThemeConfig;
     use super::parse_color_to_linear;
+    use crate::{ThemeColorKey, ThemeMetricKey};
     use std::collections::HashMap;
 
     #[test]
@@ -1014,5 +1026,22 @@ mod tests {
         assert!((c.g - 1.0).abs() < 1e-6);
         assert!((c.b - 1.0).abs() < 1e-6);
         assert!((c.a - 0.1).abs() < 1e-6);
+    }
+
+    #[test]
+    fn typed_theme_keys_resolve_via_semantic_palette() {
+        let host = crate::test_host::TestHost::default();
+        let theme = Theme::global(&host);
+
+        assert_eq!(
+            theme.color(ThemeColorKey::PopoverForeground),
+            theme
+                .color_by_key("popover-foreground")
+                .expect("popover-foreground")
+        );
+        assert_eq!(
+            theme.metric(ThemeMetricKey::Radius),
+            theme.metric_by_key("radius").expect("radius")
+        );
     }
 }
