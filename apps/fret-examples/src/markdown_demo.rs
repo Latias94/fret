@@ -263,7 +263,7 @@ External (not fetched by markdown; click to open):
 Network image (demo-only; fetched by the host's image hook):
 
 ![HTTPBin PNG](https://httpbin.org/image/png)
-![Rust SVG](https://www.rust-lang.org/static/images/rust-logo-blk.svg)
+![Rust SVG](https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/rust.svg)
  "##,
         );
 
