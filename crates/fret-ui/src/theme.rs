@@ -7,7 +7,7 @@ use crate::theme_registry::{ThemeTokenKind, canonicalize_token_key};
 use crate::{ThemeColorKey, ThemeMetricKey};
 
 fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
-    HashMap::from([
+    let mut out = HashMap::from([
         (
             "color.surface.background".to_string(),
             colors.surface_background,
@@ -87,11 +87,64 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
             "color.viewport.rotate_gizmo".to_string(),
             colors.viewport_rotate_gizmo,
         ),
-    ])
+    ]);
+
+    // shadcn/new-york core semantic palette (canonical names).
+    out.insert("background".to_string(), colors.surface_background);
+    out.insert("foreground".to_string(), colors.text_primary);
+    out.insert("border".to_string(), colors.panel_border);
+    out.insert("input".to_string(), colors.panel_border);
+    out.insert("ring".to_string(), colors.focus_ring);
+    out.insert(
+        "ring-offset-background".to_string(),
+        colors.surface_background,
+    );
+
+    out.insert("card".to_string(), colors.panel_background);
+    out.insert("card-foreground".to_string(), colors.text_primary);
+
+    out.insert("popover".to_string(), colors.menu_background);
+    out.insert("popover-foreground".to_string(), colors.text_primary);
+    out.insert("popover.border".to_string(), colors.menu_border);
+
+    out.insert("muted".to_string(), colors.panel_background);
+    out.insert("muted-foreground".to_string(), colors.text_muted);
+
+    out.insert("accent".to_string(), colors.hover_background);
+    out.insert("accent-foreground".to_string(), colors.text_primary);
+
+    out.insert("primary".to_string(), colors.accent);
+    out.insert("primary-foreground".to_string(), colors.text_primary);
+
+    out.insert("secondary".to_string(), colors.panel_background);
+    out.insert("secondary-foreground".to_string(), colors.text_primary);
+
+    out.insert("destructive".to_string(), colors.viewport_gizmo_x);
+    out.insert("destructive-foreground".to_string(), colors.text_primary);
+
+    // Common non-core semantic keys used by recipes (kept for the migration window).
+    out.insert(
+        "selection.background".to_string(),
+        colors.selection_background,
+    );
+    out.insert("input.background".to_string(), colors.panel_background);
+    out.insert("input.foreground".to_string(), colors.text_primary);
+    out.insert("caret".to_string(), colors.text_primary);
+    out.insert("scrollbar.background".to_string(), colors.scrollbar_track);
+    out.insert(
+        "scrollbar.thumb.background".to_string(),
+        colors.scrollbar_thumb,
+    );
+    out.insert(
+        "scrollbar.thumb.hover.background".to_string(),
+        colors.scrollbar_thumb_hover,
+    );
+
+    out
 }
 
 fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
-    HashMap::from([
+    let mut out = HashMap::from([
         ("metric.radius.sm".to_string(), metrics.radius_sm),
         ("metric.radius.md".to_string(), metrics.radius_md),
         ("metric.radius.lg".to_string(), metrics.radius_lg),
@@ -111,7 +164,20 @@ fn default_metric_tokens(metrics: ThemeMetrics) -> HashMap<String, Px> {
             "metric.font.mono_line_height".to_string(),
             metrics.mono_font_line_height,
         ),
-    ])
+    ]);
+
+    // shadcn/new-york core semantic metrics (canonical names).
+    out.insert("radius".to_string(), metrics.radius_sm);
+    out.insert("radius.lg".to_string(), metrics.radius_md);
+    out.insert("font.size".to_string(), metrics.font_size);
+    out.insert("mono_font.size".to_string(), metrics.mono_font_size);
+    out.insert("font.line_height".to_string(), metrics.font_line_height);
+    out.insert(
+        "mono_font.line_height".to_string(),
+        metrics.mono_font_line_height,
+    );
+
+    out
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
