@@ -1,0 +1,23 @@
+[package]
+name = "fret-node"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-ui = { path = "../../crates/fret-ui", optional = true }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+tracing.workspace = true
+
+[features]
+default = ["fret-ui"]
+
+# Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
+fret-ui = ["dep:fret-ui"]
+
+# Builds only the headless graph model + schema + rules (no `fret-ui` dependency).
+headless = []
