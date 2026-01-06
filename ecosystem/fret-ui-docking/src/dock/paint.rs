@@ -27,6 +27,15 @@ pub(super) fn paint_dock(
     overlay_hooks: Option<&dyn DockViewportOverlayHooks>,
     scene: &mut Scene,
 ) {
+    let panel_bg = theme.color_required("card");
+    let surface_bg = theme.color_required("background");
+    let hover_bg = theme.color_required("accent");
+    let primary = theme.color_required("primary");
+    let fg = theme.color_required("foreground");
+    let fg_muted = theme.color_required("muted-foreground");
+    let pad_md = theme.metric_required("metric.padding.md");
+    let radius_sm = theme.metric_required("metric.radius.sm");
+
     let PaintDockParams {
         window,
         layout,
@@ -47,7 +56,7 @@ pub(super) fn paint_dock(
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(0),
             rect,
-            background: theme.colors.panel_background,
+            background: panel_bg,
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
@@ -56,7 +65,7 @@ pub(super) fn paint_dock(
         scene.push(SceneOp::Quad {
             order: fret_core::DrawOrder(1),
             rect: tab_bar,
-            background: theme.colors.surface_background,
+            background: surface_bg,
             border: Edges::all(Px(0.0)),
             border_color: Color::TRANSPARENT,
             corner_radii: fret_core::Corners::all(Px(0.0)),
@@ -76,13 +85,13 @@ pub(super) fn paint_dock(
             let is_active = i == *active;
             let is_hovered = hovered_tab == Some((node_id, i));
             let bg = if is_active {
-                theme.colors.panel_background
+                panel_bg
             } else if is_hovered {
-                theme.colors.hover_background
+                hover_bg
             } else {
                 Color {
                     a: 0.0,
-                    ..theme.colors.panel_background
+                    ..panel_bg
                 }
             };
 
@@ -107,7 +116,7 @@ pub(super) fn paint_dock(
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(3),
                     rect: underline,
-                    background: theme.colors.accent,
+                    background: primary,
                     border: Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(Px(0.0)),
@@ -115,15 +124,15 @@ pub(super) fn paint_dock(
             }
 
             if let Some(title) = tab_titles.get(panel) {
-                let pad_x = theme.metrics.padding_md;
+                let pad_x = pad_md;
                 let text_x = Px(tab_rect.origin.x.0 + pad_x.0);
                 let inner_y = tab_rect.origin.y.0
                     + ((tab_rect.size.height.0 - title.metrics.size.height.0) * 0.5);
                 let text_y = Px(inner_y + title.metrics.baseline.0);
                 let text_color = if is_active || is_hovered {
-                    theme.colors.text_primary
+                    fg
                 } else {
-                    theme.colors.text_muted
+                    fg_muted
                 };
 
                 scene.push(SceneOp::PushClipRect { rect: tab_rect });
@@ -145,10 +154,10 @@ pub(super) fn paint_dock(
                     scene.push(SceneOp::Quad {
                         order: fret_core::DrawOrder(5),
                         rect: close_rect,
-                        background: theme.colors.hover_background,
+                        background: hover_bg,
                         border: Edges::all(Px(0.0)),
                         border_color: Color::TRANSPARENT,
-                        corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
+                        corner_radii: fret_core::Corners::all(radius_sm),
                     });
                 }
 
@@ -159,9 +168,9 @@ pub(super) fn paint_dock(
                         + ((close_rect.size.height.0 - glyph.metrics.size.height.0) * 0.5);
                     let text_y = Px(inner_y + glyph.metrics.baseline.0);
                     let color = if close_pressed || close_hovered {
-                        theme.colors.text_primary
+                        fg
                     } else {
-                        theme.colors.text_muted
+                        fg_muted
                     };
                     scene.push(SceneOp::Text {
                         order: fret_core::DrawOrder(6),
@@ -191,7 +200,7 @@ pub(super) fn paint_dock(
                     background: panel.color,
                     border: Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
+                    corner_radii: fret_core::Corners::all(radius_sm),
                 });
 
                 scene.push(SceneOp::PushClipRect { rect: content });
@@ -214,7 +223,7 @@ pub(super) fn paint_dock(
                     background: panel.color,
                     border: Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
-                    corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
+                    corner_radii: fret_core::Corners::all(radius_sm),
                 });
             }
         }
@@ -252,9 +261,9 @@ pub(super) fn paint_split_handles(
         );
 
         let background = if active == Some(node) {
-            theme.colors.focus_ring
+            theme.color_required("ring")
         } else {
-            theme.colors.panel_border
+            theme.color_required("border")
         };
 
         let handle = ResizeHandle {
@@ -290,6 +299,10 @@ pub(super) fn paint_drop_overlay(
         return;
     };
 
+    let primary = theme.color_required("primary");
+    let radius_sm = theme.metric_required("metric.radius.sm");
+    let radius_md = theme.metric_required("metric.radius.md");
+
     match target {
         DockDropTarget::Float { window: w } => {
             if w != window {
@@ -301,14 +314,14 @@ pub(super) fn paint_drop_overlay(
                 rect: zone,
                 background: Color {
                     a: 0.10,
-                    ..theme.colors.accent
+                    ..primary
                 },
                 border: Edges::all(Px(3.0)),
                 border_color: Color {
                     a: 0.85,
-                    ..theme.colors.accent
+                    ..primary
                 },
-                corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_md.0.max(6.0))),
+                corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
             });
         }
         DockDropTarget::Dock(target) => {
@@ -323,14 +336,14 @@ pub(super) fn paint_drop_overlay(
                     rect: tab_bar,
                     background: Color {
                         a: 0.14,
-                        ..theme.colors.accent
+                        ..primary
                     },
                     border: Edges::all(Px(1.0)),
                     border_color: Color {
                         a: 0.45,
-                        ..theme.colors.accent
+                        ..primary
                     },
-                    corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0))),
+                    corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
                 });
                 if let Some(i) = target.insert_index {
                     let scroll = tab_scroll_for_node(tab_scroll, target.tabs);
@@ -344,12 +357,12 @@ pub(super) fn paint_drop_overlay(
                         rect: marker,
                         background: Color {
                             a: 0.85,
-                            ..theme.colors.accent
+                            ..primary
                         },
                         border: Edges::all(Px(1.0)),
                         border_color: Color {
                             a: 1.0,
-                            ..theme.colors.accent
+                            ..primary
                         },
                         corner_radii: fret_core::Corners::all(Px(3.0)),
                     });
@@ -372,7 +385,7 @@ pub(super) fn paint_drop_overlay(
                             rect: cap,
                             background: Color {
                                 a: 0.92,
-                                ..theme.colors.accent
+                                ..primary
                             },
                             border: Edges::all(Px(0.0)),
                             border_color: Color::TRANSPARENT,
@@ -389,14 +402,14 @@ pub(super) fn paint_drop_overlay(
                 rect: overlay,
                 background: Color {
                     a: 0.16,
-                    ..theme.colors.accent
+                    ..primary
                 },
                 border: Edges::all(Px(2.0)),
                 border_color: Color {
                     a: 0.85,
-                    ..theme.colors.accent
+                    ..primary
                 },
-                corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0))),
+                corner_radii: fret_core::Corners::all(Px(radius_sm.0.max(4.0))),
             });
         }
     }
@@ -424,29 +437,37 @@ pub(super) fn paint_drop_hints(
 
     let hint_rects = dock_hint_rects(rect);
 
+    let inactive_bg_base = theme.color_required("card");
+    let inactive_border_base = theme.color_required("border");
+    let active_base = theme.color_required("primary");
+    let surface_bg = theme.color_required("background");
+    let radius_sm = theme.metric_required("metric.radius.sm");
+    let radius_md = theme.metric_required("metric.radius.md");
+    let pad_sm = theme.metric_required("metric.padding.sm");
+
     let inactive_bg = Color {
         a: 0.64,
-        ..theme.colors.panel_background
+        ..inactive_bg_base
     };
     let inactive_border = Color {
         a: 0.95,
-        ..theme.colors.panel_border
+        ..inactive_border_base
     };
     let active_bg = Color {
         a: 0.92,
-        ..theme.colors.accent
+        ..active_base
     };
     let active_border = Color {
         a: 1.0,
-        ..theme.colors.accent
+        ..active_base
     };
 
     let order = fret_core::DrawOrder(9_500);
     let border = Edges::all(Px(2.0));
-    let corner_radii = fret_core::Corners::all(Px(theme.metrics.radius_sm.0.max(4.0)));
+    let corner_radii = fret_core::Corners::all(Px(radius_sm.0.max(4.0)));
 
     // Draw a plate behind the 5-way pad, closer to ImGui/Godot affordances.
-    let pad = Px(theme.metrics.padding_sm.0.max(6.0));
+    let pad = Px(pad_sm.0.max(6.0));
     let mut min_x: f32 = f32::INFINITY;
     let mut min_y: f32 = f32::INFINITY;
     let mut max_x: f32 = f32::NEG_INFINITY;
@@ -470,14 +491,14 @@ pub(super) fn paint_drop_hints(
             rect: plate,
             background: Color {
                 a: 0.70,
-                ..theme.colors.surface_background
+                ..surface_bg
             },
             border: Edges::all(Px(1.0)),
             border_color: Color {
                 a: 0.70,
-                ..theme.colors.panel_border
+                ..inactive_border_base
             },
-            corner_radii: fret_core::Corners::all(Px(theme.metrics.radius_md.0.max(6.0))),
+            corner_radii: fret_core::Corners::all(Px(radius_md.0.max(6.0))),
         });
     }
 
@@ -524,20 +545,21 @@ fn paint_drop_hint_icon(
     let frame = inset(hint_rect, pad);
     let inner = inset(frame, Px((min_dim * 0.08).clamp(2.0, 4.0)));
 
+    let fg = theme.color_required("foreground");
     let stroke = Color {
         a: if is_active { 0.92 } else { 0.80 },
-        ..theme.colors.text_primary
+        ..fg
     };
     let base = Color {
         a: if is_active { 0.16 } else { 0.12 },
-        ..theme.colors.text_primary
+        ..fg
     };
     let fill = Color {
         a: if is_active { 0.90 } else { 0.72 },
-        ..theme.colors.text_primary
+        ..fg
     };
 
-    let frame_radius = Px(theme.metrics.radius_sm.0.clamp(2.0, 4.0));
+    let frame_radius = Px(theme.metric_required("metric.radius.sm").0.clamp(2.0, 4.0));
     scene.push(SceneOp::Quad {
         order: fret_core::DrawOrder(order),
         rect: frame,

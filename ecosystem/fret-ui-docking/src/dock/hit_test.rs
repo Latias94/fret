@@ -21,7 +21,7 @@ pub(super) fn tab_rect_for_index(tab_bar: Rect, index: usize, scroll: Px) -> Rec
 }
 
 pub(super) fn tab_close_rect(theme: fret_ui::ThemeSnapshot, tab_rect: Rect) -> Rect {
-    let pad = theme.metrics.padding_sm.0.max(0.0);
+    let pad = theme.metric_required("metric.padding.sm").0.max(0.0);
     let x = tab_rect.origin.x.0 + tab_rect.size.width.0 - pad - DOCK_TAB_CLOSE_SIZE.0;
     let y = tab_rect.origin.y.0 + (tab_rect.size.height.0 - DOCK_TAB_CLOSE_SIZE.0) * 0.5;
     Rect::new(
