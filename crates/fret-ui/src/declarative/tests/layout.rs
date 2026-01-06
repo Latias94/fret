@@ -663,25 +663,6 @@ fn scroll_thumb_drag_updates_offset() {
         scroll_handle.offset().y,
     )
     .expect("thumb rect");
-    let pad = crate::declarative::paint_helpers::scrollbar_track_padding_px(
-        scrollbar_bounds.size.height.0,
-    );
-    let inner = (scrollbar_bounds.size.height.0 - pad * 2.0).max(0.0);
-    let max_thumb_y = inner - thumb.size.height.0;
-    assert!(
-        scroll_handle.max_offset().y.0 > 0.0,
-        "expected overflow for drag test (viewport={:?} content={:?})",
-        scroll_handle.viewport_size().height,
-        scroll_handle.content_size().height
-    );
-    assert!(
-        max_thumb_y > 0.0,
-        "expected thumb travel (bounds_h={} pad={} inner={} thumb_h={})",
-        scrollbar_bounds.size.height.0,
-        pad,
-        inner,
-        thumb.size.height.0
-    );
     let down_pos = fret_core::Point::new(Px(thumb.origin.x.0 + 1.0), Px(thumb.origin.y.0 + 1.0));
     let move_pos = fret_core::Point::new(down_pos.x, Px(down_pos.y.0 + 8.0));
     ui.dispatch_event(

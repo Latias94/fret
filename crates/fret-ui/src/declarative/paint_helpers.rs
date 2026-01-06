@@ -1,9 +1,8 @@
 use super::prelude::*;
 
 // Radix ScrollArea includes the scrollbar's padding (main axis) in thumb sizing/offset math.
-// In shadcn/ui v4 the default scrollbar uses `p-px` (1px), so we mirror that by default.
 // See `repo-ref/primitives/packages/react/scroll-area/src/scroll-area.tsx` (`getThumbSize`).
-const RADIX_SCROLLBAR_PADDING_PX: f32 = 1.0;
+const RADIX_SCROLLBAR_PADDING_PX: f32 = 2.0;
 
 pub(super) fn scrollbar_track_padding_px(track_main_axis: f32) -> f32 {
     RADIX_SCROLLBAR_PADDING_PX.min(track_main_axis.max(0.0) * 0.5)
