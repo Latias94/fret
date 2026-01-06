@@ -14,6 +14,7 @@ use fret_ui::element::{
 use fret_ui::{Invalidation, Theme, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::headless::table::{ColumnPinningState, TableState, create_column_helper};
 use std::sync::Arc;
+use std::time::Instant;
 
 #[derive(Debug, Clone)]
 struct DemoRow {
@@ -28,6 +29,10 @@ struct TableDemoWindowState {
     table_state: Model<TableState>,
     rows: Arc<[DemoRow]>,
     scroll: VirtualListScrollHandle,
+    started_at: Instant,
+    frame: u64,
+    profile_frames_left: u64,
+    exit_after_frames: Option<u64>,
 }
 
 #[derive(Default)]
@@ -35,6 +40,14 @@ struct TableDemoDriver;
 
 impl TableDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> TableDemoWindowState {
+        let started_at = Instant::now();
+        let profile_frames_left = std::env::var_os("FRET_TABLE_DEMO_PROFILE_FRAMES")
+            .and_then(|v| v.to_string_lossy().parse::<u64>().ok())
+            .unwrap_or(0);
+        let exit_after_frames = std::env::var_os("FRET_TABLE_DEMO_EXIT_AFTER_FRAMES")
+            .and_then(|v| v.to_string_lossy().parse::<u64>().ok());
+
+        let gen_started = Instant::now();
         let rows: Arc<[DemoRow]> = (0..10_000)
             .map(|i| DemoRow {
                 id: i as u32,
@@ -44,6 +57,15 @@ impl TableDemoDriver {
             })
             .collect::<Vec<_>>()
             .into();
+        let gen_elapsed = gen_started.elapsed();
+
+        if profile_frames_left > 0 {
+            tracing::info!(
+                "table_demo: generated {} rows in {:.2}ms",
+                rows.len(),
+                gen_elapsed.as_secs_f64() * 1000.0
+            );
+        }
 
         let mut table_state = TableState::default();
         table_state.pagination.page_size = rows.len();
@@ -65,6 +87,10 @@ impl TableDemoDriver {
             table_state,
             rows,
             scroll: VirtualListScrollHandle::new(),
+            started_at,
+            frame: 0,
+            profile_frames_left,
+            exit_after_frames,
         }
     }
 }
@@ -174,6 +200,7 @@ impl WinitAppDriver for TableDemoDriver {
             ..
         } = context;
 
+        let frame_started = Instant::now();
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("table-demo", |cx| {
@@ -311,8 +338,33 @@ impl WinitAppDriver for TableDemoDriver {
 
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        let layout_started = Instant::now();
         frame.layout_all();
+        let layout_elapsed = layout_started.elapsed();
+        let paint_started = Instant::now();
         frame.paint_all(scene);
+        let paint_elapsed = paint_started.elapsed();
+
+        state.frame = state.frame.saturating_add(1);
+        if state.profile_frames_left > 0 {
+            state.profile_frames_left = state.profile_frames_left.saturating_sub(1);
+            let since_start = state.started_at.elapsed();
+            let frame_elapsed = frame_started.elapsed();
+            tracing::info!(
+                "table_demo: frame={} since_start={:.2}ms total={:.2}ms layout={:.2}ms paint={:.2}ms",
+                state.frame,
+                since_start.as_secs_f64() * 1000.0,
+                frame_elapsed.as_secs_f64() * 1000.0,
+                layout_elapsed.as_secs_f64() * 1000.0,
+                paint_elapsed.as_secs_f64() * 1000.0
+            );
+        }
+
+        if let Some(limit) = state.exit_after_frames {
+            if state.frame >= limit {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            }
+        }
     }
 
     fn window_create_spec(
@@ -326,12 +378,22 @@ impl WinitAppDriver for TableDemoDriver {
 
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
+        .with_env_filter({
+            let mut filter = tracing_subscriber::EnvFilter::from_default_env()
                 .add_directive("fret=info".parse().unwrap())
                 .add_directive("fret_render=info".parse().unwrap())
-                .add_directive("fret_launch=info".parse().unwrap()),
-        )
+                .add_directive("fret_launch=info".parse().unwrap());
+
+            if std::env::var_os("FRET_TABLE_DEMO_PROFILE_FRAMES").is_some()
+                || std::env::var_os("FRET_TABLE_DEMO_EXIT_AFTER_FRAMES").is_some()
+            {
+                filter = filter
+                    .add_directive("fret_examples=info".parse().unwrap())
+                    .add_directive("fret_ui_kit=info".parse().unwrap());
+            }
+
+            filter
+        })
         .try_init();
 
     let mut app = App::new();
