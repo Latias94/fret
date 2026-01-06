@@ -2,6 +2,7 @@
 
 mod ids;
 mod model;
+mod validate;
 
 pub use ids::{
     EdgeId, GraphId, GroupId, NodeId, NodeKindKey, PortId, PortKey, StickyNoteId, SymbolId,
@@ -10,3 +11,7 @@ pub use model::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeKind, Graph, Group, Node, Port, PortCapacity,
     PortDirection, PortKind, StickyNote, Symbol,
 };
+pub use validate::{GraphValidationError, GraphValidationReport, validate_graph};
+
+#[cfg(test)]
+mod tests;

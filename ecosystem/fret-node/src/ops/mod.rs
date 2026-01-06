@@ -1,15 +1,19 @@
 //! Undoable graph edit operations.
 
+mod apply;
+
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Group, GroupId, Node, NodeId, Port, PortId, StickyNote,
     StickyNoteId, Symbol, SymbolId,
 };
 
-/// A minimal, reversible edit operation.
+pub use apply::{ApplyError, apply_op, apply_transaction};
+
+/// A reversible edit operation.
 ///
+/// Destructive variants carry the removed data so the operation can be inverted for undo/redo.
 /// Higher-level tools should batch multiple ops into a single transaction.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
@@ -17,40 +21,74 @@ pub enum GraphOp {
     /// Adds a node.
     AddNode { id: NodeId, node: Node },
     /// Removes a node.
-    RemoveNode { id: NodeId },
+    ///
+    /// This operation is expected to remove associated ports and edges as well.
+    RemoveNode {
+        id: NodeId,
+        node: Node,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        ports: Vec<(PortId, Port)>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        edges: Vec<(EdgeId, Edge)>,
+    },
     /// Sets a node position.
-    SetNodePos { id: NodeId, pos: CanvasPoint },
+    SetNodePos {
+        id: NodeId,
+        from: CanvasPoint,
+        to: CanvasPoint,
+    },
     /// Sets a node collapsed state.
-    SetNodeCollapsed { id: NodeId, collapsed: bool },
+    SetNodeCollapsed { id: NodeId, from: bool, to: bool },
+    /// Sets a node's port ordering.
+    SetNodePorts {
+        id: NodeId,
+        from: Vec<PortId>,
+        to: Vec<PortId>,
+    },
 
     /// Adds a port.
     AddPort { id: PortId, port: Port },
     /// Removes a port.
-    RemovePort { id: PortId },
+    ///
+    /// This operation is expected to remove associated edges as well.
+    RemovePort {
+        id: PortId,
+        port: Port,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        edges: Vec<(EdgeId, Edge)>,
+    },
 
     /// Adds an edge.
     AddEdge { id: EdgeId, edge: Edge },
     /// Removes an edge.
-    RemoveEdge { id: EdgeId },
+    RemoveEdge { id: EdgeId, edge: Edge },
     /// Sets an edge kind.
-    SetEdgeKind { id: EdgeId, kind: EdgeKind },
+    SetEdgeKind {
+        id: EdgeId,
+        from: EdgeKind,
+        to: EdgeKind,
+    },
 
     /// Adds a symbol.
     AddSymbol { id: SymbolId, symbol: Symbol },
     /// Removes a symbol.
-    RemoveSymbol { id: SymbolId },
-    /// Updates a symbol payload (domain-owned metadata).
-    SetSymbolMeta { id: SymbolId, meta: Value },
+    RemoveSymbol { id: SymbolId, symbol: Symbol },
+    /// Updates a symbol metadata payload (domain-owned).
+    SetSymbolMeta {
+        id: SymbolId,
+        from: serde_json::Value,
+        to: serde_json::Value,
+    },
 
     /// Adds a group.
     AddGroup { id: GroupId, group: Group },
     /// Removes a group.
-    RemoveGroup { id: GroupId },
+    RemoveGroup { id: GroupId, group: Group },
 
     /// Adds a sticky note.
     AddStickyNote { id: StickyNoteId, note: StickyNote },
     /// Removes a sticky note.
-    RemoveStickyNote { id: StickyNoteId },
+    RemoveStickyNote { id: StickyNoteId, note: StickyNote },
 }
 
 /// A batch of edit operations that should be applied and undone as one unit.

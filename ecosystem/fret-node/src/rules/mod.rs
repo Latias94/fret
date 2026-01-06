@@ -4,7 +4,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::{EdgeId, NodeId, PortId, SymbolId};
+use crate::core::{
+    Edge, EdgeId, EdgeKind, Graph, NodeId, PortCapacity, PortDirection, PortId, PortKind, SymbolId,
+};
 use crate::ops::GraphOp;
 
 /// Diagnostic severity.
@@ -99,3 +101,91 @@ impl ConnectPlan {
         }
     }
 }
+
+/// Plans connecting two ports.
+///
+/// This is a rules-driven decision point used by the UI interaction loop.
+/// The returned ops are intended to be applied as part of a single transaction.
+pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
+    let Some(port_a) = graph.ports.get(&a) else {
+        return ConnectPlan::reject(format!("missing port: {a:?}"));
+    };
+    let Some(port_b) = graph.ports.get(&b) else {
+        return ConnectPlan::reject(format!("missing port: {b:?}"));
+    };
+
+    let (from_id, to_id, from, to) = match (port_a.dir, port_b.dir) {
+        (PortDirection::Out, PortDirection::In) => (a, b, port_a, port_b),
+        (PortDirection::In, PortDirection::Out) => (b, a, port_b, port_a),
+        _ => {
+            return ConnectPlan::reject("ports must have opposite directions (in/out)");
+        }
+    };
+
+    if from.node == to.node {
+        return ConnectPlan::reject("cannot connect ports on the same node");
+    }
+
+    if from.kind != to.kind {
+        return ConnectPlan::reject(format!(
+            "port kinds are incompatible: from={:?} to={:?}",
+            from.kind, to.kind
+        ));
+    }
+
+    let edge_kind = match (from.kind, to.kind) {
+        (PortKind::Data, PortKind::Data) => EdgeKind::Data,
+        (PortKind::Exec, PortKind::Exec) => EdgeKind::Exec,
+        _ => {
+            return ConnectPlan::reject("port kinds are incompatible");
+        }
+    };
+
+    for edge in graph.edges.values() {
+        if edge.kind == edge_kind && edge.from == from_id && edge.to == to_id {
+            return ConnectPlan::accept();
+        }
+    }
+
+    let mut ops: Vec<GraphOp> = Vec::new();
+
+    if from.capacity == PortCapacity::Single {
+        for (edge_id, edge) in graph.edges.iter() {
+            if edge.kind == edge_kind && edge.from == from_id {
+                ops.push(GraphOp::RemoveEdge {
+                    id: *edge_id,
+                    edge: edge.clone(),
+                });
+            }
+        }
+    }
+
+    if to.capacity == PortCapacity::Single {
+        for (edge_id, edge) in graph.edges.iter() {
+            if edge.kind == edge_kind && edge.to == to_id {
+                ops.push(GraphOp::RemoveEdge {
+                    id: *edge_id,
+                    edge: edge.clone(),
+                });
+            }
+        }
+    }
+
+    ops.push(GraphOp::AddEdge {
+        id: EdgeId::new(),
+        edge: Edge {
+            kind: edge_kind,
+            from: from_id,
+            to: to_id,
+        },
+    });
+
+    ConnectPlan {
+        decision: ConnectDecision::Accept,
+        diagnostics: Vec::new(),
+        ops,
+    }
+}
+
+#[cfg(test)]
+mod tests;
