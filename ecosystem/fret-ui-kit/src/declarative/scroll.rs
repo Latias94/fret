@@ -7,6 +7,7 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::LayoutRefinement;
+use crate::declarative::stack;
 use crate::declarative::style;
 
 /// Component-layer scroll helper (typed, declarative).
@@ -326,4 +327,134 @@ pub fn overflow_scrollbar<H: UiHost>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     overflow_scroll(cx, layout, true, f)
+}
+
+/// Like `overflow_scroll`, but enforces a single content root.
+///
+/// Note: `Scroll` does not lay out multiple children; if you pass a `Vec` of siblings they will
+/// overlap. Prefer this helper (or `*_vstack`) to make the intended structure explicit.
+pub fn overflow_scroll_content<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutRefinement,
+    show_scrollbar: bool,
+    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+) -> AnyElement {
+    overflow_scroll(cx, layout, show_scrollbar, |cx| vec![content(cx)])
+}
+
+/// Vertical scrolling with a `vstack` content root.
+pub fn overflow_scroll_vstack<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutRefinement,
+    show_scrollbar: bool,
+    vstack: stack::VStackProps,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    overflow_scroll_content(cx, layout, show_scrollbar, |cx| stack::vstack(cx, vstack, f))
+}
+
+/// Horizontal scrolling with a single content root.
+pub fn overflow_scroll_x_content<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutRefinement,
+    show_scrollbar_x: bool,
+    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+) -> AnyElement {
+    let (layout, scrollbar_w, thumb, thumb_hover) = {
+        let theme = Theme::global(&*cx.app);
+        let layout = style::layout_style(theme, layout);
+
+        let scrollbar_w = theme
+            .metric_by_key("metric.scrollbar.width")
+            .unwrap_or(theme.metrics.scrollbar_width);
+
+        let thumb = theme
+            .color_by_key("scrollbar.thumb.background")
+            .unwrap_or(theme.colors.scrollbar_thumb);
+        let thumb_hover = theme
+            .color_by_key("scrollbar.thumb.hover.background")
+            .unwrap_or(
+                theme
+                    .color_by_key("scrollbar.thumb.background")
+                    .unwrap_or(theme.colors.scrollbar_thumb_hover),
+            );
+
+        (layout, scrollbar_w, thumb, thumb_hover)
+    };
+
+    cx.stack_props(StackProps { layout }, move |cx| {
+        let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+        let mut scroll_layout = LayoutStyle::default();
+        scroll_layout.size.width = Length::Fill;
+        scroll_layout.size.height = Length::Fill;
+        scroll_layout.overflow = Overflow::Clip;
+
+        let scroll = cx.scroll(
+            ScrollProps {
+                layout: scroll_layout,
+                axis: ScrollAxis::X,
+                scroll_handle: Some(handle.clone()),
+            },
+            |cx| vec![content(cx)],
+        );
+
+        let scroll_id = scroll.id;
+        let mut children = vec![scroll];
+
+        if show_scrollbar_x {
+            let scrollbar_layout = LayoutStyle {
+                position: PositionStyle::Absolute,
+                inset: InsetStyle {
+                    top: None,
+                    right: Some(Px(0.0)),
+                    bottom: Some(Px(0.0)),
+                    left: Some(Px(0.0)),
+                },
+                size: SizeStyle {
+                    height: Length::Px(scrollbar_w),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+
+            children.push(cx.scrollbar(ScrollbarProps {
+                layout: scrollbar_layout,
+                axis: ScrollbarAxis::Horizontal,
+                scroll_target: Some(scroll_id),
+                scroll_handle: handle,
+                style: ScrollbarStyle {
+                    thumb,
+                    thumb_hover,
+                    thumb_idle_alpha: 0.65,
+                },
+            }));
+        }
+
+        children
+    })
+}
+
+/// Horizontal scrolling with a `vstack` content root.
+pub fn overflow_scroll_x_vstack<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutRefinement,
+    show_scrollbar_x: bool,
+    vstack: stack::VStackProps,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    overflow_scroll_x_content(cx, layout, show_scrollbar_x, |cx| stack::vstack(cx, vstack, f))
+}
+
+/// Like `overflow_scroll_with_handle_xy`, but enforces a single content root.
+pub fn overflow_scroll_with_handle_xy_content<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutRefinement,
+    show_scrollbar_x: bool,
+    show_scrollbar_y: bool,
+    handle: ScrollHandle,
+    content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+) -> AnyElement {
+    overflow_scroll_with_handle_xy(cx, layout, show_scrollbar_x, show_scrollbar_y, handle, |cx| {
+        vec![content(cx)]
+    })
 }
