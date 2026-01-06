@@ -56,7 +56,7 @@ pub fn markdown_with<H: UiHost>(
     let mut stream = mdstream::MdStream::default();
     let update = stream.append(source);
 
-    let mut state = MarkdownPulldownState::default();
+    let mut state = MarkdownPulldownState::new();
     state.apply_update(update);
 
     markdown_mdstream_pulldown_with(cx, &theme, state.doc(), &state.adapter, components)
@@ -538,7 +538,7 @@ fn parse_code_fence_body(raw: &str) -> (Option<Arc<str>>, Arc<str>) {
     (language, Arc::<str>::from(body))
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct MarkdownPulldownState {
     doc: mdstream::DocumentState,
     adapter: mdstream::adapters::pulldown::PulldownAdapter,
@@ -546,7 +546,15 @@ pub struct MarkdownPulldownState {
 
 impl MarkdownPulldownState {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            doc: mdstream::DocumentState::default(),
+            adapter: mdstream::adapters::pulldown::PulldownAdapter::new(
+                mdstream::adapters::pulldown::PulldownAdapterOptions {
+                    pulldown: pulldown_options_default(),
+                    prefer_display_for_pending: true,
+                },
+            ),
+        }
     }
 
     pub fn doc(&self) -> &mdstream::DocumentState {
@@ -570,6 +578,12 @@ impl MarkdownPulldownState {
         // Note: `UpdateRef` borrows from `MdStream`. Convert to an owned update to keep this state
         // render- and pipeline-agnostic (safe to store).
         self.apply_update(update.to_owned())
+    }
+}
+
+impl Default for MarkdownPulldownState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1144,9 +1158,18 @@ struct InlinePiece {
 }
 
 fn parse_events(source: &str) -> Vec<pulldown_cmark::Event<'static>> {
-    pulldown_cmark::Parser::new(source)
+    pulldown_cmark::Parser::new_ext(source, pulldown_options_default())
         .map(|e| e.into_static())
         .collect()
+}
+
+fn pulldown_options_default() -> pulldown_cmark::Options {
+    let mut opts = pulldown_cmark::Options::empty();
+    opts.insert(pulldown_cmark::Options::ENABLE_TABLES);
+    opts.insert(pulldown_cmark::Options::ENABLE_TASKLISTS);
+    opts.insert(pulldown_cmark::Options::ENABLE_STRIKETHROUGH);
+    opts.insert(pulldown_cmark::Options::ENABLE_FOOTNOTES);
+    opts
 }
 
 fn inline_pieces_from_events(events: &[pulldown_cmark::Event<'static>]) -> Vec<InlinePiece> {
