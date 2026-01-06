@@ -19,15 +19,16 @@ pub struct Row<'a, TData> {
     pub index: usize,
     pub depth: u16,
     pub parent: Option<RowIndex>,
+    pub parent_id: Option<RowId>,
     pub sub_rows: Vec<RowIndex>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RowModel<'a, TData> {
-    root_rows: Vec<RowIndex>,
-    flat_rows: Vec<RowIndex>,
-    rows_by_id: HashMap<RowId, RowIndex>,
-    arena: Vec<Row<'a, TData>>,
+    pub(super) root_rows: Vec<RowIndex>,
+    pub(super) flat_rows: Vec<RowIndex>,
+    pub(super) rows_by_id: HashMap<RowId, RowIndex>,
+    pub(super) arena: Vec<Row<'a, TData>>,
 }
 
 impl<'a, TData> RowModel<'a, TData> {
@@ -45,6 +46,10 @@ impl<'a, TData> RowModel<'a, TData> {
 
     pub fn row_by_id(&self, id: &str) -> Option<RowIndex> {
         self.rows_by_id.get(id).copied()
+    }
+
+    pub fn rows_by_id(&self) -> &HashMap<RowId, RowIndex> {
+        &self.rows_by_id
     }
 
     pub fn arena(&self) -> &[Row<'a, TData>] {
@@ -163,6 +168,7 @@ fn build_core_row_model<'a, TData>(
                 index,
                 depth,
                 parent,
+                parent_id: parent_id.cloned(),
                 sub_rows: Vec::new(),
             });
             flat_out.push(row_index);
