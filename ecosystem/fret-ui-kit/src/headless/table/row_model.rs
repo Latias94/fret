@@ -194,6 +194,10 @@ pub struct Table<'a, TData> {
     paginated_row_model: OnceCell<RowModel<'a, TData>>,
     expanded_paginated_row_model: OnceCell<RowModel<'a, TData>>,
     selected_row_model: OnceCell<RowModel<'a, TData>>,
+    faceted_row_model_by_column: OnceCell<Vec<OnceCell<RowModel<'a, TData>>>>,
+    faceted_unique_values_by_column: OnceCell<Vec<OnceCell<super::FacetCounts>>>,
+    faceted_unique_labels_by_column: OnceCell<Vec<OnceCell<super::FacetLabels<'a>>>>,
+    faceted_min_max_u64_by_column: OnceCell<Vec<OnceCell<Option<(u64, u64)>>>>,
 }
 
 impl<'a, TData> Table<'a, TData> {
@@ -219,6 +223,10 @@ impl<'a, TData> Table<'a, TData> {
             paginated_row_model: OnceCell::new(),
             expanded_paginated_row_model: OnceCell::new(),
             selected_row_model: OnceCell::new(),
+            faceted_row_model_by_column: OnceCell::new(),
+            faceted_unique_values_by_column: OnceCell::new(),
+            faceted_unique_labels_by_column: OnceCell::new(),
+            faceted_min_max_u64_by_column: OnceCell::new(),
         }
     }
 
@@ -232,6 +240,28 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn column(&self, id: &str) -> Option<&super::ColumnDef<TData>> {
         self.columns.iter().find(|c| c.id.as_ref() == id)
+    }
+
+    fn column_index(&self, id: &str) -> Option<usize> {
+        self.columns.iter().position(|c| c.id.as_ref() == id)
+    }
+
+    /// TanStack-aligned: resolve a row by id, optionally searching outside the current paginated
+    /// row model (e.g. pinned rows).
+    pub fn row(&self, row_key: RowKey, search_all: bool) -> Option<&Row<'a, TData>> {
+        let first = if search_all {
+            self.pre_pagination_row_model()
+        } else {
+            self.row_model()
+        };
+
+        first
+            .row_by_key(row_key)
+            .and_then(|i| first.row(i))
+            .or_else(|| {
+                let core = self.core_row_model();
+                core.row_by_key(row_key).and_then(|i| core.row(i))
+            })
     }
 
     pub fn state(&self) -> &super::TableState {
@@ -463,6 +493,92 @@ impl<'a, TData> Table<'a, TData> {
             super::select_rows_fn(self.pre_selected_row_model(), &self.state.row_selection)
         })
     }
+
+    pub fn faceted_row_model(&self, column_id: &str) -> Option<&RowModel<'a, TData>> {
+        let column_index = self.column_index(column_id)?;
+
+        if self.options.manual_filtering {
+            return Some(self.pre_filtered_row_model());
+        }
+
+        let caches = self.faceted_row_model_by_column.get_or_init(|| {
+            let mut v = Vec::with_capacity(self.columns.len());
+            for _ in 0..self.columns.len() {
+                v.push(OnceCell::new());
+            }
+            v
+        });
+
+        Some(caches[column_index].get_or_init(|| {
+            super::faceted_row_model_excluding(
+                self.pre_filtered_row_model(),
+                &self.columns,
+                &self.state.column_filters,
+                self.state.global_filter.clone(),
+                Some(column_id),
+            )
+        }))
+    }
+
+    pub fn faceted_unique_values(&self, column_id: &str) -> Option<&super::FacetCounts> {
+        let column_index = self.column_index(column_id)?;
+        let column = self.column(column_id)?;
+
+        let caches = self.faceted_unique_values_by_column.get_or_init(|| {
+            let mut v = Vec::with_capacity(self.columns.len());
+            for _ in 0..self.columns.len() {
+                v.push(OnceCell::new());
+            }
+            v
+        });
+
+        Some(caches[column_index].get_or_init(|| {
+            let model = self
+                .faceted_row_model(column_id)
+                .unwrap_or_else(|| self.row_model());
+            super::faceted_unique_values(model, column)
+        }))
+    }
+
+    pub fn faceted_unique_value_labels(&self, column_id: &str) -> Option<&super::FacetLabels<'a>> {
+        let column_index = self.column_index(column_id)?;
+        let column = self.column(column_id)?;
+
+        let caches = self.faceted_unique_labels_by_column.get_or_init(|| {
+            let mut v = Vec::with_capacity(self.columns.len());
+            for _ in 0..self.columns.len() {
+                v.push(OnceCell::new());
+            }
+            v
+        });
+
+        Some(caches[column_index].get_or_init(|| {
+            let model = self
+                .faceted_row_model(column_id)
+                .unwrap_or_else(|| self.row_model());
+            super::faceted_unique_value_labels(model, column)
+        }))
+    }
+
+    pub fn faceted_min_max_u64(&self, column_id: &str) -> Option<(u64, u64)> {
+        let column_index = self.column_index(column_id)?;
+        let column = self.column(column_id)?;
+
+        let caches = self.faceted_min_max_u64_by_column.get_or_init(|| {
+            let mut v = Vec::with_capacity(self.columns.len());
+            for _ in 0..self.columns.len() {
+                v.push(OnceCell::new());
+            }
+            v
+        });
+
+        *caches[column_index].get_or_init(|| {
+            let model = self
+                .faceted_row_model(column_id)
+                .unwrap_or_else(|| self.row_model());
+            super::faceted_min_max_u64(model, column)
+        })
+    }
 }
 
 fn splitmix64(mut z: u64) -> u64 {
@@ -583,7 +699,8 @@ fn build_core_row_model<'a, TData>(
 mod tests {
     use super::*;
     use crate::headless::table::{
-        PaginationState, SortSpec, TableOptions, TableState, create_column_helper,
+        ColumnDef, ColumnFilter, PaginationState, SortSpec, TableOptions, TableState,
+        create_column_helper,
     };
     use std::sync::Arc;
 
@@ -1192,5 +1309,73 @@ mod tests {
             table.center_row_keys(),
             vec![RowKey(1), RowKey(2), RowKey(3)]
         );
+    }
+
+    #[test]
+    fn table_faceting_excludes_own_filter_and_can_return_labels() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            status_key: u64,
+            status_label: Arc<str>,
+            role_key: u64,
+            role_label: Arc<str>,
+        }
+
+        let data = vec![
+            Item {
+                status_key: 1,
+                status_label: "A".into(),
+                role_key: 10,
+                role_label: "X".into(),
+            },
+            Item {
+                status_key: 2,
+                status_label: "B".into(),
+                role_key: 10,
+                role_label: "X".into(),
+            },
+            Item {
+                status_key: 1,
+                status_label: "A".into(),
+                role_key: 20,
+                role_label: "Y".into(),
+            },
+        ];
+
+        let status = ColumnDef::new("status")
+            .filter_by(|it: &Item, q| it.status_label.as_ref() == q)
+            .facet_key_by(|it: &Item| it.status_key)
+            .facet_str_by(|it: &Item| it.status_label.as_ref());
+        let role = ColumnDef::new("role")
+            .filter_by(|it: &Item, q| it.role_label.as_ref() == q)
+            .facet_key_by(|it: &Item| it.role_key)
+            .facet_str_by(|it: &Item| it.role_label.as_ref());
+
+        let mut state = TableState::default();
+        state.column_filters = vec![
+            ColumnFilter {
+                column: "status".into(),
+                value: "A".into(),
+            },
+            ColumnFilter {
+                column: "role".into(),
+                value: "X".into(),
+            },
+        ];
+
+        let table = Table::builder(&data)
+            .columns(vec![status, role])
+            .state(state)
+            .build();
+
+        let counts = table.faceted_unique_values("status").unwrap();
+        assert_eq!(counts.get(&1).copied(), Some(1));
+        assert_eq!(counts.get(&2).copied(), Some(1));
+
+        let labels = table.faceted_unique_value_labels("status").unwrap();
+        assert_eq!(labels.get(&1).copied(), Some("A"));
+        assert_eq!(labels.get(&2).copied(), Some("B"));
+
+        assert_eq!(table.faceted_min_max_u64("status"), Some((1, 2)));
     }
 }

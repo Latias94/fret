@@ -8,6 +8,7 @@ mod column_pinning;
 mod column_sizing;
 mod column_sizing_info;
 mod column_visibility;
+mod faceting;
 mod filtering;
 mod flat_row_order;
 mod memo;
@@ -26,6 +27,10 @@ pub use column_pinning::{ColumnPinningState, split_pinned_columns};
 pub use column_sizing::{ColumnSizingState, column_size};
 pub use column_sizing_info::ColumnSizingInfoState;
 pub use column_visibility::{ColumnVisibilityState, is_column_visible, visible_columns};
+pub use faceting::{
+    FacetCounts, FacetKey, FacetLabels, faceted_min_max_u64, faceted_row_model_excluding,
+    faceted_unique_value_labels, faceted_unique_values,
+};
 pub use filtering::{
     ColumnFilter, ColumnFiltersState, GlobalFilterState, contains_ascii_case_insensitive,
     filter_row_model,

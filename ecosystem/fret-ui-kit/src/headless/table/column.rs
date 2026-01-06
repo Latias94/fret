@@ -5,12 +5,16 @@ pub type ColumnId = Arc<str>;
 
 pub type SortCmpFn<TData> = Arc<dyn Fn(&TData, &TData) -> Ordering>;
 pub type FilterFn<TData> = Arc<dyn Fn(&TData, &str) -> bool>;
+pub type FacetKeyFn<TData> = Arc<dyn Fn(&TData) -> u64>;
+pub type FacetStrFn<TData> = Arc<dyn for<'r> Fn(&'r TData) -> &'r str>;
 
 #[derive(Clone)]
 pub struct ColumnDef<TData> {
     pub id: ColumnId,
     pub sort_cmp: Option<SortCmpFn<TData>>,
     pub filter_fn: Option<FilterFn<TData>>,
+    pub facet_key_fn: Option<FacetKeyFn<TData>>,
+    pub facet_str_fn: Option<FacetStrFn<TData>>,
 }
 
 impl<TData> std::fmt::Debug for ColumnDef<TData> {
@@ -27,6 +31,8 @@ impl<TData> ColumnDef<TData> {
             id: id.into(),
             sort_cmp: None,
             filter_fn: None,
+            facet_key_fn: None,
+            facet_str_fn: None,
         }
     }
 
@@ -37,6 +43,18 @@ impl<TData> ColumnDef<TData> {
 
     pub fn filter_by(mut self, f: impl Fn(&TData, &str) -> bool + 'static) -> Self {
         self.filter_fn = Some(Arc::new(f));
+        self
+    }
+
+    /// Provide a stable `u64` facet key for this column (TanStack-aligned faceting, Rust-native).
+    pub fn facet_key_by(mut self, f: impl Fn(&TData) -> u64 + 'static) -> Self {
+        self.facet_key_fn = Some(Arc::new(f));
+        self
+    }
+
+    /// Provide a string view for this column's facet value (borrowed from row data; no allocation).
+    pub fn facet_str_by(mut self, f: impl for<'r> Fn(&'r TData) -> &'r str + 'static) -> Self {
+        self.facet_str_fn = Some(Arc::new(f));
         self
     }
 }
