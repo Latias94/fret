@@ -186,6 +186,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
             position: inside,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
 
@@ -209,6 +210,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
             position: outside,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
 
@@ -291,6 +293,7 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
             position,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
 
@@ -385,6 +388,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
             position: p,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
     assert_eq!(
@@ -456,6 +460,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             position: down,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
     ui.dispatch_event(
@@ -474,6 +479,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             position: Point::new(Px(128.0), Px(20.0)),
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
 
@@ -539,6 +545,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
             position,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
     ui.dispatch_event(
@@ -548,6 +555,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
             position,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
 
@@ -800,6 +808,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
             position: Point::new(Px(2.0), Px(2.0)),
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
 

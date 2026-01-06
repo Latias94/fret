@@ -3620,6 +3620,145 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         }
     }
 
+    fn fit_view_to_data_now<H: UiHost>(
+        &self,
+        app: &mut H,
+    ) -> (
+        DataRect,
+        Option<DataRect>,
+        Option<DataRect>,
+        Option<DataRect>,
+    ) {
+        let data_bounds = self.read_data_bounds(app);
+        let view = if self.style.clamp_to_data_bounds {
+            expand_data_bounds_scaled(
+                data_bounds,
+                self.style.overscroll_fraction,
+                self.x_scale,
+                self.y_scale,
+            )
+        } else {
+            sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y_scale)
+        };
+        let view = constrain_view_bounds_scaled(
+            view,
+            self.x_scale,
+            self.y_scale,
+            self.x_constraints,
+            self.y_constraints,
+        );
+
+        let view_y2 = if self.show_y2_axis {
+            self.read_data_bounds_y2(app).map(|data_bounds| {
+                let y2_bounds = if self.style.clamp_to_data_bounds {
+                    expand_data_bounds_scaled(
+                        data_bounds,
+                        self.style.overscroll_fraction,
+                        self.x_scale,
+                        self.y2_scale,
+                    )
+                } else {
+                    sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y2_scale)
+                };
+
+                let view_y2 = sanitize_data_rect_scaled(
+                    DataRect {
+                        x_min: view.x_min,
+                        x_max: view.x_max,
+                        y_min: y2_bounds.y_min,
+                        y_max: y2_bounds.y_max,
+                    },
+                    self.x_scale,
+                    self.y2_scale,
+                );
+
+                constrain_view_bounds_scaled(
+                    view_y2,
+                    self.x_scale,
+                    self.y2_scale,
+                    self.x_constraints,
+                    self.y2_constraints,
+                )
+            })
+        } else {
+            None
+        };
+
+        let view_y3 = if self.show_y3_axis {
+            self.read_data_bounds_y3(app).map(|data_bounds| {
+                let y3_bounds = if self.style.clamp_to_data_bounds {
+                    expand_data_bounds_scaled(
+                        data_bounds,
+                        self.style.overscroll_fraction,
+                        self.x_scale,
+                        self.y3_scale,
+                    )
+                } else {
+                    sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y3_scale)
+                };
+
+                let view_y3 = sanitize_data_rect_scaled(
+                    DataRect {
+                        x_min: view.x_min,
+                        x_max: view.x_max,
+                        y_min: y3_bounds.y_min,
+                        y_max: y3_bounds.y_max,
+                    },
+                    self.x_scale,
+                    self.y3_scale,
+                );
+
+                constrain_view_bounds_scaled(
+                    view_y3,
+                    self.x_scale,
+                    self.y3_scale,
+                    self.x_constraints,
+                    self.y3_constraints,
+                )
+            })
+        } else {
+            None
+        };
+
+        let view_y4 = if self.show_y4_axis {
+            self.read_data_bounds_y4(app).map(|data_bounds| {
+                let y4_bounds = if self.style.clamp_to_data_bounds {
+                    expand_data_bounds_scaled(
+                        data_bounds,
+                        self.style.overscroll_fraction,
+                        self.x_scale,
+                        self.y4_scale,
+                    )
+                } else {
+                    sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y4_scale)
+                };
+
+                let view_y4 = sanitize_data_rect_scaled(
+                    DataRect {
+                        x_min: view.x_min,
+                        x_max: view.x_max,
+                        y_min: y4_bounds.y_min,
+                        y_max: y4_bounds.y_max,
+                    },
+                    self.x_scale,
+                    self.y4_scale,
+                );
+
+                constrain_view_bounds_scaled(
+                    view_y4,
+                    self.x_scale,
+                    self.y4_scale,
+                    self.x_constraints,
+                    self.y4_constraints,
+                )
+            })
+        } else {
+            None
+        };
+
+        (view, view_y2, view_y3, view_y4)
+    }
+
     pub fn with_layer(model: Model<L::Model>, layer: L) -> Self {
         let axis_gap = LinePlotStyle::default().axis_gap;
         Self {
@@ -5162,6 +5301,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 position,
                 button,
                 modifiers,
+                ..
             }) => {
                 let (
                     y_axis_gap,
@@ -5345,9 +5485,85 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
             }
             Event::Pointer(PointerEvent::Up {
-                button, modifiers, ..
+                position,
+                button,
+                modifiers,
+                click_count,
             }) => {
                 if *button == MouseButton::Left || *button == MouseButton::Right {
+                    let plain = !modifiers.shift
+                        && !modifiers.ctrl
+                        && !modifiers.alt
+                        && !modifiers.alt_gr
+                        && !modifiers.meta;
+                    if *button == MouseButton::Left
+                        && *click_count == 2
+                        && plain
+                        && self.pan_last_pos.is_none()
+                        && self.box_zoom_start.is_none()
+                        && self.query_drag_start.is_none()
+                    {
+                        let (
+                            y_axis_gap,
+                            y_axis_right_gap,
+                            y_axis_right2_gap,
+                            y_axis_right3_gap,
+                            x_axis_gap,
+                        ) = self.axis_gaps();
+                        let layout = PlotLayout::from_bounds(
+                            cx.bounds,
+                            self.style.padding,
+                            y_axis_gap,
+                            y_axis_right_gap,
+                            y_axis_right2_gap,
+                            y_axis_right3_gap,
+                            x_axis_gap,
+                        );
+                        if layout.plot.size.width.0 > 0.0
+                            && layout.plot.size.height.0 > 0.0
+                            && contains_point(layout.plot, *position)
+                        {
+                            let (view, view_y2, view_y3, view_y4) =
+                                self.fit_view_to_data_now(cx.app);
+                            let show_y2_axis = self.show_y2_axis;
+                            let show_y3_axis = self.show_y3_axis;
+                            let show_y4_axis = self.show_y4_axis;
+                            let _ = self.update_plot_state(cx.app, |s| {
+                                s.view_is_auto = false;
+                                s.view_bounds = Some(view);
+                                if show_y2_axis {
+                                    s.view_y2_is_auto = false;
+                                    s.view_bounds_y2 = view_y2;
+                                }
+                                if show_y3_axis {
+                                    s.view_y3_is_auto = false;
+                                    s.view_bounds_y3 = view_y3;
+                                }
+                                if show_y4_axis {
+                                    s.view_y4_is_auto = false;
+                                    s.view_bounds_y4 = view_y4;
+                                }
+                            });
+
+                            self.hover = None;
+                            self.cursor_px = None;
+                            self.legend_hover = None;
+                            self.pan_last_pos = None;
+                            self.box_zoom_start = None;
+                            self.box_zoom_current = None;
+                            self.box_zoom_button = None;
+                            self.query_drag_start = None;
+                            self.query_drag_current = None;
+                            if cx.captured == Some(cx.node) {
+                                cx.release_pointer_capture();
+                            }
+                            cx.invalidate_self(Invalidation::Paint);
+                            cx.request_redraw();
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+
                     if *button == MouseButton::Left && self.query_drag_start.is_some() {
                         if cx.captured == Some(cx.node) {
                             cx.release_pointer_capture();

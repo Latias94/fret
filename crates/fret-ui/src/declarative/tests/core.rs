@@ -300,6 +300,7 @@ fn key_hook_runs_for_focused_text_input() {
             position: pos,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
     ui.dispatch_event(
@@ -309,6 +310,7 @@ fn key_hook_runs_for_focused_text_input() {
             position: pos,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
     ui.dispatch_event(
@@ -409,6 +411,7 @@ fn key_hook_can_request_focus() {
             position: pos,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
     ui.dispatch_event(
@@ -418,6 +421,7 @@ fn key_hook_can_request_focus() {
             position: pos,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
 

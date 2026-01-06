@@ -281,6 +281,7 @@ fn render_and_bind_dock_panels_keeps_non_viewport_panel_alive() {
             position: Point::new(Px(10.0), Px(60.0)),
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
 
@@ -632,6 +633,7 @@ fn viewport_capture_emits_clamped_pointer_moves_outside_draw_rect() {
             position: down_pos,
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
     let _ = harness.app.take_effects();
@@ -689,6 +691,7 @@ fn viewport_capture_requests_animation_frames_while_active() {
             position: down_pos,
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
     let _ = harness.app.take_effects();

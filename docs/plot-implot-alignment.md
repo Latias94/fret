@@ -55,7 +55,7 @@ to ImPlot's default `ImPlotInputMap`.
 | Box select expand (horizontal) | Hold `Alt` | Hold `Alt` (RMB box zoom only) | Expands selection to plot edges on X. |
 | Box select expand (vertical) | Hold `Shift` | Hold `Shift` (RMB box zoom only) | Expands selection to plot edges on Y. |
 | Cancel box select | `LMB press` | `LMB press` (when RMB selecting) or `Esc` | `Esc` cancels any active drag. |
-| Fit / reset view | `LMB double-click` | `R` | We currently don't have a click count in `PointerEvent`; adding double-click needs core input support. |
+| Fit / reset view | `LMB double-click` | `LMB double-click` | `R` remains as an explicit "reset everything" shortcut (also clears hidden/pinned/query). |
 | Clear query selection | N/A (app-owned) | `Q` | `PlotState.query` is application-controlled state. |
 | Restore legend visibility | N/A | `A` | Clears hidden/pinned series. |
 

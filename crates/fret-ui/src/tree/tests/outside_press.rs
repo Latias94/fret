@@ -47,6 +47,7 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
         }),
     );
     ui.dispatch_event(
@@ -56,6 +57,7 @@ fn outside_press_observer_must_not_capture_pointer_or_break_click_through() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
         }),
     );
 
@@ -182,6 +184,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
             position: Point::new(Px(45.0), Px(6.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
         }),
     );
 
@@ -209,6 +212,7 @@ fn outside_press_observer_respects_overlay_render_transform() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
         }),
     );
 
@@ -298,6 +302,7 @@ fn outside_press_observer_dispatch_sets_input_context_phase() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
         }),
     );
 

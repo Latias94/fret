@@ -602,6 +602,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         position,
                         button,
                         modifiers,
+                        ..
                     } => {
                         // Arbitration: while a dock drag session is active (or viewport capture is
                         // active), we do not allow starting competing capture sessions from a
@@ -1088,6 +1089,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         position,
                         button,
                         modifiers,
+                        ..
                     } => {
                         let mut handled = false;
                         if *button == fret_core::MouseButton::Left

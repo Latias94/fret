@@ -2,6 +2,7 @@ use fret_core::{
     CursorIcon, Event, ExternalDragFile, ExternalDragFiles, ExternalDropToken, KeyCode, Modifiers,
     MouseButton, MouseButtons, Point, PointerEvent, Px, Rect,
 };
+use std::time::{Duration, Instant};
 use winit::dpi::{LogicalPosition, LogicalSize, PhysicalPosition};
 use winit::event::{
     ButtonSource, ElementState, KeyEvent, MouseButton as WinitMouseButton, MouseScrollDelta,
@@ -245,6 +246,123 @@ pub struct WinitInputState {
     pub modifiers: Modifiers,
     pub raw_modifiers: ModifiersState,
     pub alt_gr_down: bool,
+    click: ClickTracker,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct ClickState {
+    last_time: Option<Instant>,
+    last_pos: Point,
+    count: u8,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct PressState {
+    start_pos: Point,
+    click_count: u8,
+    moved: bool,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct ClickTracker {
+    left: ClickState,
+    right: ClickState,
+    middle: ClickState,
+    back: ClickState,
+    forward: ClickState,
+    press_left: Option<PressState>,
+    press_right: Option<PressState>,
+    press_middle: Option<PressState>,
+    press_back: Option<PressState>,
+    press_forward: Option<PressState>,
+}
+
+impl ClickTracker {
+    const CLICK_SLOP_PX: f32 = 6.0;
+    const MULTI_CLICK_MAX_DELAY: Duration = Duration::from_millis(500);
+
+    fn begin_press(&mut self, button: MouseButton, pos: Point) -> u8 {
+        if matches!(button, MouseButton::Other(_)) {
+            return 1;
+        }
+        let now = Instant::now();
+        let (state, press) = self.state_for_button_mut(button);
+        let count = match state.last_time {
+            Some(t)
+                if now.duration_since(t) <= Self::MULTI_CLICK_MAX_DELAY
+                    && distance_px(pos, state.last_pos) <= Self::CLICK_SLOP_PX =>
+            {
+                state.count.saturating_add(1).max(2)
+            }
+            _ => 1,
+        };
+
+        *press = Some(PressState {
+            start_pos: pos,
+            click_count: count,
+            moved: false,
+        });
+        count
+    }
+
+    fn update_move(&mut self, pos: Point) {
+        for press in [
+            &mut self.press_left,
+            &mut self.press_right,
+            &mut self.press_middle,
+            &mut self.press_back,
+            &mut self.press_forward,
+        ] {
+            let Some(st) = press.as_mut() else {
+                continue;
+            };
+            if st.moved {
+                continue;
+            }
+            if distance_px(pos, st.start_pos) > Self::CLICK_SLOP_PX {
+                st.moved = true;
+            }
+        }
+    }
+
+    fn end_press(&mut self, button: MouseButton, pos: Point) -> u8 {
+        if matches!(button, MouseButton::Other(_)) {
+            return 1;
+        }
+        let now = Instant::now();
+        let (state, press) = self.state_for_button_mut(button);
+        let Some(press_state) = press.take() else {
+            return 1;
+        };
+
+        if !press_state.moved && distance_px(pos, press_state.start_pos) <= Self::CLICK_SLOP_PX {
+            state.last_time = Some(now);
+            state.last_pos = pos;
+            state.count = press_state.click_count;
+        }
+
+        press_state.click_count.max(1)
+    }
+
+    fn state_for_button_mut(
+        &mut self,
+        button: MouseButton,
+    ) -> (&mut ClickState, &mut Option<PressState>) {
+        match button {
+            MouseButton::Left => (&mut self.left, &mut self.press_left),
+            MouseButton::Right => (&mut self.right, &mut self.press_right),
+            MouseButton::Middle => (&mut self.middle, &mut self.press_middle),
+            MouseButton::Back => (&mut self.back, &mut self.press_back),
+            MouseButton::Forward => (&mut self.forward, &mut self.press_forward),
+            MouseButton::Other(_) => (&mut self.left, &mut self.press_left),
+        }
+    }
+}
+
+fn distance_px(a: Point, b: Point) -> f32 {
+    let dx = a.x.0 - b.x.0;
+    let dy = a.y.0 - b.y.0;
+    (dx * dx + dy * dy).sqrt()
 }
 
 #[derive(Debug, Default, Clone)]
@@ -401,6 +519,7 @@ impl WinitInputState {
                 self.cursor_pos_physical = Some(*position);
                 let logical: LogicalPosition<f32> = position.to_logical(window_scale_factor);
                 self.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
+                self.click.update_move(self.cursor_pos);
                 out.push(Event::Pointer(PointerEvent::Move {
                     position: self.cursor_pos,
                     buttons: self.pressed_buttons,
@@ -423,17 +542,23 @@ impl WinitInputState {
                 let pressed = matches!(state, ElementState::Pressed);
                 set_mouse_buttons(&mut self.pressed_buttons, winit_button, pressed);
 
+                let mapped_button = map_mouse_button(winit_button);
+
                 let evt = if pressed {
+                    let click_count = self.click.begin_press(mapped_button, self.cursor_pos);
                     PointerEvent::Down {
                         position: self.cursor_pos,
-                        button: map_mouse_button(winit_button),
+                        button: mapped_button,
                         modifiers: self.modifiers,
+                        click_count,
                     }
                 } else {
+                    let click_count = self.click.end_press(mapped_button, self.cursor_pos);
                     PointerEvent::Up {
                         position: self.cursor_pos,
-                        button: map_mouse_button(winit_button),
+                        button: mapped_button,
                         modifiers: self.modifiers,
+                        click_count,
                     }
                 };
                 out.push(Event::Pointer(evt));

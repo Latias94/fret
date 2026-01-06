@@ -592,6 +592,7 @@ fn scroll_thumb_drag_updates_offset() {
             position: down_pos,
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
         }),
     );
     ui.dispatch_event(
@@ -613,6 +614,7 @@ fn scroll_thumb_drag_updates_offset() {
             position: move_pos,
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
         }),
     );
 
@@ -1099,6 +1101,7 @@ fn focus_ring_is_focus_visible_only() {
             position: fret_core::Point::new(Px(4.0), Px(4.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
         }),
     );
     assert_eq!(
@@ -1464,6 +1467,7 @@ fn pressable_dispatches_click_command_when_released_over_self() {
             position,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
     ui.dispatch_event(
@@ -1473,6 +1477,7 @@ fn pressable_dispatches_click_command_when_released_over_self() {
             position,
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
+            click_count: 1,
         }),
     );
 

@@ -200,6 +200,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -209,6 +210,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
             }),
         );
 

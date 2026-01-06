@@ -154,6 +154,7 @@ impl<H: UiHost> Widget<H> for Plot3dCanvas {
                 position,
                 button,
                 modifiers,
+                ..
             }) => {
                 if !draw_rect.contains(*position) {
                     return;
@@ -239,6 +240,7 @@ impl<H: UiHost> Widget<H> for Plot3dCanvas {
                 position,
                 button,
                 modifiers,
+                ..
             }) => {
                 let Some(capture) = self.capture else {
                     return;

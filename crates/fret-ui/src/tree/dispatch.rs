@@ -908,18 +908,26 @@ impl<H: UiHost> UiTree<H> {
                         modifiers: *modifiers,
                     },
                     PointerEvent::Down {
-                        button, modifiers, ..
+                        button,
+                        modifiers,
+                        click_count,
+                        ..
                     } => PointerEvent::Down {
                         position,
                         button: *button,
                         modifiers: *modifiers,
+                        click_count: *click_count,
                     },
                     PointerEvent::Up {
-                        button, modifiers, ..
+                        button,
+                        modifiers,
+                        click_count,
+                        ..
                     } => PointerEvent::Up {
                         position,
                         button: *button,
                         modifiers: *modifiers,
+                        click_count: *click_count,
                     },
                     PointerEvent::Wheel { modifiers, .. } => PointerEvent::Wheel {
                         position,

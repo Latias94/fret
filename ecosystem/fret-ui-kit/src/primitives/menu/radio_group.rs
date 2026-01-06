@@ -218,6 +218,7 @@ mod tests {
                 position: click_a,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -227,6 +228,7 @@ mod tests {
                 position: click_a,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
             }),
         );
         assert_eq!(
@@ -268,6 +270,7 @@ mod tests {
                 position: click_b,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -277,6 +280,7 @@ mod tests {
                 position: click_b,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
             }),
         );
         assert_eq!(
