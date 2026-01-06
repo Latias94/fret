@@ -77,24 +77,28 @@ pub fn code_block<H: UiHost>(
             let lines = split_lines(code);
             let line_number_width = line_number_width(lines.len());
 
-            lines
-                .into_iter()
-                .enumerate()
-                .map(|(i, line)| {
-                    if show_line_numbers {
-                        render_code_line_with_number(
-                            cx,
-                            &theme,
-                            i + 1,
-                            line_number_width,
-                            line,
-                            &spans,
-                        )
-                    } else {
-                        render_code_line(cx, &theme, line, &spans)
-                    }
-                })
-                .collect()
+            // `Scroll` lays out all children in the same shifted content rect; it does not
+            // vertically stack them. Wrap code lines in a single column to avoid overlap.
+            vec![stack::vstack(cx, stack::VStackProps::default().gap(Space::N0), |cx| {
+                lines
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, line)| {
+                        if show_line_numbers {
+                            render_code_line_with_number(
+                                cx,
+                                &theme,
+                                i + 1,
+                                line_number_width,
+                                line,
+                                &spans,
+                            )
+                        } else {
+                            render_code_line(cx, &theme, line, &spans)
+                        }
+                    })
+                    .collect()
+            })]
         })]
     })
 }
