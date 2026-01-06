@@ -924,7 +924,10 @@ fn render_mdstream_block_with_events<H: UiHost>(
             }
         }
         mdstream::BlockKind::MathBlock => {
-            render_pulldown_events_root(cx, theme, markdown_theme, components, events)
+            // mdstream already classifies the block as MathBlock; don't rely on pulldown to
+            // re-discover `Event::DisplayMath` because the adapter may have stripped delimiters.
+            let latex = parse_math_block_body(block.display_or_raw());
+            render_math_block(cx, theme, markdown_theme, components, latex)
         }
         mdstream::BlockKind::HtmlBlock
         | mdstream::BlockKind::FootnoteDefinition
@@ -950,6 +953,25 @@ fn raw_block_kind_from_mdstream(kind: mdstream::BlockKind) -> RawBlockKind {
         mdstream::BlockKind::Unknown => RawBlockKind::Unknown,
         _ => RawBlockKind::Unknown,
     }
+}
+
+fn parse_math_block_body(text: &str) -> Arc<str> {
+    let s = text.trim();
+    if s.is_empty() {
+        return Arc::<str>::from("");
+    }
+
+    // Support common delimiters. mdstream may already have stripped them, so we fall back to `s`.
+    if let Some(rest) = s.strip_prefix("$$") {
+        let rest = rest.strip_suffix("$$").unwrap_or(rest);
+        return Arc::<str>::from(rest.trim().to_string());
+    }
+    if let Some(rest) = s.strip_prefix("\\[") {
+        let rest = rest.strip_suffix("\\]").unwrap_or(rest);
+        return Arc::<str>::from(rest.trim().to_string());
+    }
+
+    Arc::<str>::from(s.to_string())
 }
 
 fn render_heading_inline<H: UiHost>(
@@ -3146,6 +3168,24 @@ mod tests {
         use pulldown_cmark::Event;
         let events = parse_events("$$x^2$$\n");
         assert!(events.iter().any(|e| matches!(e, Event::DisplayMath(_))));
+    }
+
+    #[test]
+    fn mdstream_math_block_body_strips_common_delimiters() {
+        let mut stream = mdstream::MdStream::default();
+        let update = stream.append("$$\n\\int_0^1 x^2\\,dx = \\frac{1}{3}\n$$\n");
+
+        let mut state = MarkdownPulldownState::new();
+        state.apply_update(update);
+
+        let blocks = state.doc().committed();
+        let math = blocks
+            .iter()
+            .find(|b| matches!(b.kind, mdstream::BlockKind::MathBlock))
+            .expect("math block exists");
+
+        let body = parse_math_block_body(math.display_or_raw());
+        assert!(body.contains("\\int_0^1"));
     }
 
     #[test]
