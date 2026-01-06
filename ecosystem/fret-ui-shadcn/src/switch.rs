@@ -11,7 +11,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::switch::switch_a11y;
+use fret_ui_kit::primitives::switch::{switch_a11y, switch_checked_from_optional_bool, toggle_optional_bool};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -166,16 +166,19 @@ impl Switch {
                     SwitchModel::Determinate(model) => cx.pressable_toggle_bool(model),
                     SwitchModel::Optional(model) => {
                         cx.pressable_update_model(model, |v| {
-                            let cur = v.unwrap_or(false);
-                            *v = Some(!cur);
+                            *v = toggle_optional_bool(*v);
                         });
                     }
                 }
 
                 let theme = Theme::global(&*cx.app).clone();
                 let on = match &model {
-                    SwitchModel::Determinate(model) => cx.watch_model(model).copied().unwrap_or(false),
-                    SwitchModel::Optional(model) => cx.watch_model(model).copied().flatten().unwrap_or(false),
+                    SwitchModel::Determinate(model) => {
+                        cx.watch_model(model).copied().unwrap_or(false)
+                    }
+                    SwitchModel::Optional(model) => {
+                        switch_checked_from_optional_bool(cx.watch_model(model).copied().flatten())
+                    }
                 };
 
                 let mut bg = if on {
@@ -270,7 +273,10 @@ pub fn switch<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> 
     Switch::new(model).into_element(cx)
 }
 
-pub fn switch_opt<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<Option<bool>>) -> AnyElement {
+pub fn switch_opt<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<Option<bool>>,
+) -> AnyElement {
     Switch::new_opt(model).into_element(cx)
 }
 

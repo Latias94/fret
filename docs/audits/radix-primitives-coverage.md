@@ -25,6 +25,7 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 - `avatar` -> `ecosystem/fret-ui-kit/src/primitives/avatar.rs`
 - `aspect-ratio` -> `ecosystem/fret-ui-kit/src/primitives/aspect_ratio.rs`
 - `alert-dialog` -> `ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs`
+- `checkbox` -> `ecosystem/fret-ui-kit/src/primitives/checkbox.rs`
 - `collapsible` -> `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`
 - `collection` -> `ecosystem/fret-ui-kit/src/primitives/collection.rs`
 - `context-menu` -> `ecosystem/fret-ui-kit/src/primitives/context_menu.rs` (facade over `menu`)
@@ -62,8 +63,7 @@ None currently tracked.
 These shadcn components exist today, but their reusable behavior/policy should be moved into
 Radix-named primitives facades so non-shadcn consumers can reuse them:
 
-- `checkbox` -> `ecosystem/fret-ui-shadcn/src/checkbox.rs`
-- `switch` -> `ecosystem/fret-ui-shadcn/src/switch.rs`
+None currently tracked.
 
 ### Intentional differences
 

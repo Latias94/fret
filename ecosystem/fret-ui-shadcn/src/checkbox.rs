@@ -12,7 +12,7 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::checkbox::{CheckedState, checkbox_a11y};
+use fret_ui_kit::primitives::checkbox::{CheckedState, checkbox_a11y, checked_state_from_optional_bool, toggle_optional_bool};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -167,12 +167,7 @@ impl Checkbox {
                     CheckboxCheckedModel::Bool(model) => cx.pressable_toggle_bool(model),
                     CheckboxCheckedModel::OptionalBool(model) => {
                         cx.pressable_update_model(model, |v| {
-                            let next = match *v {
-                                None => Some(true),
-                                Some(true) => Some(false),
-                                Some(false) => Some(true),
-                            };
-                            *v = next;
+                            *v = toggle_optional_bool(*v);
                         });
                     }
                     CheckboxCheckedModel::TriState(model) => {
@@ -186,11 +181,7 @@ impl Checkbox {
                         CheckedState::from(cx.watch_model(model).copied().unwrap_or(false))
                     }
                     CheckboxCheckedModel::OptionalBool(model) => {
-                        match cx.watch_model(model).copied().flatten() {
-                            Some(true) => CheckedState::Checked,
-                            Some(false) => CheckedState::Unchecked,
-                            None => CheckedState::Indeterminate,
-                        }
+                        checked_state_from_optional_bool(cx.watch_model(model).copied().flatten())
                     }
                     CheckboxCheckedModel::TriState(model) => {
                         cx.watch_model(model).copied().unwrap_or_default()

@@ -27,10 +27,11 @@ Fret models Radix checkbox outcomes as:
 
 - Pass: Tri-state behavior is modeled via `CheckedState` (checked / unchecked / indeterminate).
 - Pass: Semantics maps indeterminate to `checked: None` (equivalent to Radix `aria-checked="mixed"`).
+- Pass: Optional boolean bindings (`Option<bool>`) can be mapped/toggled via primitives helpers
+  (`checked_state_from_optional_bool`, `toggle_optional_bool`), keeping recipes thin.
 - Note: Fret currently does not model DOM-style `name`/form submission semantics.
 
 ## Follow-ups (recommended)
 
 - If strict parity is required, consider introducing a first-class `A11yChecked::Mixed` instead of
   using `Option<bool>` in the semantics snapshot layer.
-

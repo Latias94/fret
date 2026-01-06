@@ -23,5 +23,6 @@ Key upstream concepts:
 ## Current parity notes
 
 - Pass: A11y stamping helper matches Radix "role + checked" outcomes.
+- Pass: Optional boolean shadcn bindings can be normalized/toggled via primitives helpers
+  (`switch_checked_from_optional_bool`, `toggle_optional_bool`).
 - N/A: HTML form integration (`BubbleInput`) is intentionally not modeled at the primitives layer.
-
