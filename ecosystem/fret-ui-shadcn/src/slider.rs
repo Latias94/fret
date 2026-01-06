@@ -101,6 +101,7 @@ pub struct Slider {
     min: f32,
     max: f32,
     step: f32,
+    min_steps_between_thumbs: u32,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -114,6 +115,7 @@ impl Slider {
             min: 0.0,
             max: 100.0,
             step: 1.0,
+            min_steps_between_thumbs: 0,
             disabled: false,
             a11y_label: None,
             layout: LayoutRefinement::default(),
@@ -129,6 +131,12 @@ impl Slider {
 
     pub fn step(mut self, step: f32) -> Self {
         self.step = step;
+        self
+    }
+
+    /// Minimum number of steps between thumbs (Radix `minStepsBetweenThumbs`).
+    pub fn min_steps_between_thumbs(mut self, min_steps_between_thumbs: u32) -> Self {
+        self.min_steps_between_thumbs = min_steps_between_thumbs;
         self
     }
 
@@ -159,6 +167,7 @@ impl Slider {
             self.min,
             self.max,
             self.step,
+            self.min_steps_between_thumbs,
             self.disabled,
             self.a11y_label,
             self.layout,
@@ -173,6 +182,7 @@ pub fn slider<H: UiHost>(
     min: f32,
     max: f32,
     step: f32,
+    min_steps_between_thumbs: u32,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -215,11 +225,18 @@ pub fn slider<H: UiHost>(
             .read_ref(|values| values.clone())
             .ok()
             .unwrap_or_else(|| vec![min]);
-        let mut values_sorted = values;
+        let mut values_sorted = values.clone();
         if values_sorted.is_empty() {
             values_sorted.push(min);
         }
         values_sorted.sort_by(|a, b| a.total_cmp(b));
+        if values_sorted.len() > 1 && values_sorted != values {
+            let values_sorted = values_sorted.clone();
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&model, |values| *values = values_sorted);
+        }
 
         let active_index = cx.app.models().get_cloned(&drag_index_model).unwrap_or(0);
         let active_index = active_index.min(values_sorted.len().saturating_sub(1));
@@ -246,6 +263,7 @@ pub fn slider<H: UiHost>(
         let max_value = max;
         let step_value = step;
         let thumb_size = style.thumb_size;
+        let min_steps_between_thumbs_value = min_steps_between_thumbs;
         let model_on_down = model.clone();
         let model_on_move = model.clone();
         let drag_index_on_down = drag_index_model.clone();
@@ -272,7 +290,7 @@ pub fn slider<H: UiHost>(
                         max_value,
                         step_value,
                         thumb_size,
-                        0,
+                        min_steps_between_thumbs_value,
                     );
                     let _ = host
                         .models_mut()
@@ -304,7 +322,7 @@ pub fn slider<H: UiHost>(
                         step_value,
                         thumb_size,
                         value_index_to_change,
-                        0,
+                        min_steps_between_thumbs_value,
                     );
                     let _ = host
                         .models_mut()
@@ -327,6 +345,7 @@ pub fn slider<H: UiHost>(
 
             let model_on_key = model.clone();
             let drag_index_on_key = drag_index_model.clone();
+            let min_steps_between_thumbs_value = min_steps_between_thumbs;
             cx.key_on_key_down_for(
                 semantics_id,
                 Arc::new(move |host, cx, down| {
@@ -383,7 +402,7 @@ pub fn slider<H: UiHost>(
                         min_value,
                         max_value,
                         step,
-                        0,
+                        min_steps_between_thumbs_value,
                     ) {
                         let _ = host
                             .models_mut()
@@ -525,6 +544,14 @@ mod tests {
         TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
     use fret_ui::tree::UiTree;
+
+    fn pointer_x_for_value(bounds: Rect, value: f32, min: f32, max: f32, thumb_size: Px) -> Px {
+        let t = radix_slider::normalize_value(value, min, max);
+        let thumb = thumb_size.0.max(0.0);
+        let track_w = (bounds.size.width.0 - thumb).max(0.0);
+        let left = bounds.origin.x.0 + thumb * 0.5;
+        Px(left + track_w * t)
+    }
 
     struct FakeServices;
 
@@ -694,5 +721,62 @@ mod tests {
             "expected second thumb≈100, got {}",
             values[1]
         );
+    }
+
+    #[test]
+    fn slider_respects_min_steps_between_thumbs() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(60.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(vec![10.0, 14.0]);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-slider-respects-min-steps-between-thumbs",
+            |cx| {
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .step(1.0)
+                        .min_steps_between_thumbs(5)
+                        .style(SliderStyle::default())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let slider_node = ui.children(root)[0];
+        let slider_bounds = ui.debug_node_bounds(slider_node).expect("slider bounds");
+        let position = Point::new(
+            pointer_x_for_value(slider_bounds, 12.0, 0.0, 100.0, Px(16.0)),
+            Px(slider_bounds.origin.y.0 + slider_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let values = app.models().get_cloned(&model).unwrap_or_default();
+        assert_eq!(values, vec![10.0, 14.0]);
     }
 }
