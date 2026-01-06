@@ -67,6 +67,19 @@ impl FadePresence {
     }
 
     pub fn update(&mut self, open: bool, tick: u64) -> PresenceOutput {
+        self.update_with_easing(open, tick, crate::headless::easing::smoothstep)
+    }
+
+    /// Like [`FadePresence::update`], but allows callers to provide an easing function.
+    ///
+    /// This is useful for matching CSS-style easing curves (e.g. cubic-bezier) without changing
+    /// the default `smoothstep` behavior across the codebase.
+    pub fn update_with_easing(
+        &mut self,
+        open: bool,
+        tick: u64,
+        ease: fn(f32) -> f32,
+    ) -> PresenceOutput {
         if open {
             match self.phase {
                 Phase::Hidden | Phase::Closing { .. } => {
@@ -98,7 +111,7 @@ impl FadePresence {
                 let fade = self.open_ticks.max(1);
                 let elapsed = tick.saturating_sub(start_tick).saturating_add(1);
                 let t = (elapsed as f32 / fade as f32).clamp(0.0, 1.0);
-                let opacity = smoothstep(t);
+                let opacity = ease(t).clamp(0.0, 1.0);
                 if t >= 1.0 {
                     self.phase = Phase::Open;
                     PresenceOutput {
@@ -118,7 +131,7 @@ impl FadePresence {
                 let fade = self.close_ticks.max(1);
                 let elapsed = tick.saturating_sub(start_tick).saturating_add(1);
                 let t = (elapsed as f32 / fade as f32).clamp(0.0, 1.0);
-                let opacity = smoothstep(1.0 - t);
+                let opacity = ease(1.0 - t).clamp(0.0, 1.0);
                 if t >= 1.0 {
                     self.phase = Phase::Hidden;
                     PresenceOutput {
@@ -136,11 +149,6 @@ impl FadePresence {
             }
         }
     }
-}
-
-fn smoothstep(t: f32) -> f32 {
-    let t = t.clamp(0.0, 1.0);
-    t * t * (3.0 - 2.0 * t)
 }
 
 #[cfg(test)]
@@ -173,5 +181,21 @@ mod tests {
         assert!(!c3.present);
         assert!(!c3.animating);
         assert_eq!(c3.opacity, 0.0);
+    }
+
+    #[test]
+    fn update_with_easing_can_use_linear_progress() {
+        let mut p = FadePresence::default();
+        p.set_fade_ticks(4);
+
+        let a0 = p.update_with_easing(true, 0, crate::headless::easing::linear);
+        assert!(a0.present);
+        assert!(a0.animating);
+        assert!((a0.opacity - 0.25).abs() < 1e-6);
+
+        let a3 = p.update_with_easing(true, 3, crate::headless::easing::linear);
+        assert!(a3.present);
+        assert!(!a3.animating);
+        assert!((a3.opacity - 1.0).abs() < 1e-6);
     }
 }

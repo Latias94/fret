@@ -1,7 +1,8 @@
+pub mod checked_state;
 pub mod cmdk_score;
 pub mod cmdk_selection;
-pub mod checked_state;
 pub mod dismissible_layer;
+pub mod easing;
 pub mod focus_scope;
 pub mod hover_intent;
 pub mod menu_nav;
@@ -10,5 +11,7 @@ pub mod roving_focus;
 pub mod safe_hover;
 pub mod scroll_area_visibility;
 pub mod slider;
+#[cfg(feature = "table")]
+pub mod table;
 pub mod tooltip_delay_group;
 pub mod typeahead;
