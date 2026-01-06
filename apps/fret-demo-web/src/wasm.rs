@@ -25,6 +25,7 @@ enum Demo {
     LinkedCursorDemo,
     InfLinesDemo,
     TagsDemo,
+    DragDemo,
 }
 
 fn select_demo() -> Demo {
@@ -81,6 +82,9 @@ fn select_demo() -> Demo {
     }
     if hash.contains("tags_demo") || search.contains("demo=tags_demo") {
         return Demo::TagsDemo;
+    }
+    if hash.contains("drag_demo") || search.contains("demo=drag_demo") {
+        return Demo::DragDemo;
     }
 
     Demo::ComponentsGallery
@@ -203,6 +207,13 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::tags_demo::build_runner_config();
             config.main_window_title = "fret-demo tags_demo (web)".to_string();
             let driver = fret_examples::tags_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::DragDemo => {
+            let app = fret_examples::drag_demo::build_app();
+            let mut config = fret_examples::drag_demo::build_runner_config();
+            config.main_window_title = "fret-demo drag_demo (web)".to_string();
+            let driver = fret_examples::drag_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
     }

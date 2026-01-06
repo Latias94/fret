@@ -34,6 +34,7 @@ hash or query string:
 - `?demo=linked_cursor_demo` (or `#linked_cursor_demo`)
 - `?demo=inf_lines_demo` (or `#inf_lines_demo`)
 - `?demo=tags_demo` (or `#tags_demo`)
+- `?demo=drag_demo` (or `#drag_demo`)
 
 ## Debug teardown
 
