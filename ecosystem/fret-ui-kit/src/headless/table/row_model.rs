@@ -194,6 +194,8 @@ pub struct Table<'a, TData> {
     paginated_row_model: OnceCell<RowModel<'a, TData>>,
     expanded_paginated_row_model: OnceCell<RowModel<'a, TData>>,
     selected_row_model: OnceCell<RowModel<'a, TData>>,
+    filtered_selected_row_model: OnceCell<RowModel<'a, TData>>,
+    page_selected_row_model: OnceCell<RowModel<'a, TData>>,
     faceted_row_model_by_column: OnceCell<Vec<OnceCell<RowModel<'a, TData>>>>,
     faceted_unique_values_by_column: OnceCell<Vec<OnceCell<super::FacetCounts>>>,
     faceted_unique_labels_by_column: OnceCell<Vec<OnceCell<super::FacetLabels<'a>>>>,
@@ -223,6 +225,8 @@ impl<'a, TData> Table<'a, TData> {
             paginated_row_model: OnceCell::new(),
             expanded_paginated_row_model: OnceCell::new(),
             selected_row_model: OnceCell::new(),
+            filtered_selected_row_model: OnceCell::new(),
+            page_selected_row_model: OnceCell::new(),
             faceted_row_model_by_column: OnceCell::new(),
             faceted_unique_values_by_column: OnceCell::new(),
             faceted_unique_labels_by_column: OnceCell::new(),
@@ -491,6 +495,34 @@ impl<'a, TData> Table<'a, TData> {
     pub fn selected_row_model(&self) -> &RowModel<'a, TData> {
         self.selected_row_model.get_or_init(|| {
             super::select_rows_fn(self.pre_selected_row_model(), &self.state.row_selection)
+        })
+    }
+
+    pub fn filtered_selected_row_model(&self) -> &RowModel<'a, TData> {
+        self.filtered_selected_row_model.get_or_init(|| {
+            if self.state.row_selection.is_empty() {
+                return RowModel {
+                    root_rows: Vec::new(),
+                    flat_rows: Vec::new(),
+                    rows_by_key: HashMap::new(),
+                    arena: Vec::new(),
+                };
+            }
+            super::select_rows_fn(self.filtered_row_model(), &self.state.row_selection)
+        })
+    }
+
+    pub fn page_selected_row_model(&self) -> &RowModel<'a, TData> {
+        self.page_selected_row_model.get_or_init(|| {
+            if self.state.row_selection.is_empty() {
+                return RowModel {
+                    root_rows: Vec::new(),
+                    flat_rows: Vec::new(),
+                    rows_by_key: HashMap::new(),
+                    arena: Vec::new(),
+                };
+            }
+            super::select_rows_fn(self.row_model(), &self.state.row_selection)
         })
     }
 
@@ -1503,5 +1535,66 @@ mod tests {
 
         assert!(table2.is_all_rows_selected());
         assert!(!table2.is_some_rows_selected());
+    }
+
+    #[test]
+    fn table_filtered_selected_row_model_intersects_filtered_rows() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            status: Arc<str>,
+        }
+
+        let data = vec![
+            Item { status: "A".into() },
+            Item { status: "B".into() },
+            Item { status: "A".into() },
+        ];
+
+        let status = ColumnDef::new("status").filter_by(|it: &Item, q| it.status.as_ref() == q);
+
+        let mut state = TableState::default();
+        state.column_filters = vec![ColumnFilter {
+            column: "status".into(),
+            value: "A".into(),
+        }];
+        state.row_selection = [RowKey::from_index(0), RowKey::from_index(1)]
+            .into_iter()
+            .collect();
+
+        let table = Table::builder(&data)
+            .columns(vec![status])
+            .state(state)
+            .build();
+
+        let selected = table.filtered_selected_row_model();
+        assert_eq!(selected.root_rows().len(), 1);
+        assert!(selected.row_by_key(RowKey::from_index(0)).is_some());
+        assert!(std::ptr::eq(selected, table.filtered_selected_row_model()));
+    }
+
+    #[test]
+    fn table_page_selected_row_model_only_includes_page_rows() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = (0..10).map(|i| Item { value: i }).collect::<Vec<_>>();
+        let mut state = TableState::default();
+        state.pagination = PaginationState {
+            page_index: 1,
+            page_size: 3,
+        };
+        state.row_selection = [RowKey::from_index(0), RowKey::from_index(4)]
+            .into_iter()
+            .collect();
+
+        let table = Table::builder(&data).state(state).build();
+
+        let selected = table.page_selected_row_model();
+        assert_eq!(selected.root_rows().len(), 1);
+        assert!(selected.row_by_key(RowKey::from_index(4)).is_some());
+        assert!(std::ptr::eq(selected, table.page_selected_row_model()));
     }
 }
