@@ -901,6 +901,7 @@ pub struct LinePlotStyle {
     pub tooltip_border: Option<Color>,
     pub tooltip_text_color: Option<Color>,
     pub mouse_readout: MouseReadoutMode,
+    pub linked_cursor_readout: MouseReadoutMode,
     pub hover_threshold: Px,
     /// Minimum number of major tick labels per axis.
     ///
@@ -934,6 +935,7 @@ impl Default for LinePlotStyle {
             tooltip_border: None,
             tooltip_text_color: None,
             mouse_readout: MouseReadoutMode::default(),
+            linked_cursor_readout: MouseReadoutMode::default(),
             hover_threshold: Px(10.0),
             tick_count: 5,
             stroke_color: Color {
@@ -1840,6 +1842,7 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     legend_entries: Vec<LegendEntry>,
     tooltip_text: Option<PreparedText>,
     mouse_readout_text: Option<PreparedText>,
+    linked_cursor_readout_text: Option<PreparedText>,
 }
 
 impl PlotCanvas<LinePlotLayer> {
@@ -2255,6 +2258,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             legend_entries: Vec::new(),
             tooltip_text: None,
             mouse_readout_text: None,
+            linked_cursor_readout_text: None,
         }
     }
 
@@ -4833,7 +4837,124 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             (data.x.is_finite() && data.y.is_finite()).then_some(data)
         });
 
-        if self.style.mouse_readout == MouseReadoutMode::Overlay {
+        let linked_x = state.linked_cursor_x.filter(|x| x.is_finite());
+        let linked_overlay_active =
+            linked_x.is_some() && self.style.linked_cursor_readout == MouseReadoutMode::Overlay;
+
+        if linked_overlay_active {
+            let linked_x = linked_x.expect("checked above");
+
+            let hidden = &state.hidden_series;
+            let mut readout_rows = self
+                .model
+                .read(cx.app, |_app, m| L::cursor_readout(m, linked_x, hidden))
+                .unwrap_or_default();
+
+            if let Some(pinned) = state.pinned_series {
+                readout_rows.retain(|r| r.series_id == pinned);
+            }
+
+            let x_text = self.tooltip_x_labels.format(linked_x, x_span);
+            let mut text = format!("x={x_text}");
+            for row in readout_rows {
+                let y_text = row
+                    .y
+                    .filter(|y| y.is_finite())
+                    .map(|y| {
+                        if row.y_axis == YAxis::Right && self.show_y2_axis {
+                            let span = view_bounds_y2
+                                .map(|b| (b.y_max - b.y_min).abs())
+                                .unwrap_or(y_span);
+                            self.y2_axis_labels.format(y, span)
+                        } else {
+                            self.tooltip_y_labels.format(y, y_span)
+                        }
+                    })
+                    .unwrap_or_else(|| "NA".to_string());
+                text.push_str(&format!("\n{}: y={y_text}", row.label));
+            }
+
+            let font_size = cx
+                .theme()
+                .metric_by_key("font.size")
+                .unwrap_or(cx.theme().metrics.font_size);
+            let style = TextStyle {
+                font: FontId::default(),
+                size: Px((font_size.0 * 0.90).max(10.0)),
+                weight: FontWeight::NORMAL,
+                line_height: None,
+                letter_spacing_em: None,
+            };
+            let constraints = TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor,
+            };
+
+            let mut key = 0u64;
+            key = Self::hash_u64(key, theme.revision);
+            key = Self::hash_u64(key, font_stack_key);
+            key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
+            for b in text.as_bytes() {
+                key = Self::hash_u64(key, u64::from(*b));
+            }
+            key = Self::hash_u64(key, Self::text_style_key(&style));
+
+            let needs = self
+                .linked_cursor_readout_text
+                .as_ref()
+                .is_none_or(|t| t.key != key);
+            if needs {
+                if let Some(prev) = self.linked_cursor_readout_text.take() {
+                    cx.services.text().release(prev.blob);
+                }
+                let prepared = self.prepare_text(cx.services, &text, &style, constraints);
+                self.linked_cursor_readout_text = Some(PreparedText {
+                    blob: prepared.blob,
+                    metrics: prepared.metrics,
+                    key,
+                });
+            }
+
+            if let Some(tt) = self.linked_cursor_readout_text {
+                let pad = Px(6.0);
+                let margin = Px(6.0);
+                let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
+                let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
+
+                let mut x = Px(layout.plot.origin.x.0 + margin.0);
+                let mut y = Px(layout.plot.origin.y.0 + margin.0);
+
+                let max_x = layout.plot.origin.x.0 + layout.plot.size.width.0 - w.0;
+                let max_y = layout.plot.origin.y.0 + layout.plot.size.height.0 - h.0;
+                x = Px(x.0.min(max_x).max(layout.plot.origin.x.0));
+                y = Px(y.0.min(max_y).max(layout.plot.origin.y.0));
+
+                let rect = Rect::new(Point::new(x, y), Size::new(w, h));
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(12),
+                    rect,
+                    background: tooltip_background,
+                    border: fret_core::Edges::all(Px(1.0)),
+                    border_color: tooltip_border,
+                    corner_radii: fret_core::Corners::all(Px(6.0)),
+                });
+
+                let origin = Point::new(
+                    Px(rect.origin.x.0 + pad.0),
+                    Px(rect.origin.y.0 + pad.0 + tt.metrics.baseline.0),
+                );
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(13),
+                    origin,
+                    text: tt.blob,
+                    color: tooltip_text_color,
+                });
+            }
+        }
+
+        if self.style.mouse_readout == MouseReadoutMode::Overlay && !linked_overlay_active {
             if let Some(cursor_data) = cursor_data {
                 let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
                 let y_text = self.tooltip_y_labels.format(cursor_data.y, y_span);
@@ -5005,6 +5126,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 })
                 .or_else(|| {
                     let linked_x = state.linked_cursor_x?;
+                    if self.style.linked_cursor_readout != MouseReadoutMode::Tooltip {
+                        return None;
+                    }
                     if !linked_x.is_finite() {
                         return None;
                     }
@@ -5165,6 +5289,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             services.text().release(t.blob);
         }
         if let Some(t) = self.mouse_readout_text.take() {
+            services.text().release(t.blob);
+        }
+        if let Some(t) = self.linked_cursor_readout_text.take() {
             services.text().release(t.blob);
         }
     }
