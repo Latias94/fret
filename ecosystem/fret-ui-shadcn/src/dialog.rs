@@ -4,6 +4,7 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
     TextWrap,
 };
+use fret_icons::ids;
 use fret_runtime::{Model, ModelId};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
@@ -11,10 +12,9 @@ use fret_ui::element::{
     SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_icons::ids;
-use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
@@ -110,13 +110,16 @@ impl Dialog {
             let prev_content_element =
                 cx.with_state(DialogA11yState::default, |st| st.content_element);
 
-            let presence = OverlayController::fade_presence_with_durations(
+            let motion = OverlayController::transition_with_durations(
                 cx,
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_200,
                 overlay_motion::SHADCN_MOTION_TICKS_200,
             );
-            let overlay_presence = OverlayPresence::from_fade(is_open, presence);
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: is_open,
+            };
 
             let content_element_for_trigger: std::cell::Cell<
                 Option<fret_ui::elements::GlobalElementId>,
@@ -127,7 +130,7 @@ impl Dialog {
                 let overlay_closable = self.overlay_closable;
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
 
-                let opacity = presence.opacity;
+                let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let barrier_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
