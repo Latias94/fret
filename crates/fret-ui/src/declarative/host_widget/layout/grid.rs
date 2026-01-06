@@ -150,13 +150,15 @@ impl ElementHostWidget {
                         return *size;
                     }
 
+                    // Same rationale as flex layout: avoid measuring wrapped content (especially
+                    // text) at effectively-infinite widths during intrinsic/probe passes.
                     let max_w = match avail.width {
                         TaffyAvailableSpace::Definite(w) => Px(w),
-                        _ => Px(1.0e9),
+                        _ => inner_avail.width,
                     };
                     let max_h = match avail.height {
                         TaffyAvailableSpace::Definite(h) => Px(h),
-                        _ => Px(1.0e9),
+                        _ => inner_avail.height,
                     };
 
                     let known_w = known.width.map(Px);

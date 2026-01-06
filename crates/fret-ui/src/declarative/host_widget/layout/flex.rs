@@ -168,13 +168,21 @@ impl ElementHostWidget {
                         return *size;
                     }
 
+                    // Taffy may request "intrinsic" measurements using MaxContent/MinContent.
+                    // Those are not the final viewport constraints and can cause text to be
+                    // measured at an effectively-infinite width (e.g. `Px(1.0e9)`), producing a
+                    // 1-line height that then gets clipped once the node is later assigned a
+                    // definite width.
+                    //
+                    // We cap non-definite requests to our container's available inner size to
+                    // keep wrapped text measurement stable across probe passes.
                     let max_w = match avail.width {
                         TaffyAvailableSpace::Definite(w) => Px(w),
-                        _ => Px(1.0e9),
+                        _ => inner_avail.width,
                     };
                     let max_h = match avail.height {
                         TaffyAvailableSpace::Definite(h) => Px(h),
-                        _ => Px(1.0e9),
+                        _ => inner_avail.height,
                     };
 
                     let known_w = known.width.map(Px);
