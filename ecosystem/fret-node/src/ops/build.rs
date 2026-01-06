@@ -14,6 +14,18 @@ pub trait GraphOpBuilderExt {
     /// Builds a `RemovePort` op for an existing port, including incident edges.
     fn build_remove_port_op(&self, id: PortId) -> Option<GraphOp>;
 
+    /// Builds ops that disconnect all edges incident to the port.
+    ///
+    /// The ops are returned in deterministic order.
+    fn build_disconnect_port_ops(&self, id: PortId) -> Option<Vec<GraphOp>>;
+
+    /// Builds a transaction that removes a port (and its incident edges).
+    fn build_remove_port_tx(
+        &self,
+        id: PortId,
+        label: impl Into<String>,
+    ) -> Option<GraphTransaction>;
+
     /// Builds a `RemoveNode` op for an existing node, including owned ports and incident edges.
     fn build_remove_node_op(&self, id: NodeId) -> Option<GraphOp>;
 
@@ -49,6 +61,44 @@ impl GraphOpBuilderExt for Graph {
         edges.sort_by_key(|(edge_id, _)| *edge_id);
 
         Some(GraphOp::RemovePort { id, port, edges })
+    }
+
+    fn build_disconnect_port_ops(&self, id: PortId) -> Option<Vec<GraphOp>> {
+        self.ports.get(&id)?;
+
+        let mut ops: Vec<GraphOp> = self
+            .edges
+            .iter()
+            .filter_map(|(edge_id, edge)| {
+                if edge.from == id || edge.to == id {
+                    Some(GraphOp::RemoveEdge {
+                        id: *edge_id,
+                        edge: edge.clone(),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        ops.sort_by_key(|op| match op {
+            GraphOp::RemoveEdge { id, .. } => *id,
+            _ => unreachable!(),
+        });
+
+        Some(ops)
+    }
+
+    fn build_remove_port_tx(
+        &self,
+        id: PortId,
+        label: impl Into<String>,
+    ) -> Option<GraphTransaction> {
+        let op = self.build_remove_port_op(id)?;
+        Some(GraphTransaction {
+            label: Some(label.into()),
+            ops: vec![op],
+        })
     }
 
     fn build_remove_node_op(&self, id: NodeId) -> Option<GraphOp> {
