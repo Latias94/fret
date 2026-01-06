@@ -3082,6 +3082,7 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     pan_last_pos: Option<Point>,
     box_zoom_start: Option<Point>,
     box_zoom_current: Option<Point>,
+    box_zoom_button: Option<MouseButton>,
     query_drag_start: Option<Point>,
     query_drag_current: Option<Point>,
     axis_label_key: Option<u64>,
@@ -3437,6 +3438,59 @@ mod hover_segment_tests {
 }
 
 #[cfg(test)]
+mod box_select_modifier_tests {
+    use super::*;
+
+    #[test]
+    fn box_select_modifiers_expand_to_edges() {
+        let plot_size = Size::new(Px(100.0), Px(50.0));
+        let start = Point::new(Px(10.0), Px(10.0));
+        let end = Point::new(Px(20.0), Px(20.0));
+
+        let mods_x = fret_core::Modifiers {
+            alt: true,
+            ..fret_core::Modifiers::default()
+        };
+        let (sx, ex) = PlotCanvas::<LinePlotLayer>::apply_box_select_modifiers(
+            plot_size, start, end, mods_x, true,
+        );
+        assert_eq!(sx.x.0, 0.0);
+        assert_eq!(ex.x.0, 100.0);
+        assert_eq!(sx.y.0, 10.0);
+        assert_eq!(ex.y.0, 20.0);
+
+        let mods_y = fret_core::Modifiers {
+            shift: true,
+            ..fret_core::Modifiers::default()
+        };
+        let (sy, ey) = PlotCanvas::<LinePlotLayer>::apply_box_select_modifiers(
+            plot_size, start, end, mods_y, true,
+        );
+        assert_eq!(sy.y.0, 0.0);
+        assert_eq!(ey.y.0, 50.0);
+        assert_eq!(sy.x.0, 10.0);
+        assert_eq!(ey.x.0, 20.0);
+
+        let mods_xy = fret_core::Modifiers {
+            alt: true,
+            shift: true,
+            ..fret_core::Modifiers::default()
+        };
+        let (sxy, exy) = PlotCanvas::<LinePlotLayer>::apply_box_select_modifiers(
+            plot_size, start, end, mods_xy, true,
+        );
+        assert_eq!((sxy.x.0, sxy.y.0), (0.0, 0.0));
+        assert_eq!((exy.x.0, exy.y.0), (100.0, 50.0));
+
+        let (s_no, e_no) = PlotCanvas::<LinePlotLayer>::apply_box_select_modifiers(
+            plot_size, start, end, mods_xy, false,
+        );
+        assert_eq!((s_no.x.0, s_no.y.0), (10.0, 10.0));
+        assert_eq!((e_no.x.0, e_no.y.0), (20.0, 20.0));
+    }
+}
+
+#[cfg(test)]
 mod candlestick_bounds_tests {
     use super::*;
 
@@ -3507,6 +3561,35 @@ impl PlotCanvas<ShadedPlotLayer> {
 }
 
 impl<L: PlotLayer + 'static> PlotCanvas<L> {
+    fn apply_box_select_modifiers(
+        plot_size: Size,
+        start: Point,
+        end: Point,
+        modifiers: fret_core::Modifiers,
+        allow_edge_expand: bool,
+    ) -> (Point, Point) {
+        if !allow_edge_expand {
+            return (start, end);
+        }
+
+        let mut start = start;
+        let mut end = end;
+
+        // Matches ImPlot's default selection modifiers:
+        // - Alt: expand selection horizontally to plot edge.
+        // - Shift: expand selection vertically to plot edge.
+        if modifiers.alt {
+            start.x = Px(0.0);
+            end.x = plot_size.width;
+        }
+        if modifiers.shift {
+            start.y = Px(0.0);
+            end.y = plot_size.height;
+        }
+
+        (start, end)
+    }
+
     fn ensure_required_axes_enabled<H: UiHost>(&mut self, app: &mut H) {
         if !self.show_y2_axis {
             let has_y2 = self
@@ -3589,6 +3672,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             pan_last_pos: None,
             box_zoom_start: None,
             box_zoom_current: None,
+            box_zoom_button: None,
             query_drag_start: None,
             query_drag_current: None,
             axis_label_key: None,
@@ -4997,6 +5081,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
                     self.box_zoom_current = None;
+                    self.box_zoom_button = None;
                     self.query_drag_start = None;
                     self.query_drag_current = None;
                     if cx.captured == Some(cx.node) {
@@ -5016,6 +5101,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.pan_last_pos = None;
                     self.box_zoom_start = None;
                     self.box_zoom_current = None;
+                    self.box_zoom_button = None;
                     self.query_drag_start = None;
                     self.query_drag_current = None;
                     if cx.captured == Some(cx.node) {
@@ -5044,6 +5130,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         self.pan_last_pos = None;
                         self.box_zoom_start = None;
                         self.box_zoom_current = None;
+                        self.box_zoom_button = None;
                         self.query_drag_start = None;
                         self.query_drag_current = None;
                         self.hover = None;
@@ -5176,6 +5263,27 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let inside = contains_point(layout.plot, *position);
 
                 if inside && *button == MouseButton::Left {
+                    // ImPlot-compatible cancel for RMB box selection: LMB cancels an active selection.
+                    if self.box_zoom_start.is_some()
+                        && self.box_zoom_button == Some(MouseButton::Right)
+                    {
+                        self.pan_last_pos = None;
+                        self.box_zoom_start = None;
+                        self.box_zoom_current = None;
+                        self.box_zoom_button = None;
+                        self.query_drag_start = None;
+                        self.query_drag_current = None;
+                        self.hover = None;
+                        self.cursor_px = None;
+                        if cx.captured == Some(cx.node) {
+                            cx.release_pointer_capture();
+                        }
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+
                     self.cursor_px = Some(local_from_absolute(layout.plot.origin, *position));
                     self.hover = None;
                     if modifiers.alt {
@@ -5185,10 +5293,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         self.pan_last_pos = None;
                         self.box_zoom_start = None;
                         self.box_zoom_current = None;
+                        self.box_zoom_button = None;
                     } else if modifiers.shift {
                         let local = local_from_absolute(layout.plot.origin, *position);
                         self.box_zoom_start = Some(local);
                         self.box_zoom_current = Some(local);
+                        self.box_zoom_button = Some(*button);
                         self.pan_last_pos = None;
                         self.query_drag_start = None;
                         self.query_drag_current = None;
@@ -5199,6 +5309,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         self.pan_last_pos = Some(*position);
                         self.box_zoom_start = None;
                         self.box_zoom_current = None;
+                        self.box_zoom_button = None;
                         self.query_drag_start = None;
                         self.query_drag_current = None;
                     }
@@ -5207,11 +5318,37 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
+                } else if inside && *button == MouseButton::Right {
+                    if let Some((legend, _rows)) = self.legend_layout(layout)
+                        && contains_point(legend, *position)
+                    {
+                        return;
+                    }
+
+                    // ImPlot default: RMB drag begins box selection.
+                    self.cursor_px = Some(local_from_absolute(layout.plot.origin, *position));
+                    self.hover = None;
+
+                    let local = local_from_absolute(layout.plot.origin, *position);
+                    self.box_zoom_start = Some(local);
+                    self.box_zoom_current = Some(local);
+                    self.box_zoom_button = Some(*button);
+                    self.pan_last_pos = None;
+                    self.query_drag_start = None;
+                    self.query_drag_current = None;
+
+                    cx.request_focus(cx.node);
+                    cx.capture_pointer(cx.node);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
                 }
             }
-            Event::Pointer(PointerEvent::Up { button, .. }) => {
-                if *button == MouseButton::Left {
-                    if self.query_drag_start.is_some() {
+            Event::Pointer(PointerEvent::Up {
+                button, modifiers, ..
+            }) => {
+                if *button == MouseButton::Left || *button == MouseButton::Right {
+                    if *button == MouseButton::Left && self.query_drag_start.is_some() {
                         if cx.captured == Some(cx.node) {
                             cx.release_pointer_capture();
                         }
@@ -5269,7 +5406,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
-                    } else if self.box_zoom_start.is_some() {
+                    } else if self.box_zoom_start.is_some() && self.box_zoom_button == Some(*button)
+                    {
                         if cx.captured == Some(cx.node) {
                             cx.release_pointer_capture();
                         }
@@ -5295,6 +5433,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             let end = self
                                 .box_zoom_current
                                 .unwrap_or(Point::new(Px(0.0), Px(0.0)));
+                            let allow_edge_expand =
+                                self.box_zoom_button == Some(MouseButton::Right);
+                            let (start, end) = Self::apply_box_select_modifiers(
+                                layout.plot.size,
+                                start,
+                                end,
+                                *modifiers,
+                                allow_edge_expand,
+                            );
 
                             let w = (start.x.0 - end.x.0).abs();
                             let h = (start.y.0 - end.y.0).abs();
@@ -5545,13 +5692,14 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
                         self.box_zoom_start = None;
                         self.box_zoom_current = None;
+                        self.box_zoom_button = None;
                         self.pan_last_pos = None;
                         self.hover = None;
 
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
-                    } else if self.pan_last_pos.take().is_some() {
+                    } else if *button == MouseButton::Left && self.pan_last_pos.take().is_some() {
                         if cx.captured == Some(cx.node) {
                             cx.release_pointer_capture();
                         }

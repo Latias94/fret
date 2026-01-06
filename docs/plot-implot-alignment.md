@@ -40,7 +40,24 @@ This contract is documented in ADR 0099.
 - [x] Linked cursor readout supports pinned/hover filtering
 - [x] Selection/query linking across plots (built on top of `LinkedPlotGroup`)
 - [x] Line hover uses nearest segment distance (not just sampled points)
-- [ ] Keyboard shortcuts matrix (document + align with ImPlot defaults)
+- [~] Keyboard shortcuts matrix (documented; partially aligned with ImPlot defaults)
+
+### Keyboard shortcuts & mouse gestures
+
+This table describes the default mapping used by `fret-ui-plot` today, with a side-by-side reference
+to ImPlot's default `ImPlotInputMap`.
+
+| Action | ImPlot default | `fret-ui-plot` default | Notes |
+| --- | --- | --- | --- |
+| Pan | `LMB drag` | `LMB drag` | Matches ImPlot. |
+| Zoom | `Wheel` | `Wheel` | `Shift` = X-only, `Ctrl` = Y-only. ImPlot has no axis-only modifiers by default. |
+| Box select / zoom | `RMB drag` | `RMB drag` and `Shift+LMB drag` | `RMB drag` follows ImPlot. `Shift+LMB` is kept as an accessibility-friendly alternative. |
+| Box select expand (horizontal) | Hold `Alt` | Hold `Alt` (RMB box zoom only) | Expands selection to plot edges on X. |
+| Box select expand (vertical) | Hold `Shift` | Hold `Shift` (RMB box zoom only) | Expands selection to plot edges on Y. |
+| Cancel box select | `LMB press` | `LMB press` (when RMB selecting) or `Esc` | `Esc` cancels any active drag. |
+| Fit / reset view | `LMB double-click` | `R` | We currently don't have a click count in `PointerEvent`; adding double-click needs core input support. |
+| Clear query selection | N/A (app-owned) | `Q` | `PlotState.query` is application-controlled state. |
+| Restore legend visibility | N/A | `A` | Clears hidden/pinned series. |
 
 ## Data & identity
 
@@ -101,6 +118,7 @@ This contract is documented in ADR 0099.
 
 ## Next steps (recommended order)
 
-1. Axis formatting (time + custom formatters).
-2. Expand plot type set (error bars, candlesticks).
-3. Keyboard shortcuts matrix (document + align with ImPlot defaults).
+1. Per-series style overrides (line/marker style beyond color).
+2. Dashes / joins / caps (may require renderer/path contract follow-up).
+3. Double-click fit + context menu parity (requires click-count/timestamps in core input events).
+4. Configurable input map (ImPlot-like `InputMap` surface on `PlotCanvas`).
