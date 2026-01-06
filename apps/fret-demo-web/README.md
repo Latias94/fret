@@ -25,6 +25,7 @@ hash or query string:
 - `?demo=candlestick_demo` (or `#candlestick_demo`)
 - `?demo=error_bars_demo` (or `#error_bars_demo`)
 - `?demo=heatmap_demo` (or `#heatmap_demo`)
+- `?demo=histogram_demo` (or `#histogram_demo`)
 - `?demo=shaded_demo` (or `#shaded_demo`)
 - `?demo=stairs_demo` (or `#stairs_demo`)
 - `?demo=linked_cursor_demo` (or `#linked_cursor_demo`)

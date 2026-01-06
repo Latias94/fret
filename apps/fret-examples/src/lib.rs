@@ -10,6 +10,7 @@ pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod first_frame_smoke_demo;
 pub mod heatmap_demo;
+pub mod histogram_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod image_upload_demo;
 #[cfg(not(target_arch = "wasm32"))]
