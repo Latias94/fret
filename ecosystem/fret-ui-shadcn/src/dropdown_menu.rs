@@ -1081,6 +1081,10 @@ impl DropdownMenu {
                                                     let font_line_height = theme.metrics.font_line_height;
                                                     let radius_sm = theme.metrics.radius_sm;
                                                     let text_disabled = theme.colors.text_disabled;
+                                                    let icon_muted_fg = theme
+                                                        .color_by_key("muted.foreground")
+                                                        .or_else(|| theme.color_by_key("muted-foreground"))
+                                                        .unwrap_or(theme.colors.text_muted);
                                                     let destructive_fg = theme
                                                         .color_by_key("destructive")
                                                         .or_else(|| {
@@ -1556,7 +1560,11 @@ impl DropdownMenu {
                                                                         if has_submenu {
                                                                             row.push(submenu_chevron_right_text(
                                                                                 cx,
-                                                                                if disabled { text_disabled } else { row_fg },
+                                                                                if disabled {
+                                                                                    text_disabled
+                                                                                } else {
+                                                                                    icon_muted_fg
+                                                                                },
                                                                                 font_size,
                                                                                 font_line_height,
                                                                             ));
