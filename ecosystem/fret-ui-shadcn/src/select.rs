@@ -11,8 +11,8 @@ use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, PressableA11y, PressableProps, ScrollProps, ScrollbarProps,
-    ScrollbarStyle, SizeStyle, StackProps, TextProps,
+    Overflow, PositionStyle, PressableA11y, PressableProps, ScrollProps, SizeStyle, StackProps,
+    TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
@@ -64,20 +64,6 @@ fn select_scroll_with_buttons<H: UiHost>(
         },
         move |cx| {
             let handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
-
-            let scrollbar_w = theme
-                .metric_by_key("metric.scrollbar.width")
-                .unwrap_or(theme.metrics.scrollbar_width);
-            let thumb = theme
-                .color_by_key("scrollbar.thumb.background")
-                .unwrap_or(theme.colors.scrollbar_thumb);
-            let thumb_hover = theme
-                .color_by_key("scrollbar.thumb.hover.background")
-                .unwrap_or(
-                    theme
-                        .color_by_key("scrollbar.thumb.background")
-                        .unwrap_or(theme.colors.scrollbar_thumb_hover),
-                );
 
             let scroll_button_h = theme
                 .metric_by_key("component.select.scroll_button_height")
@@ -219,33 +205,7 @@ fn select_scroll_with_buttons<H: UiHost>(
                         );
                     }
 
-                    let scroll_id = scroll.id;
-                    let mut out = vec![scroll];
-                    out.push(cx.scrollbar(ScrollbarProps {
-                        layout: LayoutStyle {
-                            position: PositionStyle::Absolute,
-                            inset: InsetStyle {
-                                top: Some(Px(0.0)),
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
-                                left: None,
-                            },
-                            size: SizeStyle {
-                                width: Length::Px(scrollbar_w),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        axis: fret_ui::element::ScrollbarAxis::Vertical,
-                        scroll_target: Some(scroll_id),
-                        scroll_handle: handle_for_stack,
-                        style: ScrollbarStyle {
-                            thumb,
-                            thumb_hover,
-                            thumb_idle_alpha: 0.65,
-                        },
-                    }));
-                    out
+                    vec![scroll]
                 },
             );
 
