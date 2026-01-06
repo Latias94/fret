@@ -31,6 +31,10 @@ struct MarkdownTheme {
     inline_code_padding_y: Px,
     task_checked: fret_core::Color,
     task_unchecked: fret_core::Color,
+    table_border: fret_core::Color,
+    table_header_bg: fret_core::Color,
+    table_cell_padding_x: Px,
+    table_cell_padding_y: Px,
 }
 
 impl MarkdownTheme {
@@ -75,6 +79,19 @@ impl MarkdownTheme {
             .color_by_key("markdown.task.unchecked")
             .unwrap_or(theme.colors.text_muted);
 
+        let table_border = theme
+            .color_by_key("markdown.table.border")
+            .unwrap_or(theme.colors.panel_border);
+        let table_header_bg = theme
+            .color_by_key("markdown.table.header_bg")
+            .unwrap_or(theme.colors.panel_background);
+        let table_cell_padding_x = theme
+            .metric_by_key("markdown.table.cell.padding_x")
+            .unwrap_or(theme.metrics.padding_sm);
+        let table_cell_padding_y = theme
+            .metric_by_key("markdown.table.cell.padding_y")
+            .unwrap_or(Px(theme.metrics.padding_sm.0 * 0.5));
+
         Self {
             link,
             muted,
@@ -88,6 +105,10 @@ impl MarkdownTheme {
             inline_code_padding_y,
             task_checked,
             task_unchecked,
+            table_border,
+            table_header_bg,
+            table_cell_padding_x,
+            table_cell_padding_y,
         }
     }
 }
@@ -429,34 +450,6 @@ fn render_thematic_break<H: UiHost>(
         },
         |_cx| Vec::new(),
     )
-}
-
-fn render_table<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    info: TableInfo,
-) -> AnyElement {
-    let mut scroll_props = ScrollProps::default();
-    scroll_props.axis = ScrollAxis::X;
-
-    let style = TextStyle {
-        font: FontId::monospace(),
-        size: theme.metrics.mono_font_size,
-        weight: FontWeight::NORMAL,
-        line_height: Some(theme.metrics.mono_font_line_height),
-        letter_spacing_em: None,
-    };
-
-    cx.scroll(scroll_props, |cx| {
-        vec![cx.text_props(TextProps {
-            layout: Default::default(),
-            text: info.text,
-            style: Some(style),
-            color: Some(theme.colors.text_primary),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        })]
-    })
 }
 
 fn strip_blockquote_prefix(text: &str) -> Arc<str> {
@@ -850,7 +843,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
             if let Some(render) = &components.table {
                 render(cx, info)
             } else {
-                render_table(cx, theme, info)
+                render_pulldown_events_root(cx, theme, markdown_theme, components, events)
             }
         }
         _ => {
@@ -1040,6 +1033,14 @@ fn render_pulldown_blocks<H: UiHost>(
                     Arc::<str>::from(label.to_string()),
                 ))
             }
+            Event::Start(Tag::Table(_)) => out.push(render_pulldown_table(
+                cx,
+                theme,
+                markdown_theme,
+                components,
+                events,
+                cursor,
+            )),
             Event::Rule => {
                 out.push(render_thematic_break(cx, theme, markdown_theme));
                 *cursor += 1;
@@ -1056,6 +1057,231 @@ fn render_pulldown_blocks<H: UiHost>(
     }
 
     out
+}
+
+fn render_pulldown_table<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
+    events: &[pulldown_cmark::Event<'static>],
+    cursor: &mut usize,
+) -> AnyElement {
+    use pulldown_cmark::{Alignment, Event, Tag, TagEnd};
+
+    let alignments = match events.get(*cursor) {
+        Some(Event::Start(Tag::Table(alignments))) => alignments.clone(),
+        _ => Vec::new(),
+    };
+
+    *cursor += 1;
+
+    let mut in_head = false;
+    let mut header_rows: Vec<Vec<Vec<InlinePiece>>> = Vec::new();
+    let mut body_rows: Vec<Vec<Vec<InlinePiece>>> = Vec::new();
+
+    while *cursor < events.len() {
+        match &events[*cursor] {
+            Event::Start(Tag::TableHead) => {
+                in_head = true;
+                *cursor += 1;
+            }
+            Event::End(TagEnd::TableHead) => {
+                in_head = false;
+                *cursor += 1;
+            }
+            Event::Start(Tag::TableRow) => {
+                let row = parse_pulldown_table_row(events, cursor);
+                if in_head {
+                    header_rows.push(row);
+                } else {
+                    body_rows.push(row);
+                }
+            }
+            Event::End(TagEnd::Table) => {
+                *cursor += 1;
+                break;
+            }
+            _ => {
+                *cursor += 1;
+            }
+        }
+    }
+
+    let mut column_count = alignments.len();
+    for row in header_rows.iter().chain(body_rows.iter()) {
+        column_count = column_count.max(row.len());
+    }
+
+    fn justify_for_alignment(alignment: Alignment) -> MainAlign {
+        match alignment {
+            Alignment::Center => MainAlign::Center,
+            Alignment::Right => MainAlign::End,
+            Alignment::None | Alignment::Left => MainAlign::Start,
+        }
+    }
+
+    let all_rows = header_rows
+        .iter()
+        .map(|r| (true, r))
+        .chain(body_rows.iter().map(|r| (false, r)));
+
+    let mut scroll_props = ScrollProps::default();
+    scroll_props.axis = ScrollAxis::X;
+
+    cx.scroll(scroll_props, |cx| {
+        let mut table_props = ContainerProps::default();
+        table_props.padding = Edges::all(Px(0.0));
+        table_props.border = Edges::all(Px(1.0));
+        table_props.border_color = Some(markdown_theme.table_border);
+        table_props.background = None;
+
+        vec![cx.container(table_props, |cx| {
+            let mut column_props = FlexProps::default();
+            column_props.direction = Axis::Vertical;
+            column_props.wrap = false;
+            column_props.gap = Px(0.0);
+            column_props.padding = Edges::all(Px(0.0));
+            column_props.justify = MainAlign::Start;
+            column_props.align = CrossAlign::Start;
+
+            vec![cx.flex(column_props, |cx| {
+                let mut row_index = 0usize;
+                all_rows
+                    .map(|(is_header, row)| {
+                        let mut row_props = FlexProps::default();
+                        row_props.direction = Axis::Horizontal;
+                        row_props.wrap = false;
+                        row_props.gap = Px(0.0);
+                        row_props.padding = Edges::all(Px(0.0));
+                        row_props.justify = MainAlign::Start;
+                        row_props.align = CrossAlign::Stretch;
+
+                        let cur_row_index = row_index;
+                        row_index += 1;
+
+                        cx.flex(row_props, |cx| {
+                            (0..column_count)
+                                .map(|col_index| {
+                                    let pieces = row.get(col_index).cloned().unwrap_or_default();
+                                    let justify = alignments
+                                        .get(col_index)
+                                        .copied()
+                                        .map(justify_for_alignment)
+                                        .unwrap_or(MainAlign::Start);
+                                    render_table_cell(
+                                        cx,
+                                        theme,
+                                        markdown_theme,
+                                        components,
+                                        is_header,
+                                        cur_row_index,
+                                        col_index,
+                                        pieces,
+                                        justify,
+                                    )
+                                })
+                                .collect()
+                        })
+                    })
+                    .collect()
+            })]
+        })]
+    })
+}
+
+fn parse_pulldown_table_row(
+    events: &[pulldown_cmark::Event<'static>],
+    cursor: &mut usize,
+) -> Vec<Vec<InlinePiece>> {
+    use pulldown_cmark::{Event, Tag, TagEnd};
+
+    *cursor += 1;
+    let mut cells: Vec<Vec<InlinePiece>> = Vec::new();
+    while *cursor < events.len() {
+        match &events[*cursor] {
+            Event::Start(Tag::TableCell) => cells.push(parse_pulldown_table_cell(events, cursor)),
+            Event::End(TagEnd::TableRow) => {
+                *cursor += 1;
+                break;
+            }
+            _ => {
+                *cursor += 1;
+            }
+        }
+    }
+    cells
+}
+
+fn parse_pulldown_table_cell(
+    events: &[pulldown_cmark::Event<'static>],
+    cursor: &mut usize,
+) -> Vec<InlinePiece> {
+    use pulldown_cmark::{Event, TagEnd};
+
+    let start = *cursor;
+    *cursor += 1;
+    while *cursor < events.len() {
+        if matches!(&events[*cursor], Event::End(TagEnd::TableCell)) {
+            *cursor += 1;
+            break;
+        }
+        *cursor += 1;
+    }
+    inline_pieces_from_events_unwrapped(&events[start..*cursor])
+}
+
+fn render_table_cell<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
+    is_header: bool,
+    row_index: usize,
+    col_index: usize,
+    pieces: Vec<InlinePiece>,
+    justify: MainAlign,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.padding = Edges {
+        top: markdown_theme.table_cell_padding_y,
+        right: markdown_theme.table_cell_padding_x,
+        bottom: markdown_theme.table_cell_padding_y,
+        left: markdown_theme.table_cell_padding_x,
+    };
+    props.border = Edges {
+        top: if row_index > 0 { Px(1.0) } else { Px(0.0) },
+        right: Px(0.0),
+        bottom: Px(0.0),
+        left: if col_index > 0 { Px(1.0) } else { Px(0.0) },
+    };
+    props.border_color = Some(markdown_theme.table_border);
+    props.background = is_header.then_some(markdown_theme.table_header_bg);
+
+    let base = InlineBaseStyle {
+        font: FontId::default(),
+        size: theme.metrics.font_size,
+        weight: if is_header {
+            FontWeight::SEMIBOLD
+        } else {
+            FontWeight::NORMAL
+        },
+        line_height: Some(theme.metrics.font_line_height),
+        color: theme.colors.text_primary,
+    };
+
+    cx.container(props, |cx| {
+        vec![render_inline_flow_with_layout(
+            cx,
+            theme,
+            markdown_theme,
+            components,
+            base,
+            &pieces,
+            InlineLineWidth::Auto,
+            justify,
+        )]
+    })
 }
 
 fn render_pulldown_paragraph<H: UiHost>(
@@ -1486,7 +1712,6 @@ fn inline_pieces_from_events(events: &[pulldown_cmark::Event<'static>]) -> Vec<I
     inline_pieces_from_events_impl(events, true)
 }
 
-#[cfg(test)]
 fn inline_pieces_from_events_unwrapped(
     events: &[pulldown_cmark::Event<'static>],
 ) -> Vec<InlinePiece> {
@@ -1680,6 +1905,12 @@ fn push_inline_text(pieces: &mut Vec<InlinePiece>, text: &str, style: InlineStyl
     });
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum InlineLineWidth {
+    Fill,
+    Auto,
+}
+
 fn render_inline_flow<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -1687,6 +1918,28 @@ fn render_inline_flow<H: UiHost>(
     components: &MarkdownComponents<H>,
     base: InlineBaseStyle,
     pieces: &[InlinePiece],
+) -> AnyElement {
+    render_inline_flow_with_layout(
+        cx,
+        theme,
+        markdown_theme,
+        components,
+        base,
+        pieces,
+        InlineLineWidth::Fill,
+        MainAlign::Start,
+    )
+}
+
+fn render_inline_flow_with_layout<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
+    base: InlineBaseStyle,
+    pieces: &[InlinePiece],
+    line_width: InlineLineWidth,
+    justify: MainAlign,
 ) -> AnyElement {
     let mut lines: Vec<Vec<InlinePiece>> = Vec::new();
     let mut cur: Vec<InlinePiece> = Vec::new();
@@ -1712,25 +1965,40 @@ fn render_inline_flow<H: UiHost>(
     stack::vstack(cx, stack::VStackProps::default().gap(Space::N0), |cx| {
         lines
             .into_iter()
-            .map(|line| render_inline_line(cx, theme, markdown_theme, components, &base, line))
+            .map(|line| {
+                render_inline_line_with_layout(
+                    cx,
+                    theme,
+                    markdown_theme,
+                    components,
+                    &base,
+                    line,
+                    line_width,
+                    justify,
+                )
+            })
             .collect()
     })
 }
 
-fn render_inline_line<H: UiHost>(
+fn render_inline_line_with_layout<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     base: &InlineBaseStyle,
     pieces: Vec<InlinePiece>,
+    line_width: InlineLineWidth,
+    justify: MainAlign,
 ) -> AnyElement {
     let mut props = FlexProps::default();
-    props.layout.size.width = Length::Fill;
+    if line_width == InlineLineWidth::Fill {
+        props.layout.size.width = Length::Fill;
+    }
     props.direction = Axis::Horizontal;
     props.gap = Px(0.0);
     props.padding = Edges::all(Px(0.0));
-    props.justify = MainAlign::Start;
+    props.justify = justify;
     props.align = CrossAlign::Start;
     props.wrap = true;
 
