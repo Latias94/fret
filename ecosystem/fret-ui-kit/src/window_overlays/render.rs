@@ -595,8 +595,10 @@ pub fn render<H: UiHost>(
                 }
 
                 let theme = fret_ui::Theme::global(&*cx.app).clone();
-                let margin = margin_override.unwrap_or_else(|| theme.metric_required("metric.padding.md"));
-                let gap = gap_override.unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+                let margin =
+                    margin_override.unwrap_or_else(|| theme.metric_required("metric.padding.md"));
+                let gap =
+                    gap_override.unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
                 let toast_padding = theme.metric_required("metric.padding.sm");
                 let radius = theme.metric_required("metric.radius.md");
                 let store_for_toasts = store_for_render.clone();
@@ -668,6 +670,7 @@ pub fn render<H: UiHost>(
                     move |cx| {
                         let mut out: Vec<AnyElement> = Vec::with_capacity(toasts.len());
                         for toast in toasts {
+                            let theme = theme.clone();
                             let store = store_for_toasts.clone();
                             let toast_id = toast.id;
                             let open = toast.open;
