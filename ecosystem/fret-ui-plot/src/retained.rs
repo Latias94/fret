@@ -29,8 +29,14 @@ use crate::series::{Series, SeriesData, SeriesId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum YAxis {
+    /// Primary (left) Y axis.
     Left,
+    /// First right-side Y axis (ImPlot's Y2).
     Right,
+    /// Second right-side Y axis (ImPlot's Y3).
+    Right2,
+    /// Third right-side Y axis (ImPlot's Y4).
+    Right3,
 }
 
 #[derive(Debug, Clone)]
@@ -74,6 +80,8 @@ impl LineSeries {
 pub struct LinePlotModel {
     pub data_bounds: DataRect,
     pub data_bounds_y2: Option<DataRect>,
+    pub data_bounds_y3: Option<DataRect>,
+    pub data_bounds_y4: Option<DataRect>,
     pub series: Vec<LineSeries>,
 }
 
@@ -92,6 +100,18 @@ impl LinePlotModel {
             |s| s.y_axis,
             |s| &s.data,
         );
+        let bounds_right2 = compute_data_bounds_from_series_data_by_axis(
+            &series,
+            YAxis::Right2,
+            |s| s.y_axis,
+            |s| &s.data,
+        );
+        let bounds_right3 = compute_data_bounds_from_series_data_by_axis(
+            &series,
+            YAxis::Right3,
+            |s| s.y_axis,
+            |s| &s.data,
+        );
 
         let fallback = DataRect {
             x_min: 0.0,
@@ -103,8 +123,14 @@ impl LinePlotModel {
         let x_source = bounds_all
             .or(bounds_left)
             .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
             .unwrap_or(fallback);
-        let y_source = bounds_left.or(bounds_right).unwrap_or(x_source);
+        let y_source = bounds_left
+            .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
+            .unwrap_or(x_source);
 
         let primary = sanitize_data_rect(DataRect {
             x_min: x_source.x_min,
@@ -121,10 +147,28 @@ impl LinePlotModel {
                 y_max: b.y_max,
             })
         });
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
 
         Self {
             data_bounds: primary,
             data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
             series,
         }
     }
@@ -137,7 +181,35 @@ impl LinePlotModel {
             |s| s.y_axis,
             |s| &s.data,
         );
+        let bounds_right2 = compute_data_bounds_from_series_data_by_axis(
+            &series,
+            YAxis::Right2,
+            |s| s.y_axis,
+            |s| &s.data,
+        );
+        let bounds_right3 = compute_data_bounds_from_series_data_by_axis(
+            &series,
+            YAxis::Right3,
+            |s| s.y_axis,
+            |s| &s.data,
+        );
         let y2 = bounds_right.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
             sanitize_data_rect(DataRect {
                 x_min: primary.x_min,
                 x_max: primary.x_max,
@@ -149,6 +221,8 @@ impl LinePlotModel {
         Self {
             data_bounds: primary,
             data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
             series,
         }
     }
@@ -195,6 +269,8 @@ impl ScatterSeries {
 pub struct ScatterPlotModel {
     pub data_bounds: DataRect,
     pub data_bounds_y2: Option<DataRect>,
+    pub data_bounds_y3: Option<DataRect>,
+    pub data_bounds_y4: Option<DataRect>,
     pub series: Vec<ScatterSeries>,
 }
 
@@ -213,6 +289,18 @@ impl ScatterPlotModel {
             |s| s.y_axis,
             |s| &s.data,
         );
+        let bounds_right2 = compute_data_bounds_from_series_data_by_axis(
+            &series,
+            YAxis::Right2,
+            |s| s.y_axis,
+            |s| &s.data,
+        );
+        let bounds_right3 = compute_data_bounds_from_series_data_by_axis(
+            &series,
+            YAxis::Right3,
+            |s| s.y_axis,
+            |s| &s.data,
+        );
 
         let fallback = DataRect {
             x_min: 0.0,
@@ -224,8 +312,14 @@ impl ScatterPlotModel {
         let x_source = bounds_all
             .or(bounds_left)
             .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
             .unwrap_or(fallback);
-        let y_source = bounds_left.or(bounds_right).unwrap_or(x_source);
+        let y_source = bounds_left
+            .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
+            .unwrap_or(x_source);
 
         let primary = sanitize_data_rect(DataRect {
             x_min: x_source.x_min,
@@ -242,10 +336,28 @@ impl ScatterPlotModel {
                 y_max: b.y_max,
             })
         });
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
 
         Self {
             data_bounds: primary,
             data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
             series,
         }
     }
@@ -258,7 +370,35 @@ impl ScatterPlotModel {
             |s| s.y_axis,
             |s| &s.data,
         );
+        let bounds_right2 = compute_data_bounds_from_series_data_by_axis(
+            &series,
+            YAxis::Right2,
+            |s| s.y_axis,
+            |s| &s.data,
+        );
+        let bounds_right3 = compute_data_bounds_from_series_data_by_axis(
+            &series,
+            YAxis::Right3,
+            |s| s.y_axis,
+            |s| &s.data,
+        );
         let y2 = bounds_right.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
             sanitize_data_rect(DataRect {
                 x_min: primary.x_min,
                 x_max: primary.x_max,
@@ -270,6 +410,8 @@ impl ScatterPlotModel {
         Self {
             data_bounds: primary,
             data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
             series,
         }
     }
@@ -387,6 +529,8 @@ impl ErrorBarsSeries {
 pub struct ErrorBarsPlotModel {
     pub data_bounds: DataRect,
     pub data_bounds_y2: Option<DataRect>,
+    pub data_bounds_y3: Option<DataRect>,
+    pub data_bounds_y4: Option<DataRect>,
     pub series: Vec<ErrorBarsSeries>,
 }
 
@@ -397,6 +541,10 @@ impl ErrorBarsPlotModel {
             compute_data_bounds_from_error_bars_series(&series, |s| s.y_axis == YAxis::Left);
         let bounds_right =
             compute_data_bounds_from_error_bars_series(&series, |s| s.y_axis == YAxis::Right);
+        let bounds_right2 =
+            compute_data_bounds_from_error_bars_series(&series, |s| s.y_axis == YAxis::Right2);
+        let bounds_right3 =
+            compute_data_bounds_from_error_bars_series(&series, |s| s.y_axis == YAxis::Right3);
 
         let fallback = DataRect {
             x_min: 0.0,
@@ -408,8 +556,14 @@ impl ErrorBarsPlotModel {
         let x_source = bounds_all
             .or(bounds_left)
             .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
             .unwrap_or(fallback);
-        let y_source = bounds_left.or(bounds_right).unwrap_or(x_source);
+        let y_source = bounds_left
+            .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
+            .unwrap_or(x_source);
 
         let primary = sanitize_data_rect(DataRect {
             x_min: x_source.x_min,
@@ -426,10 +580,28 @@ impl ErrorBarsPlotModel {
                 y_max: b.y_max,
             })
         });
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
 
         Self {
             data_bounds: primary,
             data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
             series,
         }
     }
@@ -584,6 +756,8 @@ impl CandlestickSeries {
 pub struct CandlestickPlotModel {
     pub data_bounds: DataRect,
     pub data_bounds_y2: Option<DataRect>,
+    pub data_bounds_y3: Option<DataRect>,
+    pub data_bounds_y4: Option<DataRect>,
     pub series: Vec<CandlestickSeries>,
 }
 
@@ -594,6 +768,10 @@ impl CandlestickPlotModel {
             compute_data_bounds_from_candlestick_series(&series, |s| s.y_axis == YAxis::Left);
         let bounds_right =
             compute_data_bounds_from_candlestick_series(&series, |s| s.y_axis == YAxis::Right);
+        let bounds_right2 =
+            compute_data_bounds_from_candlestick_series(&series, |s| s.y_axis == YAxis::Right2);
+        let bounds_right3 =
+            compute_data_bounds_from_candlestick_series(&series, |s| s.y_axis == YAxis::Right3);
 
         let fallback = DataRect {
             x_min: 0.0,
@@ -605,8 +783,14 @@ impl CandlestickPlotModel {
         let x_source = bounds_all
             .or(bounds_left)
             .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
             .unwrap_or(fallback);
-        let y_source = bounds_left.or(bounds_right).unwrap_or(x_source);
+        let y_source = bounds_left
+            .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
+            .unwrap_or(x_source);
 
         let primary = sanitize_data_rect(DataRect {
             x_min: x_source.x_min,
@@ -623,10 +807,28 @@ impl CandlestickPlotModel {
                 y_max: b.y_max,
             })
         });
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
 
         Self {
             data_bounds: primary,
             data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
             series,
         }
     }
@@ -1837,6 +2039,8 @@ struct PlotLayout {
     plot: Rect,
     y_axis_left: Rect,
     y_axis_right: Rect,
+    y_axis_right2: Rect,
+    y_axis_right3: Rect,
     x_axis: Rect,
 }
 
@@ -1846,11 +2050,15 @@ impl PlotLayout {
         padding: Px,
         y_axis_left_gap: Px,
         y_axis_right_gap: Px,
+        y_axis_right2_gap: Px,
+        y_axis_right3_gap: Px,
         x_axis_gap: Px,
     ) -> Self {
         let pad = padding.0.max(0.0);
         let y_axis_left_gap = y_axis_left_gap.0.max(0.0);
         let y_axis_right_gap = y_axis_right_gap.0.max(0.0);
+        let y_axis_right2_gap = y_axis_right2_gap.0.max(0.0);
+        let y_axis_right3_gap = y_axis_right3_gap.0.max(0.0);
         let x_axis_gap = x_axis_gap.0.max(0.0);
 
         let content = Rect::new(
@@ -1861,7 +2069,12 @@ impl PlotLayout {
             ),
         );
 
-        let plot_w = (content.size.width.0 - y_axis_left_gap - y_axis_right_gap).max(0.0);
+        let plot_w = (content.size.width.0
+            - y_axis_left_gap
+            - y_axis_right_gap
+            - y_axis_right2_gap
+            - y_axis_right3_gap)
+            .max(0.0);
         let plot_h = (content.size.height.0 - x_axis_gap).max(0.0);
 
         let plot = Rect::new(
@@ -1875,6 +2088,20 @@ impl PlotLayout {
             Point::new(Px(plot.origin.x.0 + plot.size.width.0), plot.origin.y),
             Size::new(Px(y_axis_right_gap), Px(plot_h)),
         );
+        let y_axis_right2 = Rect::new(
+            Point::new(
+                Px(y_axis_right.origin.x.0 + y_axis_right.size.width.0),
+                plot.origin.y,
+            ),
+            Size::new(Px(y_axis_right2_gap), Px(plot_h)),
+        );
+        let y_axis_right3 = Rect::new(
+            Point::new(
+                Px(y_axis_right2.origin.x.0 + y_axis_right2.size.width.0),
+                plot.origin.y,
+            ),
+            Size::new(Px(y_axis_right3_gap), Px(plot_h)),
+        );
 
         let x_axis = Rect::new(
             Point::new(plot.origin.x, Px(plot.origin.y.0 + plot.size.height.0)),
@@ -1885,6 +2112,8 @@ impl PlotLayout {
             plot,
             y_axis_left,
             y_axis_right,
+            y_axis_right2,
+            y_axis_right3,
             x_axis,
         }
     }
@@ -1922,6 +2151,12 @@ pub trait PlotLayer {
 
     fn data_bounds(model: &Self::Model) -> DataRect;
     fn data_bounds_y2(_model: &Self::Model) -> Option<DataRect> {
+        None
+    }
+    fn data_bounds_y3(_model: &Self::Model) -> Option<DataRect> {
+        None
+    }
+    fn data_bounds_y4(_model: &Self::Model) -> Option<DataRect> {
         None
     }
     fn series_meta(model: &Self::Model) -> Vec<SeriesMeta>;
@@ -1971,9 +2206,13 @@ pub struct PlotPaintArgs<'a> {
     pub plot: Rect,
     pub view_bounds: DataRect,
     pub view_bounds_y2: Option<DataRect>,
+    pub view_bounds_y3: Option<DataRect>,
+    pub view_bounds_y4: Option<DataRect>,
     pub x_scale: AxisScale,
     pub y_scale: AxisScale,
     pub y2_scale: AxisScale,
+    pub y3_scale: AxisScale,
+    pub y4_scale: AxisScale,
     pub style: LinePlotStyle,
     pub hidden: &'a HashSet<SeriesId>,
 }
@@ -1992,9 +2231,13 @@ pub struct PlotHitTestArgs<'a> {
     pub plot_size: Size,
     pub view_bounds: DataRect,
     pub view_bounds_y2: Option<DataRect>,
+    pub view_bounds_y3: Option<DataRect>,
+    pub view_bounds_y4: Option<DataRect>,
     pub x_scale: AxisScale,
     pub y_scale: AxisScale,
     pub y2_scale: AxisScale,
+    pub y3_scale: AxisScale,
+    pub y4_scale: AxisScale,
     pub scale_factor: f32,
     pub local: Point,
     pub style: LinePlotStyle,
@@ -2124,6 +2367,8 @@ impl BarSeries {
 pub struct BarsPlotModel {
     pub data_bounds: DataRect,
     pub data_bounds_y2: Option<DataRect>,
+    pub data_bounds_y3: Option<DataRect>,
+    pub data_bounds_y4: Option<DataRect>,
     pub series: Vec<BarSeries>,
 }
 
@@ -2132,6 +2377,8 @@ impl BarsPlotModel {
         let bounds_all = compute_data_bounds_from_bar_series(&series);
         let bounds_left = compute_data_bounds_from_bar_series_by_axis(&series, YAxis::Left);
         let bounds_right = compute_data_bounds_from_bar_series_by_axis(&series, YAxis::Right);
+        let bounds_right2 = compute_data_bounds_from_bar_series_by_axis(&series, YAxis::Right2);
+        let bounds_right3 = compute_data_bounds_from_bar_series_by_axis(&series, YAxis::Right3);
 
         let fallback = DataRect {
             x_min: 0.0,
@@ -2143,8 +2390,14 @@ impl BarsPlotModel {
         let x_source = bounds_all
             .or(bounds_left)
             .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
             .unwrap_or(fallback);
-        let y_source = bounds_left.or(bounds_right).unwrap_or(x_source);
+        let y_source = bounds_left
+            .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
+            .unwrap_or(x_source);
 
         let primary = sanitize_data_rect(DataRect {
             x_min: x_source.x_min,
@@ -2161,18 +2414,15 @@ impl BarsPlotModel {
                 y_max: b.y_max,
             })
         });
-
-        Self {
-            data_bounds: primary,
-            data_bounds_y2: y2,
-            series,
-        }
-    }
-
-    pub fn from_series_with_bounds(series: Vec<BarSeries>, data_bounds: DataRect) -> Self {
-        let primary = sanitize_data_rect(data_bounds);
-        let bounds_right = compute_data_bounds_from_bar_series_by_axis(&series, YAxis::Right);
-        let y2 = bounds_right.map(|b| {
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
             sanitize_data_rect(DataRect {
                 x_min: primary.x_min,
                 x_max: primary.x_max,
@@ -2184,6 +2434,47 @@ impl BarsPlotModel {
         Self {
             data_bounds: primary,
             data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
+            series,
+        }
+    }
+
+    pub fn from_series_with_bounds(series: Vec<BarSeries>, data_bounds: DataRect) -> Self {
+        let primary = sanitize_data_rect(data_bounds);
+        let bounds_right = compute_data_bounds_from_bar_series_by_axis(&series, YAxis::Right);
+        let bounds_right2 = compute_data_bounds_from_bar_series_by_axis(&series, YAxis::Right2);
+        let bounds_right3 = compute_data_bounds_from_bar_series_by_axis(&series, YAxis::Right3);
+        let y2 = bounds_right.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+
+        Self {
+            data_bounds: primary,
+            data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
             series,
         }
     }
@@ -2310,6 +2601,8 @@ impl AreaSeries {
 pub struct AreaPlotModel {
     pub data_bounds: DataRect,
     pub data_bounds_y2: Option<DataRect>,
+    pub data_bounds_y3: Option<DataRect>,
+    pub data_bounds_y4: Option<DataRect>,
     pub series: Vec<AreaSeries>,
 }
 
@@ -2318,6 +2611,8 @@ impl AreaPlotModel {
         let bounds_all = compute_data_bounds_from_area_series(&series);
         let bounds_left = compute_data_bounds_from_area_series_by_axis(&series, YAxis::Left);
         let bounds_right = compute_data_bounds_from_area_series_by_axis(&series, YAxis::Right);
+        let bounds_right2 = compute_data_bounds_from_area_series_by_axis(&series, YAxis::Right2);
+        let bounds_right3 = compute_data_bounds_from_area_series_by_axis(&series, YAxis::Right3);
 
         let fallback = DataRect {
             x_min: 0.0,
@@ -2329,8 +2624,14 @@ impl AreaPlotModel {
         let x_source = bounds_all
             .or(bounds_left)
             .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
             .unwrap_or(fallback);
-        let y_source = bounds_left.or(bounds_right).unwrap_or(x_source);
+        let y_source = bounds_left
+            .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
+            .unwrap_or(x_source);
 
         let primary = sanitize_data_rect(DataRect {
             x_min: x_source.x_min,
@@ -2347,18 +2648,15 @@ impl AreaPlotModel {
                 y_max: b.y_max,
             })
         });
-
-        Self {
-            data_bounds: primary,
-            data_bounds_y2: y2,
-            series,
-        }
-    }
-
-    pub fn from_series_with_bounds(series: Vec<AreaSeries>, data_bounds: DataRect) -> Self {
-        let primary = sanitize_data_rect(data_bounds);
-        let bounds_right = compute_data_bounds_from_area_series_by_axis(&series, YAxis::Right);
-        let y2 = bounds_right.map(|b| {
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
             sanitize_data_rect(DataRect {
                 x_min: primary.x_min,
                 x_max: primary.x_max,
@@ -2370,6 +2668,47 @@ impl AreaPlotModel {
         Self {
             data_bounds: primary,
             data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
+            series,
+        }
+    }
+
+    pub fn from_series_with_bounds(series: Vec<AreaSeries>, data_bounds: DataRect) -> Self {
+        let primary = sanitize_data_rect(data_bounds);
+        let bounds_right = compute_data_bounds_from_area_series_by_axis(&series, YAxis::Right);
+        let bounds_right2 = compute_data_bounds_from_area_series_by_axis(&series, YAxis::Right2);
+        let bounds_right3 = compute_data_bounds_from_area_series_by_axis(&series, YAxis::Right3);
+        let y2 = bounds_right.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+
+        Self {
+            data_bounds: primary,
+            data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
             series,
         }
     }
@@ -2432,6 +2771,8 @@ impl ShadedSeries {
 pub struct ShadedPlotModel {
     pub data_bounds: DataRect,
     pub data_bounds_y2: Option<DataRect>,
+    pub data_bounds_y3: Option<DataRect>,
+    pub data_bounds_y4: Option<DataRect>,
     pub series: Vec<ShadedSeries>,
 }
 
@@ -2440,6 +2781,8 @@ impl ShadedPlotModel {
         let bounds_all = compute_data_bounds_from_shaded_series(&series);
         let bounds_left = compute_data_bounds_from_shaded_series_by_axis(&series, YAxis::Left);
         let bounds_right = compute_data_bounds_from_shaded_series_by_axis(&series, YAxis::Right);
+        let bounds_right2 = compute_data_bounds_from_shaded_series_by_axis(&series, YAxis::Right2);
+        let bounds_right3 = compute_data_bounds_from_shaded_series_by_axis(&series, YAxis::Right3);
 
         let fallback = DataRect {
             x_min: 0.0,
@@ -2451,8 +2794,14 @@ impl ShadedPlotModel {
         let x_source = bounds_all
             .or(bounds_left)
             .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
             .unwrap_or(fallback);
-        let y_source = bounds_left.or(bounds_right).unwrap_or(x_source);
+        let y_source = bounds_left
+            .or(bounds_right)
+            .or(bounds_right2)
+            .or(bounds_right3)
+            .unwrap_or(x_source);
 
         let primary = sanitize_data_rect(DataRect {
             x_min: x_source.x_min,
@@ -2469,18 +2818,15 @@ impl ShadedPlotModel {
                 y_max: b.y_max,
             })
         });
-
-        Self {
-            data_bounds: primary,
-            data_bounds_y2: y2,
-            series,
-        }
-    }
-
-    pub fn from_series_with_bounds(series: Vec<ShadedSeries>, data_bounds: DataRect) -> Self {
-        let primary = sanitize_data_rect(data_bounds);
-        let bounds_right = compute_data_bounds_from_shaded_series_by_axis(&series, YAxis::Right);
-        let y2 = bounds_right.map(|b| {
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
             sanitize_data_rect(DataRect {
                 x_min: primary.x_min,
                 x_max: primary.x_max,
@@ -2492,6 +2838,47 @@ impl ShadedPlotModel {
         Self {
             data_bounds: primary,
             data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
+            series,
+        }
+    }
+
+    pub fn from_series_with_bounds(series: Vec<ShadedSeries>, data_bounds: DataRect) -> Self {
+        let primary = sanitize_data_rect(data_bounds);
+        let bounds_right = compute_data_bounds_from_shaded_series_by_axis(&series, YAxis::Right);
+        let bounds_right2 = compute_data_bounds_from_shaded_series_by_axis(&series, YAxis::Right2);
+        let bounds_right3 = compute_data_bounds_from_shaded_series_by_axis(&series, YAxis::Right3);
+        let y2 = bounds_right.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y3 = bounds_right2.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+        let y4 = bounds_right3.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+
+        Self {
+            data_bounds: primary,
+            data_bounds_y2: y2,
+            data_bounds_y3: y3,
+            data_bounds_y4: y4,
             series,
         }
     }
@@ -2512,6 +2899,8 @@ pub struct PlotHoverOutput {
 pub struct PlotOutputSnapshot {
     pub view_bounds: DataRect,
     pub view_bounds_y2: Option<DataRect>,
+    pub view_bounds_y3: Option<DataRect>,
+    pub view_bounds_y4: Option<DataRect>,
     pub cursor: Option<DataPoint>,
     pub hover: Option<PlotHoverOutput>,
     pub query: Option<DataRect>,
@@ -2539,6 +2928,8 @@ impl Default for PlotOutput {
                     y_max: 1.0,
                 },
                 view_bounds_y2: None,
+                view_bounds_y3: None,
+                view_bounds_y4: None,
                 cursor: None,
                 hover: None,
                 query: None,
@@ -2564,6 +2955,14 @@ pub struct PlotState {
     pub view_bounds_y2: Option<DataRect>,
     /// If true, the right Y axis view is derived from `data_bounds` each frame (auto-fit).
     pub view_y2_is_auto: bool,
+    /// Current view bounds for the 3rd Y axis (if enabled) when `view_y3_is_auto == false`.
+    pub view_bounds_y3: Option<DataRect>,
+    /// If true, the 3rd Y axis view is derived from `data_bounds` each frame (auto-fit).
+    pub view_y3_is_auto: bool,
+    /// Current view bounds for the 4th Y axis (if enabled) when `view_y4_is_auto == false`.
+    pub view_bounds_y4: Option<DataRect>,
+    /// If true, the 4th Y axis view is derived from `data_bounds` each frame (auto-fit).
+    pub view_y4_is_auto: bool,
     /// An externally linked cursor position in data space.
     ///
     /// This is typically written by a plot coordinator (e.g. `LinkedPlotGroup`) so that other plots
@@ -2584,6 +2983,10 @@ impl Default for PlotState {
             view_is_auto: true,
             view_bounds_y2: None,
             view_y2_is_auto: true,
+            view_bounds_y3: None,
+            view_y3_is_auto: true,
+            view_bounds_y4: None,
+            view_y4_is_auto: true,
             linked_cursor_x: None,
             hidden_series: HashSet::new(),
             pinned_series: None,
@@ -2635,12 +3038,18 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     x_axis_ticks: AxisTicks,
     y_axis_ticks: AxisTicks,
     y2_axis_ticks: AxisTicks,
+    y3_axis_ticks: AxisTicks,
+    y4_axis_ticks: AxisTicks,
     x_scale: AxisScale,
     y_scale: AxisScale,
     y2_scale: AxisScale,
+    y3_scale: AxisScale,
+    y4_scale: AxisScale,
     x_axis_labels: AxisLabelFormatter,
     y_axis_labels: AxisLabelFormatter,
     y2_axis_labels: AxisLabelFormatter,
+    y3_axis_labels: AxisLabelFormatter,
+    y4_axis_labels: AxisLabelFormatter,
     tooltip_x_labels: AxisLabelFormatter,
     tooltip_y_labels: AxisLabelFormatter,
     layer: L,
@@ -2655,13 +3064,21 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     x_axis_thickness: Px,
     y_axis_thickness: Px,
     y_axis_right_thickness: Px,
+    y_axis_right2_thickness: Px,
+    y_axis_right3_thickness: Px,
     show_y2_axis: bool,
+    show_y3_axis: bool,
+    show_y4_axis: bool,
     lock_x: AxisLock,
     lock_y: AxisLock,
     lock_y2: AxisLock,
+    lock_y3: AxisLock,
+    lock_y4: AxisLock,
     x_constraints: AxisConstraints,
     y_constraints: AxisConstraints,
     y2_constraints: AxisConstraints,
+    y3_constraints: AxisConstraints,
+    y4_constraints: AxisConstraints,
     pan_last_pos: Option<Point>,
     box_zoom_start: Option<Point>,
     box_zoom_current: Option<Point>,
@@ -2671,9 +3088,13 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     axis_ticks_x: Vec<f64>,
     axis_ticks_y: Vec<f64>,
     axis_ticks_y2: Vec<f64>,
+    axis_ticks_y3: Vec<f64>,
+    axis_ticks_y4: Vec<f64>,
     axis_labels_x: Vec<PreparedText>,
     axis_labels_y: Vec<PreparedText>,
     axis_labels_y2: Vec<PreparedText>,
+    axis_labels_y3: Vec<PreparedText>,
+    axis_labels_y4: Vec<PreparedText>,
     legend_key: Option<u64>,
     legend_entries: Vec<LegendEntry>,
     tooltip_text: Option<PreparedText>,
@@ -2950,9 +3371,13 @@ mod hover_segment_tests {
                 y_max: 10.0,
             },
             view_bounds_y2: None,
+            view_bounds_y3: None,
+            view_bounds_y4: None,
             x_scale: AxisScale::Linear,
             y_scale: AxisScale::Linear,
             y2_scale: AxisScale::Linear,
+            y3_scale: AxisScale::Linear,
+            y4_scale: AxisScale::Linear,
             scale_factor: 1.0,
             local: Point::new(Px(5.0), Px(6.0)),
             style: LinePlotStyle::default(),
@@ -2992,9 +3417,13 @@ mod hover_segment_tests {
                 y_max: 10.0,
             },
             view_bounds_y2: None,
+            view_bounds_y3: None,
+            view_bounds_y4: None,
             x_scale: AxisScale::Linear,
             y_scale: AxisScale::Linear,
             y2_scale: AxisScale::Linear,
+            y3_scale: AxisScale::Linear,
+            y4_scale: AxisScale::Linear,
             scale_factor: 1.0,
             local: Point::new(Px(5.0), Px(6.0)),
             style: LinePlotStyle::default(),
@@ -3086,12 +3515,18 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             x_axis_ticks: AxisTicks::default(),
             y_axis_ticks: AxisTicks::default(),
             y2_axis_ticks: AxisTicks::default(),
+            y3_axis_ticks: AxisTicks::default(),
+            y4_axis_ticks: AxisTicks::default(),
             x_scale: AxisScale::Linear,
             y_scale: AxisScale::Linear,
             y2_scale: AxisScale::Linear,
+            y3_scale: AxisScale::Linear,
+            y4_scale: AxisScale::Linear,
             x_axis_labels: AxisLabelFormatter::default(),
             y_axis_labels: AxisLabelFormatter::default(),
             y2_axis_labels: AxisLabelFormatter::default(),
+            y3_axis_labels: AxisLabelFormatter::default(),
+            y4_axis_labels: AxisLabelFormatter::default(),
             tooltip_x_labels: AxisLabelFormatter::default(),
             tooltip_y_labels: AxisLabelFormatter::default(),
             layer,
@@ -3106,13 +3541,21 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             x_axis_thickness: axis_gap,
             y_axis_thickness: axis_gap,
             y_axis_right_thickness: Px(0.0),
+            y_axis_right2_thickness: Px(0.0),
+            y_axis_right3_thickness: Px(0.0),
             show_y2_axis: false,
+            show_y3_axis: false,
+            show_y4_axis: false,
             lock_x: AxisLock::default(),
             lock_y: AxisLock::default(),
             lock_y2: AxisLock::default(),
+            lock_y3: AxisLock::default(),
+            lock_y4: AxisLock::default(),
             x_constraints: AxisConstraints::default(),
             y_constraints: AxisConstraints::default(),
             y2_constraints: AxisConstraints::default(),
+            y3_constraints: AxisConstraints::default(),
+            y4_constraints: AxisConstraints::default(),
             pan_last_pos: None,
             box_zoom_start: None,
             box_zoom_current: None,
@@ -3122,9 +3565,13 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             axis_ticks_x: Vec::new(),
             axis_ticks_y: Vec::new(),
             axis_ticks_y2: Vec::new(),
+            axis_ticks_y3: Vec::new(),
+            axis_ticks_y4: Vec::new(),
             axis_labels_x: Vec::new(),
             axis_labels_y: Vec::new(),
             axis_labels_y2: Vec::new(),
+            axis_labels_y3: Vec::new(),
+            axis_labels_y4: Vec::new(),
             legend_key: None,
             legend_entries: Vec::new(),
             tooltip_text: None,
@@ -3161,6 +3608,20 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self
     }
 
+    pub fn y3_axis_format(mut self, format: AxisLabelFormat) -> Self {
+        self.show_y3_axis = true;
+        self.y3_axis_ticks = format.ticks();
+        self.y3_axis_labels = format.labels();
+        self
+    }
+
+    pub fn y4_axis_format(mut self, format: AxisLabelFormat) -> Self {
+        self.show_y4_axis = true;
+        self.y4_axis_ticks = format.ticks();
+        self.y4_axis_labels = format.labels();
+        self
+    }
+
     pub fn x_axis_locked(mut self, locked: bool) -> Self {
         self.lock_x = AxisLock {
             pan: locked,
@@ -3179,6 +3640,22 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
     pub fn y2_axis_locked(mut self, locked: bool) -> Self {
         self.lock_y2 = AxisLock {
+            pan: locked,
+            zoom: locked,
+        };
+        self
+    }
+
+    pub fn y3_axis_locked(mut self, locked: bool) -> Self {
+        self.lock_y3 = AxisLock {
+            pan: locked,
+            zoom: locked,
+        };
+        self
+    }
+
+    pub fn y4_axis_locked(mut self, locked: bool) -> Self {
+        self.lock_y4 = AxisLock {
             pan: locked,
             zoom: locked,
         };
@@ -3215,6 +3692,26 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self
     }
 
+    pub fn y3_axis_pan_locked(mut self, locked: bool) -> Self {
+        self.lock_y3.pan = locked;
+        self
+    }
+
+    pub fn y3_axis_zoom_locked(mut self, locked: bool) -> Self {
+        self.lock_y3.zoom = locked;
+        self
+    }
+
+    pub fn y4_axis_pan_locked(mut self, locked: bool) -> Self {
+        self.lock_y4.pan = locked;
+        self
+    }
+
+    pub fn y4_axis_zoom_locked(mut self, locked: bool) -> Self {
+        self.lock_y4.zoom = locked;
+        self
+    }
+
     pub fn x_axis_constraints(mut self, constraints: AxisConstraints) -> Self {
         self.x_constraints = constraints;
         self
@@ -3230,6 +3727,16 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self
     }
 
+    pub fn y3_axis_constraints(mut self, constraints: AxisConstraints) -> Self {
+        self.y3_constraints = constraints;
+        self
+    }
+
+    pub fn y4_axis_constraints(mut self, constraints: AxisConstraints) -> Self {
+        self.y4_constraints = constraints;
+        self
+    }
+
     pub fn x_axis_scale(mut self, scale: AxisScale) -> Self {
         self.x_scale = scale;
         self
@@ -3242,6 +3749,16 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
     pub fn y2_axis_scale(mut self, scale: AxisScale) -> Self {
         self.y2_scale = scale;
+        self
+    }
+
+    pub fn y3_axis_scale(mut self, scale: AxisScale) -> Self {
+        self.y3_scale = scale;
+        self
+    }
+
+    pub fn y4_axis_scale(mut self, scale: AxisScale) -> Self {
+        self.y4_scale = scale;
         self
     }
 
@@ -3261,6 +3778,18 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         self
     }
 
+    pub fn y3_axis_ticks(mut self, ticks: AxisTicks) -> Self {
+        self.show_y3_axis = true;
+        self.y3_axis_ticks = ticks;
+        self
+    }
+
+    pub fn y4_axis_ticks(mut self, ticks: AxisTicks) -> Self {
+        self.show_y4_axis = true;
+        self.y4_axis_ticks = ticks;
+        self
+    }
+
     pub fn x_axis_labels(mut self, labels: AxisLabelFormatter) -> Self {
         self.x_axis_labels = labels.clone();
         self.tooltip_x_labels = labels;
@@ -3276,6 +3805,18 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
     pub fn y2_axis_labels(mut self, labels: AxisLabelFormatter) -> Self {
         self.show_y2_axis = true;
         self.y2_axis_labels = labels;
+        self
+    }
+
+    pub fn y3_axis_labels(mut self, labels: AxisLabelFormatter) -> Self {
+        self.show_y3_axis = true;
+        self.y3_axis_labels = labels;
+        self
+    }
+
+    pub fn y4_axis_labels(mut self, labels: AxisLabelFormatter) -> Self {
+        self.show_y4_axis = true;
+        self.y4_axis_labels = labels;
         self
     }
 
@@ -3303,7 +3844,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         ui.create_node_retained(canvas)
     }
 
-    fn axis_gaps(&self) -> (Px, Px, Px) {
+    fn axis_gaps(&self) -> (Px, Px, Px, Px, Px) {
         let min = self.style.axis_gap.0.max(0.0);
         let y = self.y_axis_thickness.0.max(min);
         let y_right = if self.show_y2_axis {
@@ -3311,8 +3852,18 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         } else {
             0.0
         };
+        let y_right2 = if self.show_y3_axis {
+            self.y_axis_right2_thickness.0.max(min)
+        } else {
+            0.0
+        };
+        let y_right3 = if self.show_y4_axis {
+            self.y_axis_right3_thickness.0.max(min)
+        } else {
+            0.0
+        };
         let x = self.x_axis_thickness.0.max(min);
-        (Px(y), Px(y_right), Px(x))
+        (Px(y), Px(y_right), Px(y_right2), Px(y_right3), Px(x))
     }
 
     fn read_plot_state<H: UiHost>(&self, app: &mut H) -> PlotState {
@@ -3361,6 +3912,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         state: &PlotState,
         view_bounds: DataRect,
         view_bounds_y2: Option<DataRect>,
+        view_bounds_y3: Option<DataRect>,
+        view_bounds_y4: Option<DataRect>,
     ) {
         let cursor_data = self.cursor_px.and_then(|cursor_px| {
             if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
@@ -3381,6 +3934,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             PlotOutputSnapshot {
                 view_bounds,
                 view_bounds_y2,
+                view_bounds_y3,
+                view_bounds_y4,
                 cursor: cursor_data,
                 hover: self.hover.map(|h| PlotHoverOutput {
                     series_id: h.series_id,
@@ -3469,12 +4024,112 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         ))
     }
 
+    fn current_view_bounds_y3<H: UiHost>(
+        &self,
+        app: &mut H,
+        state: &PlotState,
+        view_bounds: DataRect,
+    ) -> Option<DataRect> {
+        if !self.show_y3_axis {
+            return None;
+        }
+
+        let data_bounds = self.read_data_bounds_y3(app)?;
+
+        let y3_bounds = if state.view_y3_is_auto {
+            if self.style.clamp_to_data_bounds {
+                expand_data_bounds_scaled(
+                    data_bounds,
+                    self.style.overscroll_fraction,
+                    self.x_scale,
+                    self.y3_scale,
+                )
+            } else {
+                sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y3_scale)
+            }
+        } else if let Some(view) = state.view_bounds_y3 {
+            sanitize_data_rect_scaled(view, self.x_scale, self.y3_scale)
+        } else {
+            sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y3_scale)
+        };
+
+        let view = sanitize_data_rect_scaled(
+            DataRect {
+                x_min: view_bounds.x_min,
+                x_max: view_bounds.x_max,
+                y_min: y3_bounds.y_min,
+                y_max: y3_bounds.y_max,
+            },
+            self.x_scale,
+            self.y3_scale,
+        );
+
+        Some(constrain_view_bounds_scaled(
+            view,
+            self.x_scale,
+            self.y3_scale,
+            self.x_constraints,
+            self.y3_constraints,
+        ))
+    }
+
+    fn current_view_bounds_y4<H: UiHost>(
+        &self,
+        app: &mut H,
+        state: &PlotState,
+        view_bounds: DataRect,
+    ) -> Option<DataRect> {
+        if !self.show_y4_axis {
+            return None;
+        }
+
+        let data_bounds = self.read_data_bounds_y4(app)?;
+
+        let y4_bounds = if state.view_y4_is_auto {
+            if self.style.clamp_to_data_bounds {
+                expand_data_bounds_scaled(
+                    data_bounds,
+                    self.style.overscroll_fraction,
+                    self.x_scale,
+                    self.y4_scale,
+                )
+            } else {
+                sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y4_scale)
+            }
+        } else if let Some(view) = state.view_bounds_y4 {
+            sanitize_data_rect_scaled(view, self.x_scale, self.y4_scale)
+        } else {
+            sanitize_data_rect_scaled(data_bounds, self.x_scale, self.y4_scale)
+        };
+
+        let view = sanitize_data_rect_scaled(
+            DataRect {
+                x_min: view_bounds.x_min,
+                x_max: view_bounds.x_max,
+                y_min: y4_bounds.y_min,
+                y_max: y4_bounds.y_max,
+            },
+            self.x_scale,
+            self.y4_scale,
+        );
+
+        Some(constrain_view_bounds_scaled(
+            view,
+            self.x_scale,
+            self.y4_scale,
+            self.x_constraints,
+            self.y4_constraints,
+        ))
+    }
+
     fn rebuild_paths_if_needed<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
         plot: Rect,
         view_bounds: DataRect,
         view_bounds_y2: Option<DataRect>,
+        view_bounds_y3: Option<DataRect>,
+        view_bounds_y4: Option<DataRect>,
         hidden: &HashSet<SeriesId>,
     ) -> Vec<(SeriesId, PathId, Color)> {
         let model_revision = self.model.revision(cx.app).unwrap_or(0);
@@ -3490,9 +4145,13 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 plot,
                 view_bounds,
                 view_bounds_y2,
+                view_bounds_y3,
+                view_bounds_y4,
                 x_scale: self.x_scale,
                 y_scale: self.y_scale,
                 y2_scale: self.y2_scale,
+                y3_scale: self.y3_scale,
+                y4_scale: self.y4_scale,
                 style: self.style,
                 hidden,
             },
@@ -3505,6 +4164,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         plot: Rect,
         view_bounds: DataRect,
         view_bounds_y2: Option<DataRect>,
+        view_bounds_y3: Option<DataRect>,
+        view_bounds_y4: Option<DataRect>,
         hidden: &HashSet<SeriesId>,
     ) -> Vec<PlotQuad> {
         let model_revision = self.model.revision(cx.app).unwrap_or(0);
@@ -3520,9 +4181,13 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 plot,
                 view_bounds,
                 view_bounds_y2,
+                view_bounds_y3,
+                view_bounds_y4,
                 x_scale: self.x_scale,
                 y_scale: self.y_scale,
                 y2_scale: self.y2_scale,
+                y3_scale: self.y3_scale,
+                y4_scale: self.y4_scale,
                 style: self.style,
                 hidden,
             },
@@ -3539,9 +4204,17 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         for t in self.axis_labels_y2.drain(..) {
             services.text().release(t.blob);
         }
+        for t in self.axis_labels_y3.drain(..) {
+            services.text().release(t.blob);
+        }
+        for t in self.axis_labels_y4.drain(..) {
+            services.text().release(t.blob);
+        }
         self.axis_ticks_x.clear();
         self.axis_ticks_y.clear();
         self.axis_ticks_y2.clear();
+        self.axis_ticks_y3.clear();
+        self.axis_ticks_y4.clear();
         self.axis_label_key = None;
     }
 
@@ -3651,6 +4324,24 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         Some(sanitize_data_rect(bounds))
     }
 
+    fn read_data_bounds_y3<H: UiHost>(&self, app: &mut H) -> Option<DataRect> {
+        let bounds = self
+            .model
+            .read(app, |_app, m| L::data_bounds_y3(m))
+            .ok()
+            .flatten()?;
+        Some(sanitize_data_rect(bounds))
+    }
+
+    fn read_data_bounds_y4<H: UiHost>(&self, app: &mut H) -> Option<DataRect> {
+        let bounds = self
+            .model
+            .read(app, |_app, m| L::data_bounds_y4(m))
+            .ok()
+            .flatten()?;
+        Some(sanitize_data_rect(bounds))
+    }
+
     fn text_style_key(style: &TextStyle) -> u64 {
         let mut state = 0u64;
         state = Self::hash_u64(state, hash_value(&style.font));
@@ -3701,6 +4392,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         layout: PlotLayout,
         view_bounds: DataRect,
         view_bounds_y2: Option<DataRect>,
+        view_bounds_y3: Option<DataRect>,
+        view_bounds_y4: Option<DataRect>,
         theme_revision: u64,
         font_stack_key: u64,
     ) -> bool {
@@ -3712,6 +4405,11 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         key = Self::hash_u64(key, font_stack_key);
         key = Self::hash_f32_bits(key, layout.plot.size.width.0);
         key = Self::hash_f32_bits(key, layout.plot.size.height.0);
+        key = Self::hash_f32_bits(key, layout.y_axis_left.size.width.0);
+        key = Self::hash_f32_bits(key, layout.y_axis_right.size.width.0);
+        key = Self::hash_f32_bits(key, layout.y_axis_right2.size.width.0);
+        key = Self::hash_f32_bits(key, layout.y_axis_right3.size.width.0);
+        key = Self::hash_f32_bits(key, layout.x_axis.size.height.0);
         key = Self::hash_f64_bits(key, view_bounds.x_min);
         key = Self::hash_f64_bits(key, view_bounds.x_max);
         key = Self::hash_f64_bits(key, view_bounds.y_min);
@@ -3722,18 +4420,38 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         } else {
             key = Self::hash_u64(key, 0);
         }
+        if let Some(y3) = view_bounds_y3 {
+            key = Self::hash_f64_bits(key, y3.y_min);
+            key = Self::hash_f64_bits(key, y3.y_max);
+        } else {
+            key = Self::hash_u64(key, 0);
+        }
+        if let Some(y4) = view_bounds_y4 {
+            key = Self::hash_f64_bits(key, y4.y_min);
+            key = Self::hash_f64_bits(key, y4.y_max);
+        } else {
+            key = Self::hash_u64(key, 0);
+        }
         key = Self::hash_u64(key, u64::from(self.style.axis_gap.0.to_bits()));
         key = Self::hash_u64(key, u64::from(self.style.tick_count as u32));
         key = Self::hash_u64(key, self.x_axis_ticks.key());
         key = Self::hash_u64(key, self.y_axis_ticks.key());
         key = Self::hash_u64(key, self.y2_axis_ticks.key());
+        key = Self::hash_u64(key, self.y3_axis_ticks.key());
+        key = Self::hash_u64(key, self.y4_axis_ticks.key());
         key = Self::hash_u64(key, self.x_scale.key());
         key = Self::hash_u64(key, self.y_scale.key());
         key = Self::hash_u64(key, self.y2_scale.key());
+        key = Self::hash_u64(key, self.y3_scale.key());
+        key = Self::hash_u64(key, self.y4_scale.key());
         key = Self::hash_u64(key, self.x_axis_labels.key());
         key = Self::hash_u64(key, self.y_axis_labels.key());
         key = Self::hash_u64(key, self.y2_axis_labels.key());
+        key = Self::hash_u64(key, self.y3_axis_labels.key());
+        key = Self::hash_u64(key, self.y4_axis_labels.key());
         key = Self::hash_u64(key, u64::from(self.show_y2_axis));
+        key = Self::hash_u64(key, u64::from(self.show_y3_axis));
+        key = Self::hash_u64(key, u64::from(self.show_y4_axis));
 
         if self.axis_label_key == Some(key) {
             return false;
@@ -3767,6 +4485,12 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         let y2_span = view_bounds_y2
             .map(|b| axis_span(b.y_min, b.y_max, self.y2_scale))
             .unwrap_or(0.0);
+        let y3_span = view_bounds_y3
+            .map(|b| axis_span(b.y_min, b.y_max, self.y3_scale))
+            .unwrap_or(0.0);
+        let y4_span = view_bounds_y4
+            .map(|b| axis_span(b.y_min, b.y_max, self.y4_scale))
+            .unwrap_or(0.0);
 
         let constraints_x = TextConstraints {
             max_width: None,
@@ -3782,6 +4506,18 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         };
         let constraints_y2 = TextConstraints {
             max_width: Some(layout.y_axis_right.size.width),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+        let constraints_y3 = TextConstraints {
+            max_width: Some(layout.y_axis_right2.size.width),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+        let constraints_y4 = TextConstraints {
+            max_width: Some(layout.y_axis_right3.size.width),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
@@ -3944,6 +4680,36 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         } else {
             Vec::new()
         };
+        self.axis_ticks_y3 = if self.show_y3_axis {
+            if let Some(y3_bounds) = view_bounds_y3 {
+                axis_ticks_scaled(
+                    y3_bounds.y_min,
+                    y3_bounds.y_max,
+                    y_tick_count,
+                    self.y3_axis_ticks,
+                    self.y3_scale,
+                )
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        };
+        self.axis_ticks_y4 = if self.show_y4_axis {
+            if let Some(y4_bounds) = view_bounds_y4 {
+                axis_ticks_scaled(
+                    y4_bounds.y_min,
+                    y4_bounds.y_max,
+                    y_tick_count,
+                    self.y4_axis_ticks,
+                    self.y4_scale,
+                )
+            } else {
+                Vec::new()
+            }
+        } else {
+            Vec::new()
+        };
 
         for v in x_ticks {
             let text = if self.x_scale == AxisScale::Log10 && self.x_axis_labels.is_number_auto() {
@@ -3979,6 +4745,34 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             }
         }
 
+        if self.show_y3_axis {
+            let y3_ticks = self.axis_ticks_y3.clone();
+            for v in y3_ticks {
+                let text =
+                    if self.y3_scale == AxisScale::Log10 && self.y3_axis_labels.is_number_auto() {
+                        log10_tick_label_or_empty(v)
+                    } else {
+                        self.y3_axis_labels.format(v, y3_span)
+                    };
+                let prepared = self.prepare_text(cx.services, &text, &style, constraints_y3);
+                self.axis_labels_y3.push(prepared);
+            }
+        }
+
+        if self.show_y4_axis {
+            let y4_ticks = self.axis_ticks_y4.clone();
+            for v in y4_ticks {
+                let text =
+                    if self.y4_scale == AxisScale::Log10 && self.y4_axis_labels.is_number_auto() {
+                        log10_tick_label_or_empty(v)
+                    } else {
+                        self.y4_axis_labels.format(v, y4_span)
+                    };
+                let prepared = self.prepare_text(cx.services, &text, &style, constraints_y4);
+                self.axis_labels_y4.push(prepared);
+            }
+        }
+
         self.axis_label_key = Some(key);
 
         // Axis thickness auto-fit: expand the axis gaps to fit the largest tick label.
@@ -3988,7 +4782,9 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
         let content_w = layout.plot.size.width.0
             + layout.y_axis_left.size.width.0
-            + layout.y_axis_right.size.width.0;
+            + layout.y_axis_right.size.width.0
+            + layout.y_axis_right2.size.width.0
+            + layout.y_axis_right3.size.width.0;
         let content_h = layout.plot.size.height.0 + layout.x_axis.size.height.0;
 
         let max_y_label_w = self
@@ -4001,6 +4797,16 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             .iter()
             .map(|t| t.metrics.size.width.0)
             .fold(0.0f32, f32::max);
+        let max_y3_label_w = self
+            .axis_labels_y3
+            .iter()
+            .map(|t| t.metrics.size.width.0)
+            .fold(0.0f32, f32::max);
+        let max_y4_label_w = self
+            .axis_labels_y4
+            .iter()
+            .map(|t| t.metrics.size.width.0)
+            .fold(0.0f32, f32::max);
         let max_x_label_h = self
             .axis_labels_x
             .iter()
@@ -4010,6 +4816,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         let desired_y = (max_y_label_w + 8.0).max(min_axis);
         let desired_x = (max_x_label_h + 6.0).max(min_axis);
         let desired_y2 = (max_y2_label_w + 8.0).max(min_axis);
+        let desired_y3 = (max_y3_label_w + 8.0).max(min_axis);
+        let desired_y4 = (max_y4_label_w + 8.0).max(min_axis);
 
         // Prevent axes from consuming the majority of the plot area in degenerate cases.
         let cap_y = (content_w * 0.5).max(min_axis);
@@ -4018,6 +4826,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         let next_y = desired_y.min(cap_y);
         let next_x = desired_x.min(cap_x);
         let next_y2 = desired_y2.min(cap_y);
+        let next_y3 = desired_y3.min(cap_y);
+        let next_y4 = desired_y4.min(cap_y);
 
         if next_y.is_finite() && next_y > self.y_axis_thickness.0 + 0.5 {
             self.y_axis_thickness = Px(next_y);
@@ -4026,6 +4836,20 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         if self.show_y2_axis && next_y2.is_finite() && next_y2 > self.y_axis_right_thickness.0 + 0.5
         {
             self.y_axis_right_thickness = Px(next_y2);
+            changed = true;
+        }
+        if self.show_y3_axis
+            && next_y3.is_finite()
+            && next_y3 > self.y_axis_right2_thickness.0 + 0.5
+        {
+            self.y_axis_right2_thickness = Px(next_y3);
+            changed = true;
+        }
+        if self.show_y4_axis
+            && next_y4.is_finite()
+            && next_y4 > self.y_axis_right3_thickness.0 + 0.5
+        {
+            self.y_axis_right3_thickness = Px(next_y4);
             changed = true;
         }
         if next_x.is_finite() && next_x > self.x_axis_thickness.0 + 0.5 {
@@ -4125,6 +4949,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         s.view_bounds = None;
                         s.view_y2_is_auto = true;
                         s.view_bounds_y2 = None;
+                        s.view_y3_is_auto = true;
+                        s.view_bounds_y3 = None;
+                        s.view_y4_is_auto = true;
+                        s.view_bounds_y4 = None;
                         s.linked_cursor_x = None;
                         s.hidden_series.clear();
                         s.pinned_series = None;
@@ -4214,12 +5042,20 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 button,
                 modifiers,
             }) => {
-                let (y_axis_gap, y_axis_right_gap, x_axis_gap) = self.axis_gaps();
+                let (
+                    y_axis_gap,
+                    y_axis_right_gap,
+                    y_axis_right2_gap,
+                    y_axis_right3_gap,
+                    x_axis_gap,
+                ) = self.axis_gaps();
                 let layout = PlotLayout::from_bounds(
                     cx.bounds,
                     self.style.padding,
                     y_axis_gap,
                     y_axis_right_gap,
+                    y_axis_right2_gap,
+                    y_axis_right3_gap,
                     x_axis_gap,
                 );
                 if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
@@ -4346,12 +5182,20 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             cx.release_pointer_capture();
                         }
 
-                        let (y_axis_gap, y_axis_right_gap, x_axis_gap) = self.axis_gaps();
+                        let (
+                            y_axis_gap,
+                            y_axis_right_gap,
+                            y_axis_right2_gap,
+                            y_axis_right3_gap,
+                            x_axis_gap,
+                        ) = self.axis_gaps();
                         let layout = PlotLayout::from_bounds(
                             cx.bounds,
                             self.style.padding,
                             y_axis_gap,
                             y_axis_right_gap,
+                            y_axis_right2_gap,
+                            y_axis_right3_gap,
                             x_axis_gap,
                         );
                         if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
@@ -4396,12 +5240,20 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             cx.release_pointer_capture();
                         }
 
-                        let (y_axis_gap, y_axis_right_gap, x_axis_gap) = self.axis_gaps();
+                        let (
+                            y_axis_gap,
+                            y_axis_right_gap,
+                            y_axis_right2_gap,
+                            y_axis_right3_gap,
+                            x_axis_gap,
+                        ) = self.axis_gaps();
                         let layout = PlotLayout::from_bounds(
                             cx.bounds,
                             self.style.padding,
                             y_axis_gap,
                             y_axis_right_gap,
+                            y_axis_right2_gap,
+                            y_axis_right3_gap,
                             x_axis_gap,
                         );
                         if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
@@ -4416,7 +5268,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             if w >= 4.0 && h >= 4.0 {
                                 let all_locked = self.lock_x.zoom
                                     && self.lock_y.zoom
-                                    && (!self.show_y2_axis || self.lock_y2.zoom);
+                                    && (!self.show_y2_axis || self.lock_y2.zoom)
+                                    && (!self.show_y3_axis || self.lock_y3.zoom)
+                                    && (!self.show_y4_axis || self.lock_y4.zoom);
                                 if all_locked {
                                     // Axis locks prevent any view change; keep auto-fit state intact.
                                     // The selection rectangle is still useful feedback for users.
@@ -4425,6 +5279,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     let view_bounds = self.current_view_bounds(cx.app, &state);
                                     let view_bounds_y2 =
                                         self.current_view_bounds_y2(cx.app, &state, view_bounds);
+                                    let view_bounds_y3 =
+                                        self.current_view_bounds_y3(cx.app, &state, view_bounds);
+                                    let view_bounds_y4 =
+                                        self.current_view_bounds_y4(cx.app, &state, view_bounds);
                                     if let Some(mut next) = data_rect_from_plot_points_scaled(
                                         view_bounds,
                                         layout.plot.size,
@@ -4443,6 +5301,34 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                                         end,
                                                         self.x_scale,
                                                         self.y2_scale,
+                                                    )
+                                                })
+                                            })
+                                            .flatten();
+                                        let mut next_y3 = (!self.lock_y3.zoom)
+                                            .then(|| {
+                                                view_bounds_y3.and_then(|vb| {
+                                                    data_rect_from_plot_points_scaled(
+                                                        vb,
+                                                        layout.plot.size,
+                                                        start,
+                                                        end,
+                                                        self.x_scale,
+                                                        self.y3_scale,
+                                                    )
+                                                })
+                                            })
+                                            .flatten();
+                                        let mut next_y4 = (!self.lock_y4.zoom)
+                                            .then(|| {
+                                                view_bounds_y4.and_then(|vb| {
+                                                    data_rect_from_plot_points_scaled(
+                                                        vb,
+                                                        layout.plot.size,
+                                                        start,
+                                                        end,
+                                                        self.x_scale,
+                                                        self.y4_scale,
                                                     )
                                                 })
                                             })
@@ -4467,6 +5353,28 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                                     self.y2_scale,
                                                 );
                                             }
+                                            if let (Some(candidate), Some(bounds_y3)) =
+                                                (next_y3.as_mut(), self.read_data_bounds_y3(cx.app))
+                                            {
+                                                *candidate = clamp_view_to_data_scaled(
+                                                    *candidate,
+                                                    bounds_y3,
+                                                    self.style.overscroll_fraction,
+                                                    self.x_scale,
+                                                    self.y3_scale,
+                                                );
+                                            }
+                                            if let (Some(candidate), Some(bounds_y4)) =
+                                                (next_y4.as_mut(), self.read_data_bounds_y4(cx.app))
+                                            {
+                                                *candidate = clamp_view_to_data_scaled(
+                                                    *candidate,
+                                                    bounds_y4,
+                                                    self.style.overscroll_fraction,
+                                                    self.x_scale,
+                                                    self.y4_scale,
+                                                );
+                                            }
                                         }
 
                                         next = apply_axis_locks(
@@ -4482,6 +5390,26 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                                     *candidate,
                                                     self.lock_x.zoom,
                                                     self.lock_y2.zoom,
+                                                );
+                                            }
+                                        }
+                                        if let Some(vb_y3) = view_bounds_y3 {
+                                            if let Some(candidate) = next_y3.as_mut() {
+                                                *candidate = apply_axis_locks(
+                                                    vb_y3,
+                                                    *candidate,
+                                                    self.lock_x.zoom,
+                                                    self.lock_y3.zoom,
+                                                );
+                                            }
+                                        }
+                                        if let Some(vb_y4) = view_bounds_y4 {
+                                            if let Some(candidate) = next_y4.as_mut() {
+                                                *candidate = apply_axis_locks(
+                                                    vb_y4,
+                                                    *candidate,
+                                                    self.lock_x.zoom,
+                                                    self.lock_y4.zoom,
                                                 );
                                             }
                                         }
@@ -4502,6 +5430,24 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                                 self.y2_constraints,
                                             );
                                         }
+                                        if let Some(candidate) = next_y3.as_mut() {
+                                            *candidate = constrain_view_bounds_scaled(
+                                                *candidate,
+                                                self.x_scale,
+                                                self.y3_scale,
+                                                self.x_constraints,
+                                                self.y3_constraints,
+                                            );
+                                        }
+                                        if let Some(candidate) = next_y4.as_mut() {
+                                            *candidate = constrain_view_bounds_scaled(
+                                                *candidate,
+                                                self.x_scale,
+                                                self.y4_scale,
+                                                self.x_constraints,
+                                                self.y4_constraints,
+                                            );
+                                        }
 
                                         let primary_changed = next != view_bounds;
                                         let y2_changed = next_y2
@@ -4510,8 +5456,24 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                             .unwrap_or(
                                                 next_y2.is_some() && view_bounds_y2.is_none(),
                                             );
+                                        let y3_changed = next_y3
+                                            .zip(view_bounds_y3)
+                                            .map(|(next, prev)| next != prev)
+                                            .unwrap_or(
+                                                next_y3.is_some() && view_bounds_y3.is_none(),
+                                            );
+                                        let y4_changed = next_y4
+                                            .zip(view_bounds_y4)
+                                            .map(|(next, prev)| next != prev)
+                                            .unwrap_or(
+                                                next_y4.is_some() && view_bounds_y4.is_none(),
+                                            );
                                         let show_y2_axis = self.show_y2_axis;
                                         let lock_y2_axis = self.lock_y2.zoom;
+                                        let show_y3_axis = self.show_y3_axis;
+                                        let lock_y3_axis = self.lock_y3.zoom;
+                                        let show_y4_axis = self.show_y4_axis;
+                                        let lock_y4_axis = self.lock_y4.zoom;
                                         let _ = self.update_plot_state(cx.app, |s| {
                                             if primary_changed {
                                                 s.view_is_auto = false;
@@ -4524,6 +5486,22 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                             {
                                                 s.view_y2_is_auto = false;
                                                 s.view_bounds_y2 = next_y2;
+                                            }
+                                            if show_y3_axis
+                                                && !lock_y3_axis
+                                                && y3_changed
+                                                && next_y3.is_some()
+                                            {
+                                                s.view_y3_is_auto = false;
+                                                s.view_bounds_y3 = next_y3;
+                                            }
+                                            if show_y4_axis
+                                                && !lock_y4_axis
+                                                && y4_changed
+                                                && next_y4.is_some()
+                                            {
+                                                s.view_y4_is_auto = false;
+                                                s.view_bounds_y4 = next_y4;
                                             }
                                         });
                                     }
@@ -4554,12 +5532,20 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 delta,
                 modifiers,
             }) => {
-                let (y_axis_gap, y_axis_right_gap, x_axis_gap) = self.axis_gaps();
+                let (
+                    y_axis_gap,
+                    y_axis_right_gap,
+                    y_axis_right2_gap,
+                    y_axis_right3_gap,
+                    x_axis_gap,
+                ) = self.axis_gaps();
                 let layout = PlotLayout::from_bounds(
                     cx.bounds,
                     self.style.padding,
                     y_axis_gap,
                     y_axis_right_gap,
+                    y_axis_right2_gap,
+                    y_axis_right3_gap,
                     x_axis_gap,
                 );
                 if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
@@ -4591,6 +5577,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let mut zoom_x = zoom_x_raw;
                 let mut zoom_y1 = zoom_y_raw;
                 let mut zoom_y2 = zoom_y_raw;
+                let mut zoom_y3 = zoom_y_raw;
+                let mut zoom_y4 = zoom_y_raw;
 
                 if self.lock_x.zoom {
                     zoom_x = 1.0;
@@ -4601,14 +5589,25 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 if self.lock_y2.zoom {
                     zoom_y2 = 1.0;
                 }
+                if self.lock_y3.zoom {
+                    zoom_y3 = 1.0;
+                }
+                if self.lock_y4.zoom {
+                    zoom_y4 = 1.0;
+                }
 
-                if zoom_x == 1.0 && zoom_y1 == 1.0 && (!self.show_y2_axis || zoom_y2 == 1.0) {
+                let no_right_zoom = (!self.show_y2_axis || zoom_y2 == 1.0)
+                    && (!self.show_y3_axis || zoom_y3 == 1.0)
+                    && (!self.show_y4_axis || zoom_y4 == 1.0);
+                if zoom_x == 1.0 && zoom_y1 == 1.0 && no_right_zoom {
                     return;
                 }
 
                 let state = self.read_plot_state(cx.app);
                 let view_bounds = self.current_view_bounds(cx.app, &state);
                 let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
+                let view_bounds_y3 = self.current_view_bounds_y3(cx.app, &state, view_bounds);
+                let view_bounds_y4 = self.current_view_bounds_y4(cx.app, &state, view_bounds);
                 let local = local_from_absolute(layout.plot.origin, *position);
                 let Some(next) = zoom_view_at_px_scaled(
                     view_bounds,
@@ -4632,6 +5631,36 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 zoom_y2,
                                 self.x_scale,
                                 self.y2_scale,
+                            )
+                        })
+                    })
+                    .flatten();
+                let mut next_y3 = (!self.lock_y3.zoom)
+                    .then(|| {
+                        view_bounds_y3.and_then(|vb| {
+                            zoom_view_at_px_scaled(
+                                vb,
+                                layout.plot.size,
+                                local,
+                                zoom_x,
+                                zoom_y3,
+                                self.x_scale,
+                                self.y3_scale,
+                            )
+                        })
+                    })
+                    .flatten();
+                let mut next_y4 = (!self.lock_y4.zoom)
+                    .then(|| {
+                        view_bounds_y4.and_then(|vb| {
+                            zoom_view_at_px_scaled(
+                                vb,
+                                layout.plot.size,
+                                local,
+                                zoom_x,
+                                zoom_y4,
+                                self.x_scale,
+                                self.y4_scale,
                             )
                         })
                     })
@@ -4660,12 +5689,42 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             self.y2_scale,
                         );
                     }
+                    if let (Some(candidate), Some(bounds_y3)) =
+                        (next_y3.as_mut(), self.read_data_bounds_y3(cx.app))
+                    {
+                        *candidate = clamp_view_to_data_scaled(
+                            *candidate,
+                            bounds_y3,
+                            self.style.overscroll_fraction,
+                            self.x_scale,
+                            self.y3_scale,
+                        );
+                    }
+                    if let (Some(candidate), Some(bounds_y4)) =
+                        (next_y4.as_mut(), self.read_data_bounds_y4(cx.app))
+                    {
+                        *candidate = clamp_view_to_data_scaled(
+                            *candidate,
+                            bounds_y4,
+                            self.style.overscroll_fraction,
+                            self.x_scale,
+                            self.y4_scale,
+                        );
+                    }
                 }
 
                 next = apply_axis_locks(view_bounds, next, self.lock_x.zoom, self.lock_y.zoom);
                 if let (Some(vb_y2), Some(candidate)) = (view_bounds_y2, next_y2.as_mut()) {
                     *candidate =
                         apply_axis_locks(vb_y2, *candidate, self.lock_x.zoom, self.lock_y2.zoom);
+                }
+                if let (Some(vb_y3), Some(candidate)) = (view_bounds_y3, next_y3.as_mut()) {
+                    *candidate =
+                        apply_axis_locks(vb_y3, *candidate, self.lock_x.zoom, self.lock_y3.zoom);
+                }
+                if let (Some(vb_y4), Some(candidate)) = (view_bounds_y4, next_y4.as_mut()) {
+                    *candidate =
+                        apply_axis_locks(vb_y4, *candidate, self.lock_x.zoom, self.lock_y4.zoom);
                 }
 
                 next = constrain_view_bounds_scaled(
@@ -4684,14 +5743,44 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         self.y2_constraints,
                     );
                 }
+                if let Some(candidate) = next_y3.as_mut() {
+                    *candidate = constrain_view_bounds_scaled(
+                        *candidate,
+                        self.x_scale,
+                        self.y3_scale,
+                        self.x_constraints,
+                        self.y3_constraints,
+                    );
+                }
+                if let Some(candidate) = next_y4.as_mut() {
+                    *candidate = constrain_view_bounds_scaled(
+                        *candidate,
+                        self.x_scale,
+                        self.y4_scale,
+                        self.x_constraints,
+                        self.y4_constraints,
+                    );
+                }
 
                 let primary_changed = next != view_bounds;
                 let y2_changed = next_y2
                     .zip(view_bounds_y2)
                     .map(|(next, prev)| next != prev)
                     .unwrap_or(next_y2.is_some() && view_bounds_y2.is_none());
+                let y3_changed = next_y3
+                    .zip(view_bounds_y3)
+                    .map(|(next, prev)| next != prev)
+                    .unwrap_or(next_y3.is_some() && view_bounds_y3.is_none());
+                let y4_changed = next_y4
+                    .zip(view_bounds_y4)
+                    .map(|(next, prev)| next != prev)
+                    .unwrap_or(next_y4.is_some() && view_bounds_y4.is_none());
                 let show_y2_axis = self.show_y2_axis;
                 let lock_y2_axis = self.lock_y2.zoom;
+                let show_y3_axis = self.show_y3_axis;
+                let lock_y3_axis = self.lock_y3.zoom;
+                let show_y4_axis = self.show_y4_axis;
+                let lock_y4_axis = self.lock_y4.zoom;
                 let _ = self.update_plot_state(cx.app, |s| {
                     if primary_changed {
                         s.view_is_auto = false;
@@ -4701,6 +5790,14 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         s.view_y2_is_auto = false;
                         s.view_bounds_y2 = next_y2;
                     }
+                    if show_y3_axis && !lock_y3_axis && y3_changed && next_y3.is_some() {
+                        s.view_y3_is_auto = false;
+                        s.view_bounds_y3 = next_y3;
+                    }
+                    if show_y4_axis && !lock_y4_axis && y4_changed && next_y4.is_some() {
+                        s.view_y4_is_auto = false;
+                        s.view_bounds_y4 = next_y4;
+                    }
                 });
                 cx.request_focus(cx.node);
                 cx.invalidate_self(Invalidation::Paint);
@@ -4708,12 +5805,20 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 cx.stop_propagation();
             }
             Event::Pointer(PointerEvent::Move { position, .. }) => {
-                let (y_axis_gap, y_axis_right_gap, x_axis_gap) = self.axis_gaps();
+                let (
+                    y_axis_gap,
+                    y_axis_right_gap,
+                    y_axis_right2_gap,
+                    y_axis_right3_gap,
+                    x_axis_gap,
+                ) = self.axis_gaps();
                 let layout = PlotLayout::from_bounds(
                     cx.bounds,
                     self.style.padding,
                     y_axis_gap,
                     y_axis_right_gap,
+                    y_axis_right2_gap,
+                    y_axis_right3_gap,
                     x_axis_gap,
                 );
                 if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
@@ -4792,8 +5897,13 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let dx_px = if self.lock_x.pan { 0.0 } else { dx_px_raw };
                     let dy_px_y1 = if self.lock_y.pan { 0.0 } else { dy_px_raw };
                     let dy_px_y2 = if self.lock_y2.pan { 0.0 } else { dy_px_raw };
+                    let dy_px_y3 = if self.lock_y3.pan { 0.0 } else { dy_px_raw };
+                    let dy_px_y4 = if self.lock_y4.pan { 0.0 } else { dy_px_raw };
 
-                    if dx_px == 0.0 && dy_px_y1 == 0.0 && (!self.show_y2_axis || dy_px_y2 == 0.0) {
+                    let no_right_pan = (!self.show_y2_axis || dy_px_y2 == 0.0)
+                        && (!self.show_y3_axis || dy_px_y3 == 0.0)
+                        && (!self.show_y4_axis || dy_px_y4 == 0.0);
+                    if dx_px == 0.0 && dy_px_y1 == 0.0 && no_right_pan {
                         self.pan_last_pos = Some(*position);
                         cx.stop_propagation();
                         return;
@@ -4802,6 +5912,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let state = self.read_plot_state(cx.app);
                     let view_bounds = self.current_view_bounds(cx.app, &state);
                     let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
+                    let view_bounds_y3 = self.current_view_bounds_y3(cx.app, &state, view_bounds);
+                    let view_bounds_y4 = self.current_view_bounds_y4(cx.app, &state, view_bounds);
                     let Some(next) = pan_view_by_px_scaled(
                         view_bounds,
                         layout.plot.size,
@@ -4822,6 +5934,34 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     dy_px_y2,
                                     self.x_scale,
                                     self.y2_scale,
+                                )
+                            })
+                        })
+                        .flatten();
+                    let mut next_y3 = (!self.lock_y3.pan)
+                        .then(|| {
+                            view_bounds_y3.and_then(|vb| {
+                                pan_view_by_px_scaled(
+                                    vb,
+                                    layout.plot.size,
+                                    dx_px,
+                                    dy_px_y3,
+                                    self.x_scale,
+                                    self.y3_scale,
+                                )
+                            })
+                        })
+                        .flatten();
+                    let mut next_y4 = (!self.lock_y4.pan)
+                        .then(|| {
+                            view_bounds_y4.and_then(|vb| {
+                                pan_view_by_px_scaled(
+                                    vb,
+                                    layout.plot.size,
+                                    dx_px,
+                                    dy_px_y4,
+                                    self.x_scale,
+                                    self.y4_scale,
                                 )
                             })
                         })
@@ -4850,12 +5990,42 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 self.y2_scale,
                             );
                         }
+                        if let (Some(candidate), Some(bounds_y3)) =
+                            (next_y3.as_mut(), self.read_data_bounds_y3(cx.app))
+                        {
+                            *candidate = clamp_view_to_data_scaled(
+                                *candidate,
+                                bounds_y3,
+                                self.style.overscroll_fraction,
+                                self.x_scale,
+                                self.y3_scale,
+                            );
+                        }
+                        if let (Some(candidate), Some(bounds_y4)) =
+                            (next_y4.as_mut(), self.read_data_bounds_y4(cx.app))
+                        {
+                            *candidate = clamp_view_to_data_scaled(
+                                *candidate,
+                                bounds_y4,
+                                self.style.overscroll_fraction,
+                                self.x_scale,
+                                self.y4_scale,
+                            );
+                        }
                     }
 
                     next = apply_axis_locks(view_bounds, next, self.lock_x.pan, self.lock_y.pan);
                     if let (Some(vb_y2), Some(candidate)) = (view_bounds_y2, next_y2.as_mut()) {
                         *candidate =
                             apply_axis_locks(vb_y2, *candidate, self.lock_x.pan, self.lock_y2.pan);
+                    }
+                    if let (Some(vb_y3), Some(candidate)) = (view_bounds_y3, next_y3.as_mut()) {
+                        *candidate =
+                            apply_axis_locks(vb_y3, *candidate, self.lock_x.pan, self.lock_y3.pan);
+                    }
+                    if let (Some(vb_y4), Some(candidate)) = (view_bounds_y4, next_y4.as_mut()) {
+                        *candidate =
+                            apply_axis_locks(vb_y4, *candidate, self.lock_x.pan, self.lock_y4.pan);
                     }
 
                     next = constrain_view_bounds_scaled(
@@ -4874,14 +6044,44 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             self.y2_constraints,
                         );
                     }
+                    if let Some(candidate) = next_y3.as_mut() {
+                        *candidate = constrain_view_bounds_scaled(
+                            *candidate,
+                            self.x_scale,
+                            self.y3_scale,
+                            self.x_constraints,
+                            self.y3_constraints,
+                        );
+                    }
+                    if let Some(candidate) = next_y4.as_mut() {
+                        *candidate = constrain_view_bounds_scaled(
+                            *candidate,
+                            self.x_scale,
+                            self.y4_scale,
+                            self.x_constraints,
+                            self.y4_constraints,
+                        );
+                    }
 
                     let primary_changed = next != view_bounds;
                     let y2_changed = next_y2
                         .zip(view_bounds_y2)
                         .map(|(next, prev)| next != prev)
                         .unwrap_or(next_y2.is_some() && view_bounds_y2.is_none());
+                    let y3_changed = next_y3
+                        .zip(view_bounds_y3)
+                        .map(|(next, prev)| next != prev)
+                        .unwrap_or(next_y3.is_some() && view_bounds_y3.is_none());
+                    let y4_changed = next_y4
+                        .zip(view_bounds_y4)
+                        .map(|(next, prev)| next != prev)
+                        .unwrap_or(next_y4.is_some() && view_bounds_y4.is_none());
                     let show_y2_axis = self.show_y2_axis;
                     let lock_y2_axis = self.lock_y2.pan;
+                    let show_y3_axis = self.show_y3_axis;
+                    let lock_y3_axis = self.lock_y3.pan;
+                    let show_y4_axis = self.show_y4_axis;
+                    let lock_y4_axis = self.lock_y4.pan;
                     let _ = self.update_plot_state(cx.app, |s| {
                         if primary_changed {
                             s.view_is_auto = false;
@@ -4890,6 +6090,14 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         if show_y2_axis && !lock_y2_axis && y2_changed && next_y2.is_some() {
                             s.view_y2_is_auto = false;
                             s.view_bounds_y2 = next_y2;
+                        }
+                        if show_y3_axis && !lock_y3_axis && y3_changed && next_y3.is_some() {
+                            s.view_y3_is_auto = false;
+                            s.view_bounds_y3 = next_y3;
+                        }
+                        if show_y4_axis && !lock_y4_axis && y4_changed && next_y4.is_some() {
+                            s.view_y4_is_auto = false;
+                            s.view_bounds_y4 = next_y4;
                         }
                     });
                     self.pan_last_pos = Some(*position);
@@ -4915,6 +6123,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let state = self.read_plot_state(cx.app);
                     let view_bounds = self.current_view_bounds(cx.app, &state);
                     let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
+                    let view_bounds_y3 = self.current_view_bounds_y3(cx.app, &state, view_bounds);
+                    let view_bounds_y4 = self.current_view_bounds_y4(cx.app, &state, view_bounds);
                     let hidden = &state.hidden_series;
                     let pinned = state.pinned_series;
 
@@ -4931,9 +6141,13 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     plot_size: layout.plot.size,
                                     view_bounds,
                                     view_bounds_y2,
+                                    view_bounds_y3,
+                                    view_bounds_y4,
                                     x_scale: self.x_scale,
                                     y_scale: self.y_scale,
                                     y2_scale: self.y2_scale,
+                                    y3_scale: self.y3_scale,
+                                    y4_scale: self.y4_scale,
                                     scale_factor,
                                     local,
                                     style: self.style,
@@ -4958,12 +6172,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let state = self.read_plot_state(cx.app);
                 let view_bounds = self.current_view_bounds(cx.app, &state);
                 let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
+                let view_bounds_y3 = self.current_view_bounds_y3(cx.app, &state, view_bounds);
+                let view_bounds_y4 = self.current_view_bounds_y4(cx.app, &state, view_bounds);
                 self.publish_current_output_snapshot(
                     cx.app,
                     layout,
                     &state,
                     view_bounds,
                     view_bounds_y2,
+                    view_bounds_y3,
+                    view_bounds_y4,
                 );
             }
             _ => {}
@@ -5038,6 +6256,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         let min_axis = self.style.axis_gap;
         self.x_axis_thickness = Px(self.x_axis_thickness.0.max(min_axis.0));
         self.y_axis_thickness = Px(self.y_axis_thickness.0.max(min_axis.0));
+        if self.show_y2_axis {
+            self.y_axis_right_thickness = Px(self.y_axis_right_thickness.0.max(min_axis.0));
+        }
+        if self.show_y3_axis {
+            self.y_axis_right2_thickness = Px(self.y_axis_right2_thickness.0.max(min_axis.0));
+        }
+        if self.show_y4_axis {
+            self.y_axis_right3_thickness = Px(self.y_axis_right3_thickness.0.max(min_axis.0));
+        }
 
         // Layout can depend on text metrics (axis thickness). Converge in up to two passes.
         let mut layout = PlotLayout::from_bounds(
@@ -5045,11 +6272,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             self.style.padding,
             self.y_axis_thickness,
             self.y_axis_right_thickness,
+            self.y_axis_right2_thickness,
+            self.y_axis_right3_thickness,
             self.x_axis_thickness,
         );
         let state = self.read_plot_state(cx.app);
         let view_bounds = self.current_view_bounds(cx.app, &state);
         let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
+        let view_bounds_y3 = self.current_view_bounds_y3(cx.app, &state, view_bounds);
+        let view_bounds_y4 = self.current_view_bounds_y4(cx.app, &state, view_bounds);
 
         // Axis labels can expand axis thickness; keep plot-local interaction points stable by
         // shifting stored coordinates when the plot origin moves.
@@ -5059,6 +6290,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 layout,
                 view_bounds,
                 view_bounds_y2,
+                view_bounds_y3,
+                view_bounds_y4,
                 theme.revision,
                 font_stack_key,
             );
@@ -5071,6 +6304,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 self.style.padding,
                 self.y_axis_thickness,
                 self.y_axis_right_thickness,
+                self.y_axis_right2_thickness,
+                self.y_axis_right3_thickness,
                 self.x_axis_thickness,
             );
 
@@ -5106,7 +6341,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             layout = next_layout;
         }
 
-        self.publish_current_output_snapshot(cx.app, layout, &state, view_bounds, view_bounds_y2);
+        self.publish_current_output_snapshot(
+            cx.app,
+            layout,
+            &state,
+            view_bounds,
+            view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
+        );
         self.rebuild_legend_if_needed(cx, theme.revision, font_stack_key);
 
         // Grid + series + hover are clipped to the plot area.
@@ -5187,9 +6430,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 .or(self.hover.map(|h| h.series_id))
                 .or(self.legend_hover);
 
-            for quad in
-                self.rebuild_quads_if_needed(cx, layout.plot, view_bounds, view_bounds_y2, hidden)
-            {
+            for quad in self.rebuild_quads_if_needed(
+                cx,
+                layout.plot,
+                view_bounds,
+                view_bounds_y2,
+                view_bounds_y3,
+                view_bounds_y4,
+                hidden,
+            ) {
                 cx.scene.push(SceneOp::Quad {
                     order: quad.order,
                     rect: offset_rect(quad.rect_local, layout.plot.origin),
@@ -5200,9 +6449,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 });
             }
 
-            for (series_id, path, color) in
-                self.rebuild_paths_if_needed(cx, layout.plot, view_bounds, view_bounds_y2, hidden)
-            {
+            for (series_id, path, color) in self.rebuild_paths_if_needed(
+                cx,
+                layout.plot,
+                view_bounds,
+                view_bounds_y2,
+                view_bounds_y3,
+                view_bounds_y4,
+                hidden,
+            ) {
                 let color = if emphasized {
                     if let Some(emphasized) = emphasized_series
                         && emphasized != series_id
@@ -5513,8 +6768,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
 
-            // Right Y2 axis line.
-            if self.show_y2_axis && layout.y_axis_right.size.width.0 > 0.0 {
+            // Right-side Y axis line (Y2/Y3/Y4 share the plot edge).
+            let any_right_axis = self.show_y2_axis || self.show_y3_axis || self.show_y4_axis;
+            let any_right_width = layout.y_axis_right.size.width.0 > 0.0
+                || layout.y_axis_right2.size.width.0 > 0.0
+                || layout.y_axis_right3.size.width.0 > 0.0;
+            if any_right_axis && any_right_width {
                 let x = Px(layout.plot.origin.x.0 + layout.plot.size.width.0 - 1.0);
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(10),
@@ -5548,6 +6807,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         let x_ticks = &self.axis_ticks_x;
         let y_ticks = &self.axis_ticks_y;
         let y2_ticks = &self.axis_ticks_y2;
+        let y3_ticks = &self.axis_ticks_y3;
+        let y4_ticks = &self.axis_ticks_y4;
 
         let transform_y1 = PlotTransform {
             viewport: layout.plot,
@@ -5560,6 +6821,18 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             data: b,
             x_scale: self.x_scale,
             y_scale: self.y2_scale,
+        });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: layout.plot,
+            data: b,
+            x_scale: self.x_scale,
+            y_scale: self.y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: layout.plot,
+            data: b,
+            x_scale: self.x_scale,
+            y_scale: self.y4_scale,
         });
 
         for (i, label) in self.axis_labels_x.iter().enumerate() {
@@ -5632,6 +6905,62 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let y = Px(y.0.round());
 
                     let origin_x = layout.y_axis_right.origin.x.0 + 4.0;
+                    let top = y.0 - (label.metrics.size.height.0 * 0.5);
+                    let origin = Point::new(Px(origin_x), Px(top + label.metrics.baseline.0));
+
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(11),
+                        origin,
+                        text: label.blob,
+                        color: label_color,
+                    });
+                }
+            }
+        }
+
+        if self.show_y3_axis {
+            if let Some(transform_y3) = transform_y3 {
+                for (i, label) in self.axis_labels_y3.iter().enumerate() {
+                    if label.metrics.size.width.0 <= 0.0 {
+                        continue;
+                    }
+                    let Some(v) = y3_ticks.get(i).copied() else {
+                        continue;
+                    };
+                    let Some(y) = transform_y3.data_y_to_px(v) else {
+                        continue;
+                    };
+                    let y = Px(y.0.round());
+
+                    let origin_x = layout.y_axis_right2.origin.x.0 + 4.0;
+                    let top = y.0 - (label.metrics.size.height.0 * 0.5);
+                    let origin = Point::new(Px(origin_x), Px(top + label.metrics.baseline.0));
+
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(11),
+                        origin,
+                        text: label.blob,
+                        color: label_color,
+                    });
+                }
+            }
+        }
+
+        if self.show_y4_axis {
+            if let Some(transform_y4) = transform_y4 {
+                for (i, label) in self.axis_labels_y4.iter().enumerate() {
+                    if label.metrics.size.width.0 <= 0.0 {
+                        continue;
+                    }
+                    let Some(v) = y4_ticks.get(i).copied() else {
+                        continue;
+                    };
+                    let Some(y) = transform_y4.data_y_to_px(v) else {
+                        continue;
+                    };
+                    let y = Px(y.0.round());
+
+                    let origin_x = layout.y_axis_right3.origin.x.0 + 4.0;
                     let top = y.0 - (label.metrics.size.height.0 * 0.5);
                     let origin = Point::new(Px(origin_x), Px(top + label.metrics.baseline.0));
 
@@ -5742,15 +7071,26 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let y_text = row
                     .y
                     .filter(|y| y.is_finite())
-                    .map(|y| {
-                        if row.y_axis == YAxis::Right && self.show_y2_axis {
+                    .map(|y| match row.y_axis {
+                        YAxis::Right if self.show_y2_axis => {
                             let span = view_bounds_y2
                                 .map(|b| (b.y_max - b.y_min).abs())
                                 .unwrap_or(y_span);
                             self.y2_axis_labels.format(y, span)
-                        } else {
-                            self.tooltip_y_labels.format(y, y_span)
                         }
+                        YAxis::Right2 if self.show_y3_axis => {
+                            let span = view_bounds_y3
+                                .map(|b| (b.y_max - b.y_min).abs())
+                                .unwrap_or(y_span);
+                            self.y3_axis_labels.format(y, span)
+                        }
+                        YAxis::Right3 if self.show_y4_axis => {
+                            let span = view_bounds_y4
+                                .map(|b| (b.y_max - b.y_min).abs())
+                                .unwrap_or(y_span);
+                            self.y4_axis_labels.format(y, span)
+                        }
+                        _ => self.tooltip_y_labels.format(y, y_span),
                     })
                     .unwrap_or_else(|| "NA".to_string());
                 text.push_str(&format!("\n{}: y={y_text}", row.label));
@@ -5926,6 +7266,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             .map(|b| (b.y_max - b.y_min).abs())
                             .unwrap_or(y_span);
                         self.y2_axis_labels.format(hover.data.y, span)
+                    } else if y_axis == YAxis::Right2 && self.show_y3_axis {
+                        let span = view_bounds_y3
+                            .map(|b| (b.y_max - b.y_min).abs())
+                            .unwrap_or(y_span);
+                        self.y3_axis_labels.format(hover.data.y, span)
+                    } else if y_axis == YAxis::Right3 && self.show_y4_axis {
+                        let span = view_bounds_y4
+                            .map(|b| (b.y_max - b.y_min).abs())
+                            .unwrap_or(y_span);
+                        self.y4_axis_labels.format(hover.data.y, span)
                     } else {
                         self.tooltip_y_labels.format(hover.data.y, y_span)
                     };
@@ -5993,15 +7343,26 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         let y_text = row
                             .y
                             .filter(|y| y.is_finite())
-                            .map(|y| {
-                                if row.y_axis == YAxis::Right && self.show_y2_axis {
+                            .map(|y| match row.y_axis {
+                                YAxis::Right if self.show_y2_axis => {
                                     let span = view_bounds_y2
                                         .map(|b| (b.y_max - b.y_min).abs())
                                         .unwrap_or(y_span);
                                     self.y2_axis_labels.format(y, span)
-                                } else {
-                                    self.tooltip_y_labels.format(y, y_span)
                                 }
+                                YAxis::Right2 if self.show_y3_axis => {
+                                    let span = view_bounds_y3
+                                        .map(|b| (b.y_max - b.y_min).abs())
+                                        .unwrap_or(y_span);
+                                    self.y3_axis_labels.format(y, span)
+                                }
+                                YAxis::Right3 if self.show_y4_axis => {
+                                    let span = view_bounds_y4
+                                        .map(|b| (b.y_max - b.y_min).abs())
+                                        .unwrap_or(y_span);
+                                    self.y4_axis_labels.format(y, span)
+                                }
+                                _ => self.tooltip_y_labels.format(y, y_span),
                             })
                             .unwrap_or_else(|| "NA".to_string());
                         text.push_str(&format!("\n{}: y={y_text}", row.label));
@@ -6068,15 +7429,26 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         let y_text = row
                             .y
                             .filter(|y| y.is_finite())
-                            .map(|y| {
-                                if row.y_axis == YAxis::Right && self.show_y2_axis {
+                            .map(|y| match row.y_axis {
+                                YAxis::Right if self.show_y2_axis => {
                                     let span = view_bounds_y2
                                         .map(|b| (b.y_max - b.y_min).abs())
                                         .unwrap_or(y_span);
                                     self.y2_axis_labels.format(y, span)
-                                } else {
-                                    self.tooltip_y_labels.format(y, y_span)
                                 }
+                                YAxis::Right2 if self.show_y3_axis => {
+                                    let span = view_bounds_y3
+                                        .map(|b| (b.y_max - b.y_min).abs())
+                                        .unwrap_or(y_span);
+                                    self.y3_axis_labels.format(y, span)
+                                }
+                                YAxis::Right3 if self.show_y4_axis => {
+                                    let span = view_bounds_y4
+                                        .map(|b| (b.y_max - b.y_min).abs())
+                                        .unwrap_or(y_span);
+                                    self.y4_axis_labels.format(y, span)
+                                }
+                                _ => self.tooltip_y_labels.format(y, y_span),
                             })
                             .unwrap_or_else(|| "NA".to_string());
                         text.push_str(&format!("\n{}: y={y_text}", row.label));
@@ -6212,6 +7584,14 @@ impl PlotLayer for LinePlotLayer {
         model.data_bounds_y2
     }
 
+    fn data_bounds_y3(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y3
+    }
+
+    fn data_bounds_y4(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y4
+    }
+
     fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
         model
             .series
@@ -6297,9 +7677,13 @@ impl PlotLayer for LinePlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             style,
             hidden,
         } = args;
@@ -6309,6 +7693,15 @@ impl PlotLayer for LinePlotLayer {
         let viewport_h_bits = plot.size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series = &model.series;
         let series_count = series.len();
@@ -6325,11 +7718,7 @@ impl PlotLayer for LinePlotLayer {
         let cached_ok = self.cached_paths.len() == series_count
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
-                    let expected_view_key = if s.y_axis == YAxis::Right {
-                        view_key_y2.unwrap_or(view_key_y1)
-                    } else {
-                        view_key_y1
-                    };
+                    let expected_view_key = view_key_for_axis(s.y_axis);
 
                     s.id == c.series_id && c.view_key == expected_view_key
                 }) && c.model_revision == model_revision
@@ -6373,6 +7762,25 @@ impl PlotLayer for LinePlotLayer {
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
 
         let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
             width: style.stroke_width,
@@ -6387,11 +7795,7 @@ impl PlotLayer for LinePlotLayer {
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
             if hidden.contains(&series_id) {
-                let view_key = if s.y_axis == YAxis::Right {
-                    view_key_y2.unwrap_or(view_key_y1)
-                } else {
-                    view_key_y1
-                };
+                let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
                     id: None,
                     series_id,
@@ -6406,14 +7810,8 @@ impl PlotLayer for LinePlotLayer {
                 continue;
             }
 
-            let (transform, view_key) = if s.y_axis == YAxis::Right {
-                (
-                    transform_y2.unwrap_or(transform_y1),
-                    view_key_y2.unwrap_or(view_key_y1),
-                )
-            } else {
-                (transform_y1, view_key_y1)
-            };
+            let transform = transform_for_axis(s.y_axis);
+            let view_key = view_key_for_axis(s.y_axis);
 
             let (commands, samples) =
                 decimate_polyline(transform, &*s.data, cx.scale_factor, series_id);
@@ -6477,6 +7875,14 @@ impl PlotLayer for ScatterPlotLayer {
         model.data_bounds_y2
     }
 
+    fn data_bounds_y3(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y3
+    }
+
+    fn data_bounds_y4(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y4
+    }
+
     fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
         model
             .series
@@ -6562,9 +7968,13 @@ impl PlotLayer for ScatterPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             style,
             hidden,
         } = args;
@@ -6574,6 +7984,15 @@ impl PlotLayer for ScatterPlotLayer {
         let viewport_h_bits = plot.size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series = &model.series;
         let series_count = series.len();
@@ -6590,11 +8009,7 @@ impl PlotLayer for ScatterPlotLayer {
         let cached_ok = self.cached_paths.len() == series_count
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
-                    let expected_view_key = if s.y_axis == YAxis::Right {
-                        view_key_y2.unwrap_or(view_key_y1)
-                    } else {
-                        view_key_y1
-                    };
+                    let expected_view_key = view_key_for_axis(s.y_axis);
                     s.id == c.series_id && c.view_key == expected_view_key
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
@@ -6637,6 +8052,25 @@ impl PlotLayer for ScatterPlotLayer {
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
 
         let marker_radius = Px((style.stroke_width.0 * 3.0).clamp(2.0, 6.0));
         let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
@@ -6652,11 +8086,7 @@ impl PlotLayer for ScatterPlotLayer {
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
             if hidden.contains(&series_id) {
-                let view_key = if s.y_axis == YAxis::Right {
-                    view_key_y2.unwrap_or(view_key_y1)
-                } else {
-                    view_key_y1
-                };
+                let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
                     id: None,
                     series_id,
@@ -6671,16 +8101,8 @@ impl PlotLayer for ScatterPlotLayer {
                 continue;
             }
 
-            let transform = if s.y_axis == YAxis::Right {
-                transform_y2.unwrap_or(transform_y1)
-            } else {
-                transform_y1
-            };
-            let view_key = if s.y_axis == YAxis::Right {
-                view_key_y2.unwrap_or(view_key_y1)
-            } else {
-                view_key_y1
-            };
+            let transform = transform_for_axis(s.y_axis);
+            let view_key = view_key_for_axis(s.y_axis);
 
             let samples = decimate_points(transform, &*s.data, cx.scale_factor, series_id);
             let commands = scatter_marker_commands(&samples, marker_radius);
@@ -6744,6 +8166,14 @@ impl PlotLayer for ErrorBarsPlotLayer {
         model.data_bounds_y2
     }
 
+    fn data_bounds_y3(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y3
+    }
+
+    fn data_bounds_y4(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y4
+    }
+
     fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
         model
             .series
@@ -6829,9 +8259,13 @@ impl PlotLayer for ErrorBarsPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             style,
             hidden,
         } = args;
@@ -6841,6 +8275,15 @@ impl PlotLayer for ErrorBarsPlotLayer {
         let viewport_h_bits = plot.size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series = &model.series;
         let series_count = series.len();
@@ -6857,11 +8300,7 @@ impl PlotLayer for ErrorBarsPlotLayer {
         let cached_ok = self.cached_paths.len() == series_count
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
-                    let expected_view_key = if s.y_axis == YAxis::Right {
-                        view_key_y2.unwrap_or(view_key_y1)
-                    } else {
-                        view_key_y1
-                    };
+                    let expected_view_key = view_key_for_axis(s.y_axis);
                     s.id == c.series_id && c.view_key == expected_view_key
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
@@ -6904,6 +8343,25 @@ impl PlotLayer for ErrorBarsPlotLayer {
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
 
         let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
             width: style.stroke_width,
@@ -6918,11 +8376,7 @@ impl PlotLayer for ErrorBarsPlotLayer {
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
             if hidden.contains(&series_id) {
-                let view_key = if s.y_axis == YAxis::Right {
-                    view_key_y2.unwrap_or(view_key_y1)
-                } else {
-                    view_key_y1
-                };
+                let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
                     id: None,
                     series_id,
@@ -6937,16 +8391,8 @@ impl PlotLayer for ErrorBarsPlotLayer {
                 continue;
             }
 
-            let transform = if s.y_axis == YAxis::Right {
-                transform_y2.unwrap_or(transform_y1)
-            } else {
-                transform_y1
-            };
-            let view_key = if s.y_axis == YAxis::Right {
-                view_key_y2.unwrap_or(view_key_y1)
-            } else {
-                view_key_y1
-            };
+            let transform = transform_for_axis(s.y_axis);
+            let view_key = view_key_for_axis(s.y_axis);
 
             let samples = decimate_points(transform, &*s.data, cx.scale_factor, series_id);
             let commands = error_bars_commands(s, transform, &samples);
@@ -7008,6 +8454,14 @@ impl PlotLayer for CandlestickPlotLayer {
 
     fn data_bounds_y2(model: &Self::Model) -> Option<DataRect> {
         model.data_bounds_y2
+    }
+
+    fn data_bounds_y3(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y3
+    }
+
+    fn data_bounds_y4(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y4
     }
 
     fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
@@ -7095,9 +8549,13 @@ impl PlotLayer for CandlestickPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             style,
             hidden,
         } = args;
@@ -7107,6 +8565,15 @@ impl PlotLayer for CandlestickPlotLayer {
         let viewport_h_bits = plot.size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series = &model.series;
         let series_count = series.len();
@@ -7129,11 +8596,7 @@ impl PlotLayer for CandlestickPlotLayer {
         let cached_ok = self.cached_paths.len() == series_count
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
-                    let expected_view_key = if s.y_axis == YAxis::Right {
-                        view_key_y2.unwrap_or(view_key_y1)
-                    } else {
-                        view_key_y1
-                    };
+                    let expected_view_key = view_key_for_axis(s.y_axis);
                     s.id == c.series_id && c.view_key == expected_view_key
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
@@ -7210,6 +8673,31 @@ impl PlotLayer for CandlestickPlotLayer {
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
+        let view_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_bounds,
+            YAxis::Right => view_bounds_y2.unwrap_or(view_bounds),
+            YAxis::Right2 => view_bounds_y3.unwrap_or(view_bounds),
+            YAxis::Right3 => view_bounds_y4.unwrap_or(view_bounds),
+        };
 
         let wick_style = PathStyle::Stroke(fret_core::StrokeStyle {
             width: style.stroke_width,
@@ -7226,11 +8714,7 @@ impl PlotLayer for CandlestickPlotLayer {
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
             if hidden.contains(&series_id) {
-                let view_key = if s.y_axis == YAxis::Right {
-                    view_key_y2.unwrap_or(view_key_y1)
-                } else {
-                    view_key_y1
-                };
+                let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedCandlestickPath {
                     wick_id: None,
                     up_id: None,
@@ -7247,21 +8731,9 @@ impl PlotLayer for CandlestickPlotLayer {
                 continue;
             }
 
-            let transform = if s.y_axis == YAxis::Right {
-                transform_y2.unwrap_or(transform_y1)
-            } else {
-                transform_y1
-            };
-            let view_key = if s.y_axis == YAxis::Right {
-                view_key_y2.unwrap_or(view_key_y1)
-            } else {
-                view_key_y1
-            };
-            let view = if s.y_axis == YAxis::Right {
-                view_bounds_y2.unwrap_or(view_bounds)
-            } else {
-                view_bounds
-            };
+            let transform = transform_for_axis(s.y_axis);
+            let view_key = view_key_for_axis(s.y_axis);
+            let view = view_for_axis(s.y_axis);
 
             let samples = decimate_samples(transform, &*s.close_series, cx.scale_factor, series_id);
             let (wick_cmds, up_cmds, down_cmds) =
@@ -7338,9 +8810,13 @@ impl PlotLayer for CandlestickPlotLayer {
             plot_size,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             scale_factor,
             local,
             style,
@@ -7357,6 +8833,15 @@ impl PlotLayer for CandlestickPlotLayer {
         let viewport_h_bits = plot_size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series: Vec<(SeriesId, YAxis, &dyn SeriesData)> = model
             .series
@@ -7372,11 +8857,7 @@ impl PlotLayer for CandlestickPlotLayer {
         let cached_ok = self.cached_paths.len() == series_count
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|(id, axis, _data)| {
-                    let expected_view_key = if *axis == YAxis::Right {
-                        view_key_y2.unwrap_or(view_key_y1)
-                    } else {
-                        view_key_y1
-                    };
+                    let expected_view_key = view_key_for_axis(*axis);
                     *id == c.series_id && c.view_key == expected_view_key
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
@@ -7425,6 +8906,25 @@ impl PlotLayer for CandlestickPlotLayer {
                 x_scale,
                 y_scale: y2_scale,
             });
+            let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+                data: b,
+                x_scale,
+                y_scale: y3_scale,
+            });
+            let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+                data: b,
+                x_scale,
+                y_scale: y4_scale,
+            });
+
+            let transform_for_axis = |axis: YAxis| match axis {
+                YAxis::Left => transform_y1,
+                YAxis::Right => transform_y2.unwrap_or(transform_y1),
+                YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+                YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+            };
 
             for (series_id, axis, data) in series.iter().copied() {
                 if hidden.contains(&series_id) {
@@ -7435,11 +8935,7 @@ impl PlotLayer for CandlestickPlotLayer {
                 {
                     continue;
                 }
-                let transform = if axis == YAxis::Right {
-                    transform_y2.unwrap_or(transform_y1)
-                } else {
-                    transform_y1
-                };
+                let transform = transform_for_axis(axis);
                 for sample in decimate_samples(transform, data, scale_factor, series_id) {
                     consider_sample(sample);
                 }
@@ -7481,6 +8977,14 @@ impl PlotLayer for StairsPlotLayer {
 
     fn data_bounds_y2(model: &Self::Model) -> Option<DataRect> {
         model.data_bounds_y2
+    }
+
+    fn data_bounds_y3(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y3
+    }
+
+    fn data_bounds_y4(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y4
     }
 
     fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
@@ -7568,9 +9072,13 @@ impl PlotLayer for StairsPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             style,
             hidden,
         } = args;
@@ -7580,6 +9088,15 @@ impl PlotLayer for StairsPlotLayer {
         let viewport_h_bits = plot.size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series = &model.series;
         let series_count = series.len();
@@ -7596,11 +9113,7 @@ impl PlotLayer for StairsPlotLayer {
         let cached_ok = self.cached_paths.len() == series_count
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
-                    let expected_view_key = if s.y_axis == YAxis::Right {
-                        view_key_y2.unwrap_or(view_key_y1)
-                    } else {
-                        view_key_y1
-                    };
+                    let expected_view_key = view_key_for_axis(s.y_axis);
                     s.id == c.series_id && c.view_key == expected_view_key
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
@@ -7643,6 +9156,25 @@ impl PlotLayer for StairsPlotLayer {
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
 
         let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
             width: style.stroke_width,
@@ -7657,11 +9189,7 @@ impl PlotLayer for StairsPlotLayer {
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
             if hidden.contains(&series_id) {
-                let view_key = if s.y_axis == YAxis::Right {
-                    view_key_y2.unwrap_or(view_key_y1)
-                } else {
-                    view_key_y1
-                };
+                let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
                     id: None,
                     series_id,
@@ -7676,16 +9204,8 @@ impl PlotLayer for StairsPlotLayer {
                 continue;
             }
 
-            let transform = if s.y_axis == YAxis::Right {
-                transform_y2.unwrap_or(transform_y1)
-            } else {
-                transform_y1
-            };
-            let view_key = if s.y_axis == YAxis::Right {
-                view_key_y2.unwrap_or(view_key_y1)
-            } else {
-                view_key_y1
-            };
+            let transform = transform_for_axis(s.y_axis);
+            let view_key = view_key_for_axis(s.y_axis);
 
             let (polyline, samples) =
                 decimate_polyline(transform, &*s.data, cx.scale_factor, series_id);
@@ -7749,6 +9269,14 @@ impl PlotLayer for BarsPlotLayer {
 
     fn data_bounds_y2(model: &Self::Model) -> Option<DataRect> {
         model.data_bounds_y2
+    }
+
+    fn data_bounds_y3(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y3
+    }
+
+    fn data_bounds_y4(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y4
     }
 
     fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
@@ -7836,9 +9364,13 @@ impl PlotLayer for BarsPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             style,
             hidden,
         } = args;
@@ -7848,6 +9380,15 @@ impl PlotLayer for BarsPlotLayer {
         let viewport_h_bits = plot.size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series = &model.series;
         let series_count = series.len();
@@ -7864,11 +9405,7 @@ impl PlotLayer for BarsPlotLayer {
         let cached_ok = self.cached_paths.len() == series_count
             && self.cached_paths.iter().enumerate().all(|(i, c)| {
                 series.get(i).is_some_and(|s| {
-                    let expected_view_key = if s.y_axis == YAxis::Right {
-                        view_key_y2.unwrap_or(view_key_y1)
-                    } else {
-                        view_key_y1
-                    };
+                    let expected_view_key = view_key_for_axis(s.y_axis);
                     s.id == c.series_id && c.view_key == expected_view_key
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
@@ -7911,6 +9448,25 @@ impl PlotLayer for BarsPlotLayer {
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
 
         let path_style = PathStyle::Fill(fret_core::FillStyle::default());
         let constraints = PathConstraints {
@@ -7923,11 +9479,7 @@ impl PlotLayer for BarsPlotLayer {
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
             if hidden.contains(&series_id) {
-                let view_key = if s.y_axis == YAxis::Right {
-                    view_key_y2.unwrap_or(view_key_y1)
-                } else {
-                    view_key_y1
-                };
+                let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedPath {
                     id: None,
                     series_id,
@@ -7942,16 +9494,8 @@ impl PlotLayer for BarsPlotLayer {
                 continue;
             }
 
-            let transform = if s.y_axis == YAxis::Right {
-                transform_y2.unwrap_or(transform_y1)
-            } else {
-                transform_y1
-            };
-            let view_key = if s.y_axis == YAxis::Right {
-                view_key_y2.unwrap_or(view_key_y1)
-            } else {
-                view_key_y1
-            };
+            let transform = transform_for_axis(s.y_axis);
+            let view_key = view_key_for_axis(s.y_axis);
 
             let samples = decimate_points(transform, &*s.data, cx.scale_factor, series_id);
             let commands = bars_path_commands(transform, &samples, s.bar_width, s.baseline);
@@ -8317,6 +9861,14 @@ impl PlotLayer for AreaPlotLayer {
         model.data_bounds_y2
     }
 
+    fn data_bounds_y3(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y3
+    }
+
+    fn data_bounds_y4(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y4
+    }
+
     fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
         model
             .series
@@ -8402,9 +9954,13 @@ impl PlotLayer for AreaPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             style,
             hidden,
         } = args;
@@ -8414,6 +9970,15 @@ impl PlotLayer for AreaPlotLayer {
         let viewport_h_bits = plot.size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series = &model.series;
         let series_count = series.len();
@@ -8442,11 +10007,7 @@ impl PlotLayer for AreaPlotLayer {
                     && c.viewport_h_bits == viewport_h_bits
                     && c.stroke_width == style.stroke_width
                     && {
-                        let expected_view_key = if s.y_axis == YAxis::Right {
-                            view_key_y2.unwrap_or(view_key_y1)
-                        } else {
-                            view_key_y1
-                        };
+                        let expected_view_key = view_key_for_axis(s.y_axis);
                         c.view_key == expected_view_key
                     }
                     && c.baseline_bits == s.baseline.to_bits()
@@ -8502,6 +10063,18 @@ impl PlotLayer for AreaPlotLayer {
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
 
         let fill_style = PathStyle::Fill(fret_core::FillStyle::default());
         let stroke_style = PathStyle::Stroke(fret_core::StrokeStyle {
@@ -8517,11 +10090,7 @@ impl PlotLayer for AreaPlotLayer {
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
             if hidden.contains(&series_id) {
-                let view_key = if s.y_axis == YAxis::Right {
-                    view_key_y2.unwrap_or(view_key_y1)
-                } else {
-                    view_key_y1
-                };
+                let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedAreaPath {
                     fill_id: None,
                     stroke_id: None,
@@ -8539,14 +10108,23 @@ impl PlotLayer for AreaPlotLayer {
                 continue;
             }
 
-            let (transform, view_bounds, view_key) = if s.y_axis == YAxis::Right {
-                (
+            let (transform, view_bounds, view_key) = match s.y_axis {
+                YAxis::Left => (transform_y1, view_bounds, view_key_y1),
+                YAxis::Right => (
                     transform_y2.unwrap_or(transform_y1),
                     view_bounds_y2.unwrap_or(view_bounds),
                     view_key_y2.unwrap_or(view_key_y1),
-                )
-            } else {
-                (transform_y1, view_bounds, view_key_y1)
+                ),
+                YAxis::Right2 => (
+                    transform_y3.unwrap_or(transform_y1),
+                    view_bounds_y3.unwrap_or(view_bounds),
+                    view_key_y3.unwrap_or(view_key_y1),
+                ),
+                YAxis::Right3 => (
+                    transform_y4.unwrap_or(transform_y1),
+                    view_bounds_y4.unwrap_or(view_bounds),
+                    view_key_y4.unwrap_or(view_key_y1),
+                ),
             };
 
             let (line_commands, samples) =
@@ -8623,9 +10201,13 @@ impl PlotLayer for AreaPlotLayer {
             plot_size,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             scale_factor,
             local,
             style,
@@ -8642,6 +10224,15 @@ impl PlotLayer for AreaPlotLayer {
         let viewport_h_bits = plot_size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series = &model.series;
         let series_count = series.len();
@@ -8661,11 +10252,7 @@ impl PlotLayer for AreaPlotLayer {
                     && c.viewport_h_bits == viewport_h_bits
                     && c.stroke_width == style.stroke_width
                     && {
-                        let expected_view_key = if s.y_axis == YAxis::Right {
-                            view_key_y2.unwrap_or(view_key_y1)
-                        } else {
-                            view_key_y1
-                        };
+                        let expected_view_key = view_key_for_axis(s.y_axis);
                         c.view_key == expected_view_key
                     }
             });
@@ -8682,6 +10269,25 @@ impl PlotLayer for AreaPlotLayer {
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
 
         let mut best: Option<(PlotHover, f32)> = None;
 
@@ -8695,11 +10301,7 @@ impl PlotLayer for AreaPlotLayer {
                 {
                     continue;
                 }
-                let transform = if s.y_axis == YAxis::Right {
-                    transform_y2.unwrap_or(transform_y1)
-                } else {
-                    transform_y1
-                };
+                let transform = transform_for_axis(s.y_axis);
 
                 let mut prev: Option<SamplePoint> = None;
                 for sp in cached.samples.iter().copied() {
@@ -8720,11 +10322,7 @@ impl PlotLayer for AreaPlotLayer {
                 {
                     continue;
                 }
-                let transform = if s.y_axis == YAxis::Right {
-                    transform_y2.unwrap_or(transform_y1)
-                } else {
-                    transform_y1
-                };
+                let transform = transform_for_axis(s.y_axis);
                 let samples = decimate_samples(transform, &*s.data, scale_factor, s.id);
                 let mut prev: Option<SamplePoint> = None;
                 for sp in samples.into_iter() {
@@ -8761,6 +10359,14 @@ impl PlotLayer for ShadedPlotLayer {
 
     fn data_bounds_y2(model: &Self::Model) -> Option<DataRect> {
         model.data_bounds_y2
+    }
+
+    fn data_bounds_y3(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y3
+    }
+
+    fn data_bounds_y4(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y4
     }
 
     fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
@@ -8857,9 +10463,13 @@ impl PlotLayer for ShadedPlotLayer {
             plot,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             style,
             hidden,
         } = args;
@@ -8869,6 +10479,15 @@ impl PlotLayer for ShadedPlotLayer {
         let viewport_h_bits = plot.size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series = &model.series;
         let series_count = series.len();
@@ -8900,11 +10519,7 @@ impl PlotLayer for ShadedPlotLayer {
                     && c.viewport_h_bits == viewport_h_bits
                     && c.stroke_width == style.stroke_width
                     && {
-                        let expected_view_key = if s.y_axis == YAxis::Right {
-                            view_key_y2.unwrap_or(view_key_y1)
-                        } else {
-                            view_key_y1
-                        };
+                        let expected_view_key = view_key_for_axis(s.y_axis);
                         c.view_key == expected_view_key
                     }
                     && c.fill_alpha_bits == s.fill_alpha.to_bits()
@@ -8965,6 +10580,25 @@ impl PlotLayer for ShadedPlotLayer {
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
 
         let fill_style = PathStyle::Fill(fret_core::FillStyle::default());
         let stroke_style = PathStyle::Stroke(fret_core::StrokeStyle {
@@ -8980,11 +10614,7 @@ impl PlotLayer for ShadedPlotLayer {
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
             if hidden.contains(&series_id) {
-                let view_key = if s.y_axis == YAxis::Right {
-                    view_key_y2.unwrap_or(view_key_y1)
-                } else {
-                    view_key_y1
-                };
+                let view_key = view_key_for_axis(s.y_axis);
                 self.cached_paths.push(CachedShadedPath {
                     fill_id: None,
                     upper_stroke_id: None,
@@ -9002,14 +10632,8 @@ impl PlotLayer for ShadedPlotLayer {
                 continue;
             }
 
-            let (transform, view_key) = if s.y_axis == YAxis::Right {
-                (
-                    transform_y2.unwrap_or(transform_y1),
-                    view_key_y2.unwrap_or(view_key_y1),
-                )
-            } else {
-                (transform_y1, view_key_y1)
-            };
+            let transform = transform_for_axis(s.y_axis);
+            let view_key = view_key_for_axis(s.y_axis);
 
             let (fill_commands, upper_line_commands, lower_line_commands, samples) =
                 decimate_shaded_band(transform, &*s.upper, &*s.lower, cx.scale_factor, series_id);
@@ -9093,9 +10717,13 @@ impl PlotLayer for ShadedPlotLayer {
             plot_size,
             view_bounds,
             view_bounds_y2,
+            view_bounds_y3,
+            view_bounds_y4,
             x_scale,
             y_scale,
             y2_scale,
+            y3_scale,
+            y4_scale,
             scale_factor,
             local,
             style,
@@ -9112,6 +10740,15 @@ impl PlotLayer for ShadedPlotLayer {
         let viewport_h_bits = plot_size.height.0.to_bits();
         let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
         let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+        let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+        let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+        let view_key_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => view_key_y1,
+            YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+            YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+            YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+        };
 
         let series = &model.series;
         let series_count = series.len();
@@ -9131,11 +10768,7 @@ impl PlotLayer for ShadedPlotLayer {
                     && c.viewport_h_bits == viewport_h_bits
                     && c.stroke_width == style.stroke_width
                     && {
-                        let expected_view_key = if s.y_axis == YAxis::Right {
-                            view_key_y2.unwrap_or(view_key_y1)
-                        } else {
-                            view_key_y1
-                        };
+                        let expected_view_key = view_key_for_axis(s.y_axis);
                         c.view_key == expected_view_key
                     }
             });
@@ -9152,6 +10785,25 @@ impl PlotLayer for ShadedPlotLayer {
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
 
         let mut best: Option<(PlotHover, f32)> = None;
 
@@ -9166,11 +10818,7 @@ impl PlotLayer for ShadedPlotLayer {
                     continue;
                 }
 
-                let transform = if s.y_axis == YAxis::Right {
-                    transform_y2.unwrap_or(transform_y1)
-                } else {
-                    transform_y1
-                };
+                let transform = transform_for_axis(s.y_axis);
 
                 let mut prev: Option<SamplePoint> = None;
                 for sp in cached.samples.iter().copied() {
@@ -9192,11 +10840,7 @@ impl PlotLayer for ShadedPlotLayer {
                     continue;
                 }
 
-                let transform = if s.y_axis == YAxis::Right {
-                    transform_y2.unwrap_or(transform_y1)
-                } else {
-                    transform_y1
-                };
+                let transform = transform_for_axis(s.y_axis);
                 let (_fill, _upper, _lower, samples) =
                     decimate_shaded_band(transform, &*s.upper, &*s.lower, scale_factor, s.id);
                 let mut prev: Option<SamplePoint> = None;
@@ -9347,9 +10991,13 @@ fn hit_test_polyline_series_data(
         plot_size,
         view_bounds,
         view_bounds_y2,
+        view_bounds_y3,
+        view_bounds_y4,
         x_scale,
         y_scale,
         y2_scale,
+        y3_scale,
+        y4_scale,
         scale_factor,
         local,
         style,
@@ -9366,6 +11014,15 @@ fn hit_test_polyline_series_data(
     let viewport_h_bits = plot_size.height.0.to_bits();
     let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
     let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+    let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+    let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+    let view_key_for_axis = |axis: YAxis| match axis {
+        YAxis::Left => view_key_y1,
+        YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+        YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+        YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+    };
 
     let series_count = series.len();
     if series_count == 0 {
@@ -9375,11 +11032,7 @@ fn hit_test_polyline_series_data(
     let cached_ok = cached_paths.len() == series_count
         && cached_paths.iter().enumerate().all(|(i, c)| {
             series.get(i).is_some_and(|(id, axis, _data)| {
-                let expected_view_key = if *axis == YAxis::Right {
-                    view_key_y2.unwrap_or(view_key_y1)
-                } else {
-                    view_key_y1
-                };
+                let expected_view_key = view_key_for_axis(*axis);
                 *id == c.series_id && c.view_key == expected_view_key
             }) && c.model_revision == model_revision
                 && c.scale_factor_bits == scale_factor_bits
@@ -9400,6 +11053,25 @@ fn hit_test_polyline_series_data(
         x_scale,
         y_scale: y2_scale,
     });
+    let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+        viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+        data: b,
+        x_scale,
+        y_scale: y3_scale,
+    });
+    let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+        viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+        data: b,
+        x_scale,
+        y_scale: y4_scale,
+    });
+
+    let transform_for_axis = |axis: YAxis| match axis {
+        YAxis::Left => transform_y1,
+        YAxis::Right => transform_y2.unwrap_or(transform_y1),
+        YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+        YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+    };
 
     let mut best: Option<(PlotHover, f32)> = None;
 
@@ -9413,11 +11085,7 @@ fn hit_test_polyline_series_data(
             {
                 continue;
             }
-            let transform = if axis == YAxis::Right {
-                transform_y2.unwrap_or(transform_y1)
-            } else {
-                transform_y1
-            };
+            let transform = transform_for_axis(axis);
             debug_assert_eq!(cached.series_id, series_id);
 
             let mut prev: Option<SamplePoint> = None;
@@ -9515,9 +11183,13 @@ fn hit_test_series_data(
         plot_size,
         view_bounds,
         view_bounds_y2,
+        view_bounds_y3,
+        view_bounds_y4,
         x_scale,
         y_scale,
         y2_scale,
+        y3_scale,
+        y4_scale,
         scale_factor,
         local,
         style,
@@ -9534,6 +11206,15 @@ fn hit_test_series_data(
     let viewport_h_bits = plot_size.height.0.to_bits();
     let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
     let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+    let view_key_y3 = view_bounds_y3.map(|b| data_rect_key_scaled(b, x_scale, y3_scale));
+    let view_key_y4 = view_bounds_y4.map(|b| data_rect_key_scaled(b, x_scale, y4_scale));
+
+    let view_key_for_axis = |axis: YAxis| match axis {
+        YAxis::Left => view_key_y1,
+        YAxis::Right => view_key_y2.unwrap_or(view_key_y1),
+        YAxis::Right2 => view_key_y3.unwrap_or(view_key_y1),
+        YAxis::Right3 => view_key_y4.unwrap_or(view_key_y1),
+    };
 
     let series_count = series.len();
     if series_count == 0 {
@@ -9543,11 +11224,7 @@ fn hit_test_series_data(
     let cached_ok = cached_paths.len() == series_count
         && cached_paths.iter().enumerate().all(|(i, c)| {
             series.get(i).is_some_and(|(id, axis, _data)| {
-                let expected_view_key = if *axis == YAxis::Right {
-                    view_key_y2.unwrap_or(view_key_y1)
-                } else {
-                    view_key_y1
-                };
+                let expected_view_key = view_key_for_axis(*axis);
                 *id == c.series_id && c.view_key == expected_view_key
             }) && c.model_revision == model_revision
                 && c.scale_factor_bits == scale_factor_bits
@@ -9596,6 +11273,25 @@ fn hit_test_series_data(
             x_scale,
             y_scale: y2_scale,
         });
+        let transform_y3 = view_bounds_y3.map(|b| PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: b,
+            x_scale,
+            y_scale: y3_scale,
+        });
+        let transform_y4 = view_bounds_y4.map(|b| PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: b,
+            x_scale,
+            y_scale: y4_scale,
+        });
+
+        let transform_for_axis = |axis: YAxis| match axis {
+            YAxis::Left => transform_y1,
+            YAxis::Right => transform_y2.unwrap_or(transform_y1),
+            YAxis::Right2 => transform_y3.unwrap_or(transform_y1),
+            YAxis::Right3 => transform_y4.unwrap_or(transform_y1),
+        };
 
         for (series_id, axis, data) in series.iter().copied() {
             if hidden.contains(&series_id) {
@@ -9606,11 +11302,7 @@ fn hit_test_series_data(
             {
                 continue;
             }
-            let transform = if axis == YAxis::Right {
-                transform_y2.unwrap_or(transform_y1)
-            } else {
-                transform_y1
-            };
+            let transform = transform_for_axis(axis);
 
             // Fast path for monotonic-X slice-backed series.
             if data.is_sorted_by_x()

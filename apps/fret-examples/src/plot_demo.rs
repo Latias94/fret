@@ -36,6 +36,8 @@ impl PlotDemoDriver {
         let mut series1: Vec<DataPoint> = Vec::with_capacity(n);
         let mut series2: Vec<DataPoint> = Vec::with_capacity(n);
         let mut series3: Vec<DataPoint> = Vec::with_capacity(n);
+        let mut series4: Vec<DataPoint> = Vec::with_capacity(n);
+        let mut series5: Vec<DataPoint> = Vec::with_capacity(n);
 
         let push = |series: &mut Vec<DataPoint>, x: f64, y: f64| {
             if !x.is_finite() || !y.is_finite() {
@@ -66,6 +68,9 @@ impl PlotDemoDriver {
             );
             // A "right axis" series with a very different scale (e.g. amps vs volts).
             push(&mut series3, x, (u * 0.22).sin() * 25.0 + 10.0);
+            // Additional right-side axes (Y3/Y4) to validate multi-axis support.
+            push(&mut series4, x, (u * 0.18).cos() * 250.0 + 500.0);
+            push(&mut series5, x, (u * 0.08).sin() * 1_500.0 + 2_000.0);
         }
 
         let plot = app
@@ -79,6 +84,16 @@ impl PlotDemoDriver {
                     Series::from_points_sorted(series3, true),
                 )
                 .y_axis(YAxis::Right),
+                LineSeries::new(
+                    "signal E (right2)",
+                    Series::from_points_sorted(series4, true),
+                )
+                .y_axis(YAxis::Right2),
+                LineSeries::new(
+                    "signal F (right3)",
+                    Series::from_points_sorted(series5, true),
+                )
+                .y_axis(YAxis::Right3),
             ]));
         let plot_state = app.models_mut().insert(PlotState::default());
         let plot_output = app.models_mut().insert(PlotOutput::default());
@@ -189,6 +204,18 @@ impl WinitAppDriver for PlotDemoDriver {
                         return "NA".to_string();
                     }
                     format!("{v:.1} A")
+                }))
+                .y3_axis_labels(AxisLabelFormatter::custom(0x5941_3303u64, |v, _span| {
+                    if !v.is_finite() {
+                        return "NA".to_string();
+                    }
+                    format!("{v:.0} mA")
+                }))
+                .y4_axis_labels(AxisLabelFormatter::custom(0x5941_3404u64, |v, _span| {
+                    if !v.is_finite() {
+                        return "NA".to_string();
+                    }
+                    format!("{v:.0} Pa")
                 }))
                 .state(state.plot_state.clone())
                 .output(state.plot_output.clone());

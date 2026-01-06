@@ -77,7 +77,7 @@ This contract is documented in ADR 0099.
 - [x] Log axis tick labels (major decades labeled; minor ticks are grid-only by default)
 - [x] Axis formatters (custom label callbacks with stable cache key)
 - [x] Axis thickness auto-fit (avoid clipped labels)
-- [~] Multi-axes (Y2 supported; no Y3/Y4 yet)
+- [x] Multi-axes (Y2/Y3/Y4)
 - [x] Axis lock (lock X/Y pan/zoom)
 - [x] Axis constraints (limits + min/max span)
 

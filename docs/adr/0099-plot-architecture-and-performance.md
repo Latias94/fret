@@ -64,20 +64,21 @@ Series identity must be stable across reordering, filtering, and streaming updat
 This mirrors the ID-based state strategy in `egui_plot` and the label-ID registration model in ImPlot,
 but keeps state local to the widget rather than a global context.
 
-### 2.5) Multi-axis (Y2) is a second view, not a second plot
+### 2.5) Multi-axis (Y2/Y3/Y4) is a second view, not a second plot
 
 To align with common ImPlot usage while keeping contracts portable, multi-axis support is modeled as:
 
-- A per-series axis choice (`YAxis::{Left,Right}`) rather than implicit scaling.
+- A per-series axis choice (`YAxis::{Left,Right,Right2,Right3}`) rather than implicit scaling.
 - A shared X range (pan/zoom in X affects all axes).
-- Independent Y view bounds per axis (`PlotState.view_bounds` and `PlotState.view_bounds_y2`), allowing
-  different scales without distorting the primary Y axis.
+- Independent Y view bounds per axis (`PlotState.view_bounds`, `PlotState.view_bounds_y2`,
+  `PlotState.view_bounds_y3`, `PlotState.view_bounds_y4`), allowing different scales without
+  distorting the primary Y axis.
 
 ### 2.6) Axis scales are explicit (Linear / Log10)
 
 Axis scaling is an explicit, per-axis configuration on the canvas (not hidden inside series data):
 
-- `AxisScale::{Linear,Log10}` is carried by the canvas for X, Y, and Y2.
+- `AxisScale::{Linear,Log10}` is carried by the canvas for X, Y, Y2, Y3, and Y4.
 - `PlotTransform` maps **data space → axis space → pixels** so pan/zoom math and clamping behave
   consistently across scales.
 - Tick generation is scale-aware (log axes always produce log ticks regardless of "nice/linear" hints).
