@@ -352,6 +352,74 @@ impl ComponentsGalleryDriver {
                                             ]
                                         },
                                     ),
+                                    cx.text(Arc::<str>::from(format!(
+                                        "Theme config: {}",
+                                        theme.name
+                                    ))),
+                                    cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(10.0),
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: true,
+                                        },
+                                        |cx| {
+                                            let border = theme.color_required("border");
+                                            let swatches = [
+                                                ("background", theme.color_required("background")),
+                                                ("foreground", theme.color_required("foreground")),
+                                                ("card", theme.color_required("card")),
+                                                ("muted", theme.color_required("muted")),
+                                                ("primary", theme.color_required("primary")),
+                                                ("ring", theme.color_required("ring")),
+                                                ("border", border),
+                                            ];
+
+                                            swatches
+                                                .into_iter()
+                                                .map(|(label, color)| {
+                                                    cx.flex(
+                                                        FlexProps {
+                                                            layout: LayoutStyle::default(),
+                                                            direction: fret_core::Axis::Horizontal,
+                                                            gap: Px(6.0),
+                                                            padding: Edges::all(Px(0.0)),
+                                                            justify: MainAlign::Start,
+                                                            align: CrossAlign::Center,
+                                                            wrap: false,
+                                                        },
+                                                        |cx| {
+                                                            vec![
+                                                                cx.container(
+                                                                    ContainerProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Px(Px(14.0));
+                                                                            layout.size.height =
+                                                                                Length::Px(Px(14.0));
+                                                                            layout
+                                                                        },
+                                                                        background: Some(color),
+                                                                        border: Edges::all(Px(1.0)),
+                                                                        border_color: Some(border),
+                                                                        corner_radii: Corners::all(Px(3.0)),
+                                                                        ..Default::default()
+                                                                    },
+                                                                    |_cx| Vec::new(),
+                                                                ),
+                                                                cx.text(label),
+                                                            ]
+                                                        },
+                                                    )
+                                                })
+                                                .collect()
+                                        },
+                                    ),
                                     cx.container(
                                         ContainerProps {
                                             layout: {
@@ -839,10 +907,23 @@ impl ComponentsGalleryDriver {
                                                                         shadcn::Button::new("HoverCard (hover, not clipped)")
                                                                             .variant(shadcn::ButtonVariant::Outline)
                                                                             .into_element(cx),
-                                                                        shadcn::HoverCardContent::new(vec![
-                                                                            cx.text("HoverCard content (overlay-root)"),
-                                                                            cx.text("Move pointer from trigger to content."),
-                                                                        ])
+                                                                        shadcn::HoverCardContent::new(vec![cx.flex(
+                                                                            FlexProps {
+                                                                                layout: LayoutStyle::default(),
+                                                                                direction: fret_core::Axis::Vertical,
+                                                                                gap: Px(4.0),
+                                                                                padding: Edges::all(Px(0.0)),
+                                                                                justify: MainAlign::Start,
+                                                                                align: CrossAlign::Start,
+                                                                                wrap: false,
+                                                                            },
+                                                                            |cx| {
+                                                                                vec![
+                                                                                    cx.text("HoverCard content (overlay-root)"),
+                                                                                    cx.text("Move pointer from trigger to content."),
+                                                                                ]
+                                                                            },
+                                                                        )])
                                                                         .into_element(cx),
                                                                     )
                                                                     .close_delay_frames(10)
