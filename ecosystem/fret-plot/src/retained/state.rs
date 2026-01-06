@@ -14,6 +14,34 @@ pub struct PlotHoverOutput {
     pub value: Option<f64>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PlotDragPhase {
+    Start,
+    Update,
+    End,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PlotDragOutput {
+    LineX {
+        id: u64,
+        x: f64,
+        phase: PlotDragPhase,
+    },
+    LineY {
+        id: u64,
+        axis: YAxis,
+        y: f64,
+        phase: PlotDragPhase,
+    },
+    Rect {
+        id: u64,
+        axis: YAxis,
+        rect: DataRect,
+        phase: PlotDragPhase,
+    },
+}
+
 /// A caller-owned output snapshot for plot interaction state.
 ///
 /// This is intended for building higher-level behaviors such as linked plots, inspectors, and
@@ -27,6 +55,7 @@ pub struct PlotOutputSnapshot {
     pub cursor: Option<DataPoint>,
     pub hover: Option<PlotHoverOutput>,
     pub query: Option<DataRect>,
+    pub drag: Option<PlotDragOutput>,
 }
 
 /// Plot output state written by the plot widget.
@@ -56,6 +85,7 @@ impl Default for PlotOutput {
                 cursor: None,
                 hover: None,
                 query: None,
+                drag: None,
             },
         }
     }
@@ -181,9 +211,152 @@ impl InfLineY {
 pub struct PlotOverlays {
     pub inf_lines_x: Vec<InfLineX>,
     pub inf_lines_y: Vec<InfLineY>,
+    pub drag_lines_x: Vec<DragLineX>,
+    pub drag_lines_y: Vec<DragLineY>,
+    pub drag_rects: Vec<DragRect>,
     pub tags_x: Vec<TagX>,
     pub tags_y: Vec<TagY>,
     pub text: Vec<PlotText>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DragLineX {
+    pub id: u64,
+    pub x: f64,
+    pub label: Option<String>,
+    pub show_value: bool,
+    pub color: Option<Color>,
+    pub width: Px,
+}
+
+impl DragLineX {
+    pub fn new(id: u64, x: f64) -> Self {
+        Self {
+            id,
+            x,
+            label: None,
+            show_value: true,
+            color: None,
+            width: Px(1.0),
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn show_value(mut self, show: bool) -> Self {
+        self.show_value = show;
+        self
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    pub fn width(mut self, width: Px) -> Self {
+        self.width = width;
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DragLineY {
+    pub id: u64,
+    pub y: f64,
+    pub axis: YAxis,
+    pub label: Option<String>,
+    pub show_value: bool,
+    pub color: Option<Color>,
+    pub width: Px,
+}
+
+impl DragLineY {
+    pub fn new(id: u64, y: f64, axis: YAxis) -> Self {
+        Self {
+            id,
+            y,
+            axis,
+            label: None,
+            show_value: true,
+            color: None,
+            width: Px(1.0),
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn show_value(mut self, show: bool) -> Self {
+        self.show_value = show;
+        self
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    pub fn width(mut self, width: Px) -> Self {
+        self.width = width;
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DragRect {
+    pub id: u64,
+    pub rect: DataRect,
+    pub axis: YAxis,
+    pub label: Option<String>,
+    pub show_value: bool,
+    pub color: Option<Color>,
+    pub border_width: Px,
+    pub fill: Option<Color>,
+}
+
+impl DragRect {
+    pub fn new(id: u64, rect: DataRect, axis: YAxis) -> Self {
+        Self {
+            id,
+            rect,
+            axis,
+            label: None,
+            show_value: false,
+            color: None,
+            border_width: Px(1.0),
+            fill: None,
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn show_value(mut self, show: bool) -> Self {
+        self.show_value = show;
+        self
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    pub fn border_width(mut self, border_width: Px) -> Self {
+        self.border_width = border_width;
+        self
+    }
+
+    pub fn fill(mut self, fill: Color) -> Self {
+        self.fill = Some(fill);
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

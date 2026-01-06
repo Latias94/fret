@@ -346,6 +346,7 @@ mod tests {
             cursor: None,
             hover: None,
             query: None,
+            drag: None,
         };
 
         let r = apply_snapshot_to_plot_state(&mut state, snapshot, PlotLinkPolicy::default());
@@ -385,6 +386,7 @@ mod tests {
             cursor: None,
             hover: None,
             query: None,
+            drag: None,
         };
 
         let _ = apply_snapshot_to_plot_state(&mut state, snapshot, PlotLinkPolicy::default());

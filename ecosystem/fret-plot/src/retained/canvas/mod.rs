@@ -34,7 +34,9 @@ use super::layers::{
     PlotPaintArgs, PlotQuad, SeriesMeta,
 };
 use super::layout::{PlotLayout, PlotRegion};
-use super::state::{PlotHoverOutput, PlotOutput, PlotOutputSnapshot, PlotState};
+use super::state::{
+    PlotDragOutput, PlotDragPhase, PlotHoverOutput, PlotOutput, PlotOutputSnapshot, PlotState,
+};
 use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
@@ -133,6 +135,40 @@ struct AxisLock {
     zoom: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DragRectHandle {
+    Inside,
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum DragCapture {
+    LineX {
+        id: u64,
+        button: MouseButton,
+        offset_x: f64,
+        current_x: f64,
+    },
+    LineY {
+        id: u64,
+        axis: YAxis,
+        button: MouseButton,
+        offset_y: f64,
+        current_y: f64,
+    },
+    Rect {
+        id: u64,
+        axis: YAxis,
+        button: MouseButton,
+        handle: DragRectHandle,
+        offset: DataPoint,
+        current: DataRect,
+    },
+}
+
 #[derive(Debug)]
 pub struct PlotCanvas<L: PlotLayer + 'static> {
     model: Model<L::Model>,
@@ -194,6 +230,8 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     query_drag_button: Option<MouseButton>,
     query_drag_start: Option<Point>,
     query_drag_current: Option<Point>,
+    drag_capture: Option<DragCapture>,
+    drag_output: Option<PlotDragOutput>,
     axis_label_key: Option<u64>,
     axis_ticks_x: Vec<f64>,
     axis_ticks_y: Vec<f64>,
@@ -570,6 +608,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             query_drag_button: None,
             query_drag_start: None,
             query_drag_current: None,
+            drag_capture: None,
+            drag_output: None,
             axis_label_key: None,
             axis_ticks_x: Vec::new(),
             axis_ticks_y: Vec::new(),
@@ -1028,6 +1068,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                     value: h.value,
                 }),
                 query: state.query,
+                drag: self.drag_output,
             },
         );
     }
@@ -1392,6 +1433,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.query_drag_button = None;
                     self.query_drag_start = None;
                     self.query_drag_current = None;
+                    self.drag_capture = None;
+                    self.drag_output = None;
 
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
@@ -1427,6 +1470,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.query_drag_button = None;
                     self.query_drag_start = None;
                     self.query_drag_current = None;
+                    self.drag_capture = None;
+                    self.drag_output = None;
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -1452,6 +1497,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.query_drag_button = None;
                     self.query_drag_start = None;
                     self.query_drag_current = None;
+                    self.drag_capture = None;
+                    self.drag_output = None;
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -1472,7 +1519,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let state = self.read_plot_state(cx.app);
                     let has_active_drag = self.box_zoom_start.is_some()
                         || self.pan_button.is_some()
-                        || self.query_drag_start.is_some();
+                        || self.query_drag_start.is_some()
+                        || self.drag_capture.is_some();
 
                     if has_active_drag {
                         self.pan_button = None;
@@ -1486,6 +1534,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         self.query_drag_button = None;
                         self.query_drag_start = None;
                         self.query_drag_current = None;
+                        self.drag_capture = None;
+                        self.drag_output = None;
                         self.hover = None;
                         if cx.captured == Some(cx.node) {
                             cx.release_pointer_capture();
@@ -1538,6 +1588,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     return;
                 }
 
+                // Clear stale drag output on any new press.
+                self.drag_output = None;
+
                 // Axis lock UI: Ctrl+Click on an axis region toggles pan+zoom lock.
                 if modifiers.ctrl
                     && *button == MouseButton::Left
@@ -1576,6 +1629,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.query_drag_button = None;
                     self.query_drag_start = None;
                     self.query_drag_current = None;
+                    self.drag_capture = None;
+                    self.drag_output = None;
 
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
@@ -1661,6 +1716,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.query_drag_button = None;
                     self.query_drag_start = None;
                     self.query_drag_current = None;
+                    self.drag_capture = None;
+                    self.drag_output = None;
                     if cx.captured == Some(cx.node) {
                         cx.release_pointer_capture();
                     }
@@ -1730,6 +1787,264 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     return;
                 }
 
+                // If the user clicks on a draggable overlay, prefer dragging it over panning.
+                if start_pan && region == Some(PlotRegion::Plot) {
+                    let state = self.read_plot_state(cx.app);
+                    let view_bounds = self.current_view_bounds(cx.app, &state);
+                    let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
+                    let view_bounds_y3 = self.current_view_bounds_y3(cx.app, &state, view_bounds);
+                    let view_bounds_y4 = self.current_view_bounds_y4(cx.app, &state, view_bounds);
+
+                    let local = local_from_absolute(layout.plot.origin, *position);
+                    let threshold = resolved_style.hover_threshold.0.max(1.0);
+
+                    let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+                    let transform_x = PlotTransform {
+                        viewport: local_viewport,
+                        data: view_bounds,
+                        x_scale: self.x_scale,
+                        y_scale: self.y_scale,
+                    };
+                    let transform_for_y_axis = |axis: YAxis| -> Option<PlotTransform> {
+                        match axis {
+                            YAxis::Left => Some(PlotTransform {
+                                viewport: local_viewport,
+                                data: view_bounds,
+                                x_scale: self.x_scale,
+                                y_scale: self.y_scale,
+                            }),
+                            YAxis::Right if self.show_y2_axis => {
+                                view_bounds_y2.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y2_scale,
+                                })
+                            }
+                            YAxis::Right2 if self.show_y3_axis => {
+                                view_bounds_y3.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y3_scale,
+                                })
+                            }
+                            YAxis::Right3 if self.show_y4_axis => {
+                                view_bounds_y4.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y4_scale,
+                                })
+                            }
+                            _ => None,
+                        }
+                    };
+
+                    let mut best: Option<(f32, DragCapture)> = None;
+                    let overlays = &state.overlays;
+
+                    for line in &overlays.drag_lines_x {
+                        if !line.x.is_finite() {
+                            continue;
+                        }
+                        let Some(x_px) = transform_x.data_x_to_px(line.x) else {
+                            continue;
+                        };
+                        let dist = (local.x.0 - x_px.0).abs();
+                        if dist > threshold {
+                            continue;
+                        }
+                        let data = transform_x.px_to_data(local);
+                        if !data.x.is_finite() {
+                            continue;
+                        }
+                        let offset_x = data.x - line.x;
+                        let candidate = DragCapture::LineX {
+                            id: line.id,
+                            button: *button,
+                            offset_x,
+                            current_x: line.x,
+                        };
+                        if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
+                            best = Some((dist, candidate));
+                        }
+                    }
+
+                    for line in &overlays.drag_lines_y {
+                        if !line.y.is_finite() {
+                            continue;
+                        }
+                        let Some(transform) = transform_for_y_axis(line.axis) else {
+                            continue;
+                        };
+                        let Some(y_px) = transform.data_y_to_px(line.y) else {
+                            continue;
+                        };
+                        let dist = (local.y.0 - y_px.0).abs();
+                        if dist > threshold {
+                            continue;
+                        }
+                        let data = transform.px_to_data(local);
+                        if !data.y.is_finite() {
+                            continue;
+                        }
+                        let offset_y = data.y - line.y;
+                        let candidate = DragCapture::LineY {
+                            id: line.id,
+                            axis: line.axis,
+                            button: *button,
+                            offset_y,
+                            current_y: line.y,
+                        };
+                        if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
+                            best = Some((dist, candidate));
+                        }
+                    }
+
+                    for rect in &overlays.drag_rects {
+                        let Some(transform) = transform_for_y_axis(rect.axis) else {
+                            continue;
+                        };
+                        let a = transform.data_to_px(DataPoint {
+                            x: rect.rect.x_min,
+                            y: rect.rect.y_min,
+                        });
+                        let b = transform.data_to_px(DataPoint {
+                            x: rect.rect.x_max,
+                            y: rect.rect.y_max,
+                        });
+                        if !a.x.0.is_finite()
+                            || !a.y.0.is_finite()
+                            || !b.x.0.is_finite()
+                            || !b.y.0.is_finite()
+                        {
+                            continue;
+                        }
+                        let left = a.x.0.min(b.x.0);
+                        let right = a.x.0.max(b.x.0);
+                        let top = a.y.0.min(b.y.0);
+                        let bottom = a.y.0.max(b.y.0);
+
+                        let inside = local.x.0 >= left
+                            && local.x.0 <= right
+                            && local.y.0 >= top
+                            && local.y.0 <= bottom;
+                        if !inside {
+                            continue;
+                        }
+
+                        let dist_left = (local.x.0 - left).abs();
+                        let dist_right = (local.x.0 - right).abs();
+                        let dist_top = (local.y.0 - top).abs();
+                        let dist_bottom = (local.y.0 - bottom).abs();
+
+                        let mut handle = DragRectHandle::Inside;
+                        let mut dist = 0.0f32;
+                        let mut set = |d: f32, h: DragRectHandle| {
+                            if d <= threshold && (handle == DragRectHandle::Inside || d < dist) {
+                                handle = h;
+                                dist = d;
+                            }
+                        };
+                        set(dist_left, DragRectHandle::Left);
+                        set(dist_right, DragRectHandle::Right);
+                        set(dist_top, DragRectHandle::Top);
+                        set(dist_bottom, DragRectHandle::Bottom);
+
+                        let data = transform.px_to_data(local);
+                        if !data.x.is_finite() || !data.y.is_finite() {
+                            continue;
+                        }
+
+                        let offset = match handle {
+                            DragRectHandle::Inside => DataPoint {
+                                x: data.x - rect.rect.x_min,
+                                y: data.y - rect.rect.y_min,
+                            },
+                            DragRectHandle::Left => DataPoint {
+                                x: data.x - rect.rect.x_min,
+                                y: 0.0,
+                            },
+                            DragRectHandle::Right => DataPoint {
+                                x: data.x - rect.rect.x_max,
+                                y: 0.0,
+                            },
+                            DragRectHandle::Top => DataPoint {
+                                x: 0.0,
+                                y: data.y - rect.rect.y_max,
+                            },
+                            DragRectHandle::Bottom => DataPoint {
+                                x: 0.0,
+                                y: data.y - rect.rect.y_min,
+                            },
+                        };
+
+                        let candidate = DragCapture::Rect {
+                            id: rect.id,
+                            axis: rect.axis,
+                            button: *button,
+                            handle,
+                            offset,
+                            current: rect.rect,
+                        };
+                        if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
+                            best = Some((dist, candidate));
+                        }
+                    }
+
+                    if let Some((_dist, capture)) = best {
+                        self.cursor_px = Some(local);
+                        self.hover = None;
+                        self.pan_button = None;
+                        self.pan_target = None;
+                        self.pan_start_pos = None;
+                        self.pan_last_pos = None;
+                        self.box_zoom_start = None;
+                        self.box_zoom_current = None;
+                        self.box_zoom_button = None;
+                        self.box_zoom_required_mods = None;
+                        self.query_drag_button = None;
+                        self.query_drag_start = None;
+                        self.query_drag_current = None;
+
+                        self.drag_output = Some(match capture {
+                            DragCapture::LineX { id, current_x, .. } => PlotDragOutput::LineX {
+                                id,
+                                x: current_x,
+                                phase: PlotDragPhase::Start,
+                            },
+                            DragCapture::LineY {
+                                id,
+                                axis,
+                                current_y,
+                                ..
+                            } => PlotDragOutput::LineY {
+                                id,
+                                axis,
+                                y: current_y,
+                                phase: PlotDragPhase::Start,
+                            },
+                            DragCapture::Rect {
+                                id, axis, current, ..
+                            } => PlotDragOutput::Rect {
+                                id,
+                                axis,
+                                rect: current,
+                                phase: PlotDragPhase::Start,
+                            },
+                        });
+                        self.drag_capture = Some(capture);
+
+                        cx.request_focus(cx.node);
+                        cx.capture_pointer(cx.node);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+
                 self.cursor_px = (region == Some(PlotRegion::Plot))
                     .then(|| local_from_absolute(layout.plot.origin, *position));
                 self.hover = None;
@@ -1747,6 +2062,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.box_zoom_current = None;
                     self.box_zoom_button = None;
                     self.box_zoom_required_mods = None;
+                    self.drag_capture = None;
                 } else if start_box_primary || start_box_alt {
                     let local = local_from_absolute(layout.plot.origin, *position);
                     self.box_zoom_start = Some(local);
@@ -1767,6 +2083,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.query_drag_start = None;
                     self.query_drag_current = None;
                     self.query_drag_button = None;
+                    self.drag_capture = None;
                 } else {
                     self.pan_button = Some(*button);
                     self.pan_target = region;
@@ -1779,6 +2096,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     self.query_drag_start = None;
                     self.query_drag_current = None;
                     self.query_drag_button = None;
+                    self.drag_capture = None;
                 }
 
                 cx.request_focus(cx.node);
@@ -1795,6 +2113,51 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 ..
             }) => {
                 self.last_pointer_pos = Some(*position);
+
+                if let Some(capture) = self.drag_capture
+                    && match capture {
+                        DragCapture::LineX { button: b, .. } => b == *button,
+                        DragCapture::LineY { button: b, .. } => b == *button,
+                        DragCapture::Rect { button: b, .. } => b == *button,
+                    }
+                {
+                    self.drag_capture = None;
+                    self.drag_output = Some(match capture {
+                        DragCapture::LineX { id, current_x, .. } => PlotDragOutput::LineX {
+                            id,
+                            x: current_x,
+                            phase: PlotDragPhase::End,
+                        },
+                        DragCapture::LineY {
+                            id,
+                            axis,
+                            current_y,
+                            ..
+                        } => PlotDragOutput::LineY {
+                            id,
+                            axis,
+                            y: current_y,
+                            phase: PlotDragPhase::End,
+                        },
+                        DragCapture::Rect {
+                            id, axis, current, ..
+                        } => PlotDragOutput::Rect {
+                            id,
+                            axis,
+                            rect: current,
+                            phase: PlotDragPhase::End,
+                        },
+                    });
+
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
                 if self.pan_button == Some(*button)
                     || self.box_zoom_button == Some(*button)
                     || self.query_drag_button == Some(*button)
@@ -2798,6 +3161,162 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     }
                 }
 
+                if let Some(mut capture) = self.drag_capture {
+                    let state = self.read_plot_state(cx.app);
+                    let view_bounds = self.current_view_bounds(cx.app, &state);
+                    let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
+                    let view_bounds_y3 = self.current_view_bounds_y3(cx.app, &state, view_bounds);
+                    let view_bounds_y4 = self.current_view_bounds_y4(cx.app, &state, view_bounds);
+
+                    let local = local_from_absolute(layout.plot.origin, *position);
+                    self.cursor_px = Some(local);
+                    self.hover = None;
+
+                    let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+                    let transform_x = PlotTransform {
+                        viewport: local_viewport,
+                        data: view_bounds,
+                        x_scale: self.x_scale,
+                        y_scale: self.y_scale,
+                    };
+                    let transform_for_y_axis = |axis: YAxis| -> Option<PlotTransform> {
+                        match axis {
+                            YAxis::Left => Some(PlotTransform {
+                                viewport: local_viewport,
+                                data: view_bounds,
+                                x_scale: self.x_scale,
+                                y_scale: self.y_scale,
+                            }),
+                            YAxis::Right if self.show_y2_axis => {
+                                view_bounds_y2.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y2_scale,
+                                })
+                            }
+                            YAxis::Right2 if self.show_y3_axis => {
+                                view_bounds_y3.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y3_scale,
+                                })
+                            }
+                            YAxis::Right3 if self.show_y4_axis => {
+                                view_bounds_y4.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y4_scale,
+                                })
+                            }
+                            _ => None,
+                        }
+                    };
+
+                    match &mut capture {
+                        DragCapture::LineX {
+                            id,
+                            offset_x,
+                            current_x,
+                            ..
+                        } => {
+                            let data = transform_x.px_to_data(local);
+                            if data.x.is_finite() {
+                                *current_x = data.x - *offset_x;
+                                self.drag_output = Some(PlotDragOutput::LineX {
+                                    id: *id,
+                                    x: *current_x,
+                                    phase: PlotDragPhase::Update,
+                                });
+                            }
+                        }
+                        DragCapture::LineY {
+                            id,
+                            axis,
+                            offset_y,
+                            current_y,
+                            ..
+                        } => {
+                            if let Some(transform) = transform_for_y_axis(*axis) {
+                                let data = transform.px_to_data(local);
+                                if data.y.is_finite() {
+                                    *current_y = data.y - *offset_y;
+                                    self.drag_output = Some(PlotDragOutput::LineY {
+                                        id: *id,
+                                        axis: *axis,
+                                        y: *current_y,
+                                        phase: PlotDragPhase::Update,
+                                    });
+                                }
+                            }
+                        }
+                        DragCapture::Rect {
+                            id,
+                            axis,
+                            handle,
+                            offset,
+                            current,
+                            ..
+                        } => {
+                            if let Some(transform) = transform_for_y_axis(*axis) {
+                                let data = transform.px_to_data(local);
+                                if data.x.is_finite() && data.y.is_finite() {
+                                    let mut next = *current;
+                                    match handle {
+                                        DragRectHandle::Inside => {
+                                            let w = current.width();
+                                            let h = current.height();
+                                            next.x_min = data.x - offset.x;
+                                            next.x_max = next.x_min + w;
+                                            next.y_min = data.y - offset.y;
+                                            next.y_max = next.y_min + h;
+                                        }
+                                        DragRectHandle::Left => {
+                                            next.x_min = data.x - offset.x;
+                                            if next.x_min > next.x_max {
+                                                next.x_min = next.x_max;
+                                            }
+                                        }
+                                        DragRectHandle::Right => {
+                                            next.x_max = data.x - offset.x;
+                                            if next.x_max < next.x_min {
+                                                next.x_max = next.x_min;
+                                            }
+                                        }
+                                        DragRectHandle::Top => {
+                                            next.y_max = data.y - offset.y;
+                                            if next.y_max < next.y_min {
+                                                next.y_max = next.y_min;
+                                            }
+                                        }
+                                        DragRectHandle::Bottom => {
+                                            next.y_min = data.y - offset.y;
+                                            if next.y_min > next.y_max {
+                                                next.y_min = next.y_max;
+                                            }
+                                        }
+                                    }
+                                    *current = next;
+                                    self.drag_output = Some(PlotDragOutput::Rect {
+                                        id: *id,
+                                        axis: *axis,
+                                        rect: next,
+                                        phase: PlotDragPhase::Update,
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    self.drag_capture = Some(capture);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
                 if self.query_drag_start.is_some() {
                     let local = local_from_absolute(layout.plot.origin, *position);
                     self.cursor_px = Some(local);
@@ -3603,6 +4122,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             let overlays = &state.overlays;
             if !overlays.inf_lines_x.is_empty()
                 || !overlays.inf_lines_y.is_empty()
+                || !overlays.drag_lines_x.is_empty()
+                || !overlays.drag_lines_y.is_empty()
+                || !overlays.drag_rects.is_empty()
                 || !overlays.tags_x.is_empty()
                 || !overlays.tags_y.is_empty()
                 || !overlays.text.is_empty()
@@ -3611,6 +4133,47 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     a: (crosshair_color.a * 0.45).clamp(0.05, 1.0),
                     ..crosshair_color
                 };
+
+                let theme = cx.theme();
+                let annotation_background = crate::theme_tokens::color(
+                    theme,
+                    "fret.plot.annotation.background",
+                    "plot.annotation.background",
+                )
+                .unwrap_or(tooltip_background);
+                let annotation_border = crate::theme_tokens::color(
+                    theme,
+                    "fret.plot.annotation.border",
+                    "plot.annotation.border",
+                )
+                .unwrap_or(tooltip_border);
+                let annotation_text = crate::theme_tokens::color(
+                    theme,
+                    "fret.plot.annotation.text",
+                    "plot.annotation.text",
+                )
+                .unwrap_or(tooltip_text_color);
+                let annotation_stroke = crate::theme_tokens::color(
+                    theme,
+                    "fret.plot.annotation.stroke",
+                    "plot.annotation.stroke",
+                )
+                .unwrap_or(crosshair_color);
+                let annotation_padding = crate::theme_tokens::metric(
+                    theme,
+                    "fret.plot.annotation.padding",
+                    "plot.annotation.padding",
+                )
+                .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+                let annotation_radius = crate::theme_tokens::metric(
+                    theme,
+                    "fret.plot.annotation.radius",
+                    "plot.annotation.radius",
+                )
+                .unwrap_or_else(|| theme.metric_required("metric.radius.sm"));
+
+                let margin = Px(6.0);
+                let marker_len = Px(8.0);
 
                 let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
                 let transform_x = PlotTransform {
@@ -3717,9 +4280,163 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     }
                 }
 
+                if !overlays.drag_rects.is_empty() {
+                    for rect in &overlays.drag_rects {
+                        let Some(transform) = transform_for_y_axis(rect.axis) else {
+                            continue;
+                        };
+
+                        let mut current = rect.rect;
+                        if let Some(DragCapture::Rect {
+                            id,
+                            current: dragged,
+                            ..
+                        }) = self.drag_capture
+                            && id == rect.id
+                        {
+                            current = dragged;
+                        }
+
+                        if !current.x_min.is_finite()
+                            || !current.x_max.is_finite()
+                            || !current.y_min.is_finite()
+                            || !current.y_max.is_finite()
+                        {
+                            continue;
+                        }
+
+                        let a = transform.data_to_px(DataPoint {
+                            x: current.x_min,
+                            y: current.y_min,
+                        });
+                        let b = transform.data_to_px(DataPoint {
+                            x: current.x_max,
+                            y: current.y_max,
+                        });
+                        if !a.x.0.is_finite()
+                            || !a.y.0.is_finite()
+                            || !b.x.0.is_finite()
+                            || !b.y.0.is_finite()
+                        {
+                            continue;
+                        }
+
+                        let left = a.x.0.min(b.x.0).clamp(0.0, layout.plot.size.width.0);
+                        let right = a.x.0.max(b.x.0).clamp(0.0, layout.plot.size.width.0);
+                        let top = a.y.0.min(b.y.0).clamp(0.0, layout.plot.size.height.0);
+                        let bottom = a.y.0.max(b.y.0).clamp(0.0, layout.plot.size.height.0);
+
+                        let w = (right - left).max(0.0);
+                        let h = (bottom - top).max(0.0);
+                        if w <= 0.0 || h <= 0.0 {
+                            continue;
+                        }
+
+                        let color = rect.color.unwrap_or(annotation_stroke);
+                        let fill = rect.fill.unwrap_or(Color { a: 0.12, ..color });
+                        let border_w = rect.border_width.0.max(1.0);
+
+                        let abs_rect = Rect::new(
+                            Point::new(
+                                Px((layout.plot.origin.x.0 + left).round()),
+                                Px((layout.plot.origin.y.0 + top).round()),
+                            ),
+                            Size::new(Px(w), Px(h)),
+                        );
+
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(3),
+                            rect: abs_rect,
+                            background: fill,
+                            border: fret_core::Edges::all(Px(border_w)),
+                            border_color: color,
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                        });
+                    }
+                }
+
+                if !overlays.drag_lines_x.is_empty() {
+                    for line in &overlays.drag_lines_x {
+                        let mut x = line.x;
+                        if let Some(DragCapture::LineX { id, current_x, .. }) = self.drag_capture
+                            && id == line.id
+                        {
+                            x = current_x;
+                        }
+
+                        if !x.is_finite() {
+                            continue;
+                        }
+                        let Some(x_px) = transform_x.data_x_to_px(x) else {
+                            continue;
+                        };
+
+                        let w = line.width.0.max(1.0).min(layout.plot.size.width.0.max(1.0));
+                        let left = (x_px.0 - w * 0.5).clamp(0.0, layout.plot.size.width.0 - w);
+                        let x_abs = Px((layout.plot.origin.x.0 + left).round());
+
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(3),
+                            rect: Rect::new(
+                                Point::new(x_abs, layout.plot.origin.y),
+                                Size::new(Px(w), layout.plot.size.height),
+                            ),
+                            background: line.color.unwrap_or(annotation_stroke),
+                            border: fret_core::Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                        });
+                    }
+                }
+
+                if !overlays.drag_lines_y.is_empty() {
+                    for line in &overlays.drag_lines_y {
+                        let Some(transform) = transform_for_y_axis(line.axis) else {
+                            continue;
+                        };
+
+                        let mut y = line.y;
+                        if let Some(DragCapture::LineY { id, current_y, .. }) = self.drag_capture
+                            && id == line.id
+                        {
+                            y = current_y;
+                        }
+
+                        if !y.is_finite() {
+                            continue;
+                        }
+                        let Some(y_px) = transform.data_y_to_px(y) else {
+                            continue;
+                        };
+
+                        let h = line
+                            .width
+                            .0
+                            .max(1.0)
+                            .min(layout.plot.size.height.0.max(1.0));
+                        let top = (y_px.0 - h * 0.5).clamp(0.0, layout.plot.size.height.0 - h);
+                        let y_abs = Px((layout.plot.origin.y.0 + top).round());
+
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(3),
+                            rect: Rect::new(
+                                Point::new(layout.plot.origin.x, y_abs),
+                                Size::new(layout.plot.size.width, Px(h)),
+                            ),
+                            background: line.color.unwrap_or(annotation_stroke),
+                            border: fret_core::Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                        });
+                    }
+                }
+
                 if !overlays.tags_x.is_empty()
                     || !overlays.tags_y.is_empty()
                     || !overlays.text.is_empty()
+                    || !overlays.drag_lines_x.is_empty()
+                    || !overlays.drag_lines_y.is_empty()
+                    || !overlays.drag_rects.is_empty()
                 {
                     #[derive(Debug, Clone)]
                     enum OverlayPlacement {
@@ -3748,50 +4465,117 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         placement: OverlayPlacement,
                     }
 
-                    let theme = cx.theme();
-                    let annotation_background = crate::theme_tokens::color(
-                        theme,
-                        "fret.plot.annotation.background",
-                        "plot.annotation.background",
-                    )
-                    .unwrap_or(tooltip_background);
-                    let annotation_border = crate::theme_tokens::color(
-                        theme,
-                        "fret.plot.annotation.border",
-                        "plot.annotation.border",
-                    )
-                    .unwrap_or(tooltip_border);
-                    let annotation_text = crate::theme_tokens::color(
-                        theme,
-                        "fret.plot.annotation.text",
-                        "plot.annotation.text",
-                    )
-                    .unwrap_or(tooltip_text_color);
-                    let annotation_stroke = crate::theme_tokens::color(
-                        theme,
-                        "fret.plot.annotation.stroke",
-                        "plot.annotation.stroke",
-                    )
-                    .unwrap_or(crosshair_color);
-                    let annotation_padding = crate::theme_tokens::metric(
-                        theme,
-                        "fret.plot.annotation.padding",
-                        "plot.annotation.padding",
-                    )
-                    .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
-                    let annotation_radius = crate::theme_tokens::metric(
-                        theme,
-                        "fret.plot.annotation.radius",
-                        "plot.annotation.radius",
-                    )
-                    .unwrap_or_else(|| theme.metric_required("metric.radius.sm"));
-                    let margin = Px(6.0);
-                    let marker_len = Px(8.0);
-
                     let x_span = (view_bounds.x_max - view_bounds.x_min).abs();
                     let y_span = (view_bounds.y_max - view_bounds.y_min).abs();
 
                     let mut drafts: Vec<OverlayDraft> = Vec::new();
+
+                    for line in &overlays.drag_lines_x {
+                        let mut x = line.x;
+                        if let Some(DragCapture::LineX { id, current_x, .. }) = self.drag_capture
+                            && id == line.id
+                        {
+                            x = current_x;
+                        }
+
+                        if !x.is_finite() {
+                            continue;
+                        }
+                        let x_value = x;
+                        let Some(x_px) = transform_x.data_x_to_px(x) else {
+                            continue;
+                        };
+                        let x = Px((layout.plot.origin.x.0 + x_px.0).round());
+
+                        let value = line
+                            .show_value
+                            .then(|| self.tooltip_x_labels.format(x_value, x_span))
+                            .unwrap_or_default();
+                        let text = match (&line.label, line.show_value) {
+                            (Some(label), true) => format!("{label}: {value}"),
+                            (Some(label), false) => label.clone(),
+                            (None, true) => value,
+                            (None, false) => String::new(),
+                        };
+                        if text.is_empty() {
+                            continue;
+                        }
+
+                        drafts.push(OverlayDraft {
+                            text,
+                            placement: OverlayPlacement::TagX {
+                                x,
+                                color: line.color.unwrap_or(annotation_stroke),
+                            },
+                        });
+                    }
+
+                    for line in &overlays.drag_lines_y {
+                        let Some(transform) = transform_for_y_axis(line.axis) else {
+                            continue;
+                        };
+
+                        let mut y = line.y;
+                        if let Some(DragCapture::LineY { id, current_y, .. }) = self.drag_capture
+                            && id == line.id
+                        {
+                            y = current_y;
+                        }
+
+                        if !y.is_finite() {
+                            continue;
+                        }
+                        let y_value = y;
+                        let Some(y_px) = transform.data_y_to_px(y) else {
+                            continue;
+                        };
+                        let y = Px((layout.plot.origin.y.0 + y_px.0).round());
+
+                        let (span, labels) = match line.axis {
+                            YAxis::Right if self.show_y2_axis => (
+                                view_bounds_y2
+                                    .map(|b| (b.y_max - b.y_min).abs())
+                                    .unwrap_or(y_span),
+                                &self.y2_axis_labels,
+                            ),
+                            YAxis::Right2 if self.show_y3_axis => (
+                                view_bounds_y3
+                                    .map(|b| (b.y_max - b.y_min).abs())
+                                    .unwrap_or(y_span),
+                                &self.y3_axis_labels,
+                            ),
+                            YAxis::Right3 if self.show_y4_axis => (
+                                view_bounds_y4
+                                    .map(|b| (b.y_max - b.y_min).abs())
+                                    .unwrap_or(y_span),
+                                &self.y4_axis_labels,
+                            ),
+                            _ => (y_span, &self.tooltip_y_labels),
+                        };
+
+                        let value = line
+                            .show_value
+                            .then(|| labels.format(y_value, span))
+                            .unwrap_or_default();
+                        let text = match (&line.label, line.show_value) {
+                            (Some(label), true) => format!("{label}: {value}"),
+                            (Some(label), false) => label.clone(),
+                            (None, true) => value,
+                            (None, false) => String::new(),
+                        };
+                        if text.is_empty() {
+                            continue;
+                        }
+
+                        drafts.push(OverlayDraft {
+                            text,
+                            placement: OverlayPlacement::TagY {
+                                y,
+                                right: line.axis != YAxis::Left,
+                                color: line.color.unwrap_or(annotation_stroke),
+                            },
+                        });
+                    }
 
                     for tag in &overlays.tags_x {
                         if !tag.x.is_finite() {

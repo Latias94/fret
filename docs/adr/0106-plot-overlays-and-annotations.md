@@ -60,7 +60,7 @@ Theming is token-driven (see `docs/plot-theme-tokens.md`), with optional annotat
 To keep the baseline clean, interaction is a follow-up:
 
 - P1: hover affordances + tooltip integration (e.g. "line label at axis edge").
-- P1: draggable reference lines (opt-in per overlay).
+- P1: draggable reference lines and rectangles (opt-in per overlay), with outputs reported via `PlotOutputSnapshot::drag`.
 - P2: spans (filled X/Y ranges), text callouts, and arbitrary polyline annotations.
 
 Interactive overlays remain caller-owned, with widget-produced outputs flowing through `PlotOutput`
