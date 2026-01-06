@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px};
+use fret_core::{Axis, Color, Corners, Edges, Px};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
@@ -166,9 +166,7 @@ impl Checkbox {
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
                 cx.key_add_on_key_down_for(
                     id,
-                    Arc::new(|_host, _cx, down| {
-                        matches!(down.key, KeyCode::Enter | KeyCode::NumpadEnter)
-                    }),
+                    fret_ui_kit::primitives::keyboard::consume_enter_key_handler(),
                 );
                 cx.pressable_dispatch_command_opt(on_click);
                 match &checked {
