@@ -270,6 +270,95 @@ pub struct ThemeSnapshot {
     pub revision: u64,
 }
 
+impl ThemeSnapshot {
+    pub fn color_by_key(&self, key: &str) -> Option<Color> {
+        let key = canonicalize_token_key(ThemeTokenKind::Color, key);
+        let c = match key {
+            "background" => self.colors.surface_background,
+            "foreground" => self.colors.text_primary,
+
+            "card" => self.colors.panel_background,
+            "card-foreground" => self.colors.text_primary,
+
+            "popover" => self.colors.menu_background,
+            "popover-foreground" => self.colors.text_primary,
+            "popover.border" => self.colors.menu_border,
+
+            "border" => self.colors.panel_border,
+            "input" => self.colors.panel_border,
+            "ring" => self.colors.focus_ring,
+            "ring-offset-background" => self.colors.surface_background,
+
+            "muted" => self.colors.panel_background,
+            "muted-foreground" => self.colors.text_muted,
+
+            "accent" => self.colors.hover_background,
+            "accent-foreground" => self.colors.text_primary,
+
+            "primary" => self.colors.accent,
+            "primary-foreground" => self.colors.text_primary,
+
+            "secondary" => self.colors.panel_background,
+            "secondary-foreground" => self.colors.text_primary,
+
+            "destructive" => self.colors.viewport_gizmo_x,
+            "destructive-foreground" => self.colors.text_primary,
+
+            "selection.background" => self.colors.selection_background,
+
+            "scrollbar.background" => self.colors.scrollbar_track,
+            "scrollbar.thumb.background" => self.colors.scrollbar_thumb,
+            "scrollbar.thumb.hover.background" => self.colors.scrollbar_thumb_hover,
+
+            "fret.menu.background" => self.colors.menu_background,
+            "fret.menu.border" => self.colors.menu_border,
+            "fret.menu.item.hover" => self.colors.menu_item_hover,
+            "fret.menu.item.selected" => self.colors.menu_item_selected,
+
+            "fret.list.background" => self.colors.list_background,
+            "fret.list.border" => self.colors.list_border,
+            "fret.list.row.hover" => self.colors.list_row_hover,
+            "fret.list.row.selected" => self.colors.list_row_selected,
+
+            _ => return None,
+        };
+        Some(c)
+    }
+
+    pub fn color_required(&self, key: &str) -> Color {
+        self.color_by_key(key)
+            .unwrap_or_else(|| panic!("missing theme color token {key}"))
+    }
+
+    pub fn metric_by_key(&self, key: &str) -> Option<Px> {
+        let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
+        let px = match key {
+            "metric.radius.sm" => self.metrics.radius_sm,
+            "metric.radius.md" => self.metrics.radius_md,
+            "metric.radius.lg" => self.metrics.radius_lg,
+            "metric.padding.sm" => self.metrics.padding_sm,
+            "metric.padding.md" => self.metrics.padding_md,
+            "metric.scrollbar.width" => self.metrics.scrollbar_width,
+
+            "radius" => self.metrics.radius_sm,
+            "radius.lg" => self.metrics.radius_md,
+
+            "font.size" => self.metrics.font_size,
+            "font.line_height" => self.metrics.font_line_height,
+            "mono_font.size" => self.metrics.mono_font_size,
+            "mono_font.line_height" => self.metrics.mono_font_line_height,
+
+            _ => return None,
+        };
+        Some(px)
+    }
+
+    pub fn metric_required(&self, key: &str) -> Px {
+        self.metric_by_key(key)
+            .unwrap_or_else(|| panic!("missing theme metric token {key}"))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Theme {
     pub name: String,
