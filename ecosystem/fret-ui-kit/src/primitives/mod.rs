@@ -43,6 +43,7 @@ pub mod menu;
 pub mod menubar;
 pub mod popover;
 pub mod popper;
+pub mod popper_arrow;
 pub mod popper_content;
 pub mod presence;
 pub mod progress;

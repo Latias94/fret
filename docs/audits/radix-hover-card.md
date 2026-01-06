@@ -25,5 +25,5 @@ Key upstream concepts:
 
 - Pass: Overlay root naming and request wiring are standardized in `primitives::hover_card`.
 - Pass: shadcn `HoverCard` composes hover intent + hover overlays to match Radix open/close outcomes.
-- Partial: Motion/arrow rendering are handled by the shadcn recipe layer today.
-
+- Pass: Motion math is available in `declarative::overlay_motion`, and diamond arrow rendering is
+  available via `primitives::popper_arrow`; recipes primarily wire tokens and layout.
