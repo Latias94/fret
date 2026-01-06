@@ -17,6 +17,81 @@ use fret_ui_kit::{LayoutRefinement, Space};
 
 pub use mdstream::BlockId;
 
+#[derive(Debug, Clone, Copy)]
+struct MarkdownTheme {
+    link: fret_core::Color,
+    muted: fret_core::Color,
+    hr: fret_core::Color,
+    blockquote_border: fret_core::Color,
+    blockquote_border_width: Px,
+    blockquote_padding: Px,
+    inline_code_fg: fret_core::Color,
+    inline_code_bg: fret_core::Color,
+    inline_code_padding_x: Px,
+    inline_code_padding_y: Px,
+    task_checked: fret_core::Color,
+    task_unchecked: fret_core::Color,
+}
+
+impl MarkdownTheme {
+    fn resolve(theme: &Theme) -> Self {
+        let link = theme
+            .color_by_key("markdown.link")
+            .unwrap_or(theme.colors.accent);
+        let muted = theme
+            .color_by_key("markdown.muted")
+            .unwrap_or(theme.colors.text_muted);
+        let hr = theme
+            .color_by_key("markdown.hr")
+            .unwrap_or(theme.colors.panel_border);
+
+        let blockquote_border = theme
+            .color_by_key("markdown.blockquote.border")
+            .unwrap_or(theme.colors.panel_border);
+        let blockquote_border_width = theme
+            .metric_by_key("markdown.blockquote.border_width")
+            .unwrap_or(Px(3.0));
+        let blockquote_padding = theme
+            .metric_by_key("markdown.blockquote.padding")
+            .unwrap_or(theme.metrics.padding_sm);
+
+        let inline_code_fg = theme
+            .color_by_key("markdown.inline_code.fg")
+            .unwrap_or(theme.colors.text_primary);
+        let inline_code_bg = theme
+            .color_by_key("markdown.inline_code.bg")
+            .unwrap_or(theme.colors.hover_background);
+        let inline_code_padding_x = theme
+            .metric_by_key("markdown.inline_code.padding_x")
+            .unwrap_or(Px(3.0));
+        let inline_code_padding_y = theme
+            .metric_by_key("markdown.inline_code.padding_y")
+            .unwrap_or(Px(1.0));
+
+        let task_checked = theme
+            .color_by_key("markdown.task.checked")
+            .unwrap_or(theme.colors.accent);
+        let task_unchecked = theme
+            .color_by_key("markdown.task.unchecked")
+            .unwrap_or(theme.colors.text_muted);
+
+        Self {
+            link,
+            muted,
+            hr,
+            blockquote_border,
+            blockquote_border_width,
+            blockquote_padding,
+            inline_code_fg,
+            inline_code_bg,
+            inline_code_padding_x,
+            inline_code_padding_y,
+            task_checked,
+            task_unchecked,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Markdown {
     source: Arc<str>,
@@ -52,6 +127,7 @@ pub fn markdown_with<H: UiHost>(
     components: &MarkdownComponents<H>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
+    let markdown_theme = MarkdownTheme::resolve(&theme);
 
     let mut stream = mdstream::MdStream::default();
     let update = stream.append(source);
@@ -59,7 +135,14 @@ pub fn markdown_with<H: UiHost>(
     let mut state = MarkdownPulldownState::new();
     state.apply_update(update);
 
-    markdown_mdstream_pulldown_with(cx, &theme, state.doc(), &state.adapter, components)
+    markdown_mdstream_pulldown_with(
+        cx,
+        &theme,
+        markdown_theme,
+        state.doc(),
+        &state.adapter,
+        components,
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -309,7 +392,11 @@ fn render_code_block<H: UiHost>(
     })
 }
 
-fn render_thematic_break<H: UiHost>(cx: &mut ElementContext<'_, H>, theme: &Theme) -> AnyElement {
+fn render_thematic_break<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    _theme: &Theme,
+    markdown_theme: MarkdownTheme,
+) -> AnyElement {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Px(Px(1.0));
@@ -318,7 +405,7 @@ fn render_thematic_break<H: UiHost>(cx: &mut ElementContext<'_, H>, theme: &Them
         ContainerProps {
             layout,
             padding: Edges::all(Px(0.0)),
-            background: Some(theme.colors.panel_border),
+            background: Some(markdown_theme.hr),
             shadow: None,
             border: Edges::all(Px(0.0)),
             border_color: None,
@@ -600,12 +687,21 @@ pub fn markdown_streaming_pulldown_with<H: UiHost>(
     components: &MarkdownComponents<H>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
-    markdown_mdstream_pulldown_with(cx, &theme, state.doc(), &state.adapter, components)
+    let markdown_theme = MarkdownTheme::resolve(&theme);
+    markdown_mdstream_pulldown_with(
+        cx,
+        &theme,
+        markdown_theme,
+        state.doc(),
+        &state.adapter,
+        components,
+    )
 }
 
 fn markdown_mdstream_pulldown_with<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     doc: &mdstream::DocumentState,
     adapter: &mdstream::adapters::pulldown::PulldownAdapter,
     components: &MarkdownComponents<H>,
@@ -626,12 +722,22 @@ fn markdown_mdstream_pulldown_with<H: UiHost>(
                 |b| b.id,
                 |cx, _i, block| match adapter.committed_events(block.id) {
                     Some(events) => out.push(render_mdstream_block_with_events(
-                        cx, theme, components, block, events,
+                        cx,
+                        theme,
+                        markdown_theme,
+                        components,
+                        block,
+                        events,
                     )),
                     None => {
                         let tmp = parse_events(block.display_or_raw());
                         out.push(render_mdstream_block_with_events(
-                            cx, theme, components, block, &tmp,
+                            cx,
+                            theme,
+                            markdown_theme,
+                            components,
+                            block,
+                            &tmp,
                         ));
                     }
                 },
@@ -641,7 +747,12 @@ fn markdown_mdstream_pulldown_with<H: UiHost>(
                 cx.keyed(pending.id, |cx| {
                     let events = adapter.parse_pending(pending);
                     out.push(render_mdstream_block_with_events(
-                        cx, theme, components, pending, &events,
+                        cx,
+                        theme,
+                        markdown_theme,
+                        components,
+                        pending,
+                        &events,
                     ));
                 });
             }
@@ -654,6 +765,7 @@ fn markdown_mdstream_pulldown_with<H: UiHost>(
 fn render_mdstream_block_with_events<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     block: &mdstream::Block,
     events: &[pulldown_cmark::Event<'static>],
@@ -668,7 +780,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
             if let Some(render) = &components.heading {
                 render(cx, info)
             } else {
-                render_heading_inline(cx, theme, components, info, events)
+                render_heading_inline(cx, theme, markdown_theme, components, info, events)
             }
         }
         mdstream::BlockKind::Paragraph => {
@@ -678,14 +790,14 @@ fn render_mdstream_block_with_events<H: UiHost>(
             if let Some(render) = &components.paragraph {
                 render(cx, info)
             } else {
-                render_paragraph_inline(cx, theme, components, events)
+                render_paragraph_inline(cx, theme, markdown_theme, components, events)
             }
         }
         mdstream::BlockKind::ThematicBreak => {
             if let Some(render) = &components.thematic_break {
                 render(cx, ThematicBreakInfo)
             } else {
-                render_thematic_break(cx, theme)
+                render_thematic_break(cx, theme, markdown_theme)
             }
         }
         mdstream::BlockKind::CodeFence => {
@@ -702,7 +814,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
             if let Some(render) = &components.list {
                 render(cx, list)
             } else {
-                render_pulldown_events_root(cx, theme, components, events)
+                render_pulldown_events_root(cx, theme, markdown_theme, components, events)
             }
         }
         mdstream::BlockKind::BlockQuote => {
@@ -712,7 +824,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
             if let Some(render) = &components.blockquote {
                 render(cx, info)
             } else {
-                render_pulldown_events_root(cx, theme, components, events)
+                render_pulldown_events_root(cx, theme, markdown_theme, components, events)
             }
         }
         mdstream::BlockKind::Table => {
@@ -752,6 +864,7 @@ fn raw_block_kind_from_mdstream(kind: mdstream::BlockKind) -> RawBlockKind {
 fn render_heading_inline<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     info: HeadingInfo,
     events: &[pulldown_cmark::Event<'static>],
@@ -772,12 +885,13 @@ fn render_heading_inline<H: UiHost>(
     };
 
     let pieces = inline_pieces_from_events(events);
-    render_inline_flow(cx, theme, components, base, &pieces)
+    render_inline_flow(cx, theme, markdown_theme, components, base, &pieces)
 }
 
 fn render_paragraph_inline<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
 ) -> AnyElement {
@@ -790,17 +904,26 @@ fn render_paragraph_inline<H: UiHost>(
     };
 
     let pieces = inline_pieces_from_events(events);
-    render_inline_flow(cx, theme, components, base, &pieces)
+    render_inline_flow(cx, theme, markdown_theme, components, base, &pieces)
 }
 
 fn render_pulldown_events_root<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
 ) -> AnyElement {
     let mut cursor = 0usize;
-    let children = render_pulldown_blocks(cx, theme, components, events, &mut cursor, None);
+    let children = render_pulldown_blocks(
+        cx,
+        theme,
+        markdown_theme,
+        components,
+        events,
+        &mut cursor,
+        None,
+    );
     if children.len() == 1 {
         return children.into_iter().next().unwrap();
     }
@@ -814,6 +937,7 @@ fn render_pulldown_events_root<H: UiHost>(
 enum PulldownStop {
     Item,
     BlockQuote,
+    FootnoteDefinition,
 }
 
 fn stop_matches(end: &pulldown_cmark::TagEnd, stop: PulldownStop) -> bool {
@@ -821,6 +945,7 @@ fn stop_matches(end: &pulldown_cmark::TagEnd, stop: PulldownStop) -> bool {
     match (stop, end) {
         (PulldownStop::Item, TagEnd::Item) => true,
         (PulldownStop::BlockQuote, TagEnd::BlockQuote(_)) => true,
+        (PulldownStop::FootnoteDefinition, TagEnd::FootnoteDefinition) => true,
         _ => false,
     }
 }
@@ -828,6 +953,7 @@ fn stop_matches(end: &pulldown_cmark::TagEnd, stop: PulldownStop) -> bool {
 fn render_pulldown_blocks<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
@@ -847,11 +973,17 @@ fn render_pulldown_blocks<H: UiHost>(
 
         match &events[*cursor] {
             Event::Start(Tag::Paragraph) => out.push(render_pulldown_paragraph(
-                cx, theme, components, events, cursor,
+                cx,
+                theme,
+                markdown_theme,
+                components,
+                events,
+                cursor,
             )),
             Event::Start(Tag::Heading { level, .. }) => out.push(render_pulldown_heading(
                 cx,
                 theme,
+                markdown_theme,
                 components,
                 events,
                 cursor,
@@ -865,13 +997,35 @@ fn render_pulldown_blocks<H: UiHost>(
                 kind.clone(),
             )),
             Event::Start(Tag::List(start)) => out.push(render_pulldown_list(
-                cx, theme, components, events, cursor, *start,
+                cx,
+                theme,
+                markdown_theme,
+                components,
+                events,
+                cursor,
+                *start,
             )),
             Event::Start(Tag::BlockQuote(_)) => out.push(render_pulldown_blockquote(
-                cx, theme, components, events, cursor,
+                cx,
+                theme,
+                markdown_theme,
+                components,
+                events,
+                cursor,
             )),
+            Event::Start(Tag::FootnoteDefinition(label)) => {
+                out.push(render_pulldown_footnote_definition(
+                    cx,
+                    theme,
+                    markdown_theme,
+                    components,
+                    events,
+                    cursor,
+                    Arc::<str>::from(label.to_string()),
+                ))
+            }
             Event::Rule => {
-                out.push(render_thematic_break(cx, theme));
+                out.push(render_thematic_break(cx, theme, markdown_theme));
                 *cursor += 1;
             }
             Event::End(TagEnd::List(_))
@@ -891,6 +1045,7 @@ fn render_pulldown_blocks<H: UiHost>(
 fn render_pulldown_paragraph<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
@@ -906,12 +1061,19 @@ fn render_pulldown_paragraph<H: UiHost>(
         }
         *cursor += 1;
     }
-    render_paragraph_inline(cx, theme, components, &events[start..*cursor])
+    render_paragraph_inline(
+        cx,
+        theme,
+        markdown_theme,
+        components,
+        &events[start..*cursor],
+    )
 }
 
 fn render_pulldown_heading<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
@@ -934,7 +1096,7 @@ fn render_pulldown_heading<H: UiHost>(
         level,
         text: plain_text_from_events(slice),
     };
-    render_heading_inline(cx, theme, components, info, slice)
+    render_heading_inline(cx, theme, markdown_theme, components, info, slice)
 }
 
 fn render_pulldown_code_block<H: UiHost>(
@@ -980,6 +1142,7 @@ fn render_pulldown_code_block<H: UiHost>(
 fn render_pulldown_blockquote<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
@@ -988,29 +1151,31 @@ fn render_pulldown_blockquote<H: UiHost>(
     let children = render_pulldown_blocks(
         cx,
         theme,
+        markdown_theme,
         components,
         events,
         cursor,
         Some(PulldownStop::BlockQuote),
     );
-    render_blockquote_container(cx, theme, children)
+    render_blockquote_container(cx, theme, markdown_theme, children)
 }
 
 fn render_blockquote_container<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    _theme: &Theme,
+    markdown_theme: MarkdownTheme,
     children: Vec<AnyElement>,
 ) -> AnyElement {
     let mut props = ContainerProps::default();
     props.layout.size.width = Length::Fill;
-    props.padding = Edges::all(theme.metrics.padding_sm);
+    props.padding = Edges::all(markdown_theme.blockquote_padding);
     props.border = Edges {
         top: Px(0.0),
         right: Px(0.0),
         bottom: Px(0.0),
-        left: Px(3.0),
+        left: markdown_theme.blockquote_border_width,
     };
-    props.border_color = Some(theme.colors.panel_border);
+    props.border_color = Some(markdown_theme.blockquote_border);
 
     cx.container(props, |cx| {
         if children.len() == 1 {
@@ -1028,6 +1193,7 @@ fn render_blockquote_container<H: UiHost>(
 fn render_pulldown_list<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
     cursor: &mut usize,
@@ -1035,25 +1201,38 @@ fn render_pulldown_list<H: UiHost>(
 ) -> AnyElement {
     use pulldown_cmark::{Event, Tag, TagEnd};
 
+    struct ListItem {
+        task: Option<bool>,
+        children: Vec<AnyElement>,
+    }
+
     let ordered = start.is_some();
     let start_no = start.unwrap_or(1) as u32;
 
     *cursor += 1;
-    let mut items: Vec<Vec<AnyElement>> = Vec::new();
+    let mut items: Vec<ListItem> = Vec::new();
 
     while *cursor < events.len() {
         match &events[*cursor] {
             Event::Start(Tag::Item) => {
                 *cursor += 1;
+                let task = match events.get(*cursor) {
+                    Some(Event::TaskListMarker(checked)) => {
+                        *cursor += 1;
+                        Some(*checked)
+                    }
+                    _ => None,
+                };
                 let children = render_pulldown_blocks(
                     cx,
                     theme,
+                    markdown_theme,
                     components,
                     events,
                     cursor,
                     Some(PulldownStop::Item),
                 );
-                items.push(children);
+                items.push(ListItem { task, children });
             }
             Event::End(TagEnd::List(_)) => {
                 *cursor += 1;
@@ -1069,28 +1248,54 @@ fn render_pulldown_list<H: UiHost>(
         items
             .into_iter()
             .enumerate()
-            .map(|(i, children)| {
-                let marker = if ordered {
-                    Arc::<str>::from(format!("{}.", start_no.saturating_add(i as u32)))
-                } else {
-                    Arc::<str>::from("•".to_string())
-                };
-
-                let marker_el = cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: marker,
-                    style: None,
-                    color: Some(theme.colors.text_muted),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                });
-
-                let body = if children.len() == 1 {
-                    children.into_iter().next().unwrap()
+            .map(|(i, item)| {
+                let body = if item.children.len() == 1 {
+                    item.children.into_iter().next().unwrap()
                 } else {
                     stack::vstack(cx, stack::VStackProps::default().gap(Space::N1), |_cx| {
-                        children
+                        item.children
                     })
+                };
+
+                let marker_el = match item.task {
+                    Some(checked) => {
+                        let task_el = render_task_list_marker(cx, theme, markdown_theme, checked);
+                        if ordered {
+                            let no =
+                                Arc::<str>::from(format!("{}.", start_no.saturating_add(i as u32)));
+                            let no_el = cx.text_props(TextProps {
+                                layout: Default::default(),
+                                text: no,
+                                style: None,
+                                color: Some(markdown_theme.muted),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                            });
+                            stack::hstack(
+                                cx,
+                                stack::HStackProps::default().gap(Space::N1).items_start(),
+                                |_cx| vec![no_el, task_el],
+                            )
+                        } else {
+                            task_el
+                        }
+                    }
+                    None => {
+                        let marker = if ordered {
+                            Arc::<str>::from(format!("{}.", start_no.saturating_add(i as u32)))
+                        } else {
+                            Arc::<str>::from("•".to_string())
+                        };
+
+                        cx.text_props(TextProps {
+                            layout: Default::default(),
+                            text: marker,
+                            style: None,
+                            color: Some(markdown_theme.muted),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                        })
+                    }
                 };
 
                 stack::hstack(
@@ -1101,6 +1306,78 @@ fn render_pulldown_list<H: UiHost>(
             })
             .collect()
     })
+}
+
+fn render_task_list_marker<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    checked: bool,
+) -> AnyElement {
+    let (text, color) = if checked {
+        ("☑", markdown_theme.task_checked)
+    } else {
+        ("☐", markdown_theme.task_unchecked)
+    };
+
+    cx.text_props(TextProps {
+        layout: Default::default(),
+        text: Arc::<str>::from(text.to_string()),
+        style: Some(TextStyle {
+            font: FontId::default(),
+            size: theme.metrics.font_size,
+            weight: FontWeight::NORMAL,
+            line_height: Some(theme.metrics.font_line_height),
+            letter_spacing_em: None,
+        }),
+        color: Some(color),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    })
+}
+
+fn render_pulldown_footnote_definition<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
+    events: &[pulldown_cmark::Event<'static>],
+    cursor: &mut usize,
+    label: Arc<str>,
+) -> AnyElement {
+    *cursor += 1;
+    let children = render_pulldown_blocks(
+        cx,
+        theme,
+        markdown_theme,
+        components,
+        events,
+        cursor,
+        Some(PulldownStop::FootnoteDefinition),
+    );
+
+    let label_el = cx.text_props(TextProps {
+        layout: Default::default(),
+        text: Arc::<str>::from(format!("[^{}]", label)),
+        style: None,
+        color: Some(markdown_theme.muted),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    });
+
+    let body = if children.len() == 1 {
+        children.into_iter().next().unwrap()
+    } else {
+        stack::vstack(cx, stack::VStackProps::default().gap(Space::N1), |_cx| {
+            children
+        })
+    };
+
+    stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_start(),
+        |_cx| vec![label_el, body],
+    )
 }
 
 fn plain_text_from_events(events: &[pulldown_cmark::Event<'static>]) -> Arc<str> {
@@ -1147,6 +1424,8 @@ struct InlineBaseStyle {
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct InlineStyle {
     strong: bool,
+    emphasis: bool,
+    strikethrough: bool,
     code: bool,
     link: Option<Arc<str>>,
 }
@@ -1190,6 +1469,8 @@ fn inline_pieces_from_events_impl(
     use pulldown_cmark::{Event, Tag, TagEnd};
 
     let mut strong_depth = 0usize;
+    let mut emphasis_depth = 0usize;
+    let mut strikethrough_depth = 0usize;
     let mut link_stack: Vec<Arc<str>> = Vec::new();
     let mut pieces: Vec<InlinePiece> = Vec::new();
 
@@ -1213,10 +1494,24 @@ fn inline_pieces_from_events_impl(
         match event {
             Event::Start(Tag::Strong) => strong_depth += 1,
             Event::End(TagEnd::Strong) => strong_depth = strong_depth.saturating_sub(1),
+            Event::Start(Tag::Emphasis) => emphasis_depth += 1,
+            Event::End(TagEnd::Emphasis) => emphasis_depth = emphasis_depth.saturating_sub(1),
+            Event::Start(Tag::Strikethrough) => strikethrough_depth += 1,
+            Event::End(TagEnd::Strikethrough) => {
+                strikethrough_depth = strikethrough_depth.saturating_sub(1);
+            }
             Event::Start(Tag::Link { dest_url, .. }) => {
                 link_stack.push(Arc::<str>::from(dest_url.to_string()));
             }
             Event::End(TagEnd::Link) => {
+                link_stack.pop();
+            }
+            Event::Start(Tag::Image { dest_url, .. }) => {
+                // Render images as their alt text styled as a link to the image URL. The actual
+                // image loading is intentionally delegated to the host.
+                link_stack.push(Arc::<str>::from(dest_url.to_string()));
+            }
+            Event::End(TagEnd::Image) => {
                 link_stack.pop();
             }
             Event::Text(t) => push_inline_text(
@@ -1224,6 +1519,8 @@ fn inline_pieces_from_events_impl(
                 t.as_ref(),
                 InlineStyle {
                     strong: strong_depth > 0,
+                    emphasis: emphasis_depth > 0,
+                    strikethrough: strikethrough_depth > 0,
                     code: false,
                     link: link_stack.last().cloned(),
                 },
@@ -1233,15 +1530,44 @@ fn inline_pieces_from_events_impl(
                 t.as_ref(),
                 InlineStyle {
                     strong: strong_depth > 0,
+                    emphasis: emphasis_depth > 0,
+                    strikethrough: strikethrough_depth > 0,
                     code: true,
                     link: link_stack.last().cloned(),
                 },
             ),
+            Event::Html(t) => push_inline_text(
+                &mut pieces,
+                t.as_ref(),
+                InlineStyle {
+                    strong: strong_depth > 0,
+                    emphasis: emphasis_depth > 0,
+                    strikethrough: strikethrough_depth > 0,
+                    code: true,
+                    link: link_stack.last().cloned(),
+                },
+            ),
+            Event::FootnoteReference(label) => {
+                let href = Arc::<str>::from(format!("#fn-{}", label));
+                push_inline_text(
+                    &mut pieces,
+                    &format!("[^{}]", label),
+                    InlineStyle {
+                        strong: false,
+                        emphasis: false,
+                        strikethrough: false,
+                        code: false,
+                        link: Some(href),
+                    },
+                );
+            }
             Event::SoftBreak => push_inline_text(
                 &mut pieces,
                 " ",
                 InlineStyle {
                     strong: strong_depth > 0,
+                    emphasis: emphasis_depth > 0,
+                    strikethrough: strikethrough_depth > 0,
                     code: false,
                     link: link_stack.last().cloned(),
                 },
@@ -1251,6 +1577,8 @@ fn inline_pieces_from_events_impl(
                 "\n",
                 InlineStyle {
                     strong: strong_depth > 0,
+                    emphasis: emphasis_depth > 0,
+                    strikethrough: strikethrough_depth > 0,
                     code: false,
                     link: link_stack.last().cloned(),
                 },
@@ -1281,6 +1609,7 @@ fn push_inline_text(pieces: &mut Vec<InlinePiece>, text: &str, style: InlineStyl
 fn render_inline_flow<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     base: InlineBaseStyle,
     pieces: &[InlinePiece],
@@ -1304,7 +1633,7 @@ fn render_inline_flow<H: UiHost>(
     stack::vstack(cx, stack::VStackProps::default().gap(Space::N0), |cx| {
         lines
             .into_iter()
-            .map(|line| render_inline_line(cx, theme, components, &base, line))
+            .map(|line| render_inline_line(cx, theme, markdown_theme, components, &base, line))
             .collect()
     })
 }
@@ -1312,6 +1641,7 @@ fn render_inline_flow<H: UiHost>(
 fn render_inline_line<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     base: &InlineBaseStyle,
     pieces: Vec<InlinePiece>,
@@ -1328,7 +1658,7 @@ fn render_inline_line<H: UiHost>(
     cx.flex(props, |cx| {
         coalesce_link_runs(pieces)
             .into_iter()
-            .map(|piece| render_inline_token(cx, theme, components, base, piece))
+            .map(|piece| render_inline_token(cx, theme, markdown_theme, components, base, piece))
             .collect()
     })
 }
@@ -1336,6 +1666,7 @@ fn render_inline_line<H: UiHost>(
 fn render_inline_token<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    markdown_theme: MarkdownTheme,
     components: &MarkdownComponents<H>,
     base: &InlineBaseStyle,
     piece: InlinePiece,
@@ -1357,10 +1688,42 @@ fn render_inline_token<H: UiHost>(
     };
 
     let color = if piece.style.link.is_some() {
-        theme.colors.accent
+        markdown_theme.link
+    } else if piece.style.strikethrough {
+        markdown_theme.muted
     } else {
         base.color
     };
+
+    if piece.style.code {
+        let mut props = ContainerProps::default();
+        props.padding = Edges {
+            top: markdown_theme.inline_code_padding_y,
+            right: markdown_theme.inline_code_padding_x,
+            bottom: markdown_theme.inline_code_padding_y,
+            left: markdown_theme.inline_code_padding_x,
+        };
+        props.background = Some(markdown_theme.inline_code_bg);
+        props.border = Edges::all(Px(0.0));
+        props.corner_radii = fret_core::Corners::all(theme.metrics.radius_sm);
+
+        return cx.container(props, |cx| {
+            vec![cx.text_props(TextProps {
+                layout: Default::default(),
+                text: Arc::<str>::from(piece.text),
+                style: Some(TextStyle {
+                    font,
+                    size,
+                    weight,
+                    line_height,
+                    letter_spacing_em: None,
+                }),
+                color: Some(markdown_theme.inline_code_fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })]
+        });
+    }
 
     if let Some(href) = piece.style.link.clone() {
         let href = href.clone();
@@ -1582,6 +1945,33 @@ mod tests {
     fn pulldown_counts_list_items() {
         let events = parse_events("- a\n- b\n");
         assert_eq!(count_top_level_list_items(&events), 2);
+    }
+
+    #[test]
+    fn pulldown_parses_gfm_task_list_marker() {
+        use pulldown_cmark::Event;
+        let events = parse_events("- [x] done\n- [ ] todo\n");
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, Event::TaskListMarker(true)))
+        );
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, Event::TaskListMarker(false)))
+        );
+    }
+
+    #[test]
+    fn pulldown_parses_strikethrough_when_enabled() {
+        use pulldown_cmark::{Event, Tag};
+        let events = parse_events("~~gone~~\n");
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, Event::Start(Tag::Strikethrough)))
+        );
     }
 
     #[test]
