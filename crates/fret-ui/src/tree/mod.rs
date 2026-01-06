@@ -15,6 +15,8 @@ use fret_runtime::{
 use slotmap::SlotMap;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
+use std::mem::MaybeUninit;
+use std::slice;
 use std::sync::Arc;
 
 mod commands;
@@ -176,23 +178,119 @@ impl ObservationMask {
 
 #[derive(Default)]
 struct ObservationIndex {
-    by_node: HashMap<NodeId, HashMap<ModelId, ObservationMask>>,
+    by_node: HashMap<NodeId, Vec<(ModelId, ObservationMask)>>,
     by_model: HashMap<ModelId, HashMap<NodeId, ObservationMask>>,
 }
 
-impl ObservationIndex {
-    fn record(&mut self, node: NodeId, observations: Vec<(ModelId, Invalidation)>) {
-        let mut next: HashMap<ModelId, ObservationMask> = HashMap::new();
-        for (model, inv) in observations {
-            next.entry(model).or_default().add(inv);
+#[derive(Debug)]
+pub(super) struct SmallNodeList<const N: usize> {
+    len: usize,
+    inline: [MaybeUninit<NodeId>; N],
+    spill: Vec<NodeId>,
+}
+
+impl<const N: usize> Default for SmallNodeList<N> {
+    fn default() -> Self {
+        Self {
+            len: 0,
+            inline: [MaybeUninit::uninit(); N],
+            spill: Vec::new(),
+        }
+    }
+}
+
+impl<const N: usize> SmallNodeList<N> {
+    pub(super) fn set(&mut self, nodes: &[NodeId]) {
+        if nodes.len() <= N {
+            self.spill.clear();
+            self.len = nodes.len();
+            for (i, &id) in nodes.iter().enumerate() {
+                self.inline[i].write(id);
+            }
+        } else {
+            self.len = 0;
+            self.spill.clear();
+            self.spill.extend_from_slice(nodes);
+        }
+    }
+
+    pub(super) fn as_slice(&self) -> &[NodeId] {
+        if !self.spill.is_empty() {
+            return self.spill.as_slice();
+        }
+        unsafe { slice::from_raw_parts(self.inline.as_ptr() as *const NodeId, self.len) }
+    }
+}
+
+#[derive(Debug)]
+pub(super) struct SmallCopyList<T: Copy, const N: usize> {
+    len: usize,
+    inline: [MaybeUninit<T>; N],
+    spill: Vec<T>,
+}
+
+impl<T: Copy, const N: usize> Default for SmallCopyList<T, N> {
+    fn default() -> Self {
+        Self {
+            len: 0,
+            inline: [MaybeUninit::uninit(); N],
+            spill: Vec::new(),
+        }
+    }
+}
+
+impl<T: Copy, const N: usize> SmallCopyList<T, N> {
+    pub(super) fn push(&mut self, value: T) {
+        if self.spill.is_empty() && self.len < N {
+            self.inline[self.len].write(value);
+            self.len += 1;
+            return;
         }
 
-        let prev = self.by_node.insert(node, next);
-        let prev = prev.unwrap_or_default();
-        let next = self.by_node.get(&node).cloned().unwrap_or_default();
+        if self.spill.is_empty() {
+            self.spill.reserve(self.len.saturating_add(1));
+            for i in 0..self.len {
+                // SAFETY: indices 0..len have been written.
+                let v = unsafe { self.inline[i].assume_init() };
+                self.spill.push(v);
+            }
+            self.len = 0;
+        }
 
-        for model in prev.keys() {
-            if next.contains_key(model) {
+        self.spill.push(value);
+    }
+
+    pub(super) fn as_slice(&self) -> &[T] {
+        if !self.spill.is_empty() {
+            return self.spill.as_slice();
+        }
+        unsafe { slice::from_raw_parts(self.inline.as_ptr() as *const T, self.len) }
+    }
+}
+
+impl ObservationIndex {
+    fn record(&mut self, node: NodeId, observations: &[(ModelId, Invalidation)]) {
+        let entry = self.by_node.entry(node).or_default();
+
+        let mut prev_models = SmallCopyList::<ModelId, 8>::default();
+        for (model, _) in entry.iter() {
+            prev_models.push(*model);
+        }
+
+        entry.clear();
+        entry.reserve(observations.len());
+        for &(model, inv) in observations {
+            if let Some((_, mask)) = entry.iter_mut().find(|(m, _)| *m == model) {
+                mask.add(inv);
+            } else {
+                let mut mask = ObservationMask::default();
+                mask.add(inv);
+                entry.push((model, mask));
+            }
+        }
+
+        for model in prev_models.as_slice() {
+            if entry.iter().any(|(m, _)| *m == *model) {
                 continue;
             }
             if let Some(nodes) = self.by_model.get_mut(model) {
@@ -203,7 +301,7 @@ impl ObservationIndex {
             }
         }
 
-        for (model, mask) in next {
+        for (model, mask) in entry.iter().copied() {
             self.by_model.entry(model).or_default().insert(node, mask);
         }
     }
@@ -212,7 +310,7 @@ impl ObservationIndex {
         let Some(prev) = self.by_node.remove(&node) else {
             return;
         };
-        for model in prev.keys() {
+        for (model, _) in &prev {
             if let Some(nodes) = self.by_model.get_mut(model) {
                 nodes.remove(&node);
                 if nodes.is_empty() {
@@ -225,23 +323,33 @@ impl ObservationIndex {
 
 #[derive(Default)]
 struct GlobalObservationIndex {
-    by_node: HashMap<NodeId, HashMap<TypeId, ObservationMask>>,
+    by_node: HashMap<NodeId, Vec<(TypeId, ObservationMask)>>,
     by_global: HashMap<TypeId, HashMap<NodeId, ObservationMask>>,
 }
 
 impl GlobalObservationIndex {
-    fn record(&mut self, node: NodeId, observations: Vec<(TypeId, Invalidation)>) {
-        let mut next: HashMap<TypeId, ObservationMask> = HashMap::new();
-        for (global, inv) in observations {
-            next.entry(global).or_default().add(inv);
+    fn record(&mut self, node: NodeId, observations: &[(TypeId, Invalidation)]) {
+        let entry = self.by_node.entry(node).or_default();
+
+        let mut prev_globals = SmallCopyList::<TypeId, 8>::default();
+        for (global, _) in entry.iter() {
+            prev_globals.push(*global);
         }
 
-        let prev = self.by_node.insert(node, next);
-        let prev = prev.unwrap_or_default();
-        let next = self.by_node.get(&node).cloned().unwrap_or_default();
+        entry.clear();
+        entry.reserve(observations.len());
+        for &(global, inv) in observations {
+            if let Some((_, mask)) = entry.iter_mut().find(|(g, _)| *g == global) {
+                mask.add(inv);
+            } else {
+                let mut mask = ObservationMask::default();
+                mask.add(inv);
+                entry.push((global, mask));
+            }
+        }
 
-        for global in prev.keys() {
-            if next.contains_key(global) {
+        for global in prev_globals.as_slice() {
+            if entry.iter().any(|(g, _)| *g == *global) {
                 continue;
             }
             if let Some(nodes) = self.by_global.get_mut(global) {
@@ -252,7 +360,7 @@ impl GlobalObservationIndex {
             }
         }
 
-        for (global, mask) in next {
+        for (global, mask) in entry.iter().copied() {
             self.by_global.entry(global).or_default().insert(node, mask);
         }
     }
@@ -261,7 +369,7 @@ impl GlobalObservationIndex {
         let Some(prev) = self.by_node.remove(&node) else {
             return;
         };
-        for global in prev.keys() {
+        for (global, _) in &prev {
             if let Some(nodes) = self.by_global.get_mut(global) {
                 nodes.remove(&node);
                 if nodes.is_empty() {

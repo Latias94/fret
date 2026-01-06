@@ -156,12 +156,12 @@ impl<H: UiHost> UiTree<H> {
             self.paint_cache.misses = self.paint_cache.misses.saturating_add(1);
         }
 
-        let mut observations: Vec<(ModelId, Invalidation)> = Vec::new();
+        let mut observations = SmallCopyList::<(ModelId, Invalidation), 8>::default();
         let mut observe_model = |model: ModelId, inv: Invalidation| {
             observations.push((model, inv));
         };
 
-        let mut global_observations: Vec<(TypeId, Invalidation)> = Vec::new();
+        let mut global_observations = SmallCopyList::<(TypeId, Invalidation), 8>::default();
         let mut observe_global = |id: TypeId, inv: Invalidation| {
             global_observations.push((id, inv));
         };
@@ -173,11 +173,10 @@ impl<H: UiHost> UiTree<H> {
 
         let start = scene.ops_len();
         self.with_widget_mut(node, |widget, tree| {
-            let children: Vec<NodeId> = tree
-                .nodes
-                .get(node)
-                .map(|n| n.children.clone())
-                .unwrap_or_default();
+            let mut children_buf = SmallNodeList::<32>::default();
+            if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
+                children_buf.set(children);
+            }
             let window = tree.window;
             let focus = tree.focus;
             let mut cx = PaintCx {
@@ -185,7 +184,7 @@ impl<H: UiHost> UiTree<H> {
                 node,
                 window,
                 focus,
-                children: &children,
+                children: children_buf.as_slice(),
                 bounds,
                 scale_factor: sf,
                 accumulated_transform: current_transform,
@@ -213,9 +212,9 @@ impl<H: UiHost> UiTree<H> {
         });
         let end = scene.ops_len();
 
-        self.observed_in_paint.record(node, observations);
+        self.observed_in_paint.record(node, observations.as_slice());
         self.observed_globals_in_paint
-            .record(node, global_observations);
+            .record(node, global_observations.as_slice());
         if let Some(n) = self.nodes.get_mut(node) {
             n.invalidation.paint = false;
             if cache_enabled {

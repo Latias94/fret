@@ -139,6 +139,67 @@ fn row_justify_center_and_align_end_positions_children() {
 }
 
 #[test]
+fn flex_wrap_positions_children_on_multiple_rows() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(25.0), Px(60.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "flex-wrap",
+        |cx| {
+            let mut props = crate::element::FlexProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.wrap = true;
+            vec![cx.flex(props, |cx| {
+                vec![
+                    cx.text("a"),
+                    cx.text("b"),
+                    cx.text("c"),
+                    cx.text("d"),
+                    cx.text("e"),
+                ]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex_node = ui.children(root)[0];
+    let children = ui.children(flex_node);
+    assert_eq!(children.len(), 5);
+
+    let b0 = ui.debug_node_bounds(children[0]).expect("child0 bounds");
+    let b1 = ui.debug_node_bounds(children[1]).expect("child1 bounds");
+    let b2 = ui.debug_node_bounds(children[2]).expect("child2 bounds");
+    let b3 = ui.debug_node_bounds(children[3]).expect("child3 bounds");
+    let b4 = ui.debug_node_bounds(children[4]).expect("child4 bounds");
+
+    assert!((b0.origin.x.0 - 0.0).abs() < 0.01, "x0={:?}", b0.origin.x);
+    assert!((b1.origin.x.0 - 10.0).abs() < 0.01, "x1={:?}", b1.origin.x);
+    assert!((b2.origin.x.0 - 0.0).abs() < 0.01, "x2={:?}", b2.origin.x);
+    assert!((b3.origin.x.0 - 10.0).abs() < 0.01, "x3={:?}", b3.origin.x);
+    assert!((b4.origin.x.0 - 0.0).abs() < 0.01, "x4={:?}", b4.origin.x);
+
+    assert!((b0.origin.y.0 - 0.0).abs() < 0.01, "y0={:?}", b0.origin.y);
+    assert!((b1.origin.y.0 - 0.0).abs() < 0.01, "y1={:?}", b1.origin.y);
+    assert!((b2.origin.y.0 - 10.0).abs() < 0.01, "y2={:?}", b2.origin.y);
+    assert!((b3.origin.y.0 - 10.0).abs() < 0.01, "y3={:?}", b3.origin.y);
+    assert!((b4.origin.y.0 - 20.0).abs() < 0.01, "y4={:?}", b4.origin.y);
+}
+
+#[test]
 fn pressable_keyboard_activation_dispatches_click_command() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
