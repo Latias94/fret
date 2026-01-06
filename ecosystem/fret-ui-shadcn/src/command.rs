@@ -37,21 +37,21 @@ fn border(theme: &Theme) -> Color {
     theme
         .color_by_key("border")
         .or_else(|| theme.color_by_key("input"))
-        .unwrap_or(theme.colors.panel_border)
+        .expect("missing theme token: border/input")
 }
 
 fn bg(theme: &Theme) -> Color {
     theme
         .color_by_key("popover")
         .or_else(|| theme.color_by_key("background"))
-        .unwrap_or(theme.colors.surface_background)
+        .expect("missing theme token: popover/background")
 }
 
 fn item_bg_hover(theme: &Theme) -> Color {
     theme
         .color_by_key("accent")
         .or_else(|| theme.color_by_key("muted"))
-        .unwrap_or(theme.colors.hover_background)
+        .expect("missing theme token: accent/muted")
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -70,12 +70,8 @@ fn command_text_input<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
-    let fg = theme
-        .color_by_key("foreground")
-        .unwrap_or(theme.colors.text_primary);
-    let placeholder_fg = theme
-        .color_by_key("muted-foreground")
-        .unwrap_or(theme.colors.text_muted);
+    let fg = theme.color_required("foreground");
+    let placeholder_fg = theme.color_required("muted-foreground");
 
     let mut chrome = TextInputStyle::from_theme(theme.snapshot());
     chrome.padding = Edges::all(Px(0.0));
@@ -136,9 +132,7 @@ fn cmdk_highlighted_label<H: UiHost>(
     }
 
     let theme = Theme::global(&*cx.app).clone();
-    let muted_fg = theme
-        .color_by_key("muted-foreground")
-        .unwrap_or(theme.colors.text_muted);
+    let muted_fg = theme.color_required("muted-foreground");
 
     let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
     if ranges.is_empty() {
@@ -240,11 +234,11 @@ pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.command.item.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or(theme.metrics.font_size);
+        .unwrap_or_else(|| theme.metric_required("font.size"));
     let line_height = theme
         .metric_by_key("component.command.item.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or(theme.metrics.font_line_height);
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -255,14 +249,17 @@ pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
 }
 
 fn heading_text_style(theme: &Theme) -> TextStyle {
+    let base_size = theme.metric_required("font.size");
+    let base_line_height = theme.metric_required("font.line_height");
+
     let size = theme
         .metric_by_key("component.command.heading.text_px")
         .or_else(|| theme.metric_by_key("component.text.sm_px"))
-        .unwrap_or_else(|| Px((theme.metrics.font_size.0 - 2.0).max(10.0)));
+        .unwrap_or_else(|| Px((base_size.0 - 2.0).max(10.0)));
     let line_height = theme
         .metric_by_key("component.command.heading.line_height")
         .or_else(|| theme.metric_by_key("component.text.sm_line_height"))
-        .unwrap_or_else(|| Px((theme.metrics.font_line_height.0 - 4.0).max(size.0)));
+        .unwrap_or_else(|| Px((base_line_height.0 - 4.0).max(size.0)));
 
     TextStyle {
         font: FontId::default(),
@@ -274,14 +271,17 @@ fn heading_text_style(theme: &Theme) -> TextStyle {
 }
 
 pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
+    let base_size = theme.metric_required("font.size");
+    let base_line_height = theme.metric_required("font.line_height");
+
     let px = theme
         .metric_by_key("component.command.shortcut.text_px")
         .or_else(|| theme.metric_by_key("component.text.sm_px"))
-        .unwrap_or_else(|| Px((theme.metrics.font_size.0 - 2.0).max(10.0)));
+        .unwrap_or_else(|| Px((base_size.0 - 2.0).max(10.0)));
     let line_height = theme
         .metric_by_key("component.command.shortcut.line_height")
         .or_else(|| theme.metric_by_key("component.text.sm_line_height"))
-        .unwrap_or_else(|| Px((theme.metrics.font_line_height.0 - 4.0).max(px.0)));
+        .unwrap_or_else(|| Px((base_line_height.0 - 4.0).max(px.0)));
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -313,9 +313,7 @@ impl CommandShortcut {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme
-            .color_by_key("muted-foreground")
-            .unwrap_or(theme.colors.text_muted);
+        let fg = theme.color_required("muted-foreground");
         cx.text_props(TextProps {
             layout: {
                 let mut layout = LayoutStyle::default();
@@ -486,9 +484,7 @@ impl CommandInput {
                     .clone()
                     .unwrap_or_else(|| Arc::from("Command input"));
                 let placeholder = self.placeholder.clone();
-                let icon_fg = theme
-                    .color_by_key("muted-foreground")
-                    .unwrap_or(theme.colors.text_muted);
+                let icon_fg = theme.color_required("muted-foreground");
 
                 let icon = decl_icon::icon_with(
                     cx,
@@ -715,7 +711,7 @@ impl CommandEmpty {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.colors.text_muted;
+        let fg = theme.color_required("muted-foreground");
         let text_style = item_text_style(&theme);
         cx.container(
             ContainerProps {
@@ -889,9 +885,7 @@ impl CommandList {
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
             let bg_hover = item_bg_hover(&theme);
-            let fg = theme
-                .color_by_key("foreground")
-                .unwrap_or(theme.colors.text_primary);
+            let fg = theme.color_required("foreground");
             let text_style = item_text_style(&theme);
             let item_layout = decl_style::layout_style(
                 &theme,
@@ -1431,10 +1425,8 @@ impl CommandPalette {
 
             let bg_hover = item_bg_hover(&theme);
             let bg_selected = alpha_mul(bg_hover, 0.85);
-            let fg = theme
-                .color_by_key("foreground")
-                .unwrap_or(theme.colors.text_primary);
-            let fg_disabled = theme.colors.text_disabled;
+            let fg = theme.color_required("foreground");
+            let fg_disabled = alpha_mul(fg, 0.5);
             let text_style = item_text_style(&theme);
             let item_layout = decl_style::layout_style(
                 &theme,
@@ -1461,9 +1453,7 @@ impl CommandPalette {
                 .into_iter()
                 .map(|row| match row {
                     CommandPaletteRenderRow::Heading(heading) => {
-                        let fg = theme
-                            .color_by_key("muted-foreground")
-                            .unwrap_or(theme.colors.text_muted);
+                        let fg = theme.color_required("muted-foreground");
                         let style = heading_text_style(&theme);
                         cx.container(
                             ContainerProps {
@@ -1752,9 +1742,7 @@ impl CommandPalette {
             );
             let input_id = input.id;
 
-            let icon_fg = theme
-                .color_by_key("muted-foreground")
-                .unwrap_or(theme.colors.text_muted);
+            let icon_fg = theme.color_required("muted-foreground");
             let icon = decl_icon::icon_with(
                 cx,
                 ids::ui::SEARCH,

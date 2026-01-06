@@ -25,7 +25,7 @@ use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Space};
+use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radius, Space};
 
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
@@ -431,17 +431,16 @@ impl DropdownMenuShortcut {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or(theme.colors.text_muted);
+        let fg = theme.color_required("muted-foreground");
 
+        let base_size = theme.metric_required("font.size");
+        let base_line_height = theme.metric_required("font.line_height");
         let font_size = theme
             .metric_by_key("component.dropdown_menu.shortcut.font_size")
-            .unwrap_or_else(|| Px((theme.metrics.font_size.0 - 1.0).max(10.0)));
+            .unwrap_or_else(|| Px((base_size.0 - 1.0).max(10.0)));
         let font_line_height = theme
             .metric_by_key("component.dropdown_menu.shortcut.line_height")
-            .unwrap_or_else(|| Px((theme.metrics.font_line_height.0 - 2.0).max(font_size.0)));
+            .unwrap_or_else(|| Px((base_line_height.0 - 2.0).max(font_size.0)));
 
         cx.text_props(TextProps {
             layout: {
@@ -855,7 +854,7 @@ impl DropdownMenu {
                 theme
                     .metric_by_key("component.dropdown_menu.arrow_padding")
                     .or_else(|| theme.metric_by_key("component.popover.arrow_padding"))
-                    .unwrap_or(theme.metrics.radius_md)
+                    .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme))
             });
 
             let trigger = trigger(cx);
@@ -985,35 +984,23 @@ impl DropdownMenu {
                     };
                     let transform = slide * zoom;
 
-                    let border = theme
-                        .color_by_key("border")
-                        .unwrap_or(theme.colors.panel_border);
+                    let border = theme.color_required("border");
+                    let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
                     // new-york-v4:
                     // - `DropdownMenuContent`: `shadow-md`
                     // - `DropdownMenuSubContent`: `shadow-lg`
-                    let shadow = decl_style::shadow_md(&theme, theme.metrics.radius_sm);
-                    let shadow_submenu = decl_style::shadow_lg(&theme, theme.metrics.radius_sm);
-                    let ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
+                    let shadow = decl_style::shadow_md(&theme, radius_sm);
+                    let shadow_submenu = decl_style::shadow_lg(&theme, radius_sm);
+                    let ring = decl_style::focus_ring(&theme, radius_sm);
                     // new-york-v4: item rows use `px-2`.
                     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                     // new-york-v4: item rows use `py-1.5`.
                     let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
-                    let bg = theme
-                        .color_by_key("popover")
-                        .or_else(|| theme.color_by_key("popover.background"))
-                        .unwrap_or(theme.colors.panel_background);
-                    let fg = theme
-                        .color_by_key("popover.foreground")
-                        .or_else(|| theme.color_by_key("popover-foreground"))
-                        .unwrap_or(theme.colors.text_primary);
-                    let accent = theme
-                        .color_by_key("accent")
-                        .unwrap_or(theme.colors.hover_background);
-                    let accent_fg = theme
-                        .color_by_key("accent.foreground")
-                        .or_else(|| theme.color_by_key("accent-foreground"))
-                        .unwrap_or(theme.colors.text_primary);
+                    let bg = theme.color_required("popover");
+                    let fg = theme.color_required("popover-foreground");
+                    let accent = theme.color_required("accent");
+                    let accent_fg = theme.color_required("accent-foreground");
 
                     let entries_for_submenu = entries.clone();
                     let open_for_menu = open_for_overlay.clone();
@@ -1060,9 +1047,7 @@ impl DropdownMenu {
                                             shadow: Some(shadow),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
-                                            corner_radii: fret_core::Corners::all(
-                                                theme.metrics.radius_sm,
-                                            ),
+                                            corner_radii: fret_core::Corners::all(radius_sm),
                                         },
                                         move |cx| {
                                     let scroll_layout = LayoutStyle {
@@ -1110,20 +1095,14 @@ impl DropdownMenu {
                                                 labels_arc.clone(),
                                                 typeahead_timeout_ticks,
                                                 move |cx| {
-                                                    let font_size = theme.metrics.font_size;
-                                                    let font_line_height = theme.metrics.font_line_height;
-                                                    let radius_sm = theme.metrics.radius_sm;
-                                                    let text_disabled = theme.colors.text_disabled;
-                                                    let icon_muted_fg = theme
-                                                        .color_by_key("muted.foreground")
-                                                        .or_else(|| theme.color_by_key("muted-foreground"))
-                                                        .unwrap_or(theme.colors.text_muted);
-                                                    let destructive_fg = theme
-                                                        .color_by_key("destructive")
-                                                        .or_else(|| {
-                                                            theme.color_by_key("destructive.background")
-                                                        })
-                                                        .unwrap_or(theme.colors.text_primary);
+                                                    let font_size = theme.metric_required("font.size");
+                                                    let font_line_height =
+                                                        theme.metric_required("font.line_height");
+                                                    let text_disabled =
+                                                        alpha_mul(theme.color_required("foreground"), 0.5);
+                                                    let icon_muted_fg =
+                                                        theme.color_required("muted-foreground");
+                                                    let destructive_fg = theme.color_required("destructive");
                                                     let destructive_bg = alpha_mul(destructive_fg, 0.10);
 
                                                     let text_style = TextStyle {
@@ -1141,10 +1120,7 @@ impl DropdownMenu {
                                                     for entry in entries.clone() {
                                                         match entry {
                                                     DropdownMenuEntry::Label(label) => {
-                                                        let fg = theme
-                                                            .color_by_key("muted.foreground")
-                                                            .or_else(|| theme.color_by_key("muted-foreground"))
-                                                            .unwrap_or(theme.colors.text_muted);
+                                                        let fg = theme.color_required("muted-foreground");
                                                         let text = label.text.clone();
                                                         let pad_left =
                                                             if label.inset { pad_x_inset } else { pad_x };
@@ -1781,19 +1757,14 @@ impl DropdownMenu {
                                             })
                                             .count();
 
-                                            let font_size = theme.metrics.font_size;
-                                            let font_line_height = theme.metrics.font_line_height;
-                                            let radius_sm = theme.metrics.radius_sm;
-                                            let text_disabled = theme.colors.text_disabled;
-                                            let destructive_fg = theme
-                                                .color_by_key("destructive")
-                                                .or_else(|| theme.color_by_key("destructive.background"))
-                                                .unwrap_or(theme.colors.text_primary);
+                                            let font_size = theme.metric_required("font.size");
+                                            let font_line_height =
+                                                theme.metric_required("font.line_height");
+                                            let text_disabled =
+                                                alpha_mul(theme.color_required("foreground"), 0.5);
+                                            let destructive_fg = theme.color_required("destructive");
                                             let destructive_bg = alpha_mul(destructive_fg, 0.10);
-                                            let label_fg = theme
-                                                .color_by_key("muted.foreground")
-                                                .or_else(|| theme.color_by_key("muted-foreground"))
-                                                .unwrap_or(theme.colors.text_muted);
+                                            let label_fg = theme.color_required("muted-foreground");
 
                                             let text_style = TextStyle {
                                                 font: FontId::default(),
@@ -1851,9 +1822,7 @@ impl DropdownMenu {
                                                     shadow: Some(shadow_submenu),
                                                     border: Edges::all(Px(1.0)),
                                                     border_color: Some(border),
-                                                    corner_radii: fret_core::Corners::all(
-                                                        theme.metrics.radius_sm,
-                                                    ),
+                                                    corner_radii: fret_core::Corners::all(radius_sm),
                                                 },
                                                 move |cx| {
                                                     let mut item_ix: usize = 0;

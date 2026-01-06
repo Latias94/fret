@@ -25,7 +25,7 @@ use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::roving_focus_group;
-use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Space};
+use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radius, Space};
 
 use crate::overlay_motion;
 
@@ -200,19 +200,18 @@ impl MenubarShortcut {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or(theme.colors.text_muted);
+        let fg = theme.color_required("muted-foreground");
+        let font_size = theme.metric_required("font.size");
+        let font_line_height = theme.metric_required("font.line_height");
 
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.text,
             style: Some(TextStyle {
                 font: FontId::default(),
-                size: theme.metrics.font_size,
+                size: font_size,
                 weight: FontWeight::NORMAL,
-                line_height: Some(theme.metrics.font_line_height),
+                line_height: Some(font_line_height),
                 letter_spacing_em: Some(0.12),
             }),
             color: Some(fg),
@@ -707,13 +706,12 @@ impl Menubar {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
-            let border = theme
-                .color_by_key("border")
-                .unwrap_or(theme.colors.panel_border);
-            let radius = theme.metrics.radius_sm;
+            let border = theme.color_required("border");
+            let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let pad_x = MetricRef::space(Space::N2).resolve(&theme);
             let pad_y = MetricRef::space(Space::N2).resolve(&theme);
             let gap = MetricRef::space(Space::N1).resolve(&theme);
+            let bg = theme.color_required("background");
 
             let disabled = self.disabled;
             let menus = self.menus;
@@ -752,7 +750,7 @@ impl Menubar {
                                 bottom: pad_y,
                                 left: pad_x,
                             },
-                            background: Some(theme.colors.panel_background),
+                            background: Some(bg),
                             shadow: None,
                             border: Edges::all(Px(1.0)),
                             border_color: Some(border),
@@ -909,22 +907,20 @@ impl MenubarMenuEntries {
             let theme = Theme::global(&*cx.app).clone();
             let enabled = !self.menu.disabled;
 
-            let radius = theme.metrics.radius_sm;
+            let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
-            let bg_hover = theme.colors.hover_background;
-            let bg_open = alpha_mul(theme.colors.selection_background, 0.35);
-            let fg = theme
-                .color_by_key("foreground")
-                .unwrap_or(theme.colors.text_primary);
-            let fg_muted = theme
-                .color_by_key("muted-foreground")
-                .unwrap_or(theme.colors.text_muted);
+            let bg_hover = theme.color_required("accent");
+            let bg_open = alpha_mul(bg_hover, 0.35);
+            let fg = theme.color_required("foreground");
+            let fg_muted = theme.color_required("muted-foreground");
 
+            let font_size = theme.metric_required("font.size");
+            let font_line_height = theme.metric_required("font.line_height");
             let text_style = TextStyle {
                 font: FontId::default(),
-                size: theme.metrics.font_size,
+                size: font_size,
                 weight: FontWeight::MEDIUM,
-                line_height: Some(theme.metrics.font_line_height),
+                line_height: Some(font_line_height),
                 letter_spacing_em: None,
             };
 
@@ -1109,19 +1105,18 @@ impl MenubarMenuEntries {
                             ..Default::default()
                         };
 
-                        let border = theme
-                            .color_by_key("border")
-                            .unwrap_or(theme.colors.panel_border);
-                        let shadow = decl_style::shadow_sm(&theme, theme.metrics.radius_sm);
-                        let item_ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
+                        let border = theme.color_required("border");
+                        let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
+                        let shadow = decl_style::shadow_sm(&theme, radius_sm);
+                        let item_ring = decl_style::focus_ring(&theme, radius_sm);
                         let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                         let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                         let pad_y = MetricRef::space(Space::N2).resolve(&theme);
-                        let destructive_fg = theme
-                            .color_by_key("destructive")
-                            .or_else(|| theme.color_by_key("destructive.background"))
-                            .unwrap_or(fg);
+                        let font_size = theme.metric_required("font.size");
+                        let font_line_height = theme.metric_required("font.line_height");
+                        let destructive_fg = theme.color_required("destructive");
                         let destructive_bg = alpha_mul(destructive_fg, 0.12);
+                        let panel_bg = theme.color_required("popover");
 
                         let open_for_submenu = open_for_overlay.clone();
                         let submenu_for_content = submenu.clone();
@@ -1148,11 +1143,11 @@ impl MenubarMenuEntries {
                                     move |layout| ContainerProps {
                                         layout,
                                         padding: Edges::all(Px(6.0)),
-                                        background: Some(theme.colors.menu_background),
+                                        background: Some(panel_bg),
                                         shadow: Some(shadow),
                                         border: Edges::all(Px(1.0)),
                                         border_color: Some(border),
-                                        corner_radii: Corners::all(theme.metrics.radius_sm),
+                                        corner_radii: Corners::all(radius_sm),
                                     },
                                     move |cx| {
                                         let content_focus_id_for_panel =
@@ -1236,10 +1231,10 @@ impl MenubarMenuEntries {
                                                                         text,
                                                                         style: Some(TextStyle {
                                                                             font: FontId::default(),
-                                                                            size: theme.metrics.font_size,
+                                                                            size: font_size,
                                                                             weight: FontWeight::MEDIUM,
                                                                             line_height: Some(
-                                                                                theme.metrics.font_line_height,
+                                                                                font_line_height,
                                                                             ),
                                                                             letter_spacing_em: None,
                                                                         }),
@@ -1325,7 +1320,7 @@ impl MenubarMenuEntries {
                                                                     let mut bg = Color::TRANSPARENT;
                                                                     if st.hovered || st.pressed || st.focused {
                                                                         bg = alpha_mul(
-                                                                            theme.colors.menu_item_hover,
+                                                                            theme.color_required("accent"),
                                                                             0.9,
                                                                         );
                                                                     }
@@ -1372,7 +1367,7 @@ impl MenubarMenuEntries {
                                                                         pad_x,
                                                                         pad_x,
                                                                         pad_y,
-                                                                        theme.metrics.radius_sm,
+                                                                        radius_sm,
                                                                         text_style.clone(),
                                                                     );
 
@@ -1460,7 +1455,7 @@ impl MenubarMenuEntries {
                                                                     let mut bg = Color::TRANSPARENT;
                                                                     if st.hovered || st.pressed || st.focused {
                                                                         bg = alpha_mul(
-                                                                            theme.colors.menu_item_hover,
+                                                                            theme.color_required("accent"),
                                                                             0.9,
                                                                         );
                                                                     }
@@ -1507,7 +1502,7 @@ impl MenubarMenuEntries {
                                                                         pad_x,
                                                                         pad_x,
                                                                         pad_y,
-                                                                        theme.metrics.radius_sm,
+                                                                        radius_sm,
                                                                         text_style.clone(),
                                                                     );
 
@@ -1612,7 +1607,7 @@ impl MenubarMenuEntries {
                                                                             destructive_bg
                                                                         } else {
                                                                             alpha_mul(
-                                                                                theme.colors.menu_item_hover,
+                                                                                theme.color_required("accent"),
                                                                                 0.9,
                                                                             )
                                                                         };
@@ -1668,7 +1663,7 @@ impl MenubarMenuEntries {
                                                                         pad_left,
                                                                         pad_x,
                                                                         pad_y,
-                                                                        theme.metrics.radius_sm,
+                                                                        radius_sm,
                                                                         text_style.clone(),
                                                                     );
 
@@ -1720,9 +1715,7 @@ impl MenubarMenuEntries {
                                                                         Color::TRANSPARENT;
                                                                     if st.hovered || st.pressed || st.focused {
                                                                         bg = alpha_mul(
-                                                                            theme
-                                                                                .colors
-                                                                                .menu_item_hover,
+                                                                            theme.color_required("accent"),
                                                                             0.9,
                                                                         );
                                                                     }
@@ -1748,7 +1741,7 @@ impl MenubarMenuEntries {
                                                                             ),
                                                                             border_color: None,
                                                                             corner_radii: Corners::all(
-                                                                                theme.metrics.radius_sm,
+                                                                                radius_sm,
                                                                             ),
                                                                         },
                                                                         move |cx| {
@@ -1966,11 +1959,11 @@ impl MenubarMenuEntries {
                                         move |layout| ContainerProps {
                                             layout,
                                             padding: Edges::all(Px(6.0)),
-                                            background: Some(theme.colors.menu_background),
+                                            background: Some(panel_bg),
                                             shadow: Some(shadow),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
-                                            corner_radii: Corners::all(theme.metrics.radius_sm),
+                                            corner_radii: Corners::all(radius_sm),
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
@@ -2053,9 +2046,9 @@ impl MenubarMenuEntries {
                                                                                     text,
                                                                                     style: Some(TextStyle {
                                                                                         font: FontId::default(),
-                                                                                        size: theme.metrics.font_size,
+                                                                                        size: font_size,
                                                                                         weight: FontWeight::MEDIUM,
-                                                                                        line_height: Some(theme.metrics.font_line_height),
+                                                                                        line_height: Some(font_line_height),
                                                                                         letter_spacing_em: None,
                                                                                     }),
                                                                                     color: Some(fg),
@@ -2127,7 +2120,7 @@ impl MenubarMenuEntries {
                                                                                 let mut bg = Color::TRANSPARENT;
                                                                                 if st.hovered || st.pressed || st.focused {
                                                                                     bg = alpha_mul(
-                                                                                        theme.colors.menu_item_hover,
+                                                                                        theme.color_required("accent"),
                                                                                         0.9,
                                                                                     );
                                                                                 }
@@ -2174,7 +2167,7 @@ impl MenubarMenuEntries {
                                                                                     pad_x,
                                                                                     pad_x,
                                                                                     pad_y,
-                                                                                    theme.metrics.radius_sm,
+                                                                                    radius_sm,
                                                                                     text_style.clone(),
                                                                                 );
 
@@ -2249,7 +2242,7 @@ impl MenubarMenuEntries {
                                                                                 let mut bg = Color::TRANSPARENT;
                                                                                 if st.hovered || st.pressed || st.focused {
                                                                                     bg = alpha_mul(
-                                                                                        theme.colors.menu_item_hover,
+                                                                                        theme.color_required("accent"),
                                                                                         0.9,
                                                                                     );
                                                                                 }
@@ -2296,7 +2289,7 @@ impl MenubarMenuEntries {
                                                                                     pad_x,
                                                                                     pad_x,
                                                                                     pad_y,
-                                                                                    theme.metrics.radius_sm,
+                                                                                    radius_sm,
                                                                                     text_style.clone(),
                                                                                 );
 
@@ -2365,7 +2358,7 @@ impl MenubarMenuEntries {
                                                                                         destructive_bg
                                                                                     } else {
                                                                                         alpha_mul(
-                                                                                            theme.colors.menu_item_hover,
+                                                                                            theme.color_required("accent"),
                                                                                             0.9,
                                                                                         )
                                                                                     };
@@ -2417,7 +2410,7 @@ impl MenubarMenuEntries {
                                                                                     pad_left,
                                                                                     pad_x,
                                                                                     pad_y,
-                                                                                    theme.metrics.radius_sm,
+                                                                                    radius_sm,
                                                                                     text_style.clone(),
                                                                                 );
 

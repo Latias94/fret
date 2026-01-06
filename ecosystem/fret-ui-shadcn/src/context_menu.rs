@@ -26,7 +26,7 @@ use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Space};
+use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radius, Space};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 use crate::overlay_motion;
@@ -190,19 +190,18 @@ impl ContextMenuShortcut {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or(theme.colors.text_muted);
+        let fg = theme.color_required("muted-foreground");
+        let font_size = theme.metric_required("font.size");
+        let font_line_height = theme.metric_required("font.line_height");
 
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.text,
             style: Some(TextStyle {
                 font: fret_core::FontId::default(),
-                size: theme.metrics.font_size,
+                size: font_size,
                 weight: fret_core::FontWeight::NORMAL,
-                line_height: Some(theme.metrics.font_line_height),
+                line_height: Some(font_line_height),
                 letter_spacing_em: Some(0.12),
             }),
             color: Some(fg),
@@ -727,40 +726,30 @@ fn context_menu_submenu_panel<H: UiHost>(
     let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
     let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
 
-    let border = theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border);
-    let shadow = decl_style::shadow_sm(&theme, theme.metrics.radius_sm);
-    let ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
+    let border = theme.color_required("border");
+    let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
+    let shadow = decl_style::shadow_sm(&theme, radius_sm);
+    let ring = decl_style::focus_ring(&theme, radius_sm);
     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
     let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+    let font_size = theme.metric_required("font.size");
+    let font_line_height = theme.metric_required("font.line_height");
     let text_style = TextStyle {
         font: fret_core::FontId::default(),
-        size: theme.metrics.font_size,
+        size: font_size,
         weight: fret_core::FontWeight::NORMAL,
-        line_height: Some(theme.metrics.font_line_height),
+        line_height: Some(font_line_height),
         letter_spacing_em: None,
     };
-    let radius_sm = theme.metrics.radius_sm;
-    let text_disabled = theme.colors.text_disabled;
-    let label_fg = theme
-        .color_by_key("muted.foreground")
-        .or_else(|| theme.color_by_key("muted-foreground"))
-        .unwrap_or(theme.colors.text_muted);
-    let accent = theme
-        .color_by_key("accent")
-        .unwrap_or(theme.colors.hover_background);
-    let accent_fg = theme
-        .color_by_key("accent.foreground")
-        .or_else(|| theme.color_by_key("accent-foreground"))
-        .unwrap_or(theme.colors.text_primary);
-    let fg = theme.colors.text_primary;
-    let destructive_fg = theme
-        .color_by_key("destructive")
-        .or_else(|| theme.color_by_key("destructive.background"))
-        .unwrap_or(fg);
+    let text_disabled = alpha_mul(theme.color_required("foreground"), 0.5);
+    let label_fg = theme.color_required("muted-foreground");
+    let accent = theme.color_required("accent");
+    let accent_fg = theme.color_required("accent-foreground");
+    let fg = theme.color_required("foreground");
+    let destructive_fg = theme.color_required("destructive");
     let destructive_bg = alpha_mul(destructive_fg, 0.12);
+    let panel_bg = theme.color_required("popover");
 
     menu::sub_content::submenu_panel_at(
         cx,
@@ -768,11 +757,11 @@ fn context_menu_submenu_panel<H: UiHost>(
         move |layout| ContainerProps {
             layout,
             padding: Edges::all(Px(4.0)),
-            background: Some(theme.colors.panel_background),
+            background: Some(panel_bg),
             shadow: Some(shadow),
             border: Edges::all(Px(1.0)),
             border_color: Some(border),
-            corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
+            corner_radii: fret_core::Corners::all(radius_sm),
         },
         move |cx| {
             let mut item_ix: usize = 0;
@@ -800,9 +789,9 @@ fn context_menu_submenu_panel<H: UiHost>(
                                     text,
                                     style: Some(TextStyle {
                                         font: fret_core::FontId::default(),
-                                        size: theme.metrics.font_size,
+                                        size: font_size,
                                         weight: fret_core::FontWeight::MEDIUM,
-                                        line_height: Some(theme.metrics.font_line_height),
+                                        line_height: Some(font_line_height),
                                         letter_spacing_em: None,
                                     }),
                                     wrap: TextWrap::None,
@@ -914,8 +903,8 @@ fn context_menu_submenu_panel<H: UiHost>(
                                     row_bg,
                                     row_fg,
                                     text_style.clone(),
-                                    theme.metrics.font_size,
-                                    theme.metrics.font_line_height,
+                                    font_size,
+                                    font_line_height,
                                     pad_left,
                                     pad_x,
                                     pad_y,
@@ -1003,8 +992,8 @@ fn context_menu_submenu_panel<H: UiHost>(
                                     row_bg,
                                     row_fg,
                                     text_style.clone(),
-                                    theme.metrics.font_size,
-                                    theme.metrics.font_line_height,
+                                    font_size,
+                                    font_line_height,
                                     pad_x,
                                     pad_x,
                                     pad_y,
@@ -1095,8 +1084,8 @@ fn context_menu_submenu_panel<H: UiHost>(
                                     row_bg,
                                     row_fg,
                                     text_style.clone(),
-                                    theme.metrics.font_size,
-                                    theme.metrics.font_line_height,
+                                    font_size,
+                                    font_line_height,
                                     pad_x,
                                     pad_x,
                                     pad_y,
@@ -1272,7 +1261,7 @@ impl ContextMenu {
                 theme
                     .metric_by_key("component.context_menu.arrow_padding")
                     .or_else(|| theme.metric_by_key("component.popover.arrow_padding"))
-                    .unwrap_or(theme.metrics.radius_md)
+                    .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme))
             });
 
             let id = cx.root_id();
@@ -1425,40 +1414,30 @@ impl ContextMenu {
                     };
                     let transform = slide * zoom;
 
-                    let border = theme
-                        .color_by_key("border")
-                        .unwrap_or(theme.colors.panel_border);
-                    let shadow = decl_style::shadow_sm(&theme, theme.metrics.radius_sm);
-                    let ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
+                    let border = theme.color_required("border");
+                    let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
+                    let shadow = decl_style::shadow_sm(&theme, radius_sm);
+                    let ring = decl_style::focus_ring(&theme, radius_sm);
                     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
                     let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                     let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+                    let font_size = theme.metric_required("font.size");
+                    let font_line_height = theme.metric_required("font.line_height");
                     let text_style = TextStyle {
                         font: fret_core::FontId::default(),
-                        size: theme.metrics.font_size,
+                        size: font_size,
                         weight: fret_core::FontWeight::NORMAL,
-                        line_height: Some(theme.metrics.font_line_height),
+                        line_height: Some(font_line_height),
                         letter_spacing_em: None,
                     };
-                    let radius_sm = theme.metrics.radius_sm;
-                    let text_disabled = theme.colors.text_disabled;
-                    let label_fg = theme
-                        .color_by_key("muted.foreground")
-                        .or_else(|| theme.color_by_key("muted-foreground"))
-                        .unwrap_or(theme.colors.text_muted);
-                    let accent = theme
-                        .color_by_key("accent")
-                        .unwrap_or(theme.colors.hover_background);
-                    let accent_fg = theme
-                        .color_by_key("accent.foreground")
-                        .or_else(|| theme.color_by_key("accent-foreground"))
-                        .unwrap_or(theme.colors.text_primary);
-                    let fg = theme.colors.text_primary;
-                    let destructive_fg = theme
-                        .color_by_key("destructive")
-                        .or_else(|| theme.color_by_key("destructive.background"))
-                        .unwrap_or(fg);
+                    let text_disabled = alpha_mul(theme.color_required("foreground"), 0.5);
+                    let label_fg = theme.color_required("muted-foreground");
+                    let accent = theme.color_required("accent");
+                    let accent_fg = theme.color_required("accent-foreground");
+                    let fg = theme.color_required("foreground");
+                    let destructive_fg = theme.color_required("destructive");
                     let destructive_bg = alpha_mul(destructive_fg, 0.12);
+                    let panel_bg = theme.color_required("popover");
 
                     let arrow_el = popper_arrow::diamond_arrow_element(
                         cx,
@@ -1466,7 +1445,7 @@ impl ContextMenu {
                         wrapper_insets,
                         arrow_size,
                         DiamondArrowStyle {
-                            bg: theme.colors.panel_background,
+                            bg: panel_bg,
                             border: Some(border),
                             border_width: Px(1.0),
                         },
@@ -1495,13 +1474,11 @@ impl ContextMenu {
                                         move |layout| ContainerProps {
                                             layout,
                                             padding: Edges::all(Px(4.0)),
-                                            background: Some(theme.colors.panel_background),
+                                            background: Some(panel_bg),
                                             shadow: Some(shadow),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border),
-                                            corner_radii: fret_core::Corners::all(
-                                                theme.metrics.radius_sm,
-                                            ),
+                                            corner_radii: fret_core::Corners::all(radius_sm),
                                         },
                                         move |cx| {
                                             let content_focus_id_for_panel =
@@ -1555,10 +1532,10 @@ impl ContextMenu {
                                                                     text,
                                                                     style: Some(TextStyle {
                                                                         font: fret_core::FontId::default(),
-                                                                        size: theme.metrics.font_size,
+                                                                        size: font_size,
                                                                         weight: fret_core::FontWeight::MEDIUM,
                                                                         line_height: Some(
-                                                                            theme.metrics.font_line_height,
+                                                                            font_line_height,
                                                                         ),
                                                                         letter_spacing_em: None,
                                                                     }),
@@ -1721,16 +1698,16 @@ impl ContextMenu {
                                                                         has_submenu,
                                                                         None,
                                                                         disabled,
-                                                                        row_bg,
-                                                                        row_fg,
-                                                                        text_style.clone(),
-                                                                        theme.metrics.font_size,
-                                                                        theme.metrics.font_line_height,
-                                                                        pad_left,
-                                                                        pad_x,
-                                                                        pad_y,
-                                                                        radius_sm,
-                                                                        text_disabled,
+                                                                    row_bg,
+                                                                    row_fg,
+                                                                    text_style.clone(),
+                                                                    font_size,
+                                                                    font_line_height,
+                                                                    pad_left,
+                                                                    pad_x,
+                                                                    pad_y,
+                                                                    radius_sm,
+                                                                    text_disabled,
                                                                     );
 
                                                                     (props, children)
@@ -1824,15 +1801,15 @@ impl ContextMenu {
                                                                         Some(checked_now),
                                                                         disabled,
                                                                         row_bg,
-                                                                        row_fg,
-                                                                        text_style.clone(),
-                                                                        theme.metrics.font_size,
-                                                                        theme.metrics.font_line_height,
-                                                                        pad_x,
-                                                                        pad_x,
-                                                                        pad_y,
-                                                                        radius_sm,
-                                                                        text_disabled,
+                                                                    row_fg,
+                                                                    text_style.clone(),
+                                                                    font_size,
+                                                                    font_line_height,
+                                                                    pad_x,
+                                                                    pad_x,
+                                                                    pad_y,
+                                                                    radius_sm,
+                                                                    text_disabled,
                                                                     )
                                                                 },
                                                             )
@@ -1935,8 +1912,8 @@ impl ContextMenu {
                                                                         row_bg,
                                                                         row_fg,
                                                                         text_style.clone(),
-                                                                        theme.metrics.font_size,
-                                                                        theme.metrics.font_line_height,
+                                                                        font_size,
+                                                                        font_line_height,
                                                                         pad_x,
                                                                         pad_x,
                                                                         pad_y,
