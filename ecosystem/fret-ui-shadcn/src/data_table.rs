@@ -10,7 +10,7 @@ use fret_ui::element::{
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
 
 use crate::table::{TableCell, TableHead, TableRow};
 
@@ -115,7 +115,7 @@ impl DataTable {
         let border = border_color(&theme);
 
         let root_chrome = ChromeRefinement::default()
-            .rounded_md()
+            .rounded(Radius::Lg)
             .border_1()
             .border_color(ColorRef::Color(border))
             .merge(self.chrome);
@@ -158,7 +158,12 @@ impl DataTable {
             let body_id = body.id;
 
             let header_row = {
+                let header_bg = theme
+                    .color_by_key("muted")
+                    .or_else(|| theme.color_by_key("muted.background"))
+                    .unwrap_or(theme.colors.panel_background);
                 let header_chrome = ChromeRefinement::default()
+                    .bg(ColorRef::Color(header_bg))
                     .border_1()
                     .border_color(ColorRef::Color(border));
                 let mut props = decl_style::container_props(

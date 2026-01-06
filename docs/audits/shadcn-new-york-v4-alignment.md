@@ -85,6 +85,17 @@ Fret mapping intent:
   - TabsList: `h-9`, `rounded-lg`, `p-[3px]`, `bg-muted`.
   - Trigger: `flex-1`, `h-[calc(100%-1px)]`, active background/border behavior.
 
+### `DataTable`
+
+- Upstream example block: `repo-ref/ui/apps/v4/registry/new-york-v4/blocks/dashboard-01/components/data-table.tsx`
+- Upstream table primitives: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/table.tsx`
+- Fret: `ecosystem/fret-ui-shadcn/src/data_table.rs`
+- Gaps to check:
+  - Wrapper: `overflow-hidden rounded-lg border` (container chrome).
+  - Header row: `bg-muted` and fixed/sticky behavior (Fret uses a separate header + wheel sync).
+  - Empty state: `h-24 text-center` equivalent for zero rows.
+  - First/utility columns: fixed-width affordances (drag handles, checkboxes) without layout jitter.
+
 ### `Tooltip`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/tooltip.tsx`
@@ -100,4 +111,3 @@ Fret mapping intent:
 - Gaps to check:
   - Overlay: `bg-black/50` (not fully opaque).
   - Content: centered, `rounded-lg`, `border`, `p-6`, `shadow-lg`, close button slot.
-
