@@ -129,9 +129,7 @@ impl InputGroup {
         chrome.caret_color = resolved.text_color;
         chrome.selection_color = resolved.selection_color;
 
-        let font_line_height = theme
-            .metric_by_key("font.line_height")
-            .unwrap_or(theme.metrics.font_line_height);
+        let font_line_height = theme.metric_required("font.line_height");
         let text_style = TextStyle {
             font: FontId::default(),
             size: resolved.text_px,
