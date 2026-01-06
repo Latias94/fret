@@ -1,14 +1,12 @@
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
-
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
     TextWrap,
 };
 use fret_icons::ids;
-use fret_runtime::{Effect, Model, TimerToken};
+use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     OpacityProps, Overflow, PositionStyle, PressableA11y, PressableProps, ScrollProps, SizeStyle,
@@ -665,9 +663,7 @@ fn select_impl<H: UiHost>(
 
         #[derive(Debug)]
         struct SelectTriggerKeyState {
-            suppress_next_activate: bool,
-            query: String,
-            clear_token: Option<TimerToken>,
+            trigger: radix_select::SelectTriggerKeyState,
             was_open: bool,
             active_row: Option<usize>,
         }
@@ -675,9 +671,7 @@ fn select_impl<H: UiHost>(
         impl SelectTriggerKeyState {
             fn new() -> Self {
                 Self {
-                    suppress_next_activate: false,
-                    query: String::new(),
-                    clear_token: None,
+                    trigger: radix_select::SelectTriggerKeyState::default(),
                     was_open: false,
                     active_row: None,
                 }
@@ -735,12 +729,7 @@ fn select_impl<H: UiHost>(
                     let mut state = state_for_timer
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
-                    if state.clear_token == Some(token) {
-                        state.clear_token = None;
-                        state.query.clear();
-                        return true;
-                    }
-                    false
+                    state.trigger.on_timer(token)
                 }),
             );
 
@@ -753,90 +742,21 @@ fn select_impl<H: UiHost>(
             cx.key_on_key_down_for(
                 trigger_id,
                 Arc::new(move |host, action_cx, it| {
-                    use fret_core::KeyCode;
-
-                    if it.repeat {
-                        return false;
-                    }
-
-                    let is_open = host.models_mut().get_copied(&open_for_key).unwrap_or(false);
-                    if is_open {
-                        return false;
-                    }
-
-                    let is_modifier_key = it.modifiers.ctrl
-                        || it.modifiers.alt
-                        || it.modifiers.meta
-                        || it.modifiers.alt_gr;
-                    if is_modifier_key {
-                        return false;
-                    }
-
                     let mut state = state_for_key
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
-
-                    if it.key == KeyCode::Space && !state.query.is_empty() {
-                        return true;
-                    }
-
-                    if radix_select::is_select_open_key(it.key) {
-                        if radix_select::select_open_key_suppresses_activate(it.key) {
-                            state.suppress_next_activate = true;
-                        }
-                        if let Some(token) = state.clear_token.take() {
-                            host.push_effect(Effect::CancelTimer { token });
-                        }
-                        state.query.clear();
-
-                        let _ = host.models_mut().update(&open_for_key, |v| *v = true);
-                        host.request_redraw(action_cx.window);
-                        return true;
-                    }
-
-                    let Some(ch) = fret_core::keycode_to_ascii_lowercase(it.key) else {
-                        return false;
-                    };
-
-                    state.query.push(ch);
-                    if let Some(token) = state.clear_token.take() {
-                        host.push_effect(Effect::CancelTimer { token });
-                    }
-                    let token = host.next_timer_token();
-                    state.clear_token = Some(token);
-                    host.push_effect(Effect::SetTimer {
-                        window: Some(action_cx.window),
-                        token,
-                        after: Duration::from_millis(500),
-                        repeat: None,
-                    });
-
-                    let current = host
-                        .models_mut()
-                        .read(&model_for_key, |v| v.clone())
-                        .ok()
-                        .flatten();
-                    let current_idx = current.as_ref().and_then(|v| {
-                        values_for_key
-                            .iter()
-                            .position(|it| it.as_ref() == v.as_ref())
-                    });
-
-                    if let Some(next) = typeahead::match_prefix_arc_str(
+                    state.trigger.handle_key_down_when_closed(
+                        host,
+                        action_cx.window,
+                        &open_for_key,
+                        &model_for_key,
+                        values_for_key.as_ref(),
                         labels_for_key.as_ref(),
                         disabled_for_key.as_ref(),
-                        &state.query,
-                        current_idx,
-                        true,
-                    ) && let Some(next_value) = values_for_key.get(next).cloned()
-                    {
-                        let _ = host
-                            .models_mut()
-                            .update(&model_for_key, |v| *v = Some(next_value));
-                        host.request_redraw(action_cx.window);
-                    }
-
-                    true
+                        it.key,
+                        it.modifiers,
+                        it.repeat,
+                    )
                 }),
             );
 
@@ -847,15 +767,11 @@ fn select_impl<H: UiHost>(
                     .lock()
                     .unwrap_or_else(|e| e.into_inner());
 
-                if state.suppress_next_activate {
-                    state.suppress_next_activate = false;
+                if state.trigger.take_suppress_next_activate() {
                     return;
                 }
 
-                if let Some(token) = state.clear_token.take() {
-                    host.push_effect(Effect::CancelTimer { token });
-                }
-                state.query.clear();
+                state.trigger.clear_typeahead(host);
 
                 let _ = host.models_mut().update(&open_for_activate, |v| *v = !*v);
                 host.request_redraw(action_cx.window);
@@ -1047,7 +963,7 @@ fn select_impl<H: UiHost>(
                         } else {
                             roving_focus::first_enabled(&disabled)
                         };
-                        let (active_row, _open_query) = {
+                        let active_row = {
                             let mut state = trigger_state
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
@@ -1056,8 +972,7 @@ fn select_impl<H: UiHost>(
                                 if !state.was_open {
                                     state.was_open = true;
                                     state.active_row = initial_active_row;
-                                    state.query.clear();
-                                    state.clear_token = None;
+                                    state.trigger.reset_typeahead_buffer();
                                 } else if state.active_row.is_none() {
                                     state.active_row = initial_active_row;
                                 }
@@ -1066,7 +981,7 @@ fn select_impl<H: UiHost>(
                                 state.active_row = None;
                             }
 
-                            (state.active_row, state.query.clone())
+                            state.active_row
                         };
 
                         let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
@@ -1150,7 +1065,9 @@ fn select_impl<H: UiHost>(
                                                             .lock()
                                                             .unwrap_or_else(|e| e.into_inner());
 
-                                                        if it.key == KeyCode::Space && !state.query.is_empty() {
+                                                        if it.key == KeyCode::Space
+                                                            && !state.trigger.typeahead_query().is_empty()
+                                                        {
                                                             return true;
                                                         }
 
@@ -1220,27 +1137,21 @@ fn select_impl<H: UiHost>(
                                                                 true
                                                             }
                                                             _ => {
-                                                                let Some(ch) = fret_core::keycode_to_ascii_lowercase(it.key) else {
+                                                                let Some(_ch) = state
+                                                                    .trigger
+                                                                    .push_typeahead_key_and_arm_timer(
+                                                                        host,
+                                                                        action_cx.window,
+                                                                        it.key,
+                                                                    )
+                                                                else {
                                                                     return false;
                                                                 };
-
-                                                                state.query.push(ch);
-                                                                if let Some(token) = state.clear_token.take() {
-                                                                    host.push_effect(Effect::CancelTimer { token });
-                                                                }
-                                                                let token = host.next_timer_token();
-                                                                state.clear_token = Some(token);
-                                                                host.push_effect(Effect::SetTimer {
-                                                                    window: Some(action_cx.window),
-                                                                    token,
-                                                                    after: Duration::from_millis(500),
-                                                                    repeat: None,
-                                                                });
 
                                                                 let next = typeahead::match_prefix_arc_str(
                                                                     labels_for_key.as_ref(),
                                                                     disabled_for_key.as_ref(),
-                                                                    &state.query,
+                                                                    state.trigger.typeahead_query(),
                                                                     current,
                                                                     true,
                                                                 );

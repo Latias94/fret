@@ -15,13 +15,16 @@
 //! overlay request wiring without forcing a visual skin.
 
 use std::sync::Arc;
+use std::time::Duration;
 
-use fret_core::KeyCode;
-use fret_runtime::Model;
+use fret_core::{AppWindowId, KeyCode, Modifiers};
+use fret_runtime::{Effect, Model, TimerToken};
+use fret_ui::action::UiActionHost;
 use fret_ui::element::{AnyElement, ElementKind, PressableA11y, PressableProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::headless::typeahead;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Stable per-overlay root naming convention for select overlays.
@@ -73,6 +76,177 @@ pub fn select_open_key_suppresses_activate(key: KeyCode) -> bool {
     matches!(key, KeyCode::Space | KeyCode::Enter)
 }
 
+/// Radix-like select typeahead clear timeout (in milliseconds).
+pub const SELECT_TYPEAHEAD_CLEAR_TIMEOUT_MS: u64 = 500;
+
+/// Timer-driven typeahead query state (Radix-style).
+#[derive(Debug, Default)]
+pub struct TimedTypeaheadState {
+    query: String,
+    clear_token: Option<TimerToken>,
+}
+
+impl TimedTypeaheadState {
+    pub fn query(&self) -> &str {
+        self.query.as_str()
+    }
+
+    pub fn clear_and_cancel(&mut self, host: &mut dyn UiActionHost) {
+        if let Some(token) = self.clear_token.take() {
+            host.push_effect(Effect::CancelTimer { token });
+        }
+        self.query.clear();
+    }
+
+    pub fn on_timer(&mut self, token: TimerToken) -> bool {
+        if self.clear_token == Some(token) {
+            self.clear_token = None;
+            self.query.clear();
+            return true;
+        }
+        false
+    }
+
+    pub fn push_key_and_arm_timer(
+        &mut self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        key: KeyCode,
+        timeout: Duration,
+    ) -> Option<char> {
+        let ch = fret_core::keycode_to_ascii_lowercase(key)?;
+        self.query.push(ch);
+        if let Some(token) = self.clear_token.take() {
+            host.push_effect(Effect::CancelTimer { token });
+        }
+        let token = host.next_timer_token();
+        self.clear_token = Some(token);
+        host.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token,
+            after: timeout,
+            repeat: None,
+        });
+        Some(ch)
+    }
+}
+
+/// Closed-state trigger policy for Radix-style select.
+///
+/// This models two coupled Radix outcomes:
+/// - Trigger open keys open the listbox on key-down (and suppress the ensuing key-up activation).
+/// - While closed, alphanumeric typeahead updates the selected value without opening.
+#[derive(Debug, Default)]
+pub struct SelectTriggerKeyState {
+    suppress_next_activate: bool,
+    typeahead: TimedTypeaheadState,
+}
+
+impl SelectTriggerKeyState {
+    pub fn take_suppress_next_activate(&mut self) -> bool {
+        let v = self.suppress_next_activate;
+        self.suppress_next_activate = false;
+        v
+    }
+
+    pub fn clear_typeahead(&mut self, host: &mut dyn UiActionHost) {
+        self.typeahead.clear_and_cancel(host);
+    }
+
+    pub fn reset_typeahead_buffer(&mut self) {
+        self.typeahead.query.clear();
+        self.typeahead.clear_token = None;
+    }
+
+    pub fn typeahead_query(&self) -> &str {
+        self.typeahead.query()
+    }
+
+    pub fn push_typeahead_key_and_arm_timer(
+        &mut self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        key: KeyCode,
+    ) -> Option<char> {
+        let timeout = Duration::from_millis(SELECT_TYPEAHEAD_CLEAR_TIMEOUT_MS);
+        self.typeahead
+            .push_key_and_arm_timer(host, window, key, timeout)
+    }
+
+    pub fn on_timer(&mut self, token: TimerToken) -> bool {
+        self.typeahead.on_timer(token)
+    }
+
+    pub fn handle_key_down_when_closed(
+        &mut self,
+        host: &mut dyn UiActionHost,
+        window: AppWindowId,
+        open: &Model<bool>,
+        value: &Model<Option<Arc<str>>>,
+        values: &[Arc<str>],
+        labels: &[Arc<str>],
+        disabled: &[bool],
+        key: KeyCode,
+        modifiers: Modifiers,
+        repeat: bool,
+    ) -> bool {
+        if repeat {
+            return false;
+        }
+
+        let is_open = host.models_mut().get_copied(open).unwrap_or(false);
+        if is_open {
+            return false;
+        }
+
+        let is_modifier_key = modifiers.ctrl || modifiers.alt || modifiers.meta || modifiers.alt_gr;
+        if is_modifier_key {
+            return false;
+        }
+
+        if key == KeyCode::Space && !self.typeahead.query().is_empty() {
+            return true;
+        }
+
+        if is_select_open_key(key) {
+            if select_open_key_suppresses_activate(key) {
+                self.suppress_next_activate = true;
+            }
+            self.typeahead.clear_and_cancel(host);
+            let _ = host.models_mut().update(open, |v| *v = true);
+            host.request_redraw(window);
+            return true;
+        }
+
+        let timeout = Duration::from_millis(SELECT_TYPEAHEAD_CLEAR_TIMEOUT_MS);
+        let Some(_ch) = self
+            .typeahead
+            .push_key_and_arm_timer(host, window, key, timeout)
+        else {
+            return false;
+        };
+
+        let current = host.models_mut().read(value, |v| v.clone()).ok().flatten();
+        let current_idx = current
+            .as_ref()
+            .and_then(|v| values.iter().position(|it| it.as_ref() == v.as_ref()));
+
+        if let Some(next) = typeahead::match_prefix_arc_str(
+            labels,
+            disabled,
+            self.typeahead.query(),
+            current_idx,
+            true,
+        ) && let Some(next_value) = values.get(next).cloned()
+        {
+            let _ = host.models_mut().update(value, |v| *v = Some(next_value));
+            host.request_redraw(window);
+        }
+
+        true
+    }
+}
+
 /// Builds an overlay request for a Radix-style select content overlay.
 ///
 /// This uses a modal overlay layer to approximate Radix Select's outside interaction blocking.
@@ -98,8 +272,10 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, Size};
+    use fret_ui::action::UiActionHostAdapter;
     use fret_ui::element::{LayoutStyle, PressableProps};
+    use std::time::Duration;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -126,12 +302,8 @@ mod tests {
             );
 
             let listbox = GlobalElementId(0xbeef);
-            let trigger = apply_select_trigger_a11y(
-                trigger,
-                true,
-                Some(Arc::from("Select")),
-                Some(listbox),
-            );
+            let trigger =
+                apply_select_trigger_a11y(trigger, true, Some(Arc::from("Select")), Some(listbox));
 
             let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
                 panic!("expected pressable trigger");
@@ -150,7 +322,13 @@ mod tests {
         let id = GlobalElementId(0x123);
         let trigger = GlobalElementId(0x456);
 
-        let req = modal_select_request(id, trigger, open, OverlayPresence::instant(true), Vec::new());
+        let req = modal_select_request(
+            id,
+            trigger,
+            open,
+            OverlayPresence::instant(true),
+            Vec::new(),
+        );
         let expected = select_root_name(id);
         assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
     }
@@ -167,5 +345,78 @@ mod tests {
         assert!(select_open_key_suppresses_activate(KeyCode::Space));
         assert!(!select_open_key_suppresses_activate(KeyCode::ArrowDown));
         assert!(!select_open_key_suppresses_activate(KeyCode::ArrowUp));
+    }
+
+    #[test]
+    fn trigger_typeahead_updates_value_without_opening() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let value = app.models_mut().insert(None::<Arc<str>>);
+
+        let values: Vec<Arc<str>> = vec![Arc::from("alpha"), Arc::from("beta")];
+        let labels: Vec<Arc<str>> = vec![Arc::from("Alpha"), Arc::from("Beta")];
+        let disabled = vec![false, false];
+
+        let mut state = SelectTriggerKeyState::default();
+        let mut host = UiActionHostAdapter { app: &mut app };
+        assert!(state.handle_key_down_when_closed(
+            &mut host,
+            window,
+            &open,
+            &value,
+            &values,
+            &labels,
+            &disabled,
+            KeyCode::KeyB,
+            Modifiers::default(),
+            false,
+        ));
+
+        assert!(!app.models().get_copied(&open).unwrap_or(false));
+        assert_eq!(
+            app.models().get_cloned(&value).flatten().as_deref(),
+            Some("beta")
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(|e| matches!(
+                e,
+                Effect::SetTimer { after, .. }
+                    if *after == Duration::from_millis(SELECT_TYPEAHEAD_CLEAR_TIMEOUT_MS)
+            )),
+            "expected a typeahead clear timer"
+        );
+    }
+
+    #[test]
+    fn trigger_open_key_opens_and_suppresses_activate() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let value = app.models_mut().insert(None::<Arc<str>>);
+
+        let values: Vec<Arc<str>> = vec![Arc::from("alpha")];
+        let labels: Vec<Arc<str>> = vec![Arc::from("Alpha")];
+        let disabled = vec![false];
+
+        let mut state = SelectTriggerKeyState::default();
+        let mut host = UiActionHostAdapter { app: &mut app };
+        assert!(state.handle_key_down_when_closed(
+            &mut host,
+            window,
+            &open,
+            &value,
+            &values,
+            &labels,
+            &disabled,
+            KeyCode::Enter,
+            Modifiers::default(),
+            false,
+        ));
+
+        assert!(app.models().get_copied(&open).unwrap_or(false));
+        assert!(state.take_suppress_next_activate());
     }
 }
