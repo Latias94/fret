@@ -24,6 +24,8 @@ pub struct TableOptions {
     /// If true, pinned rows can remain visible even if they are outside the current
     /// filtered/sorted/paginated row set (TanStack `keepPinnedRows`).
     pub keep_pinned_rows: bool,
+    /// Whether to allow column hiding at the table level (TanStack `enableHiding`).
+    pub enable_hiding: bool,
 }
 
 impl Default for TableOptions {
@@ -35,6 +37,7 @@ impl Default for TableOptions {
             manual_expanding: false,
             paginate_expanded_rows: true,
             keep_pinned_rows: true,
+            enable_hiding: true,
         }
     }
 }

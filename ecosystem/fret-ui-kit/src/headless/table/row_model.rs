@@ -159,6 +159,11 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    pub fn enable_hiding(mut self, enabled: bool) -> Self {
+        self.options.enable_hiding = enabled;
+        self
+    }
+
     pub fn get_row_key(
         mut self,
         f: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'a,
@@ -274,6 +279,76 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn options(&self) -> super::TableOptions {
         self.options
+    }
+
+    pub fn column_visibility(&self) -> &super::ColumnVisibilityState {
+        &self.state.column_visibility
+    }
+
+    pub fn is_column_visible(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(super::is_column_visible(
+            &self.state.column_visibility,
+            &col.id,
+        ))
+    }
+
+    pub fn column_can_hide(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(self.options.enable_hiding && col.enable_hiding)
+    }
+
+    pub fn hideable_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        self.ordered_columns()
+            .into_iter()
+            .filter(|c| self.options.enable_hiding && c.enable_hiding)
+            .collect()
+    }
+
+    pub fn is_all_columns_visible(&self) -> bool {
+        self.columns
+            .iter()
+            .all(|c| super::is_column_visible(&self.state.column_visibility, &c.id))
+    }
+
+    pub fn is_some_columns_visible(&self) -> bool {
+        self.columns
+            .iter()
+            .any(|c| super::is_column_visible(&self.state.column_visibility, &c.id))
+    }
+
+    pub fn toggled_column_visibility(
+        &self,
+        column_id: &str,
+        visible: Option<bool>,
+    ) -> Option<super::ColumnVisibilityState> {
+        let col = self.column(column_id)?;
+        if !(self.options.enable_hiding && col.enable_hiding) {
+            return Some(self.state.column_visibility.clone());
+        }
+        Some(super::toggled_column_visible(
+            &self.state.column_visibility,
+            &col.id,
+            visible,
+        ))
+    }
+
+    pub fn toggled_all_columns_visible(
+        &self,
+        visible: Option<bool>,
+    ) -> super::ColumnVisibilityState {
+        let visible = visible.unwrap_or_else(|| !self.is_all_columns_visible());
+
+        let mut next = self.state.column_visibility.clone();
+        for col in &self.columns {
+            let can_hide = self.options.enable_hiding && col.enable_hiding;
+            if visible {
+                super::set_column_visible(&mut next, &col.id, true);
+            } else {
+                super::set_column_visible(&mut next, &col.id, !can_hide);
+            }
+        }
+        next
     }
 
     pub fn is_some_rows_expanded(&self) -> bool {
@@ -804,8 +879,9 @@ fn build_core_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::headless::table::is_column_visible;
     use crate::headless::table::{
-        ColumnDef, ColumnFilter, PaginationState, SortSpec, TableOptions, TableState,
+        ColumnDef, ColumnFilter, ColumnId, PaginationState, SortSpec, TableOptions, TableState,
         create_column_helper,
     };
     use std::sync::Arc;
@@ -1627,5 +1703,52 @@ mod tests {
         assert_eq!(selected.root_rows().len(), 1);
         assert!(selected.row_by_key(RowKey::from_index(4)).is_some());
         assert!(std::ptr::eq(selected, table.page_selected_row_model()));
+    }
+
+    #[test]
+    fn table_column_visibility_toggle_respects_enable_hiding() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = vec![Item { value: 1 }];
+        let columns = vec![
+            ColumnDef::new("a").enable_hiding(true),
+            ColumnDef::new("b").enable_hiding(false),
+        ];
+
+        let table = Table::builder(&data).columns(columns).build();
+        assert_eq!(table.column_can_hide("a"), Some(true));
+        assert_eq!(table.column_can_hide("b"), Some(false));
+        assert_eq!(table.is_column_visible("a"), Some(true));
+
+        let next = table.toggled_column_visibility("a", Some(false)).unwrap();
+        assert!(!is_column_visible(&next, &ColumnId::from("a")));
+
+        let next_b = table.toggled_column_visibility("b", Some(false)).unwrap();
+        assert!(is_column_visible(&next_b, &ColumnId::from("b")));
+    }
+
+    #[test]
+    fn table_toggle_all_columns_visible_keeps_non_hideable_visible_when_hiding_all() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = vec![Item { value: 1 }];
+        let columns = vec![
+            ColumnDef::new("a").enable_hiding(true),
+            ColumnDef::new("b").enable_hiding(false),
+        ];
+
+        let table = Table::builder(&data).columns(columns).build();
+        let next = table.toggled_all_columns_visible(Some(false));
+
+        assert!(!is_column_visible(&next, &ColumnId::from("a")));
+        assert!(is_column_visible(&next, &ColumnId::from("b")));
     }
 }

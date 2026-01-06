@@ -27,6 +27,7 @@ pub use column_pinning::{ColumnPinningState, split_pinned_columns};
 pub use column_sizing::{ColumnSizingState, column_size};
 pub use column_sizing_info::ColumnSizingInfoState;
 pub use column_visibility::{ColumnVisibilityState, is_column_visible, visible_columns};
+pub use column_visibility::{set_column_visible, toggle_column_visible, toggled_column_visible};
 pub use faceting::{
     FacetCounts, FacetKey, FacetLabels, faceted_min_max_u64, faceted_row_model_excluding,
     faceted_unique_value_labels, faceted_unique_values,
