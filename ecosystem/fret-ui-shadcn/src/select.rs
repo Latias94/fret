@@ -85,9 +85,12 @@ fn select_scroll_with_buttons<H: UiHost>(
 
             let max = handle.max_offset();
             let offset = handle.offset();
-            let has_scroll = max.y.0 > 0.0;
-            let show_up = has_scroll && offset.y.0 > 0.0;
-            let show_down = has_scroll && offset.y.0 < max.y.0;
+            // Guard against fractional max offsets (layout rounding) causing scroll affordances to
+            // appear when content visually fits.
+            let scroll_epsilon = Px(0.5);
+            let has_scroll = max.y.0 > scroll_epsilon.0;
+            let show_up = has_scroll && offset.y.0 > scroll_epsilon.0;
+            let show_down = has_scroll && (offset.y.0 + scroll_epsilon.0) < max.y.0;
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                  icon: fret_icons::IconId,
@@ -112,18 +115,13 @@ fn select_scroll_with_buttons<H: UiHost>(
                         },
                         ..Default::default()
                     },
-                    move |cx, st| {
+                    move |cx, _st| {
                         cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
                             let prev = handle.offset();
                             let next = Point::new(prev.x, Px(prev.y.0 + item_step.0 * dir));
                             handle.scroll_to_offset(next);
                             host.request_redraw(action_cx.window);
                         }));
-
-                        let mut bg = Color::TRANSPARENT;
-                        if st.hovered || st.pressed {
-                            bg = alpha_mul(theme.colors.selection_background, 0.25);
-                        }
 
                         vec![cx.container(
                             ContainerProps {
@@ -133,12 +131,18 @@ fn select_scroll_with_buttons<H: UiHost>(
                                     layout.size.height = Length::Fill;
                                     layout
                                 },
-                                padding: Edges::all(Px(0.0)),
-                                background: Some(bg),
+                                // new-york-v4: `py-1` and no hover fill.
+                                padding: Edges {
+                                    top: Px(4.0),
+                                    right: Px(0.0),
+                                    bottom: Px(4.0),
+                                    left: Px(0.0),
+                                },
+                                background: Some(Color::TRANSPARENT),
                                 shadow: None,
                                 border: Edges::all(Px(0.0)),
                                 border_color: None,
-                                corner_radii: Corners::all(theme.metrics.radius_sm),
+                                corner_radii: Corners::all(Px(0.0)),
                             },
                             |cx| {
                                 vec![cx.flex(
