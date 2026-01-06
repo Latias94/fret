@@ -1395,6 +1395,15 @@ fn select_impl<H: UiHost>(
                                                                                         let mut layout = LayoutStyle::default();
                                                                                         layout.size.width = Length::Fill;
                                                                                         layout.size.height = Length::Px(Px(1.0));
+                                                                                        // new-york-v4: `SelectSeparator` uses `-mx-1 my-1`.
+                                                                                        layout.margin.left =
+                                                                                            fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                                        layout.margin.right =
+                                                                                            fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                                        layout.margin.top =
+                                                                                            fret_ui::element::MarginEdge::Px(Px(4.0));
+                                                                                        layout.margin.bottom =
+                                                                                            fret_ui::element::MarginEdge::Px(Px(4.0));
                                                                                         layout
                                                                                     },
                                                                                     background: Some(border),
@@ -1723,6 +1732,8 @@ fn select_impl<H: UiHost>(
                             cx.text_props(TextProps {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.min_width = Some(Px(0.0));
                                     layout.flex.grow = 1.0;
                                     layout.flex.shrink = 1.0;
                                     layout.flex.basis = Length::Px(Px(0.0));
