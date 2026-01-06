@@ -60,7 +60,7 @@ Theming is token-driven (see `docs/plot-theme-tokens.md`), with optional annotat
 To keep the baseline clean, interaction is a follow-up:
 
 - P1: hover affordances + tooltip integration (e.g. "line label at axis edge").
-- P1: draggable reference lines and rectangles (opt-in per overlay), with outputs reported via `PlotOutputSnapshot::drag`.
+- P1: draggable points, reference lines, and rectangles (opt-in per overlay), with outputs reported via `PlotOutputSnapshot::drag`.
 - P2: spans (filled X/Y ranges), text callouts, and arbitrary polyline annotations.
 
 Interactive overlays remain caller-owned, with widget-produced outputs flowing through `PlotOutput`
@@ -86,6 +86,6 @@ For Plot3D (ADR 0098), annotations are expected to be implemented either:
 
 ## References
 
-- ImPlot: `ImPlot::DragLineX`, `ImPlot::DragLineY`, `ImPlot::PlotInfLines`
+- ImPlot: `ImPlot::DragPoint`, `ImPlot::DragLineX`, `ImPlot::DragLineY`, `ImPlot::DragRect`, `ImPlot::PlotInfLines`
 - egui_plot annotations: `HLine`, `VLine`, marker APIs
 - GPUI component plot substrate: `repo-ref/gpui-component/crates/ui/src/plot/mod.rs`

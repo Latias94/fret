@@ -159,6 +159,13 @@ enum DragCapture {
         offset_y: f64,
         current_y: f64,
     },
+    Point {
+        id: u64,
+        axis: YAxis,
+        button: MouseButton,
+        offset: DataPoint,
+        current: DataPoint,
+    },
     Rect {
         id: u64,
         axis: YAxis,
@@ -1844,152 +1851,194 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     let mut best: Option<(f32, DragCapture)> = None;
                     let overlays = &state.overlays;
 
-                    for line in &overlays.drag_lines_x {
-                        if !line.x.is_finite() {
+                    // If the user clicks on a draggable point, prefer it over other drag handles.
+                    for point in &overlays.drag_points {
+                        if !point.point.x.is_finite() || !point.point.y.is_finite() {
                             continue;
                         }
-                        let Some(x_px) = transform_x.data_x_to_px(line.x) else {
+                        let Some(transform) = transform_for_y_axis(point.axis) else {
                             continue;
                         };
-                        let dist = (local.x.0 - x_px.0).abs();
-                        if dist > threshold {
+                        let p_px = transform.data_to_px(point.point);
+                        if !p_px.x.0.is_finite() || !p_px.y.0.is_finite() {
                             continue;
                         }
-                        let data = transform_x.px_to_data(local);
-                        if !data.x.is_finite() {
+                        let hit_r = point.radius.0.max(threshold);
+                        let dx = local.x.0 - p_px.x.0;
+                        let dy = local.y.0 - p_px.y.0;
+                        let dist = (dx * dx + dy * dy).sqrt();
+                        if dist > hit_r {
                             continue;
                         }
-                        let offset_x = data.x - line.x;
-                        let candidate = DragCapture::LineX {
-                            id: line.id,
-                            button: *button,
-                            offset_x,
-                            current_x: line.x,
-                        };
-                        if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
-                            best = Some((dist, candidate));
-                        }
-                    }
-
-                    for line in &overlays.drag_lines_y {
-                        if !line.y.is_finite() {
-                            continue;
-                        }
-                        let Some(transform) = transform_for_y_axis(line.axis) else {
-                            continue;
-                        };
-                        let Some(y_px) = transform.data_y_to_px(line.y) else {
-                            continue;
-                        };
-                        let dist = (local.y.0 - y_px.0).abs();
-                        if dist > threshold {
-                            continue;
-                        }
-                        let data = transform.px_to_data(local);
-                        if !data.y.is_finite() {
-                            continue;
-                        }
-                        let offset_y = data.y - line.y;
-                        let candidate = DragCapture::LineY {
-                            id: line.id,
-                            axis: line.axis,
-                            button: *button,
-                            offset_y,
-                            current_y: line.y,
-                        };
-                        if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
-                            best = Some((dist, candidate));
-                        }
-                    }
-
-                    for rect in &overlays.drag_rects {
-                        let Some(transform) = transform_for_y_axis(rect.axis) else {
-                            continue;
-                        };
-                        let a = transform.data_to_px(DataPoint {
-                            x: rect.rect.x_min,
-                            y: rect.rect.y_min,
-                        });
-                        let b = transform.data_to_px(DataPoint {
-                            x: rect.rect.x_max,
-                            y: rect.rect.y_max,
-                        });
-                        if !a.x.0.is_finite()
-                            || !a.y.0.is_finite()
-                            || !b.x.0.is_finite()
-                            || !b.y.0.is_finite()
-                        {
-                            continue;
-                        }
-                        let left = a.x.0.min(b.x.0);
-                        let right = a.x.0.max(b.x.0);
-                        let top = a.y.0.min(b.y.0);
-                        let bottom = a.y.0.max(b.y.0);
-
-                        let inside = local.x.0 >= left
-                            && local.x.0 <= right
-                            && local.y.0 >= top
-                            && local.y.0 <= bottom;
-                        if !inside {
-                            continue;
-                        }
-
-                        let dist_left = (local.x.0 - left).abs();
-                        let dist_right = (local.x.0 - right).abs();
-                        let dist_top = (local.y.0 - top).abs();
-                        let dist_bottom = (local.y.0 - bottom).abs();
-
-                        let mut handle = DragRectHandle::Inside;
-                        let mut dist = 0.0f32;
-                        let mut set = |d: f32, h: DragRectHandle| {
-                            if d <= threshold && (handle == DragRectHandle::Inside || d < dist) {
-                                handle = h;
-                                dist = d;
-                            }
-                        };
-                        set(dist_left, DragRectHandle::Left);
-                        set(dist_right, DragRectHandle::Right);
-                        set(dist_top, DragRectHandle::Top);
-                        set(dist_bottom, DragRectHandle::Bottom);
-
                         let data = transform.px_to_data(local);
                         if !data.x.is_finite() || !data.y.is_finite() {
                             continue;
                         }
-
-                        let offset = match handle {
-                            DragRectHandle::Inside => DataPoint {
-                                x: data.x - rect.rect.x_min,
-                                y: data.y - rect.rect.y_min,
-                            },
-                            DragRectHandle::Left => DataPoint {
-                                x: data.x - rect.rect.x_min,
-                                y: 0.0,
-                            },
-                            DragRectHandle::Right => DataPoint {
-                                x: data.x - rect.rect.x_max,
-                                y: 0.0,
-                            },
-                            DragRectHandle::Top => DataPoint {
-                                x: 0.0,
-                                y: data.y - rect.rect.y_max,
-                            },
-                            DragRectHandle::Bottom => DataPoint {
-                                x: 0.0,
-                                y: data.y - rect.rect.y_min,
-                            },
+                        let offset = DataPoint {
+                            x: data.x - point.point.x,
+                            y: data.y - point.point.y,
                         };
-
-                        let candidate = DragCapture::Rect {
-                            id: rect.id,
-                            axis: rect.axis,
+                        let candidate = DragCapture::Point {
+                            id: point.id,
+                            axis: point.axis,
                             button: *button,
-                            handle,
                             offset,
-                            current: rect.rect,
+                            current: point.point,
                         };
                         if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
                             best = Some((dist, candidate));
+                        }
+                    }
+
+                    if best.is_none() {
+                        for line in &overlays.drag_lines_x {
+                            if !line.x.is_finite() {
+                                continue;
+                            }
+                            let Some(x_px) = transform_x.data_x_to_px(line.x) else {
+                                continue;
+                            };
+                            let dist = (local.x.0 - x_px.0).abs();
+                            if dist > threshold {
+                                continue;
+                            }
+                            let data = transform_x.px_to_data(local);
+                            if !data.x.is_finite() {
+                                continue;
+                            }
+                            let offset_x = data.x - line.x;
+                            let candidate = DragCapture::LineX {
+                                id: line.id,
+                                button: *button,
+                                offset_x,
+                                current_x: line.x,
+                            };
+                            if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
+                                best = Some((dist, candidate));
+                            }
+                        }
+
+                        for line in &overlays.drag_lines_y {
+                            if !line.y.is_finite() {
+                                continue;
+                            }
+                            let Some(transform) = transform_for_y_axis(line.axis) else {
+                                continue;
+                            };
+                            let Some(y_px) = transform.data_y_to_px(line.y) else {
+                                continue;
+                            };
+                            let dist = (local.y.0 - y_px.0).abs();
+                            if dist > threshold {
+                                continue;
+                            }
+                            let data = transform.px_to_data(local);
+                            if !data.y.is_finite() {
+                                continue;
+                            }
+                            let offset_y = data.y - line.y;
+                            let candidate = DragCapture::LineY {
+                                id: line.id,
+                                axis: line.axis,
+                                button: *button,
+                                offset_y,
+                                current_y: line.y,
+                            };
+                            if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
+                                best = Some((dist, candidate));
+                            }
+                        }
+
+                        for rect in &overlays.drag_rects {
+                            let Some(transform) = transform_for_y_axis(rect.axis) else {
+                                continue;
+                            };
+                            let a = transform.data_to_px(DataPoint {
+                                x: rect.rect.x_min,
+                                y: rect.rect.y_min,
+                            });
+                            let b = transform.data_to_px(DataPoint {
+                                x: rect.rect.x_max,
+                                y: rect.rect.y_max,
+                            });
+                            if !a.x.0.is_finite()
+                                || !a.y.0.is_finite()
+                                || !b.x.0.is_finite()
+                                || !b.y.0.is_finite()
+                            {
+                                continue;
+                            }
+                            let left = a.x.0.min(b.x.0);
+                            let right = a.x.0.max(b.x.0);
+                            let top = a.y.0.min(b.y.0);
+                            let bottom = a.y.0.max(b.y.0);
+
+                            let inside = local.x.0 >= left
+                                && local.x.0 <= right
+                                && local.y.0 >= top
+                                && local.y.0 <= bottom;
+                            if !inside {
+                                continue;
+                            }
+
+                            let dist_left = (local.x.0 - left).abs();
+                            let dist_right = (local.x.0 - right).abs();
+                            let dist_top = (local.y.0 - top).abs();
+                            let dist_bottom = (local.y.0 - bottom).abs();
+
+                            let mut handle = DragRectHandle::Inside;
+                            let mut dist = 0.0f32;
+                            let mut set = |d: f32, h: DragRectHandle| {
+                                if d <= threshold && (handle == DragRectHandle::Inside || d < dist)
+                                {
+                                    handle = h;
+                                    dist = d;
+                                }
+                            };
+                            set(dist_left, DragRectHandle::Left);
+                            set(dist_right, DragRectHandle::Right);
+                            set(dist_top, DragRectHandle::Top);
+                            set(dist_bottom, DragRectHandle::Bottom);
+
+                            let data = transform.px_to_data(local);
+                            if !data.x.is_finite() || !data.y.is_finite() {
+                                continue;
+                            }
+
+                            let offset = match handle {
+                                DragRectHandle::Inside => DataPoint {
+                                    x: data.x - rect.rect.x_min,
+                                    y: data.y - rect.rect.y_min,
+                                },
+                                DragRectHandle::Left => DataPoint {
+                                    x: data.x - rect.rect.x_min,
+                                    y: 0.0,
+                                },
+                                DragRectHandle::Right => DataPoint {
+                                    x: data.x - rect.rect.x_max,
+                                    y: 0.0,
+                                },
+                                DragRectHandle::Top => DataPoint {
+                                    x: 0.0,
+                                    y: data.y - rect.rect.y_max,
+                                },
+                                DragRectHandle::Bottom => DataPoint {
+                                    x: 0.0,
+                                    y: data.y - rect.rect.y_min,
+                                },
+                            };
+
+                            let candidate = DragCapture::Rect {
+                                id: rect.id,
+                                axis: rect.axis,
+                                button: *button,
+                                handle,
+                                offset,
+                                current: rect.rect,
+                            };
+                            if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
+                                best = Some((dist, candidate));
+                            }
                         }
                     }
 
@@ -2023,6 +2072,14 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 id,
                                 axis,
                                 y: current_y,
+                                phase: PlotDragPhase::Start,
+                            },
+                            DragCapture::Point {
+                                id, axis, current, ..
+                            } => PlotDragOutput::Point {
+                                id,
+                                axis,
+                                point: current,
                                 phase: PlotDragPhase::Start,
                             },
                             DragCapture::Rect {
@@ -2118,6 +2175,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     && match capture {
                         DragCapture::LineX { button: b, .. } => b == *button,
                         DragCapture::LineY { button: b, .. } => b == *button,
+                        DragCapture::Point { button: b, .. } => b == *button,
                         DragCapture::Rect { button: b, .. } => b == *button,
                     }
                 {
@@ -2137,6 +2195,14 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             id,
                             axis,
                             y: current_y,
+                            phase: PlotDragPhase::End,
+                        },
+                        DragCapture::Point {
+                            id, axis, current, ..
+                        } => PlotDragOutput::Point {
+                            id,
+                            axis,
+                            point: current,
                             phase: PlotDragPhase::End,
                         },
                         DragCapture::Rect {
@@ -3252,6 +3318,32 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 }
                             }
                         }
+                        DragCapture::Point {
+                            id,
+                            axis,
+                            offset,
+                            current,
+                            ..
+                        } => {
+                            if let Some(transform) = transform_for_y_axis(*axis) {
+                                let data = transform.px_to_data(local);
+                                if data.x.is_finite() && data.y.is_finite() {
+                                    let next = DataPoint {
+                                        x: data.x - offset.x,
+                                        y: data.y - offset.y,
+                                    };
+                                    if next.x.is_finite() && next.y.is_finite() {
+                                        *current = next;
+                                        self.drag_output = Some(PlotDragOutput::Point {
+                                            id: *id,
+                                            axis: *axis,
+                                            point: next,
+                                            phase: PlotDragPhase::Update,
+                                        });
+                                    }
+                                }
+                            }
+                        }
                         DragCapture::Rect {
                             id,
                             axis,
@@ -4124,6 +4216,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 || !overlays.inf_lines_y.is_empty()
                 || !overlays.drag_lines_x.is_empty()
                 || !overlays.drag_lines_y.is_empty()
+                || !overlays.drag_points.is_empty()
                 || !overlays.drag_rects.is_empty()
                 || !overlays.tags_x.is_empty()
                 || !overlays.tags_y.is_empty()
@@ -4431,11 +4524,65 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     }
                 }
 
+                if !overlays.drag_points.is_empty() {
+                    for point in &overlays.drag_points {
+                        let Some(transform) = transform_for_y_axis(point.axis) else {
+                            continue;
+                        };
+
+                        let mut current = point.point;
+                        if let Some(DragCapture::Point {
+                            id,
+                            current: dragged,
+                            ..
+                        }) = self.drag_capture
+                            && id == point.id
+                        {
+                            current = dragged;
+                        }
+
+                        if !current.x.is_finite() || !current.y.is_finite() {
+                            continue;
+                        }
+
+                        let p_px = transform.data_to_px(current);
+                        if !p_px.x.0.is_finite() || !p_px.y.0.is_finite() {
+                            continue;
+                        }
+
+                        let color = point.color.unwrap_or(annotation_stroke);
+                        let r = point.radius.0.max(2.0);
+                        let d = (r * 2.0).max(1.0);
+
+                        let max_left = (layout.plot.size.width.0 - d).max(0.0);
+                        let max_top = (layout.plot.size.height.0 - d).max(0.0);
+                        let left = (p_px.x.0 - r).clamp(0.0, max_left);
+                        let top = (p_px.y.0 - r).clamp(0.0, max_top);
+                        let abs_rect = Rect::new(
+                            Point::new(
+                                Px((layout.plot.origin.x.0 + left).round()),
+                                Px((layout.plot.origin.y.0 + top).round()),
+                            ),
+                            Size::new(Px(d), Px(d)),
+                        );
+
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(3),
+                            rect: abs_rect,
+                            background: color,
+                            border: fret_core::Edges::all(Px(1.0)),
+                            border_color: annotation_border,
+                            corner_radii: fret_core::Corners::all(Px(r)),
+                        });
+                    }
+                }
+
                 if !overlays.tags_x.is_empty()
                     || !overlays.tags_y.is_empty()
                     || !overlays.text.is_empty()
                     || !overlays.drag_lines_x.is_empty()
                     || !overlays.drag_lines_y.is_empty()
+                    || !overlays.drag_points.is_empty()
                     || !overlays.drag_rects.is_empty()
                 {
                     #[derive(Debug, Clone)]
@@ -4573,6 +4720,93 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 y,
                                 right: line.axis != YAxis::Left,
                                 color: line.color.unwrap_or(annotation_stroke),
+                            },
+                        });
+                    }
+
+                    for point in &overlays.drag_points {
+                        let Some(transform) = transform_for_y_axis(point.axis) else {
+                            continue;
+                        };
+
+                        let mut current = point.point;
+                        if let Some(DragCapture::Point {
+                            id,
+                            current: dragged,
+                            ..
+                        }) = self.drag_capture
+                            && id == point.id
+                        {
+                            current = dragged;
+                        }
+
+                        if !current.x.is_finite() || !current.y.is_finite() {
+                            continue;
+                        }
+
+                        let p_px = transform.data_to_px(current);
+                        if !p_px.x.0.is_finite() || !p_px.y.0.is_finite() {
+                            continue;
+                        }
+
+                        let x_value = current.x;
+                        let y_value = current.y;
+                        let Some(x_px) = transform_x.data_x_to_px(x_value) else {
+                            continue;
+                        };
+
+                        let (span, labels) = match point.axis {
+                            YAxis::Right if self.show_y2_axis => (
+                                view_bounds_y2
+                                    .map(|b| (b.y_max - b.y_min).abs())
+                                    .unwrap_or(y_span),
+                                &self.y2_axis_labels,
+                            ),
+                            YAxis::Right2 if self.show_y3_axis => (
+                                view_bounds_y3
+                                    .map(|b| (b.y_max - b.y_min).abs())
+                                    .unwrap_or(y_span),
+                                &self.y3_axis_labels,
+                            ),
+                            YAxis::Right3 if self.show_y4_axis => (
+                                view_bounds_y4
+                                    .map(|b| (b.y_max - b.y_min).abs())
+                                    .unwrap_or(y_span),
+                                &self.y4_axis_labels,
+                            ),
+                            _ => (y_span, &self.tooltip_y_labels),
+                        };
+
+                        let value = point.show_value.then(|| {
+                            let x = self.tooltip_x_labels.format(x_value, x_span);
+                            let y = labels.format(y_value, span);
+                            format!("({x}, {y})")
+                        });
+                        let text = match (&point.label, value) {
+                            (Some(label), Some(value)) => format!("{label}: {value}"),
+                            (Some(label), None) => label.clone(),
+                            (None, Some(value)) => value,
+                            (None, None) => String::new(),
+                        };
+                        if text.is_empty() {
+                            continue;
+                        }
+
+                        let margin = Px(8.0);
+                        let origin = Point::new(
+                            Px((layout.plot.origin.x.0 + x_px.0 + margin.0).round()),
+                            Px((layout.plot.origin.y.0 + p_px.y.0 - margin.0).round()),
+                        );
+
+                        drafts.push(OverlayDraft {
+                            text,
+                            placement: OverlayPlacement::Text {
+                                origin,
+                                color: annotation_text,
+                                background: Some(annotation_background),
+                                border: Some(annotation_border),
+                                padding: annotation_padding,
+                                corner_radius: annotation_radius,
                             },
                         });
                     }

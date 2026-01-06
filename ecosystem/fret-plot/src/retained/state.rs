@@ -34,6 +34,12 @@ pub enum PlotDragOutput {
         y: f64,
         phase: PlotDragPhase,
     },
+    Point {
+        id: u64,
+        axis: YAxis,
+        point: DataPoint,
+        phase: PlotDragPhase,
+    },
     Rect {
         id: u64,
         axis: YAxis,
@@ -213,6 +219,7 @@ pub struct PlotOverlays {
     pub inf_lines_y: Vec<InfLineY>,
     pub drag_lines_x: Vec<DragLineX>,
     pub drag_lines_y: Vec<DragLineY>,
+    pub drag_points: Vec<DragPoint>,
     pub drag_rects: Vec<DragRect>,
     pub tags_x: Vec<TagX>,
     pub tags_y: Vec<TagY>,
@@ -303,6 +310,51 @@ impl DragLineY {
 
     pub fn width(mut self, width: Px) -> Self {
         self.width = width;
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DragPoint {
+    pub id: u64,
+    pub point: DataPoint,
+    pub axis: YAxis,
+    pub label: Option<String>,
+    pub show_value: bool,
+    pub color: Option<Color>,
+    pub radius: Px,
+}
+
+impl DragPoint {
+    pub fn new(id: u64, point: DataPoint, axis: YAxis) -> Self {
+        Self {
+            id,
+            point,
+            axis,
+            label: None,
+            show_value: false,
+            color: None,
+            radius: Px(4.0),
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn show_value(mut self, show: bool) -> Self {
+        self.show_value = show;
+        self
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    pub fn radius(mut self, radius: Px) -> Self {
+        self.radius = radius;
         self
     }
 }
