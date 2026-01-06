@@ -25,13 +25,8 @@ const HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES: u32 =
 const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
 
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
-    let bg = theme
-        .color_by_key("popover")
-        .or_else(|| theme.color_by_key("popover.background"))
-        .unwrap_or(theme.colors.panel_background);
-    let border = theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border);
+    let bg = theme.color_required("popover");
+    let border = theme.color_required("border");
 
     ChromeRefinement::default()
         .rounded(Radius::Md)
@@ -182,14 +177,10 @@ impl HoverCard {
         let arrow_padding = self.arrow_padding_override.unwrap_or_else(|| {
             theme
                 .metric_by_key("component.hover_card.arrow_padding")
-                .unwrap_or(theme.metrics.radius_md)
+                .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme))
         });
-        let arrow_bg = theme
-            .color_by_key("popover")
-            .unwrap_or(theme.colors.panel_background);
-        let arrow_border = theme
-            .color_by_key("border")
-            .unwrap_or(theme.colors.panel_border);
+        let arrow_bg = theme.color_required("popover");
+        let arrow_border = theme.color_required("border");
 
         let trigger = self.trigger;
         let content = self.content;
