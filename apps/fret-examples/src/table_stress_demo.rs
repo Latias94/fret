@@ -52,6 +52,8 @@ struct TableStressWindowState {
     alloc_prev: alloc_profile::AllocProfileSnapshot,
     alloc_last_calls: u64,
     alloc_last_bytes: u64,
+    alloc_last_render_calls: u64,
+    alloc_last_render_bytes: u64,
     alloc_last_layout_calls: u64,
     alloc_last_layout_bytes: u64,
     alloc_last_paint_calls: u64,
@@ -128,6 +130,8 @@ impl TableStressDriver {
             alloc_prev,
             alloc_last_calls: 0,
             alloc_last_bytes: 0,
+            alloc_last_render_calls: 0,
+            alloc_last_render_bytes: 0,
             alloc_last_layout_calls: 0,
             alloc_last_layout_bytes: 0,
             alloc_last_paint_calls: 0,
@@ -330,6 +334,9 @@ impl WinitAppDriver for TableStressDriver {
         } = context;
 
         let frame_started = Instant::now();
+        let alloc_before_frame = alloc_profile::snapshot();
+
+        let render_started = Instant::now();
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("table-stress-demo", |cx| {
@@ -409,7 +416,7 @@ impl WinitAppDriver for TableStressDriver {
                     let rows = state.rows.clone();
 
                     let header: Arc<str> = Arc::from(format!(
-                        "Table stress demo | rows={} | selected={} | sorting={} | role_filter={} | global_filter={} | items_rev={} | alloc/frame={} ({} B) layout={} ({} B) paint={} ({} B) | [S]=toggle sort | [F]=toggle role filter | [G]=toggle global filter | [C]=clear filters | [R]=bump items_rev | [Home]/[End] | [Esc]=close",
+                        "Table stress demo | rows={} | selected={} | sorting={} | role_filter={} | global_filter={} | items_rev={} | alloc/frame={} ({} B) render={} ({} B) layout={} ({} B) paint={} ({} B) | [S]=toggle sort | [F]=toggle role filter | [G]=toggle global filter | [C]=clear filters | [R]=bump items_rev | [Home]/[End] | [Esc]=close",
                         rows.len(),
                         selected,
                         sorting,
@@ -418,6 +425,8 @@ impl WinitAppDriver for TableStressDriver {
                         items_revision,
                         state.alloc_last_calls,
                         state.alloc_last_bytes,
+                        state.alloc_last_render_calls,
+                        state.alloc_last_render_bytes,
                         state.alloc_last_layout_calls,
                         state.alloc_last_layout_bytes,
                         state.alloc_last_paint_calls,
@@ -504,10 +513,11 @@ impl WinitAppDriver for TableStressDriver {
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
         scene.clear();
+        let render_elapsed = render_started.elapsed();
+        let alloc_after_render = alloc_profile::snapshot();
 
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        let alloc_before = alloc_profile::snapshot();
 
         let layout_started = Instant::now();
         frame.layout_all();
@@ -519,12 +529,18 @@ impl WinitAppDriver for TableStressDriver {
         let paint_elapsed = paint_started.elapsed();
         let alloc_after_paint = alloc_profile::snapshot();
 
+        state.alloc_last_render_calls = alloc_after_render
+            .alloc_calls
+            .saturating_sub(alloc_before_frame.alloc_calls);
+        state.alloc_last_render_bytes = alloc_after_render
+            .alloc_bytes
+            .saturating_sub(alloc_before_frame.alloc_bytes);
         state.alloc_last_layout_calls = alloc_after_layout
             .alloc_calls
-            .saturating_sub(alloc_before.alloc_calls);
+            .saturating_sub(alloc_after_render.alloc_calls);
         state.alloc_last_layout_bytes = alloc_after_layout
             .alloc_bytes
-            .saturating_sub(alloc_before.alloc_bytes);
+            .saturating_sub(alloc_after_render.alloc_bytes);
         state.alloc_last_paint_calls = alloc_after_paint
             .alloc_calls
             .saturating_sub(alloc_after_layout.alloc_calls);
@@ -535,10 +551,10 @@ impl WinitAppDriver for TableStressDriver {
         state.alloc_prev = alloc_after_paint;
         state.alloc_last_calls = alloc_after_paint
             .alloc_calls
-            .saturating_sub(alloc_before.alloc_calls);
+            .saturating_sub(alloc_before_frame.alloc_calls);
         state.alloc_last_bytes = alloc_after_paint
             .alloc_bytes
-            .saturating_sub(alloc_before.alloc_bytes);
+            .saturating_sub(alloc_before_frame.alloc_bytes);
 
         state.frame = state.frame.saturating_add(1);
         if state.profile_frames_left > 0 {
@@ -546,14 +562,17 @@ impl WinitAppDriver for TableStressDriver {
             let since_start = state.started_at.elapsed();
             let frame_elapsed = frame_started.elapsed();
             tracing::info!(
-                "table_stress_demo: frame={} since_start={:.2}ms total={:.2}ms layout={:.2}ms paint={:.2}ms alloc={} ({} B) layout_alloc={} ({} B) paint_alloc={} ({} B)",
+                "table_stress_demo: frame={} since_start={:.2}ms total={:.2}ms render={:.2}ms layout={:.2}ms paint={:.2}ms alloc={} ({} B) render_alloc={} ({} B) layout_alloc={} ({} B) paint_alloc={} ({} B)",
                 state.frame,
                 since_start.as_secs_f64() * 1000.0,
                 frame_elapsed.as_secs_f64() * 1000.0,
+                render_elapsed.as_secs_f64() * 1000.0,
                 layout_elapsed.as_secs_f64() * 1000.0,
                 paint_elapsed.as_secs_f64() * 1000.0,
                 state.alloc_last_calls,
                 state.alloc_last_bytes,
+                state.alloc_last_render_calls,
+                state.alloc_last_render_bytes,
                 state.alloc_last_layout_calls,
                 state.alloc_last_layout_bytes,
                 state.alloc_last_paint_calls,
