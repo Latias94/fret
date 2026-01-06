@@ -174,8 +174,28 @@ impl<'a, TData> Table<'a, TData> {
         &self.columns
     }
 
+    pub fn column(&self, id: &str) -> Option<&super::ColumnDef<TData>> {
+        self.columns.iter().find(|c| c.id.as_ref() == id)
+    }
+
     pub fn state(&self) -> &super::TableState {
         &self.state
+    }
+
+    pub fn ordered_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        super::order_columns(&self.columns, &self.state.column_order)
+    }
+
+    pub fn visible_columns(&self) -> Vec<&super::ColumnDef<TData>> {
+        self.ordered_columns()
+            .into_iter()
+            .filter(|c| super::is_column_visible(&self.state.column_visibility, &c.id))
+            .collect()
+    }
+
+    pub fn column_size(&self, id: &str) -> Option<f32> {
+        let col = self.column(id)?;
+        super::column_size(&self.state.column_sizing, &col.id)
     }
 
     pub fn core_row_model(&self) -> &RowModel<'a, TData> {
@@ -477,5 +497,42 @@ mod tests {
         assert_eq!(selected.root_rows().len(), 1);
         assert!(selected.row_by_id("1").is_some());
         assert!(std::ptr::eq(selected, table.selected_row_model()));
+    }
+
+    #[test]
+    fn table_visible_columns_respects_order_then_visibility() {
+        let data = vec![Item { value: 1 }];
+
+        let helper = create_column_helper::<Item>();
+        let columns = vec![
+            helper.clone().accessor("a", |it| it.value),
+            helper.clone().accessor("b", |it| it.value),
+            helper.accessor("c", |it| it.value),
+        ];
+
+        let mut state = TableState::default();
+        state.column_order = vec!["c".into(), "a".into()];
+        state.column_visibility.insert("b".into(), false);
+
+        let table = Table::builder(&data).columns(columns).state(state).build();
+        let visible = table.visible_columns();
+        let ids = visible.iter().map(|c| c.id.as_ref()).collect::<Vec<_>>();
+
+        assert_eq!(ids, vec!["c", "a"]);
+    }
+
+    #[test]
+    fn table_column_size_reads_from_state() {
+        let data = vec![Item { value: 1 }];
+
+        let helper = create_column_helper::<Item>();
+        let columns = vec![helper.accessor("value", |it| it.value)];
+
+        let mut state = TableState::default();
+        state.column_sizing.insert("value".into(), 120.0);
+
+        let table = Table::builder(&data).columns(columns).state(state).build();
+        assert_eq!(table.column_size("value"), Some(120.0));
+        assert_eq!(table.column_size("missing"), None);
     }
 }
