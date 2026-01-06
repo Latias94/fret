@@ -35,11 +35,9 @@ Fret models Radix Select outcomes by composing:
   Radix "disable outside pointer events" outcome.
 - Pass: Trigger can stamp Radix-like `expanded` + `controls` relationships via
   `apply_select_trigger_a11y(...)`.
-- Partial: Typeahead + roving navigation is implemented in the shadcn layer today; the facade
-  currently focuses on stable a11y + overlay wiring entry points.
+- Pass: Trigger open keys + closed-state typeahead policy is exposed via the Radix-named facade.
+- Partial: Content roving navigation is implemented in the shadcn layer today.
 
 ## Follow-ups (recommended)
 
-- Downshift trigger open-keys + closed-state typeahead policy into `primitives::select` so non-shadcn
-  consumers can reuse the same behavior outcomes.
-
+_None tracked at this time._
