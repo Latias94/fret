@@ -121,26 +121,16 @@ impl AlertDialog {
                 let opacity = motion.progress;
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let barrier_layout = LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(0.0)),
-                        },
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-
-                    // Non-closable overlay barrier.
-                    let barrier = cx.container(
+                    let barrier_fill = cx.container(
                         ContainerProps {
-                            layout: barrier_layout,
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
                             padding: Edges::all(Px(0.0)),
                             background: Some(overlay_color),
                             shadow: None,
@@ -149,6 +139,12 @@ impl AlertDialog {
                             corner_radii: Corners::all(Px(0.0)),
                         },
                         |_cx| Vec::new(),
+                    );
+
+                    let barrier = radix_alert_dialog::alert_dialog_modal_barrier(
+                        cx,
+                        self.open.clone(),
+                        vec![barrier_fill],
                     );
 
                     crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);

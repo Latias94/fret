@@ -15,10 +15,14 @@
 //! modal overlay request wiring, without forcing a visual skin.
 
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ElementKind, PressableProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, ElementKind, InsetStyle, LayoutStyle, Length, PositionStyle,
+    PressableProps, SizeStyle,
+};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::declarative::action_hooks::ActionHooksExt as _;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Stable per-overlay root naming convention for dialog-like modal overlays.
@@ -62,6 +66,61 @@ pub fn modal_dialog_request(
     let mut request = OverlayRequest::modal(id, Some(trigger), open, presence, children);
     request.root_name = Some(dialog_root_name(id));
     request
+}
+
+/// Standard full-window modal barrier layout (absolute inset 0, fill).
+pub fn modal_barrier_layout() -> LayoutStyle {
+    LayoutStyle {
+        position: PositionStyle::Absolute,
+        inset: InsetStyle {
+            top: Some(fret_core::Px(0.0)),
+            right: Some(fret_core::Px(0.0)),
+            bottom: Some(fret_core::Px(0.0)),
+            left: Some(fret_core::Px(0.0)),
+        },
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Fill,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Builds a modal overlay barrier element that can optionally dismiss the given `open` model when
+/// pressed.
+///
+/// The barrier is intentionally skin-agnostic: pass any background/visual elements as `children`.
+pub fn modal_barrier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    dismiss_on_press: bool,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let layout = modal_barrier_layout();
+
+    if dismiss_on_press {
+        cx.pressable(
+            PressableProps {
+                layout,
+                enabled: true,
+                focusable: false,
+                ..Default::default()
+            },
+            move |cx, _st| {
+                cx.pressable_set_bool(&open, false);
+                children
+            },
+        )
+    } else {
+        cx.container(
+            ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            move |_cx| children,
+        )
+    }
 }
 
 /// Requests a Radix-style modal dialog overlay for the current window.
@@ -119,7 +178,13 @@ mod tests {
         let id = GlobalElementId(0x123);
         let trigger = GlobalElementId(0x456);
 
-        let req = modal_dialog_request(id, trigger, open, OverlayPresence::instant(true), Vec::new());
+        let req = modal_dialog_request(
+            id,
+            trigger,
+            open,
+            OverlayPresence::instant(true),
+            Vec::new(),
+        );
         let expected = dialog_root_name(id);
         assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
     }

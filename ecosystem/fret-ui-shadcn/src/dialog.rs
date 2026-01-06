@@ -133,22 +133,6 @@ impl Dialog {
 
                 let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let barrier_layout = LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(0.0)),
-                        },
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-
                     let barrier_fill = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
@@ -169,34 +153,12 @@ impl Dialog {
                         |_cx| Vec::new(),
                     );
 
-                    let barrier = if overlay_closable {
-                        let open = self.open.clone();
-                        cx.pressable(
-                            PressableProps {
-                                layout: barrier_layout,
-                                enabled: true,
-                                focusable: false,
-                                ..Default::default()
-                            },
-                            move |cx, _st| {
-                                cx.pressable_set_bool(&open, false);
-                                vec![barrier_fill]
-                            },
-                        )
-                    } else {
-                        cx.container(
-                            ContainerProps {
-                                layout: barrier_layout,
-                                padding: Edges::all(Px(0.0)),
-                                background: Some(overlay_color),
-                                shadow: None,
-                                border: Edges::all(Px(0.0)),
-                                border_color: None,
-                                corner_radii: Corners::all(Px(0.0)),
-                            },
-                            |_cx| Vec::new(),
-                        )
-                    };
+                    let barrier = radix_dialog::modal_barrier(
+                        cx,
+                        self.open.clone(),
+                        overlay_closable,
+                        vec![barrier_fill],
+                    );
 
                     let outer = cx.bounds;
                     let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));

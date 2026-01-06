@@ -11,9 +11,13 @@
 
 use std::collections::HashMap;
 
+use fret_runtime::Model;
 use fret_runtime::ModelId;
+use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
+
+use crate::primitives::dialog as dialog_prim;
 
 #[derive(Default)]
 struct AlertDialogCancelRegistry {
@@ -53,6 +57,15 @@ pub fn cancel_element_for_open_model<H: UiHost>(
         .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
             reg.by_open.get(&open_id).copied()
         })
+}
+
+/// Builds a Radix-style alert-dialog modal barrier (non-dismissable by outside press).
+pub fn alert_dialog_modal_barrier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    dialog_prim::modal_barrier(cx, open, false, children)
 }
 
 #[cfg(test)]
