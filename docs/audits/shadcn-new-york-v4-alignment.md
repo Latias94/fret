@@ -48,6 +48,12 @@ Fret mapping intent:
   - Selected indicator: absolute slot (`right-2`, `size-3.5`) + reserve `pr-8`.
   - Scroll buttons: `py-1` with centered `size-4` chevrons (only visible when scrollable).
 
+Recent fixes:
+
+- Trigger sizing now matches new-york-v4 defaults (no forced `w-full`/`min-w` on the trigger; dropdown min width defaults to `8rem`).
+- Trigger chrome/content width now tracks the trigger width mode (auto vs fixed), preventing “ellipsis even when there is space” cases.
+- `fret-icons-radix` now vendors `chevron-up.svg`, so Radix-backed semantic `ui.chevron.up` resolves correctly.
+
 ### `DropdownMenu`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx`
