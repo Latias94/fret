@@ -264,36 +264,34 @@ impl TextArea {
     }
 
     fn sync_style_from_theme(&mut self, theme: &Theme) {
-        self.scrollbar_width = theme.metrics.scrollbar_width;
+        self.scrollbar_width = theme.metric_required("metric.scrollbar.width");
 
         let rev = theme.revision();
 
         if !self.style_override && self.last_theme_revision != Some(rev) {
             self.last_theme_revision = Some(rev);
-            self.style.padding_x = theme.metrics.padding_md;
-            self.style.padding_y = theme.metrics.padding_md;
-            self.style.background = theme.colors.panel_background;
-            self.style.border_color = theme.colors.panel_border;
+            self.style.padding_x = theme.metric_required("metric.padding.md");
+            self.style.padding_y = theme.metric_required("metric.padding.md");
+            self.style.background = theme.color_required("card");
+            self.style.border_color = theme.color_required("border");
             // Focus ring styling is intentionally component-owned (recipes) rather than
             // runtime-owned to keep `fret-ui` mechanism-only (ADR 0066). Component libraries can
             // set `TextAreaStyle.focus_ring` explicitly when desired.
             self.style.focus_ring = None;
-            self.style.corner_radii = Corners::all(theme.metrics.radius_md);
-            self.style.text_color = theme.colors.text_primary;
-            self.style.selection_color = theme.colors.selection_background;
-            self.style.caret_color = theme.colors.text_primary;
+            self.style.corner_radii = Corners::all(theme.metric_required("metric.radius.md"));
+            self.style.text_color = theme.color_required("foreground");
+            self.style.selection_color = theme.color_required("selection.background");
+            self.style.caret_color = theme.color_required("foreground");
             self.style.preedit_bg_color = Color {
                 a: 0.22,
-                ..theme.colors.selection_background
+                ..theme.color_required("selection.background")
             };
-            self.style.preedit_underline_color = theme.colors.accent;
+            self.style.preedit_underline_color = theme.color_required("primary");
         }
 
         if !self.text_style_override && self.last_text_style_theme_revision != Some(rev) {
             self.last_text_style_theme_revision = Some(rev);
-            let next_size = theme
-                .metric_by_key("font.size")
-                .unwrap_or(theme.metrics.font_size);
+            let next_size = theme.metric_required("font.size");
             if self.text_style.size != next_size {
                 self.text_style.size = next_size;
                 self.text_dirty = true;

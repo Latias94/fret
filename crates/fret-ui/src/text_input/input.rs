@@ -107,7 +107,7 @@ impl TextInput {
         }
         self.last_text_style_theme_revision = Some(theme.revision);
 
-        let next_size = theme.metrics.font_size;
+        let next_size = theme.metric_required("font.size");
         if self.style.size != next_size {
             self.queue_release_all_text_blobs();
             self.style.size = next_size;
