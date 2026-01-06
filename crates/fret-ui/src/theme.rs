@@ -274,6 +274,40 @@ impl ThemeSnapshot {
     pub fn color_by_key(&self, key: &str) -> Option<Color> {
         let key = canonicalize_token_key(ThemeTokenKind::Color, key);
         let c = match key {
+            // Baseline dotted keys (ADR 0050). These are useful for app/editor overlays and for
+            // gradual migration away from typed theme field reads.
+            "color.surface.background" => self.colors.surface_background,
+            "color.panel.background" => self.colors.panel_background,
+            "color.panel.border" => self.colors.panel_border,
+            "color.text.primary" => self.colors.text_primary,
+            "color.text.muted" => self.colors.text_muted,
+            "color.text.disabled" => self.colors.text_disabled,
+            "color.accent" => self.colors.accent,
+            "color.selection.background" => self.colors.selection_background,
+            "color.hover.background" => self.colors.hover_background,
+            "color.focus.ring" => self.colors.focus_ring,
+            "color.menu.background" => self.colors.menu_background,
+            "color.menu.border" => self.colors.menu_border,
+            "color.menu.item.hover" => self.colors.menu_item_hover,
+            "color.menu.item.selected" => self.colors.menu_item_selected,
+            "color.list.background" => self.colors.list_background,
+            "color.list.border" => self.colors.list_border,
+            "color.list.row.hover" => self.colors.list_row_hover,
+            "color.list.row.selected" => self.colors.list_row_selected,
+            "color.scrollbar.track" => self.colors.scrollbar_track,
+            "color.scrollbar.thumb" => self.colors.scrollbar_thumb,
+            "color.scrollbar.thumb.hover" => self.colors.scrollbar_thumb_hover,
+            "color.viewport.selection.fill" => self.colors.viewport_selection_fill,
+            "color.viewport.selection.stroke" => self.colors.viewport_selection_stroke,
+            "color.viewport.marker" => self.colors.viewport_marker,
+            "color.viewport.drag_line.pan" => self.colors.viewport_drag_line_pan,
+            "color.viewport.drag_line.orbit" => self.colors.viewport_drag_line_orbit,
+            "color.viewport.gizmo.x" => self.colors.viewport_gizmo_x,
+            "color.viewport.gizmo.y" => self.colors.viewport_gizmo_y,
+            "color.viewport.gizmo.handle.background" => self.colors.viewport_gizmo_handle_background,
+            "color.viewport.gizmo.handle.border" => self.colors.viewport_gizmo_handle_border,
+            "color.viewport.rotate_gizmo" => self.colors.viewport_rotate_gizmo,
+
             "background" => self.colors.surface_background,
             "foreground" => self.colors.text_primary,
 
@@ -339,6 +373,10 @@ impl ThemeSnapshot {
             "metric.padding.sm" => self.metrics.padding_sm,
             "metric.padding.md" => self.metrics.padding_md,
             "metric.scrollbar.width" => self.metrics.scrollbar_width,
+            "metric.font.size" => self.metrics.font_size,
+            "metric.font.line_height" => self.metrics.font_line_height,
+            "metric.font.mono_size" => self.metrics.mono_font_size,
+            "metric.font.mono_line_height" => self.metrics.mono_font_line_height,
 
             "radius" => self.metrics.radius_sm,
             "radius.lg" => self.metrics.radius_md,
