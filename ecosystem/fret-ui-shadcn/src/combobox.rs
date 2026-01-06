@@ -223,7 +223,7 @@ pub fn combobox<H: UiHost>(
             weight: FontWeight::MEDIUM,
             line_height: theme
                 .metric_by_key("font.line_height")
-                .or(Some(theme.metrics.font_line_height)),
+                .or(Some(theme.metric_required("font.line_height"))),
             letter_spacing_em: None,
         };
 
@@ -247,15 +247,15 @@ pub fn combobox<H: UiHost>(
 
         let bg = theme
             .color_by_key("background")
-            .unwrap_or(theme.colors.surface_background);
+            .unwrap_or_else(|| theme.color_required("background"));
         let bg_hover = theme
             .color_by_key("accent")
             .or_else(|| theme.color_by_key("accent.background"))
-            .unwrap_or(theme.colors.hover_background);
-        let bg_pressed = theme.colors.selection_background;
+            .unwrap_or_else(|| theme.color_required("accent"));
+        let bg_pressed = theme.color_required("accent");
         let fg = theme
             .color_by_key("foreground")
-            .unwrap_or(theme.colors.text_primary);
+            .unwrap_or_else(|| theme.color_required("foreground"));
         let fg_hover = theme
             .color_by_key("accent-foreground")
             .or_else(|| theme.color_by_key("accent.foreground"))
@@ -263,7 +263,7 @@ pub fn combobox<H: UiHost>(
         let border = theme
             .color_by_key("input")
             .or_else(|| theme.color_by_key("border"))
-            .unwrap_or(theme.colors.panel_border);
+            .unwrap_or_else(|| theme.color_required("border"));
 
         let enabled = !disabled;
         let items: Vec<ComboboxItem> = items.to_vec();
@@ -428,8 +428,8 @@ pub fn combobox<H: UiHost>(
                     } else {
                         let fg = theme
                             .color_by_key("foreground")
-                            .unwrap_or(theme.colors.text_primary);
-                        let fg_disabled = theme.colors.text_disabled;
+                            .unwrap_or_else(|| theme.color_required("foreground"));
+                        let fg_disabled = alpha_mul(fg, 0.5);
                         let item_text_style = crate::command::item_text_style(&theme);
 
                         let mut command_items: Vec<CommandItem> = Vec::with_capacity(items.len());

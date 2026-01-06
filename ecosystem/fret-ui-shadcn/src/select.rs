@@ -162,7 +162,9 @@ fn select_scroll_with_buttons<H: UiHost>(
                                             Some(ColorRef::Color(
                                                 theme
                                                     .color_by_key("muted-foreground")
-                                                    .unwrap_or(theme.colors.text_muted),
+                                                    .unwrap_or_else(|| {
+                                                        theme.color_required("muted-foreground")
+                                                    }),
                                             )),
                                         )]
                                     },
@@ -637,7 +639,7 @@ fn select_impl<H: UiHost>(
             theme
                 .metric_by_key("component.select.arrow_padding")
                 .or_else(|| theme.metric_by_key("component.popover.arrow_padding"))
-                .unwrap_or(theme.metrics.radius_md)
+                .unwrap_or_else(|| theme.metric_required("metric.radius.md"))
         });
 
         let resolved = resolve_input_chrome(
@@ -659,7 +661,9 @@ fn select_impl<H: UiHost>(
             font: FontId::default(),
             size: resolved.text_px,
             weight: FontWeight::NORMAL,
-            line_height: theme.metric_by_key("font.line_height").or(Some(theme.metrics.font_line_height)),
+            line_height: theme
+                .metric_by_key("font.line_height")
+                .or(Some(theme.metric_required("font.line_height"))),
             letter_spacing_em: None,
         };
 
@@ -683,7 +687,7 @@ fn select_impl<H: UiHost>(
         let fg = resolved.text_color;
         let fg_muted = theme
             .color_by_key("muted-foreground")
-            .unwrap_or(theme.colors.text_muted);
+            .unwrap_or_else(|| theme.color_required("muted-foreground"));
 
         let enabled = !disabled;
         let item_len = count_items(entries);
@@ -1256,20 +1260,14 @@ fn select_impl<H: UiHost>(
                                                                             let fg = theme
                                                                                 .color_by_key("muted.foreground")
                                                                                 .or_else(|| theme.color_by_key("muted-foreground"))
-                                                                                .unwrap_or(theme.colors.text_muted);
+                                                                                .unwrap_or_else(|| theme.color_required("muted.foreground"));
 
-                                                                            let label_text_px = Px(
-                                                                                (theme.metrics.font_size.0 - 2.0)
-                                                                                    .max(10.0),
-                                                                            );
-                                                                            let label_line_height = Px(
-                                                                                (theme
-                                                                                    .metrics
-                                                                                    .font_line_height
-                                                                                    .0
-                                                                                    - 4.0)
-                                                                                    .max(12.0),
-                                                                            );
+                                                                            let font_size = theme.metric_required("font.size");
+                                                                            let font_line_height = theme.metric_required("font.line_height");
+                                                                            let label_text_px =
+                                                                                Px((font_size.0 - 2.0).max(10.0));
+                                                                            let label_line_height =
+                                                                                Px((font_line_height.0 - 4.0).max(12.0));
 
                                                                             out.push(cx.container(
                                                                                 ContainerProps {
@@ -1319,7 +1317,7 @@ fn select_impl<H: UiHost>(
                                                                             let theme = Theme::global(&*cx.app).clone();
                                                                             let border = theme
                                                                                 .color_by_key("border")
-                                                                                .unwrap_or(theme.colors.panel_border);
+                                                                                .unwrap_or_else(|| theme.color_required("border"));
 
                                                                             out.push(cx.container(
                                                                                 ContainerProps {
@@ -1425,11 +1423,11 @@ fn select_impl<H: UiHost>(
                                                                                     let bg_accent = theme
                                                                                         .color_by_key("accent")
                                                                                         .or_else(|| theme.color_by_key("accent.background"))
-                                                                                        .unwrap_or(theme.colors.hover_background);
+                                                                                        .unwrap_or_else(|| theme.color_required("accent"));
                                                                                     let fg_accent = theme
                                                                                         .color_by_key("accent-foreground")
                                                                                         .or_else(|| theme.color_by_key("accent.foreground"))
-                                                                                        .unwrap_or(theme.colors.text_primary);
+                                                                                        .unwrap_or_else(|| theme.color_required("accent.foreground"));
 
                                                                                     let mut bg = Color::TRANSPARENT;
                                                                                     let mut fg = if item_disabled {
@@ -1477,7 +1475,9 @@ fn select_impl<H: UiHost>(
                                                                                             shadow: None,
                                                                                             border: Edges::all(Px(0.0)),
                                                                                             border_color: None,
-                                                                                            corner_radii: Corners::all(theme.metrics.radius_sm),
+                                                                                            corner_radii: Corners::all(
+                                                                                                theme.metric_required("metric.radius.sm"),
+                                                                                            ),
                                                                                         },
                                                                                         |cx| {
                                                                                             let text = cx.container(
