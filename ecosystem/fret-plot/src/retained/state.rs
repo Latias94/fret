@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::cartesian::{DataPoint, DataRect};
 use crate::series::SeriesId;
-use fret_core::geometry::Px;
+use fret_core::geometry::{Point, Px};
 use fret_core::scene::Color;
 
 use super::models::YAxis;
@@ -181,4 +181,138 @@ impl InfLineY {
 pub struct PlotOverlays {
     pub inf_lines_x: Vec<InfLineX>,
     pub inf_lines_y: Vec<InfLineY>,
+    pub tags_x: Vec<TagX>,
+    pub tags_y: Vec<TagY>,
+    pub text: Vec<PlotText>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TagX {
+    pub x: f64,
+    pub label: Option<String>,
+    pub show_value: bool,
+    pub color: Option<Color>,
+}
+
+impl TagX {
+    pub fn new(x: f64) -> Self {
+        Self {
+            x,
+            label: None,
+            show_value: true,
+            color: None,
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn show_value(mut self, show: bool) -> Self {
+        self.show_value = show;
+        self
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TagY {
+    pub y: f64,
+    pub axis: YAxis,
+    pub label: Option<String>,
+    pub show_value: bool,
+    pub color: Option<Color>,
+}
+
+impl TagY {
+    pub fn new(y: f64, axis: YAxis) -> Self {
+        Self {
+            y,
+            axis,
+            label: None,
+            show_value: true,
+            color: None,
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<String>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn show_value(mut self, show: bool) -> Self {
+        self.show_value = show;
+        self
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlotText {
+    pub x: f64,
+    pub y: f64,
+    pub axis: YAxis,
+    pub text: String,
+    pub color: Option<Color>,
+    pub background: Option<Color>,
+    pub border: Option<Color>,
+    pub padding: Px,
+    pub corner_radius: Px,
+    pub offset: Point,
+}
+
+impl PlotText {
+    pub fn new(x: f64, y: f64, axis: YAxis, text: impl Into<String>) -> Self {
+        Self {
+            x,
+            y,
+            axis,
+            text: text.into(),
+            color: None,
+            background: None,
+            border: None,
+            padding: Px(0.0),
+            corner_radius: Px(0.0),
+            offset: Point::new(Px(0.0), Px(0.0)),
+        }
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    pub fn background(mut self, background: Color) -> Self {
+        self.background = Some(background);
+        self
+    }
+
+    pub fn border(mut self, border: Color) -> Self {
+        self.border = Some(border);
+        self
+    }
+
+    pub fn padding(mut self, padding: Px) -> Self {
+        self.padding = padding;
+        self
+    }
+
+    pub fn corner_radius(mut self, radius: Px) -> Self {
+        self.corner_radius = radius;
+        self
+    }
+
+    pub fn offset(mut self, offset: Point) -> Self {
+        self.offset = offset;
+        self
+    }
 }

@@ -1,6 +1,6 @@
 # ADR 0106: Plot Overlays and Annotations (2D, `fret-plot`)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -33,15 +33,27 @@ So `fret-plot` adds:
 - `PlotState::overlays: PlotOverlays`
 - `PlotOverlays` contains per-overlay collections (starting with reference lines).
 
-### 2) P0 overlay surface: static infinite reference lines (InfLines)
+### 2) P0 overlay surface: static overlays (InfLines, Tags, PlotText)
 
-P0 supports static, non-interactive reference lines:
+P0 supports static, non-interactive overlays:
 
 - `InfLineX { x: f64, color: Option<Color>, width: Px }`
 - `InfLineY { y: f64, axis: YAxis, color: Option<Color>, width: Px }`
+- `TagX { x: f64, label: Option<String>, show_value: bool, color: Option<Color> }`
+- `TagY { y: f64, axis: YAxis, label: Option<String>, show_value: bool, color: Option<Color> }`
+- `PlotText { x: f64, y: f64, axis: YAxis, text: String, ... }`
 
 Rendering uses the current `PlotTransform` to map data coordinates into the local plot viewport and emits
-`SceneOp::Quad` rectangles clipped by the plot region.
+`SceneOp::Quad` / `SceneOp::Text` primitives clipped by the plot region.
+
+Theming is token-driven (see `docs/plot-theme-tokens.md`), with optional annotation tokens:
+
+- `fret.plot.annotation.background` / `plot.annotation.background`
+- `fret.plot.annotation.border` / `plot.annotation.border`
+- `fret.plot.annotation.text` / `plot.annotation.text`
+- `fret.plot.annotation.stroke` / `plot.annotation.stroke`
+- `fret.plot.annotation.padding` / `plot.annotation.padding`
+- `fret.plot.annotation.radius` / `plot.annotation.radius`
 
 ### 3) Interaction is layered (P1+)
 
@@ -58,7 +70,7 @@ Interactive overlays remain caller-owned, with widget-produced outputs flowing t
 
 - ADR 0097: plot crate placement and portable rendering constraints.
 - ADR 0099: retained plot architecture and caching baseline.
-- `docs/plot-implot-alignment.md`: feature checklist (including `inf_lines_demo`).
+- `docs/audits/implot-alignment.md`: feature checklist (including `inf_lines_demo`).
 
 This ADR only defines the overlay/annotation contract. It does not change the rendering substrate or
 the series model contract.

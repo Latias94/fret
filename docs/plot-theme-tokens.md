@@ -33,12 +33,17 @@ All tokens below are optional.
 - `fret.plot.tooltip.background` (fallback: `popover`)
 - `fret.plot.tooltip.border` (fallback: `popover.border`)
 - `fret.plot.tooltip.text` (fallback: `popover-foreground`)
+- `fret.plot.annotation.background` (fallback: `fret.plot.tooltip.background`)
+- `fret.plot.annotation.border` (fallback: `fret.plot.tooltip.border`)
+- `fret.plot.annotation.text` (fallback: `fret.plot.tooltip.text`)
+- `fret.plot.annotation.stroke` (fallback: `fret.plot.crosshair`)
 
 Compatibility keys:
 
 - `plot.background`, `plot.border`, `plot.axis`, `plot.grid`, `plot.label`, `plot.crosshair`
 - `plot.selection.stroke`, `plot.selection.fill`
 - `plot.tooltip.background`, `plot.tooltip.border`, `plot.tooltip.text`
+- `plot.annotation.background`, `plot.annotation.border`, `plot.annotation.text`, `plot.annotation.stroke`
 
 ## Tokens (Series Palette)
 
@@ -62,10 +67,13 @@ These tokens are interpreted as pixel values (the `ThemeConfig.metrics` map stor
 - `fret.plot.axis_gap` (fallback: `LinePlotStyle::default().axis_gap`)
 - `fret.plot.stroke_width` (fallback: `LinePlotStyle::default().stroke_width`)
 - `fret.plot.hover_threshold` (fallback: `LinePlotStyle::default().hover_threshold`)
+- `fret.plot.annotation.padding` (fallback: `metric.padding.sm`)
+- `fret.plot.annotation.radius` (fallback: `metric.radius.sm`)
 
 Compatibility keys:
 
 - `plot.border_width`, `plot.padding`, `plot.axis_gap`, `plot.stroke_width`, `plot.hover_threshold`
+- `plot.annotation.padding`, `plot.annotation.radius`
 
 ## Example Theme Config Snippet
 

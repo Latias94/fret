@@ -89,6 +89,7 @@ impl InfLinesDemoDriver {
                 InfLineY::new(500.0, YAxis::Right2),
                 InfLineY::new(2_000.0, YAxis::Right3),
             ],
+            ..Default::default()
         };
 
         let plot_state = app.models_mut().insert(state);

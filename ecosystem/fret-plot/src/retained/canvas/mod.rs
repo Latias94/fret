@@ -215,6 +215,8 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     tooltip_text: Option<PreparedText>,
     mouse_readout_text: Option<PreparedText>,
     linked_cursor_readout_text: Option<PreparedText>,
+    overlays_text_key: Option<u64>,
+    overlays_text: Vec<PreparedText>,
 }
 
 #[cfg(test)]
@@ -589,6 +591,8 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             tooltip_text: None,
             mouse_readout_text: None,
             linked_cursor_readout_text: None,
+            overlays_text_key: None,
+            overlays_text: Vec::new(),
         }
     }
 
@@ -3597,7 +3601,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
             // Infinite reference lines (caller-owned overlays).
             let overlays = &state.overlays;
-            if !overlays.inf_lines_x.is_empty() || !overlays.inf_lines_y.is_empty() {
+            if !overlays.inf_lines_x.is_empty()
+                || !overlays.inf_lines_y.is_empty()
+                || !overlays.tags_x.is_empty()
+                || !overlays.tags_y.is_empty()
+                || !overlays.text.is_empty()
+            {
                 let default_color = Color {
                     a: (crosshair_color.a * 0.45).clamp(0.05, 1.0),
                     ..crosshair_color
@@ -3647,61 +3656,504 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     }
                 };
 
-                for line in &overlays.inf_lines_x {
-                    if !line.x.is_finite() {
-                        continue;
+                if !overlays.inf_lines_x.is_empty() {
+                    for line in &overlays.inf_lines_x {
+                        if !line.x.is_finite() {
+                            continue;
+                        }
+                        let Some(x_px) = transform_x.data_x_to_px(line.x) else {
+                            continue;
+                        };
+
+                        let w = line.width.0.max(1.0).min(layout.plot.size.width.0.max(1.0));
+                        let left = (x_px.0 - w * 0.5).clamp(0.0, layout.plot.size.width.0 - w);
+                        let x = Px((layout.plot.origin.x.0 + left).round());
+
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(3),
+                            rect: Rect::new(
+                                Point::new(x, layout.plot.origin.y),
+                                Size::new(Px(w), layout.plot.size.height),
+                            ),
+                            background: line.color.unwrap_or(default_color),
+                            border: fret_core::Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                        });
                     }
-                    let Some(x_px) = transform_x.data_x_to_px(line.x) else {
-                        continue;
-                    };
-
-                    let w = line.width.0.max(1.0).min(layout.plot.size.width.0.max(1.0));
-                    let left = (x_px.0 - w * 0.5).clamp(0.0, layout.plot.size.width.0 - w);
-                    let x = Px((layout.plot.origin.x.0 + left).round());
-
-                    cx.scene.push(SceneOp::Quad {
-                        order: DrawOrder(3),
-                        rect: Rect::new(
-                            Point::new(x, layout.plot.origin.y),
-                            Size::new(Px(w), layout.plot.size.height),
-                        ),
-                        background: line.color.unwrap_or(default_color),
-                        border: fret_core::Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
-                        corner_radii: fret_core::Corners::all(Px(0.0)),
-                    });
                 }
 
-                for line in &overlays.inf_lines_y {
-                    if !line.y.is_finite() {
-                        continue;
+                if !overlays.inf_lines_y.is_empty() {
+                    for line in &overlays.inf_lines_y {
+                        if !line.y.is_finite() {
+                            continue;
+                        }
+                        let Some(transform) = transform_for_y_axis(line.axis) else {
+                            continue;
+                        };
+                        let Some(y_px) = transform.data_y_to_px(line.y) else {
+                            continue;
+                        };
+
+                        let h = line
+                            .width
+                            .0
+                            .max(1.0)
+                            .min(layout.plot.size.height.0.max(1.0));
+                        let top = (y_px.0 - h * 0.5).clamp(0.0, layout.plot.size.height.0 - h);
+                        let y = Px((layout.plot.origin.y.0 + top).round());
+
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(3),
+                            rect: Rect::new(
+                                Point::new(layout.plot.origin.x, y),
+                                Size::new(layout.plot.size.width, Px(h)),
+                            ),
+                            background: line.color.unwrap_or(default_color),
+                            border: fret_core::Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                        });
                     }
-                    let Some(transform) = transform_for_y_axis(line.axis) else {
-                        continue;
+                }
+
+                if !overlays.tags_x.is_empty()
+                    || !overlays.tags_y.is_empty()
+                    || !overlays.text.is_empty()
+                {
+                    #[derive(Debug, Clone)]
+                    enum OverlayPlacement {
+                        TagX {
+                            x: Px,
+                            color: Color,
+                        },
+                        TagY {
+                            y: Px,
+                            right: bool,
+                            color: Color,
+                        },
+                        Text {
+                            origin: Point,
+                            color: Color,
+                            background: Option<Color>,
+                            border: Option<Color>,
+                            padding: Px,
+                            corner_radius: Px,
+                        },
+                    }
+
+                    #[derive(Debug, Clone)]
+                    struct OverlayDraft {
+                        text: String,
+                        placement: OverlayPlacement,
+                    }
+
+                    let theme = cx.theme();
+                    let annotation_background = crate::theme_tokens::color(
+                        theme,
+                        "fret.plot.annotation.background",
+                        "plot.annotation.background",
+                    )
+                    .unwrap_or(tooltip_background);
+                    let annotation_border = crate::theme_tokens::color(
+                        theme,
+                        "fret.plot.annotation.border",
+                        "plot.annotation.border",
+                    )
+                    .unwrap_or(tooltip_border);
+                    let annotation_text = crate::theme_tokens::color(
+                        theme,
+                        "fret.plot.annotation.text",
+                        "plot.annotation.text",
+                    )
+                    .unwrap_or(tooltip_text_color);
+                    let annotation_stroke = crate::theme_tokens::color(
+                        theme,
+                        "fret.plot.annotation.stroke",
+                        "plot.annotation.stroke",
+                    )
+                    .unwrap_or(crosshair_color);
+                    let annotation_padding = crate::theme_tokens::metric(
+                        theme,
+                        "fret.plot.annotation.padding",
+                        "plot.annotation.padding",
+                    )
+                    .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+                    let annotation_radius = crate::theme_tokens::metric(
+                        theme,
+                        "fret.plot.annotation.radius",
+                        "plot.annotation.radius",
+                    )
+                    .unwrap_or_else(|| theme.metric_required("metric.radius.sm"));
+                    let margin = Px(6.0);
+                    let marker_len = Px(8.0);
+
+                    let x_span = (view_bounds.x_max - view_bounds.x_min).abs();
+                    let y_span = (view_bounds.y_max - view_bounds.y_min).abs();
+
+                    let mut drafts: Vec<OverlayDraft> = Vec::new();
+
+                    for tag in &overlays.tags_x {
+                        if !tag.x.is_finite() {
+                            continue;
+                        }
+                        let Some(x_px) = transform_x.data_x_to_px(tag.x) else {
+                            continue;
+                        };
+                        let x = Px((layout.plot.origin.x.0 + x_px.0).round());
+
+                        let value = tag
+                            .show_value
+                            .then(|| self.tooltip_x_labels.format(tag.x, x_span))
+                            .unwrap_or_default();
+                        let text = match (&tag.label, tag.show_value) {
+                            (Some(label), true) => format!("{label}: {value}"),
+                            (Some(label), false) => label.clone(),
+                            (None, true) => value,
+                            (None, false) => String::new(),
+                        };
+                        if text.is_empty() {
+                            continue;
+                        }
+
+                        drafts.push(OverlayDraft {
+                            text,
+                            placement: OverlayPlacement::TagX {
+                                x,
+                                color: tag.color.unwrap_or(annotation_stroke),
+                            },
+                        });
+                    }
+
+                    for tag in &overlays.tags_y {
+                        if !tag.y.is_finite() {
+                            continue;
+                        }
+                        let Some(transform) = transform_for_y_axis(tag.axis) else {
+                            continue;
+                        };
+                        let Some(y_px) = transform.data_y_to_px(tag.y) else {
+                            continue;
+                        };
+                        let y = Px((layout.plot.origin.y.0 + y_px.0).round());
+
+                        let (span, labels) = match tag.axis {
+                            YAxis::Right if self.show_y2_axis => (
+                                view_bounds_y2
+                                    .map(|b| (b.y_max - b.y_min).abs())
+                                    .unwrap_or(y_span),
+                                &self.y2_axis_labels,
+                            ),
+                            YAxis::Right2 if self.show_y3_axis => (
+                                view_bounds_y3
+                                    .map(|b| (b.y_max - b.y_min).abs())
+                                    .unwrap_or(y_span),
+                                &self.y3_axis_labels,
+                            ),
+                            YAxis::Right3 if self.show_y4_axis => (
+                                view_bounds_y4
+                                    .map(|b| (b.y_max - b.y_min).abs())
+                                    .unwrap_or(y_span),
+                                &self.y4_axis_labels,
+                            ),
+                            _ => (y_span, &self.tooltip_y_labels),
+                        };
+
+                        let value = tag
+                            .show_value
+                            .then(|| labels.format(tag.y, span))
+                            .unwrap_or_default();
+                        let text = match (&tag.label, tag.show_value) {
+                            (Some(label), true) => format!("{label}: {value}"),
+                            (Some(label), false) => label.clone(),
+                            (None, true) => value,
+                            (None, false) => String::new(),
+                        };
+                        if text.is_empty() {
+                            continue;
+                        }
+
+                        drafts.push(OverlayDraft {
+                            text,
+                            placement: OverlayPlacement::TagY {
+                                y,
+                                right: tag.axis != YAxis::Left,
+                                color: tag.color.unwrap_or(annotation_stroke),
+                            },
+                        });
+                    }
+
+                    for t in &overlays.text {
+                        if !t.x.is_finite() || !t.y.is_finite() {
+                            continue;
+                        }
+                        let Some(transform) = transform_for_y_axis(t.axis) else {
+                            continue;
+                        };
+                        let Some(px_x) = transform.data_x_to_px(t.x) else {
+                            continue;
+                        };
+                        let Some(px_y) = transform.data_y_to_px(t.y) else {
+                            continue;
+                        };
+                        let origin = Point::new(
+                            Px((layout.plot.origin.x.0 + px_x.0 + t.offset.x.0).round()),
+                            Px((layout.plot.origin.y.0 + px_y.0 + t.offset.y.0).round()),
+                        );
+
+                        let padding = if t.background.is_some() && t.padding.0 <= 0.0 {
+                            annotation_padding
+                        } else {
+                            t.padding
+                        };
+                        let corner_radius = if t.background.is_some() && t.corner_radius.0 <= 0.0 {
+                            annotation_radius
+                        } else {
+                            t.corner_radius
+                        };
+
+                        drafts.push(OverlayDraft {
+                            text: t.text.clone(),
+                            placement: OverlayPlacement::Text {
+                                origin,
+                                color: t.color.unwrap_or(annotation_text),
+                                background: t.background,
+                                border: t.border,
+                                padding,
+                                corner_radius,
+                            },
+                        });
+                    }
+
+                    let overlay_font_size = Px((theme_font_size.0 * 0.90).max(10.0));
+                    let overlay_style = TextStyle {
+                        font: FontId::default(),
+                        size: overlay_font_size,
+                        weight: FontWeight::NORMAL,
+                        line_height: None,
+                        letter_spacing_em: None,
                     };
-                    let Some(y_px) = transform.data_y_to_px(line.y) else {
-                        continue;
+                    let overlay_constraints = TextConstraints {
+                        max_width: None,
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        scale_factor: cx.scale_factor,
                     };
 
-                    let h = line
-                        .width
-                        .0
-                        .max(1.0)
-                        .min(layout.plot.size.height.0.max(1.0));
-                    let top = (y_px.0 - h * 0.5).clamp(0.0, layout.plot.size.height.0 - h);
-                    let y = Px((layout.plot.origin.y.0 + top).round());
+                    let mut overlay_key = 0u64;
+                    overlay_key = Self::hash_u64(overlay_key, theme_revision);
+                    overlay_key = Self::hash_u64(overlay_key, font_stack_key);
+                    overlay_key = Self::hash_u64(overlay_key, u64::from(cx.scale_factor.to_bits()));
+                    overlay_key = Self::hash_u64(overlay_key, Self::text_style_key(&overlay_style));
+                    overlay_key = Self::hash_u64(overlay_key, drafts.len() as u64);
+                    for d in &drafts {
+                        for b in d.text.as_bytes() {
+                            overlay_key = Self::hash_u64(overlay_key, u64::from(*b));
+                        }
+                    }
 
-                    cx.scene.push(SceneOp::Quad {
-                        order: DrawOrder(3),
-                        rect: Rect::new(
-                            Point::new(layout.plot.origin.x, y),
-                            Size::new(layout.plot.size.width, Px(h)),
-                        ),
-                        background: line.color.unwrap_or(default_color),
-                        border: fret_core::Edges::all(Px(0.0)),
-                        border_color: Color::TRANSPARENT,
-                        corner_radii: fret_core::Corners::all(Px(0.0)),
-                    });
+                    if self.overlays_text_key != Some(overlay_key) {
+                        for prev in self.overlays_text.drain(..) {
+                            cx.services.text().release(prev.blob);
+                        }
+                        self.overlays_text_key = Some(overlay_key);
+
+                        self.overlays_text.reserve(drafts.len());
+                        for d in &drafts {
+                            let prepared = self.prepare_text(
+                                cx.services,
+                                &d.text,
+                                &overlay_style,
+                                overlay_constraints,
+                            );
+                            self.overlays_text.push(PreparedText {
+                                blob: prepared.blob,
+                                metrics: prepared.metrics,
+                                key: prepared.key,
+                            });
+                        }
+                    }
+
+                    for (i, d) in drafts.iter().enumerate() {
+                        let Some(text) = self.overlays_text.get(i).copied() else {
+                            continue;
+                        };
+
+                        match &d.placement {
+                            OverlayPlacement::TagX { x, color } => {
+                                let pad = annotation_padding;
+                                let w = Px(text.metrics.size.width.0 + pad.0 * 2.0);
+                                let h = Px(text.metrics.size.height.0 + pad.0 * 2.0);
+
+                                let left = (x.0 - w.0 * 0.5).clamp(
+                                    layout.plot.origin.x.0,
+                                    layout.plot.origin.x.0 + layout.plot.size.width.0 - w.0,
+                                );
+                                let top = (layout.plot.origin.y.0 + layout.plot.size.height.0
+                                    - h.0
+                                    - margin.0)
+                                    .clamp(
+                                        layout.plot.origin.y.0,
+                                        layout.plot.origin.y.0 + layout.plot.size.height.0 - h.0,
+                                    );
+                                let rect =
+                                    Rect::new(Point::new(Px(left), Px(top)), Size::new(w, h));
+
+                                cx.scene.push(SceneOp::Quad {
+                                    order: DrawOrder(3),
+                                    rect,
+                                    background: annotation_background,
+                                    border: fret_core::Edges::all(Px(1.0)),
+                                    border_color: annotation_border,
+                                    corner_radii: fret_core::Corners::all(annotation_radius),
+                                });
+
+                                let origin = Point::new(
+                                    Px(rect.origin.x.0 + pad.0),
+                                    Px(rect.origin.y.0 + pad.0 + text.metrics.baseline.0),
+                                );
+                                cx.scene.push(SceneOp::Text {
+                                    order: DrawOrder(3),
+                                    origin,
+                                    text: text.blob,
+                                    color: annotation_text,
+                                });
+
+                                let marker_w = Px(2.0);
+                                let marker_h =
+                                    Px(marker_len.0.min(layout.plot.size.height.0.max(0.0)));
+                                let marker_left = (x.0 - marker_w.0 * 0.5).clamp(
+                                    layout.plot.origin.x.0,
+                                    layout.plot.origin.x.0 + layout.plot.size.width.0 - marker_w.0,
+                                );
+                                let marker_top = (layout.plot.origin.y.0
+                                    + layout.plot.size.height.0
+                                    - marker_h.0)
+                                    .max(layout.plot.origin.y.0);
+                                cx.scene.push(SceneOp::Quad {
+                                    order: DrawOrder(3),
+                                    rect: Rect::new(
+                                        Point::new(Px(marker_left), Px(marker_top)),
+                                        Size::new(marker_w, marker_h),
+                                    ),
+                                    background: *color,
+                                    border: fret_core::Edges::all(Px(0.0)),
+                                    border_color: Color::TRANSPARENT,
+                                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                                });
+                            }
+                            OverlayPlacement::TagY { y, right, color } => {
+                                let pad = annotation_padding;
+                                let w = Px(text.metrics.size.width.0 + pad.0 * 2.0);
+                                let h = Px(text.metrics.size.height.0 + pad.0 * 2.0);
+
+                                let left = if *right {
+                                    (layout.plot.origin.x.0 + layout.plot.size.width.0
+                                        - w.0
+                                        - margin.0)
+                                        .max(layout.plot.origin.x.0)
+                                } else {
+                                    layout.plot.origin.x.0 + margin.0
+                                };
+                                let top = (y.0 - h.0 * 0.5).clamp(
+                                    layout.plot.origin.y.0,
+                                    layout.plot.origin.y.0 + layout.plot.size.height.0 - h.0,
+                                );
+                                let rect =
+                                    Rect::new(Point::new(Px(left), Px(top)), Size::new(w, h));
+
+                                cx.scene.push(SceneOp::Quad {
+                                    order: DrawOrder(3),
+                                    rect,
+                                    background: annotation_background,
+                                    border: fret_core::Edges::all(Px(1.0)),
+                                    border_color: annotation_border,
+                                    corner_radii: fret_core::Corners::all(annotation_radius),
+                                });
+
+                                let origin = Point::new(
+                                    Px(rect.origin.x.0 + pad.0),
+                                    Px(rect.origin.y.0 + pad.0 + text.metrics.baseline.0),
+                                );
+                                cx.scene.push(SceneOp::Text {
+                                    order: DrawOrder(3),
+                                    origin,
+                                    text: text.blob,
+                                    color: annotation_text,
+                                });
+
+                                let marker_h = Px(2.0);
+                                let marker_w =
+                                    Px(marker_len.0.min(layout.plot.size.width.0.max(0.0)));
+                                let marker_top = (y.0 - marker_h.0 * 0.5).clamp(
+                                    layout.plot.origin.y.0,
+                                    layout.plot.origin.y.0 + layout.plot.size.height.0 - marker_h.0,
+                                );
+                                let marker_left = if *right {
+                                    (layout.plot.origin.x.0 + layout.plot.size.width.0 - marker_w.0)
+                                        .max(layout.plot.origin.x.0)
+                                } else {
+                                    layout.plot.origin.x.0
+                                };
+                                cx.scene.push(SceneOp::Quad {
+                                    order: DrawOrder(3),
+                                    rect: Rect::new(
+                                        Point::new(Px(marker_left), Px(marker_top)),
+                                        Size::new(marker_w, marker_h),
+                                    ),
+                                    background: *color,
+                                    border: fret_core::Edges::all(Px(0.0)),
+                                    border_color: Color::TRANSPARENT,
+                                    corner_radii: fret_core::Corners::all(Px(0.0)),
+                                });
+                            }
+                            OverlayPlacement::Text {
+                                origin,
+                                color,
+                                background,
+                                border,
+                                padding,
+                                corner_radius,
+                            } => {
+                                let pad = *padding;
+                                let w = Px(text.metrics.size.width.0 + pad.0 * 2.0);
+                                let h = Px(text.metrics.size.height.0 + pad.0 * 2.0);
+
+                                let left = origin.x.0.clamp(
+                                    layout.plot.origin.x.0,
+                                    layout.plot.origin.x.0 + layout.plot.size.width.0 - w.0,
+                                );
+                                let top = origin.y.0.clamp(
+                                    layout.plot.origin.y.0,
+                                    layout.plot.origin.y.0 + layout.plot.size.height.0 - h.0,
+                                );
+                                let rect =
+                                    Rect::new(Point::new(Px(left), Px(top)), Size::new(w, h));
+
+                                if let Some(bg) = *background {
+                                    cx.scene.push(SceneOp::Quad {
+                                        order: DrawOrder(3),
+                                        rect,
+                                        background: bg,
+                                        border: fret_core::Edges::all(Px(1.0)),
+                                        border_color: border.unwrap_or(annotation_border),
+                                        corner_radii: fret_core::Corners::all(*corner_radius),
+                                    });
+                                }
+
+                                let text_origin = Point::new(
+                                    Px(rect.origin.x.0 + pad.0),
+                                    Px(rect.origin.y.0 + pad.0 + text.metrics.baseline.0),
+                                );
+                                cx.scene.push(SceneOp::Text {
+                                    order: DrawOrder(3),
+                                    origin: text_origin,
+                                    text: text.blob,
+                                    color: *color,
+                                });
+                            }
+                        }
+                    }
                 }
             }
 
@@ -5018,5 +5470,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         if let Some(t) = self.linked_cursor_readout_text.take() {
             services.text().release(t.blob);
         }
+        for t in self.overlays_text.drain(..) {
+            services.text().release(t.blob);
+        }
+        self.overlays_text_key = None;
     }
 }
