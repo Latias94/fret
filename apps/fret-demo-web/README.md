@@ -33,6 +33,7 @@ hash or query string:
 - `?demo=stems_demo` (or `#stems_demo`)
 - `?demo=linked_cursor_demo` (or `#linked_cursor_demo`)
 - `?demo=inf_lines_demo` (or `#inf_lines_demo`)
+- `?demo=tags_demo` (or `#tags_demo`)
 
 ## Debug teardown
 
