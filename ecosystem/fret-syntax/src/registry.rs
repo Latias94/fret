@@ -239,9 +239,14 @@ pub fn config_for(language: &str) -> Option<&'static HighlightConfiguration> {
 fn bash_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_bash::LANGUAGE.into(), "bash", "", "", "")
-                .expect("valid bash config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_bash::LANGUAGE.into(),
+            "bash",
+            include_str!("../languages/bash/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid bash highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -251,8 +256,14 @@ fn bash_config() -> &'static HighlightConfiguration {
 fn c_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg = HighlightConfiguration::new(tree_sitter_c::LANGUAGE.into(), "c", "", "", "")
-            .expect("valid c config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_c::LANGUAGE.into(),
+            "c",
+            include_str!("../languages/c/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid c highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -262,9 +273,14 @@ fn c_config() -> &'static HighlightConfiguration {
 fn cpp_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_cpp::LANGUAGE.into(), "cpp", "", "", "")
-                .expect("valid cpp config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_cpp::LANGUAGE.into(),
+            "cpp",
+            include_str!("../languages/cpp/highlights.scm"),
+            include_str!("../languages/cpp/injections.scm"),
+            "",
+        )
+        .expect("valid cpp highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -274,9 +290,14 @@ fn cpp_config() -> &'static HighlightConfiguration {
 fn csharp_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_c_sharp::LANGUAGE.into(), "csharp", "", "", "")
-                .expect("valid csharp config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_c_sharp::LANGUAGE.into(),
+            "csharp",
+            include_str!("../languages/csharp/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid csharp highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -286,9 +307,14 @@ fn csharp_config() -> &'static HighlightConfiguration {
 fn cmake_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_cmake::LANGUAGE.into(), "cmake", "", "", "")
-                .expect("valid cmake config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_cmake::LANGUAGE.into(),
+            "cmake",
+            include_str!("../languages/cmake/highlights.scm"),
+            include_str!("../languages/cmake/injections.scm"),
+            "",
+        )
+        .expect("valid cmake highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -298,9 +324,14 @@ fn cmake_config() -> &'static HighlightConfiguration {
 fn css_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_css::LANGUAGE.into(), "css", "", "", "")
-                .expect("valid css config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_css::LANGUAGE.into(),
+            "css",
+            include_str!("../languages/css/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid css highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -310,9 +341,14 @@ fn css_config() -> &'static HighlightConfiguration {
 fn diff_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_diff::LANGUAGE.into(), "diff", "", "", "")
-                .expect("valid diff config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_diff::LANGUAGE.into(),
+            "diff",
+            include_str!("../languages/diff/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid diff highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -322,9 +358,14 @@ fn diff_config() -> &'static HighlightConfiguration {
 fn elixir_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_elixir::LANGUAGE.into(), "elixir", "", "", "")
-                .expect("valid elixir config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_elixir::LANGUAGE.into(),
+            "elixir",
+            include_str!("../languages/elixir/highlights.scm"),
+            include_str!("../languages/elixir/injections.scm"),
+            "",
+        )
+        .expect("valid elixir highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -337,11 +378,11 @@ fn embedded_template_config() -> &'static HighlightConfiguration {
         let mut cfg = HighlightConfiguration::new(
             tree_sitter_embedded_template::LANGUAGE.into(),
             "embedded-template",
-            "",
+            include_str!("../languages/embedded-template/highlights.scm"),
             "",
             "",
         )
-        .expect("valid embedded-template config");
+        .expect("valid embedded-template highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -456,11 +497,11 @@ fn graphql_config() -> &'static HighlightConfiguration {
         let mut cfg = HighlightConfiguration::new(
             tree_sitter_graphql::LANGUAGE.into(),
             "graphql",
-            "",
-            "",
+            include_str!("../languages/graphql/highlights.scm"),
+            include_str!("../languages/graphql/injections.scm"),
             "",
         )
-        .expect("valid graphql config");
+        .expect("valid graphql highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -470,9 +511,14 @@ fn graphql_config() -> &'static HighlightConfiguration {
 fn java_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_java::LANGUAGE.into(), "java", "", "", "")
-                .expect("valid java config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_java::LANGUAGE.into(),
+            "java",
+            include_str!("../languages/java/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid java highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -482,9 +528,14 @@ fn java_config() -> &'static HighlightConfiguration {
 fn make_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_make::LANGUAGE.into(), "make", "", "", "")
-                .expect("valid make config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_make::LANGUAGE.into(),
+            "make",
+            include_str!("../languages/make/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid make highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -511,9 +562,14 @@ fn zig_config() -> &'static HighlightConfiguration {
 fn markdown_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_md::LANGUAGE.into(), "markdown", "", "", "")
-                .expect("valid markdown config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_md::LANGUAGE.into(),
+            "markdown",
+            include_str!("../languages/markdown/highlights.scm"),
+            include_str!("../languages/markdown/injections.scm"),
+            "",
+        )
+        .expect("valid markdown highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -523,9 +579,14 @@ fn markdown_config() -> &'static HighlightConfiguration {
 fn proto_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_proto::LANGUAGE.into(), "proto", "", "", "")
-                .expect("valid proto config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_proto::LANGUAGE.into(),
+            "proto",
+            include_str!("../languages/proto/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid proto highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -535,9 +596,14 @@ fn proto_config() -> &'static HighlightConfiguration {
 fn python_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_python::LANGUAGE.into(), "python", "", "", "")
-                .expect("valid python config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_python::LANGUAGE.into(),
+            "python",
+            include_str!("../languages/python/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid python highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -547,9 +613,14 @@ fn python_config() -> &'static HighlightConfiguration {
 fn ruby_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_ruby::LANGUAGE.into(), "ruby", "", "", "")
-                .expect("valid ruby config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_ruby::LANGUAGE.into(),
+            "ruby",
+            include_str!("../languages/ruby/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid ruby highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -559,9 +630,14 @@ fn ruby_config() -> &'static HighlightConfiguration {
 fn scala_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_scala::LANGUAGE.into(), "scala", "", "", "")
-                .expect("valid scala config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_scala::LANGUAGE.into(),
+            "scala",
+            include_str!("../languages/scala/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid scala highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -571,9 +647,14 @@ fn scala_config() -> &'static HighlightConfiguration {
 fn sql_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_sequel::LANGUAGE.into(), "sql", "", "", "")
-                .expect("valid sql config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_sequel::LANGUAGE.into(),
+            "sql",
+            include_str!("../languages/sql/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid sql highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -583,9 +664,14 @@ fn sql_config() -> &'static HighlightConfiguration {
 fn swift_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_swift::LANGUAGE.into(), "swift", "", "", "")
-                .expect("valid swift config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_swift::LANGUAGE.into(),
+            "swift",
+            include_str!("../languages/swift/highlights.scm"),
+            include_str!("../languages/swift/injections.scm"),
+            "",
+        )
+        .expect("valid swift highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -595,9 +681,14 @@ fn swift_config() -> &'static HighlightConfiguration {
 fn yaml_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_yaml::LANGUAGE.into(), "yaml", "", "", "")
-                .expect("valid yaml config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_yaml::LANGUAGE.into(),
+            "yaml",
+            include_str!("../languages/yaml/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid yaml highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })
@@ -607,9 +698,14 @@ fn yaml_config() -> &'static HighlightConfiguration {
 fn toml_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
     CONFIG.get_or_init(|| {
-        let mut cfg =
-            HighlightConfiguration::new(tree_sitter_toml_ng::LANGUAGE.into(), "toml", "", "", "")
-                .expect("valid toml config");
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_toml_ng::LANGUAGE.into(),
+            "toml",
+            include_str!("../languages/toml/highlights.scm"),
+            "",
+            "",
+        )
+        .expect("valid toml highlight queries");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })

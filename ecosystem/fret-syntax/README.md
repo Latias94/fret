@@ -7,6 +7,8 @@ leaves theme token resolution to the component layer.
 
 ## Attribution
 
-Some bundled highlight query files are derived from `gpui-component` (Apache-2.0) as a reference
-source. See `docs/repo-ref.md` for the pinned checkout location under `repo-ref/`.
+This crate bundles a set of Tree-sitter query files (`*.scm`) for highlighting and language
+injections. Sources and license texts are recorded in:
 
+- `ecosystem/fret-syntax/third_party/README.md`
+- `ecosystem/fret-syntax/third_party/licenses/`
