@@ -921,6 +921,9 @@ pub struct VirtualListProps {
     pub len: usize,
     pub items_revision: u64,
     pub estimate_row_height: Px,
+    /// When `false`, the virtual list will skip per-item measurement and assume the estimated row
+    /// height is correct for all items (fast path for fixed-height lists/tables).
+    pub measure_items: bool,
     pub overscan: usize,
     pub scroll_margin: Px,
     pub gap: Px,
@@ -933,6 +936,9 @@ pub struct VirtualListOptions {
     pub axis: fret_core::Axis,
     pub items_revision: u64,
     pub estimate_row_height: Px,
+    /// When `false`, the list will not do a pre-measure pass for visible items.
+    /// This is intended for fixed-height lists where `estimate_row_height` is exact.
+    pub measure_items: bool,
     pub overscan: usize,
     pub scroll_margin: Px,
     pub gap: Px,
@@ -944,6 +950,7 @@ impl VirtualListOptions {
             axis: fret_core::Axis::Vertical,
             items_revision: 0,
             estimate_row_height,
+            measure_items: true,
             overscan,
             scroll_margin: Px(0.0),
             gap: Px(0.0),

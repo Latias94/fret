@@ -18,8 +18,8 @@ use crate::declarative::stack;
 use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::headless::table::{
-    ColumnDef, ColumnId, Row, SortCmpFn, SortSpec, TableState, column_size, is_column_visible,
-    is_row_selected, order_columns, split_pinned_columns,
+    ColumnDef, ColumnId, Row, RowKey, SortCmpFn, SortSpec, TableState, column_size,
+    is_column_visible, is_row_selected, order_columns, split_pinned_columns,
 };
 
 fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
@@ -170,6 +170,7 @@ pub fn table_virtualized<H: UiHost, TData>(
     state: Model<TableState>,
     vertical_scroll: &VirtualListScrollHandle,
     items_revision: u64,
+    row_key_at: &dyn Fn(&TData, usize) -> RowKey,
     props: TableViewProps,
     on_row_activate: impl Fn(&Row<'_, TData>) -> Option<CommandId>,
     mut render_header_cell: impl FnMut(
@@ -253,6 +254,7 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let mut list_options = fret_ui::element::VirtualListOptions::new(row_h, props.overscan);
     list_options.items_revision = items_revision;
+    list_options.measure_items = false;
 
     let rendered_rows = Cell::new(0usize);
 
@@ -551,25 +553,26 @@ pub fn table_virtualized<H: UiHost, TData>(
                                         list_options,
                                         vertical_scroll,
                                         |i| {
-                                            page_rows[i] as u64
+                                            row_key_at(&data[page_rows[i]], page_rows[i]).0
                                         },
                                         |cx, i| {
                                             rendered_rows.set(rendered_rows.get().saturating_add(1));
                                             let data_index = page_rows[i];
+                                            let row_key = row_key_at(&data[data_index], data_index);
                                             let data_row = Row {
-                                                id: Arc::from(data_index.to_string()),
+                                                key: row_key,
                                                 original: &data[data_index],
                                                 index: data_index,
                                                 depth: 0,
                                                 parent: None,
-                                                parent_id: None,
+                                                parent_key: None,
                                                 sub_rows: Vec::new(),
                                             };
 
                                             let cmd = on_row_activate(&data_row);
                                             let enabled = cmd.is_some() || props.enable_row_selection;
                                             let is_selected =
-                                                is_row_selected(&data_row.id, &state_value.row_selection);
+                                                is_row_selected(data_row.key, &state_value.row_selection);
 
                                             cx.pressable(
                                                 PressableProps {
@@ -586,18 +589,17 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                     cx.pressable_dispatch_command_opt(cmd.clone());
                                                     if props.enable_row_selection {
                                                         let state_model = state.clone();
-                                                        let row_id = data_row.id.clone();
+                                                        let row_key = data_row.key;
                                                         let single = props.single_row_selection;
                                                         cx.pressable_update_model(&state_model, move |st| {
-                                                            let selected =
-                                                                is_row_selected(&row_id, &st.row_selection);
+                                                            let selected = st.row_selection.contains(&row_key);
                                                             if single {
                                                                 st.row_selection.clear();
                                                             }
                                                             if selected {
-                                                                st.row_selection.remove(row_id.as_ref());
+                                                                st.row_selection.remove(&row_key);
                                                             } else {
-                                                                st.row_selection.insert(row_id.clone(), true);
+                                                                st.row_selection.insert(row_key);
                                                             }
                                                         });
                                                     }

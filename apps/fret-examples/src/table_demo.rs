@@ -12,7 +12,7 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
 };
 use fret_ui::{Invalidation, Theme, UiTree, VirtualListScrollHandle};
-use fret_ui_kit::headless::table::{ColumnPinningState, TableState, create_column_helper};
+use fret_ui_kit::headless::table::{ColumnPinningState, RowKey, TableState, create_column_helper};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -296,6 +296,7 @@ impl WinitAppDriver for TableDemoDriver {
                                                     table_state.clone(),
                                                     &scroll,
                                                     1,
+                                                    &|row: &DemoRow, _i| RowKey(row.id as u64),
                                                     fret_ui_kit::declarative::table::TableViewProps {
                                                         overscan: 8,
                                                         ..Default::default()
@@ -363,7 +364,12 @@ impl WinitAppDriver for TableDemoDriver {
         if let Some(limit) = state.exit_after_frames {
             if state.frame >= limit {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                return;
             }
+        }
+
+        if state.profile_frames_left > 0 || state.exit_after_frames.is_some() {
+            app.request_redraw(window);
         }
     }
 
