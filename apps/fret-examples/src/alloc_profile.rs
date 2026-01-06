@@ -4,7 +4,7 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 #[cfg(feature = "alloc-profile")]
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct AllocProfileSnapshot {
     pub alloc_calls: u64,
     pub alloc_bytes: u64,
@@ -68,7 +68,7 @@ pub fn reset() {
 }
 
 #[cfg(not(feature = "alloc-profile"))]
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct AllocProfileSnapshot {
     pub alloc_calls: u64,
     pub alloc_bytes: u64,
