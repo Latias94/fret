@@ -74,6 +74,11 @@ To align with common ImPlot usage while keeping contracts portable, multi-axis s
   `PlotState.view_bounds_y3`, `PlotState.view_bounds_y4`), allowing different scales without
   distorting the primary Y axis.
 
+Implementation note:
+
+- Axes are auto-enabled when the model contains series assigned to them, so forgetting to call
+  `y*_axis_*` configuration APIs does not silently plot those series against the primary Y axis.
+
 ### 2.6) Axis scales are explicit (Linear / Log10)
 
 Axis scaling is an explicit, per-axis configuration on the canvas (not hidden inside series data):

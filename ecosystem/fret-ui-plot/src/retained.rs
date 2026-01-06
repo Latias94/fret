@@ -3507,6 +3507,36 @@ impl PlotCanvas<ShadedPlotLayer> {
 }
 
 impl<L: PlotLayer + 'static> PlotCanvas<L> {
+    fn ensure_required_axes_enabled<H: UiHost>(&mut self, app: &mut H) {
+        if !self.show_y2_axis {
+            let has_y2 = self
+                .model
+                .read(app, |_app, m| L::data_bounds_y2(m).is_some())
+                .unwrap_or(false);
+            if has_y2 {
+                self.show_y2_axis = true;
+            }
+        }
+        if !self.show_y3_axis {
+            let has_y3 = self
+                .model
+                .read(app, |_app, m| L::data_bounds_y3(m).is_some())
+                .unwrap_or(false);
+            if has_y3 {
+                self.show_y3_axis = true;
+            }
+        }
+        if !self.show_y4_axis {
+            let has_y4 = self
+                .model
+                .read(app, |_app, m| L::data_bounds_y4(m).is_some())
+                .unwrap_or(false);
+            if has_y4 {
+                self.show_y4_axis = true;
+            }
+        }
+    }
+
     pub fn with_layer(model: Model<L::Model>, layer: L) -> Self {
         let axis_gap = LinePlotStyle::default().axis_gap;
         Self {
@@ -4936,6 +4966,10 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
 
 impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
     fn event(&mut self, cx: &mut fret_ui::retained_bridge::EventCx<'_, H>, event: &Event) {
+        // Axis enablement is derived from the model (series -> axis assignment), so make sure
+        // we don't accidentally interpret "right axis series" using the primary Y transform.
+        self.ensure_required_axes_enabled(cx.app);
+
         match event {
             Event::KeyDown { key, modifiers, .. } => {
                 let plain = !modifiers.shift
@@ -6203,6 +6237,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         }
         cx.observe_global::<TextFontStackKey>(Invalidation::Paint);
         self.last_scale_factor = cx.scale_factor;
+
+        self.ensure_required_axes_enabled(cx.app);
 
         let theme = cx.theme().snapshot();
         let font_stack_key = cx
