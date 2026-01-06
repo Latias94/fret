@@ -37,6 +37,7 @@ struct LinkedPlotMemberMemory {
 /// This is intended to support common ImPlot-style workflows:
 /// - Linked view bounds (pan/zoom) across multiple plots.
 /// - Shared query selections across multiple plots.
+/// - Multi-axis linking: when present, Y2/Y3/Y4 view bounds propagate alongside the primary view.
 ///
 /// Design notes:
 /// - The coordinator uses `PlotOutput.revision` as a change detector.
@@ -193,6 +194,33 @@ fn apply_snapshot_to_plot_state(
             changed = true;
             should_ignore = true;
         }
+
+        // Only propagate optional axis bounds when the source plot provides them. This prevents a
+        // plot that doesn't have a given axis enabled from clearing other members' axis state.
+        if let Some(vb) = snapshot.view_bounds_y2 {
+            if state.view_y2_is_auto || state.view_bounds_y2 != Some(vb) {
+                state.view_y2_is_auto = false;
+                state.view_bounds_y2 = Some(vb);
+                changed = true;
+                should_ignore = true;
+            }
+        }
+        if let Some(vb) = snapshot.view_bounds_y3 {
+            if state.view_y3_is_auto || state.view_bounds_y3 != Some(vb) {
+                state.view_y3_is_auto = false;
+                state.view_bounds_y3 = Some(vb);
+                changed = true;
+                should_ignore = true;
+            }
+        }
+        if let Some(vb) = snapshot.view_bounds_y4 {
+            if state.view_y4_is_auto || state.view_bounds_y4 != Some(vb) {
+                state.view_y4_is_auto = false;
+                state.view_bounds_y4 = Some(vb);
+                changed = true;
+                should_ignore = true;
+            }
+        }
     }
     if policy.query {
         if state.query != snapshot.query {
@@ -280,5 +308,94 @@ mod tests {
         // Now a real user interaction on plot B should be observed.
         members[1].rev = 2;
         assert_eq!(tick_pick_source(&mut members), Some(1));
+    }
+
+    #[test]
+    fn apply_snapshot_propagates_optional_axis_bounds_when_present() {
+        let mut state = PlotState::default();
+        assert!(state.view_is_auto);
+        assert!(state.view_y2_is_auto);
+        assert!(state.view_y3_is_auto);
+        assert!(state.view_y4_is_auto);
+
+        let snapshot = PlotOutputSnapshot {
+            view_bounds: crate::cartesian::DataRect {
+                x_min: 0.0,
+                x_max: 10.0,
+                y_min: -1.0,
+                y_max: 1.0,
+            },
+            view_bounds_y2: Some(crate::cartesian::DataRect {
+                x_min: 0.0,
+                x_max: 10.0,
+                y_min: 0.0,
+                y_max: 100.0,
+            }),
+            view_bounds_y3: Some(crate::cartesian::DataRect {
+                x_min: 0.0,
+                x_max: 10.0,
+                y_min: 500.0,
+                y_max: 750.0,
+            }),
+            view_bounds_y4: Some(crate::cartesian::DataRect {
+                x_min: 0.0,
+                x_max: 10.0,
+                y_min: 10_000.0,
+                y_max: 12_000.0,
+            }),
+            cursor: None,
+            hover: None,
+            query: None,
+        };
+
+        let r = apply_snapshot_to_plot_state(&mut state, snapshot, PlotLinkPolicy::default());
+        assert!(r.changed);
+        assert!(r.should_ignore_output_once);
+        assert!(!state.view_is_auto);
+        assert!(!state.view_y2_is_auto);
+        assert!(!state.view_y3_is_auto);
+        assert!(!state.view_y4_is_auto);
+        assert_eq!(state.view_bounds, Some(snapshot.view_bounds));
+        assert_eq!(state.view_bounds_y2, snapshot.view_bounds_y2);
+        assert_eq!(state.view_bounds_y3, snapshot.view_bounds_y3);
+        assert_eq!(state.view_bounds_y4, snapshot.view_bounds_y4);
+    }
+
+    #[test]
+    fn apply_snapshot_does_not_clear_optional_axis_bounds_on_none() {
+        let mut state = PlotState::default();
+        state.view_y2_is_auto = false;
+        state.view_bounds_y2 = Some(crate::cartesian::DataRect {
+            x_min: 0.0,
+            x_max: 1.0,
+            y_min: 10.0,
+            y_max: 20.0,
+        });
+
+        let snapshot = PlotOutputSnapshot {
+            view_bounds: crate::cartesian::DataRect {
+                x_min: 0.0,
+                x_max: 1.0,
+                y_min: 0.0,
+                y_max: 1.0,
+            },
+            view_bounds_y2: None,
+            view_bounds_y3: None,
+            view_bounds_y4: None,
+            cursor: None,
+            hover: None,
+            query: None,
+        };
+
+        let _ = apply_snapshot_to_plot_state(&mut state, snapshot, PlotLinkPolicy::default());
+        assert_eq!(
+            state.view_bounds_y2,
+            Some(crate::cartesian::DataRect {
+                x_min: 0.0,
+                x_max: 1.0,
+                y_min: 10.0,
+                y_max: 20.0,
+            })
+        );
     }
 }
