@@ -2,9 +2,10 @@
 
 use std::sync::Arc;
 
-use fret_core::{Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Axis, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, ScrollAxis, ScrollProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, ScrollAxis,
+    ScrollProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
@@ -289,6 +290,12 @@ pub struct TableInfo {
 #[derive(Debug, Clone, Copy)]
 pub struct ThematicBreakInfo;
 
+#[derive(Debug, Clone)]
+pub struct LinkInfo {
+    pub href: Arc<str>,
+    pub text: Arc<str>,
+}
+
 pub type HeadingRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, HeadingInfo) -> AnyElement;
 pub type ParagraphRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, ParagraphInfo) -> AnyElement;
@@ -304,6 +311,7 @@ pub type BlockQuoteRenderer<H> =
 pub type TableRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, TableInfo) -> AnyElement;
 pub type ThematicBreakRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, ThematicBreakInfo) -> AnyElement;
+pub type LinkRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, LinkInfo) -> AnyElement;
 
 #[derive(Clone)]
 pub struct MarkdownComponents<H: UiHost> {
@@ -320,6 +328,7 @@ pub struct MarkdownComponents<H: UiHost> {
     pub blockquote: Option<Arc<BlockQuoteRenderer<H>>>,
     pub table: Option<Arc<TableRenderer<H>>>,
     pub thematic_break: Option<Arc<ThematicBreakRenderer<H>>>,
+    pub link: Option<Arc<LinkRenderer<H>>>,
 }
 
 impl<H: UiHost> Default for MarkdownComponents<H> {
@@ -334,6 +343,7 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
             blockquote: None,
             table: None,
             thematic_break: None,
+            link: None,
         }
     }
 }
@@ -981,6 +991,572 @@ fn parse_code_fence_body(raw: &str) -> (Option<Arc<str>>, Arc<str>) {
     (language, Arc::<str>::from(body))
 }
 
+#[derive(Debug, Default)]
+pub struct MarkdownPulldownState {
+    doc: mdstream::DocumentState,
+    adapter: mdstream::adapters::pulldown::PulldownAdapter,
+}
+
+impl MarkdownPulldownState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn doc(&self) -> &mdstream::DocumentState {
+        &self.doc
+    }
+
+    pub fn clear(&mut self) {
+        self.doc.clear();
+        self.adapter.clear();
+    }
+
+    pub fn apply_update(&mut self, update: mdstream::Update) -> mdstream::AppliedUpdate {
+        self.adapter.apply_update(&update);
+        self.doc.apply(update)
+    }
+
+    pub fn apply_update_ref(
+        &mut self,
+        update: &mdstream::UpdateRef<'_>,
+    ) -> mdstream::AppliedUpdate {
+        // Note: `UpdateRef` borrows from `MdStream`. Convert to an owned update to keep this state
+        // render- and pipeline-agnostic (safe to store).
+        self.apply_update(update.to_owned())
+    }
+}
+
+pub fn markdown_streaming_pulldown<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    state: &MarkdownPulldownState,
+) -> AnyElement {
+    markdown_streaming_pulldown_with(cx, state, &MarkdownComponents::default())
+}
+
+pub fn markdown_streaming_pulldown_with<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    state: &MarkdownPulldownState,
+    components: &MarkdownComponents<H>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+    markdown_mdstream_pulldown_with(cx, &theme, state.doc(), &state.adapter, components)
+}
+
+fn markdown_mdstream_pulldown_with<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    doc: &mdstream::DocumentState,
+    adapter: &mdstream::adapters::pulldown::PulldownAdapter,
+    components: &MarkdownComponents<H>,
+) -> AnyElement {
+    let committed = doc.committed();
+    let pending = doc.pending();
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            let mut out = Vec::with_capacity(committed.len() + usize::from(pending.is_some()));
+
+            cx.for_each_keyed(
+                committed,
+                |b| b.id,
+                |cx, _i, block| match adapter.committed_events(block.id) {
+                    Some(events) => out.push(render_mdstream_block_with_events(
+                        cx, theme, components, block, events,
+                    )),
+                    None => {
+                        let tmp = parse_events(block.display_or_raw());
+                        out.push(render_mdstream_block_with_events(
+                            cx, theme, components, block, &tmp,
+                        ));
+                    }
+                },
+            );
+
+            if let Some(pending) = pending {
+                cx.keyed(pending.id, |cx| {
+                    let events = adapter.parse_pending(pending);
+                    out.push(render_mdstream_block_with_events(
+                        cx, theme, components, pending, &events,
+                    ));
+                });
+            }
+
+            out
+        },
+    )
+}
+
+fn render_mdstream_block_with_events<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    block: &mdstream::Block,
+    events: &[pulldown_cmark::Event<'static>],
+) -> AnyElement {
+    match block.kind {
+        mdstream::BlockKind::Heading => {
+            let (level, text) = parse_heading_text(block.display_or_raw()).unwrap_or((
+                1,
+                Arc::<str>::from(block.display_or_raw().trim().to_string()),
+            ));
+            let info = HeadingInfo { level, text };
+            if let Some(render) = &components.heading {
+                render(cx, info)
+            } else {
+                render_heading_inline(cx, theme, components, info, events)
+            }
+        }
+        mdstream::BlockKind::Paragraph => {
+            let info = ParagraphInfo {
+                text: Arc::<str>::from(block.display_or_raw().trim_end().to_string()),
+            };
+            if let Some(render) = &components.paragraph {
+                render(cx, info)
+            } else {
+                render_paragraph_inline(cx, theme, components, events)
+            }
+        }
+        mdstream::BlockKind::ThematicBreak => {
+            if let Some(render) = &components.thematic_break {
+                render(cx, ThematicBreakInfo)
+            } else {
+                render_thematic_break(cx, theme)
+            }
+        }
+        mdstream::BlockKind::CodeFence => {
+            let (language, code) = parse_code_fence_body(block.display_or_raw());
+            let info = CodeBlockInfo { language, code };
+            if let Some(render) = &components.code_block {
+                render(cx, info)
+            } else {
+                render_code_block(cx, info, components)
+            }
+        }
+        mdstream::BlockKind::List => {
+            let list = parse_list_info(block.display_or_raw());
+            if let Some(render) = &components.list {
+                render(cx, list)
+            } else {
+                render_list_pulldown(cx, theme, components, list)
+            }
+        }
+        mdstream::BlockKind::BlockQuote => {
+            let info = BlockQuoteInfo {
+                text: strip_blockquote_prefix(block.display_or_raw()),
+            };
+            if let Some(render) = &components.blockquote {
+                render(cx, info)
+            } else {
+                render_blockquote(cx, theme, components, info)
+            }
+        }
+        mdstream::BlockKind::Table => {
+            let info = TableInfo {
+                text: Arc::<str>::from(block.display_or_raw().trim_end().to_string()),
+            };
+            if let Some(render) = &components.table {
+                render(cx, info)
+            } else {
+                render_table(cx, theme, info)
+            }
+        }
+        _ => {
+            let info = RawBlockInfo {
+                kind: RawBlockKind::Unknown,
+                text: Arc::<str>::from(block.display_or_raw().trim_end().to_string()),
+            };
+            if let Some(render) = &components.raw_block {
+                render(cx, info)
+            } else {
+                render_paragraph(cx, theme, info.text)
+            }
+        }
+    }
+}
+
+fn render_heading_inline<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    info: HeadingInfo,
+    events: &[pulldown_cmark::Event<'static>],
+) -> AnyElement {
+    let size = match info.level {
+        1 => Px(theme.metrics.font_size.0 * 1.6),
+        2 => Px(theme.metrics.font_size.0 * 1.4),
+        3 => Px(theme.metrics.font_size.0 * 1.2),
+        _ => theme.metrics.font_size,
+    };
+
+    let base = InlineBaseStyle {
+        font: FontId::default(),
+        size,
+        weight: FontWeight::SEMIBOLD,
+        line_height: Some(Px(theme.metrics.font_line_height.0 * 1.2)),
+        color: theme.colors.text_primary,
+    };
+
+    let pieces = inline_pieces_from_events(events);
+    render_inline_flow(cx, theme, components, base, &pieces)
+}
+
+fn render_paragraph_inline<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    events: &[pulldown_cmark::Event<'static>],
+) -> AnyElement {
+    let base = InlineBaseStyle {
+        font: FontId::default(),
+        size: theme.metrics.font_size,
+        weight: FontWeight::NORMAL,
+        line_height: Some(theme.metrics.font_line_height),
+        color: theme.colors.text_primary,
+    };
+
+    let pieces = inline_pieces_from_events(events);
+    render_inline_flow(cx, theme, components, base, &pieces)
+}
+
+fn render_list_pulldown<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    info: ListInfo,
+) -> AnyElement {
+    if info.items.is_empty() {
+        return render_paragraph(cx, theme, Arc::<str>::from(""));
+    }
+
+    stack::vstack(cx, stack::VStackProps::default().gap(Space::N1), |cx| {
+        info.items
+            .into_iter()
+            .enumerate()
+            .map(|(i, text)| {
+                let marker = if info.ordered {
+                    Arc::<str>::from(format!("{}.", info.start.saturating_add(i as u32)))
+                } else {
+                    Arc::<str>::from("•".to_string())
+                };
+
+                stack::hstack(cx, stack::HStackProps::default().gap(Space::N2), |cx| {
+                    let marker_el = cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: marker,
+                        style: None,
+                        color: Some(theme.colors.text_muted),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    });
+
+                    let base = InlineBaseStyle {
+                        font: FontId::default(),
+                        size: theme.metrics.font_size,
+                        weight: FontWeight::NORMAL,
+                        line_height: Some(theme.metrics.font_line_height),
+                        color: theme.colors.text_primary,
+                    };
+                    let events = parse_events(&text);
+                    let pieces = inline_pieces_from_events_unwrapped(&events);
+                    let item = render_inline_flow(cx, theme, components, base, &pieces);
+
+                    vec![marker_el, item]
+                })
+            })
+            .collect()
+    })
+}
+
+#[derive(Debug, Clone)]
+struct InlineBaseStyle {
+    font: FontId,
+    size: Px,
+    weight: FontWeight,
+    line_height: Option<Px>,
+    color: fret_core::Color,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct InlineStyle {
+    strong: bool,
+    code: bool,
+    link: Option<Arc<str>>,
+}
+
+#[derive(Debug, Clone)]
+struct InlinePiece {
+    text: String,
+    style: InlineStyle,
+}
+
+fn parse_events(source: &str) -> Vec<pulldown_cmark::Event<'static>> {
+    pulldown_cmark::Parser::new(source)
+        .map(|e| e.into_static())
+        .collect()
+}
+
+fn inline_pieces_from_events(events: &[pulldown_cmark::Event<'static>]) -> Vec<InlinePiece> {
+    inline_pieces_from_events_impl(events, true)
+}
+
+fn inline_pieces_from_events_unwrapped(
+    events: &[pulldown_cmark::Event<'static>],
+) -> Vec<InlinePiece> {
+    inline_pieces_from_events_impl(events, false)
+}
+
+fn inline_pieces_from_events_impl(
+    events: &[pulldown_cmark::Event<'static>],
+    require_wrapper: bool,
+) -> Vec<InlinePiece> {
+    use pulldown_cmark::{Event, Tag, TagEnd};
+
+    let mut strong_depth = 0usize;
+    let mut link_stack: Vec<Arc<str>> = Vec::new();
+    let mut pieces: Vec<InlinePiece> = Vec::new();
+
+    let mut wrapper_depth = 0usize;
+
+    for event in events {
+        match event {
+            Event::Start(Tag::Paragraph) | Event::Start(Tag::Heading { .. }) => {
+                wrapper_depth += 1;
+            }
+            Event::End(TagEnd::Paragraph) | Event::End(TagEnd::Heading(_)) => {
+                wrapper_depth = wrapper_depth.saturating_sub(1);
+            }
+            _ => {}
+        }
+
+        if require_wrapper && wrapper_depth == 0 {
+            continue;
+        }
+
+        match event {
+            Event::Start(Tag::Strong) => strong_depth += 1,
+            Event::End(TagEnd::Strong) => strong_depth = strong_depth.saturating_sub(1),
+            Event::Start(Tag::Link { dest_url, .. }) => {
+                link_stack.push(Arc::<str>::from(dest_url.to_string()));
+            }
+            Event::End(TagEnd::Link) => {
+                link_stack.pop();
+            }
+            Event::Text(t) => push_inline_text(
+                &mut pieces,
+                t.as_ref(),
+                InlineStyle {
+                    strong: strong_depth > 0,
+                    code: false,
+                    link: link_stack.last().cloned(),
+                },
+            ),
+            Event::Code(t) => push_inline_text(
+                &mut pieces,
+                t.as_ref(),
+                InlineStyle {
+                    strong: strong_depth > 0,
+                    code: true,
+                    link: link_stack.last().cloned(),
+                },
+            ),
+            Event::SoftBreak => push_inline_text(
+                &mut pieces,
+                " ",
+                InlineStyle {
+                    strong: strong_depth > 0,
+                    code: false,
+                    link: link_stack.last().cloned(),
+                },
+            ),
+            Event::HardBreak => push_inline_text(
+                &mut pieces,
+                "\n",
+                InlineStyle {
+                    strong: strong_depth > 0,
+                    code: false,
+                    link: link_stack.last().cloned(),
+                },
+            ),
+            _ => {}
+        }
+    }
+
+    pieces
+}
+
+fn push_inline_text(pieces: &mut Vec<InlinePiece>, text: &str, style: InlineStyle) {
+    if text.is_empty() {
+        return;
+    }
+    if let Some(last) = pieces.last_mut()
+        && last.style == style
+    {
+        last.text.push_str(text);
+        return;
+    }
+    pieces.push(InlinePiece {
+        text: text.to_string(),
+        style,
+    });
+}
+
+fn render_inline_flow<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    base: InlineBaseStyle,
+    pieces: &[InlinePiece],
+) -> AnyElement {
+    let mut lines: Vec<Vec<InlinePiece>> = Vec::new();
+    let mut cur: Vec<InlinePiece> = Vec::new();
+
+    for piece in pieces {
+        let splits: Vec<&str> = piece.text.split('\n').collect();
+        for (i, split) in splits.iter().enumerate() {
+            if !split.is_empty() {
+                cur.extend(split_piece_into_tokens(split, &piece.style));
+            }
+            if i + 1 < splits.len() {
+                lines.push(std::mem::take(&mut cur));
+            }
+        }
+    }
+    lines.push(cur);
+
+    stack::vstack(cx, stack::VStackProps::default().gap(Space::N0), |cx| {
+        lines
+            .into_iter()
+            .map(|line| render_inline_line(cx, theme, components, &base, line))
+            .collect()
+    })
+}
+
+fn render_inline_line<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    base: &InlineBaseStyle,
+    pieces: Vec<InlinePiece>,
+) -> AnyElement {
+    let mut props = FlexProps::default();
+    props.layout.size.width = Length::Fill;
+    props.direction = Axis::Horizontal;
+    props.gap = Px(0.0);
+    props.padding = Edges::all(Px(0.0));
+    props.justify = MainAlign::Start;
+    props.align = CrossAlign::Start;
+    props.wrap = true;
+
+    cx.flex(props, |cx| {
+        coalesce_link_runs(pieces)
+            .into_iter()
+            .map(|piece| render_inline_token(cx, theme, components, base, piece))
+            .collect()
+    })
+}
+
+fn render_inline_token<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    base: &InlineBaseStyle,
+    piece: InlinePiece,
+) -> AnyElement {
+    if let Some(href) = piece.style.link.clone() {
+        if let Some(render) = &components.link {
+            return render(
+                cx,
+                LinkInfo {
+                    href,
+                    text: Arc::<str>::from(piece.text),
+                },
+            );
+        }
+    }
+
+    let (font, size, line_height) = if piece.style.code {
+        (
+            FontId::monospace(),
+            theme.metrics.mono_font_size,
+            Some(theme.metrics.mono_font_line_height),
+        )
+    } else {
+        (base.font.clone(), base.size, base.line_height)
+    };
+
+    let weight = if piece.style.strong {
+        FontWeight::SEMIBOLD
+    } else {
+        base.weight
+    };
+
+    let color = if piece.style.link.is_some() {
+        theme.colors.accent
+    } else {
+        base.color
+    };
+
+    cx.text_props(TextProps {
+        layout: Default::default(),
+        text: Arc::<str>::from(piece.text),
+        style: Some(TextStyle {
+            font,
+            size,
+            weight,
+            line_height,
+            letter_spacing_em: None,
+        }),
+        color: Some(color),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    })
+}
+
+fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> {
+    if text.trim().is_empty() {
+        return Vec::new();
+    }
+    if style.code {
+        return vec![InlinePiece {
+            text: text.to_string(),
+            style: style.clone(),
+        }];
+    }
+
+    let mut out: Vec<InlinePiece> = Vec::new();
+    let words: Vec<&str> = text.split_whitespace().filter(|s| !s.is_empty()).collect();
+    for (i, w) in words.iter().enumerate() {
+        let mut token = w.to_string();
+        if i + 1 < words.len() {
+            token.push(' ');
+        }
+        out.push(InlinePiece {
+            text: token,
+            style: style.clone(),
+        });
+    }
+    out
+}
+
+fn coalesce_link_runs(pieces: Vec<InlinePiece>) -> Vec<InlinePiece> {
+    let mut out: Vec<InlinePiece> = Vec::new();
+    for piece in pieces {
+        if let Some(last) = out.last_mut()
+            && last.style == piece.style
+            && last.style.link.is_some()
+        {
+            last.text.push_str(&piece.text);
+            continue;
+        }
+        out.push(piece);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1049,5 +1625,13 @@ mod tests {
         let text = Arc::<str>::from("> a\n> b\n  > c\n");
         let out = strip_blockquote_prefix(&text);
         assert_eq!(out.as_ref(), "a\nb\nc");
+    }
+
+    #[test]
+    fn pulldown_extracts_link_and_strong() {
+        let events = parse_events("Hello **world** [link](https://example.com)\n");
+        let pieces = inline_pieces_from_events_unwrapped(&events);
+        assert!(pieces.iter().any(|p| p.style.strong));
+        assert!(pieces.iter().any(|p| p.style.link.is_some()));
     }
 }
