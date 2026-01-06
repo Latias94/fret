@@ -386,7 +386,9 @@ pub fn overflow_scroll_x_content<H: UiHost>(
         let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
         let mut scroll_layout = LayoutStyle::default();
         scroll_layout.size.width = Length::Fill;
-        scroll_layout.size.height = Length::Fill;
+        // For X-only scrolling, the common expectation is "height = content height" (e.g. code
+        // blocks) while width fills the viewport.
+        scroll_layout.size.height = Length::Auto;
         scroll_layout.overflow = Overflow::Clip;
 
         let scroll = cx.scroll(
