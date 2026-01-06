@@ -1,19 +1,21 @@
 use fret_core::{Color, Corners, CursorIcon, Edges, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps, PressableA11y,
+    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
     PressableProps, ScrollAxis, ScrollProps,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use std::cell::Cell;
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::declarative::stack;
-use crate::{Items, Justify, MetricRef, Size, Space};
+use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::headless::table::{
     ColumnDef, ColumnId, Row, SortCmpFn, SortSpec, TableState, column_size, is_column_visible,
@@ -181,6 +183,7 @@ pub fn table_virtualized<H: UiHost, TData>(
         &ColumnDef<TData>,
     ) -> Vec<AnyElement>,
 ) -> AnyElement {
+    let profile = std::env::var_os("FRET_TABLE_PROFILE").is_some();
     let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
 
     let theme = Theme::global(&*cx.app);
@@ -220,7 +223,18 @@ pub fn table_virtualized<H: UiHost, TData>(
             cache.items_revision = items_revision;
             cache.data_len = data.len();
             cache.sorting = sorting_key.clone();
+            let started = Instant::now();
             cache.order = compute_flat_row_order(data, &columns, &cache.sorting);
+            let elapsed = started.elapsed();
+
+            if profile {
+                tracing::info!(
+                    "table_virtualized: recompute row_order len={} sorting={} took {:.2}ms",
+                    data.len(),
+                    cache.sorting.len(),
+                    elapsed.as_secs_f64() * 1000.0
+                );
+            }
         }
 
         cache.order.clone()
@@ -240,6 +254,8 @@ pub fn table_virtualized<H: UiHost, TData>(
     let mut list_options = fret_ui::element::VirtualListOptions::new(row_h, props.overscan);
     list_options.items_revision = items_revision;
 
+    let rendered_rows = Cell::new(0usize);
+
     cx.semantics(
         fret_ui::element::SemanticsProps {
             role: SemanticsRole::List,
@@ -248,6 +264,15 @@ pub fn table_virtualized<H: UiHost, TData>(
         |cx| {
             vec![cx.container(
                 ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout.flex.grow = 1.0;
+                        layout.flex.basis = Length::Px(Px(0.0));
+                        layout.overflow = Overflow::Clip;
+                        layout
+                    },
                     background: Some(table_bg),
                     border: Edges::all(Px(1.0)),
                     border_color: Some(border),
@@ -258,6 +283,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                     vec![stack::vstack(
                         cx,
                         stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().size_full())
                             .gap_y(Space::N0)
                             .justify(Justify::Start)
                             .items(Items::Stretch),
@@ -528,6 +554,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                             page_rows[i] as u64
                                         },
                                         |cx, i| {
+                                            rendered_rows.set(rendered_rows.get().saturating_add(1));
                                             let data_index = page_rows[i];
                                             let data_row = Row {
                                                 id: Arc::from(data_index.to_string()),
@@ -682,6 +709,16 @@ pub fn table_virtualized<H: UiHost, TData>(
                                             )
                                         },
                                     );
+
+                                    if profile {
+                                        tracing::info!(
+                                            "table_virtualized: list len={} page_rows={} rendered_rows={} row_h={:.1}px",
+                                            data.len(),
+                                            set_size,
+                                            rendered_rows.get(),
+                                            row_h.0
+                                        );
+                                    }
 
                                     vec![header, body]
                         },
