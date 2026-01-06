@@ -1,7 +1,7 @@
 use fret_core::{Color, Px};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    ScrollAxis, ScrollProps, ScrollbarProps, ScrollbarStyle, SizeStyle, StackProps,
+    ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps, ScrollbarStyle, SizeStyle, StackProps,
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -77,6 +77,7 @@ pub fn overflow_scroll<H: UiHost>(
 
             children.push(cx.scrollbar(ScrollbarProps {
                 layout: scrollbar_layout,
+                axis: ScrollbarAxis::Vertical,
                 scroll_target: Some(scroll_id),
                 scroll_handle: handle,
                 style: ScrollbarStyle {
@@ -155,6 +156,7 @@ pub fn overflow_scroll_with_handle<H: UiHost>(
 
             children.push(cx.scrollbar(ScrollbarProps {
                 layout: scrollbar_layout,
+                axis: ScrollbarAxis::Vertical,
                 scroll_target: Some(scroll_id),
                 scroll_handle: handle,
                 style: ScrollbarStyle {
@@ -244,6 +246,7 @@ pub fn overflow_scroll_with_handle_xy<H: UiHost>(
 
             children.push(cx.scrollbar(ScrollbarProps {
                 layout: scrollbar_layout,
+                axis: ScrollbarAxis::Vertical,
                 scroll_target: Some(scroll_id),
                 scroll_handle: handle.clone(),
                 style: ScrollbarStyle {
@@ -276,6 +279,7 @@ pub fn overflow_scroll_with_handle_xy<H: UiHost>(
 
             children.push(cx.scrollbar(ScrollbarProps {
                 layout: scrollbar_layout,
+                axis: ScrollbarAxis::Horizontal,
                 scroll_target: Some(scroll_id),
                 scroll_handle: handle.clone(),
                 style: ScrollbarStyle {

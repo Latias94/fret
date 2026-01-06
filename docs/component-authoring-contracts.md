@@ -181,8 +181,8 @@ Mechanism primitives:
 
 Current constraints to account for:
 
-- `ScrollbarProps` is currently **vertical-only** (thumb drag state is Y-based). Horizontal/dual-axis
-  scrollbars are not yet a first-class primitive.
+- `ScrollbarProps` supports both vertical and horizontal scrollbars via `ScrollbarAxis`. Dual-axis
+  scrolling is expressed as two independent scrollbars.
 - `VirtualListState` is currently **vertical-only** (`offset_y`).
 
 Component-layer helpers:

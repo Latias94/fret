@@ -1003,6 +1003,18 @@ impl Default for ScrollbarStyle {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollbarAxis {
+    Vertical,
+    Horizontal,
+}
+
+impl Default for ScrollbarAxis {
+    fn default() -> Self {
+        Self::Vertical
+    }
+}
+
 /// A mechanism-only scrollbar primitive.
 ///
 /// Component libraries decide when to show/hide scrollbars and resolve theme tokens into this
@@ -1011,6 +1023,7 @@ impl Default for ScrollbarStyle {
 #[derive(Debug, Clone, Default)]
 pub struct ScrollbarProps {
     pub layout: LayoutStyle,
+    pub axis: ScrollbarAxis,
     /// Declarative element id for the associated scroll container, if any.
     ///
     /// When provided, the scrollbar will invalidate the target node's layout/paint when the
@@ -1024,8 +1037,8 @@ pub struct ScrollbarProps {
 #[derive(Debug, Default, Clone)]
 pub struct ScrollbarState {
     pub dragging_thumb: bool,
-    pub drag_start_pointer_y: Px,
-    pub drag_start_offset_y: Px,
+    pub drag_start_pointer: Px,
+    pub drag_start_offset: Px,
     pub hovered: bool,
 }
 

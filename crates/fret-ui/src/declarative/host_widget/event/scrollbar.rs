@@ -19,9 +19,8 @@ pub(super) fn handle_scrollbar<H: UiHost>(
     let scroll_target = props.scroll_target;
     match pe {
         fret_core::PointerEvent::Wheel { delta, .. } => {
-            let is_horizontal = cx.bounds.size.width.0 > cx.bounds.size.height.0;
             let prev = handle.offset();
-            if is_horizontal {
+            if matches!(props.axis, crate::element::ScrollbarAxis::Horizontal) {
                 let dx = if delta.x.0.abs() > 0.01 {
                     delta.x
                 } else {
@@ -50,7 +49,7 @@ pub(super) fn handle_scrollbar<H: UiHost>(
 
             let bounds = cx.bounds;
             let position = *position;
-            let is_horizontal = bounds.size.width.0 > bounds.size.height.0;
+            let is_horizontal = matches!(props.axis, crate::element::ScrollbarAxis::Horizontal);
 
             crate::elements::with_element_state(
                 &mut *cx.app,
@@ -81,24 +80,19 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                                 bounds,
                                 viewport,
                                 content,
-                                state.drag_start_offset_y,
+                                state.drag_start_offset,
                             )
                         } else {
-                            scrollbar_thumb_rect(
-                                bounds,
-                                viewport,
-                                content,
-                                state.drag_start_offset_y,
-                            )
+                            scrollbar_thumb_rect(bounds, viewport, content, state.drag_start_offset)
                         })
                     {
                         if is_horizontal {
                             let max_thumb_x = (bounds.size.width.0 - thumb.size.width.0).max(0.0);
                             if max_thumb_x > 0.0 {
-                                let delta_x = position.x.0 - state.drag_start_pointer_y.0;
+                                let delta_x = position.x.0 - state.drag_start_pointer.0;
                                 let scale = max_offset.0 / max_thumb_x;
                                 let next =
-                                    Px((state.drag_start_offset_y.0 + delta_x * scale).max(0.0));
+                                    Px((state.drag_start_offset.0 + delta_x * scale).max(0.0));
                                 let next = Px(next.0.min(max_offset.0));
                                 if (handle.offset().x.0 - next.0).abs() > 0.01 {
                                     let prev = handle.offset();
@@ -111,10 +105,10 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                         } else {
                             let max_thumb_y = (bounds.size.height.0 - thumb.size.height.0).max(0.0);
                             if max_thumb_y > 0.0 {
-                                let delta_y = position.y.0 - state.drag_start_pointer_y.0;
+                                let delta_y = position.y.0 - state.drag_start_pointer.0;
                                 let scale = max_offset.0 / max_thumb_y;
                                 let next =
-                                    Px((state.drag_start_offset_y.0 + delta_y * scale).max(0.0));
+                                    Px((state.drag_start_offset.0 + delta_y * scale).max(0.0));
                                 let next = Px(next.0.min(max_offset.0));
                                 if (handle.offset().y.0 - next.0).abs() > 0.01 {
                                     let prev = handle.offset();
@@ -156,7 +150,7 @@ pub(super) fn handle_scrollbar<H: UiHost>(
             let mut did_change_offset = false;
             let bounds = cx.bounds;
             let position = *position;
-            let is_horizontal = bounds.size.width.0 > bounds.size.height.0;
+            let is_horizontal = matches!(props.axis, crate::element::ScrollbarAxis::Horizontal);
 
             crate::elements::with_element_state(
                 &mut *cx.app,
@@ -197,12 +191,12 @@ pub(super) fn handle_scrollbar<H: UiHost>(
 
                     if thumb.contains(position) {
                         state.dragging_thumb = true;
-                        state.drag_start_pointer_y = if is_horizontal {
+                        state.drag_start_pointer = if is_horizontal {
                             position.x
                         } else {
                             position.y
                         };
-                        state.drag_start_offset_y = current_offset;
+                        state.drag_start_offset = current_offset;
                         did_start_drag = true;
                     } else if bounds.contains(position) {
                         // Page to the click position (center the thumb on the pointer).

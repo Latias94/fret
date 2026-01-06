@@ -232,6 +232,7 @@ fn select_scroll_with_buttons<H: UiHost>(
                             },
                             ..Default::default()
                         },
+                        axis: fret_ui::element::ScrollbarAxis::Vertical,
                         scroll_target: Some(scroll_id),
                         scroll_handle: handle_for_stack,
                         style: ScrollbarStyle {

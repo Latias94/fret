@@ -504,7 +504,7 @@ impl ElementHostWidget {
                     |state| (state.hovered, state.dragging_thumb),
                 );
 
-                let is_horizontal = cx.bounds.size.width.0 > cx.bounds.size.height.0;
+                let is_horizontal = matches!(props.axis, crate::element::ScrollbarAxis::Horizontal);
                 let thumb = if is_horizontal {
                     let offset_x = handle.offset().x;
                     let viewport_w = handle.viewport_size().width;
