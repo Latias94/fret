@@ -1086,7 +1086,7 @@ fn select_impl<H: UiHost>(
                             (state.active_row, state.query.clone())
                         };
 
-                        let shadow = decl_style::shadow_sm(&theme_for_overlay, radius);
+                        let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
                         let arrow_bg = theme_for_overlay.colors.panel_background;
                         let arrow_border = border;
 
