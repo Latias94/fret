@@ -1976,17 +1976,17 @@ impl MenubarMenuEntries {
 
                                                                         out.push(cx.keyed(value.clone(), move |cx| {
                                                                             cx.pressable_with_id_props(move |cx, st, item_id| {
-                                                                                menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
-                                                                                    cx,
-                                                                                    item_id,
-                                                                                    group_active.clone(),
-                                                                                    trigger_registry.clone(),
-                                                                                );
                                                                                 menu::sub_content::wire_item(
                                                                                     cx,
                                                                                     item_id,
                                                                                     !item_enabled,
                                                                                     &submenu_for_key,
+                                                                                );
+                                                                                menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                                                                    cx,
+                                                                                    item_id,
+                                                                                    group_active.clone(),
+                                                                                    trigger_registry.clone(),
                                                                                 );
 
                                                                                 let checked_now = cx
@@ -2093,17 +2093,17 @@ impl MenubarMenuEntries {
 
                                                                         out.push(cx.keyed(value.clone(), move |cx| {
                                                                             cx.pressable_with_id_props(move |cx, st, item_id| {
-                                                                                menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
-                                                                                    cx,
-                                                                                    item_id,
-                                                                                    group_active.clone(),
-                                                                                    trigger_registry.clone(),
-                                                                                );
                                                                                 menu::sub_content::wire_item(
                                                                                     cx,
                                                                                     item_id,
                                                                                     !item_enabled,
                                                                                     &submenu_for_key,
+                                                                                );
+                                                                                menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                                                                    cx,
+                                                                                    item_id,
+                                                                                    group_active.clone(),
+                                                                                    trigger_registry.clone(),
                                                                                 );
 
                                                                                 let selected = cx
@@ -2217,17 +2217,17 @@ impl MenubarMenuEntries {
 
                                                                         out.push(cx.keyed(value.clone(), move |cx| {
                                                                             cx.pressable_with_id_props(move |cx, st, item_id| {
-                                                                                menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
-                                                                                    cx,
-                                                                                    item_id,
-                                                                                    group_active.clone(),
-                                                                                    trigger_registry.clone(),
-                                                                                );
                                                                                 menu::sub_content::wire_item(
                                                                                     cx,
                                                                                     item_id,
                                                                                     !item_enabled,
                                                                                     &submenu_for_key,
+                                                                                );
+                                                                                menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                                                                                    cx,
+                                                                                    item_id,
+                                                                                    group_active.clone(),
+                                                                                    trigger_registry.clone(),
                                                                                 );
 
                                                                                 cx.pressable_dispatch_command_opt(command);
