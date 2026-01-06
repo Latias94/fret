@@ -11,6 +11,46 @@ pub struct SortSpec {
 
 pub type SortingState = Vec<SortSpec>;
 
+pub fn sort_for_column(sorting: &[SortSpec], id: &str) -> Option<bool> {
+    sorting
+        .iter()
+        .find(|s| s.column.as_ref() == id)
+        .map(|s| s.desc)
+}
+
+pub fn toggle_sort_for_column(sorting: &mut SortingState, column: ColumnId, multi: bool) {
+    let pos = sorting
+        .iter()
+        .position(|s| s.column.as_ref() == column.as_ref());
+
+    let next = match pos.and_then(|i| sorting.get(i).map(|s| s.desc)) {
+        None => Some(false),
+        Some(false) => Some(true),
+        Some(true) => None,
+    };
+
+    if !multi {
+        sorting.clear();
+        if let Some(desc) = next {
+            sorting.push(SortSpec { column, desc });
+        }
+        return;
+    }
+
+    match (pos, next) {
+        (None, Some(desc)) => sorting.push(SortSpec { column, desc }),
+        (Some(i), Some(desc)) => {
+            if let Some(spec) = sorting.get_mut(i) {
+                spec.desc = desc;
+            }
+        }
+        (Some(i), None) => {
+            sorting.remove(i);
+        }
+        (None, None) => {}
+    }
+}
+
 pub fn sort_row_model<'a, TData>(
     row_model: &RowModel<'a, TData>,
     columns: &[ColumnDef<TData>],
@@ -187,5 +227,26 @@ mod tests {
             .collect::<Vec<_>>();
 
         assert_eq!(ids, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn toggle_sort_for_column_cycles_and_resets_when_single() {
+        let mut sorting: SortingState = Vec::new();
+
+        toggle_sort_for_column(&mut sorting, "a".into(), false);
+        assert_eq!(sorting.len(), 1);
+        assert_eq!(sorting[0].column.as_ref(), "a");
+        assert!(!sorting[0].desc);
+
+        toggle_sort_for_column(&mut sorting, "a".into(), false);
+        assert_eq!(sorting.len(), 1);
+        assert!(sorting[0].desc);
+
+        toggle_sort_for_column(&mut sorting, "a".into(), false);
+        assert!(sorting.is_empty());
+
+        toggle_sort_for_column(&mut sorting, "b".into(), false);
+        assert_eq!(sorting.len(), 1);
+        assert_eq!(sorting[0].column.as_ref(), "b");
     }
 }

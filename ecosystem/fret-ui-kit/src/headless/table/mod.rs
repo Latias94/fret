@@ -31,5 +31,7 @@ pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_o
 pub use pagination::{PaginationState, paginate_row_model};
 pub use row_model::{Row, RowIndex, RowKey, RowModel, Table, TableBuilder};
 pub use row_selection::{RowSelectionState, is_row_selected, select_rows_fn};
-pub use sorting::{SortSpec, SortingState, sort_row_model};
+pub use sorting::{
+    SortSpec, SortingState, sort_for_column, sort_row_model, toggle_sort_for_column,
+};
 pub use state::TableState;
