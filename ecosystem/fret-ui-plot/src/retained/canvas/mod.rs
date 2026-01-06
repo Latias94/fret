@@ -29,12 +29,12 @@ use std::hash::{Hash, Hasher};
 use super::YAxis;
 use super::layers::resolve_series_color;
 use super::layers::{
-    PlotCursorReadoutArgs, PlotHitTestArgs, PlotHover, PlotLayer, PlotPaintArgs, PlotQuad,
-    SeriesMeta,
+    PlotCursorReadoutArgs, PlotCursorReadoutRow, PlotHitTestArgs, PlotHover, PlotLayer,
+    PlotPaintArgs, PlotQuad, SeriesMeta,
 };
 use super::layout::{PlotLayout, PlotRegion};
 use super::state::{PlotHoverOutput, PlotOutput, PlotOutputSnapshot, PlotState};
-use super::style::{LinePlotStyle, MouseReadoutMode};
+use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
@@ -4330,6 +4330,27 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         }
 
         let tooltip = selection_tooltip.or_else(|| {
+            let format_y = |y: f64, axis: YAxis| {
+                if axis == YAxis::Right && self.show_y2_axis {
+                    let span = view_bounds_y2
+                        .map(|b| (b.y_max - b.y_min).abs())
+                        .unwrap_or(y_span);
+                    self.y2_axis_labels.format(y, span)
+                } else if axis == YAxis::Right2 && self.show_y3_axis {
+                    let span = view_bounds_y3
+                        .map(|b| (b.y_max - b.y_min).abs())
+                        .unwrap_or(y_span);
+                    self.y3_axis_labels.format(y, span)
+                } else if axis == YAxis::Right3 && self.show_y4_axis {
+                    let span = view_bounds_y4
+                        .map(|b| (b.y_max - b.y_min).abs())
+                        .unwrap_or(y_span);
+                    self.y4_axis_labels.format(y, span)
+                } else {
+                    self.tooltip_y_labels.format(y, y_span)
+                }
+            };
+
             self.hover
                 .map(|hover| {
                     let (series_count, series_label, y_axis) = self
@@ -4343,24 +4364,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         .unwrap_or((0, None, YAxis::Left));
 
                     let x_text = self.tooltip_x_labels.format(hover.data.x, x_span);
-                    let y_text = if y_axis == YAxis::Right && self.show_y2_axis {
-                        let span = view_bounds_y2
-                            .map(|b| (b.y_max - b.y_min).abs())
-                            .unwrap_or(y_span);
-                        self.y2_axis_labels.format(hover.data.y, span)
-                    } else if y_axis == YAxis::Right2 && self.show_y3_axis {
-                        let span = view_bounds_y3
-                            .map(|b| (b.y_max - b.y_min).abs())
-                            .unwrap_or(y_span);
-                        self.y3_axis_labels.format(hover.data.y, span)
-                    } else if y_axis == YAxis::Right3 && self.show_y4_axis {
-                        let span = view_bounds_y4
-                            .map(|b| (b.y_max - b.y_min).abs())
-                            .unwrap_or(y_span);
-                        self.y4_axis_labels.format(hover.data.y, span)
-                    } else {
-                        self.tooltip_y_labels.format(hover.data.y, y_span)
-                    };
+                    let y_text = format_y(hover.data.y, y_axis);
                     let text = if series_count > 1 {
                         if let Some(label) = series_label.as_deref() {
                             format!("{label}  x={x_text}  y={y_text}")
@@ -4390,6 +4394,69 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         text
                     };
                     (hover.plot_px, text)
+                })
+                .or_else(|| {
+                    if self.style.series_tooltip != SeriesTooltipMode::NearestAtCursor {
+                        return None;
+                    }
+
+                    let cursor_px = cursor_px?;
+                    let cursor_data = cursor_data?;
+
+                    let hidden = &state.hidden_series;
+                    let readout_args = PlotCursorReadoutArgs {
+                        x: cursor_data.x,
+                        plot_size: layout.plot.size,
+                        view_bounds,
+                        x_scale: self.x_scale,
+                        y_scale: self.y_scale,
+                        scale_factor: cx.scale_factor,
+                        hidden,
+                    };
+                    let readout_rows = self
+                        .model
+                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
+                        .unwrap_or_default();
+
+                    let pinned = state.pinned_series.filter(|id| !hidden.contains(id));
+                    let legend_hover = self.legend_hover.filter(|id| !hidden.contains(id));
+
+                    let mut best: Option<(f64, PlotCursorReadoutRow)> = None;
+                    for row in readout_rows {
+                        if let Some(pinned) = pinned {
+                            if row.series_id != pinned {
+                                continue;
+                            }
+                        } else if let Some(hovered) = legend_hover {
+                            if row.series_id != hovered {
+                                continue;
+                            }
+                        }
+
+                        let Some(y) = row.y.filter(|y| y.is_finite()) else {
+                            continue;
+                        };
+                        let dist = (cursor_data.y - y).abs();
+                        if !dist.is_finite() {
+                            continue;
+                        }
+
+                        if best.as_ref().is_none_or(|(d, _)| dist < *d) {
+                            best = Some((dist, row));
+                        }
+                    }
+
+                    let (_dist, row) = best?;
+                    let y = row.y?;
+                    let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
+                    let y_text = format_y(y, row.y_axis);
+                    let text = if !row.label.is_empty() {
+                        format!("{}  x={x_text}  y={y_text}", row.label)
+                    } else {
+                        format!("s={}  x={x_text}  y={y_text}", row.series_id.0)
+                    };
+
+                    Some((cursor_px, text))
                 })
                 .or_else(|| {
                     if self.style.mouse_readout != MouseReadoutMode::Tooltip {
@@ -4425,27 +4492,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         let y_text = row
                             .y
                             .filter(|y| y.is_finite())
-                            .map(|y| match row.y_axis {
-                                YAxis::Right if self.show_y2_axis => {
-                                    let span = view_bounds_y2
-                                        .map(|b| (b.y_max - b.y_min).abs())
-                                        .unwrap_or(y_span);
-                                    self.y2_axis_labels.format(y, span)
-                                }
-                                YAxis::Right2 if self.show_y3_axis => {
-                                    let span = view_bounds_y3
-                                        .map(|b| (b.y_max - b.y_min).abs())
-                                        .unwrap_or(y_span);
-                                    self.y3_axis_labels.format(y, span)
-                                }
-                                YAxis::Right3 if self.show_y4_axis => {
-                                    let span = view_bounds_y4
-                                        .map(|b| (b.y_max - b.y_min).abs())
-                                        .unwrap_or(y_span);
-                                    self.y4_axis_labels.format(y, span)
-                                }
-                                _ => self.tooltip_y_labels.format(y, y_span),
-                            })
+                            .map(|y| format_y(y, row.y_axis))
                             .unwrap_or_else(|| "NA".to_string());
                         text.push_str(&format!("\n{}: y={y_text}", row.label));
                     }
@@ -4511,27 +4558,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         let y_text = row
                             .y
                             .filter(|y| y.is_finite())
-                            .map(|y| match row.y_axis {
-                                YAxis::Right if self.show_y2_axis => {
-                                    let span = view_bounds_y2
-                                        .map(|b| (b.y_max - b.y_min).abs())
-                                        .unwrap_or(y_span);
-                                    self.y2_axis_labels.format(y, span)
-                                }
-                                YAxis::Right2 if self.show_y3_axis => {
-                                    let span = view_bounds_y3
-                                        .map(|b| (b.y_max - b.y_min).abs())
-                                        .unwrap_or(y_span);
-                                    self.y3_axis_labels.format(y, span)
-                                }
-                                YAxis::Right3 if self.show_y4_axis => {
-                                    let span = view_bounds_y4
-                                        .map(|b| (b.y_max - b.y_min).abs())
-                                        .unwrap_or(y_span);
-                                    self.y4_axis_labels.format(y, span)
-                                }
-                                _ => self.tooltip_y_labels.format(y, y_span),
-                            })
+                            .map(|y| format_y(y, row.y_axis))
                             .unwrap_or_else(|| "NA".to_string());
                         text.push_str(&format!("\n{}: y={y_text}", row.label));
                     }

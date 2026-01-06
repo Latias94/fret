@@ -48,6 +48,24 @@ impl Default for ReadoutSeriesPolicy {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SeriesTooltipMode {
+    /// Match ImPlot-style hover tooltips: show a series tooltip only when the pointer is close to
+    /// a series item (hit-tested within `LinePlotStyle::hover_threshold`).
+    HoverOnly,
+    /// When the pointer is inside the plot region, show a tooltip for the nearest series at the
+    /// cursor X (based on the smallest `|cursor_y - series_y_at_x|` distance).
+    ///
+    /// This does not change hover emphasis or selection; it only affects tooltip selection.
+    NearestAtCursor,
+}
+
+impl Default for SeriesTooltipMode {
+    fn default() -> Self {
+        Self::HoverOnly
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct LinePlotStyle {
     pub background: Option<Color>,
@@ -67,6 +85,7 @@ pub struct LinePlotStyle {
     pub linked_cursor_readout: MouseReadoutMode,
     pub linked_cursor_readout_anchor: OverlayAnchor,
     pub linked_cursor_readout_policy: ReadoutSeriesPolicy,
+    pub series_tooltip: SeriesTooltipMode,
     pub hover_threshold: Px,
     /// Minimum number of major tick labels per axis.
     ///
@@ -104,6 +123,7 @@ impl Default for LinePlotStyle {
             linked_cursor_readout: MouseReadoutMode::default(),
             linked_cursor_readout_anchor: OverlayAnchor::TopLeft,
             linked_cursor_readout_policy: ReadoutSeriesPolicy::default(),
+            series_tooltip: SeriesTooltipMode::default(),
             hover_threshold: Px(10.0),
             tick_count: 5,
             stroke_color: Color {
