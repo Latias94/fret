@@ -1800,3 +1800,67 @@ fn flex_defaults_to_fit_content_under_constraints() {
         flex_bounds.size.height
     );
 }
+
+#[test]
+fn scroll_rounds_scrollable_extent_up_to_next_pixel() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(50.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let handle = crate::scroll::ScrollHandle::default();
+    let handle_for_root = handle.clone();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-rounding",
+        move |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+
+            let mut child_layout = crate::element::LayoutStyle::default();
+            child_layout.size.width = Length::Fill;
+            child_layout.size.height = Length::Px(Px(100.2));
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    scroll_handle: Some(handle_for_root.clone()),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![cx.container(
+                        crate::element::ContainerProps {
+                            layout: child_layout,
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.text("content")],
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let max = handle.max_offset();
+    assert!((max.y.0 - 51.0).abs() < 0.01, "max_offset.y={:?}", max.y);
+
+    handle.scroll_to_offset(Point::new(Px(0.0), Px(60.0)));
+    assert!(
+        (handle.offset().y.0 - 51.0).abs() < 0.01,
+        "offset.y={:?}",
+        handle.offset().y
+    );
+}
