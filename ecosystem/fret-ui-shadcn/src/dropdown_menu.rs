@@ -435,15 +435,29 @@ impl DropdownMenuShortcut {
             .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_muted);
 
+        let font_size = theme
+            .metric_by_key("component.dropdown_menu.shortcut.font_size")
+            .unwrap_or_else(|| Px((theme.metrics.font_size.0 - 1.0).max(10.0)));
+        let font_line_height = theme
+            .metric_by_key("component.dropdown_menu.shortcut.line_height")
+            .unwrap_or_else(|| Px((theme.metrics.font_line_height.0 - 2.0).max(font_size.0)));
+
         cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
+                layout.margin.left = fret_ui::element::MarginEdge::Auto;
+                layout
+            },
             text: self.text,
             style: Some(TextStyle {
                 font: FontId::default(),
-                size: theme.metrics.font_size,
+                // new-york-v4: `text-xs`.
+                size: font_size,
                 weight: FontWeight::NORMAL,
-                line_height: Some(theme.metrics.font_line_height),
-                letter_spacing_em: Some(0.12),
+                line_height: Some(font_line_height),
+                // new-york-v4: `tracking-widest`.
+                letter_spacing_em: Some(0.10),
             }),
             color: Some(fg),
             wrap: TextWrap::None,
