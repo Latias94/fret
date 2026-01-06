@@ -46,4 +46,5 @@ Fret models Radix Select outcomes by composing:
 
 ## Follow-ups (recommended)
 
-- Consider mirroring Radix close-on-window-blur/resize behavior in the overlay controller layer.
+- Done: Close-on-window-blur/resize is supported in the overlay controller layer and enabled by
+  default for Radix Select content overlays.

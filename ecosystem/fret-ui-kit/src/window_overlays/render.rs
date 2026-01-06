@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, Color, NodeId, Point, Px, Rect, Transform2D};
+use fret_core::{AppWindowId, Color, NodeId, Point, Px, Rect, Transform2D, WindowMetricsService};
 use fret_runtime::DragKind;
 use fret_ui::action::{DismissReason, UiActionHostExt};
 use fret_ui::declarative;
@@ -48,6 +48,35 @@ pub fn render<H: UiHost>(
     window: AppWindowId,
     bounds: Rect,
 ) {
+    let focused_now = app
+        .global::<WindowMetricsService>()
+        .and_then(|svc| svc.focused(window));
+    let scale_factor_now = app
+        .global::<WindowMetricsService>()
+        .and_then(|svc| svc.scale_factor(window));
+
+    let (focus_lost, resized) = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let w = overlays.windows.entry(window).or_default();
+
+        let bounds_changed = w.last_bounds.is_some_and(|last| last.size != bounds.size);
+        let scale_changed = w
+            .last_scale_factor
+            .is_some_and(|last| Some(last) != scale_factor_now);
+        let resized = bounds_changed || scale_changed;
+
+        let focus_lost = matches!((w.last_focused, focused_now), (Some(true), Some(false)));
+
+        w.last_bounds = Some(bounds);
+        if let Some(focused_now) = focused_now {
+            w.last_focused = Some(focused_now);
+        }
+        if let Some(scale_factor_now) = scale_factor_now {
+            w.last_scale_factor = Some(scale_factor_now);
+        }
+
+        (focus_lost, resized)
+    });
+
     let dock_drag_affects_window = app.drag().is_some_and(|d| {
         d.kind == DragKind::DockPanel && (d.source_window == window || d.current_window == window)
     });
@@ -86,7 +115,14 @@ pub fn render<H: UiHost>(
         }
         seen_modals.insert(req.id);
 
-        let open_now = app.models().get_copied(&req.open).unwrap_or(false);
+        let mut open_now = app.models().get_copied(&req.open).unwrap_or(false);
+        if open_now
+            && ((focus_lost && req.close_on_window_focus_lost)
+                || (resized && req.close_on_window_resize))
+        {
+            let _ = app.models_mut().update(&req.open, |v| *v = false);
+            open_now = false;
+        }
 
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
@@ -200,6 +236,13 @@ pub fn render<H: UiHost>(
             );
 
         let mut open_now = app.models().get_copied(&req.open).unwrap_or(false);
+        if open_now
+            && ((focus_lost && req.close_on_window_focus_lost)
+                || (resized && req.close_on_window_resize))
+        {
+            let _ = app.models_mut().update(&req.open, |v| *v = false);
+            open_now = false;
+        }
         let on_pointer_move = req.on_pointer_move.clone();
 
         let root = declarative::render_dismissible_root_with_hooks(

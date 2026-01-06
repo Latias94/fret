@@ -282,6 +282,7 @@ fn render_and_bind_dock_panels_keeps_non_viewport_panel_alive() {
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -569,6 +570,7 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
             position,
             buttons: fret_core::MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     harness.ui.dispatch_event(
@@ -578,6 +580,7 @@ fn dock_drag_suppresses_viewport_hover_and_wheel_forwarding() {
             position,
             delta: Point::new(Px(0.0), Px(12.0)),
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -634,6 +637,7 @@ fn viewport_capture_emits_clamped_pointer_moves_outside_draw_rect() {
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     let _ = harness.app.take_effects();
@@ -649,6 +653,7 @@ fn viewport_capture_emits_clamped_pointer_moves_outside_draw_rect() {
                 ..Default::default()
             },
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -692,6 +697,7 @@ fn viewport_capture_requests_animation_frames_while_active() {
             button: fret_core::MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     let _ = harness.app.take_effects();
@@ -752,6 +758,7 @@ fn dock_split_handle_hover_sets_resize_cursor_effect() {
             position: Point::new(Px(x), Px(y)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 

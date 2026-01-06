@@ -208,8 +208,10 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
     let ring_offset = theme
         .metric_by_key("component.ring.offset")
         .unwrap_or(Px(2.0));
+    // shadcn/new-york-v4 uses `ring-ring/50` for the ring color.
     let ring_color = theme
-        .color_by_key("ring")
+        .color_by_key("ring/50")
+        .or_else(|| theme.color_by_key("ring"))
         .unwrap_or_else(|| theme.color_required("ring"));
     let ring_offset_color = theme
         .color_by_key("ring-offset-background")
@@ -221,6 +223,10 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
     let border_color = theme
         .color_by_key("component.input.border")
         .unwrap_or_else(|| theme.color_required("input"));
+    // shadcn/new-york-v4 uses `focus-visible:border-ring`.
+    let border_color_focused = theme
+        .color_by_key("ring")
+        .unwrap_or_else(|| theme.color_required("ring"));
     let radius = theme
         .metric_by_key("component.input.radius")
         .unwrap_or_else(|| theme.metric_required("metric.radius.sm"));
@@ -233,13 +239,13 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
         background,
         border: Edges::all(Px(1.0)),
         border_color,
-        border_color_focused: border_color,
+        border_color_focused,
         focus_ring: Some(RingStyle {
             placement: RingPlacement::Outset,
             width: ring_width,
             offset: ring_offset,
             color: ring_color,
-            offset_color: Some(ring_offset_color),
+            offset_color: (ring_offset.0 > 0.0).then_some(ring_offset_color),
             corner_radii: Corners::all(radius),
         }),
         corner_radii: Corners::all(radius),

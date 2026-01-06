@@ -277,6 +277,8 @@ pub enum Event {
     /// The runner must not close the window immediately; the app/driver may intercept the request
     /// (e.g. unsaved-changes confirmation) and decide whether to emit `WindowRequest::Close`.
     WindowCloseRequested,
+    /// Window focus state changed (focused vs blurred).
+    WindowFocusChanged(bool),
     WindowScaleFactorChanged(f32),
     WindowMoved(WindowLogicalPosition),
     WindowResized {

@@ -33,11 +33,10 @@ Fret does not use React context. Instead, tabs behavior is composed via:
   (Radix `onMouseDown` behavior).
 - Partial: Semantics roles (`TabList` / `Tab` / `TabPanel`) exist in the runtime; the current
   shadcn-aligned `Tabs` recipe wires these roles explicitly.
-- Partial: `TabsContent` `forceMount` is not exposed as a dedicated Radix-named primitive surface
-  yet, but the runtime now has `InteractivityGate` to model "mounted but not present/interactive"
-  subtrees and the shadcn recipe exposes this via `Tabs::force_mount_content(...)`.
+- Pass: `TabsContent` force-mount semantics are exposed as `tab_panel_with_gate(...)` and the
+  composable `TabsContent::force_mount(...)` surface.
 
 ## Follow-ups (recommended)
 
-- Add a composable tabs surface (`TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent`) on top of
-  these primitives to match Radix authoring ergonomics without hard-coding a visual skin.
+- Done: Added a composable tabs surface (`TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent`)
+  on top of these primitives to match Radix authoring ergonomics without hard-coding a visual skin.

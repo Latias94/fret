@@ -9,8 +9,14 @@
 use std::sync::Arc;
 
 use fret_core::{Modifiers, MouseButton, PointerType, SemanticsRole};
-use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, SemanticsProps};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
+    SemanticsProps,
+};
 use fret_ui::{ElementContext, UiHost};
+
+use crate::declarative::ModelWatchExt;
+use crate::declarative::action_hooks::ActionHooksExt as _;
 
 /// Matches Radix Tabs `orientation` outcome: horizontal (default) vs vertical layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -97,6 +103,15 @@ pub fn tab_a11y_with_collection(
     }
 }
 
+/// A11y metadata for a `TabsList` container.
+pub fn tab_list_semantics_props(layout: LayoutStyle) -> SemanticsProps {
+    SemanticsProps {
+        layout,
+        role: SemanticsRole::TabList,
+        ..Default::default()
+    }
+}
+
 /// Maps a selected `value` (string key) to the active index, skipping disabled items.
 ///
 /// This is the Radix outcome "value controls which trigger is active", expressed in Fret terms.
@@ -153,6 +168,309 @@ pub fn tab_panel_with_gate<H: UiHost>(
         Some(cx.interactivity_gate(active, active, |cx| vec![panel(cx)]))
     } else {
         Some(panel(cx))
+    }
+}
+
+/// A composable, Radix-shaped tabs configuration surface (`TabsRoot` / `TabsList` / `TabsTrigger` /
+/// `TabsContent`).
+///
+/// Unlike Radix React, Fret does not use context objects; the "composition" surface is expressed as
+/// small Rust builders that thread the shared models and option values through closures.
+#[derive(Debug, Clone)]
+pub struct TabsRoot {
+    model: fret_runtime::Model<Option<Arc<str>>>,
+    disabled: bool,
+    orientation: TabsOrientation,
+    activation_mode: TabsActivationMode,
+    loop_navigation: bool,
+}
+
+impl TabsRoot {
+    pub fn new(model: fret_runtime::Model<Option<Arc<str>>>) -> Self {
+        Self {
+            model,
+            disabled: false,
+            orientation: TabsOrientation::default(),
+            activation_mode: TabsActivationMode::default(),
+            loop_navigation: true,
+        }
+    }
+
+    pub fn model(&self) -> fret_runtime::Model<Option<Arc<str>>> {
+        self.model.clone()
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn orientation(mut self, orientation: TabsOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    pub fn activation_mode(mut self, activation_mode: TabsActivationMode) -> Self {
+        self.activation_mode = activation_mode;
+        self
+    }
+
+    pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
+        self.loop_navigation = loop_navigation;
+        self
+    }
+
+    pub fn list(self, values: Arc<[Arc<str>]>, disabled: Arc<[bool]>) -> TabsList {
+        TabsList::new(self, values, disabled)
+    }
+
+    pub fn trigger(&self, value: impl Into<Arc<str>>) -> TabsTrigger {
+        TabsTrigger::new(value)
+    }
+
+    pub fn content(&self, value: impl Into<Arc<str>>) -> TabsContent {
+        TabsContent::new(value)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TabsList {
+    root: TabsRoot,
+    values: Arc<[Arc<str>]>,
+    disabled: Arc<[bool]>,
+    layout: LayoutStyle,
+}
+
+impl TabsList {
+    pub fn new(root: TabsRoot, values: Arc<[Arc<str>]>, disabled: Arc<[bool]>) -> Self {
+        Self {
+            root,
+            values,
+            disabled,
+            layout: LayoutStyle::default(),
+        }
+    }
+
+    pub fn layout(mut self, layout: LayoutStyle) -> Self {
+        self.layout = layout;
+        self
+    }
+
+    /// Renders a tabs list semantics root containing a roving-focus group.
+    ///
+    /// Notes:
+    /// - This does not apply any visual skin. Pass `flex` / `layout` via `RovingFlexProps`.
+    /// - This installs APG navigation and, in automatic mode, updates `TabsRoot.model` when the
+    ///   active tab changes.
+    #[track_caller]
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        mut props: RovingFlexProps,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let model = self.root.model.clone();
+        let activation_mode = self.root.activation_mode;
+        let disabled_for_roving = self.disabled.clone();
+        let values_for_roving = self.values.clone();
+
+        props.flex.direction = match self.root.orientation {
+            TabsOrientation::Horizontal => fret_core::Axis::Horizontal,
+            TabsOrientation::Vertical => fret_core::Axis::Vertical,
+        };
+        props.roving = RovingFocusProps {
+            enabled: props.roving.enabled && !self.root.disabled,
+            wrap: self.root.loop_navigation,
+            disabled: disabled_for_roving,
+        };
+
+        let layout = self.layout;
+        cx.semantics(tab_list_semantics_props(layout), move |cx| {
+            vec![cx.roving_flex(props, move |cx| {
+                cx.roving_nav_apg();
+                if activation_mode == TabsActivationMode::Automatic {
+                    cx.roving_select_option_arc_str(&model, values_for_roving.clone());
+                }
+                f(cx)
+            })]
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TabsTrigger {
+    value: Arc<str>,
+    label: Option<Arc<str>>,
+    disabled: bool,
+    index: Option<usize>,
+    tab_stop: bool,
+    set_size: Option<u32>,
+}
+
+impl TabsTrigger {
+    pub fn new(value: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            label: None,
+            disabled: false,
+            index: None,
+            tab_stop: false,
+            set_size: None,
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    /// Optional 0-based index used to populate collection metadata (`pos_in_set`).
+    pub fn index(mut self, index: usize) -> Self {
+        self.index = Some(index);
+        self
+    }
+
+    /// Whether this trigger is the current "tab stop" in roving focus terms.
+    ///
+    /// When `true`, `PressableProps.focusable` will be enabled even when the element isn't focused.
+    pub fn tab_stop(mut self, tab_stop: bool) -> Self {
+        self.tab_stop = tab_stop;
+        self
+    }
+
+    /// Optional set size used to populate collection metadata (`set_size`).
+    pub fn set_size(mut self, set_size: Option<u32>) -> Self {
+        self.set_size = set_size;
+        self
+    }
+
+    /// Renders a `TabsTrigger` as a pressable, wiring Radix-like pointer and activation behavior.
+    ///
+    /// - Selects the tab on left mouse down (no ctrl key), matching Radix's `onMouseDown`.
+    /// - Activates selection on pressable "activate" as well (Enter/Space and click-like pointer up).
+    #[track_caller]
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        root: &TabsRoot,
+        mut props: PressableProps,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let model = root.model.clone();
+        let value = self.value.clone();
+        let label = self.label.clone();
+        let disabled = self.disabled || root.disabled;
+        let tab_stop = self.tab_stop;
+        let pos_in_set = self
+            .index
+            .and_then(|idx| u32::try_from(idx.saturating_add(1)).ok());
+        let set_size = self.set_size;
+
+        cx.pressable_with_id_props(move |cx, st, _id| {
+            let value_for_pointer = value.clone();
+            let model_for_pointer = model.clone();
+
+            cx.pressable_add_on_pointer_down(Arc::new(move |host, _cx, down| {
+                use fret_ui::action::PressablePointerDownResult as R;
+
+                match tabs_trigger_pointer_down_action(
+                    down.pointer_type,
+                    down.button,
+                    down.modifiers,
+                    disabled,
+                ) {
+                    TabsTriggerPointerDownAction::Select => {
+                        let _ = host
+                            .models_mut()
+                            .update(&model_for_pointer, |v| *v = Some(value_for_pointer.clone()));
+                        R::Continue
+                    }
+                    TabsTriggerPointerDownAction::PreventFocus => R::SkipDefault,
+                    TabsTriggerPointerDownAction::Ignore => R::Continue,
+                }
+            }));
+
+            // Ensure Enter/Space activation (and click-like pointer-up) also selects this tab.
+            cx.pressable_set_option_arc_str(&model, value.clone());
+
+            let selected_value = cx.watch_model(&model).layout().cloned().flatten();
+            let selected = selected_value.as_deref() == Some(value.as_ref());
+
+            props.enabled = !disabled;
+            // Roving focus: only the tab stop participates in the default tab order.
+            props.focusable = (!disabled) && (tab_stop || st.focused);
+            props.a11y = tab_a11y_with_collection(label.clone(), selected, pos_in_set, set_size);
+
+            (props, f(cx))
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TabsContent {
+    value: Arc<str>,
+    label: Option<Arc<str>>,
+    labelled_by_element: Option<u64>,
+    force_mount: bool,
+    layout: LayoutStyle,
+}
+
+impl TabsContent {
+    pub fn new(value: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            label: None,
+            labelled_by_element: None,
+            force_mount: false,
+            layout: LayoutStyle::default(),
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn labelled_by_element(mut self, labelled_by_element: Option<u64>) -> Self {
+        self.labelled_by_element = labelled_by_element;
+        self
+    }
+
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
+        self
+    }
+
+    pub fn layout(mut self, layout: LayoutStyle) -> Self {
+        self.layout = layout;
+        self
+    }
+
+    /// Renders a `TabsContent` (tab panel) subtree if it is active or force-mounted.
+    #[track_caller]
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        root: &TabsRoot,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> Option<AnyElement> {
+        let selected_value: Option<Arc<str>> =
+            cx.watch_model(&root.model).layout().cloned().flatten();
+        let active = selected_value.as_deref() == Some(self.value.as_ref());
+        tab_panel_with_gate(
+            cx,
+            active,
+            self.force_mount,
+            self.layout,
+            self.label,
+            self.labelled_by_element,
+            f,
+        )
     }
 }
 

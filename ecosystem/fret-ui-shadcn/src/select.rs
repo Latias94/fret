@@ -870,9 +870,13 @@ fn select_impl<H: UiHost>(
                         .unwrap_or(Px(8.0));
                     let outer = overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
 
+                    // new-york-v4 uses Radix's `--radix-select-content-available-height` which
+                    // adapts to the current window + trigger placement. Prefer that behavior by
+                    // defaulting to the computed outer bounds height, while still allowing an
+                    // explicit theme override for apps that want a fixed cap.
                     let max_h = theme
                         .metric_by_key("component.select.max_list_height")
-                        .unwrap_or(Px(240.0));
+                        .unwrap_or(outer.size.height);
                     let item_h = theme
                         .metric_by_key("component.select.item_height")
                         .unwrap_or(Px(32.0));

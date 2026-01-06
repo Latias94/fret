@@ -272,6 +272,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         state.platform.input.pressed_buttons = fret_core::MouseButtons::default();
                     }
                 }
+                self.deliver_window_event_now(app_window, &Event::WindowFocusChanged(focused));
                 macos_window_log(format_args!(
                     "[focused] app_window={:?} focused={} winit={:?}",
                     app_window, focused, window_id

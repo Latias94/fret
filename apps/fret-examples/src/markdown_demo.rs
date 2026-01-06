@@ -202,12 +202,20 @@ This is a focused demo for `fret-markdown` + `fret-code-view`.
 ## Text
 
 Paragraphs should wrap and respect the viewport width. Inline code looks like `let x = 1;`.
+Strikethrough looks like ~~deleted~~.
 
 - Unordered list item A
 - Unordered list item B
 
 1. Ordered list item 1
 2. Ordered list item 2
+
+- [ ] Task unchecked
+- [x] Task checked
+
+Footnotes are supported.[^note]
+
+[^note]: This is a footnote definition.
 
 > Blockquotes are supported.
 > They can span multiple lines.
@@ -258,12 +266,21 @@ SVG (cached via `SvgAssetCache`):
 
 External (not fetched by markdown; click to open):
 
-![Remote](https://example.com/logo.png)
-
 Network image (demo-only; fetched by the host's image hook):
 
 ![HTTPBin PNG](https://httpbin.org/image/png)
+![HTTPBin JPEG](https://httpbin.org/image/jpeg)
 ![Rust SVG](https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/rust.svg)
+
+## Math
+
+Inline math: $E = mc^2$.
+
+Display math:
+
+$$
+\int_0^1 x^2\,dx = \frac{1}{3}
+$$
  "##,
         );
 

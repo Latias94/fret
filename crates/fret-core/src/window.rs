@@ -22,6 +22,7 @@ pub struct WindowMetricsService {
     inner_sizes: HashMap<AppWindowId, Size>,
     logical_positions: HashMap<AppWindowId, WindowLogicalPosition>,
     scale_factors: HashMap<AppWindowId, f32>,
+    focused: HashMap<AppWindowId, bool>,
 }
 
 impl WindowMetricsService {
@@ -49,6 +50,14 @@ impl WindowMetricsService {
         self.scale_factors.get(&window).copied()
     }
 
+    pub fn set_focused(&mut self, window: AppWindowId, focused: bool) {
+        self.focused.insert(window, focused);
+    }
+
+    pub fn focused(&self, window: AppWindowId) -> Option<bool> {
+        self.focused.get(&window).copied()
+    }
+
     pub fn inner_bounds(&self, window: AppWindowId) -> Option<Rect> {
         let size = self.inner_size(window)?;
         Some(Rect::new(Point::new(crate::Px(0.0), crate::Px(0.0)), size))
@@ -62,6 +71,9 @@ impl WindowMetricsService {
             Event::WindowMoved(position) => {
                 self.set_logical_position(window, *position);
             }
+            Event::WindowFocusChanged(focused) => {
+                self.set_focused(window, *focused);
+            }
             Event::WindowScaleFactorChanged(scale_factor) => {
                 self.set_scale_factor(window, *scale_factor);
             }
@@ -73,6 +85,7 @@ impl WindowMetricsService {
         self.inner_sizes.remove(&window);
         self.logical_positions.remove(&window);
         self.scale_factors.remove(&window);
+        self.focused.remove(&window);
     }
 }
 
@@ -109,6 +122,9 @@ mod tests {
 
         svc.apply_event(window, &Event::WindowScaleFactorChanged(2.0));
         assert_eq!(svc.scale_factor(window), Some(2.0));
+
+        svc.apply_event(window, &Event::WindowFocusChanged(true));
+        assert_eq!(svc.focused(window), Some(true));
     }
 
     #[test]
@@ -119,10 +135,12 @@ mod tests {
         svc.set_inner_size(window, Size::new(Px(1.0), Px(2.0)));
         svc.set_logical_position(window, WindowLogicalPosition { x: 1, y: 2 });
         svc.set_scale_factor(window, 1.5);
+        svc.set_focused(window, true);
         svc.remove(window);
 
         assert_eq!(svc.inner_size(window), None);
         assert_eq!(svc.logical_position(window), None);
         assert_eq!(svc.scale_factor(window), None);
+        assert_eq!(svc.focused(window), None);
     }
 }

@@ -70,8 +70,8 @@ fn render_missing_panel<H: UiHost>(
     let root_name = missing_panel_root_name(panel);
     declarative::render_root(ui, app, services, window, bounds, &root_name, |cx| {
         let theme = cx.theme().snapshot();
-        let padding = theme.metrics.padding_md;
-        let background = theme.colors.surface_background;
+        let padding = theme.metric_required("metric.padding.md");
+        let background = theme.color_required("background");
         vec![cx.container(
             fret_ui::element::ContainerProps {
                 layout: {

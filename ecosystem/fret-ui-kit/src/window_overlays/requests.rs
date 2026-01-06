@@ -15,6 +15,8 @@ pub struct DismissiblePopoverRequest {
     /// dismissal policy (Radix DismissableLayer branches).
     pub dismissable_branches: Vec<GlobalElementId>,
     pub consume_outside_pointer_events: bool,
+    pub close_on_window_focus_lost: bool,
+    pub close_on_window_resize: bool,
     pub open: Model<bool>,
     pub present: bool,
     pub initial_focus: Option<GlobalElementId>,
@@ -33,6 +35,11 @@ impl std::fmt::Debug for DismissiblePopoverRequest {
                 "consume_outside_pointer_events",
                 &self.consume_outside_pointer_events,
             )
+            .field(
+                "close_on_window_focus_lost",
+                &self.close_on_window_focus_lost,
+            )
+            .field("close_on_window_resize", &self.close_on_window_resize)
             .field("open", &"<model>")
             .field("present", &self.present)
             .field("initial_focus", &self.initial_focus)
@@ -47,6 +54,8 @@ pub struct ModalRequest {
     pub id: GlobalElementId,
     pub root_name: String,
     pub trigger: Option<GlobalElementId>,
+    pub close_on_window_focus_lost: bool,
+    pub close_on_window_resize: bool,
     pub open: Model<bool>,
     pub present: bool,
     pub initial_focus: Option<GlobalElementId>,
@@ -59,6 +68,11 @@ impl std::fmt::Debug for ModalRequest {
             .field("id", &self.id)
             .field("root_name", &self.root_name)
             .field("trigger", &self.trigger)
+            .field(
+                "close_on_window_focus_lost",
+                &self.close_on_window_focus_lost,
+            )
+            .field("close_on_window_resize", &self.close_on_window_resize)
             .field("open", &"<model>")
             .field("present", &self.present)
             .field("initial_focus", &self.initial_focus)

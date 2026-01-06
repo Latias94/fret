@@ -122,6 +122,9 @@ impl ElementHostWidget {
             .expect("taffy mark dirty");
 
         cache.measure_cache.clear();
+        cache
+            .measure_cache
+            .reserve(cache.children.len().saturating_mul(4));
         let root = cache.root;
 
         {

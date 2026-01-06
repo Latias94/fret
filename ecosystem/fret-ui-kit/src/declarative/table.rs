@@ -113,7 +113,7 @@ impl Default for TableViewProps {
 pub fn table_virtualized<H: UiHost, TData>(
     cx: &mut ElementContext<'_, H>,
     data: &[TData],
-    columns: Vec<ColumnDef<TData>>,
+    columns: &[ColumnDef<TData>],
     state: Model<TableState>,
     vertical_scroll: &VirtualListScrollHandle,
     items_revision: u64,
