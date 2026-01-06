@@ -2,10 +2,13 @@
 
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Axis, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+};
+use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, ScrollAxis,
-    ScrollProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    PressableProps, ScrollAxis, ScrollProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
@@ -312,6 +315,8 @@ pub type TableRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, TableInfo
 pub type ThematicBreakRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, ThematicBreakInfo) -> AnyElement;
 pub type LinkRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, LinkInfo) -> AnyElement;
+pub type OnLinkActivate =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason, LinkInfo) + 'static>;
 
 #[derive(Clone)]
 pub struct MarkdownComponents<H: UiHost> {
@@ -329,6 +334,7 @@ pub struct MarkdownComponents<H: UiHost> {
     pub table: Option<Arc<TableRenderer<H>>>,
     pub thematic_break: Option<Arc<ThematicBreakRenderer<H>>>,
     pub link: Option<Arc<LinkRenderer<H>>>,
+    pub on_link_activate: Option<OnLinkActivate>,
 }
 
 impl<H: UiHost> Default for MarkdownComponents<H> {
@@ -344,6 +350,7 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
             table: None,
             thematic_break: None,
             link: None,
+            on_link_activate: None,
         }
     }
 }
@@ -1141,7 +1148,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
             if let Some(render) = &components.list {
                 render(cx, list)
             } else {
-                render_list_pulldown(cx, theme, components, list)
+                render_pulldown_events_root(cx, theme, components, events)
             }
         }
         mdstream::BlockKind::BlockQuote => {
@@ -1151,7 +1158,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
             if let Some(render) = &components.blockquote {
                 render(cx, info)
             } else {
-                render_blockquote(cx, theme, components, info)
+                render_pulldown_events_root(cx, theme, components, events)
             }
         }
         mdstream::BlockKind::Table => {
@@ -1222,53 +1229,346 @@ fn render_paragraph_inline<H: UiHost>(
     render_inline_flow(cx, theme, components, base, &pieces)
 }
 
-fn render_list_pulldown<H: UiHost>(
+fn render_pulldown_events_root<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     components: &MarkdownComponents<H>,
-    info: ListInfo,
+    events: &[pulldown_cmark::Event<'static>],
 ) -> AnyElement {
-    if info.items.is_empty() {
-        return render_paragraph(cx, theme, Arc::<str>::from(""));
+    let mut cursor = 0usize;
+    let children = render_pulldown_blocks(cx, theme, components, events, &mut cursor, None);
+    if children.len() == 1 {
+        return children.into_iter().next().unwrap();
+    }
+
+    stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |_cx| {
+        children
+    })
+}
+
+#[derive(Debug, Clone, Copy)]
+enum PulldownStop {
+    Item,
+    BlockQuote,
+}
+
+fn stop_matches(end: &pulldown_cmark::TagEnd, stop: PulldownStop) -> bool {
+    use pulldown_cmark::TagEnd;
+    match (stop, end) {
+        (PulldownStop::Item, TagEnd::Item) => true,
+        (PulldownStop::BlockQuote, TagEnd::BlockQuote(_)) => true,
+        _ => false,
+    }
+}
+
+fn render_pulldown_blocks<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    events: &[pulldown_cmark::Event<'static>],
+    cursor: &mut usize,
+    stop: Option<PulldownStop>,
+) -> Vec<AnyElement> {
+    use pulldown_cmark::{Event, Tag, TagEnd};
+
+    let mut out = Vec::new();
+    while *cursor < events.len() {
+        match (&events[*cursor], stop) {
+            (Event::End(end), Some(stop)) if stop_matches(end, stop) => {
+                *cursor += 1;
+                break;
+            }
+            _ => {}
+        }
+
+        match &events[*cursor] {
+            Event::Start(Tag::Paragraph) => out.push(render_pulldown_paragraph(
+                cx, theme, components, events, cursor,
+            )),
+            Event::Start(Tag::Heading { level, .. }) => out.push(render_pulldown_heading(
+                cx,
+                theme,
+                components,
+                events,
+                cursor,
+                heading_level_to_u8(*level),
+            )),
+            Event::Start(Tag::CodeBlock(kind)) => out.push(render_pulldown_code_block(
+                cx,
+                components,
+                events,
+                cursor,
+                kind.clone(),
+            )),
+            Event::Start(Tag::List(start)) => out.push(render_pulldown_list(
+                cx, theme, components, events, cursor, *start,
+            )),
+            Event::Start(Tag::BlockQuote(_)) => out.push(render_pulldown_blockquote(
+                cx, theme, components, events, cursor,
+            )),
+            Event::Rule => {
+                out.push(render_thematic_break(cx, theme));
+                *cursor += 1;
+            }
+            Event::End(TagEnd::List(_))
+            | Event::End(TagEnd::Item)
+            | Event::End(TagEnd::BlockQuote(_)) => {
+                *cursor += 1;
+            }
+            _ => {
+                *cursor += 1;
+            }
+        }
+    }
+
+    out
+}
+
+fn render_pulldown_paragraph<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    events: &[pulldown_cmark::Event<'static>],
+    cursor: &mut usize,
+) -> AnyElement {
+    use pulldown_cmark::{Event, TagEnd};
+
+    let start = *cursor;
+    *cursor += 1;
+    while *cursor < events.len() {
+        if matches!(&events[*cursor], Event::End(TagEnd::Paragraph)) {
+            *cursor += 1;
+            break;
+        }
+        *cursor += 1;
+    }
+    render_paragraph_inline(cx, theme, components, &events[start..*cursor])
+}
+
+fn render_pulldown_heading<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    events: &[pulldown_cmark::Event<'static>],
+    cursor: &mut usize,
+    level: u8,
+) -> AnyElement {
+    use pulldown_cmark::{Event, TagEnd};
+
+    let start = *cursor;
+    *cursor += 1;
+    while *cursor < events.len() {
+        if matches!(&events[*cursor], Event::End(TagEnd::Heading(_))) {
+            *cursor += 1;
+            break;
+        }
+        *cursor += 1;
+    }
+
+    let slice = &events[start..*cursor];
+    let info = HeadingInfo {
+        level,
+        text: plain_text_from_events(slice),
+    };
+    render_heading_inline(cx, theme, components, info, slice)
+}
+
+fn render_pulldown_code_block<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    components: &MarkdownComponents<H>,
+    events: &[pulldown_cmark::Event<'static>],
+    cursor: &mut usize,
+    kind: pulldown_cmark::CodeBlockKind<'static>,
+) -> AnyElement {
+    use pulldown_cmark::{CodeBlockKind, Event, TagEnd};
+
+    let language = match &kind {
+        CodeBlockKind::Indented => None,
+        CodeBlockKind::Fenced(info) => parse_fenced_code_language(info),
+    };
+
+    *cursor += 1;
+    let mut buf = String::new();
+    while *cursor < events.len() {
+        match &events[*cursor] {
+            Event::Text(t) => buf.push_str(t.as_ref()),
+            Event::SoftBreak | Event::HardBreak => buf.push('\n'),
+            Event::End(TagEnd::CodeBlock) => {
+                *cursor += 1;
+                break;
+            }
+            _ => {}
+        }
+        *cursor += 1;
+    }
+
+    let info = CodeBlockInfo {
+        language,
+        code: Arc::<str>::from(buf),
+    };
+    if let Some(render) = &components.code_block {
+        render(cx, info)
+    } else {
+        render_code_block(cx, info, components)
+    }
+}
+
+fn render_pulldown_blockquote<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    events: &[pulldown_cmark::Event<'static>],
+    cursor: &mut usize,
+) -> AnyElement {
+    *cursor += 1;
+    let children = render_pulldown_blocks(
+        cx,
+        theme,
+        components,
+        events,
+        cursor,
+        Some(PulldownStop::BlockQuote),
+    );
+    render_blockquote_container(cx, theme, children)
+}
+
+fn render_blockquote_container<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Fill;
+    props.padding = Edges::all(theme.metrics.padding_sm);
+    props.border = Edges {
+        top: Px(0.0),
+        right: Px(0.0),
+        bottom: Px(0.0),
+        left: Px(3.0),
+    };
+    props.border_color = Some(theme.colors.panel_border);
+
+    cx.container(props, |cx| {
+        if children.len() == 1 {
+            children
+        } else {
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N2),
+                |_cx| children,
+            )]
+        }
+    })
+}
+
+fn render_pulldown_list<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    components: &MarkdownComponents<H>,
+    events: &[pulldown_cmark::Event<'static>],
+    cursor: &mut usize,
+    start: Option<u64>,
+) -> AnyElement {
+    use pulldown_cmark::{Event, Tag, TagEnd};
+
+    let ordered = start.is_some();
+    let start_no = start.unwrap_or(1) as u32;
+
+    *cursor += 1;
+    let mut items: Vec<Vec<AnyElement>> = Vec::new();
+
+    while *cursor < events.len() {
+        match &events[*cursor] {
+            Event::Start(Tag::Item) => {
+                *cursor += 1;
+                let children = render_pulldown_blocks(
+                    cx,
+                    theme,
+                    components,
+                    events,
+                    cursor,
+                    Some(PulldownStop::Item),
+                );
+                items.push(children);
+            }
+            Event::End(TagEnd::List(_)) => {
+                *cursor += 1;
+                break;
+            }
+            _ => {
+                *cursor += 1;
+            }
+        }
     }
 
     stack::vstack(cx, stack::VStackProps::default().gap(Space::N1), |cx| {
-        info.items
+        items
             .into_iter()
             .enumerate()
-            .map(|(i, text)| {
-                let marker = if info.ordered {
-                    Arc::<str>::from(format!("{}.", info.start.saturating_add(i as u32)))
+            .map(|(i, children)| {
+                let marker = if ordered {
+                    Arc::<str>::from(format!("{}.", start_no.saturating_add(i as u32)))
                 } else {
                     Arc::<str>::from("•".to_string())
                 };
 
-                stack::hstack(cx, stack::HStackProps::default().gap(Space::N2), |cx| {
-                    let marker_el = cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: marker,
-                        style: None,
-                        color: Some(theme.colors.text_muted),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                    });
+                let marker_el = cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: marker,
+                    style: None,
+                    color: Some(theme.colors.text_muted),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                });
 
-                    let base = InlineBaseStyle {
-                        font: FontId::default(),
-                        size: theme.metrics.font_size,
-                        weight: FontWeight::NORMAL,
-                        line_height: Some(theme.metrics.font_line_height),
-                        color: theme.colors.text_primary,
-                    };
-                    let events = parse_events(&text);
-                    let pieces = inline_pieces_from_events_unwrapped(&events);
-                    let item = render_inline_flow(cx, theme, components, base, &pieces);
+                let body = if children.len() == 1 {
+                    children.into_iter().next().unwrap()
+                } else {
+                    stack::vstack(cx, stack::VStackProps::default().gap(Space::N1), |_cx| {
+                        children
+                    })
+                };
 
-                    vec![marker_el, item]
-                })
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_start(),
+                    |_cx| vec![marker_el, body],
+                )
             })
             .collect()
     })
+}
+
+fn plain_text_from_events(events: &[pulldown_cmark::Event<'static>]) -> Arc<str> {
+    use pulldown_cmark::{Event, Tag, TagEnd};
+
+    let mut out = String::new();
+    let mut wrapper_depth = 0usize;
+
+    for e in events {
+        match e {
+            Event::Start(Tag::Paragraph) | Event::Start(Tag::Heading { .. }) => {
+                wrapper_depth += 1;
+            }
+            Event::End(TagEnd::Paragraph) | Event::End(TagEnd::Heading(_)) => {
+                wrapper_depth = wrapper_depth.saturating_sub(1);
+            }
+            _ => {}
+        }
+
+        if wrapper_depth == 0 {
+            continue;
+        }
+
+        match e {
+            Event::Text(t) | Event::Code(t) => out.push_str(t.as_ref()),
+            Event::SoftBreak => out.push(' '),
+            Event::HardBreak => out.push('\n'),
+            _ => {}
+        }
+    }
+
+    Arc::<str>::from(out.trim().to_string())
 }
 
 #[derive(Debug, Clone)]
@@ -1303,6 +1603,7 @@ fn inline_pieces_from_events(events: &[pulldown_cmark::Event<'static>]) -> Vec<I
     inline_pieces_from_events_impl(events, true)
 }
 
+#[cfg(test)]
 fn inline_pieces_from_events_unwrapped(
     events: &[pulldown_cmark::Event<'static>],
 ) -> Vec<InlinePiece> {
@@ -1466,18 +1767,6 @@ fn render_inline_token<H: UiHost>(
     base: &InlineBaseStyle,
     piece: InlinePiece,
 ) -> AnyElement {
-    if let Some(href) = piece.style.link.clone() {
-        if let Some(render) = &components.link {
-            return render(
-                cx,
-                LinkInfo {
-                    href,
-                    text: Arc::<str>::from(piece.text),
-                },
-            );
-        }
-    }
-
     let (font, size, line_height) = if piece.style.code {
         (
             FontId::monospace(),
@@ -1499,6 +1788,60 @@ fn render_inline_token<H: UiHost>(
     } else {
         base.color
     };
+
+    if let Some(href) = piece.style.link.clone() {
+        let href = href.clone();
+        if let Some(render) = &components.link {
+            return render(
+                cx,
+                LinkInfo {
+                    href,
+                    text: Arc::<str>::from(piece.text),
+                },
+            );
+        }
+
+        if let Some(on_link_activate) = components.on_link_activate.clone() {
+            let link_text = Arc::<str>::from(piece.text.trim_end().to_string());
+            let display_text = Arc::<str>::from(piece.text);
+
+            let mut props = PressableProps::default();
+            props.a11y.role = Some(SemanticsRole::Button);
+            props.a11y.label = Some(link_text.clone());
+
+            return cx.pressable(props, |cx, _state| {
+                let href = href.clone();
+                let link_text = link_text.clone();
+                let on_link_activate = on_link_activate.clone();
+                cx.pressable_on_activate(Arc::new(move |host, cx, reason| {
+                    on_link_activate(
+                        host,
+                        cx,
+                        reason,
+                        LinkInfo {
+                            href: href.clone(),
+                            text: link_text.clone(),
+                        },
+                    );
+                }));
+
+                vec![cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: display_text.clone(),
+                    style: Some(TextStyle {
+                        font,
+                        size,
+                        weight,
+                        line_height,
+                        letter_spacing_em: None,
+                    }),
+                    color: Some(color),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })]
+            });
+        }
+    }
 
     cx.text_props(TextProps {
         layout: Default::default(),
@@ -1560,6 +1903,24 @@ fn coalesce_link_runs(pieces: Vec<InlinePiece>) -> Vec<InlinePiece> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn count_top_level_list_items(events: &[pulldown_cmark::Event<'static>]) -> usize {
+        use pulldown_cmark::{Event, Tag, TagEnd};
+
+        let mut list_depth = 0usize;
+        let mut count = 0usize;
+
+        for e in events {
+            match e {
+                Event::Start(Tag::List(_)) => list_depth += 1,
+                Event::End(TagEnd::List(_)) => list_depth = list_depth.saturating_sub(1),
+                Event::Start(Tag::Item) if list_depth == 1 => count += 1,
+                _ => {}
+            }
+        }
+
+        count
+    }
 
     #[test]
     fn parses_fenced_language_variants() {
@@ -1633,5 +1994,11 @@ mod tests {
         let pieces = inline_pieces_from_events_unwrapped(&events);
         assert!(pieces.iter().any(|p| p.style.strong));
         assert!(pieces.iter().any(|p| p.style.link.is_some()));
+    }
+
+    #[test]
+    fn pulldown_counts_list_items() {
+        let events = parse_events("- a\n- b\n");
+        assert_eq!(count_top_level_list_items(&events), 2);
     }
 }
