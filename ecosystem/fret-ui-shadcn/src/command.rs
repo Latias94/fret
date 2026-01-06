@@ -470,7 +470,7 @@ impl CommandInput {
                 left: Px(0.0),
             };
             wrapper.border_color = Some(border);
-            if wrapper.layout.size.height == Length::Auto {
+            if matches!(wrapper.layout.size.height, Length::Auto) {
                 wrapper.layout.size.height = Length::Px(wrapper_h);
             }
             wrapper.padding = Edges {
@@ -1730,7 +1730,7 @@ impl CommandPalette {
             };
             wrapper.border_color = Some(border);
 
-            if wrapper.layout.size.height == Length::Auto {
+            if matches!(wrapper.layout.size.height, Length::Auto) {
                 wrapper.layout.size.height = Length::Px(wrapper_h);
             }
             wrapper.padding = Edges {
@@ -1740,10 +1740,7 @@ impl CommandPalette {
                 left: pad_x,
             };
 
-            let a11y_label = self
-                .a11y_label
-                .clone()
-                .unwrap_or_else(|| Arc::from("Command input"));
+            let a11y_label = self.a11y_label.clone();
             let input = command_text_input(
                 cx,
                 self.model.clone(),
