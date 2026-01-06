@@ -112,13 +112,16 @@ impl Sheet {
             let id = trigger.id;
             let overlay_root_name = OverlayController::modal_root_name(id);
 
-            let presence = OverlayController::fade_presence_with_durations(
+            let motion = OverlayController::transition_with_durations(
                 cx,
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_500,
                 overlay_motion::SHADCN_MOTION_TICKS_300,
             );
-            let overlay_presence = OverlayPresence::from_fade(is_open, presence);
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: is_open,
+            };
 
             if overlay_presence.present {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
@@ -131,7 +134,7 @@ impl Sheet {
                     .unwrap_or(Px(350.0));
                 let size = self.size_override.unwrap_or(default_size);
 
-                let opacity = presence.opacity;
+                let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let barrier_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
