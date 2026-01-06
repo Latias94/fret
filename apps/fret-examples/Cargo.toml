@@ -25,3 +25,7 @@ fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-ru
 tracing.workspace = true
 tracing-subscriber.workspace = true
 winit.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = "2"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
