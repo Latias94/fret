@@ -32,9 +32,11 @@ fn parse_env_u64(key: &str) -> Option<u64> {
 #[derive(Debug, Clone)]
 struct DemoRow {
     id: u32,
+    id_text: Arc<str>,
     name: Arc<str>,
     role: Arc<str>,
     score: i32,
+    score_text: Arc<str>,
 }
 
 struct TableStressWindowState {
@@ -66,11 +68,17 @@ impl TableStressDriver {
 
         let gen_started = Instant::now();
         let rows: Arc<[DemoRow]> = (0..row_count)
-            .map(|i| DemoRow {
-                id: i as u32,
-                name: Arc::from(format!("User {i}")),
-                role: Arc::from(if i % 7 == 0 { "Admin" } else { "Member" }),
-                score: ((i * 31) % 997) as i32,
+            .map(|i| {
+                let id = i as u32;
+                let score = ((i * 31) % 997) as i32;
+                DemoRow {
+                    id,
+                    id_text: Arc::from(id.to_string()),
+                    name: Arc::from(format!("User {i}")),
+                    role: Arc::from(if i % 7 == 0 { "Admin" } else { "Member" }),
+                    score,
+                    score_text: Arc::from(score.to_string()),
+                }
             })
             .collect::<Vec<_>>()
             .into();
@@ -461,12 +469,12 @@ impl WinitAppDriver for TableStressDriver {
                                                         vec![cx.text(label)]
                                                     },
                                                     |cx, row, col| {
-                                                        let text = match col.id.as_ref() {
-                                                            "id" => row.original.id.to_string(),
-                                                            "name" => row.original.name.as_ref().to_string(),
-                                                            "role" => row.original.role.as_ref().to_string(),
-                                                            "score" => row.original.score.to_string(),
-                                                            _ => "".to_string(),
+                                                        let text: Arc<str> = match col.id.as_ref() {
+                                                            "id" => row.original.id_text.clone(),
+                                                            "name" => row.original.name.clone(),
+                                                            "role" => row.original.role.clone(),
+                                                            "score" => row.original.score_text.clone(),
+                                                            _ => Arc::from(""),
                                                         };
                                                         vec![cx.text(text)]
                                                     },
