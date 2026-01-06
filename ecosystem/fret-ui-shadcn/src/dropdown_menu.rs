@@ -1157,15 +1157,24 @@ impl DropdownMenu {
                                                             ContainerProps {
                                                                 layout: {
                                                                     let mut layout =
-                                                                                LayoutStyle::default();
-                                                                            layout.size.width =
-                                                                                Length::Fill;
-                                                                            layout.size.height =
-                                                                                Length::Px(Px(1.0));
-                                                                            layout
-                                                                        },
-                                                                        padding: Edges::all(Px(0.0)),
-                                                                        background: Some(border),
+                                                                        LayoutStyle::default();
+                                                                    layout.size.width =
+                                                                        Length::Fill;
+                                                                    layout.size.height =
+                                                                        Length::Px(Px(1.0));
+                                                                    // new-york-v4: `-mx-1 my-1`.
+                                                                    layout.margin.left =
+                                                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                    layout.margin.right =
+                                                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                    layout.margin.top =
+                                                                        fret_ui::element::MarginEdge::Px(Px(4.0));
+                                                                    layout.margin.bottom =
+                                                                        fret_ui::element::MarginEdge::Px(Px(4.0));
+                                                                    layout
+                                                                },
+                                                                padding: Edges::all(Px(0.0)),
+                                                                background: Some(border),
                                                                         ..Default::default()
                                                                     },
                                                                     |_cx| Vec::new(),
@@ -1784,6 +1793,23 @@ impl DropdownMenu {
                                                                                 Length::Fill;
                                                                             layout.size.height =
                                                                                 Length::Px(Px(1.0));
+                                                                            // new-york-v4: `-mx-1 my-1`.
+                                                                            layout.margin.left =
+                                                                                fret_ui::element::MarginEdge::Px(
+                                                                                    Px(-4.0),
+                                                                                );
+                                                                            layout.margin.right =
+                                                                                fret_ui::element::MarginEdge::Px(
+                                                                                    Px(-4.0),
+                                                                                );
+                                                                            layout.margin.top =
+                                                                                fret_ui::element::MarginEdge::Px(
+                                                                                    Px(4.0),
+                                                                                );
+                                                                            layout.margin.bottom =
+                                                                                fret_ui::element::MarginEdge::Px(
+                                                                                    Px(4.0),
+                                                                                );
                                                                             layout
                                                                         },
                                                                         padding: Edges::all(Px(0.0)),
