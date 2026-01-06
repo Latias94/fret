@@ -33,6 +33,7 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 - `dropdown-menu` -> `ecosystem/fret-ui-kit/src/primitives/dropdown_menu.rs` (facade over `menu`)
 - `focus-scope` -> `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs`
 - `hover-card` -> `ecosystem/fret-ui-kit/src/primitives/hover_card.rs`
+- `label` -> `ecosystem/fret-ui-kit/src/primitives/label.rs`
 - `menu` -> `ecosystem/fret-ui-kit/src/primitives/menu/*`
 - `menubar` -> `ecosystem/fret-ui-kit/src/primitives/menubar.rs` (facade over `menu`, plus trigger-row + ArrowLeft/Right switching policy in `primitives/menubar/trigger_row.rs`)
 - `popover` -> `ecosystem/fret-ui-kit/src/primitives/popover.rs` (facade over window overlays + popper)
@@ -42,6 +43,7 @@ and infrastructure helpers like `primitive`, `portal`, `slot`, etc.).
 - `radio-group` -> `ecosystem/fret-ui-kit/src/primitives/radio_group.rs`
 - `roving-focus` -> `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs`
 - `scroll-area` -> `ecosystem/fret-ui-kit/src/primitives/scroll_area.rs`
+- `separator` -> `ecosystem/fret-ui-kit/src/primitives/separator.rs`
 - `slider` -> `ecosystem/fret-ui-kit/src/primitives/slider.rs`
 - `select` -> `ecosystem/fret-ui-kit/src/primitives/select.rs`
 - `switch` -> `ecosystem/fret-ui-kit/src/primitives/switch.rs`
@@ -62,8 +64,6 @@ Radix-named primitives facades so non-shadcn consumers can reuse them:
 
 - `checkbox` -> `ecosystem/fret-ui-shadcn/src/checkbox.rs`
 - `switch` -> `ecosystem/fret-ui-shadcn/src/switch.rs`
-- `separator` -> `ecosystem/fret-ui-shadcn/src/separator.rs`
-- `label` -> `ecosystem/fret-ui-shadcn/src/label.rs`
 
 ### Intentional differences
 
