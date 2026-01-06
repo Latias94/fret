@@ -324,7 +324,7 @@ impl<'a, TData> Table<'a, TData> {
         if self.options.manual_expanding {
             return self.pre_expanded_row_model();
         }
-        if self.state.expanding.is_empty() {
+        if !super::is_some_rows_expanded(&self.state.expanding) {
             return self.pre_expanded_row_model();
         }
         self.expanded_row_model.get_or_init(|| {

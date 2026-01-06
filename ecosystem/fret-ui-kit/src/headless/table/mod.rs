@@ -32,7 +32,11 @@ pub use filtering::{
 pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_order};
 pub use options::TableOptions;
 pub use pagination::{PaginationState, paginate_row_model};
-pub use row_expanding::{ExpandingState, expand_row_model, is_row_expanded, toggle_row_expanded};
+pub use row_expanding::{
+    ExpandingState, expand_row_model, expanded_depth, is_row_expanded, is_some_rows_expanded,
+    row_can_expand, row_is_all_parents_expanded, set_all_rows_expanded, toggle_all_rows_expanded,
+    toggle_row_expanded,
+};
 pub use row_model::{Row, RowIndex, RowKey, RowModel, Table, TableBuilder};
 pub use row_selection::{RowSelectionState, is_row_selected, select_rows_fn};
 pub use sorting::{
