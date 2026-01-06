@@ -110,7 +110,7 @@ pub fn render<H: UiHost>(
         let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        app.with_global_mut(WindowOverlays::default, |overlays, app| {
             let mut created = false;
             let entry = overlays.modals.entry(key).or_insert_with(|| {
                 created = true;
@@ -129,6 +129,31 @@ pub fn render<H: UiHost>(
 
             // For modal overlays, `present` is the authority for whether the barrier is active.
             OverlayLayer::modal(true, open_now).apply(ui, entry.layer);
+
+            // Radix-style focus restore for close transitions:
+            // when a modal overlay closes but remains mounted (`present=true`) for an exit
+            // transition, restore focus deterministically if focus is currently inside the modal
+            // layer (or has been cleared by the hide pass).
+            //
+            // This mirrors the non-modal close-edge restore logic below, but is safe for modals as
+            // well: underlay focus cannot change while the barrier is installed.
+            let focus_now = ui.focus();
+            let closing = entry.open && !open_now;
+            if closing {
+                let focus_in_layer =
+                    focus_now.is_some_and(|n| ui.node_layer(n) == Some(entry.layer));
+                if focus_now.is_none() || focus_in_layer {
+                    if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+                        ui,
+                        app,
+                        window,
+                        entry.trigger,
+                        entry.restore_focus,
+                    ) {
+                        ui.set_focus(Some(node));
+                    }
+                }
+            }
 
             let opening = open_now && (!entry.open || created);
             if opening {
@@ -261,7 +286,10 @@ pub fn render<H: UiHost>(
             let closing = entry.open && !open_now;
             if closing
                 && (req.consume_outside_pointer_events
-                    || focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, entry.layer))
+                    || focus_scope_prim::should_restore_focus_for_non_modal_overlay(
+                        ui,
+                        entry.layer,
+                    ))
             {
                 let focus_in_layer =
                     focus_now.is_some_and(|n| ui.node_layer(n) == Some(entry.layer));
