@@ -32,9 +32,7 @@ impl Default for DataTableRowState {
 }
 
 fn border_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border)
+    theme.color_required("border")
 }
 
 fn row_height_px(theme: &Theme) -> Px {
@@ -161,7 +159,7 @@ impl DataTable {
                 let header_bg = theme
                     .color_by_key("muted")
                     .or_else(|| theme.color_by_key("muted.background"))
-                    .unwrap_or(theme.colors.panel_background);
+                    .unwrap_or_else(|| theme.color_required("muted.background"));
                 let header_chrome = ChromeRefinement::default()
                     .bg(ColorRef::Color(header_bg))
                     .border_1()
