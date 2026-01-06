@@ -23,24 +23,26 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 fn toggle_bg_hover(theme: &Theme) -> Color {
     theme
         .color_by_key("muted")
-        .unwrap_or(theme.colors.hover_background)
+        .unwrap_or_else(|| theme.color_required("muted"))
 }
 
 fn toggle_bg_on(theme: &Theme) -> Color {
-    theme.color_by_key("accent").unwrap_or(theme.colors.accent)
+    theme
+        .color_by_key("accent")
+        .unwrap_or_else(|| theme.color_required("accent"))
 }
 
 fn toggle_border(theme: &Theme) -> Color {
     theme
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
-        .unwrap_or(theme.colors.panel_border)
+        .unwrap_or_else(|| theme.color_required("border"))
 }
 
 fn toggle_ring_color(theme: &Theme) -> Color {
     theme
         .color_by_key("ring")
-        .unwrap_or(theme.colors.focus_ring)
+        .unwrap_or_else(|| theme.color_required("ring"))
 }
 
 fn toggle_group_item_h(theme: &Theme, size: ToggleSize) -> Px {
