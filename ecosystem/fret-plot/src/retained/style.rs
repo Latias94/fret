@@ -2,6 +2,69 @@
 
 use fret_core::geometry::Px;
 use fret_core::scene::Color;
+
+pub const DEFAULT_SERIES_PALETTE: [Color; 10] = [
+    Color {
+        r: 0.35,
+        g: 0.65,
+        b: 0.95,
+        a: 1.0,
+    },
+    Color {
+        r: 0.95,
+        g: 0.45,
+        b: 0.55,
+        a: 1.0,
+    },
+    Color {
+        r: 0.45,
+        g: 0.85,
+        b: 0.55,
+        a: 1.0,
+    },
+    Color {
+        r: 0.95,
+        g: 0.75,
+        b: 0.35,
+        a: 1.0,
+    },
+    Color {
+        r: 0.75,
+        g: 0.55,
+        b: 0.95,
+        a: 1.0,
+    },
+    Color {
+        r: 0.35,
+        g: 0.85,
+        b: 0.85,
+        a: 1.0,
+    },
+    Color {
+        r: 0.95,
+        g: 0.35,
+        b: 0.85,
+        a: 1.0,
+    },
+    Color {
+        r: 0.65,
+        g: 0.65,
+        b: 0.65,
+        a: 1.0,
+    },
+    Color {
+        r: 0.55,
+        g: 0.75,
+        b: 0.35,
+        a: 1.0,
+    },
+    Color {
+        r: 0.35,
+        g: 0.55,
+        b: 0.95,
+        a: 1.0,
+    },
+];
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseReadoutMode {
     /// Show mouse coordinates as a tooltip near the cursor.
@@ -94,6 +157,8 @@ pub struct LinePlotStyle {
     pub tick_count: usize,
     pub stroke_color: Color,
     pub stroke_width: Px,
+    /// Default palette used to assign colors to series without an explicit per-series override.
+    pub series_palette: [Color; 10],
     pub clamp_to_data_bounds: bool,
     /// Extra range around `data_bounds` used by clamping and auto-fit.
     ///
@@ -133,6 +198,7 @@ impl Default for LinePlotStyle {
                 a: 1.0,
             },
             stroke_width: Px(1.5),
+            series_palette: DEFAULT_SERIES_PALETTE,
             clamp_to_data_bounds: true,
             overscroll_fraction: 0.03,
             emphasize_hovered_series: true,

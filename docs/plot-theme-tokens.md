@@ -34,6 +34,19 @@ Compatibility keys:
 - `plot.selection.stroke`, `plot.selection.fill`
 - `plot.tooltip.background`, `plot.tooltip.border`, `plot.tooltip.text`
 
+## Tokens (Series Palette)
+
+If `LinePlotStyle.series_palette` is left at its default value, `fret-plot` will resolve a theme-driven
+palette for multi-series plots.
+
+Tokens:
+
+- `fret.plot.palette.0` .. `fret.plot.palette.9`
+
+Compatibility keys:
+
+- `plot.palette.0` .. `plot.palette.9`
+
 ## Example Theme Config Snippet
 
 ```json
@@ -44,8 +57,9 @@ Compatibility keys:
     "fret.plot.grid": "#2A2F3A",
     "fret.plot.crosshair": "#66CCFF",
     "fret.plot.tooltip.background": "#121826",
-    "fret.plot.tooltip.border": "#2A2F3A"
+    "fret.plot.tooltip.border": "#2A2F3A",
+    "fret.plot.palette.0": "#66CCFF",
+    "fret.plot.palette.1": "#FF7A8A"
   }
 }
 ```
-

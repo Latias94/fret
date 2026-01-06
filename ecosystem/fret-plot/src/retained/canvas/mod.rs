@@ -34,7 +34,7 @@ use super::layers::{
 };
 use super::layout::{PlotLayout, PlotRegion};
 use super::state::{PlotHoverOutput, PlotOutput, PlotOutputSnapshot, PlotState};
-use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
+use super::style::{DEFAULT_SERIES_PALETTE, LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
@@ -1147,6 +1147,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         view_bounds_y3: Option<DataRect>,
         view_bounds_y4: Option<DataRect>,
         hidden: &HashSet<SeriesId>,
+        style: LinePlotStyle,
     ) -> Vec<(SeriesId, PathId, Color)> {
         let model_revision = self.model.revision(cx.app).unwrap_or(0);
         let Ok(model) = self.model.read(cx.app, |_app, m| m.clone()) else {
@@ -1168,7 +1169,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 y2_scale: self.y2_scale,
                 y3_scale: self.y3_scale,
                 y4_scale: self.y4_scale,
-                style: self.style,
+                style,
                 hidden,
             },
         )
@@ -1183,6 +1184,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         view_bounds_y3: Option<DataRect>,
         view_bounds_y4: Option<DataRect>,
         hidden: &HashSet<SeriesId>,
+        style: LinePlotStyle,
     ) -> Vec<PlotQuad> {
         let model_revision = self.model.revision(cx.app).unwrap_or(0);
         let Ok(model) = self.model.read(cx.app, |_app, m| m.clone()) else {
@@ -1204,7 +1206,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
                 y2_scale: self.y2_scale,
                 y3_scale: self.y3_scale,
                 y4_scale: self.y4_scale,
-                style: self.style,
+                style,
                 hidden,
             },
         )
@@ -3113,6 +3115,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         let (
             theme_revision,
             theme_font_size,
+            resolved_series_palette,
             background,
             border,
             axis_color,
@@ -3126,6 +3129,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             tooltip_text_color,
         ) = {
             let theme = cx.theme();
+            let resolved_series_palette = if self.style.series_palette == DEFAULT_SERIES_PALETTE {
+                crate::theme_tokens::resolve_series_palette(theme, DEFAULT_SERIES_PALETTE)
+            } else {
+                self.style.series_palette
+            };
 
             let background = self.style.background.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.background", "plot.background")
@@ -3198,6 +3206,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             (
                 theme.revision(),
                 theme_font_size,
+                resolved_series_palette,
                 background,
                 border,
                 axis_color,
@@ -3210,6 +3219,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 tooltip_border,
                 tooltip_text_color,
             )
+        };
+
+        let resolved_style = LinePlotStyle {
+            series_palette: resolved_series_palette,
+            ..self.style
         };
 
         cx.scene.push(SceneOp::Quad {
@@ -3406,6 +3420,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 view_bounds_y3,
                 view_bounds_y4,
                 hidden,
+                resolved_style,
             ) {
                 cx.scene.push(SceneOp::Quad {
                     order: quad.order,
@@ -3425,6 +3440,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 view_bounds_y3,
                 view_bounds_y4,
                 hidden,
+                resolved_style,
             ) {
                 let color = if emphasized {
                     if let Some(emphasized) = emphasized_series

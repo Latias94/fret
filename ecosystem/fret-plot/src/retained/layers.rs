@@ -32,69 +32,6 @@ struct ResolvedSeriesStyle {
     stroke_width: Px,
 }
 
-const SERIES_PALETTE: [Color; 10] = [
-    Color {
-        r: 0.35,
-        g: 0.65,
-        b: 0.95,
-        a: 1.0,
-    },
-    Color {
-        r: 0.95,
-        g: 0.45,
-        b: 0.55,
-        a: 1.0,
-    },
-    Color {
-        r: 0.45,
-        g: 0.85,
-        b: 0.55,
-        a: 1.0,
-    },
-    Color {
-        r: 0.95,
-        g: 0.75,
-        b: 0.35,
-        a: 1.0,
-    },
-    Color {
-        r: 0.75,
-        g: 0.55,
-        b: 0.95,
-        a: 1.0,
-    },
-    Color {
-        r: 0.35,
-        g: 0.85,
-        b: 0.85,
-        a: 1.0,
-    },
-    Color {
-        r: 0.95,
-        g: 0.35,
-        b: 0.85,
-        a: 1.0,
-    },
-    Color {
-        r: 0.65,
-        g: 0.65,
-        b: 0.65,
-        a: 1.0,
-    },
-    Color {
-        r: 0.55,
-        g: 0.75,
-        b: 0.35,
-        a: 1.0,
-    },
-    Color {
-        r: 0.35,
-        g: 0.55,
-        b: 0.95,
-        a: 1.0,
-    },
-];
-
 pub(super) fn resolve_series_color(
     series_index: usize,
     plot_style: LinePlotStyle,
@@ -104,7 +41,8 @@ pub(super) fn resolve_series_color(
     if series_count <= 1 {
         return override_color.unwrap_or(plot_style.stroke_color);
     }
-    override_color.unwrap_or(SERIES_PALETTE[series_index % SERIES_PALETTE.len()])
+    override_color
+        .unwrap_or(plot_style.series_palette[series_index % plot_style.series_palette.len()])
 }
 
 fn resolve_stroke_width(plot_style: LinePlotStyle, override_width: Option<Px>) -> Px {
