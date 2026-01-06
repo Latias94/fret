@@ -1730,7 +1730,7 @@ fn select_impl<H: UiHost>(
                             {
                                 let layout = {
                                     let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
+                                    layout.size.width = Length::Auto;
                                     layout.size.min_width = Some(Px(0.0));
                                     layout.flex.grow = 1.0;
                                     layout.flex.shrink = 1.0;
