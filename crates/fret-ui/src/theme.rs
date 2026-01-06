@@ -533,7 +533,9 @@ impl Theme {
                 self.colors.panel_background = c;
                 changed = true;
             }
-            if !cfg.colors.contains_key("fret.list.background") && self.colors.list_background != c
+            if !cfg.colors.contains_key("fret.list.background")
+                && !cfg.colors.contains_key("color.list.background")
+                && self.colors.list_background != c
             {
                 self.colors.list_background = c;
                 changed = true;
@@ -556,12 +558,17 @@ impl Theme {
                 self.colors.hover_background = c;
                 changed = true;
             }
-            if !cfg.colors.contains_key("fret.menu.item.hover") && self.colors.menu_item_hover != c
+            if !cfg.colors.contains_key("fret.menu.item.hover")
+                && !cfg.colors.contains_key("color.menu.item.hover")
+                && self.colors.menu_item_hover != c
             {
                 self.colors.menu_item_hover = c;
                 changed = true;
             }
-            if !cfg.colors.contains_key("fret.list.row.hover") && self.colors.list_row_hover != c {
+            if !cfg.colors.contains_key("fret.list.row.hover")
+                && !cfg.colors.contains_key("color.list.row.hover")
+                && self.colors.list_row_hover != c
+            {
                 self.colors.list_row_hover = c;
                 changed = true;
             }
@@ -571,7 +578,10 @@ impl Theme {
                 self.colors.accent = c;
                 changed = true;
             }
-            if !cfg.colors.contains_key("selection") {
+            if !cfg.colors.contains_key("selection")
+                && !cfg.colors.contains_key("selection.background")
+                && !cfg.colors.contains_key("color.selection.background")
+            {
                 let selection = with_alpha(c, 0.4);
                 if self.colors.selection_background != selection {
                     self.colors.selection_background = selection;
