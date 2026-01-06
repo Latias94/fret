@@ -4,13 +4,13 @@
 //! content dimensions for CSS keyframe animations (e.g. `--radix-collapsible-content-height`).
 //!
 //! Fret does not use CSS variables. Instead, we cache the last known open height and drive a
-//! clipped wrapper height using `Presence`'s eased progress.
+//! clipped wrapper height using a `TransitionTimeline` progress value.
 
 use fret_core::Px;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
-use crate::primitives::presence::PresenceOutput;
+use crate::headless::transition::TransitionOutput;
 use crate::{LayoutRefinement, MetricRef};
 
 #[derive(Debug, Clone, Copy)]
@@ -68,24 +68,24 @@ pub fn update_measured_height_if_open_for<H: UiHost>(
 
 /// Compute wrapper mounting and layout patches for a collapsible content subtree.
 ///
-/// When a measurement exists, the wrapper height is driven using `presence.opacity` as an eased
+/// When a measurement exists, the wrapper height is driven using `transition.progress` as an eased
 /// 0..1 progress value. Without a measurement, call sites should avoid "close presence" to prevent
 /// hidden content from affecting layout.
 pub fn collapsible_height_wrapper_refinement(
     open: bool,
     force_mount: bool,
     require_measurement_for_close: bool,
-    presence: PresenceOutput,
+    transition: TransitionOutput,
     measured_height: Px,
 ) -> (bool, LayoutRefinement) {
     let has_measurement = measured_height.0 > 0.0;
-    let progress = presence.opacity.clamp(0.0, 1.0);
+    let progress = transition.progress.clamp(0.0, 1.0);
 
     let keep_mounted_for_close =
-        presence.present && (!require_measurement_for_close || has_measurement);
+        transition.present && (!require_measurement_for_close || has_measurement);
     let should_render = force_mount || open || keep_mounted_for_close;
 
-    let wants_height_animation = has_measurement && (presence.animating || !open);
+    let wants_height_animation = has_measurement && (transition.animating || !open);
 
     let mut wrapper = LayoutRefinement::default()
         .w_full()
