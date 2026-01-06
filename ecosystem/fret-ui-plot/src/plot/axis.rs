@@ -211,10 +211,30 @@ impl fmt::Debug for AxisLabelFormatter {
 }
 
 impl AxisLabelFormatter {
+    /// Creates a custom label formatter with a stable cache key.
+    ///
+    /// The key is used by the plot widget to cache prepared text blobs for tick labels. If the
+    /// key changes between frames, tick labels will be re-shaped and re-allocated even if the
+    /// formatting logic is the same.
     pub fn custom(key: u64, f: impl Fn(f64, f64) -> String + Send + Sync + 'static) -> Self {
         Self {
             key,
             f: Arc::new(f),
+        }
+    }
+
+    /// Creates a custom label formatter from a `'static` function pointer.
+    ///
+    /// This is a convenience helper for cases where capturing state in a closure is not needed.
+    /// The cache key is derived from the function pointer address and is stable for the lifetime
+    /// of the process.
+    pub fn custom_static(f: fn(f64, f64) -> String) -> Self {
+        let addr = f as usize as u64;
+        // Mix the address into a tagged key. This does not need to be stable across processes.
+        let key = 0x4355_5354_4d00_0000u64 ^ addr.wrapping_mul(0x9e3779b97f4a7c15);
+        Self {
+            key,
+            f: Arc::new(move |v, span| f(v, span)),
         }
     }
 
@@ -439,6 +459,39 @@ fn civil_from_days(days_since_epoch: i64) -> (i32, u32, u32) {
     (year, m as u32, d as u32)
 }
 
+// Inverse of `civil_from_days`, based on Howard Hinnant's "days_from_civil" algorithm (public
+// domain). Interprets day 0 as 1970-01-01 in the proleptic Gregorian calendar.
+fn days_from_civil(year: i32, month: u32, day: u32) -> Option<i64> {
+    if !(1..=12).contains(&month) || day == 0 || day > 31 {
+        return None;
+    }
+
+    let y = i64::from(year) - if month <= 2 { 1 } else { 0 };
+    let era = if y >= 0 { y } else { y - 399 }.div_euclid(400);
+    let yoe = y - era * 400; // [0, 399]
+    let mp = i64::from(month) + if month > 2 { -3 } else { 9 }; // [0, 11]
+    let doy = (153 * mp + 2).div_euclid(5) + i64::from(day) - 1; // [0, 365]
+    let doe = yoe * 365 + yoe.div_euclid(4) - yoe.div_euclid(100) + doy; // [0, 146096]
+    Some(era * 146_097 + doe - 719_468)
+}
+
+fn utc_parts_to_unix_seconds(
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
+) -> Option<f64> {
+    if hour >= 24 || minute >= 60 || second >= 60 {
+        return None;
+    }
+    let days = days_from_civil(year, month, day)?;
+    let sec_of_day = i64::from(hour) * 3600 + i64::from(minute) * 60 + i64::from(second);
+    let secs = days.checked_mul(86400)?.checked_add(sec_of_day)?;
+    Some(secs as f64)
+}
+
 pub fn nice_ticks(min: f64, max: f64, tick_count: usize) -> Vec<f64> {
     if tick_count == 0 {
         return Vec::new();
@@ -559,6 +612,15 @@ pub fn time_ticks_seconds(min: f64, max: f64, tick_count: usize, fmt: TimeAxisFo
         return nice_ticks(min, max, tick_count);
     }
 
+    if fmt.presentation == TimeAxisPresentation::UnixUtc {
+        let abs = time_ticks_unix_utc_seconds(min_abs, max_abs, tick_count);
+        return abs
+            .into_iter()
+            .map(|t| t - base)
+            .filter(|v| v.is_finite())
+            .collect();
+    }
+
     let first_k = (min_abs / step).ceil();
     let last_k = (max_abs / step).floor();
     if !first_k.is_finite() || !last_k.is_finite() || first_k > last_k {
@@ -584,6 +646,221 @@ pub fn time_ticks_seconds(min: f64, max: f64, tick_count: usize, fmt: TimeAxisFo
     } else {
         out
     }
+}
+
+fn time_ticks_unix_utc_seconds(min_abs: f64, max_abs: f64, tick_count: usize) -> Vec<f64> {
+    if tick_count == 0 {
+        return Vec::new();
+    }
+    if !min_abs.is_finite() || !max_abs.is_finite() {
+        return Vec::new();
+    }
+    if min_abs == max_abs {
+        return vec![min_abs];
+    }
+
+    let (min_abs, max_abs) = if min_abs <= max_abs {
+        (min_abs, max_abs)
+    } else {
+        (max_abs, min_abs)
+    };
+    let span = (max_abs - min_abs).abs();
+    if !span.is_finite() || span <= 0.0 {
+        return vec![min_abs, max_abs]
+            .into_iter()
+            .filter(|v| v.is_finite())
+            .collect();
+    }
+
+    let target = if tick_count <= 1 {
+        span
+    } else {
+        span / (tick_count.saturating_sub(1) as f64)
+    };
+
+    // Prefer calendar-aligned steps for UTC time (day/month/year boundaries).
+    #[derive(Clone, Copy)]
+    enum Step {
+        Seconds(i64),
+        Minutes(i64),
+        Hours(i64),
+        Days(i64),
+        Months(i32),
+        Years(i32),
+    }
+
+    const CANDIDATES: &[Step] = &[
+        Step::Seconds(1),
+        Step::Seconds(2),
+        Step::Seconds(5),
+        Step::Seconds(10),
+        Step::Seconds(15),
+        Step::Seconds(30),
+        Step::Minutes(1),
+        Step::Minutes(2),
+        Step::Minutes(5),
+        Step::Minutes(10),
+        Step::Minutes(15),
+        Step::Minutes(30),
+        Step::Hours(1),
+        Step::Hours(2),
+        Step::Hours(3),
+        Step::Hours(6),
+        Step::Hours(12),
+        Step::Days(1),
+        Step::Days(2),
+        Step::Days(7),
+        Step::Months(1),
+        Step::Months(2),
+        Step::Months(3),
+        Step::Months(6),
+        Step::Years(1),
+        Step::Years(2),
+        Step::Years(5),
+        Step::Years(10),
+    ];
+
+    let step = CANDIDATES
+        .iter()
+        .copied()
+        .find(|s| match *s {
+            Step::Seconds(n) => (n as f64) >= target,
+            Step::Minutes(n) => (n as f64) * 60.0 >= target,
+            Step::Hours(n) => (n as f64) * 3600.0 >= target,
+            Step::Days(n) => (n as f64) * 86400.0 >= target,
+            Step::Months(n) => (n as f64) * 86400.0 * 30.0 >= target,
+            Step::Years(n) => (n as f64) * 86400.0 * 365.0 >= target,
+        })
+        .unwrap_or(Step::Years(10));
+
+    match step {
+        Step::Seconds(step_s) => time_ticks_fixed_seconds(min_abs, max_abs, step_s),
+        Step::Minutes(step_m) => time_ticks_fixed_seconds(min_abs, max_abs, step_m * 60),
+        Step::Hours(step_h) => time_ticks_fixed_seconds(min_abs, max_abs, step_h * 3600),
+        Step::Days(step_d) => time_ticks_fixed_seconds(min_abs, max_abs, step_d * 86400),
+        Step::Months(step_m) => time_ticks_by_month(min_abs, max_abs, step_m),
+        Step::Years(step_y) => time_ticks_by_year(min_abs, max_abs, step_y),
+    }
+}
+
+fn time_ticks_fixed_seconds(min_abs: f64, max_abs: f64, step_seconds: i64) -> Vec<f64> {
+    if step_seconds <= 0 {
+        return Vec::new();
+    }
+    let min_s = min_abs.floor() as i64;
+    let max_s = max_abs.floor() as i64;
+
+    let first = if min_s.rem_euclid(step_seconds) == 0 {
+        min_s
+    } else {
+        (min_s.div_euclid(step_seconds) + 1) * step_seconds
+    };
+    let last = max_s.div_euclid(step_seconds) * step_seconds;
+    if first > last {
+        return Vec::new();
+    }
+
+    let mut out: Vec<f64> = Vec::new();
+    let mut t = first;
+    let max_steps = 8192usize;
+    for _ in 0..max_steps {
+        if t > last {
+            break;
+        }
+        out.push(t as f64);
+        t = match t.checked_add(step_seconds) {
+            Some(v) => v,
+            None => break,
+        };
+    }
+    out
+}
+
+fn time_ticks_by_month(min_abs: f64, max_abs: f64, step_months: i32) -> Vec<f64> {
+    if step_months <= 0 {
+        return Vec::new();
+    }
+    let Some((y0, m0, _d0, _h0, _min0, _s0)) = unix_seconds_to_utc_parts(min_abs) else {
+        return Vec::new();
+    };
+    let Some((_y1, _m1, _d1, _h1, _min1, _s1)) = unix_seconds_to_utc_parts(max_abs) else {
+        return Vec::new();
+    };
+
+    let month0 = (m0 as i32).saturating_sub(1);
+    let mut idx0 = y0.saturating_mul(12).saturating_add(month0);
+    let step = step_months;
+
+    // Snap to the first month boundary at or after `min_abs`, then to the step grid.
+    let start_of_month = utc_parts_to_unix_seconds(y0, m0, 1, 0, 0, 0).unwrap_or(min_abs);
+    if start_of_month < min_abs - 0.5 {
+        idx0 = idx0.saturating_add(1);
+    }
+    let rem = idx0.rem_euclid(step);
+    if rem != 0 {
+        idx0 = idx0.saturating_add(step - rem);
+    }
+
+    let mut out: Vec<f64> = Vec::new();
+    let max_steps = 4096usize;
+    let mut idx = idx0;
+    for _ in 0..max_steps {
+        let year = idx.div_euclid(12);
+        let month = idx.rem_euclid(12) + 1;
+        let Some(t) = utc_parts_to_unix_seconds(year, month as u32, 1, 0, 0, 0) else {
+            break;
+        };
+        if t > max_abs + 0.5 {
+            break;
+        }
+        if t >= min_abs - 0.5 {
+            out.push(t);
+        }
+        idx = match idx.checked_add(step) {
+            Some(v) => v,
+            None => break,
+        };
+    }
+
+    out
+}
+
+fn time_ticks_by_year(min_abs: f64, max_abs: f64, step_years: i32) -> Vec<f64> {
+    if step_years <= 0 {
+        return Vec::new();
+    }
+    let Some((y0, _m0, _d0, _h0, _min0, _s0)) = unix_seconds_to_utc_parts(min_abs) else {
+        return Vec::new();
+    };
+
+    let mut year = y0;
+    let start_of_year = utc_parts_to_unix_seconds(y0, 1, 1, 0, 0, 0).unwrap_or(min_abs);
+    if start_of_year < min_abs - 0.5 {
+        year = year.saturating_add(1);
+    }
+    let rem = year.rem_euclid(step_years);
+    if rem != 0 {
+        year = year.saturating_add(step_years - rem);
+    }
+
+    let mut out: Vec<f64> = Vec::new();
+    let max_steps = 4096usize;
+    for _ in 0..max_steps {
+        let Some(t) = utc_parts_to_unix_seconds(year, 1, 1, 0, 0, 0) else {
+            break;
+        };
+        if t > max_abs + 0.5 {
+            break;
+        }
+        if t >= min_abs - 0.5 {
+            out.push(t);
+        }
+        year = match year.checked_add(step_years) {
+            Some(v) => v,
+            None => break,
+        };
+    }
+    out
 }
 
 pub fn linear_ticks(min: f64, max: f64, tick_count: usize) -> Vec<f64> {
@@ -647,6 +924,26 @@ mod tests {
             AxisLabelFormat::TimeSeconds(fmt).format(0.0, 86400.0),
             "1970-01-01"
         );
+    }
+
+    #[test]
+    fn unix_utc_ticks_align_to_month_boundaries() {
+        // 2020-01-15 00:00:00 UTC.
+        let base = utc_parts_to_unix_seconds(2020, 1, 15, 0, 0, 0).unwrap();
+        let fmt = TimeAxisFormat {
+            base_seconds: base,
+            presentation: TimeAxisPresentation::UnixUtc,
+        };
+
+        // View spans ~70 days around the base.
+        let min = 0.0;
+        let max = 86400.0 * 70.0;
+        let ticks = time_ticks_seconds(min, max, 5, fmt);
+        assert!(!ticks.is_empty());
+
+        // The first "calendar" tick should be at the start of the next month: 2020-02-01.
+        let feb1 = utc_parts_to_unix_seconds(2020, 2, 1, 0, 0, 0).unwrap() - base;
+        assert!(ticks.contains(&feb1), "ticks={ticks:?}, feb1={feb1}");
     }
 
     #[test]

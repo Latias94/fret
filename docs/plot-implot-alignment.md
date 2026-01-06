@@ -72,10 +72,10 @@ This contract is documented in ADR 0099.
 
 - [x] Nice ticks (1/2/5 * 10^n)
 - [x] Adaptive tick density (avoid label overlap)
-- [~] Time axis + formatting (UTC seconds baseline)
+- [x] Time axis + formatting (relative seconds or Unix UTC, calendar-aligned UTC ticks)
 - [x] Log axis (Log10 scale + ticks + interactions)
-- [~] Log axis tick labels (major decades labeled; minor ticks are grid-only by default)
-- [~] Axis formatters (custom label callbacks with stable cache key)
+- [x] Log axis tick labels (major decades labeled; minor ticks are grid-only by default)
+- [x] Axis formatters (custom label callbacks with stable cache key)
 - [x] Axis thickness auto-fit (avoid clipped labels)
 - [~] Multi-axes (Y2 supported; no Y3/Y4 yet)
 - [x] Axis lock (lock X/Y pan/zoom)
