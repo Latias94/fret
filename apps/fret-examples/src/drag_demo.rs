@@ -9,8 +9,8 @@ use fret_launch::{
 };
 use fret_plot::cartesian::DataRect;
 use fret_plot::retained::{
-    DragLineX, DragLineY, DragRect, LinePlotCanvas, LinePlotModel, LinePlotStyle, LineSeries,
-    PlotDragOutput, PlotOutput, PlotOverlays, PlotState, SeriesTooltipMode, YAxis,
+    DragLineX, DragLineY, DragPoint, DragRect, LinePlotCanvas, LinePlotModel, LinePlotStyle,
+    LineSeries, PlotDragOutput, PlotOutput, PlotOverlays, PlotState, SeriesTooltipMode, YAxis,
 };
 use fret_plot::series::Series;
 use fret_runtime::PlatformCapabilities;
@@ -39,6 +39,11 @@ impl DragDemoDriver {
             PlotDragOutput::LineY { id, y, .. } => {
                 if let Some(line) = state.overlays.drag_lines_y.iter_mut().find(|l| l.id == id) {
                     line.y = y;
+                }
+            }
+            PlotDragOutput::Point { id, point, .. } => {
+                if let Some(p) = state.overlays.drag_points.iter_mut().find(|p| p.id == id) {
+                    p.point = point;
                 }
             }
             PlotDragOutput::Rect { id, rect, .. } => {
@@ -78,6 +83,22 @@ impl DragDemoDriver {
             drag_lines_y: vec![
                 DragLineY::new(0x5941u64, 0.5, YAxis::Left).label("Y hi"),
                 DragLineY::new(0x5942u64, -0.5, YAxis::Left).label("Y lo"),
+            ],
+            drag_points: vec![
+                DragPoint::new(
+                    0x5041u64,
+                    fret_plot::cartesian::DataPoint { x: 15.0, y: 0.0 },
+                    YAxis::Left,
+                )
+                .label("P A")
+                .show_value(true),
+                DragPoint::new(
+                    0x5042u64,
+                    fret_plot::cartesian::DataPoint { x: 85.0, y: 0.0 },
+                    YAxis::Left,
+                )
+                .label("P B")
+                .show_value(true),
             ],
             drag_rects: vec![
                 DragRect::new(
@@ -224,7 +245,8 @@ pub fn build_app() -> App {
 
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
-        main_window_title: "fret-demo drag_demo (DragLineX/DragLineY/DragRect)".to_string(),
+        main_window_title: "fret-demo drag_demo (DragLineX/DragLineY/DragPoint/DragRect)"
+            .to_string(),
         main_window_size: winit::dpi::LogicalSize::new(960.0, 640.0),
         ..Default::default()
     }
