@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::{cell::Cell, rc::Rc};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{
@@ -24,6 +25,27 @@ use fret_ui_kit::{
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+
+fn apply_popover_trigger_a11y(
+    mut trigger: AnyElement,
+    expanded: bool,
+    controls: Option<fret_ui::elements::GlobalElementId>,
+) -> AnyElement {
+    match &mut trigger.kind {
+        fret_ui::element::ElementKind::Pressable(fret_ui::element::PressableProps {
+            a11y, ..
+        }) => {
+            a11y.expanded = Some(expanded);
+            a11y.controls_element = controls.map(|id| id.0);
+        }
+        fret_ui::element::ElementKind::Semantics(props) => {
+            props.expanded = Some(expanded);
+            props.controls_element = controls.map(|id| id.0);
+        }
+        _ => {}
+    }
+    trigger
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
@@ -193,28 +215,10 @@ impl Popover {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
 
-            #[derive(Default)]
-            struct PopoverA11yState {
-                dialog_id: Option<fret_ui::elements::GlobalElementId>,
-            }
-
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
             let anchor_id = self.anchor_override.unwrap_or(trigger_id);
             let overlay_root_name = OverlayController::popover_root_name(trigger_id);
-
-            let dialog_id = cx.with_state(PopoverA11yState::default, |st| st.dialog_id);
-            let dialog_id = if let Some(dialog_id) = dialog_id {
-                dialog_id
-            } else {
-                let dialog_id =
-                    radix_popover::popover_dialog_wrapper_id::<H>(cx, &overlay_root_name);
-                cx.with_state(PopoverA11yState::default, |st| {
-                    st.dialog_id = Some(dialog_id)
-                });
-                dialog_id
-            };
-            let trigger = radix_popover::apply_popover_trigger_a11y(trigger, is_open, dialog_id);
 
             let presence = OverlayController::fade_presence_with_durations(
                 cx,
@@ -223,6 +227,8 @@ impl Popover {
                 overlay_motion::SHADCN_MOTION_TICKS_200,
             );
             let overlay_presence = OverlayPresence::from_fade(is_open, presence);
+            let dialog_id_for_trigger: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+                Rc::new(Cell::new(None));
 
             if overlay_presence.present {
                 let align = self.align;
@@ -248,6 +254,7 @@ impl Popover {
 
                 let opacity = presence.opacity;
                 let opening = is_open;
+                let dialog_id_for_trigger = dialog_id_for_trigger.clone();
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                     let Some(anchor) = anchor else {
@@ -262,6 +269,7 @@ impl Popover {
                         inner_id_for_scope.set(Some(inner.id));
                         vec![inner]
                     });
+                    dialog_id_for_trigger.set(Some(content.id));
 
                     let measure_id = inner_id.get().unwrap_or(content.id);
                     let last_content_size = cx.last_bounds_for_element(measure_id).map(|r| r.size);
@@ -405,7 +413,8 @@ impl Popover {
                 radix_popover::request_dismissible_popover(cx, request);
             }
 
-            trigger
+            let dialog_id_for_trigger = dialog_id_for_trigger.get();
+            apply_popover_trigger_a11y(trigger, is_open, dialog_id_for_trigger)
         })
     }
 }
