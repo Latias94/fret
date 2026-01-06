@@ -37,6 +37,7 @@ This contract is documented in ADR 0099.
 - [x] Legend interaction: hide/solo/pin (basic)
 - [x] Cursor linking across plots (vertical cursor + per-series readout at X)
 - [x] Linked cursor readout defaults to overlay (configurable tooltip)
+- [x] Linked cursor readout supports pinned/hover filtering
 - [x] Selection/query linking across plots (built on top of `LinkedPlotGroup`)
 - [x] Line hover uses nearest segment distance (not just sampled points)
 - [ ] Keyboard shortcuts matrix (document + align with ImPlot defaults)

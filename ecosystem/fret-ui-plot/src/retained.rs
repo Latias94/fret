@@ -387,6 +387,69 @@ fn offset_rect(rect: Rect, origin: Point) -> Rect {
     )
 }
 
+fn overlay_rect_in_plot(plot: Rect, size: Size, anchor: OverlayAnchor, margin: Px) -> Option<Rect> {
+    if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
+        return None;
+    }
+    if size.width.0 <= 0.0 || size.height.0 <= 0.0 {
+        return None;
+    }
+
+    let w = size.width.0;
+    let h = size.height.0;
+    let m = margin.0.max(0.0);
+
+    let x = match anchor {
+        OverlayAnchor::TopLeft | OverlayAnchor::BottomLeft => plot.origin.x.0 + m,
+        OverlayAnchor::TopRight | OverlayAnchor::BottomRight => {
+            plot.origin.x.0 + plot.size.width.0 - m - w
+        }
+    };
+    let y = match anchor {
+        OverlayAnchor::TopLeft | OverlayAnchor::TopRight => plot.origin.y.0 + m,
+        OverlayAnchor::BottomLeft | OverlayAnchor::BottomRight => {
+            plot.origin.y.0 + plot.size.height.0 - m - h
+        }
+    };
+
+    let max_x = plot.origin.x.0 + plot.size.width.0 - w;
+    let max_y = plot.origin.y.0 + plot.size.height.0 - h;
+
+    let x = x.clamp(plot.origin.x.0, max_x);
+    let y = y.clamp(plot.origin.y.0, max_y);
+
+    Some(Rect::new(Point::new(Px(x), Px(y)), size))
+}
+
+fn apply_readout_policy(
+    rows: &mut Vec<PlotCursorReadoutRow>,
+    pinned: Option<SeriesId>,
+    legend_hover: Option<SeriesId>,
+    policy: ReadoutSeriesPolicy,
+) {
+    match policy {
+        ReadoutSeriesPolicy::PinnedOrAll => {
+            if let Some(pinned) = pinned {
+                rows.retain(|r| r.series_id == pinned);
+            }
+        }
+        ReadoutSeriesPolicy::PinnedOnly => {
+            if let Some(pinned) = pinned {
+                rows.retain(|r| r.series_id == pinned);
+            } else {
+                rows.clear();
+            }
+        }
+        ReadoutSeriesPolicy::PinnedOrLegendHoverOrAll => {
+            if let Some(pinned) = pinned {
+                rows.retain(|r| r.series_id == pinned);
+            } else if let Some(hovered) = legend_hover {
+                rows.retain(|r| r.series_id == hovered);
+            }
+        }
+    }
+}
+
 fn dim_color(color: Color, factor: f32) -> Color {
     let factor = factor.clamp(0.0, 1.0);
     Color {
@@ -886,6 +949,36 @@ impl Default for MouseReadoutMode {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OverlayAnchor {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+impl Default for OverlayAnchor {
+    fn default() -> Self {
+        Self::TopLeft
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReadoutSeriesPolicy {
+    /// If a series is pinned, show only that series; otherwise show all visible series.
+    PinnedOrAll,
+    /// Show only the pinned series. If no series is pinned, show no per-series rows.
+    PinnedOnly,
+    /// If pinned, show pinned; else if a legend row is hovered, show that series; else show all.
+    PinnedOrLegendHoverOrAll,
+}
+
+impl Default for ReadoutSeriesPolicy {
+    fn default() -> Self {
+        Self::PinnedOrAll
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct LinePlotStyle {
     pub background: Option<Color>,
@@ -901,7 +994,10 @@ pub struct LinePlotStyle {
     pub tooltip_border: Option<Color>,
     pub tooltip_text_color: Option<Color>,
     pub mouse_readout: MouseReadoutMode,
+    pub mouse_readout_anchor: OverlayAnchor,
     pub linked_cursor_readout: MouseReadoutMode,
+    pub linked_cursor_readout_anchor: OverlayAnchor,
+    pub linked_cursor_readout_policy: ReadoutSeriesPolicy,
     pub hover_threshold: Px,
     /// Minimum number of major tick labels per axis.
     ///
@@ -935,7 +1031,10 @@ impl Default for LinePlotStyle {
             tooltip_border: None,
             tooltip_text_color: None,
             mouse_readout: MouseReadoutMode::default(),
+            mouse_readout_anchor: OverlayAnchor::BottomLeft,
             linked_cursor_readout: MouseReadoutMode::default(),
+            linked_cursor_readout_anchor: OverlayAnchor::TopLeft,
+            linked_cursor_readout_policy: ReadoutSeriesPolicy::default(),
             hover_threshold: Px(10.0),
             tick_count: 5,
             stroke_color: Color {
@@ -4849,10 +4948,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 .model
                 .read(cx.app, |_app, m| L::cursor_readout(m, linked_x, hidden))
                 .unwrap_or_default();
-
-            if let Some(pinned) = state.pinned_series {
-                readout_rows.retain(|r| r.series_id == pinned);
-            }
+            apply_readout_policy(
+                &mut readout_rows,
+                state.pinned_series,
+                self.legend_hover,
+                self.style.linked_cursor_readout_policy,
+            );
 
             let x_text = self.tooltip_x_labels.format(linked_x, x_span);
             let mut text = format!("x={x_text}");
@@ -4922,16 +5023,14 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let margin = Px(6.0);
                 let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
                 let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
-
-                let mut x = Px(layout.plot.origin.x.0 + margin.0);
-                let mut y = Px(layout.plot.origin.y.0 + margin.0);
-
-                let max_x = layout.plot.origin.x.0 + layout.plot.size.width.0 - w.0;
-                let max_y = layout.plot.origin.y.0 + layout.plot.size.height.0 - h.0;
-                x = Px(x.0.min(max_x).max(layout.plot.origin.x.0));
-                y = Px(y.0.min(max_y).max(layout.plot.origin.y.0));
-
-                let rect = Rect::new(Point::new(x, y), Size::new(w, h));
+                let Some(rect) = overlay_rect_in_plot(
+                    layout.plot,
+                    Size::new(w, h),
+                    self.style.linked_cursor_readout_anchor,
+                    margin,
+                ) else {
+                    return;
+                };
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(12),
                     rect,
@@ -5004,13 +5103,19 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 if let Some(tt) = self.mouse_readout_text {
-                    let pad = Px(6.0);
-                    let x = Px(layout.plot.origin.x.0 + pad.0);
-                    let top = (layout.plot.origin.y.0 + layout.plot.size.height.0)
-                        - pad.0
-                        - tt.metrics.size.height.0;
-                    let top = top.max(layout.plot.origin.y.0 + pad.0);
-                    let origin = Point::new(x, Px(top + tt.metrics.baseline.0));
+                    let margin = Px(6.0);
+                    let w = Px(tt.metrics.size.width.0);
+                    let h = Px(tt.metrics.size.height.0);
+                    let Some(rect) = overlay_rect_in_plot(
+                        layout.plot,
+                        Size::new(w, h),
+                        self.style.mouse_readout_anchor,
+                        margin,
+                    ) else {
+                        return;
+                    };
+                    let origin =
+                        Point::new(rect.origin.x, Px(rect.origin.y.0 + tt.metrics.baseline.0));
                     cx.scene.push(SceneOp::Text {
                         order: DrawOrder(12),
                         origin,
@@ -5153,10 +5258,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         .model
                         .read(cx.app, |_app, m| L::cursor_readout(m, linked_x, hidden))
                         .unwrap_or_default();
-
-                    if let Some(pinned) = state.pinned_series {
-                        readout_rows.retain(|r| r.series_id == pinned);
-                    }
+                    apply_readout_policy(
+                        &mut readout_rows,
+                        state.pinned_series,
+                        self.legend_hover,
+                        self.style.linked_cursor_readout_policy,
+                    );
 
                     let x_text = self.tooltip_x_labels.format(linked_x, x_span);
                     let mut text = format!("x={x_text}");
