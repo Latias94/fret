@@ -65,6 +65,10 @@ Recent fixes:
   - SubTrigger: right chevron `ml-auto size-4`, `data-[state=open]` accent background.
   - Shortcut: `ml-auto text-xs tracking-widest` alignment.
 
+Recent fixes:
+
+- Destructive item focus tint now matches upstream (`destructive/10` in light, `destructive/20` in dark) via seeded theme tokens.
+
 ### `Input`
 
 - Upstream: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/input.tsx`
