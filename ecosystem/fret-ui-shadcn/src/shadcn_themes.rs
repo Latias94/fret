@@ -166,6 +166,15 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
             colors.insert("ring/50".to_string(), ring_50);
         }
     }
+
+    // new-york-v4 `ScrollArea` uses `bg-border` for the thumb.
+    if let Some(border) = colors.get("border").cloned() {
+        colors.insert("scrollbar.thumb.background".to_string(), border.clone());
+        colors.insert("scrollbar.thumb.hover.background".to_string(), border);
+        colors
+            .entry("scrollbar.background".to_string())
+            .or_insert("#00000000".to_string());
+    }
     match scheme {
         ShadcnColorScheme::Light => {
             // `bg-transparent` for inputs in light mode.
