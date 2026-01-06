@@ -1847,10 +1847,211 @@ struct HeatmapCacheKey {
     value_max_bits: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct HeatmapMipKey {
+    model_revision: u64,
+    cols: usize,
+    rows: usize,
+    values_ptr: usize,
+}
+
+#[derive(Debug, Clone)]
+struct HeatmapMipLevel {
+    cols: usize,
+    rows: usize,
+    values: Vec<f32>,
+}
+
 #[derive(Debug, Default)]
 pub struct HeatmapPlotLayer {
     cache_key: Option<HeatmapCacheKey>,
     cached_quads: Vec<PlotQuad>,
+    mip_key: Option<HeatmapMipKey>,
+    mips: Vec<HeatmapMipLevel>,
+}
+
+fn ceil_div_usize(a: usize, b: usize) -> usize {
+    if b == 0 {
+        return a;
+    }
+    a / b + usize::from(a % b != 0)
+}
+
+fn select_heatmap_mip_level(
+    visible_cols: usize,
+    visible_rows: usize,
+    viewport_w: f32,
+    viewport_h: f32,
+    max_quads: usize,
+    max_level: usize,
+) -> usize {
+    let target_cols = (viewport_w.ceil().max(1.0) as usize).max(1);
+    let target_rows = (viewport_h.ceil().max(1.0) as usize).max(1);
+
+    let mut level = 0usize;
+    loop {
+        if level >= max_level {
+            return max_level;
+        }
+
+        let scale = 1usize << level.min(usize::BITS as usize - 1);
+        let vc = ceil_div_usize(visible_cols, scale).max(1);
+        let vr = ceil_div_usize(visible_rows, scale).max(1);
+        let quad_count = (vc as u64).saturating_mul(vr as u64);
+
+        if vc <= target_cols && vr <= target_rows && quad_count <= max_quads as u64 {
+            return level;
+        }
+        level = level.saturating_add(1);
+    }
+}
+
+impl HeatmapPlotLayer {
+    fn rebuild_mips_if_needed(&mut self, model_revision: u64, model: &HeatmapPlotModel) {
+        let mip_key = HeatmapMipKey {
+            model_revision,
+            cols: model.cols,
+            rows: model.rows,
+            values_ptr: model.values.as_ptr() as usize,
+        };
+
+        if self.mip_key == Some(mip_key) {
+            return;
+        }
+
+        self.mip_key = Some(mip_key);
+        self.mips.clear();
+
+        let mut prev_cols = model.cols;
+        let mut prev_rows = model.rows;
+        let mut prev: &[f32] = &model.values;
+
+        while prev_cols > 1 || prev_rows > 1 {
+            let next_cols = ceil_div_usize(prev_cols, 2).max(1);
+            let next_rows = ceil_div_usize(prev_rows, 2).max(1);
+            let mut next: Vec<f32> = vec![f32::NAN; next_cols.saturating_mul(next_rows)];
+
+            for r in 0..next_rows {
+                for c in 0..next_cols {
+                    let mut sum = 0.0f64;
+                    let mut count = 0u32;
+                    for dr in 0..2 {
+                        for dc in 0..2 {
+                            let rr = r * 2 + dr;
+                            let cc = c * 2 + dc;
+                            if rr >= prev_rows || cc >= prev_cols {
+                                continue;
+                            }
+                            let idx = rr * prev_cols + cc;
+                            let Some(v) = prev.get(idx).copied() else {
+                                continue;
+                            };
+                            if !v.is_finite() {
+                                continue;
+                            }
+                            sum += v as f64;
+                            count += 1;
+                        }
+                    }
+
+                    if count > 0 {
+                        let avg = (sum / f64::from(count)) as f32;
+                        let idx = r * next_cols + c;
+                        if let Some(slot) = next.get_mut(idx) {
+                            *slot = avg;
+                        }
+                    }
+                }
+            }
+
+            self.mips.push(HeatmapMipLevel {
+                cols: next_cols,
+                rows: next_rows,
+                values: next,
+            });
+
+            let last = self.mips.last().expect("just pushed");
+            prev_cols = last.cols;
+            prev_rows = last.rows;
+            prev = &last.values;
+        }
+    }
+
+    fn mip_level_values<'a>(
+        &'a self,
+        level: usize,
+        model: &'a HeatmapPlotModel,
+    ) -> (usize, usize, &'a [f32]) {
+        if level == 0 {
+            return (model.cols, model.rows, &model.values);
+        }
+
+        let mip = self
+            .mips
+            .get(level.saturating_sub(1))
+            .expect("level > 0 implies mip exists");
+        (mip.cols, mip.rows, &mip.values)
+    }
+}
+
+#[cfg(test)]
+mod heatmap_lod_tests {
+    use super::*;
+
+    #[test]
+    fn mip_generation_halves_with_round_up() {
+        let cols = 3usize;
+        let rows = 3usize;
+        let values: Vec<f32> = (0..cols * rows).map(|v| v as f32).collect();
+        let model = HeatmapPlotModel::new(
+            DataRect {
+                x_min: 0.0,
+                x_max: 3.0,
+                y_min: 0.0,
+                y_max: 3.0,
+            },
+            cols,
+            rows,
+            values,
+        );
+
+        let mut layer = HeatmapPlotLayer::default();
+        layer.rebuild_mips_if_needed(1, &model);
+
+        assert_eq!(layer.mips.len(), 2);
+        assert_eq!((layer.mips[0].cols, layer.mips[0].rows), (2, 2));
+        assert_eq!((layer.mips[1].cols, layer.mips[1].rows), (1, 1));
+    }
+
+    #[test]
+    fn select_mip_level_respects_max_quads() {
+        let visible_cols = 4096usize;
+        let visible_rows = 4096usize;
+        let max_quads = 50_000usize;
+        let max_level = 16usize;
+
+        let level = select_heatmap_mip_level(
+            visible_cols,
+            visible_rows,
+            800.0,
+            600.0,
+            max_quads,
+            max_level,
+        );
+        assert!(level <= max_level);
+
+        let scale = 1usize << level.min(usize::BITS as usize - 1);
+        let vc = ceil_div_usize(visible_cols, scale).max(1);
+        let vr = ceil_div_usize(visible_rows, scale).max(1);
+        let quad_count = (vc as u64).saturating_mul(vr as u64);
+        assert!(quad_count <= max_quads as u64);
+    }
+
+    #[test]
+    fn select_mip_level_uses_level0_for_small_grids() {
+        let level = select_heatmap_mip_level(64, 64, 1024.0, 768.0, 50_000, 8);
+        assert_eq!(level, 0);
+    }
 }
 
 pub type HeatmapPlotCanvas = PlotCanvas<HeatmapPlotLayer>;
@@ -5840,6 +6041,8 @@ impl PlotLayer for HeatmapPlotLayer {
             return self.cached_quads.clone();
         }
 
+        self.rebuild_mips_if_needed(model_revision, model);
+
         fn lerp(a: f32, b: f32, t: f32) -> f32 {
             a + (b - a) * t
         }
@@ -5902,13 +6105,49 @@ impl PlotLayer for HeatmapPlotLayer {
 
         let denom = (model.value_max - model.value_min).max(1.0e-12);
 
-        let mut quads: Vec<PlotQuad> = Vec::with_capacity(
-            (col1.saturating_sub(col0)).saturating_mul(row1.saturating_sub(row0)),
+        let visible_cols = col1.saturating_sub(col0);
+        let visible_rows = row1.saturating_sub(row0);
+        if visible_cols == 0 || visible_rows == 0 {
+            self.cache_key = Some(cache_key);
+            self.cached_quads.clear();
+            return Vec::new();
+        }
+
+        const MAX_HEATMAP_QUADS: usize = 50_000;
+        let max_level = self.mips.len();
+        let level = select_heatmap_mip_level(
+            visible_cols,
+            visible_rows,
+            plot.size.width.0,
+            plot.size.height.0,
+            MAX_HEATMAP_QUADS,
+            max_level,
         );
 
-        for row in row0..row1 {
-            let y0 = model.data_bounds.y_min + (row as f64) * dy;
-            let y1 = y0 + dy;
+        let scale = 1usize << level.min(usize::BITS as usize - 1);
+        let (grid_cols, grid_rows, values) = self.mip_level_values(level, model);
+
+        let level_col0 = (col0 / scale).min(grid_cols);
+        let level_col1 = ceil_div_usize(col1, scale).min(grid_cols);
+        let level_row0 = (row0 / scale).min(grid_rows);
+        let level_row1 = ceil_div_usize(row1, scale).min(grid_rows);
+
+        if level_col1 <= level_col0 || level_row1 <= level_row0 {
+            self.cache_key = Some(cache_key);
+            self.cached_quads.clear();
+            return Vec::new();
+        }
+
+        let quad_cols = level_col1.saturating_sub(level_col0);
+        let quad_rows = level_row1.saturating_sub(level_row0);
+        let mut quads: Vec<PlotQuad> = Vec::with_capacity(quad_cols.saturating_mul(quad_rows));
+
+        for row_l in level_row0..level_row1 {
+            let row_base0 = row_l.saturating_mul(scale);
+            let row_base1 = (row_l.saturating_add(1).saturating_mul(scale)).min(model.rows);
+
+            let y0 = model.data_bounds.y_min + (row_base0 as f64) * dy;
+            let y1 = model.data_bounds.y_min + (row_base1 as f64) * dy;
             let (Some(py0), Some(py1)) = (transform.data_y_to_px(y0), transform.data_y_to_px(y1))
             else {
                 continue;
@@ -5919,16 +6158,20 @@ impl PlotLayer for HeatmapPlotLayer {
                 continue;
             }
 
-            for col in col0..col1 {
-                let Some(v) = model.value_at(col, row) else {
+            for col_l in level_col0..level_col1 {
+                let idx = row_l.saturating_mul(grid_cols).saturating_add(col_l);
+                let Some(v) = values.get(idx).copied() else {
                     continue;
                 };
                 if !v.is_finite() {
                     continue;
                 }
 
-                let x0 = model.data_bounds.x_min + (col as f64) * dx;
-                let x1 = x0 + dx;
+                let col_base0 = col_l.saturating_mul(scale);
+                let col_base1 = (col_l.saturating_add(1).saturating_mul(scale)).min(model.cols);
+
+                let x0 = model.data_bounds.x_min + (col_base0 as f64) * dx;
+                let x1 = model.data_bounds.x_min + (col_base1 as f64) * dx;
                 let (Some(px0), Some(px1)) =
                     (transform.data_x_to_px(x0), transform.data_x_to_px(x1))
                 else {
@@ -5951,6 +6194,14 @@ impl PlotLayer for HeatmapPlotLayer {
                     background: color,
                     order: DrawOrder(2),
                 });
+
+                if quads.len() >= MAX_HEATMAP_QUADS {
+                    break;
+                }
+            }
+
+            if quads.len() >= MAX_HEATMAP_QUADS {
+                break;
             }
         }
 
@@ -6025,6 +6276,8 @@ impl PlotLayer for HeatmapPlotLayer {
     fn cleanup_resources(&mut self, _services: &mut dyn UiServices) {
         self.cache_key = None;
         self.cached_quads.clear();
+        self.mip_key = None;
+        self.mips.clear();
     }
 }
 
