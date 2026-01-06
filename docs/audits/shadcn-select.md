@@ -47,6 +47,7 @@ examples in `repo-ref/ui`.
 ### Visual parity (shadcn)
 
 - Pass: Selected option shows a trailing checkmark (`ids::ui::CHECK`) and selection background.
+- Pass: Overlay content animates with shadcn’s motion taxonomy (fade + zoom, plus side-based slide-in on enter).
 - Pass: Structural rows are supported via `SelectEntry` (`SelectLabel`, `SelectGroup`,
   `SelectSeparator`) rendered inside the listbox.
 - Pass: Scroll buttons (`SelectScrollUpButton` / `SelectScrollDownButton`) are rendered for

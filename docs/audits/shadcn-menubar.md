@@ -50,6 +50,7 @@ Key upstream behaviors/surfaces:
 - Pass: `inset` is supported for items/labels (left padding parity with upstream `data-inset`).
 - Pass: Destructive item variants are supported via `MenubarItemVariant::Destructive`.
 - Pass: Submenu triggers render a right chevron (`ids::ui::CHEVRON_RIGHT`) to match upstream affordance.
+- Pass: Root and submenu panels animate with shadcn’s overlay motion taxonomy (fade + zoom, plus slide-in on enter).
 - Pass: Leading icons are aligned within a fixed 16×16 slot; when any row provides a leading icon,
   the menu reserves the slot across the panel for consistent label alignment.
 

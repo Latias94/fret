@@ -28,7 +28,9 @@ Component examples:
 
 Fret does not have CSS animation events. Motion is composed from:
 
-- Presence/timing driver: `ecosystem/fret-ui-kit/src/primitives/presence.rs`
+- Transition/timing driver: `ecosystem/fret-ui-kit/src/headless/transition.rs`,
+  `ecosystem/fret-ui-kit/src/declarative/transition.rs`
+- Easing presets (including shadcn cubic-bezier): `ecosystem/fret-ui-kit/src/headless/easing.rs`
 - Transform math helpers: `ecosystem/fret-ui-kit/src/declarative/overlay_motion.rs`
 - Per-component wiring in `ecosystem/fret-ui-shadcn/src/*`.
 
@@ -55,13 +57,10 @@ Fret does not have CSS animation events. Motion is composed from:
 
 - Pass: Popover/Tooltip/HoverCard use fade + zoom + side-based slide-in keyed off popper `Side`.
 - Pass: Sheet-like modal panels can slide in/out via `shadcn_modal_slide_transform`.
+- Pass: Motion progress is driven by a shared transition timeline with shadcn-aligned easing.
 - Intentional difference: Fret's presence driver is deterministic and tick-based; it does not inspect
   CSS `animation-name` nor listen to animation lifecycle events (Radix DOM behavior).
 
-## Follow-ups (recommended)
+## Follow-ups (future)
 
-- Add a reusable cubic-bezier easing helper so motion can match shadcn's `ease-[cubic-bezier(...)]`
-  recipes where used (e.g. NavigationMenu). (`ecosystem/fret-ui-kit/src/headless/easing.rs`)
-- Consider a shared "timeline" headless helper (progress + easing + open/close durations) if more
-  components need coordinated multi-property transitions beyond opacity.
-  (`ecosystem/fret-ui-kit/src/headless/transition.rs`, `ecosystem/fret-ui-kit/src/declarative/transition.rs`)
+- Extend motion taxonomy coverage to remaining overlay-ish components as they are added (e.g. NavigationMenu).
