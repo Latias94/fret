@@ -825,10 +825,11 @@ impl TextSystem {
         for (i, l) in layout.lines.iter().enumerate() {
             let base_offset = line_starts[i];
 
+            let min_height_px = (l.max_ascent + l.max_descent).max(font_size_px).max(0.0);
             let line_height_px = l
                 .line_height_opt
-                .unwrap_or_else(|| (l.max_ascent + l.max_descent).max(0.0))
-                .max((l.max_ascent + l.max_descent).max(0.0))
+                .unwrap_or(min_height_px)
+                .max(min_height_px)
                 .max(0.0);
 
             let y_top_px = layout.line_tops_px[i];
@@ -1278,7 +1279,11 @@ fn layout_text(
 
             let ascent_px = ll.max_ascent.max(0.0);
             let descent_px = ll.max_descent.max(0.0);
-            let min_height_px = (ascent_px + descent_px).max(0.0);
+            // `cosmic_text` should usually report ascent/descent, but on some platforms/font stacks
+            // we can end up with zero metrics while still producing glyphs (single-line looks fine,
+            // multi-line collapses/overlaps). Use the configured font size as a conservative floor
+            // so wrapped text always advances vertically.
+            let min_height_px = (ascent_px + descent_px).max(font_size_px).max(0.0);
             let height_px = ll
                 .line_height_opt
                 .unwrap_or(min_height_px)
