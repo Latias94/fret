@@ -193,7 +193,22 @@ fn select_scroll_with_buttons<H: UiHost>(
                             scroll_handle: Some(handle_for_stack.clone()),
                             ..Default::default()
                         },
-                        move |cx| content(cx, active_element_ref),
+                        move |cx| {
+                            vec![cx.container(
+                                ContainerProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.height = Length::Fill;
+                                        layout
+                                    },
+                                    // new-york-v4: `SelectPrimitive.Viewport` uses `p-1`.
+                                    padding: Edges::all(Px(4.0)),
+                                    ..Default::default()
+                                },
+                                move |cx| content(cx, active_element_ref),
+                            )]
+                        },
                     );
 
                     if let Some(active_element) = active_element.get() {
@@ -1535,19 +1550,29 @@ fn select_impl<H: UiHost>(
                                                                                             });
 
                                                                                             // Indicator slot matches upstream: absolute at the end, but reserve `pr-8`.
+                                                                                            let indicator_size = Px(14.0);
+                                                                                            let indicator_top = Px(
+                                                                                                ((item_h.0 - indicator_size.0)
+                                                                                                    * 0.5)
+                                                                                                    .max(0.0),
+                                                                                            );
                                                                                             let indicator = cx.container(
                                                                                                 ContainerProps {
                                                                                                     layout: LayoutStyle {
                                                                                                         position: PositionStyle::Absolute,
                                                                                                         inset: InsetStyle {
-                                                                                                            top: Some(Px(0.0)),
+                                                                                                            top: Some(indicator_top),
                                                                                                             right: Some(Px(8.0)),
-                                                                                                            bottom: Some(Px(0.0)),
+                                                                                                            bottom: None,
                                                                                                             left: None,
                                                                                                         },
                                                                                                         size: SizeStyle {
-                                                                                                            width: Length::Px(Px(16.0)),
-                                                                                                            height: Length::Fill,
+                                                                                                            width: Length::Px(
+                                                                                                                indicator_size,
+                                                                                                            ),
+                                                                                                            height: Length::Px(
+                                                                                                                indicator_size,
+                                                                                                            ),
                                                                                                             ..Default::default()
                                                                                                         },
                                                                                                         ..Default::default()
