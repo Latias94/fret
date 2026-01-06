@@ -9,12 +9,8 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use crate::layout as shadcn_layout;
 
 fn card_chrome(theme: &Theme) -> ChromeRefinement {
-    let bg = theme
-        .color_by_key("card")
-        .unwrap_or(theme.colors.panel_background);
-    let border = theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border);
+    let bg = theme.color_required("card");
+    let border = theme.color_required("border");
     ChromeRefinement::default()
         .rounded(Radius::Lg)
         .border_1()
@@ -147,19 +143,16 @@ impl CardTitle {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme
-            .color_by_key("card.foreground")
-            .or_else(|| theme.color_by_key("foreground"))
-            .unwrap_or(theme.colors.text_primary);
+        let fg = theme.color_required("card-foreground");
 
         let px = theme
             .metric_by_key("component.card.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or(theme.metrics.font_size);
+            .unwrap_or_else(|| theme.metric_required("font.size"));
         let line_height = theme
             .metric_by_key("component.card.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         cx.text_props(TextProps {
             layout: Default::default(),
@@ -190,19 +183,16 @@ impl CardDescription {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or(theme.colors.text_muted);
+        let fg = theme.color_required("muted-foreground");
 
         let px = theme
             .metric_by_key("component.card.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or(theme.metrics.font_size);
+            .unwrap_or_else(|| theme.metric_required("font.size"));
         let line_height = theme
             .metric_by_key("component.card.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         cx.text_props(TextProps {
             layout: Default::default(),
