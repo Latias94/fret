@@ -31,12 +31,12 @@ Fret models alert-dialog outcomes as a modal overlay recipe with safety defaults
 - Pass: Overlay click-to-dismiss is disabled by default in the shadcn recipe (Radix safety outcome).
 - Pass: Initial focus prefers the first registered `Cancel` action when present, via
   `primitives::alert_dialog` registry.
-- Partial: Radix also prevents `interact outside` dismissal at the primitive layer; in Fret, modal
-  outside-press dismissal is an opt-in recipe behavior (barrier click handler), so alert-dialog
-  achieves the same outcome by not installing a closable barrier.
+- Pass: Radix prevents `interact outside` dismissal at the primitive layer; in Fret, modal
+  outside-press dismissal is implemented by the modal barrier policy. AlertDialog exposes the same
+  safety default via `primitives::alert_dialog::alert_dialog_modal_barrier(...)`, which is always
+  non-dismissable by outside press.
 
 ## Follow-ups (recommended)
 
 - Consider exposing an explicit `AlertDialogOptions` builder in `primitives::alert_dialog` if
   non-shadcn consumers need the same safety defaults without adopting the shadcn recipe layer.
-

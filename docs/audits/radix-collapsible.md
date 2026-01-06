@@ -28,10 +28,13 @@ Fret does not use React context or CSS variables. Collapsible outcomes are compo
 
 - Pass: Trigger exposes an "expanded" a11y outcome (mapped to `PressableA11y.expanded`).
 - Note: Fret does not currently model `aria-controls` wiring (content id references).
-- Partial: Dimension-driven collapse animations are modeled as a presence-driven "keep mounted while
-  closing" + cached height clip (no CSS variables yet).
+- Pass: Dimension-driven collapse animations are modeled via a cached height clip driven by a
+  deterministic transition timeline (no CSS variables).
   - Shared helper: `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
   - Implementation: `ecosystem/fret-ui-shadcn/src/collapsible.rs`
   - Backing primitive: `ecosystem/fret-ui-kit/src/primitives/presence.rs`
+  - First-open behavior: when no cached measurement exists, Fret mounts an off-flow measurement
+    wrapper (opacity 0 + absolute positioning) to populate the cached height, then starts the
+    open transition on the next frame.
   - Note: `--radix-collapsible-content-height/width` style variables are not modeled; we keep the
-    measured height in per-element state instead.
+    measured size in per-element state instead.

@@ -4,6 +4,7 @@
 .DS_Store
 /local
 /.fret
+/.worktrees
 /.codanna
 /.fastembed_cache
 /.codannaignore

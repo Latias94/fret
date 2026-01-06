@@ -463,6 +463,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn anchored_props(
+        &mut self,
+        props: crate::element::AnchoredProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Anchored(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn interactivity_gate(
         &mut self,
         present: bool,
@@ -1262,6 +1275,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let scroll_handle = scroll_handle.clone();
             scroll_handle.set_items_count(len);
 
+            let key_cache = match options.measure_mode {
+                crate::element::VirtualListMeasureMode::Measured => {
+                    crate::element::VirtualListKeyCacheMode::AllKeys
+                }
+                crate::element::VirtualListMeasureMode::Fixed => options.key_cache,
+            };
+
             let range = cx.with_state(VirtualListState::default, |state| {
                 let axis = options.axis;
                 let (viewport, offset) = match axis {
@@ -1269,14 +1289,23 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     fret_core::Axis::Horizontal => (state.viewport_w, state.offset_x),
                 };
 
-                let prev_anchor = if viewport.0 > 0.0 && !state.keys.is_empty() {
+                let prev_anchor = if viewport.0 > 0.0 && len > 0 {
                     state.metrics.visible_range(offset, viewport, 0).map(|r| {
                         let idx = r.start_index;
-                        let key = state
-                            .keys
-                            .get(idx)
-                            .copied()
-                            .unwrap_or(idx as crate::ItemKey);
+                        let key = if idx >= len {
+                            idx as crate::ItemKey
+                        } else {
+                            match key_cache {
+                                crate::element::VirtualListKeyCacheMode::AllKeys => state
+                                    .keys
+                                    .get(idx)
+                                    .copied()
+                                    .unwrap_or_else(|| item_key_at(idx)),
+                                crate::element::VirtualListKeyCacheMode::VisibleOnly => {
+                                    item_key_at(idx)
+                                }
+                            }
+                        };
                         let start = state.metrics.offset_for_index(idx);
                         let offset_in_viewport = Px((offset.0 - start.0).max(0.0));
                         (key, offset_in_viewport)
@@ -1296,7 +1325,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     options.scroll_margin,
                 );
 
-                state.metrics.ensure(
+                state.metrics.ensure_with_mode(
+                    options.measure_mode,
                     len,
                     options.estimate_row_height,
                     options.gap,
@@ -1304,38 +1334,52 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 );
 
                 let needs_rebuild = state.items_revision != options.items_revision
-                    || state.keys.len() != len
+                    || state.items_len != len
+                    || state.key_cache != key_cache
                     || prev_cfg != cfg;
 
                 if needs_rebuild {
                     state.items_revision = options.items_revision;
-                    state.keys.clear();
-                    state.keys.reserve(len);
+                    state.items_len = len;
+                    state.key_cache = key_cache;
 
-                    for i in 0..len {
-                        let key = item_key_at(i);
-                        state.keys.push(key);
+                    match key_cache {
+                        crate::element::VirtualListKeyCacheMode::AllKeys => {
+                            state.keys.clear();
+                            state.keys.reserve(len);
+
+                            for i in 0..len {
+                                let key = item_key_at(i);
+                                state.keys.push(key);
+                            }
+                        }
+                        crate::element::VirtualListKeyCacheMode::VisibleOnly => {
+                            state.keys.clear();
+                        }
                     }
 
                     state.metrics.sync_keys(&state.keys, options.items_revision);
 
-                    let has_deferred_scroll = scroll_handle.deferred_scroll_to_item().is_some();
-                    if !has_deferred_scroll && let Some((key, offset_in_viewport)) = prev_anchor {
-                        if let Some(index) = state.keys.iter().position(|&k| k == key) {
-                            let start = state.metrics.offset_for_index(index);
-                            let desired = Px(start.0 + offset_in_viewport.0);
-                            let prev = scroll_handle.offset();
-                            let clamped = state.metrics.clamp_offset(desired, viewport);
-                            match axis {
-                                fret_core::Axis::Vertical => {
-                                    scroll_handle
-                                        .set_offset(fret_core::Point::new(prev.x, clamped));
-                                    state.offset_y = clamped;
-                                }
-                                fret_core::Axis::Horizontal => {
-                                    scroll_handle
-                                        .set_offset(fret_core::Point::new(clamped, prev.y));
-                                    state.offset_x = clamped;
+                    if key_cache == crate::element::VirtualListKeyCacheMode::AllKeys {
+                        let has_deferred_scroll = scroll_handle.deferred_scroll_to_item().is_some();
+                        if !has_deferred_scroll && let Some((key, offset_in_viewport)) = prev_anchor
+                        {
+                            if let Some(index) = state.keys.iter().position(|&k| k == key) {
+                                let start = state.metrics.offset_for_index(index);
+                                let desired = Px(start.0 + offset_in_viewport.0);
+                                let prev = scroll_handle.offset();
+                                let clamped = state.metrics.clamp_offset(desired, viewport);
+                                match axis {
+                                    fret_core::Axis::Vertical => {
+                                        scroll_handle
+                                            .set_offset(fret_core::Point::new(prev.x, clamped));
+                                        state.offset_y = clamped;
+                                    }
+                                    fret_core::Axis::Horizontal => {
+                                        scroll_handle
+                                            .set_offset(fret_core::Point::new(clamped, prev.y));
+                                        state.offset_x = clamped;
+                                    }
                                 }
                             }
                         }
@@ -1367,11 +1411,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 indices
                     .iter()
                     .map(|&idx| {
-                        let key = state
-                            .keys
-                            .get(idx)
-                            .copied()
-                            .unwrap_or(idx as crate::ItemKey);
+                        let key = if idx >= len {
+                            idx as crate::ItemKey
+                        } else {
+                            match key_cache {
+                                crate::element::VirtualListKeyCacheMode::AllKeys => state
+                                    .keys
+                                    .get(idx)
+                                    .copied()
+                                    .unwrap_or_else(|| item_key_at(idx)),
+                                crate::element::VirtualListKeyCacheMode::VisibleOnly => {
+                                    item_key_at(idx)
+                                }
+                            }
+                        };
                         state.metrics.virtual_item(idx, key)
                     })
                     .collect::<Vec<_>>()
@@ -1387,6 +1440,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     items_revision: options.items_revision,
                     estimate_row_height: options.estimate_row_height,
                     measure_mode: options.measure_mode,
+                    key_cache,
                     overscan: options.overscan,
                     scroll_margin: options.scroll_margin,
                     gap: options.gap,

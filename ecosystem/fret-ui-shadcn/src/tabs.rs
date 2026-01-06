@@ -16,6 +16,11 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a *= mul;
+    c
+}
+
 fn apply_trigger_inherited_style(
     mut element: AnyElement,
     fg: Color,
@@ -75,27 +80,22 @@ fn tabs_list_padding(theme: &Theme) -> Px {
 }
 
 fn tabs_list_bg(theme: &Theme) -> Color {
-    theme
-        .color_by_key("muted")
-        .unwrap_or(theme.colors.panel_background)
+    theme.color_required("muted")
 }
 
 fn tabs_list_fg_muted(theme: &Theme) -> Color {
-    theme
-        .color_by_key("muted.foreground")
-        .or_else(|| theme.color_by_key("muted-foreground"))
-        .unwrap_or(theme.colors.text_muted)
+    theme.color_required("muted-foreground")
 }
 
 fn tabs_trigger_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.tabs.trigger.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or(theme.metrics.font_size);
+        .unwrap_or_else(|| theme.metric_required("font.size"));
     let line_height = theme
         .metric_by_key("component.tabs.trigger.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or(theme.metrics.font_line_height);
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
     TextStyle {
         font: FontId::default(),
         size: px,
@@ -112,16 +112,14 @@ fn tabs_trigger_radius(theme: &Theme) -> Px {
 }
 
 fn tabs_trigger_bg_active(theme: &Theme) -> Color {
-    theme
-        .color_by_key("background")
-        .unwrap_or(theme.colors.surface_background)
+    theme.color_required("background")
 }
 
 fn tabs_trigger_border_active(theme: &Theme) -> Color {
     theme
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
-        .unwrap_or(theme.colors.panel_border)
+        .expect("missing theme token: input/border")
 }
 
 fn tabs_trigger_border_width(theme: &Theme) -> Px {
@@ -371,10 +369,8 @@ impl Tabs {
                                 }
 
                                 let fg_muted = tabs_list_fg_muted(&theme);
-                                let fg_disabled = theme.colors.text_disabled;
-                                let fg_active = theme
-                                    .color_by_key("foreground")
-                                    .unwrap_or(theme.colors.text_primary);
+                                let fg_active = theme.color_required("foreground");
+                                let fg_disabled = alpha_mul(fg_active, 0.5);
                                 let radius = tabs_trigger_radius(&theme);
                                 let ring = decl_style::focus_ring(&theme, radius);
                                 let bg_active = tabs_trigger_bg_active(&theme);
@@ -547,16 +543,17 @@ impl Tabs {
             ));
 
             if !force_mount_content {
-                children.push(cx.semantics(
-                    SemanticsProps {
-                        layout: tab_panel_layout,
-                        role: SemanticsRole::TabPanel,
-                        label: (!active_label.is_empty()).then_some(active_label),
-                        labelled_by_element: selected_tab_element.get(),
-                        ..Default::default()
-                    },
+                if let Some(panel) = radix_tabs::tab_panel_with_gate(
+                    cx,
+                    true,
+                    false,
+                    tab_panel_layout,
+                    (!active_label.is_empty()).then_some(active_label),
+                    selected_tab_element.get(),
                     move |_cx| active_children,
-                ));
+                ) {
+                    children.push(panel);
+                }
             }
 
             if force_mount_content {
@@ -568,18 +565,17 @@ impl Tabs {
                     let label = item.label.clone();
                     let content = item.content.clone();
 
-                    children.push(cx.interactivity_gate(active, active, move |cx| {
-                        vec![cx.semantics(
-                            SemanticsProps {
-                                layout: tab_panel_layout,
-                                role: SemanticsRole::TabPanel,
-                                label: (!label.is_empty()).then_some(label),
-                                labelled_by_element,
-                                ..Default::default()
-                            },
-                            move |_cx| content,
-                        )]
-                    }));
+                    let panel = radix_tabs::tab_panel_with_gate(
+                        cx,
+                        active,
+                        true,
+                        tab_panel_layout,
+                        (!label.is_empty()).then_some(label),
+                        labelled_by_element,
+                        move |_cx| content,
+                    )
+                    .expect("force-mounted tabs content should always render a subtree");
+                    children.push(panel);
                 }
             }
 

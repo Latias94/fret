@@ -40,21 +40,10 @@ pub fn empty<H: UiHost>(
     let title = title.into();
     let theme = Theme::global(&*cx.app).clone();
 
-    let bg = theme
-        .color_by_key("card")
-        .or_else(|| theme.color_by_key("background"))
-        .unwrap_or(theme.colors.panel_background);
-    let border = theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border);
-
-    let fg = theme
-        .color_by_key("foreground")
-        .unwrap_or(theme.colors.text_primary);
-    let muted_fg = theme
-        .color_by_key("muted.foreground")
-        .or_else(|| theme.color_by_key("muted-foreground"))
-        .unwrap_or(theme.colors.text_muted);
+    let bg = theme.color_required("card");
+    let border = theme.color_required("border");
+    let fg = theme.color_required("foreground");
+    let muted_fg = theme.color_required("muted-foreground");
 
     let props = decl_style::container_props(
         &theme,
@@ -71,20 +60,20 @@ pub fn empty<H: UiHost>(
         let title_px = theme
             .metric_by_key("component.empty.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or(theme.metrics.font_size);
+            .unwrap_or_else(|| theme.metric_required("font.size"));
         let title_lh = theme
             .metric_by_key("component.empty.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         let desc_px = theme
             .metric_by_key("component.empty.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or(theme.metrics.font_size);
+            .unwrap_or_else(|| theme.metric_required("font.size"));
         let desc_lh = theme
             .metric_by_key("component.empty.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         vec![stack::vstack(
             cx,

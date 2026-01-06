@@ -219,7 +219,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
-                pointer_type: fret_core::PointerType::Mouse,
+                pointer_type: Default::default(),
             }),
         );
         ui.dispatch_event(
@@ -230,7 +230,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
-                pointer_type: fret_core::PointerType::Mouse,
+                pointer_type: Default::default(),
             }),
         );
         assert_eq!(
@@ -273,7 +273,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
-                pointer_type: fret_core::PointerType::Mouse,
+                pointer_type: Default::default(),
             }),
         );
         ui.dispatch_event(
@@ -284,7 +284,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
-                pointer_type: fret_core::PointerType::Mouse,
+                pointer_type: Default::default(),
             }),
         );
         assert_eq!(

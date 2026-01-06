@@ -6,16 +6,15 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, PressableProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    PositionStyle, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence,
-    OverlayRequest, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space,
 };
 
 use crate::layout as shadcn_layout;
@@ -110,7 +109,7 @@ impl Sheet {
 
             let trigger = trigger(cx);
             let id = trigger.id;
-            let overlay_root_name = OverlayController::modal_root_name(id);
+            let overlay_root_name = radix_dialog::dialog_root_name(id);
 
             let motion = OverlayController::transition_with_durations_and_easing(
                 cx,
@@ -125,9 +124,14 @@ impl Sheet {
             };
 
             if overlay_presence.present {
+                let open = self.open;
+                let open_for_children = open.clone();
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
                 let sheet_side = self.side;
+                let dialog_options = radix_dialog::DialogOptions::default()
+                    .dismiss_on_overlay_press(overlay_closable)
+                    .initial_focus(None);
 
                 let default_size = theme
                     .metric_by_key("component.sheet.size")
@@ -137,68 +141,25 @@ impl Sheet {
 
                 let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let barrier_layout = LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(0.0)),
-                        },
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-
-                    let barrier = if overlay_closable {
-                        let open = self.open.clone();
-                        cx.pressable(
-                            PressableProps {
-                                layout: barrier_layout,
-                                enabled: true,
-                                focusable: false,
+                    let barrier_fill = cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            move |cx, _st| {
-                                cx.pressable_set_bool(&open, false);
-                                vec![cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            size: SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                        padding: Edges::all(Px(0.0)),
-                                        background: Some(overlay_color),
-                                        shadow: None,
-                                        border: Edges::all(Px(0.0)),
-                                        border_color: None,
-                                        corner_radii: Corners::all(Px(0.0)),
-                                    },
-                                    |_cx| Vec::new(),
-                                )]
-                            },
-                        )
-                    } else {
-                        cx.container(
-                            ContainerProps {
-                                layout: barrier_layout,
-                                padding: Edges::all(Px(0.0)),
-                                background: Some(overlay_color),
-                                shadow: None,
-                                border: Edges::all(Px(0.0)),
-                                border_color: None,
-                                corner_radii: Corners::all(Px(0.0)),
-                            },
-                            |_cx| Vec::new(),
-                        )
-                    };
+                            padding: Edges::all(Px(0.0)),
+                            background: Some(overlay_color),
+                            shadow: None,
+                            border: Edges::all(Px(0.0)),
+                            border_color: None,
+                            corner_radii: Corners::all(Px(0.0)),
+                        },
+                        |_cx| Vec::new(),
+                    );
 
                     let content = content(cx);
 
@@ -308,29 +269,35 @@ impl Sheet {
                             opacity,
                         },
                         move |cx| {
-                            vec![
-                                barrier,
-                                cx.visual_transform_props(
-                                    VisualTransformProps {
-                                        layout: opacity_layout,
-                                        transform: slide,
-                                    },
-                                    move |_cx| vec![wrapper],
-                                ),
-                            ]
+                            let content = cx.visual_transform_props(
+                                VisualTransformProps {
+                                    layout: opacity_layout,
+                                    transform: slide,
+                                },
+                                move |_cx| vec![wrapper],
+                            );
+
+                            radix_dialog::modal_dialog_layer_children(
+                                cx,
+                                open_for_children.clone(),
+                                dialog_options,
+                                vec![barrier_fill],
+                                content,
+                            )
                         },
                     )]
                 });
 
-                let mut request = OverlayRequest::modal(
+                let mut request = radix_dialog::modal_dialog_request_with_options(
                     id,
-                    Some(id),
-                    self.open,
+                    id,
+                    open,
                     overlay_presence,
+                    dialog_options,
                     overlay_children,
                 );
                 request.root_name = Some(overlay_root_name);
-                OverlayController::request(cx, request);
+                radix_dialog::request_modal_dialog(cx, request);
             }
 
             trigger
@@ -368,14 +335,10 @@ impl SheetContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let bg = theme
-            .color_by_key("background")
-            .unwrap_or(theme.colors.panel_background);
-        let border = theme
-            .color_by_key("border")
-            .unwrap_or(theme.colors.panel_border);
+        let bg = theme.color_required("background");
+        let border = theme.color_required("border");
 
-        let radius = theme.metrics.radius_lg;
+        let radius = theme.metric_required("metric.radius.lg");
         let shadow = decl_style::shadow_lg(&theme, radius);
 
         let chrome = ChromeRefinement::default()
@@ -480,16 +443,16 @@ impl SheetTitle {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("foreground")
-            .unwrap_or(theme.colors.text_primary);
+            .unwrap_or_else(|| theme.color_required("foreground"));
 
         let px = theme
             .metric_by_key("component.sheet.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or(theme.metrics.font_size);
+            .unwrap_or_else(|| theme.metric_required("font.size"));
         let line_height = theme
             .metric_by_key("component.sheet.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         cx.text_props(TextProps {
             layout: Default::default(),
@@ -524,16 +487,16 @@ impl SheetDescription {
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or(theme.colors.text_muted);
+            .unwrap_or_else(|| theme.color_required("muted.foreground"));
 
         let px = theme
             .metric_by_key("component.sheet.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or(theme.metrics.font_size);
+            .unwrap_or_else(|| theme.metric_required("font.size"));
         let line_height = theme
             .metric_by_key("component.sheet.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         cx.text_props(TextProps {
             layout: Default::default(),
@@ -565,6 +528,7 @@ mod tests {
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
     use fret_ui::UiTree;
+    use fret_ui::element::PressableProps;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[derive(Default)]

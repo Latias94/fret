@@ -35,13 +35,13 @@ Fret does not use React context. Instead, dialog behavior is composed via:
 - Pass: Escape dismiss is handled by the shared dismissible root used by modal overlays.
 - Pass: Trigger can stamp Radix-like `expanded` + `controls` relationships via
   `apply_dialog_trigger_a11y(...)`.
-- Partial: Modal outside-click dismissal is authored via the recipe's overlay barrier, rather than
-  a generic "outside press observer" pass (which is intentionally click-through only for non-modal
-  overlays in Fret).
+- Pass: Modal outside-click dismissal is authored via a Radix-named primitive helper
+  (`primitives::dialog::modal_barrier(...)`), keeping the policy reusable outside the shadcn layer.
+  This still uses a barrier element (rather than the outside-press observer pass), which is
+  intentional: the observer is click-through for non-modal overlays in Fret.
 - Note: Title/description presence warnings are not currently modeled (Radix dev warnings).
 
 ## Follow-ups (recommended)
 
 - Consider a `DialogOptions` builder in `primitives::dialog` to make focus targets and dismissal
   knobs explicit (e.g. overlay-click closable vs not).
-

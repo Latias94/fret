@@ -33,6 +33,8 @@ impl ElementHostWidget {
             return Size::new(Px(0.0), Px(0.0));
         };
 
+        self.render_transform = None;
+
         self.hit_testable = match &instance {
             ElementInstance::Pressable(p) => p.enabled,
             ElementInstance::PointerRegion(p) => p.enabled,
@@ -42,6 +44,7 @@ impl ElementHostWidget {
             ElementInstance::DismissibleLayer(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::VisualTransform(_) => false,
+            ElementInstance::Anchored(_) => false,
             ElementInstance::Spinner(_) => false,
             _ => true,
         };
@@ -53,6 +56,7 @@ impl ElementHostWidget {
             ElementInstance::InteractivityGate(p) => p.present && p.interactive,
             ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::VisualTransform(_) => true,
+            ElementInstance::Anchored(_) => true,
             ElementInstance::Spinner(_) => false,
             _ => true,
         };
@@ -90,6 +94,7 @@ impl ElementHostWidget {
             ElementInstance::InteractivityGate(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::VisualTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::Anchored(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Pressable(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::PointerRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::DismissibleLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -181,15 +186,22 @@ impl ElementHostWidget {
                     Px((desired.height.0 - pad_h).max(0.0)),
                 );
                 let inner_bounds = Rect::new(inner_origin, inner_size);
+                let probe_inner_bounds = Rect::new(inner_origin, inner_avail);
 
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
-                    layout_positioned_child(
-                        cx,
-                        child,
-                        inner_bounds,
-                        positioned_layout_style(layout_style),
-                    );
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                inner_bounds,
+                                probe_inner_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, inner_bounds, style),
+                    }
                 }
 
                 desired
@@ -213,7 +225,18 @@ impl ElementHostWidget {
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
-                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
                 }
                 desired
             }
@@ -236,7 +259,18 @@ impl ElementHostWidget {
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
-                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
                 }
                 desired
             }
@@ -259,7 +293,18 @@ impl ElementHostWidget {
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
-                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
                 }
                 desired
             }
@@ -282,7 +327,18 @@ impl ElementHostWidget {
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
-                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
                 }
                 desired
             }
@@ -309,7 +365,18 @@ impl ElementHostWidget {
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
-                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
                 }
                 desired
             }
@@ -332,8 +399,81 @@ impl ElementHostWidget {
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
-                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
                 }
+                desired
+            }
+            ElementInstance::Anchored(props) => {
+                // Layout-driven anchored placement. We measure the child subtree first, then
+                // compute a placement transform relative to the wrapper bounds.
+
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired_child = max_child;
+                let desired = clamp_to_constraints(desired_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
+                }
+
+                let outer = crate::overlay_placement::inset_rect(cx.bounds, props.outer_margin);
+                let layout = crate::overlay_placement::anchored_panel_layout_sized_ex(
+                    outer,
+                    props.anchor,
+                    desired_child,
+                    props.side_offset,
+                    props.side,
+                    props.align,
+                    props.options,
+                );
+
+                let delta = fret_core::Point::new(
+                    Px(layout.rect.origin.x.0 - cx.bounds.origin.x.0),
+                    Px(layout.rect.origin.y.0 - cx.bounds.origin.y.0),
+                );
+                self.render_transform = Some(fret_core::Transform2D::translation(delta));
+
+                if let Some(out) = props.layout_out {
+                    let _ = cx.app.models_mut().update(&out, |v| {
+                        if *v != layout {
+                            *v = layout;
+                        }
+                    });
+                }
+
                 desired
             }
             ElementInstance::DismissibleLayer(props) => {
@@ -366,7 +506,18 @@ impl ElementHostWidget {
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
-                    layout_positioned_child(cx, child, base, positioned_layout_style(layout_style));
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
                 }
                 desired
             }
@@ -376,6 +527,11 @@ impl ElementHostWidget {
             ElementInstance::Text(props) => {
                 let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
+                let font_stack_key = cx
+                    .app
+                    .global::<fret_runtime::TextFontStackKey>()
+                    .map(|k| k.0)
+                    .unwrap_or(0);
                 let font_size = cx
                     .theme()
                     .metric_by_key("font.size")
@@ -404,9 +560,34 @@ impl ElementHostWidget {
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
                 };
-                let metrics = cx.services.text().measure(&props.text, &style, constraints);
 
-                self.text_cache.metrics = Some(metrics);
+                let scale_bits = cx.scale_factor.to_bits();
+                let can_reuse_metrics = self.text_cache.metrics.is_some()
+                    && self.text_cache.last_text.as_ref() == Some(&props.text)
+                    && self.text_cache.last_style.as_ref() == Some(&style)
+                    && self.text_cache.last_wrap == Some(props.wrap)
+                    && self.text_cache.last_overflow == Some(props.overflow)
+                    && self.text_cache.last_measure_width == Some(measure_width)
+                    && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
+                    && self.text_cache.last_theme_revision == Some(theme_revision)
+                    && self.text_cache.last_font_stack_key == Some(font_stack_key);
+
+                let metrics = if can_reuse_metrics {
+                    self.text_cache.metrics.expect("cached metrics")
+                } else {
+                    let metrics = cx.services.text().measure(&props.text, &style, constraints);
+                    self.text_cache.metrics = Some(metrics);
+                    self.text_cache.measured_scale_factor_bits = Some(scale_bits);
+                    self.text_cache.last_text = Some(props.text.clone());
+                    self.text_cache.last_style = Some(style);
+                    self.text_cache.last_wrap = Some(props.wrap);
+                    self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_measure_width = Some(measure_width);
+                    self.text_cache.last_theme_revision = Some(theme_revision);
+                    self.text_cache.last_font_stack_key = Some(font_stack_key);
+                    metrics
+                };
+
                 let _ = theme_revision;
 
                 clamp_to_constraints(metrics.size, props.layout, cx.available)

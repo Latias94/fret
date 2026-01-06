@@ -10,7 +10,7 @@ use fret_core::{
 use slotmap::SlotMap;
 use std::{
     borrow::Cow,
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     hash::{Hash, Hasher},
     sync::Arc,
 };
@@ -415,6 +415,51 @@ fn collect_font_names(db: &cosmic_text::fontdb::Database) -> Vec<String> {
     names
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct TextMeasureKey {
+    font: fret_core::FontId,
+    font_stack_key: u64,
+    size_bits: u32,
+    weight: u16,
+    line_height_bits: Option<u32>,
+    letter_spacing_bits: Option<u32>,
+    max_width_bits: Option<u32>,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+    scale_bits: u32,
+}
+
+impl TextMeasureKey {
+    fn new(style: &TextStyle, constraints: TextConstraints, font_stack_key: u64) -> Self {
+        let max_width_bits = constraints.max_width.map(|w| w.0.to_bits());
+        Self {
+            font: style.font.clone(),
+            font_stack_key,
+            size_bits: style.size.0.to_bits(),
+            weight: style.weight.0,
+            line_height_bits: style.line_height.map(|px| px.0.to_bits()),
+            letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
+            max_width_bits,
+            wrap: constraints.wrap,
+            overflow: constraints.overflow,
+            scale_bits: constraints.scale_factor.to_bits(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct TextMeasureEntry {
+    text_hash: u64,
+    text: Arc<str>,
+    metrics: TextMetrics,
+}
+
+fn hash_text(text: &str) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    text.hash(&mut hasher);
+    hasher.finish()
+}
+
 pub struct TextSystem {
     font_system: FontSystem,
     swash_cache: SwashCache,
@@ -425,6 +470,7 @@ pub struct TextSystem {
     blobs: SlotMap<TextBlobId, TextBlob>,
     blob_cache: HashMap<TextBlobKey, TextBlobId>,
     blob_key_by_id: HashMap<TextBlobId, TextBlobKey>,
+    measure_cache: HashMap<TextMeasureKey, VecDeque<TextMeasureEntry>>,
 
     mask_atlas: GlyphAtlas,
     color_atlas: GlyphAtlas,
@@ -480,6 +526,7 @@ impl TextSystem {
             self.blobs.clear();
             self.blob_cache.clear();
             self.blob_key_by_id.clear();
+            self.measure_cache.clear();
             self.mask_atlas.reset();
             self.color_atlas.reset();
         }
@@ -616,6 +663,7 @@ impl TextSystem {
             blobs: SlotMap::with_key(),
             blob_cache: HashMap::new(),
             blob_key_by_id: HashMap::new(),
+            measure_cache: HashMap::new(),
 
             mask_atlas: GlyphAtlas::new(atlas_width, atlas_height),
             color_atlas: GlyphAtlas::new(atlas_width, atlas_height),
@@ -673,6 +721,7 @@ impl TextSystem {
         self.blobs.clear();
         self.blob_cache.clear();
         self.blob_key_by_id.clear();
+        self.measure_cache.clear();
         self.mask_atlas.reset();
         self.color_atlas.reset();
         true
@@ -978,6 +1027,18 @@ impl TextSystem {
         style: &TextStyle,
         constraints: TextConstraints,
     ) -> TextMetrics {
+        const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
+
+        let key = TextMeasureKey::new(style, constraints, self.font_stack_key);
+        let text_hash = hash_text(text);
+        if let Some(bucket) = self.measure_cache.get_mut(&key)
+            && let Some(hit) = bucket
+                .iter()
+                .find(|e| e.text_hash == text_hash && e.text.as_ref() == text)
+        {
+            return hit.metrics;
+        }
+
         let scale = constraints.scale_factor.max(1.0);
         let font_size_px = (style.size.0 * scale).max(1.0);
 
@@ -995,7 +1056,7 @@ impl TextSystem {
                 attrs = attrs.metrics(Metrics::new(font_size_px, line_height_px));
             }
         }
-        layout_text(
+        let metrics = layout_text(
             &mut self.font_system,
             &mut self.scratch,
             text,
@@ -1005,7 +1066,19 @@ impl TextSystem {
             scale,
         )
         .0
-        .metrics
+        .metrics;
+
+        let bucket = self.measure_cache.entry(key).or_default();
+        bucket.push_back(TextMeasureEntry {
+            text_hash,
+            text: Arc::<str>::from(text),
+            metrics,
+        });
+        while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {
+            bucket.pop_front();
+        }
+
+        metrics
     }
 
     pub fn caret_x(&self, blob: TextBlobId, index: usize) -> Option<Px> {

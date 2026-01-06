@@ -35,32 +35,23 @@ fn button_h(theme: &Theme) -> Px {
 }
 
 fn border_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border)
+    theme.color_required("border")
 }
 
 fn accent(theme: &Theme) -> Color {
-    theme
-        .color_by_key("accent")
-        .unwrap_or(theme.colors.hover_background)
+    theme.color_required("accent")
 }
 
 fn accent_fg(theme: &Theme) -> Color {
-    theme
-        .color_by_key("accent.foreground")
-        .or_else(|| theme.color_by_key("accent-foreground"))
-        .unwrap_or(theme.colors.text_primary)
+    theme.color_required("accent-foreground")
 }
 
 fn base_fg(theme: &Theme) -> Color {
-    theme
-        .color_by_key("foreground")
-        .unwrap_or(theme.colors.text_primary)
+    theme.color_required("foreground")
 }
 
 fn disabled_fg(theme: &Theme) -> Color {
-    theme.colors.text_disabled
+    alpha(base_fg(theme), 0.5)
 }
 
 #[derive(Debug, Clone)]
@@ -198,9 +189,7 @@ impl PaginationLink {
         let focus_ring = decl_style::focus_ring(&theme, r);
 
         let base_bg = if self.is_active {
-            theme
-                .color_by_key("background")
-                .unwrap_or(theme.colors.surface_background)
+            theme.color_required("background")
         } else {
             Color::TRANSPARENT
         };

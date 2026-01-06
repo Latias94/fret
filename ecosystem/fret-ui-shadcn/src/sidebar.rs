@@ -17,6 +17,11 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 use crate::hover_card::{HoverCard, HoverCardAlign};
 use crate::layout as shadcn_layout;
 
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a *= mul;
+    c
+}
+
 fn sidebar_width(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.sidebar.width")
@@ -33,14 +38,14 @@ fn sidebar_bg(theme: &Theme) -> Color {
     theme
         .color_by_key("sidebar.background")
         .or_else(|| theme.color_by_key("sidebar"))
-        .unwrap_or(theme.colors.panel_background)
+        .unwrap_or_else(|| theme.color_required("sidebar"))
 }
 
 fn sidebar_fg(theme: &Theme) -> Color {
     theme
         .color_by_key("sidebar.foreground")
         .or_else(|| theme.color_by_key("sidebar-foreground"))
-        .unwrap_or(theme.colors.text_primary)
+        .unwrap_or_else(|| theme.color_required("sidebar-foreground"))
 }
 
 fn sidebar_border(theme: &Theme) -> Color {
@@ -48,7 +53,7 @@ fn sidebar_border(theme: &Theme) -> Color {
         .color_by_key("sidebar.border")
         .or_else(|| theme.color_by_key("sidebar-border"))
         .or_else(|| theme.color_by_key("border"))
-        .unwrap_or(theme.colors.panel_border)
+        .unwrap_or_else(|| theme.color_required("sidebar-border"))
 }
 
 fn sidebar_accent(theme: &Theme) -> Color {
@@ -56,7 +61,7 @@ fn sidebar_accent(theme: &Theme) -> Color {
         .color_by_key("sidebar.accent")
         .or_else(|| theme.color_by_key("sidebar-accent"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or(theme.colors.hover_background)
+        .unwrap_or_else(|| theme.color_required("sidebar-accent"))
 }
 
 fn sidebar_accent_fg(theme: &Theme) -> Color {
@@ -64,7 +69,7 @@ fn sidebar_accent_fg(theme: &Theme) -> Color {
         .color_by_key("sidebar.accent.foreground")
         .or_else(|| theme.color_by_key("sidebar-accent-foreground"))
         .or_else(|| theme.color_by_key("accent-foreground"))
-        .unwrap_or(theme.colors.text_primary)
+        .unwrap_or_else(|| theme.color_required("sidebar-accent-foreground"))
 }
 
 fn sidebar_ring(theme: &Theme, radius: Px) -> RingStyle {
@@ -75,11 +80,11 @@ fn menu_button_style(theme: &Theme) -> TextStyle {
     let size = theme
         .metric_by_key("component.sidebar.menu_button_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or(theme.metrics.font_size);
+        .unwrap_or_else(|| theme.metric_required("font.size"));
     let line_height = theme
         .metric_by_key("component.sidebar.menu_button_line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or(theme.metrics.font_line_height);
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
     TextStyle {
         font: FontId::default(),
         size,
@@ -444,7 +449,7 @@ impl SidebarMenuButton {
             };
 
             let fg = if disabled {
-                theme.colors.text_disabled
+                alpha_mul(sidebar_fg(&theme), 0.5)
             } else if active || st.hovered || st.pressed {
                 sidebar_accent_fg(&theme)
             } else {
@@ -537,13 +542,13 @@ impl SidebarMenuButton {
             .bg(ColorRef::Color(
                 theme
                     .color_by_key("popover.background")
-                    .unwrap_or(theme.colors.menu_background),
+                    .unwrap_or_else(|| theme.color_required("popover.background")),
             ))
             .border_1()
             .border_color(ColorRef::Color(
                 theme
-                    .color_by_key("popover.border")
-                    .unwrap_or(theme.colors.menu_border),
+                    .color_by_key("border")
+                    .unwrap_or_else(|| theme.color_required("border")),
             ))
             .rounded(Radius::Md)
             .p(Space::N2);

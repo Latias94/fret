@@ -150,6 +150,7 @@ pub struct Table<'a, TData> {
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     state: super::TableState,
     core_row_model: OnceCell<RowModel<'a, TData>>,
+    filtered_row_model: OnceCell<RowModel<'a, TData>>,
     sorted_row_model: OnceCell<RowModel<'a, TData>>,
     paginated_row_model: OnceCell<RowModel<'a, TData>>,
     selected_row_model: OnceCell<RowModel<'a, TData>>,
@@ -171,6 +172,7 @@ impl<'a, TData> Table<'a, TData> {
             get_sub_rows: builder.get_sub_rows,
             state: builder.state,
             core_row_model: OnceCell::new(),
+            filtered_row_model: OnceCell::new(),
             sorted_row_model: OnceCell::new(),
             paginated_row_model: OnceCell::new(),
             selected_row_model: OnceCell::new(),
@@ -226,8 +228,23 @@ impl<'a, TData> Table<'a, TData> {
         })
     }
 
-    pub fn pre_sorted_row_model(&self) -> &RowModel<'a, TData> {
+    pub fn pre_filtered_row_model(&self) -> &RowModel<'a, TData> {
         self.core_row_model()
+    }
+
+    pub fn filtered_row_model(&self) -> &RowModel<'a, TData> {
+        self.filtered_row_model.get_or_init(|| {
+            super::filter_row_model(
+                self.pre_filtered_row_model(),
+                &self.columns,
+                &self.state.column_filters,
+                self.state.global_filter.clone(),
+            )
+        })
+    }
+
+    pub fn pre_sorted_row_model(&self) -> &RowModel<'a, TData> {
+        self.filtered_row_model()
     }
 
     pub fn sorted_row_model(&self) -> &RowModel<'a, TData> {

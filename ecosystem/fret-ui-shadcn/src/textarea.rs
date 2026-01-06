@@ -101,7 +101,7 @@ pub fn textarea<H: UiHost>(
 
     let font_line_height = theme
         .metric_by_key("font.line_height")
-        .unwrap_or(theme.metrics.font_line_height);
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
     let text_style = TextStyle {
         font: FontId::default(),
         size: resolved.text_px,
@@ -120,7 +120,7 @@ pub fn textarea<H: UiHost>(
     chrome.selection_color = alpha_mul(resolved.selection_color, 0.65);
     chrome.caret_color = resolved.text_color;
     chrome.preedit_bg_color = alpha_mul(resolved.selection_color, 0.22);
-    chrome.preedit_underline_color = theme.colors.accent;
+    chrome.preedit_underline_color = resolved.selection_color;
     chrome.focus_ring = Some(decl_style::focus_ring(&theme, resolved.radius));
 
     let root_layout = decl_style::layout_style(&theme, layout.relative().w_full());

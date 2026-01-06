@@ -127,6 +127,13 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::PopTransform);
                 }
             }
+            ElementInstance::Anchored(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
             ElementInstance::DismissibleLayer(props) => {
                 paint_children_clipped_if(
                     cx,
@@ -323,7 +330,8 @@ impl ElementHostWidget {
                     self.element,
                     crate::element::VirtualListState::default,
                     |state| {
-                        state.metrics.ensure(
+                        state.metrics.ensure_with_mode(
+                            props.measure_mode,
                             props.len,
                             props.estimate_row_height,
                             props.gap,

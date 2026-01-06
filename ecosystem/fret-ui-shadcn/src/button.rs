@@ -65,44 +65,22 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color, Color, Color) {
     let transparent = Color::TRANSPARENT;
 
-    let bg_primary = theme.color_by_key("primary").unwrap_or(theme.colors.accent);
-    let fg_primary = theme
-        .color_by_key("primary-foreground")
-        .or_else(|| theme.color_by_key("primary.foreground"))
-        .unwrap_or(theme.colors.text_primary);
+    let bg_primary = theme.color_required("primary");
+    let fg_primary = theme.color_required("primary-foreground");
 
-    let bg_secondary = theme
-        .color_by_key("secondary")
-        .unwrap_or(theme.colors.panel_background);
-    let fg_secondary = theme
-        .color_by_key("secondary-foreground")
-        .or_else(|| theme.color_by_key("secondary.foreground"))
-        .unwrap_or(theme.colors.text_primary);
+    let bg_secondary = theme.color_required("secondary");
+    let fg_secondary = theme.color_required("secondary-foreground");
 
-    let bg_destructive = theme
-        .color_by_key("destructive")
-        .unwrap_or(theme.colors.selection_background);
-    let fg_destructive = theme
-        .color_by_key("destructive-foreground")
-        .or_else(|| theme.color_by_key("destructive.foreground"))
-        .unwrap_or(theme.colors.text_primary);
+    let bg_destructive = theme.color_required("destructive");
+    let fg_destructive = theme.color_required("destructive-foreground");
 
-    let fg_default = theme
-        .color_by_key("foreground")
-        .unwrap_or(theme.colors.text_primary);
+    let fg_default = theme.color_required("foreground");
 
-    let bg_accent = theme
-        .color_by_key("accent")
-        .or_else(|| theme.color_by_key("accent.background"))
-        .unwrap_or(theme.colors.hover_background);
+    let bg_accent = theme.color_required("accent");
 
-    let bg_background = theme
-        .color_by_key("background")
-        .unwrap_or(theme.colors.surface_background);
+    let bg_background = theme.color_required("background");
 
-    let border = theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border);
+    let border = theme.color_required("border");
 
     match variant {
         ButtonVariant::Default => (
@@ -152,9 +130,7 @@ fn variant_colors(theme: &Theme, variant: ButtonVariant) -> (Color, Color, Color
 
 fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
     let px = size.component_size().control_text_px(theme);
-    let line_height = theme
-        .metric_by_key("font.line_height")
-        .unwrap_or(theme.metrics.font_line_height);
+    let line_height = theme.metric_required("font.line_height");
 
     TextStyle {
         font: FontId::default(),
@@ -319,7 +295,7 @@ impl Button {
                 if focused && variant == ButtonVariant::Outline && !user_border_override {
                     border_color = theme
                         .color_by_key("ring")
-                        .unwrap_or(theme.colors.focus_ring);
+                        .unwrap_or_else(|| theme.color_required("ring"));
                 }
 
                 let padding = if variant == ButtonVariant::Link || is_icon {
@@ -644,9 +620,7 @@ mod tests {
         let mut services = FakeServices;
 
         let theme = Theme::global(&app).clone();
-        let ring = theme
-            .color_by_key("ring")
-            .unwrap_or(theme.colors.focus_ring);
+        let ring = theme.color_required("ring");
 
         let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
         let rendered_out: Rc<RefCell<Option<AnyElement>>> = Rc::new(RefCell::new(None));

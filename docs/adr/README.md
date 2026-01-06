@@ -196,6 +196,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
 - `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
+- `docs/adr/0104-layout-driven-anchored-overlays.md`
 - `docs/adr/0032-style-tokens-and-theme-resolution.md`
 - `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - `docs/adr/0102-semantic-theme-keys-and-extensible-token-registry.md`

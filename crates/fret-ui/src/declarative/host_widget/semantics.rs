@@ -173,6 +173,7 @@ impl ElementHostWidget {
             | ElementInstance::Spinner(_)
             | ElementInstance::Opacity(_)
             | ElementInstance::VisualTransform(_)
+            | ElementInstance::Anchored(_)
             | ElementInstance::Scroll(_) => {
                 cx.set_role(SemanticsRole::Generic);
             }

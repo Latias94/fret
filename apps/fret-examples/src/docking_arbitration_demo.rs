@@ -13,7 +13,7 @@ use fret_launch::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
-use fret_ui::{Invalidation, UiTree};
+use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_docking::{
     DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService, DockViewportOverlayHooks,
     DockViewportOverlayHooksService, handle_dock_before_close_window, handle_dock_op,
@@ -94,9 +94,9 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                 cx.observe_model(&models.dialog_open, Invalidation::Layout);
                 cx.observe_model(&models.last_viewport_input, Invalidation::Layout);
 
-                let theme = cx.theme().snapshot();
-                let padding = theme.metrics.padding_md;
-                let background = theme.colors.surface_background;
+                let theme = Theme::global(&*cx.app);
+                let padding = theme.metric_required("metric.padding.md");
+                let background = theme.color_required("background");
 
                 let drag_state = cx
                     .app
@@ -221,7 +221,7 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
     ) {
         let border_color = Color {
             a: 0.80,
-            ..theme.colors.accent
+            ..theme.color_required("primary")
         };
         scene.push(SceneOp::Quad {
             order: DrawOrder(6),

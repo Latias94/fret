@@ -1,6 +1,6 @@
 # ADR 0102: Semantic Theme Keys, Extensible Token Registry, and shadcn/new-york Alignment
 
-Status: Proposed
+Status: Accepted
 Scope: `fret-ui` theme resolution + config keys; impacts component ecosystems (`fret-ui-kit`, `fret-ui-shadcn`)
 
 ## Context
@@ -211,6 +211,13 @@ Theme changes must increment a monotonic `theme_revision` that participates in:
 - prepared text/blob caches where styling affects glyph output.
 
 Any registry changes (new tokens registered) that affect resolution must also bump the revision.
+
+## Implementation Status
+
+- Implemented: canonical key aliasing via `crates/fret-ui/src/theme_registry.rs`.
+- Implemented: required token accessors via `crates/fret-ui/src/theme.rs` (`Theme::color_required`, `Theme::metric_required`).
+- Implemented: `ecosystem/fret-ui-shadcn` no longer reads typed theme fields (`theme.colors.*` / `theme.metrics.*`).
+- TODO: migrate `ecosystem/fret-ui-kit` primitives and demos; add a CI guard that prevents reintroducing typed reads in shadcn-aligned crates.
 
 ## Design Outline (Non-Normative)
 

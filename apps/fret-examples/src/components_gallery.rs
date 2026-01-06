@@ -256,8 +256,8 @@ impl ComponentsGalleryDriver {
                 tree_slot_layout.flex.grow = 1.0;
                 tree_slot_layout.flex.basis = Length::Px(Px(0.0));
 
-                let padding = theme.metrics.padding_md;
-                let bg = theme.colors.surface_background;
+                let padding = theme.metric_required("metric.padding.md");
+                let bg = theme.color_required("background");
 
                 vec![cx.container(
                     ContainerProps {
@@ -360,10 +360,12 @@ impl ComponentsGalleryDriver {
                                                 layout.overflow = Overflow::Clip;
                                                 layout
                                             },
-                                            padding: Edges::all(theme.metrics.padding_md),
-                                            background: Some(theme.colors.panel_background),
+                                            padding: Edges::all(
+                                                theme.metric_required("metric.padding.md"),
+                                            ),
+                                            background: Some(theme.color_required("card")),
                                             border: Edges::all(Px(1.0)),
-                                            border_color: Some(theme.colors.panel_border),
+                                            border_color: Some(theme.color_required("border")),
                                             corner_radii: Corners::all(Px(8.0)),
                                             ..Default::default()
                                         },
@@ -547,16 +549,20 @@ impl ComponentsGalleryDriver {
                                                         if selected_emoji_font.is_some()
                                                             && is_emoji_line
                                                         {
-                                                            let theme = cx.theme().snapshot();
+                                                            let theme =
+                                                                Theme::global(&*cx.app);
                                                             let mut style = TextStyle::default();
                                                             if let Some(name) =
                                                                 selected_emoji_font.as_deref()
                                                             {
                                                                 style.font = FontId::family(name);
                                                             }
-                                                            style.size = theme.metrics.font_size;
+                                                            style.size =
+                                                                theme.metric_required("font.size");
                                                             style.line_height = Some(
-                                                                theme.metrics.font_line_height,
+                                                                theme.metric_required(
+                                                                    "font.line_height",
+                                                                ),
                                                             );
 
                                                             let mut props = TextProps::new(
@@ -580,12 +586,16 @@ impl ComponentsGalleryDriver {
                                                             continue;
                                                         }
                                                         if let Some(name) = selected_ui_font.as_deref() {
-                                                            let theme = cx.theme().snapshot();
+                                                            let theme =
+                                                                Theme::global(&*cx.app);
                                                             let mut style = TextStyle::default();
                                                             style.font = FontId::family(name);
-                                                            style.size = theme.metrics.font_size;
+                                                            style.size =
+                                                                theme.metric_required("font.size");
                                                             style.line_height =
-                                                                Some(theme.metrics.font_line_height);
+                                                                Some(theme.metric_required(
+                                                                    "font.line_height",
+                                                                ));
 
                                                             let mut props = TextProps::new(line.clone());
                                                             props.style = Some(style);
@@ -787,7 +797,7 @@ impl ComponentsGalleryDriver {
                                                 .side(shadcn::TooltipSide::Top)
                                                 .into_element(cx);
 
-                                                let hover_card = {
+                                                    let hover_card = {
                                                     let theme = Theme::global(&*cx.app);
                                                     cx.container(
                                                         ContainerProps {
@@ -799,9 +809,13 @@ impl ComponentsGalleryDriver {
                                                                 layout
                                                             },
                                                             padding: Edges::all(Px(8.0)),
-                                                            background: Some(theme.colors.panel_background),
+                                                            background: Some(
+                                                                theme.color_required("card"),
+                                                            ),
                                                             border: Edges::all(Px(1.0)),
-                                                            border_color: Some(theme.colors.panel_border),
+                                                            border_color: Some(
+                                                                theme.color_required("border"),
+                                                            ),
                                                             ..Default::default()
                                                         },
                                                         |cx| {

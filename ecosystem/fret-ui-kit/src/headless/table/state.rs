@@ -1,11 +1,14 @@
 use super::{
-    ColumnOrderState, ColumnPinningState, ColumnSizingInfoState, ColumnSizingState,
-    ColumnVisibilityState, PaginationState, RowSelectionState, SortingState,
+    ColumnFiltersState, ColumnOrderState, ColumnPinningState, ColumnSizingInfoState,
+    ColumnSizingState, ColumnVisibilityState, GlobalFilterState, PaginationState,
+    RowSelectionState, SortingState,
 };
 
 #[derive(Debug, Clone)]
 pub struct TableState {
     pub sorting: SortingState,
+    pub column_filters: ColumnFiltersState,
+    pub global_filter: GlobalFilterState,
     pub pagination: PaginationState,
     pub row_selection: RowSelectionState,
     pub column_visibility: ColumnVisibilityState,
@@ -19,6 +22,8 @@ impl Default for TableState {
     fn default() -> Self {
         Self {
             sorting: SortingState::default(),
+            column_filters: ColumnFiltersState::default(),
+            global_filter: GlobalFilterState::default(),
             pagination: PaginationState::default(),
             row_selection: RowSelectionState::default(),
             column_visibility: ColumnVisibilityState::default(),

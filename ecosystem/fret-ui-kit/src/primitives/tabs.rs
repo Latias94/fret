@@ -9,7 +9,8 @@
 use std::sync::Arc;
 
 use fret_core::{Modifiers, MouseButton, PointerType, SemanticsRole};
-use fret_ui::element::PressableA11y;
+use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y, SemanticsProps};
+use fret_ui::{ElementContext, UiHost};
 
 /// Matches Radix Tabs `orientation` outcome: horizontal (default) vs vertical layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -107,6 +108,54 @@ pub fn active_index_from_values(
     crate::headless::roving_focus::active_index_from_str_keys(values, selected, disabled)
 }
 
+/// Builds semantics props for a `TabPanel` node.
+pub fn tab_panel_semantics_props(
+    layout: LayoutStyle,
+    label: Option<Arc<str>>,
+    labelled_by_element: Option<u64>,
+) -> SemanticsProps {
+    SemanticsProps {
+        layout,
+        role: SemanticsRole::TabPanel,
+        label,
+        labelled_by_element,
+        ..Default::default()
+    }
+}
+
+/// Builds a tab panel subtree, optionally force-mounting it behind an interactivity gate.
+///
+/// This is a Radix-aligned outcome wrapper for `TabsContent forceMount`:
+/// - When `force_mount=false`, inactive panels are not mounted.
+/// - When `force_mount=true`, inactive panels remain mounted but are not present/interactive.
+#[track_caller]
+pub fn tab_panel_with_gate<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    active: bool,
+    force_mount: bool,
+    layout: LayoutStyle,
+    label: Option<Arc<str>>,
+    labelled_by_element: Option<u64>,
+    children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> Option<AnyElement> {
+    if !active && !force_mount {
+        return None;
+    }
+
+    let panel = |cx: &mut ElementContext<'_, H>| {
+        cx.semantics(
+            tab_panel_semantics_props(layout, label, labelled_by_element),
+            children,
+        )
+    };
+
+    if force_mount {
+        Some(cx.interactivity_gate(active, active, |cx| vec![panel(cx)]))
+    } else {
+        Some(panel(cx))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,5 +194,14 @@ mod tests {
             false,
         );
         assert_eq!(action, TabsTriggerPointerDownAction::Ignore);
+    }
+
+    #[test]
+    fn tab_panel_semantics_props_sets_role_and_labelled_by() {
+        let props =
+            tab_panel_semantics_props(LayoutStyle::default(), Some(Arc::from("Panel")), Some(123));
+        assert_eq!(props.role, SemanticsRole::TabPanel);
+        assert_eq!(props.label.as_deref(), Some("Panel"));
+        assert_eq!(props.labelled_by_element, Some(123));
     }
 }

@@ -48,11 +48,11 @@ fn radio_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.radio_group.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or(theme.metrics.font_size);
+        .unwrap_or_else(|| theme.metric_required("font.size"));
     let line_height = theme
         .metric_by_key("component.radio_group.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or(theme.metrics.font_line_height);
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
     TextStyle {
         font: FontId::default(),
@@ -67,24 +67,19 @@ fn radio_border(theme: &Theme) -> Color {
     theme
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
-        .unwrap_or(theme.colors.panel_border)
+        .expect("missing theme token: input/border")
 }
 
 fn radio_ring(theme: &Theme) -> Color {
-    theme
-        .color_by_key("ring")
-        .or_else(|| theme.color_by_key("primary"))
-        .unwrap_or(theme.colors.selection_background)
+    theme.color_required("ring")
 }
 
 fn radio_fg(theme: &Theme) -> Color {
-    theme
-        .color_by_key("foreground")
-        .unwrap_or(theme.colors.text_primary)
+    theme.color_required("foreground")
 }
 
 fn radio_indicator(theme: &Theme) -> Color {
-    theme.color_by_key("primary").unwrap_or(theme.colors.accent)
+    theme.color_required("primary")
 }
 
 /// Matches Radix RadioGroup `orientation` outcome.
@@ -175,7 +170,7 @@ impl RadioGroup {
 
             let text_style = radio_text_style(&theme);
             let fg = radio_fg(&theme);
-            let fg_disabled = theme.colors.text_disabled;
+            let fg_disabled = alpha_mul(fg, 0.5);
             let border = radio_border(&theme);
             let ring = radio_ring(&theme);
             let dot = radio_indicator(&theme);

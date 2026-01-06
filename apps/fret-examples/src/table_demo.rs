@@ -254,8 +254,8 @@ impl WinitAppDriver for TableDemoDriver {
                     vec![cx.container(
                         ContainerProps {
                             layout: root_layout,
-                            background: Some(theme.colors.surface_background),
-                            padding: Edges::all(theme.metrics.padding_md),
+                            background: Some(theme.color_required("background")),
+                            padding: Edges::all(theme.metric_required("metric.padding.md")),
                             ..Default::default()
                         },
                         move |cx| {
@@ -282,10 +282,12 @@ impl WinitAppDriver for TableDemoDriver {
                                         cx.container(
                                             ContainerProps {
                                                 layout: table_slot,
-                                                background: Some(theme.colors.panel_background),
+                                                background: Some(theme.color_required("card")),
                                                 border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.colors.panel_border),
-                                                corner_radii: Corners::all(theme.metrics.radius_md),
+                                                border_color: Some(theme.color_required("border")),
+                                                corner_radii: Corners::all(
+                                                    theme.metric_required("metric.radius.md"),
+                                                ),
                                                 ..Default::default()
                                             },
                                             move |cx| {

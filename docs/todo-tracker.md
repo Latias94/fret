@@ -62,9 +62,18 @@ It complements (but does not replace) ADRs:
   - Current: baseline offset is centered within the line box when `line_height > ascent+descent` (see `crates/fret-render/src/text.rs`).
   - Decision: align with the web/shadcn mental model (layout uses the line box + baseline). Do **not** implement default "optical alignment" (ink-bounds-based centering) to compensate for extreme font bearings.
   - Note: some "weird metrics" fonts may still look slightly off-center horizontally. Treat this as expected behavior under the web-aligned model unless we add an explicit per-component opt-in.
+  - Option: add an **opt-in** "optical centering" mode for single-line control labels (compute ink bounds per shaped run and apply a small offset at paint time; cache the bounds in the prepared text blob).
   - TODO: add a deterministic regression harness in `apps/fret-examples/src/components_gallery.rs` that toggles a known-problem font and captures a centered-label alignment snapshot (baseline centering regressions only).
 
-## P0 — Docking / Overlays / Viewport Capture
+## P0 – Themes / Token Consistency / shadcn Alignment
+
+- **Finish the token-only migration across the ecosystem**
+  - Problem: theme drift occurs when some components read typed fields (`theme.colors.*` / `theme.metrics.*`) while others read semantic tokens (`theme.color_by_key("border")`).
+  - ADRs: `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`, `docs/adr/0102-semantic-theme-keys-and-extensible-token-registry.md`
+  - Current: `ecosystem/fret-ui-shadcn` is now token-only and fails fast when required tokens are missing.
+  - TODO: migrate `ecosystem/fret-ui-kit` primitives and demos to token-only; add a CI guard (e.g. grep-based test) that rejects new `theme.colors.*` / `theme.metrics.*` reads in shadcn-aligned crates.
+
+## P0 – Docking / Overlays / Viewport Capture
 
 - **Dock host keep-alive and early submission**
   - Goal: ensure dock hosts remain stable targets and do not "drop" docked content due to conditional submission.

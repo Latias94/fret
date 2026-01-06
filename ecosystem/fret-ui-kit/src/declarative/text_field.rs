@@ -72,7 +72,7 @@ pub fn text_field_with_leading_icon_and_clear<H: UiHost>(
 
         let font_line_height = theme
             .metric_by_key("font.line_height")
-            .unwrap_or(theme.metrics.font_line_height);
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
         let text_style = TextStyle {
             font: FontId::default(),
             size: resolved.text_px,

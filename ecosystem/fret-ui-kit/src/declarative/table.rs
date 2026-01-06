@@ -8,7 +8,6 @@ use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use std::cell::Cell;
-use std::sync::Arc;
 use std::time::Instant;
 
 use crate::declarative::action_hooks::ActionHooksExt;
@@ -18,8 +17,8 @@ use crate::declarative::stack;
 use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::headless::table::{
-    ColumnDef, ColumnId, Row, RowKey, SortCmpFn, SortSpec, TableState, column_size,
-    is_column_visible, is_row_selected, order_columns, split_pinned_columns,
+    ColumnDef, ColumnId, FlatRowOrderCache, FlatRowOrderDeps, Row, RowKey, SortSpec, TableState,
+    column_size, is_column_visible, is_row_selected, order_columns, split_pinned_columns,
 };
 
 fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
@@ -27,12 +26,12 @@ fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
         .color_by_key("table.background")
         .or_else(|| theme.color_by_key("list.background"))
         .or_else(|| theme.color_by_key("card"))
-        .unwrap_or(theme.colors.panel_background);
+        .unwrap_or_else(|| theme.color_required("card"));
     let border = theme
         .color_by_key("table.border")
         .or_else(|| theme.color_by_key("border"))
         .or_else(|| theme.color_by_key("list.border"))
-        .unwrap_or(theme.colors.panel_border);
+        .unwrap_or_else(|| theme.color_required("border"));
     let header_bg = theme
         .color_by_key("table.header.background")
         .or_else(|| theme.color_by_key("muted"))
@@ -42,13 +41,13 @@ fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
         .or_else(|| theme.color_by_key("list.hover.background"))
         .or_else(|| theme.color_by_key("list.row.hover"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or(theme.colors.list_row_hover);
+        .unwrap_or_else(|| theme.color_required("accent"));
     let row_active = theme
         .color_by_key("table.row.active")
         .or_else(|| theme.color_by_key("list.active.background"))
         .or_else(|| theme.color_by_key("list.row.active"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or(theme.colors.list_row_selected);
+        .unwrap_or_else(|| theme.color_required("accent"));
     (table_bg, border, header_bg, row_hover, row_active)
 }
 
@@ -110,58 +109,6 @@ impl Default for TableViewProps {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct SortKey {
-    column: ColumnId,
-    desc: bool,
-}
-
-#[derive(Default)]
-struct FlatRowOrderCache {
-    items_revision: u64,
-    data_len: usize,
-    sorting: Vec<SortKey>,
-    order: Arc<[usize]>,
-}
-
-fn compute_flat_row_order<TData>(
-    data: &[TData],
-    columns: &[ColumnDef<TData>],
-    sorting: &[SortKey],
-) -> Arc<[usize]> {
-    let sorters: Vec<(SortCmpFn<TData>, bool)> = sorting
-        .iter()
-        .filter_map(|spec| {
-            let cmp = columns
-                .iter()
-                .find(|c| c.id.as_ref() == spec.column.as_ref())?
-                .sort_cmp
-                .clone()?;
-            Some((cmp, spec.desc))
-        })
-        .collect();
-
-    let mut order: Vec<usize> = (0..data.len()).collect();
-    if !sorters.is_empty() {
-        order.sort_by(|&a, &b| {
-            let a_row = &data[a];
-            let b_row = &data[b];
-            for (cmp, desc) in &sorters {
-                let mut ord = cmp(a_row, b_row);
-                if *desc {
-                    ord = ord.reverse();
-                }
-                if ord != std::cmp::Ordering::Equal {
-                    return ord;
-                }
-            }
-            a.cmp(&b)
-        });
-    }
-
-    Arc::from(order.into_boxed_slice())
-}
-
 #[allow(clippy::too_many_arguments)]
 pub fn table_virtualized<H: UiHost, TData>(
     cx: &mut ElementContext<'_, H>,
@@ -189,7 +136,7 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let theme = Theme::global(&*cx.app);
     let (table_bg, border, header_bg, row_hover, row_active) = resolve_table_colors(theme);
-    let radius = theme.metrics.radius_md;
+    let radius = theme.metric_required("metric.radius.md");
 
     let row_h = props
         .row_height
@@ -207,38 +154,31 @@ pub fn table_virtualized<H: UiHost, TData>(
     let (left_cols, center_cols, right_cols) =
         split_pinned_columns(visible_columns.as_slice(), &state_value.column_pinning);
 
-    let sorting_key = state_value
-        .sorting
-        .iter()
-        .map(|s| SortKey {
-            column: s.column.clone(),
-            desc: s.desc,
-        })
-        .collect::<Vec<_>>();
+    let sorting_key = state_value.sorting.clone();
 
     let row_order = cx.with_state(FlatRowOrderCache::default, |cache| {
-        if cache.items_revision != items_revision
-            || cache.data_len != data.len()
-            || cache.sorting != sorting_key
-        {
-            cache.items_revision = items_revision;
-            cache.data_len = data.len();
-            cache.sorting = sorting_key.clone();
-            let started = Instant::now();
-            cache.order = compute_flat_row_order(data, &columns, &cache.sorting);
-            let elapsed = started.elapsed();
+        let deps = FlatRowOrderDeps {
+            items_revision,
+            data_len: data.len(),
+            sorting: sorting_key.clone(),
+            column_filters: state_value.column_filters.clone(),
+            global_filter: state_value.global_filter.clone(),
+        };
 
-            if profile {
-                tracing::info!(
-                    "table_virtualized: recompute row_order len={} sorting={} took {:.2}ms",
-                    data.len(),
-                    cache.sorting.len(),
-                    elapsed.as_secs_f64() * 1000.0
-                );
-            }
+        let started = Instant::now();
+        let (order, recomputed) = cache.row_order(data, &columns, deps);
+        let elapsed = started.elapsed();
+
+        if profile && recomputed {
+            tracing::info!(
+                "table_virtualized: recompute row_order len={} sorting={} took {:.2}ms",
+                data.len(),
+                sorting_key.len(),
+                elapsed.as_secs_f64() * 1000.0
+            );
         }
 
-        cache.order.clone()
+        order.clone()
     });
 
     let page_size = state_value.pagination.page_size;
@@ -255,6 +195,7 @@ pub fn table_virtualized<H: UiHost, TData>(
     let mut list_options = fret_ui::element::VirtualListOptions::new(row_h, props.overscan);
     list_options.items_revision = items_revision;
     list_options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
+    list_options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
 
     let rendered_rows = Cell::new(0usize);
 
@@ -729,169 +670,4 @@ pub fn table_virtualized<H: UiHost, TData>(
             )]
         },
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{SortKey, compute_flat_row_order};
-    use crate::headless::table::{ColumnDef, ColumnId};
-    use std::cmp::Ordering;
-
-    #[derive(Debug)]
-    struct Row {
-        id: u32,
-        score: i32,
-        name: &'static str,
-    }
-
-    fn col<T: 'static>(id: &str, cmp: fn(&T, &T) -> Ordering) -> ColumnDef<T> {
-        ColumnDef::new(id).sort_by(cmp)
-    }
-
-    #[test]
-    fn flat_row_order_is_stable_without_sorting() {
-        let data = [
-            Row {
-                id: 1,
-                score: 10,
-                name: "b",
-            },
-            Row {
-                id: 2,
-                score: 9,
-                name: "a",
-            },
-        ];
-
-        let columns = vec![col::<Row>("score", |a, b| a.score.cmp(&b.score))];
-        let order = compute_flat_row_order(&data, &columns, &[]);
-        assert_eq!(&*order, &[0, 1]);
-    }
-
-    #[test]
-    fn flat_row_order_sorts_by_single_column() {
-        let data = [
-            Row {
-                id: 1,
-                score: 10,
-                name: "b",
-            },
-            Row {
-                id: 2,
-                score: 9,
-                name: "a",
-            },
-        ];
-
-        let columns = vec![col::<Row>("score", |a, b| a.score.cmp(&b.score))];
-        let order = compute_flat_row_order(
-            &data,
-            &columns,
-            &[SortKey {
-                column: ColumnId::from("score"),
-                desc: false,
-            }],
-        );
-        assert_eq!(&*order, &[1, 0]);
-    }
-
-    #[test]
-    fn flat_row_order_sorts_descending() {
-        let data = [
-            Row {
-                id: 1,
-                score: 10,
-                name: "a",
-            },
-            Row {
-                id: 2,
-                score: 10,
-                name: "b",
-            },
-        ];
-
-        let columns = vec![col::<Row>("name", |a, b| a.name.cmp(b.name))];
-        let order = compute_flat_row_order(
-            &data,
-            &columns,
-            &[SortKey {
-                column: ColumnId::from("name"),
-                desc: true,
-            }],
-        );
-        assert_eq!(&*order, &[1, 0]);
-    }
-
-    #[test]
-    fn flat_row_order_uses_index_tiebreaker() {
-        let data = [
-            Row {
-                id: 1,
-                score: 10,
-                name: "x",
-            },
-            Row {
-                id: 2,
-                score: 10,
-                name: "x",
-            },
-            Row {
-                id: 3,
-                score: 10,
-                name: "x",
-            },
-        ];
-
-        let columns = vec![col::<Row>("score", |a, b| a.score.cmp(&b.score))];
-        let order = compute_flat_row_order(
-            &data,
-            &columns,
-            &[SortKey {
-                column: ColumnId::from("score"),
-                desc: false,
-            }],
-        );
-        assert_eq!(&*order, &[0, 1, 2]);
-    }
-
-    #[test]
-    fn flat_row_order_supports_multi_sort() {
-        let data = [
-            Row {
-                id: 1,
-                score: 10,
-                name: "b",
-            },
-            Row {
-                id: 2,
-                score: 10,
-                name: "a",
-            },
-            Row {
-                id: 3,
-                score: 9,
-                name: "z",
-            },
-        ];
-
-        let columns = vec![
-            col::<Row>("score", |a, b| a.score.cmp(&b.score)),
-            col::<Row>("name", |a, b| a.name.cmp(b.name)),
-        ];
-        let order = compute_flat_row_order(
-            &data,
-            &columns,
-            &[
-                SortKey {
-                    column: ColumnId::from("score"),
-                    desc: false,
-                },
-                SortKey {
-                    column: ColumnId::from("name"),
-                    desc: false,
-                },
-            ],
-        );
-        assert_eq!(&*order, &[2, 1, 0]);
-    }
 }

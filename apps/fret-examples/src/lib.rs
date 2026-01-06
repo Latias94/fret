@@ -1,3 +1,6 @@
+#[cfg(not(target_arch = "wasm32"))]
+pub mod alloc_profile;
+
 pub mod area_demo;
 pub mod bars_demo;
 pub mod candlestick_demo;
@@ -33,5 +36,7 @@ pub mod stairs_demo;
 pub mod stems_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod table_stress_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;

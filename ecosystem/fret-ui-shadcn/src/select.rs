@@ -1,7 +1,7 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextOverflow,
+    TextStyle, TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -22,8 +22,10 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::headless::select_item_aligned as item_aligned;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
+use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::select as radix_select;
@@ -46,6 +48,8 @@ fn select_scroll_with_buttons<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: Theme,
     item_step: Px,
+    initial_scroll_to_y: Option<Px>,
+    viewport_id_out: &Cell<Option<GlobalElementId>>,
     content: impl FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> Vec<AnyElement>,
 ) -> AnyElement {
     cx.flex(
@@ -65,6 +69,10 @@ fn select_scroll_with_buttons<H: UiHost>(
         },
         move |cx| {
             let handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            if let Some(y) = initial_scroll_to_y {
+                let prev = handle.offset();
+                handle.scroll_to_offset(Point::new(prev.x, y));
+            }
 
             let scroll_button_h = theme
                 .metric_by_key("component.select.scroll_button_height")
@@ -155,7 +163,9 @@ fn select_scroll_with_buttons<H: UiHost>(
                                             Some(ColorRef::Color(
                                                 theme
                                                     .color_by_key("muted-foreground")
-                                                    .unwrap_or(theme.colors.text_muted),
+                                                    .unwrap_or_else(|| {
+                                                        theme.color_required("muted-foreground")
+                                                    }),
                                             )),
                                         )]
                                     },
@@ -211,6 +221,7 @@ fn select_scroll_with_buttons<H: UiHost>(
                             )]
                         },
                     );
+                    viewport_id_out.set(Some(scroll.id));
 
                     if let Some(active_element) = active_element.get() {
                         let _ = active_desc::scroll_active_element_into_view_y(
@@ -361,6 +372,14 @@ impl From<SelectSeparator> for SelectEntry {
     }
 }
 
+/// Matches Radix Select `position`: item-aligned (default upstream) vs popper.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SelectPosition {
+    ItemAligned,
+    #[default]
+    Popper,
+}
+
 #[derive(Clone)]
 pub struct Select {
     model: Model<Option<Arc<str>>>,
@@ -374,6 +393,7 @@ pub struct Select {
     side: SelectSide,
     align_offset: Px,
     side_offset_override: Option<Px>,
+    position: SelectPosition,
     loop_navigation: bool,
     arrow: bool,
     arrow_size_override: Option<Px>,
@@ -394,6 +414,7 @@ impl Select {
             side: SelectSide::default(),
             align_offset: Px(0.0),
             side_offset_override: None,
+            position: SelectPosition::default(),
             loop_navigation: true,
             arrow: false,
             arrow_size_override: None,
@@ -457,6 +478,11 @@ impl Select {
         self
     }
 
+    pub fn position(mut self, position: SelectPosition) -> Self {
+        self.position = position;
+        self
+    }
+
     /// When `true` (default), roving navigation loops at the ends (Radix `loop` behavior).
     pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
         self.loop_navigation = loop_navigation;
@@ -498,6 +524,7 @@ impl Select {
             self.side,
             self.align_offset,
             self.side_offset_override,
+            self.position,
             self.loop_navigation,
             self.arrow,
             self.arrow_size_override,
@@ -530,6 +557,7 @@ pub fn select<H: UiHost>(
         SelectSide::default(),
         Px(0.0),
         None,
+        SelectPosition::default(),
         true,
         false,
         None,
@@ -550,6 +578,7 @@ fn select_impl<H: UiHost>(
     side: SelectSide,
     align_offset: Px,
     side_offset_override: Option<Px>,
+    position: SelectPosition,
     loop_navigation: bool,
     arrow: bool,
     arrow_size_override: Option<Px>,
@@ -611,7 +640,7 @@ fn select_impl<H: UiHost>(
             theme
                 .metric_by_key("component.select.arrow_padding")
                 .or_else(|| theme.metric_by_key("component.popover.arrow_padding"))
-                .unwrap_or(theme.metrics.radius_md)
+                .unwrap_or_else(|| theme.metric_required("metric.radius.md"))
         });
 
         let resolved = resolve_input_chrome(
@@ -633,19 +662,20 @@ fn select_impl<H: UiHost>(
             font: FontId::default(),
             size: resolved.text_px,
             weight: FontWeight::NORMAL,
-            line_height: theme.metric_by_key("font.line_height").or(Some(theme.metrics.font_line_height)),
+            line_height: theme
+                .metric_by_key("font.line_height")
+                .or(Some(theme.metric_required("font.line_height"))),
             letter_spacing_em: None,
         };
 
         let min_width = theme
             .metric_by_key("component.select.min_width")
-            .unwrap_or(Px(180.0));
+            // new-york-v4: Select content uses `min-w-[8rem]`.
+            .unwrap_or(Px(128.0));
 
         let mut trigger_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .w_full()
-                .min_w(MetricRef::Px(min_width))
                 .min_h(MetricRef::Px(resolved.min_height))
                 .merge(layout),
         );
@@ -657,7 +687,7 @@ fn select_impl<H: UiHost>(
         let fg = resolved.text_color;
         let fg_muted = theme
             .color_by_key("muted-foreground")
-            .unwrap_or(theme.colors.text_muted);
+            .unwrap_or_else(|| theme.color_required("muted-foreground"));
 
         let enabled = !disabled;
         let item_len = count_items(entries);
@@ -668,6 +698,14 @@ fn select_impl<H: UiHost>(
             pointer: radix_select::SelectTriggerPointerState,
             content: radix_select::SelectContentKeyState,
             was_open: bool,
+            value_node: Option<GlobalElementId>,
+            viewport: Option<GlobalElementId>,
+            listbox: Option<GlobalElementId>,
+            content_panel: Option<GlobalElementId>,
+            selected_item: Option<GlobalElementId>,
+            selected_item_text: Option<GlobalElementId>,
+            pending_item_aligned_scroll_to_y: Option<Px>,
+            did_item_aligned_scroll: bool,
         }
 
         impl SelectTriggerKeyState {
@@ -677,6 +715,14 @@ fn select_impl<H: UiHost>(
                     pointer: radix_select::SelectTriggerPointerState::default(),
                     content: radix_select::SelectContentKeyState::default(),
                     was_open: false,
+                    value_node: None,
+                    viewport: None,
+                    listbox: None,
+                    content_panel: None,
+                    selected_item: None,
+                    selected_item_text: None,
+                    pending_item_aligned_scroll_to_y: None,
+                    did_item_aligned_scroll: false,
                 }
             }
         }
@@ -813,10 +859,12 @@ fn select_impl<H: UiHost>(
             let listbox_controls_element: Cell<Option<u64>> = Cell::new(None);
             let listbox_controls_element = &listbox_controls_element;
 
-            if motion.present
-                && enabled
-                && let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id)
-            {
+            if motion.present && enabled {
+                // Anchor bounds are derived from the previous layout pass. When `open=true` before
+                // the first layout (or immediately after a large tree change), the anchor may be
+                // missing for a frame. We still install the modal barrier layer to preserve Radix
+                // Select's "disable outside pointer events" outcome.
+                if let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) {
                     let window_margin = theme
                         .metric_by_key("component.select.window_margin")
                         .unwrap_or(Px(8.0));
@@ -837,82 +885,176 @@ fn select_impl<H: UiHost>(
                     let desired_w = Px(anchor.size.width.0.max(min_width.0).min(outer.size.width.0));
                     let desired = fret_core::Size::new(desired_w, desired_h);
 
-                    let side_offset = side_offset_override.unwrap_or_else(|| {
-                        theme
-                            .metric_by_key("component.select.popover_offset")
-                            .unwrap_or(Px(6.0))
-                    });
-
                     let border_width = resolved.border_width;
-                    let (arrow_options, arrow_protrusion) =
-                        popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
 
-                    let layout = popper::popper_content_layout_sized(
-                        outer,
-                        anchor,
-                        desired,
-                        popper::PopperContentPlacement::new(
-                            LayoutDirection::Ltr,
-                            side.into(),
-                            align.into(),
-                            side_offset,
-                        )
-                        .with_align_offset(align_offset)
-                        .with_arrow(arrow_options, arrow_protrusion),
-                    );
+                    let mut arrow_layout = None;
+                    let mut wrapper_insets = Edges::all(Px(0.0));
+                    let mut motion_side: Side = side.into();
 
-                    let placed = layout.rect;
-                    let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                    let mut item_aligned_rect: Option<Rect> = None;
+                    if position == SelectPosition::ItemAligned {
+                        let (value_node, viewport, listbox, content_panel, selected_item, selected_item_text, did_scroll) =
+                            {
+                                let state = trigger_state
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                (
+                                    state.value_node,
+                                    state.viewport,
+                                    state.listbox,
+                                    state.content_panel,
+                                    state.selected_item,
+                                    state.selected_item_text,
+                                    state.did_item_aligned_scroll,
+                                )
+                            };
+
+                        if let (
+                            Some(value_node),
+                            Some(viewport),
+                            Some(listbox),
+                            Some(content_panel),
+                            Some(selected_item),
+                            Some(selected_item_text),
+                        ) = (
+                            value_node,
+                            viewport,
+                            listbox,
+                            content_panel,
+                            selected_item,
+                            selected_item_text,
+                        ) {
+                            if let (
+                                Some(value_node),
+                                Some(viewport),
+                                Some(listbox),
+                                Some(content),
+                                Some(selected_item),
+                                Some(selected_item_text),
+                            ) = (
+                                overlay::anchor_bounds_for_element(cx, value_node),
+                                overlay::anchor_bounds_for_element(cx, viewport),
+                                overlay::anchor_bounds_for_element(cx, listbox),
+                                overlay::anchor_bounds_for_element(cx, content_panel),
+                                overlay::anchor_bounds_for_element(cx, selected_item),
+                                overlay::anchor_bounds_for_element(cx, selected_item_text),
+                            ) {
+                                let out = item_aligned::select_item_aligned_position(
+                                    item_aligned::SelectItemAlignedInputs {
+                                        direction: LayoutDirection::Ltr,
+                                        window: cx.bounds,
+                                        trigger: anchor,
+                                        content,
+                                        value_node,
+                                        selected_item_text,
+                                        selected_item,
+                                        viewport,
+                                        content_border_top: border_width,
+                                        content_padding_top: Px(0.0),
+                                        content_border_bottom: border_width,
+                                        content_padding_bottom: Px(0.0),
+                                        viewport_padding_top: Px(4.0),
+                                        viewport_padding_bottom: Px(4.0),
+                                        items_height: listbox.size.height,
+                                    },
+                                );
+
+                                if let Some(scroll_to) = out.scroll_to_y
+                                    && !did_scroll
+                                {
+                                    let mut state = trigger_state
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner());
+                                    state.pending_item_aligned_scroll_to_y = Some(scroll_to);
+                                    state.did_item_aligned_scroll = true;
+                                }
+
+                                let margin = item_aligned::SELECT_ITEM_ALIGNED_CONTENT_MARGIN;
+                                let inset_left = out.left.unwrap_or(margin);
+                                let inset_top = if out.top.is_some() {
+                                    margin
+                                } else if out.bottom.is_some() {
+                                    Px(cx.bounds.size.height.0 - margin.0 - out.height.0)
+                                } else {
+                                    margin
+                                };
+
+                                let placed = Rect::new(
+                                    Point::new(inset_left, inset_top),
+                                    fret_core::Size::new(out.width, out.height),
+                                );
+                                motion_side = if placed.origin.y.0 >= anchor.origin.y.0 {
+                                    Side::Bottom
+                                } else {
+                                    Side::Top
+                                };
+                                item_aligned_rect = Some(placed);
+                            }
+                        }
+                    }
+
+                    let placed = if let Some(placed) = item_aligned_rect {
+                        placed
+                    } else {
+                        let side_offset = side_offset_override.unwrap_or_else(|| {
+                            theme
+                                .metric_by_key("component.select.popover_offset")
+                                .unwrap_or(Px(6.0))
+                        });
+
+                        let (arrow_options, arrow_protrusion) =
+                            popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
+
+                        let layout = popper::popper_content_layout_sized(
+                            outer,
+                            anchor,
+                            desired,
+                            popper::PopperContentPlacement::new(
+                                LayoutDirection::Ltr,
+                                side.into(),
+                                align.into(),
+                                side_offset,
+                            )
+                            .with_align_offset(align_offset)
+                            .with_arrow(arrow_options, arrow_protrusion),
+                        );
+                        wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                        arrow_layout = Some((layout, arrow_protrusion));
+                        layout.rect
+                    };
+
                     let origin = overlay_motion::shadcn_transform_origin_for_anchored_rect(
                         anchor,
                         placed,
-                        side.into(),
+                        motion_side,
                     );
                     let zoom = overlay_motion::shadcn_zoom_transform(origin, motion.progress);
-                    let slide = overlay_motion::shadcn_enter_slide_transform(
-                        side.into(),
-                        motion.progress,
-                        is_open,
-                    );
+                    let slide =
+                        overlay_motion::shadcn_enter_slide_transform(motion_side, motion.progress, is_open);
                     let transform = slide * zoom;
                     let opacity = motion.progress;
 
                     let theme_for_overlay = theme.clone();
                     let text_style_for_overlay = text_style.clone();
                     let open_for_overlay = open_for_trigger.clone();
+                    let trigger_state_for_overlay = trigger_state.clone();
                     let list_focus_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let list_focus_id_out = &list_focus_id_out_cell;
+                    let viewport_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let viewport_id_out = &viewport_id_out_cell;
+                    let content_panel_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let content_panel_id_out = &content_panel_id_out_cell;
+                    let selected_item_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let selected_item_id_out = &selected_item_id_out_cell;
+                    let selected_item_text_id_out_cell = Cell::new(None::<GlobalElementId>);
+                    let selected_item_text_id_out = &selected_item_text_id_out_cell;
+                    let arrow_layout_for_children = arrow_layout.clone();
+                    let trigger_state_for_overlay_for_children = trigger_state_for_overlay.clone();
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                        let barrier_layout = LayoutStyle {
-                            position: PositionStyle::Absolute,
-                            inset: InsetStyle {
-                                top: Some(Px(0.0)),
-                                right: Some(Px(0.0)),
-                                bottom: Some(Px(0.0)),
-                                left: Some(Px(0.0)),
-                            },
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        };
-
-                        let open_for_barrier = open_for_overlay.clone();
-                        let barrier = cx.pressable(
-                            PressableProps {
-                                layout: barrier_layout,
-                                enabled: true,
-                                focusable: false,
-                                ..Default::default()
-                            },
-                            move |cx, _st| {
-                                cx.pressable_set_bool(&open_for_barrier, false);
-                                Vec::new()
-                            },
-                        );
+                        let trigger_state_for_overlay = trigger_state_for_overlay_for_children.clone();
+                        let barrier =
+                            radix_dialog::modal_barrier(cx, open_for_overlay.clone(), true, Vec::new());
 
                         let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
@@ -994,20 +1136,28 @@ fn select_impl<H: UiHost>(
                         let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
                         let arrow_bg = theme_for_overlay.colors.panel_background;
                         let arrow_border = border;
+                        let initial_scroll_to_y = {
+                            let mut state = trigger_state_for_overlay
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            state.pending_item_aligned_scroll_to_y.take()
+                        };
 
-                        let content =
-                            popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
-                                let arrow_el = popper_arrow::diamond_arrow_element(
-                                    cx,
-                                    &layout,
-                                    wrapper_insets,
-                                    arrow_size,
-                                    DiamondArrowStyle {
-                                        bg: arrow_bg,
-                                        border: Some(arrow_border),
-                                        border_width,
-                                    },
-                                );
+                        let trigger_state_for_overlay_in_content = trigger_state_for_overlay.clone();
+                        let content = popper_content::popper_wrapper_at(cx, placed, wrapper_insets, move |cx| {
+                                let arrow_el = arrow_layout_for_children.as_ref().and_then(|(layout, _)| {
+                                    popper_arrow::diamond_arrow_element(
+                                        cx,
+                                        layout,
+                                        wrapper_insets,
+                                        arrow_size,
+                                        DiamondArrowStyle {
+                                            bg: arrow_bg,
+                                            border: Some(arrow_border),
+                                            border_width,
+                                        },
+                                    )
+                                });
 
                                 let panel = cx.container(
                                     ContainerProps {
@@ -1028,6 +1178,8 @@ fn select_impl<H: UiHost>(
                                         cx,
                                         theme_for_overlay.clone(),
                                         item_h,
+                                        initial_scroll_to_y,
+                                        viewport_id_out,
                                         move |cx, active_element| {
                                             let disabled_for_key: Arc<[bool]> =
                                                 Arc::from(disabled.clone().into_boxed_slice());
@@ -1042,7 +1194,8 @@ fn select_impl<H: UiHost>(
                                                     .into_boxed_slice(),
                                             );
 
-                                            let state_for_key = trigger_state.clone();
+                                            let state_for_key =
+                                                trigger_state_for_overlay_in_content.clone();
                                             let open_for_key = open_for_overlay.clone();
                                             let model_for_key = model.clone();
                                             let loop_navigation_for_key = loop_navigation;
@@ -1082,20 +1235,14 @@ fn select_impl<H: UiHost>(
                                                                             let fg = theme
                                                                                 .color_by_key("muted.foreground")
                                                                                 .or_else(|| theme.color_by_key("muted-foreground"))
-                                                                                .unwrap_or(theme.colors.text_muted);
+                                                                                .unwrap_or_else(|| theme.color_required("muted.foreground"));
 
-                                                                            let label_text_px = Px(
-                                                                                (theme.metrics.font_size.0 - 2.0)
-                                                                                    .max(10.0),
-                                                                            );
-                                                                            let label_line_height = Px(
-                                                                                (theme
-                                                                                    .metrics
-                                                                                    .font_line_height
-                                                                                    .0
-                                                                                    - 4.0)
-                                                                                    .max(12.0),
-                                                                            );
+                                                                            let font_size = theme.metric_required("font.size");
+                                                                            let font_line_height = theme.metric_required("font.line_height");
+                                                                            let label_text_px =
+                                                                                Px((font_size.0 - 2.0).max(10.0));
+                                                                            let label_line_height =
+                                                                                Px((font_line_height.0 - 4.0).max(12.0));
 
                                                                             out.push(cx.container(
                                                                                 ContainerProps {
@@ -1145,7 +1292,7 @@ fn select_impl<H: UiHost>(
                                                                             let theme = Theme::global(&*cx.app).clone();
                                                                             let border = theme
                                                                                 .color_by_key("border")
-                                                                                .unwrap_or(theme.colors.panel_border);
+                                                                                .unwrap_or_else(|| theme.color_required("border"));
 
                                                                             out.push(cx.container(
                                                                                 ContainerProps {
@@ -1185,7 +1332,9 @@ fn select_impl<H: UiHost>(
 
                                                                             let pos = item_ordinal;
                                                                             item_ordinal = item_ordinal.saturating_add(1);
-                                                                            let state_for_hover = trigger_state.clone();
+                                                                            let state_for_hover =
+                                                                                trigger_state_for_overlay_in_content
+                                                                                    .clone();
                                                                             let row_idx_for_hover = row_idx;
 
                                                                             out.push(cx.pressable_with_id(
@@ -1209,6 +1358,9 @@ fn select_impl<H: UiHost>(
                                                                                     ..Default::default()
                                                                                 },
                                                                                 move |cx, st, id| {
+                                                                                    if is_selected {
+                                                                                        selected_item_id_out.set(Some(id));
+                                                                                    }
                                                                                     if is_active {
                                                                                         active_element.set(Some(id));
                                                                                     }
@@ -1247,11 +1399,11 @@ fn select_impl<H: UiHost>(
                                                                                     let bg_accent = theme
                                                                                         .color_by_key("accent")
                                                                                         .or_else(|| theme.color_by_key("accent.background"))
-                                                                                        .unwrap_or(theme.colors.hover_background);
+                                                                                        .unwrap_or_else(|| theme.color_required("accent"));
                                                                                     let fg_accent = theme
                                                                                         .color_by_key("accent-foreground")
                                                                                         .or_else(|| theme.color_by_key("accent.foreground"))
-                                                                                        .unwrap_or(theme.colors.text_primary);
+                                                                                        .unwrap_or_else(|| theme.color_required("accent.foreground"));
 
                                                                                     let mut bg = Color::TRANSPARENT;
                                                                                     let mut fg = if item_disabled {
@@ -1299,23 +1451,43 @@ fn select_impl<H: UiHost>(
                                                                                             shadow: None,
                                                                                             border: Edges::all(Px(0.0)),
                                                                                             border_color: None,
-                                                                                            corner_radii: Corners::all(theme.metrics.radius_sm),
+                                                                                            corner_radii: Corners::all(
+                                                                                                theme.metric_required("metric.radius.sm"),
+                                                                                            ),
                                                                                         },
                                                                                         |cx| {
-                                                                                            let text = cx.text_props(TextProps {
-                                                                                                layout: {
-                                                                                                    let mut layout =
-                                                                                                        LayoutStyle::default();
-                                                                                                    layout.size.width =
-                                                                                                        Length::Fill;
-                                                                                                    layout
+                                                                                            let text = cx.container(
+                                                                                                ContainerProps {
+                                                                                                    layout: {
+                                                                                                        let mut layout =
+                                                                                                            LayoutStyle::default();
+                                                                                                        layout.size.width =
+                                                                                                            Length::Fill;
+                                                                                                        layout
+                                                                                                    },
+                                                                                                    ..Default::default()
                                                                                                 },
-                                                                                                text: item.label.clone(),
-                                                                                                style: Some(text_style.clone()),
-                                                                                                wrap: TextWrap::None,
-                                                                                                overflow: TextOverflow::Clip,
-                                                                                                color: Some(fg),
-                                                                                            });
+                                                                                                |cx| {
+                                                                                                    vec![cx.text_props(TextProps {
+                                                                                                        layout: {
+                                                                                                            let mut layout =
+                                                                                                                LayoutStyle::default();
+                                                                                                            layout.size.width =
+                                                                                                                Length::Fill;
+                                                                                                            layout
+                                                                                                        },
+                                                                                                        text: item.label.clone(),
+                                                                                                        style: Some(text_style.clone()),
+                                                                                                        wrap: TextWrap::None,
+                                                                                                        overflow: TextOverflow::Clip,
+                                                                                                        color: Some(fg),
+                                                                                                    })]
+                                                                                                },
+                                                                                            );
+                                                                                            if is_selected {
+                                                                                                selected_item_text_id_out
+                                                                                                    .set(Some(text.id));
+                                                                                            }
 
                                                                                             // Indicator slot matches upstream: absolute at the end, but reserve `pr-8`.
                                                                                             let indicator_size = Px(14.0);
@@ -1439,6 +1611,8 @@ fn select_impl<H: UiHost>(
                                 },
                             );
 
+                                content_panel_id_out.set(Some(panel.id));
+
                                 if let Some(arrow_el) = arrow_el {
                                     vec![arrow_el, panel]
                                 } else {
@@ -1470,6 +1644,20 @@ fn select_impl<H: UiHost>(
                             },
                         );
 
+                        {
+                            let mut state = trigger_state_for_overlay
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            state.viewport = viewport_id_out.get();
+                            state.listbox = list_focus_id_out.get();
+                            state.content_panel = content_panel_id_out.get();
+                            state.selected_item = selected_item_id_out.get();
+                            state.selected_item_text = selected_item_text_id_out.get();
+                            if !is_open {
+                                state.did_item_aligned_scroll = false;
+                            }
+                        }
+
                         vec![barrier, animated]
                     });
 
@@ -1482,25 +1670,53 @@ fn select_impl<H: UiHost>(
                     );
                     request.initial_focus = list_focus_id_out.get();
                     radix_select::request_select(cx, request);
+                } else {
+                    let open_for_overlay = open_for_trigger.clone();
+                    let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+                        vec![radix_dialog::modal_barrier(
+                            cx,
+                            open_for_overlay.clone(),
+                            true,
+                            Vec::new(),
+                        )]
+                    });
+
+                    let request = radix_select::modal_select_request(
+                        trigger_id,
+                        trigger_id,
+                        open_for_trigger.clone(),
+                        overlay_presence,
+                        overlay_children,
+                    );
+                    radix_select::request_select(cx, request);
+                }
             }
 
             props.a11y.controls_element = listbox_controls_element.get();
+            let chrome_width = props.layout.size.width;
+            let content_width = if matches!(chrome_width, Length::Auto) {
+                Length::Auto
+            } else {
+                Length::Fill
+            };
             let chrome = input_chrome_container_props(
                 {
                     let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Fill;
+                    layout.size.width = chrome_width;
                     layout
                 },
                 resolved,
                 border_color,
             );
 
+            let state_for_value_node = trigger_state.clone();
+
             let content = move |cx: &mut ElementContext<'_, H>| {
                 vec![cx.flex(
                     FlexProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
+                            layout.size.width = content_width;
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
@@ -1512,22 +1728,45 @@ fn select_impl<H: UiHost>(
                     },
                     |cx| {
                         vec![
-                            cx.text_props(TextProps {
-                                layout: {
+                            {
+                                let layout = {
                                     let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
+                                    layout.size.width = Length::Auto;
                                     layout.size.min_width = Some(Px(0.0));
                                     layout.flex.grow = 1.0;
                                     layout.flex.shrink = 1.0;
                                     layout.flex.basis = Length::Px(Px(0.0));
                                     layout
-                                },
-                                text: label,
-                                style: Some(text_style.clone()),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Ellipsis,
-                                color: Some(if selected.is_some() { fg } else { fg_muted }),
-                            }),
+                                };
+
+                                let value_node = cx.container(
+                                    ContainerProps {
+                                        layout,
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        vec![cx.text_props(TextProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Fill;
+                                                layout
+                                            },
+                                            text: label,
+                                            style: Some(text_style.clone()),
+                                            wrap: TextWrap::None,
+                                            overflow: TextOverflow::Ellipsis,
+                                            color: Some(if selected.is_some() { fg } else { fg_muted }),
+                                        })]
+                                    },
+                                );
+
+                                let mut state = state_for_value_node
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                state.value_node = Some(value_node.id);
+
+                                value_node
+                            },
                                                         cx.opacity(0.5, |cx| {
                                 vec![decl_icon::icon_with(
                                     cx,
@@ -2145,6 +2384,107 @@ mod tests {
             root, barrier_root,
             "expected listbox to be rooted under the barrier layer"
         );
+    }
+
+    #[test]
+    fn select_open_before_first_layout_installs_modal_barrier_and_blocks_underlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(true);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("alpha", "Alpha"),
+            SelectItem::new("beta", "Beta"),
+        ];
+
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "select",
+            |cx| {
+                let underlay_activated = underlay_activated.clone();
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.inset.top = Some(Px(180.0));
+                            layout.inset.left = Some(Px(240.0));
+                            layout.position = PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_set_bool(&underlay_activated, true);
+                        Vec::new()
+                    },
+                );
+
+                vec![
+                    underlay,
+                    Select::new(model.clone(), open.clone())
+                        .items(items.clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.barrier_root.is_some(),
+            "expected select to install a modal barrier root"
+        );
+
+        let underlay_point = Point::new(Px(250.0), Px(190.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(app.models().get_copied(&underlay_activated), Some(false));
     }
 
     #[test]

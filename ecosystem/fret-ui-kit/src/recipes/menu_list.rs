@@ -4,6 +4,11 @@ use fret_ui::Theme;
 use crate::style::MetricRef;
 use crate::{Size, Space};
 
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
 #[derive(Debug, Clone)]
 pub struct MenuListRowChrome {
     pub padding_x: Px,
@@ -33,6 +38,12 @@ pub fn resolve_menu_list_row_chrome(theme: &Theme, size: Size) -> MenuListRowChr
         .metric_by_key("component.menu.separator_h")
         .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme));
 
+    let disabled_text_color = alpha_mul(
+        theme.color_by_key("muted-foreground")
+            .unwrap_or_else(|| theme.color_required("muted-foreground")),
+        0.5,
+    );
+
     MenuListRowChrome {
         padding_x,
         padding_y,
@@ -45,15 +56,15 @@ pub fn resolve_menu_list_row_chrome(theme: &Theme, size: Size) -> MenuListRowChr
         },
         text_color: theme
             .color_by_key("foreground")
-            .unwrap_or(theme.colors.text_primary),
-        disabled_text_color: theme
-            .color_by_key("muted.foreground")
-            .unwrap_or(theme.colors.text_disabled),
+            .unwrap_or_else(|| theme.color_required("foreground")),
+        disabled_text_color,
         row_hover: theme
             .color_by_key("list.hover.background")
-            .unwrap_or(theme.colors.menu_item_hover),
+            .or_else(|| theme.color_by_key("accent"))
+            .unwrap_or_else(|| theme.color_required("accent")),
         row_selected: theme
             .color_by_key("list.active.background")
-            .unwrap_or(theme.colors.menu_item_selected),
+            .or_else(|| theme.color_by_key("accent"))
+            .unwrap_or_else(|| theme.color_required("accent")),
     }
 }

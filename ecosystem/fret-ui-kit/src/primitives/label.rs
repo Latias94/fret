@@ -25,15 +25,15 @@ pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
 
     let fg = theme
         .color_by_key("foreground")
-        .unwrap_or(theme.colors.text_primary);
+        .unwrap_or_else(|| theme.color_required("foreground"));
     let px = theme
         .metric_by_key("component.label.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or(theme.metrics.font_size);
+        .unwrap_or_else(|| theme.metric_required("font.size"));
     let line_height = theme
         .metric_by_key("component.label.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or(theme.metrics.font_line_height);
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
     cx.text_props(TextProps {
         layout: Default::default(),

@@ -12,6 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
 
@@ -40,17 +41,17 @@ struct DataGridScrollHandles {
     cols: VirtualListScrollHandle,
 }
 
+fn with_alpha(mut c: Color, a: f32) -> Color {
+    c.a = a.clamp(0.0, 1.0);
+    c
+}
+
 fn border_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border)
+    theme.color_required("border")
 }
 
 fn muted_bg(theme: &Theme) -> Color {
-    theme
-        .color_by_key("muted")
-        .or_else(|| theme.color_by_key("muted.background"))
-        .unwrap_or(theme.colors.hover_background)
+    theme.color_required("muted")
 }
 
 fn row_height_px(theme: &Theme) -> Px {
@@ -62,19 +63,19 @@ fn row_height_px(theme: &Theme) -> Px {
 fn scrollbar_width(theme: &Theme) -> Px {
     theme
         .metric_by_key("metric.scrollbar.width")
-        .unwrap_or(theme.metrics.scrollbar_width)
+        .unwrap_or(Px(10.0))
 }
 
 fn scrollbar_thumb(theme: &Theme) -> Color {
     theme
         .color_by_key("scrollbar.thumb.background")
-        .unwrap_or(theme.colors.scrollbar_thumb)
+        .unwrap_or_else(|| with_alpha(theme.color_required("muted-foreground"), 0.35))
 }
 
 fn scrollbar_thumb_hover(theme: &Theme) -> Color {
     theme
         .color_by_key("scrollbar.thumb.hover.background")
-        .unwrap_or(theme.colors.scrollbar_thumb_hover)
+        .unwrap_or_else(|| with_alpha(theme.color_required("muted-foreground"), 0.55))
 }
 
 fn list_layout_style() -> LayoutStyle {
@@ -215,6 +216,7 @@ impl DataGrid {
                     layout: stack_layout,
                 },
                 move |cx| {
+                    let theme = Theme::global(&*cx.app).clone();
                     let col_widths = col_widths.clone();
 
                     let header = {
@@ -257,11 +259,8 @@ impl DataGrid {
                                     let text = headers.get(col).cloned().unwrap_or(Arc::from(""));
                                     let width =
                                         header_col_widths.get(col).copied().unwrap_or(Px(160.0));
-                                    fixed_width_container(
-                                        cx,
-                                        width,
-                                        TableHead::new(text).into_element(cx),
-                                    )
+                                    let head = TableHead::new(text).into_element(cx);
+                                    fixed_width_container(cx, width, head)
                                 },
                             )]
                         });
@@ -376,11 +375,8 @@ impl DataGrid {
                                                     .get(col)
                                                     .copied()
                                                     .unwrap_or(Px(160.0));
-                                                fixed_width_container(
-                                                    cx,
-                                                    width,
-                                                    TableCell::new(cell).into_element(cx),
-                                                )
+                                                let cell = TableCell::new(cell).into_element(cx);
+                                                fixed_width_container(cx, width, cell)
                                             },
                                         )]
                                     })]

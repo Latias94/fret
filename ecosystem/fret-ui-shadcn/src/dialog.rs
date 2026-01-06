@@ -133,22 +133,6 @@ impl Dialog {
 
                 let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let barrier_layout = LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: InsetStyle {
-                            top: Some(Px(0.0)),
-                            right: Some(Px(0.0)),
-                            bottom: Some(Px(0.0)),
-                            left: Some(Px(0.0)),
-                        },
-                        size: SizeStyle {
-                            width: Length::Fill,
-                            height: Length::Fill,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    };
-
                     let barrier_fill = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
@@ -169,34 +153,12 @@ impl Dialog {
                         |_cx| Vec::new(),
                     );
 
-                    let barrier = if overlay_closable {
-                        let open = self.open.clone();
-                        cx.pressable(
-                            PressableProps {
-                                layout: barrier_layout,
-                                enabled: true,
-                                focusable: false,
-                                ..Default::default()
-                            },
-                            move |cx, _st| {
-                                cx.pressable_set_bool(&open, false);
-                                vec![barrier_fill]
-                            },
-                        )
-                    } else {
-                        cx.container(
-                            ContainerProps {
-                                layout: barrier_layout,
-                                padding: Edges::all(Px(0.0)),
-                                background: Some(overlay_color),
-                                shadow: None,
-                                border: Edges::all(Px(0.0)),
-                                border_color: None,
-                                corner_radii: Corners::all(Px(0.0)),
-                            },
-                            |_cx| Vec::new(),
-                        )
-                    };
+                    let barrier = radix_dialog::modal_barrier(
+                        cx,
+                        self.open.clone(),
+                        overlay_closable,
+                        vec![barrier_fill],
+                    );
 
                     let outer = cx.bounds;
                     let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
@@ -271,11 +233,13 @@ impl Dialog {
                     });
                 }
 
-                let request = radix_dialog::modal_dialog_request(
+                let options = radix_dialog::DialogOptions::default().initial_focus(None);
+                let request = radix_dialog::modal_dialog_request_with_options(
                     id,
                     id,
                     self.open,
                     overlay_presence,
+                    options,
                     overlay_children,
                 );
                 radix_dialog::request_modal_dialog(cx, request);
@@ -317,14 +281,10 @@ impl DialogContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let bg = theme
-            .color_by_key("background")
-            .unwrap_or(theme.colors.panel_background);
-        let border = theme
-            .color_by_key("border")
-            .unwrap_or(theme.colors.panel_border);
+        let bg = theme.color_required("background");
+        let border = theme.color_required("border");
 
-        let radius = theme.metrics.radius_lg;
+        let radius = theme.metric_required("metric.radius.lg");
         let shadow = decl_style::shadow_lg(&theme, radius);
 
         let chrome = ChromeRefinement::default()
@@ -414,7 +374,7 @@ impl DialogClose {
             let fg = theme
                 .color_by_key("muted.foreground")
                 .or_else(|| theme.color_by_key("muted-foreground"))
-                .unwrap_or(theme.colors.text_muted);
+                .unwrap_or_else(|| theme.color_required("muted.foreground"));
 
             let a11y_label: Arc<str> = Arc::from("Close");
             let open = self.open.clone();
@@ -451,10 +411,10 @@ impl DialogClose {
 
                 let ring_color = theme
                     .color_by_key("ring")
-                    .unwrap_or(theme.colors.focus_ring);
+                    .unwrap_or_else(|| theme.color_required("ring"));
                 let ring_offset_bg = theme
                     .color_by_key("ring-offset-background")
-                    .unwrap_or(theme.colors.surface_background);
+                    .unwrap_or_else(|| theme.color_required("ring-offset-background"));
 
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
@@ -567,16 +527,16 @@ impl DialogTitle {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme
             .color_by_key("foreground")
-            .unwrap_or(theme.colors.text_primary);
+            .unwrap_or_else(|| theme.color_required("foreground"));
 
         let px = theme
             .metric_by_key("component.dialog.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or(theme.metrics.font_size);
+            .unwrap_or_else(|| theme.metric_required("font.size"));
         let line_height = theme
             .metric_by_key("component.dialog.title_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         let title = cx.text_props(TextProps {
             layout: Default::default(),
@@ -613,16 +573,16 @@ impl DialogDescription {
         let fg = theme
             .color_by_key("muted.foreground")
             .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or(theme.colors.text_muted);
+            .unwrap_or_else(|| theme.color_required("muted.foreground"));
 
         let px = theme
             .metric_by_key("component.dialog.description_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or(theme.metrics.font_size);
+            .unwrap_or_else(|| theme.metric_required("font.size"));
         let line_height = theme
             .metric_by_key("component.dialog.description_line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
         let description = cx.text_props(TextProps {
             layout: Default::default(),

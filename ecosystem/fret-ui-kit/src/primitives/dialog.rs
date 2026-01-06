@@ -15,11 +15,42 @@
 //! modal overlay request wiring, without forcing a visual skin.
 
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ElementKind, PressableProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, ElementKind, InsetStyle, LayoutStyle, Length, PositionStyle,
+    PressableProps, SizeStyle,
+};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::declarative::action_hooks::ActionHooksExt as _;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
+
+#[derive(Debug, Clone, Copy)]
+pub struct DialogOptions {
+    pub dismiss_on_overlay_press: bool,
+    pub initial_focus: Option<GlobalElementId>,
+}
+
+impl Default for DialogOptions {
+    fn default() -> Self {
+        Self {
+            dismiss_on_overlay_press: true,
+            initial_focus: None,
+        }
+    }
+}
+
+impl DialogOptions {
+    pub fn dismiss_on_overlay_press(mut self, dismiss_on_overlay_press: bool) -> Self {
+        self.dismiss_on_overlay_press = dismiss_on_overlay_press;
+        self
+    }
+
+    pub fn initial_focus(mut self, initial_focus: Option<GlobalElementId>) -> Self {
+        self.initial_focus = initial_focus;
+        self
+    }
+}
 
 /// Stable per-overlay root naming convention for dialog-like modal overlays.
 pub fn dialog_root_name(id: GlobalElementId) -> String {
@@ -59,9 +90,99 @@ pub fn modal_dialog_request(
     presence: OverlayPresence,
     children: Vec<AnyElement>,
 ) -> OverlayRequest {
+    modal_dialog_request_with_options(
+        id,
+        trigger,
+        open,
+        presence,
+        DialogOptions::default(),
+        children,
+    )
+}
+
+/// Builds an overlay request for a Radix-style modal dialog, with explicit options.
+pub fn modal_dialog_request_with_options(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    options: DialogOptions,
+    children: Vec<AnyElement>,
+) -> OverlayRequest {
     let mut request = OverlayRequest::modal(id, Some(trigger), open, presence, children);
     request.root_name = Some(dialog_root_name(id));
+    request.initial_focus = options.initial_focus;
     request
+}
+
+/// Standard full-window modal barrier layout (absolute inset 0, fill).
+pub fn modal_barrier_layout() -> LayoutStyle {
+    LayoutStyle {
+        position: PositionStyle::Absolute,
+        inset: InsetStyle {
+            top: Some(fret_core::Px(0.0)),
+            right: Some(fret_core::Px(0.0)),
+            bottom: Some(fret_core::Px(0.0)),
+            left: Some(fret_core::Px(0.0)),
+        },
+        size: SizeStyle {
+            width: Length::Fill,
+            height: Length::Fill,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Builds a modal overlay barrier element that can optionally dismiss the given `open` model when
+/// pressed.
+///
+/// The barrier is intentionally skin-agnostic: pass any background/visual elements as `children`.
+pub fn modal_barrier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    dismiss_on_press: bool,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    let layout = modal_barrier_layout();
+
+    if dismiss_on_press {
+        cx.pressable(
+            PressableProps {
+                layout,
+                enabled: true,
+                focusable: false,
+                ..Default::default()
+            },
+            move |cx, _st| {
+                cx.pressable_set_bool(&open, false);
+                children
+            },
+        )
+    } else {
+        cx.container(
+            ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            move |_cx| children,
+        )
+    }
+}
+
+/// Convenience helper to assemble modal overlay children in a Radix-like order: barrier then
+/// content.
+pub fn modal_dialog_layer_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    options: DialogOptions,
+    barrier_children: Vec<AnyElement>,
+    content: AnyElement,
+) -> Vec<AnyElement> {
+    vec![
+        modal_barrier(cx, open, options.dismiss_on_overlay_press, barrier_children),
+        content,
+    ]
 }
 
 /// Requests a Radix-style modal dialog overlay for the current window.
@@ -128,5 +249,25 @@ mod tests {
         );
         let expected = dialog_root_name(id);
         assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
+    }
+
+    #[test]
+    fn modal_dialog_request_with_options_sets_initial_focus() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let id = GlobalElementId(0x123);
+        let trigger = GlobalElementId(0x456);
+        let initial_focus = GlobalElementId(0xbeef);
+
+        let opts = DialogOptions::default().initial_focus(Some(initial_focus));
+        let req = modal_dialog_request_with_options(
+            id,
+            trigger,
+            open,
+            OverlayPresence::instant(true),
+            opts,
+            Vec::new(),
+        );
+        assert_eq!(req.initial_focus, Some(initial_focus));
     }
 }
