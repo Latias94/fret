@@ -9,7 +9,15 @@
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
-use fret_ui::element::PressableA11y;
+use fret_runtime::Model;
+use fret_ui::element::{
+    AnyElement, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
+    SemanticsProps, StackProps,
+};
+use fret_ui::{ElementContext, UiHost};
+
+use crate::declarative::ModelWatchExt;
+use crate::declarative::action_hooks::ActionHooksExt as _;
 
 /// Matches Radix Accordion `type` outcome.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,4 +66,345 @@ pub fn tab_stop_index_multiple(
         (enabled && is_open).then_some(idx)
     });
     first_open_enabled.or_else(|| crate::headless::roving_focus::first_enabled(disabled))
+}
+
+/// A composable, Radix-shaped accordion configuration surface (`AccordionRoot` / `AccordionItem` /
+/// `AccordionTrigger` / `AccordionContent`).
+///
+/// Unlike Radix React, Fret does not use context objects; the "composition" surface is expressed as
+/// small Rust builders that thread the shared models and option values through closures.
+#[derive(Debug, Clone)]
+pub struct AccordionRoot {
+    kind: AccordionKind,
+    single_model: Option<Model<Option<Arc<str>>>>,
+    multiple_model: Option<Model<Vec<Arc<str>>>>,
+    collapsible: bool,
+    disabled: bool,
+    loop_navigation: bool,
+}
+
+impl AccordionRoot {
+    pub fn single(model: Model<Option<Arc<str>>>) -> Self {
+        Self {
+            kind: AccordionKind::Single,
+            single_model: Some(model),
+            multiple_model: None,
+            collapsible: false,
+            disabled: false,
+            loop_navigation: true,
+        }
+    }
+
+    pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {
+        Self {
+            kind: AccordionKind::Multiple,
+            single_model: None,
+            multiple_model: Some(model),
+            collapsible: false,
+            disabled: false,
+            loop_navigation: true,
+        }
+    }
+
+    pub fn kind(&self) -> AccordionKind {
+        self.kind
+    }
+
+    /// In Radix single mode, `collapsible` controls whether the open item can be closed.
+    pub fn collapsible(mut self, collapsible: bool) -> Self {
+        self.collapsible = collapsible;
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
+        self.loop_navigation = loop_navigation;
+        self
+    }
+
+    pub fn list(self, values: Arc<[Arc<str>]>, disabled: Arc<[bool]>) -> AccordionList {
+        AccordionList::new(self, values, disabled)
+    }
+
+    pub fn item(&self, value: impl Into<Arc<str>>) -> AccordionItem {
+        AccordionItem::new(value)
+    }
+
+    pub fn trigger(&self, value: impl Into<Arc<str>>) -> AccordionTrigger {
+        AccordionTrigger::new(value)
+    }
+
+    pub fn content(&self, value: impl Into<Arc<str>>) -> AccordionContent {
+        AccordionContent::new(value)
+    }
+
+    pub fn is_item_open<H: UiHost>(&self, cx: &mut ElementContext<'_, H>, value: &str) -> bool {
+        match self.kind {
+            AccordionKind::Single => cx
+                .watch_model(
+                    self.single_model
+                        .as_ref()
+                        .expect("AccordionRoot single model"),
+                )
+                .layout()
+                .cloned()
+                .flatten()
+                .as_deref()
+                .is_some_and(|v| v == value),
+            AccordionKind::Multiple => cx
+                .watch_model(
+                    self.multiple_model
+                        .as_ref()
+                        .expect("AccordionRoot multiple model"),
+                )
+                .layout()
+                .cloned()
+                .unwrap_or_default()
+                .iter()
+                .any(|v| v.as_ref() == value),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AccordionList {
+    root: AccordionRoot,
+    values: Arc<[Arc<str>]>,
+    disabled: Arc<[bool]>,
+    layout: LayoutStyle,
+}
+
+impl AccordionList {
+    pub fn new(root: AccordionRoot, values: Arc<[Arc<str>]>, disabled: Arc<[bool]>) -> Self {
+        Self {
+            root,
+            values,
+            disabled,
+            layout: LayoutStyle::default(),
+        }
+    }
+
+    pub fn layout(mut self, layout: LayoutStyle) -> Self {
+        self.layout = layout;
+        self
+    }
+
+    pub fn tab_stop_index<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Option<usize> {
+        let disabled: Vec<bool> = self.disabled.iter().copied().collect();
+        match self.root.kind {
+            AccordionKind::Single => {
+                let open = cx
+                    .watch_model(
+                        self.root
+                            .single_model
+                            .as_ref()
+                            .expect("AccordionRoot single model"),
+                    )
+                    .layout()
+                    .cloned()
+                    .flatten();
+                tab_stop_index_single(&self.values, open.as_deref(), &disabled)
+            }
+            AccordionKind::Multiple => {
+                let open = cx
+                    .watch_model(
+                        self.root
+                            .multiple_model
+                            .as_ref()
+                            .expect("AccordionRoot multiple model"),
+                    )
+                    .layout()
+                    .cloned()
+                    .unwrap_or_default();
+                tab_stop_index_multiple(&self.values, &open, &disabled)
+            }
+        }
+    }
+
+    /// Renders an accordion list semantics root containing a roving-focus group.
+    ///
+    /// Notes:
+    /// - This does not apply any visual skin. Pass `flex` / `layout` via `RovingFlexProps`.
+    /// - Accordion selection is activation-driven: focus movement does not toggle open state.
+    #[track_caller]
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        mut props: RovingFlexProps,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        props.flex.direction = fret_core::Axis::Vertical;
+        props.roving = RovingFocusProps {
+            enabled: props.roving.enabled && !self.root.disabled,
+            wrap: self.root.loop_navigation,
+            disabled: self.disabled.clone(),
+        };
+
+        let layout = self.layout;
+        cx.semantics(
+            SemanticsProps {
+                layout,
+                role: SemanticsRole::List,
+                disabled: self.root.disabled,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.roving_flex(props, move |cx| {
+                    cx.roving_nav_apg();
+                    f(cx)
+                })]
+            },
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AccordionItem {
+    value: Arc<str>,
+}
+
+impl AccordionItem {
+    pub fn new(value: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+        }
+    }
+
+    pub fn value(&self) -> Arc<str> {
+        self.value.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AccordionTrigger {
+    value: Arc<str>,
+    label: Option<Arc<str>>,
+    disabled: bool,
+    tab_stop: bool,
+}
+
+impl AccordionTrigger {
+    pub fn new(value: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            label: None,
+            disabled: false,
+            tab_stop: false,
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn tab_stop(mut self, tab_stop: bool) -> Self {
+        self.tab_stop = tab_stop;
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        root: &AccordionRoot,
+        mut props: PressableProps,
+        f: impl FnOnce(&mut ElementContext<'_, H>, bool) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        let value = self.value.clone();
+        let label = self.label.clone().unwrap_or_else(|| value.clone());
+        let disabled = self.disabled || root.disabled;
+        let tab_stop = self.tab_stop;
+
+        cx.pressable_with_id_props(move |cx, st, _id| {
+            match root.kind {
+                AccordionKind::Single => {
+                    let model = root
+                        .single_model
+                        .as_ref()
+                        .expect("AccordionRoot single model")
+                        .clone();
+                    let value = value.clone();
+                    let collapsible = root.collapsible;
+                    cx.pressable_add_on_activate(Arc::new(move |host, _cx, _reason| {
+                        let value = value.clone();
+                        let _ = host.models_mut().update(&model, |open| {
+                            let is_same = open.as_deref().is_some_and(|cur| cur == value.as_ref());
+                            if is_same {
+                                if collapsible {
+                                    *open = None;
+                                }
+                            } else {
+                                *open = Some(value);
+                            }
+                        });
+                    }));
+                }
+                AccordionKind::Multiple => {
+                    let model = root
+                        .multiple_model
+                        .as_ref()
+                        .expect("AccordionRoot multiple model")
+                        .clone();
+                    cx.pressable_toggle_vec_arc_str(&model, value.clone());
+                }
+            }
+
+            let open = root.is_item_open(cx, value.as_ref());
+
+            props.enabled = !disabled;
+            props.focusable = (!disabled) && (tab_stop || st.focused);
+            props.a11y = accordion_trigger_a11y(label.clone(), open);
+
+            (props, f(cx, open))
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AccordionContent {
+    value: Arc<str>,
+    force_mount: bool,
+}
+
+impl AccordionContent {
+    pub fn new(value: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            force_mount: false,
+        }
+    }
+
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        root: &AccordionRoot,
+        f: impl FnOnce(&mut ElementContext<'_, H>, bool) -> Vec<AnyElement>,
+    ) -> Option<AnyElement> {
+        let open = root.is_item_open(cx, self.value.as_ref());
+        if !open && !self.force_mount {
+            return None;
+        }
+        Some(cx.stack_props(
+            StackProps {
+                layout: LayoutStyle::default(),
+            },
+            move |cx| f(cx, open),
+        ))
+    }
 }

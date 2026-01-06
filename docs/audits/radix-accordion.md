@@ -33,6 +33,6 @@ Fret does not use React context. Instead, accordion behavior is composed via:
 
 ## Follow-ups (recommended)
 
-- If strict parity is needed, consider adding a "composable surface" mirroring Radix (`Item` /
-  `Header` / `Trigger` / `Content`) while keeping the skin in shadcn layer.
-
+- Pass: A composable, Radix-shaped surface exists in `fret-ui-kit` for non-shadcn users:
+  `AccordionRoot` / `AccordionList` / `AccordionTrigger` / `AccordionContent` in
+  `ecosystem/fret-ui-kit/src/primitives/accordion.rs`.

@@ -26,6 +26,10 @@ examples in `repo-ref/ui`.
 - Pass: Supports both single and multiple open models (`Model<Option<Arc<str>>>` and
   `Model<Vec<Arc<str>>>`), including `collapsible(true)` in the single-open mode.
 
+Note: A fully composable, Radix-shaped surface exists in the primitives layer for non-shadcn users
+(`fret-ui-kit::primitives::accordion::AccordionRoot` / `AccordionTrigger` / `AccordionContent`),
+while the shadcn wrapper keeps a builder-style ergonomic API.
+
 ### Keyboard & interaction behavior
 
 - Pass: Trigger activation toggles open state.
