@@ -96,7 +96,7 @@ pub fn markdown_blocks_with<H: UiHost>(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
-            .layout(LayoutRefinement::default().w_full()),
+            .layout(LayoutRefinement::default().w_full().flex_shrink_0()),
         |cx| {
             let mut all =
                 Vec::with_capacity(blocks.committed.len() + usize::from(blocks.pending.is_some()));
@@ -415,6 +415,7 @@ fn render_heading<H: UiHost>(
 
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
+    layout.flex.shrink = 0.0;
 
     cx.text_props(TextProps {
         layout,
@@ -439,6 +440,7 @@ fn render_paragraph<H: UiHost>(
 ) -> AnyElement {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
+    layout.flex.shrink = 0.0;
 
     cx.text_props(TextProps {
         layout,
