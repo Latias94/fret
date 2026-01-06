@@ -2073,6 +2073,89 @@ mod heatmap_lod_tests {
     }
 }
 
+#[cfg(test)]
+mod hover_segment_tests {
+    use super::*;
+
+    use crate::series::OwnedSeriesData;
+
+    #[test]
+    fn polyline_hover_hits_segments_between_points() {
+        let data = OwnedSeriesData::new(vec![
+            DataPoint { x: 0.0, y: 5.0 },
+            DataPoint { x: 10.0, y: 5.0 },
+        ]);
+
+        let series = [(SeriesId(1), YAxis::Left, &data as &dyn SeriesData)];
+        let hidden: HashSet<SeriesId> = HashSet::new();
+
+        let args = PlotHitTestArgs {
+            model_revision: 0,
+            plot_size: Size::new(Px(10.0), Px(10.0)),
+            view_bounds: DataRect {
+                x_min: 0.0,
+                x_max: 10.0,
+                y_min: 0.0,
+                y_max: 10.0,
+            },
+            view_bounds_y2: None,
+            x_scale: AxisScale::Linear,
+            y_scale: AxisScale::Linear,
+            y2_scale: AxisScale::Linear,
+            scale_factor: 1.0,
+            local: Point::new(Px(5.0), Px(6.0)),
+            style: LinePlotStyle::default(),
+            hover_threshold: Px(1.5),
+            hidden: &hidden,
+            pinned: None,
+        };
+
+        let hover = hit_test_polyline_series_data(&[], &series, args).expect("expected hover hit");
+        assert!((hover.plot_px.x.0 - 5.0).abs() < 1.0e-6);
+        assert!((hover.plot_px.y.0 - 5.0).abs() < 1.0e-6);
+        assert!((hover.data.x - 5.0).abs() < 1.0e-6);
+        assert!((hover.data.y - 5.0).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn polyline_hover_does_not_connect_across_nan_breaks() {
+        let data = OwnedSeriesData::new(vec![
+            DataPoint { x: 0.0, y: 5.0 },
+            DataPoint {
+                x: 5.0,
+                y: f64::NAN,
+            },
+            DataPoint { x: 10.0, y: 5.0 },
+        ]);
+
+        let series = [(SeriesId(1), YAxis::Left, &data as &dyn SeriesData)];
+        let hidden: HashSet<SeriesId> = HashSet::new();
+
+        let args = PlotHitTestArgs {
+            model_revision: 0,
+            plot_size: Size::new(Px(10.0), Px(10.0)),
+            view_bounds: DataRect {
+                x_min: 0.0,
+                x_max: 10.0,
+                y_min: 0.0,
+                y_max: 10.0,
+            },
+            view_bounds_y2: None,
+            x_scale: AxisScale::Linear,
+            y_scale: AxisScale::Linear,
+            y2_scale: AxisScale::Linear,
+            scale_factor: 1.0,
+            local: Point::new(Px(5.0), Px(6.0)),
+            style: LinePlotStyle::default(),
+            hover_threshold: Px(1.5),
+            hidden: &hidden,
+            pinned: None,
+        };
+
+        assert!(hit_test_polyline_series_data(&[], &series, args).is_none());
+    }
+}
+
 pub type HeatmapPlotCanvas = PlotCanvas<HeatmapPlotLayer>;
 
 impl PlotCanvas<HeatmapPlotLayer> {
@@ -5321,7 +5404,7 @@ impl PlotLayer for LinePlotLayer {
             .iter()
             .map(|s| (s.id, s.y_axis, &*s.data))
             .collect();
-        hit_test_series_data(&self.cached_paths, &series, args)
+        hit_test_polyline_series_data(&self.cached_paths, &series, args)
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
@@ -5569,7 +5652,7 @@ impl PlotLayer for ScatterPlotLayer {
             .iter()
             .map(|s| (s.id, s.y_axis, &*s.data))
             .collect();
-        hit_test_series_data(&self.cached_paths, &series, args)
+        hit_test_polyline_series_data(&self.cached_paths, &series, args)
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
@@ -6722,21 +6805,23 @@ impl PlotLayer for AreaPlotLayer {
                     }
             });
 
-        let mut best: Option<(SamplePoint, f32)> = None;
-        let mut consider_sample = |s: SamplePoint| {
-            let dx = s.plot_px.x.0 - local.x.0;
-            let dy = s.plot_px.y.0 - local.y.0;
-            let d2 = dx * dx + dy * dy;
-            if !d2.is_finite() {
-                return;
-            }
-            if best.is_none_or(|b| d2 < b.1) {
-                best = Some((s, d2));
-            }
+        let transform_y1 = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
         };
+        let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: b,
+            x_scale,
+            y_scale: y2_scale,
+        });
+
+        let mut best: Option<(PlotHover, f32)> = None;
 
         if cached_ok {
-            for cached in &self.cached_paths {
+            for (cached, s) in self.cached_paths.iter().zip(series.iter()) {
                 if hidden.contains(&cached.series_id) {
                     continue;
                 }
@@ -6745,24 +6830,22 @@ impl PlotLayer for AreaPlotLayer {
                 {
                     continue;
                 }
-                for s in cached.samples.iter().copied() {
-                    consider_sample(s);
+                let transform = if s.y_axis == YAxis::Right {
+                    transform_y2.unwrap_or(transform_y1)
+                } else {
+                    transform_y1
+                };
+
+                let mut prev: Option<SamplePoint> = None;
+                for sp in cached.samples.iter().copied() {
+                    if let Some(p) = prev {
+                        consider_hover_segment(&mut best, local, p, sp, transform);
+                    }
+                    consider_hover_point(&mut best, local, sp);
+                    prev = Some(sp);
                 }
             }
         } else {
-            let transform_y1 = PlotTransform {
-                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
-                data: view_bounds,
-                x_scale,
-                y_scale,
-            };
-            let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
-                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
-                data: b,
-                x_scale,
-                y_scale: y2_scale,
-            });
-
             for s in series {
                 if hidden.contains(&s.id) {
                     continue;
@@ -6777,21 +6860,19 @@ impl PlotLayer for AreaPlotLayer {
                 } else {
                     transform_y1
                 };
-                for sample in decimate_samples(transform, &*s.data, scale_factor, s.id) {
-                    consider_sample(sample);
+                let samples = decimate_samples(transform, &*s.data, scale_factor, s.id);
+                let mut prev: Option<SamplePoint> = None;
+                for sp in samples.into_iter() {
+                    if let Some(p) = prev {
+                        consider_hover_segment(&mut best, local, p, sp, transform);
+                    }
+                    consider_hover_point(&mut best, local, sp);
+                    prev = Some(sp);
                 }
             }
         }
 
-        best.and_then(|(s, d2)| {
-            (d2 <= threshold2).then_some(PlotHover {
-                series_id: s.series_id,
-                index: s.index,
-                data: s.data,
-                plot_px: s.plot_px,
-                value: None,
-            })
-        })
+        best.and_then(|(hover, d2)| (d2 <= threshold2).then_some(hover))
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
@@ -7175,21 +7256,23 @@ impl PlotLayer for ShadedPlotLayer {
                     }
             });
 
-        let mut best: Option<(SamplePoint, f32)> = None;
-        let mut consider_sample = |s: SamplePoint| {
-            let dx = s.plot_px.x.0 - local.x.0;
-            let dy = s.plot_px.y.0 - local.y.0;
-            let d2 = dx * dx + dy * dy;
-            if !d2.is_finite() {
-                return;
-            }
-            if best.is_none_or(|b| d2 < b.1) {
-                best = Some((s, d2));
-            }
+        let transform_y1 = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
         };
+        let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: b,
+            x_scale,
+            y_scale: y2_scale,
+        });
+
+        let mut best: Option<(PlotHover, f32)> = None;
 
         if cached_ok {
-            for cached in &self.cached_paths {
+            for (cached, s) in self.cached_paths.iter().zip(series.iter()) {
                 if hidden.contains(&cached.series_id) {
                     continue;
                 }
@@ -7198,24 +7281,23 @@ impl PlotLayer for ShadedPlotLayer {
                 {
                     continue;
                 }
-                for s in cached.samples.iter().copied() {
-                    consider_sample(s);
+
+                let transform = if s.y_axis == YAxis::Right {
+                    transform_y2.unwrap_or(transform_y1)
+                } else {
+                    transform_y1
+                };
+
+                let mut prev: Option<SamplePoint> = None;
+                for sp in cached.samples.iter().copied() {
+                    if let Some(p) = prev {
+                        consider_hover_segment(&mut best, local, p, sp, transform);
+                    }
+                    consider_hover_point(&mut best, local, sp);
+                    prev = Some(sp);
                 }
             }
         } else {
-            let transform_y1 = PlotTransform {
-                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
-                data: view_bounds,
-                x_scale,
-                y_scale,
-            };
-            let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
-                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
-                data: b,
-                x_scale,
-                y_scale: y2_scale,
-            });
-
             for s in series {
                 if hidden.contains(&s.id) {
                     continue;
@@ -7233,21 +7315,18 @@ impl PlotLayer for ShadedPlotLayer {
                 };
                 let (_fill, _upper, _lower, samples) =
                     decimate_shaded_band(transform, &*s.upper, &*s.lower, scale_factor, s.id);
-                for sample in samples {
-                    consider_sample(sample);
+                let mut prev: Option<SamplePoint> = None;
+                for sp in samples.into_iter() {
+                    if let Some(p) = prev {
+                        consider_hover_segment(&mut best, local, p, sp, transform);
+                    }
+                    consider_hover_point(&mut best, local, sp);
+                    prev = Some(sp);
                 }
             }
         }
 
-        best.and_then(|(s, d2)| {
-            (d2 <= threshold2).then_some(PlotHover {
-                series_id: s.series_id,
-                index: s.index,
-                data: s.data,
-                plot_px: s.plot_px,
-                value: None,
-            })
-        })
+        best.and_then(|(hover, d2)| (d2 <= threshold2).then_some(hover))
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
@@ -7269,6 +7348,231 @@ fn hash_value<T: Hash>(v: &T) -> u64 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     v.hash(&mut h);
     h.finish()
+}
+
+fn point_segment_closest_px(p: Point, a: Point, b: Point) -> Option<(Point, f32)> {
+    let ax = a.x.0;
+    let ay = a.y.0;
+    let bx = b.x.0;
+    let by = b.y.0;
+    let px = p.x.0;
+    let py = p.y.0;
+
+    if !ax.is_finite() || !ay.is_finite() || !bx.is_finite() || !by.is_finite() {
+        return None;
+    }
+    if !px.is_finite() || !py.is_finite() {
+        return None;
+    }
+
+    let abx = bx - ax;
+    let aby = by - ay;
+    let apx = px - ax;
+    let apy = py - ay;
+
+    let denom = abx * abx + aby * aby;
+    if !denom.is_finite() || denom <= 0.0 {
+        return Some((a, 0.0));
+    }
+
+    let mut t = (apx * abx + apy * aby) / denom;
+    if !t.is_finite() {
+        return None;
+    }
+    t = t.clamp(0.0, 1.0);
+
+    let qx = ax + abx * t;
+    let qy = ay + aby * t;
+    if !qx.is_finite() || !qy.is_finite() {
+        return None;
+    }
+
+    Some((Point::new(Px(qx), Px(qy)), t))
+}
+
+fn consider_hover_point(best: &mut Option<(PlotHover, f32)>, local: Point, s: SamplePoint) {
+    let dx = s.plot_px.x.0 - local.x.0;
+    let dy = s.plot_px.y.0 - local.y.0;
+    let d2 = dx * dx + dy * dy;
+    if !d2.is_finite() {
+        return;
+    }
+
+    let hover = PlotHover {
+        series_id: s.series_id,
+        index: s.index,
+        data: s.data,
+        plot_px: s.plot_px,
+        value: None,
+    };
+
+    if best.is_none_or(|b| d2 < b.1) {
+        *best = Some((hover, d2));
+    }
+}
+
+fn consider_hover_segment(
+    best: &mut Option<(PlotHover, f32)>,
+    local: Point,
+    prev: SamplePoint,
+    curr: SamplePoint,
+    transform: PlotTransform,
+) {
+    if !curr.connects_to_prev {
+        return;
+    }
+
+    let Some((q, t)) = point_segment_closest_px(local, prev.plot_px, curr.plot_px) else {
+        return;
+    };
+
+    let dx = q.x.0 - local.x.0;
+    let dy = q.y.0 - local.y.0;
+    let d2 = dx * dx + dy * dy;
+    if !d2.is_finite() {
+        return;
+    }
+
+    let idx = if t <= 0.5 { prev.index } else { curr.index };
+    let data = transform.px_to_data(q);
+    if !data.x.is_finite() || !data.y.is_finite() {
+        return;
+    }
+
+    if best.is_none_or(|b| d2 < b.1) {
+        *best = Some((
+            PlotHover {
+                series_id: curr.series_id,
+                index: idx,
+                data,
+                plot_px: q,
+                value: None,
+            },
+            d2,
+        ));
+    }
+}
+
+fn hit_test_polyline_series_data(
+    cached_paths: &[CachedPath],
+    series: &[(SeriesId, YAxis, &dyn SeriesData)],
+    args: PlotHitTestArgs<'_>,
+) -> Option<PlotHover> {
+    let PlotHitTestArgs {
+        model_revision,
+        plot_size,
+        view_bounds,
+        view_bounds_y2,
+        x_scale,
+        y_scale,
+        y2_scale,
+        scale_factor,
+        local,
+        style,
+        hover_threshold,
+        hidden,
+        pinned,
+    } = args;
+
+    let threshold = hover_threshold.0.max(0.0);
+    let threshold2 = threshold * threshold;
+
+    let scale_factor_bits = scale_factor.to_bits();
+    let viewport_w_bits = plot_size.width.0.to_bits();
+    let viewport_h_bits = plot_size.height.0.to_bits();
+    let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+    let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+
+    let series_count = series.len();
+    if series_count == 0 {
+        return None;
+    }
+
+    let cached_ok = cached_paths.len() == series_count
+        && cached_paths.iter().enumerate().all(|(i, c)| {
+            series.get(i).is_some_and(|(id, axis, _data)| {
+                let expected_view_key = if *axis == YAxis::Right {
+                    view_key_y2.unwrap_or(view_key_y1)
+                } else {
+                    view_key_y1
+                };
+                *id == c.series_id && c.view_key == expected_view_key
+            }) && c.model_revision == model_revision
+                && c.scale_factor_bits == scale_factor_bits
+                && c.viewport_w_bits == viewport_w_bits
+                && c.viewport_h_bits == viewport_h_bits
+                && c.stroke_width == style.stroke_width
+        });
+
+    let transform_y1 = PlotTransform {
+        viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+        data: view_bounds,
+        x_scale,
+        y_scale,
+    };
+    let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
+        viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+        data: b,
+        x_scale,
+        y_scale: y2_scale,
+    });
+
+    let mut best: Option<(PlotHover, f32)> = None;
+
+    if cached_ok {
+        for (cached, (series_id, axis, _data)) in cached_paths.iter().zip(series.iter().copied()) {
+            if hidden.contains(&cached.series_id) {
+                continue;
+            }
+            if let Some(pinned) = pinned
+                && cached.series_id != pinned
+            {
+                continue;
+            }
+            let transform = if axis == YAxis::Right {
+                transform_y2.unwrap_or(transform_y1)
+            } else {
+                transform_y1
+            };
+            debug_assert_eq!(cached.series_id, series_id);
+
+            let mut prev: Option<SamplePoint> = None;
+            for s in cached.samples.iter().copied() {
+                if let Some(p) = prev {
+                    consider_hover_segment(&mut best, local, p, s, transform);
+                }
+                consider_hover_point(&mut best, local, s);
+                prev = Some(s);
+            }
+        }
+    } else {
+        for (series_id, axis, data) in series.iter().copied() {
+            if hidden.contains(&series_id) {
+                continue;
+            }
+            if let Some(pinned) = pinned
+                && pinned != series_id
+            {
+                continue;
+            }
+            let transform = if axis == YAxis::Right {
+                transform_y2.unwrap_or(transform_y1)
+            } else {
+                transform_y1
+            };
+            let samples = decimate_samples(transform, data, scale_factor, series_id);
+            let mut prev: Option<SamplePoint> = None;
+            for s in samples.into_iter() {
+                if let Some(p) = prev {
+                    consider_hover_segment(&mut best, local, p, s, transform);
+                }
+                consider_hover_point(&mut best, local, s);
+                prev = Some(s);
+            }
+        }
+    }
+
+    best.and_then(|(hover, d2)| (d2 <= threshold2).then_some(hover))
 }
 
 fn hit_test_series_data(

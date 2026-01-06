@@ -11,6 +11,11 @@ pub(crate) struct SamplePoint {
     pub(crate) data: DataPoint,
     /// Point in plot-local logical pixels (origin at plot rect origin).
     pub(crate) plot_px: Point,
+    /// Whether this point is connected to the previous emitted point in the same sample stream.
+    ///
+    /// This is used for hit testing against line segments. A `false` value indicates a segment
+    /// boundary (e.g. due to missing/non-finite data).
+    pub(crate) connects_to_prev: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -195,17 +200,24 @@ pub(crate) fn decimate_shaded_band(
             self.fill_commands.push(PathCommand::Close);
 
             for p in self.decimated.iter().copied() {
+                let connects_to_prev = p.index != first.index;
                 self.samples.push(SamplePoint {
                     series_id: self.series_id,
                     index: p.index,
                     data: p.upper,
                     plot_px: p.upper_px,
+                    connects_to_prev,
                 });
+            }
+
+            for p in self.decimated.iter().copied() {
+                let connects_to_prev = p.index != first.index;
                 self.samples.push(SamplePoint {
                     series_id: self.series_id,
                     index: p.index,
                     data: p.lower,
                     plot_px: p.lower_px,
+                    connects_to_prev,
                 });
             }
 
@@ -519,7 +531,10 @@ fn flush_polyline_segment(
     if segment.len() == 1 {
         let p = segment[0];
         commands.push(PathCommand::MoveTo(p.plot_px));
-        samples.push(p);
+        samples.push(SamplePoint {
+            connects_to_prev: false,
+            ..p
+        });
         segment.clear();
         return;
     }
@@ -528,7 +543,10 @@ fn flush_polyline_segment(
     let last = *segment.last().expect("non-empty segment");
 
     commands.push(PathCommand::MoveTo(first.plot_px));
-    samples.push(first);
+    samples.push(SamplePoint {
+        connects_to_prev: false,
+        ..first
+    });
 
     let mut last_emitted_idx = first.index;
     let mut last_emitted_point = first.plot_px;
@@ -562,7 +580,10 @@ fn flush_polyline_segment(
                 continue;
             }
             commands.push(PathCommand::LineTo(p.plot_px));
-            samples.push(p);
+            samples.push(SamplePoint {
+                connects_to_prev: true,
+                ..p
+            });
             last_emitted_idx = p.index;
             last_emitted_point = p.plot_px;
         }
@@ -604,10 +625,16 @@ fn flush_polyline_segment(
 
     if last.index > last_emitted_idx && last.plot_px != last_emitted_point {
         commands.push(PathCommand::LineTo(last.plot_px));
-        samples.push(last);
+        samples.push(SamplePoint {
+            connects_to_prev: true,
+            ..last
+        });
     } else if last.index > last_emitted_idx && last.plot_px == last_emitted_point {
         // Keep sample indices monotonic for hover even if the point collapses.
-        samples.push(last);
+        samples.push(SamplePoint {
+            connects_to_prev: true,
+            ..last
+        });
     }
 
     segment.clear();
@@ -637,6 +664,7 @@ fn push_poly_point(
         index,
         data: p,
         plot_px: px,
+        connects_to_prev: false,
     });
 }
 
