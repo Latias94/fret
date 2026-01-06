@@ -891,6 +891,7 @@ impl Default for GridProps {
 #[derive(Debug, Clone)]
 pub struct VirtualListProps {
     pub layout: LayoutStyle,
+    pub axis: fret_core::Axis,
     pub len: usize,
     pub items_revision: u64,
     pub estimate_row_height: Px,
@@ -903,6 +904,7 @@ pub struct VirtualListProps {
 
 #[derive(Debug, Clone, Copy)]
 pub struct VirtualListOptions {
+    pub axis: fret_core::Axis,
     pub items_revision: u64,
     pub estimate_row_height: Px,
     pub overscan: usize,
@@ -913,6 +915,7 @@ pub struct VirtualListOptions {
 impl VirtualListOptions {
     pub fn new(estimate_row_height: Px, overscan: usize) -> Self {
         Self {
+            axis: fret_core::Axis::Vertical,
             items_revision: 0,
             estimate_row_height,
             overscan,
@@ -925,7 +928,9 @@ impl VirtualListOptions {
 /// Cross-frame element-local state for a virtual list (stored in the element state store).
 #[derive(Debug, Default, Clone)]
 pub struct VirtualListState {
+    pub offset_x: Px,
     pub offset_y: Px,
+    pub viewport_w: Px,
     pub viewport_h: Px,
     pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
     pub(crate) items_revision: u64,

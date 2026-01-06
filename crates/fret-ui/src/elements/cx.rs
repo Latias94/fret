@@ -1209,21 +1209,24 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             scroll_handle.set_items_count(len);
 
             let range = cx.with_state(VirtualListState::default, |state| {
-                let prev_anchor = if state.viewport_h.0 > 0.0 && !state.keys.is_empty() {
-                    state
-                        .metrics
-                        .visible_range(state.offset_y, state.viewport_h, 0)
-                        .map(|r| {
-                            let idx = r.start_index;
-                            let key = state
-                                .keys
-                                .get(idx)
-                                .copied()
-                                .unwrap_or(idx as crate::ItemKey);
-                            let start = state.metrics.offset_for_index(idx);
-                            let offset_in_viewport = Px((state.offset_y.0 - start.0).max(0.0));
-                            (key, offset_in_viewport)
-                        })
+                let axis = options.axis;
+                let (viewport, offset) = match axis {
+                    fret_core::Axis::Vertical => (state.viewport_h, state.offset_y),
+                    fret_core::Axis::Horizontal => (state.viewport_w, state.offset_x),
+                };
+
+                let prev_anchor = if viewport.0 > 0.0 && !state.keys.is_empty() {
+                    state.metrics.visible_range(offset, viewport, 0).map(|r| {
+                        let idx = r.start_index;
+                        let key = state
+                            .keys
+                            .get(idx)
+                            .copied()
+                            .unwrap_or(idx as crate::ItemKey);
+                        let start = state.metrics.offset_for_index(idx);
+                        let offset_in_viewport = Px((offset.0 - start.0).max(0.0));
+                        (key, offset_in_viewport)
+                    })
                 } else {
                     None
                 };
@@ -1267,22 +1270,34 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                         if let Some(index) = state.keys.iter().position(|&k| k == key) {
                             let start = state.metrics.offset_for_index(index);
                             let desired = Px(start.0 + offset_in_viewport.0);
-                            let clamped = state.metrics.clamp_offset(desired, state.viewport_h);
                             let prev = scroll_handle.offset();
-                            scroll_handle.set_offset(fret_core::Point::new(prev.x, clamped));
-                            state.offset_y = clamped;
+                            let clamped = state.metrics.clamp_offset(desired, viewport);
+                            match axis {
+                                fret_core::Axis::Vertical => {
+                                    scroll_handle
+                                        .set_offset(fret_core::Point::new(prev.x, clamped));
+                                    state.offset_y = clamped;
+                                }
+                                fret_core::Axis::Horizontal => {
+                                    scroll_handle
+                                        .set_offset(fret_core::Point::new(clamped, prev.y));
+                                    state.offset_x = clamped;
+                                }
+                            }
                         }
                     }
                 }
 
-                let viewport_h = Px(state.viewport_h.0.max(0.0));
-                let offset_y = state
-                    .metrics
-                    .clamp_offset(scroll_handle.offset().y, viewport_h);
+                let viewport = Px(viewport.0.max(0.0));
+                let handle_offset = match axis {
+                    fret_core::Axis::Vertical => scroll_handle.offset().y,
+                    fret_core::Axis::Horizontal => scroll_handle.offset().x,
+                };
+                let offset = state.metrics.clamp_offset(handle_offset, viewport);
 
                 state
                     .metrics
-                    .visible_range(offset_y, viewport_h, options.overscan)
+                    .visible_range(offset, viewport, options.overscan)
             });
 
             let mut indices = range
@@ -1313,6 +1328,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 id,
                 ElementKind::VirtualList(VirtualListProps {
                     layout,
+                    axis: options.axis,
                     len,
                     items_revision: options.items_revision,
                     estimate_row_height: options.estimate_row_height,

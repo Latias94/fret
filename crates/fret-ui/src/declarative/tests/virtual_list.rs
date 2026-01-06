@@ -106,6 +106,118 @@ fn virtual_list_computes_visible_range_after_first_layout() {
 }
 
 #[test]
+fn virtual_list_computes_visible_range_after_first_layout_horizontal() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(50.0), Px(60.0)),
+    );
+    let mut text = FakeTextService::default();
+    let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        list_element_id: &mut Option<crate::elements::GlobalElementId>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        let mut options = crate::element::VirtualListOptions::new(Px(10.0), 0);
+        options.axis = fret_core::Axis::Horizontal;
+
+        let list = cx.virtual_list(100, options, scroll_handle, |cx, items| {
+            items
+                .iter()
+                .copied()
+                .map(|item| {
+                    cx.keyed(item.key, |cx| {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = crate::element::Length::Px(Px(10.0));
+                        layout.size.height = crate::element::Length::Fill;
+                        cx.container(
+                            crate::element::ContainerProps {
+                                layout,
+                                ..Default::default()
+                            },
+                            |cx| vec![cx.text("col")],
+                        )
+                    })
+                })
+                .collect()
+        });
+        *list_element_id = Some(list.id);
+        list
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-x",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let list_node = ui.children(root)[0];
+    assert_eq!(ui.children(list_node).len(), 0);
+    let viewport_w = crate::elements::with_element_state(
+        &mut app,
+        window,
+        list_element_id.unwrap(),
+        crate::element::VirtualListState::default,
+        |s| s.viewport_w,
+    );
+    assert_eq!(viewport_w, Px(50.0));
+
+    app.advance_frame();
+    let prev_list_element_id = list_element_id;
+    let mut list_element_id: Option<crate::elements::GlobalElementId> = None;
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-x",
+        |cx| vec![build_list(cx, &mut list_element_id, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert_eq!(
+        prev_list_element_id, list_element_id,
+        "virtual list element id should be stable across frames"
+    );
+
+    let list_node = ui.children(root)[0];
+    let props = app.with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&list_node))
+            .cloned()
+    });
+    let super::super::ElementInstance::VirtualList(props) =
+        props.expect("list instance exists").instance
+    else {
+        panic!("expected VirtualList instance");
+    };
+    assert_eq!(
+        props
+            .visible_items
+            .iter()
+            .map(|item| item.index)
+            .collect::<Vec<_>>(),
+        vec![0, 1, 2, 3, 4]
+    );
+    assert_eq!(ui.children(list_node).len(), 5);
+}
+
+#[test]
 fn virtual_list_scroll_to_item_keeps_target_visible() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
