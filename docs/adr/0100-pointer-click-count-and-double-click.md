@@ -46,6 +46,9 @@ The click count is computed by the runner (currently `fret-runner-winit`) becaus
 
 Widgets should treat `click_count` as an input signal and should not implement their own timing logic.
 
+Viewport forwarding (`ViewportInputKind::{PointerDown,PointerUp}`) also carries `click_count` so
+engine-facing tools can share the same semantics.
+
 ### 3) Thresholds are defined in logical pixels
 
 The runner uses logical pixels (ADR 0017) for all pointer geometry:
@@ -69,10 +72,10 @@ These thresholds are part of runner normalization policy and may be made configu
 - Runner normalization: `crates/fret-runner-winit/src/lib.rs` (`WinitInputState` click tracker)
 - Plot alignment: `ecosystem/fret-ui-plot` uses `click_count == 2` to support ImPlot-style fit on
   `LMB double-click`.
+ - Viewport forwarding: `ViewportInputKind::{PointerDown,PointerUp}` carries `click_count` for
+   tools/embeds.
 
 ## Future Work
 
-- Consider adding click count to `ViewportInputKind::{PointerDown,PointerUp}` for engine viewports.
 - Consider exposing an optional "input map" configuration for plots (ImPlot-style `InputMap`), where
   double-click fit is one of the bindable actions.
-

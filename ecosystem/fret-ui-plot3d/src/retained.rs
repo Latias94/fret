@@ -154,7 +154,7 @@ impl<H: UiHost> Widget<H> for Plot3dCanvas {
                 position,
                 button,
                 modifiers,
-                ..
+                click_count,
             }) => {
                 if !draw_rect.contains(*position) {
                     return;
@@ -170,6 +170,7 @@ impl<H: UiHost> Widget<H> for Plot3dCanvas {
                         kind: ViewportInputKind::PointerDown {
                             button: *button,
                             modifiers: *modifiers,
+                            click_count: *click_count,
                         },
                         clamped: false,
                     },
@@ -240,7 +241,7 @@ impl<H: UiHost> Widget<H> for Plot3dCanvas {
                 position,
                 button,
                 modifiers,
-                ..
+                click_count,
             }) => {
                 let Some(capture) = self.capture else {
                     return;
@@ -259,6 +260,7 @@ impl<H: UiHost> Widget<H> for Plot3dCanvas {
                         kind: ViewportInputKind::PointerUp {
                             button: *button,
                             modifiers: *modifiers,
+                            click_count: *click_count,
                         },
                         clamped: true,
                     },

@@ -237,10 +237,14 @@ pub enum ViewportInputKind {
     PointerDown {
         button: MouseButton,
         modifiers: Modifiers,
+        /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
+        click_count: u8,
     },
     PointerUp {
         button: MouseButton,
         modifiers: Modifiers,
+        /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
+        click_count: u8,
     },
     Wheel {
         delta: Point,
