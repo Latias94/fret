@@ -237,6 +237,51 @@ impl<'a, TData> Table<'a, TData> {
         self.options
     }
 
+    pub fn is_some_rows_expanded(&self) -> bool {
+        super::is_some_rows_expanded(&self.state.expanding)
+    }
+
+    pub fn is_all_rows_expanded(&self) -> bool {
+        match &self.state.expanding {
+            super::ExpandingState::All => true,
+            super::ExpandingState::Keys(keys) if keys.is_empty() => false,
+            _ => {
+                let model = self.row_model();
+                model
+                    .flat_rows()
+                    .iter()
+                    .filter_map(|&i| model.row(i))
+                    .all(|r| super::is_row_expanded(r.key, &self.state.expanding))
+            }
+        }
+    }
+
+    pub fn can_some_rows_expand(&self) -> bool {
+        let model = self.pre_pagination_row_model();
+        model
+            .flat_rows()
+            .iter()
+            .any(|&i| super::row_can_expand(model, i))
+    }
+
+    pub fn expanded_depth(&self) -> u16 {
+        super::expanded_depth(self.pre_expanded_row_model(), &self.state.expanding)
+    }
+
+    pub fn row_can_expand(&self, row_key: RowKey) -> bool {
+        let model = self.pre_expanded_row_model();
+        model
+            .row_by_key(row_key)
+            .is_some_and(|i| super::row_can_expand(model, i))
+    }
+
+    pub fn row_is_all_parents_expanded(&self, row_key: RowKey) -> bool {
+        let model = self.pre_expanded_row_model();
+        model
+            .row_by_key(row_key)
+            .is_some_and(|i| super::row_is_all_parents_expanded(model, &self.state.expanding, i))
+    }
+
     pub fn ordered_columns(&self) -> Vec<&super::ColumnDef<TData>> {
         super::order_columns(&self.columns, &self.state.column_order)
     }
@@ -964,5 +1009,30 @@ mod tests {
             table.row_model(),
             table.pre_pagination_row_model()
         ));
+    }
+
+    #[test]
+    fn table_expanding_all_marks_all_rows_expanded() {
+        let data = vec![TreeNode {
+            id: 1,
+            children: vec![TreeNode {
+                id: 10,
+                children: Vec::new(),
+            }],
+        }];
+
+        let mut state = TableState::default();
+        state.expanding = crate::headless::table::ExpandingState::All;
+
+        let table = Table::builder(&data)
+            .get_row_key(|n, _i, _parent| RowKey(n.id))
+            .get_sub_rows(|n, _i| Some(n.children.as_slice()))
+            .state(state)
+            .build();
+
+        assert!(table.is_some_rows_expanded());
+        assert!(table.is_all_rows_expanded());
+        assert!(table.row_can_expand(RowKey(1)));
+        assert!(table.row_is_all_parents_expanded(RowKey(10)));
     }
 }

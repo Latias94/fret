@@ -85,9 +85,7 @@ pub fn toggle_row_expanded<'a, TData>(
 }
 
 pub fn row_can_expand<TData>(row_model: &RowModel<'_, TData>, row: RowIndex) -> bool {
-    row_model
-        .row(row)
-        .is_some_and(|r| !r.sub_rows.is_empty())
+    row_model.row(row).is_some_and(|r| !r.sub_rows.is_empty())
 }
 
 pub fn row_is_all_parents_expanded<TData>(
