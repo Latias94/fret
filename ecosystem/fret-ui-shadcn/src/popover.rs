@@ -234,11 +234,12 @@ impl Popover {
             let anchor_id = self.anchor_override.unwrap_or(trigger_id);
             let overlay_root_name = OverlayController::popover_root_name(trigger_id);
 
-            let motion = OverlayController::transition_with_durations(
+            let motion = OverlayController::transition_with_durations_and_easing(
                 cx,
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::shadcn_ease,
             );
             let overlay_presence = OverlayPresence {
                 present: motion.present,

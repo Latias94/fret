@@ -209,11 +209,12 @@ impl HoverCard {
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
             let update = hover_intent::drive(cx, hovered, cfg);
             let opening = update.open;
-            let motion = OverlayController::transition_with_durations(
+            let motion = OverlayController::transition_with_durations_and_easing(
                 cx,
                 opening,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::shadcn_ease,
             );
             let opacity = motion.progress;
 

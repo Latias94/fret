@@ -112,11 +112,12 @@ impl Sheet {
             let id = trigger.id;
             let overlay_root_name = OverlayController::modal_root_name(id);
 
-            let motion = OverlayController::transition_with_durations(
+            let motion = OverlayController::transition_with_durations_and_easing(
                 cx,
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_500,
                 overlay_motion::SHADCN_MOTION_TICKS_300,
+                overlay_motion::shadcn_ease,
             );
             let overlay_presence = OverlayPresence {
                 present: motion.present,

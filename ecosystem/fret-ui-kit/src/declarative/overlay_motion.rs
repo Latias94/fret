@@ -17,6 +17,11 @@ pub const SHADCN_MOTION_TICKS_200: u64 = 12;
 pub const SHADCN_MOTION_TICKS_300: u64 = 18;
 pub const SHADCN_MOTION_TICKS_500: u64 = 30;
 
+/// shadcn/ui v4 default easing curve (`ease-out`-ish).
+pub fn shadcn_ease(x: f32) -> f32 {
+    crate::headless::easing::SHADCN_EASE.sample(x)
+}
+
 pub fn shadcn_slide_insets(side: Side) -> Edges {
     match side {
         Side::Top => Edges {
