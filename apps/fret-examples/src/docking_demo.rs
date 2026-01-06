@@ -32,8 +32,8 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
         panel: &fret_core::PanelKey,
     ) -> Option<fret_core::NodeId> {
         let theme = Theme::global(&*app).clone();
-        let padding = theme.metrics.padding_md;
-        let background = theme.colors.surface_background;
+        let padding = theme.metric_required("metric.padding.md");
+        let background = theme.color_required("background");
 
         let label: &str = match panel.kind.0.as_str() {
             "core.hierarchy" => "Hierarchy panel (declarative root)",
@@ -81,7 +81,7 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
     ) {
         let border_color = Color {
             a: 0.65,
-            ..theme.colors.accent
+            ..theme.color_required("primary")
         };
         scene.push(SceneOp::Quad {
             order: DrawOrder(6),
