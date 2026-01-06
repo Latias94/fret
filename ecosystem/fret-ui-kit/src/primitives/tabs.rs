@@ -9,6 +9,7 @@
 use std::sync::Arc;
 
 use fret_core::{Modifiers, MouseButton, PointerType, SemanticsRole};
+use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
     SemanticsProps,
@@ -178,7 +179,7 @@ pub fn tab_panel_with_gate<H: UiHost>(
 /// small Rust builders that thread the shared models and option values through closures.
 #[derive(Debug, Clone)]
 pub struct TabsRoot {
-    model: fret_runtime::Model<Option<Arc<str>>>,
+    model: Model<Option<Arc<str>>>,
     disabled: bool,
     orientation: TabsOrientation,
     activation_mode: TabsActivationMode,
@@ -186,7 +187,7 @@ pub struct TabsRoot {
 }
 
 impl TabsRoot {
-    pub fn new(model: fret_runtime::Model<Option<Arc<str>>>) -> Self {
+    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
         Self {
             model,
             disabled: false,
@@ -196,8 +197,28 @@ impl TabsRoot {
         }
     }
 
-    pub fn model(&self) -> fret_runtime::Model<Option<Arc<str>>> {
+    pub fn model(&self) -> Model<Option<Arc<str>>> {
         self.model.clone()
+    }
+
+    /// Creates a tabs root with a controlled/uncontrolled selection model (Radix `value` /
+    /// `defaultValue`).
+    ///
+    /// Notes:
+    /// - The internal model (uncontrolled mode) is stored in element state at the call site.
+    /// - Call this from a stable subtree (key the root node if you need state to survive reordering).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        controlled: Option<Model<Option<Arc<str>>>>,
+        default_value: impl FnOnce() -> Option<Arc<str>>,
+    ) -> Self {
+        let model = crate::primitives::controllable_state::use_controllable_model(
+            cx,
+            controlled,
+            default_value,
+        )
+        .model();
+        Self::new(model)
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {

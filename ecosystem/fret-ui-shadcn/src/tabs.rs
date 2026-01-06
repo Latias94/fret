@@ -14,6 +14,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -173,7 +174,8 @@ impl TabsItem {
 
 #[derive(Clone)]
 pub struct Tabs {
-    model: Model<Option<Arc<str>>>,
+    model: Option<Model<Option<Arc<str>>>>,
+    default_value: Option<Arc<str>>,
     items: Vec<TabsItem>,
     disabled: bool,
     orientation: TabsOrientation,
@@ -203,7 +205,24 @@ impl std::fmt::Debug for Tabs {
 impl Tabs {
     pub fn new(model: Model<Option<Arc<str>>>) -> Self {
         Self {
-            model,
+            model: Some(model),
+            default_value: None,
+            items: Vec::new(),
+            disabled: false,
+            orientation: TabsOrientation::default(),
+            activation_mode: TabsActivationMode::default(),
+            loop_navigation: true,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            force_mount_content: false,
+        }
+    }
+
+    /// Creates an uncontrolled tabs root with an optional initial value (Radix `defaultValue`).
+    pub fn uncontrolled<T: Into<Arc<str>>>(default_value: Option<T>) -> Self {
+        Self {
+            model: None,
+            default_value: default_value.map(Into::into),
             items: Vec::new(),
             disabled: false,
             orientation: TabsOrientation::default(),
@@ -217,6 +236,14 @@ impl Tabs {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Sets the uncontrolled initial selection value (Radix `defaultValue`).
+    ///
+    /// Note: If a controlled `model` is provided, this value is ignored.
+    pub fn default_value<T: Into<Arc<str>>>(mut self, default_value: Option<T>) -> Self {
+        self.default_value = default_value.map(Into::into);
         self
     }
 
@@ -267,7 +294,8 @@ impl Tabs {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let model = self.model;
+        let controlled_model = self.model;
+        let default_value = self.default_value;
         let items = self.items;
         let tabs_disabled = self.disabled;
         let orientation = self.orientation;
@@ -276,6 +304,11 @@ impl Tabs {
         let chrome = self.chrome;
         let layout = self.layout;
         let force_mount_content = self.force_mount_content;
+
+        let model = controllable_state::use_controllable_model(cx, controlled_model, || {
+            default_value.clone()
+        })
+        .model();
 
         let theme = Theme::global(&*cx.app).clone();
         let gap = tabs_gap(&theme);
@@ -606,6 +639,16 @@ pub fn tabs<H: UiHost>(
     Tabs::new(model).items(f(cx)).into_element(cx)
 }
 
+pub fn tabs_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+    cx: &mut ElementContext<'_, H>,
+    default_value: Option<T>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<TabsItem>,
+) -> AnyElement {
+    Tabs::uncontrolled(default_value)
+        .items(f(cx))
+        .into_element(cx)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -688,6 +731,41 @@ mod tests {
                         .into_element(cx),
                 ]
             });
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_uncontrolled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_value: Option<Arc<str>>,
+    ) -> fret_core::NodeId {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "tabs-uncontrolled",
+            |cx| {
+                let items = vec![
+                    TabsItem::new("alpha", "Alpha", vec![]),
+                    TabsItem::new("beta", "Beta", vec![]),
+                    TabsItem::new("gamma", "Gamma", vec![]),
+                ];
+                vec![
+                    Tabs::uncontrolled(default_value.clone())
+                        .activation_mode(TabsActivationMode::Manual)
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
         ui.set_root(root);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
@@ -804,6 +882,86 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("alpha"));
+    }
+
+    #[test]
+    fn tabs_uncontrolled_applies_default_value_once_and_allows_selection_changes() {
+        fn tab_is_selected(ui: &UiTree<App>, label: &str) -> bool {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some(label))
+                .map(|n| n.flags.selected)
+                .unwrap_or(false)
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let _root = render_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("alpha")),
+        );
+        assert!(tab_is_selected(&ui, "Alpha"));
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let beta_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Tab && n.label.as_deref() == Some("Beta"))
+            .expect("beta tab");
+
+        let click = Point::new(
+            Px(beta_tab.bounds.origin.x.0 + beta_tab.bounds.size.width.0 / 2.0),
+            Px(beta_tab.bounds.origin.y.0 + beta_tab.bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: click,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        bump_frame(&mut app);
+        let _root = render_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("alpha")),
+        );
+        assert!(tab_is_selected(&ui, "Beta"));
+
+        // The internal model should not be reset by repeatedly passing the same default value.
+        bump_frame(&mut app);
+        let _root = render_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("alpha")),
+        );
+        assert!(tab_is_selected(&ui, "Beta"));
     }
 
     fn render_force_mount_frame(

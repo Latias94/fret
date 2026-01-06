@@ -178,7 +178,7 @@ pub use switch::{Switch, switch};
 pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };
-pub use tabs::{Tabs, TabsItem, tabs};
+pub use tabs::{Tabs, TabsItem, tabs, tabs_uncontrolled};
 pub use textarea::{Textarea, textarea};
 pub use toggle::{Toggle, ToggleSize, ToggleVariant, toggle};
 pub use toggle_group::{
