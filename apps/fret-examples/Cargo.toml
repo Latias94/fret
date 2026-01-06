@@ -9,7 +9,7 @@ fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-app-kit = { path = "../../ecosystem/fret-app-kit" }
 fret-ui-docking = { path = "../../ecosystem/fret-ui-docking" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
-fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["table"] }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }

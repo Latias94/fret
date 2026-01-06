@@ -431,15 +431,21 @@ pub fn table_virtualized<H: UiHost, TData>(
                                         },
                                     );
 
-                                    let body = cx.virtual_list_keyed(
+                                    let body = cx.virtual_list_keyed_with_layout(
+                                        {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout.size.height = Length::Fill;
+                                            layout.flex.grow = 1.0;
+                                            layout.flex.basis = Length::Px(Px(0.0));
+                                            layout
+                                        },
                                         set_size,
                                         list_options,
                                         vertical_scroll,
                                         |i| {
                                             let root = row_model.root_rows()[i];
-                                            let row = row_model
-                                                .row(root)
-                                                .expect("root row exists");
+                                            let row = row_model.row(root).expect("root row exists");
                                             stable_key64(row.id.as_ref())
                                         },
                                         |cx, i| {
