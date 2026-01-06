@@ -102,7 +102,8 @@ pub fn icon_with<H: UiHost>(
             theme,
             LayoutRefinement::default()
                 .w_px(MetricRef::Px(size))
-                .h_px(MetricRef::Px(size)),
+                .h_px(MetricRef::Px(size))
+                .flex_shrink_0(),
         );
 
         let mut props = SvgIconProps::new(svg);
