@@ -11,8 +11,8 @@ pub mod roving_focus;
 pub mod safe_hover;
 pub mod scroll_area_visibility;
 pub mod slider;
-pub mod transition;
 #[cfg(feature = "table")]
 pub mod table;
 pub mod tooltip_delay_group;
+pub mod transition;
 pub mod typeahead;

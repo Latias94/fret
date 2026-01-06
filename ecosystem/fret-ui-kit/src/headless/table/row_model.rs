@@ -12,7 +12,7 @@ pub type RowId = Arc<str>;
 /// Index into a [`RowModel`] arena.
 pub type RowIndex = usize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Row<'a, TData> {
     pub id: RowId,
     pub original: &'a TData,
@@ -23,12 +23,37 @@ pub struct Row<'a, TData> {
     pub sub_rows: Vec<RowIndex>,
 }
 
-#[derive(Debug, Clone)]
+impl<'a, TData> Clone for Row<'a, TData> {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            original: self.original,
+            index: self.index,
+            depth: self.depth,
+            parent: self.parent,
+            parent_id: self.parent_id.clone(),
+            sub_rows: self.sub_rows.clone(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct RowModel<'a, TData> {
     pub(super) root_rows: Vec<RowIndex>,
     pub(super) flat_rows: Vec<RowIndex>,
     pub(super) rows_by_id: HashMap<RowId, RowIndex>,
     pub(super) arena: Vec<Row<'a, TData>>,
+}
+
+impl<'a, TData> Clone for RowModel<'a, TData> {
+    fn clone(&self) -> Self {
+        Self {
+            root_rows: self.root_rows.clone(),
+            flat_rows: self.flat_rows.clone(),
+            rows_by_id: self.rows_by_id.clone(),
+            arena: self.arena.clone(),
+        }
+    }
 }
 
 impl<'a, TData> RowModel<'a, TData> {
