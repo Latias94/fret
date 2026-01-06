@@ -543,16 +543,17 @@ impl Tabs {
             ));
 
             if !force_mount_content {
-                children.push(cx.semantics(
-                    SemanticsProps {
-                        layout: tab_panel_layout,
-                        role: SemanticsRole::TabPanel,
-                        label: (!active_label.is_empty()).then_some(active_label),
-                        labelled_by_element: selected_tab_element.get(),
-                        ..Default::default()
-                    },
+                if let Some(panel) = radix_tabs::tab_panel_with_gate(
+                    cx,
+                    true,
+                    false,
+                    tab_panel_layout,
+                    (!active_label.is_empty()).then_some(active_label),
+                    selected_tab_element.get(),
                     move |_cx| active_children,
-                ));
+                ) {
+                    children.push(panel);
+                }
             }
 
             if force_mount_content {
@@ -564,18 +565,17 @@ impl Tabs {
                     let label = item.label.clone();
                     let content = item.content.clone();
 
-                    children.push(cx.interactivity_gate(active, active, move |cx| {
-                        vec![cx.semantics(
-                            SemanticsProps {
-                                layout: tab_panel_layout,
-                                role: SemanticsRole::TabPanel,
-                                label: (!label.is_empty()).then_some(label),
-                                labelled_by_element,
-                                ..Default::default()
-                            },
-                            move |_cx| content,
-                        )]
-                    }));
+                    let panel = radix_tabs::tab_panel_with_gate(
+                        cx,
+                        active,
+                        true,
+                        tab_panel_layout,
+                        (!label.is_empty()).then_some(label),
+                        labelled_by_element,
+                        move |_cx| content,
+                    )
+                    .expect("force-mounted tabs content should always render a subtree");
+                    children.push(panel);
                 }
             }
 
