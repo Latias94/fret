@@ -96,7 +96,7 @@ pub fn markdown_blocks_with<H: UiHost>(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
-            .layout(LayoutRefinement::default().w_full().flex_shrink_0()),
+            .layout(LayoutRefinement::default().w_full()),
         |cx| {
             let mut all =
                 Vec::with_capacity(blocks.committed.len() + usize::from(blocks.pending.is_some()));
@@ -413,12 +413,8 @@ fn render_heading<H: UiHost>(
         _ => theme.metrics.font_size,
     };
 
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-    layout.flex.shrink = 0.0;
-
     cx.text_props(TextProps {
-        layout,
+        layout: Default::default(),
         text,
         style: Some(TextStyle {
             font: FontId::default(),
@@ -438,12 +434,8 @@ fn render_paragraph<H: UiHost>(
     theme: &Theme,
     text: Arc<str>,
 ) -> AnyElement {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-    layout.flex.shrink = 0.0;
-
     cx.text_props(TextProps {
-        layout,
+        layout: Default::default(),
         text,
         style: Some(TextStyle {
             font: FontId::default(),
@@ -1859,7 +1851,6 @@ fn render_inline_token<H: UiHost>(
             let display_text = Arc::<str>::from(piece.text);
 
             let mut props = PressableProps::default();
-            props.layout.flex.shrink = 0.0;
             props.a11y.role = Some(SemanticsRole::Button);
             props.a11y.label = Some(link_text.clone());
 
@@ -1879,11 +1870,8 @@ fn render_inline_token<H: UiHost>(
                     );
                 }));
 
-                let mut layout = LayoutStyle::default();
-                layout.flex.shrink = 0.0;
-
                 vec![cx.text_props(TextProps {
-                    layout,
+                    layout: Default::default(),
                     text: display_text.clone(),
                     style: Some(TextStyle {
                         font,
@@ -1900,11 +1888,8 @@ fn render_inline_token<H: UiHost>(
         }
     }
 
-    let mut layout = LayoutStyle::default();
-    layout.flex.shrink = 0.0;
-
     cx.text_props(TextProps {
-        layout,
+        layout: Default::default(),
         text: Arc::<str>::from(piece.text),
         style: Some(TextStyle {
             font,
