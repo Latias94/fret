@@ -1,6 +1,3 @@
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-
 use fret_core::{Color, Corners, CursorIcon, Edges, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
@@ -10,6 +7,8 @@ use fret_ui::element::{
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use std::sync::Arc;
+
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 use crate::declarative::model_watch::ModelWatchExt as _;
@@ -17,14 +16,9 @@ use crate::declarative::stack;
 use crate::{Items, Justify, MetricRef, Size, Space};
 
 use crate::headless::table::{
-    ColumnDef, ColumnId, Row, SortSpec, Table, TableState, is_row_selected,
+    ColumnDef, ColumnId, Row, SortCmpFn, SortSpec, TableState, column_size, is_column_visible,
+    is_row_selected, order_columns, split_pinned_columns,
 };
-
-fn stable_key64(value: &str) -> u64 {
-    let mut hasher = DefaultHasher::new();
-    value.hash(&mut hasher);
-    hasher.finish()
-}
 
 fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
     let table_bg = theme
@@ -114,6 +108,58 @@ impl Default for TableViewProps {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SortKey {
+    column: ColumnId,
+    desc: bool,
+}
+
+#[derive(Default)]
+struct FlatRowOrderCache {
+    items_revision: u64,
+    data_len: usize,
+    sorting: Vec<SortKey>,
+    order: Arc<[usize]>,
+}
+
+fn compute_flat_row_order<TData>(
+    data: &[TData],
+    columns: &[ColumnDef<TData>],
+    sorting: &[SortKey],
+) -> Arc<[usize]> {
+    let sorters: Vec<(SortCmpFn<TData>, bool)> = sorting
+        .iter()
+        .filter_map(|spec| {
+            let cmp = columns
+                .iter()
+                .find(|c| c.id.as_ref() == spec.column.as_ref())?
+                .sort_cmp
+                .clone()?;
+            Some((cmp, spec.desc))
+        })
+        .collect();
+
+    let mut order: Vec<usize> = (0..data.len()).collect();
+    if !sorters.is_empty() {
+        order.sort_by(|&a, &b| {
+            let a_row = &data[a];
+            let b_row = &data[b];
+            for (cmp, desc) in &sorters {
+                let mut ord = cmp(a_row, b_row);
+                if *desc {
+                    ord = ord.reverse();
+                }
+                if ord != std::cmp::Ordering::Equal {
+                    return ord;
+                }
+            }
+            a.cmp(&b)
+        });
+    }
+
+    Arc::from(order.into_boxed_slice())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn table_virtualized<H: UiHost, TData>(
     cx: &mut ElementContext<'_, H>,
@@ -149,14 +195,47 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let scroll_x = cx.with_state(ScrollHandle::default, |h| h.clone());
 
-    let table = Table::builder(data)
-        .columns(columns)
-        .state(state_value.clone())
-        .build();
+    let ordered_columns = order_columns(&columns, &state_value.column_order);
+    let visible_columns = ordered_columns
+        .into_iter()
+        .filter(|c| is_column_visible(&state_value.column_visibility, &c.id))
+        .collect::<Vec<_>>();
+    let (left_cols, center_cols, right_cols) =
+        split_pinned_columns(visible_columns.as_slice(), &state_value.column_pinning);
 
-    let (left_cols, center_cols, right_cols) = table.pinned_visible_columns();
-    let row_model = table.row_model();
-    let set_size = row_model.root_rows().len();
+    let sorting_key = state_value
+        .sorting
+        .iter()
+        .map(|s| SortKey {
+            column: s.column.clone(),
+            desc: s.desc,
+        })
+        .collect::<Vec<_>>();
+
+    let row_order = cx.with_state(FlatRowOrderCache::default, |cache| {
+        if cache.items_revision != items_revision
+            || cache.data_len != data.len()
+            || cache.sorting != sorting_key
+        {
+            cache.items_revision = items_revision;
+            cache.data_len = data.len();
+            cache.sorting = sorting_key.clone();
+            cache.order = compute_flat_row_order(data, &columns, &cache.sorting);
+        }
+
+        cache.order.clone()
+    });
+
+    let page_size = state_value.pagination.page_size;
+    let page_start = state_value.pagination.page_index.saturating_mul(page_size);
+    let page_end = page_start.saturating_add(page_size);
+    let page_rows: &[usize] = if page_size == 0 {
+        &[]
+    } else {
+        row_order.get(page_start..page_end).unwrap_or_default()
+    };
+
+    let set_size = page_rows.len();
 
     let mut list_options = fret_ui::element::VirtualListOptions::new(row_h, props.overscan);
     list_options.items_revision = items_revision;
@@ -219,10 +298,12 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                         &col.id,
                                                                     );
 
-                                                                    let col_w = table
-                                                                        .column_size(col.id.as_ref())
-                                                                        .map(|w| Px(w.max(0.0)))
-                                                                        .unwrap_or(props.default_column_width);
+                                                                    let col_w = column_size(
+                                                                        &state_value.column_sizing,
+                                                                        &col.id,
+                                                                    )
+                                                                    .map(|w| Px(w.max(0.0)))
+                                                                    .unwrap_or(props.default_column_width);
 
                                                                     let cell_props = ContainerProps {
                                                                         padding: Edges::all(Px(0.0)),
@@ -444,20 +525,24 @@ pub fn table_virtualized<H: UiHost, TData>(
                                         list_options,
                                         vertical_scroll,
                                         |i| {
-                                            let root = row_model.root_rows()[i];
-                                            let row = row_model.row(root).expect("root row exists");
-                                            stable_key64(row.id.as_ref())
+                                            page_rows[i] as u64
                                         },
                                         |cx, i| {
-                                            let root = row_model.root_rows()[i];
-                                            let row = row_model
-                                                .row(root)
-                                                .expect("root row exists");
+                                            let data_index = page_rows[i];
+                                            let data_row = Row {
+                                                id: Arc::from(data_index.to_string()),
+                                                original: &data[data_index],
+                                                index: data_index,
+                                                depth: 0,
+                                                parent: None,
+                                                parent_id: None,
+                                                sub_rows: Vec::new(),
+                                            };
 
-                                            let cmd = on_row_activate(row);
+                                            let cmd = on_row_activate(&data_row);
                                             let enabled = cmd.is_some() || props.enable_row_selection;
                                             let is_selected =
-                                                is_row_selected(&row.id, &state_value.row_selection);
+                                                is_row_selected(&data_row.id, &state_value.row_selection);
 
                                             cx.pressable(
                                                 PressableProps {
@@ -474,7 +559,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                     cx.pressable_dispatch_command_opt(cmd.clone());
                                                     if props.enable_row_selection {
                                                         let state_model = state.clone();
-                                                        let row_id = row.id.clone();
+                                                        let row_id = data_row.id.clone();
                                                         let single = props.single_row_selection;
                                                         cx.pressable_update_model(&state_model, move |st| {
                                                             let selected =
@@ -524,14 +609,14 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                         |cx| {
                                                                             cols.iter()
                                                                                 .map(|col| {
-                                                                                    let col_w = table
-                                                                                        .column_size(
-                                                                                            col.id.as_ref(),
-                                                                                        )
-                                                                                        .map(|w| Px(w.max(0.0)))
-                                                                                        .unwrap_or(
-                                                                                            props.default_column_width,
-                                                                                        );
+                                                                                    let col_w = column_size(
+                                                                                        &state_value.column_sizing,
+                                                                                        &col.id,
+                                                                                    )
+                                                                                    .map(|w| Px(w.max(0.0)))
+                                                                                    .unwrap_or(
+                                                                                        props.default_column_width,
+                                                                                    );
                                                                                     cx.container(
                                                                                         ContainerProps {
                                                                                             padding: Edges::symmetric(
@@ -550,7 +635,9 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                             },
                                                                                             ..Default::default()
                                                                                         },
-                                                                                        |cx| render_cell(cx, row, col),
+                                                                                        |cx| {
+                                                                                            render_cell(cx, &data_row, col)
+                                                                                        },
                                                                                     )
                                                                                 })
                                                                                 .collect()
@@ -603,4 +690,169 @@ pub fn table_virtualized<H: UiHost, TData>(
             )]
         },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SortKey, compute_flat_row_order};
+    use crate::headless::table::{ColumnDef, ColumnId};
+    use std::cmp::Ordering;
+
+    #[derive(Debug)]
+    struct Row {
+        id: u32,
+        score: i32,
+        name: &'static str,
+    }
+
+    fn col<T: 'static>(id: &str, cmp: fn(&T, &T) -> Ordering) -> ColumnDef<T> {
+        ColumnDef::new(id).sort_by(cmp)
+    }
+
+    #[test]
+    fn flat_row_order_is_stable_without_sorting() {
+        let data = [
+            Row {
+                id: 1,
+                score: 10,
+                name: "b",
+            },
+            Row {
+                id: 2,
+                score: 9,
+                name: "a",
+            },
+        ];
+
+        let columns = vec![col::<Row>("score", |a, b| a.score.cmp(&b.score))];
+        let order = compute_flat_row_order(&data, &columns, &[]);
+        assert_eq!(&*order, &[0, 1]);
+    }
+
+    #[test]
+    fn flat_row_order_sorts_by_single_column() {
+        let data = [
+            Row {
+                id: 1,
+                score: 10,
+                name: "b",
+            },
+            Row {
+                id: 2,
+                score: 9,
+                name: "a",
+            },
+        ];
+
+        let columns = vec![col::<Row>("score", |a, b| a.score.cmp(&b.score))];
+        let order = compute_flat_row_order(
+            &data,
+            &columns,
+            &[SortKey {
+                column: ColumnId::from("score"),
+                desc: false,
+            }],
+        );
+        assert_eq!(&*order, &[1, 0]);
+    }
+
+    #[test]
+    fn flat_row_order_sorts_descending() {
+        let data = [
+            Row {
+                id: 1,
+                score: 10,
+                name: "a",
+            },
+            Row {
+                id: 2,
+                score: 10,
+                name: "b",
+            },
+        ];
+
+        let columns = vec![col::<Row>("name", |a, b| a.name.cmp(b.name))];
+        let order = compute_flat_row_order(
+            &data,
+            &columns,
+            &[SortKey {
+                column: ColumnId::from("name"),
+                desc: true,
+            }],
+        );
+        assert_eq!(&*order, &[1, 0]);
+    }
+
+    #[test]
+    fn flat_row_order_uses_index_tiebreaker() {
+        let data = [
+            Row {
+                id: 1,
+                score: 10,
+                name: "x",
+            },
+            Row {
+                id: 2,
+                score: 10,
+                name: "x",
+            },
+            Row {
+                id: 3,
+                score: 10,
+                name: "x",
+            },
+        ];
+
+        let columns = vec![col::<Row>("score", |a, b| a.score.cmp(&b.score))];
+        let order = compute_flat_row_order(
+            &data,
+            &columns,
+            &[SortKey {
+                column: ColumnId::from("score"),
+                desc: false,
+            }],
+        );
+        assert_eq!(&*order, &[0, 1, 2]);
+    }
+
+    #[test]
+    fn flat_row_order_supports_multi_sort() {
+        let data = [
+            Row {
+                id: 1,
+                score: 10,
+                name: "b",
+            },
+            Row {
+                id: 2,
+                score: 10,
+                name: "a",
+            },
+            Row {
+                id: 3,
+                score: 9,
+                name: "z",
+            },
+        ];
+
+        let columns = vec![
+            col::<Row>("score", |a, b| a.score.cmp(&b.score)),
+            col::<Row>("name", |a, b| a.name.cmp(b.name)),
+        ];
+        let order = compute_flat_row_order(
+            &data,
+            &columns,
+            &[
+                SortKey {
+                    column: ColumnId::from("score"),
+                    desc: false,
+                },
+                SortKey {
+                    column: ColumnId::from("name"),
+                    desc: false,
+                },
+            ],
+        );
+        assert_eq!(&*order, &[2, 1, 0]);
+    }
 }
