@@ -6,12 +6,12 @@ edition.workspace = true
 [features]
 default = []
 
-syntax-rust = ["fret-syntax/lang-rust"]
-syntax-all = ["fret-syntax/tree-sitter-languages"]
+syntax-rust = ["fret-code-view/syntax-rust"]
+syntax-all = ["fret-code-view/syntax-all"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../fret-ui-kit" }
-fret-syntax = { path = "../fret-syntax", default-features = false }
+fret-code-view = { path = "../fret-code-view", default-features = false }
 pulldown-cmark.workspace = true

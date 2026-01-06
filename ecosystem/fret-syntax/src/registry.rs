@@ -78,6 +78,24 @@ pub fn supported_languages() -> &'static [&'static str] {
     SUPPORTED.get_or_init(|| {
         #[allow(unused_mut)]
         let mut out = Vec::new();
+        #[cfg(feature = "lang-bash")]
+        out.push("bash");
+        #[cfg(feature = "lang-c")]
+        out.push("c");
+        #[cfg(feature = "lang-cpp")]
+        out.push("cpp");
+        #[cfg(feature = "lang-c-sharp")]
+        out.push("csharp");
+        #[cfg(feature = "lang-cmake")]
+        out.push("cmake");
+        #[cfg(feature = "lang-css")]
+        out.push("css");
+        #[cfg(feature = "lang-diff")]
+        out.push("diff");
+        #[cfg(feature = "lang-elixir")]
+        out.push("elixir");
+        #[cfg(feature = "lang-embedded-template")]
+        out.push("embedded-template");
         #[cfg(feature = "lang-rust")]
         out.push("rust");
         #[cfg(feature = "lang-json")]
@@ -90,6 +108,22 @@ pub fn supported_languages() -> &'static [&'static str] {
         out.push("html");
         #[cfg(feature = "lang-go")]
         out.push("go");
+        #[cfg(feature = "lang-graphql")]
+        out.push("graphql");
+        #[cfg(feature = "lang-java")]
+        out.push("java");
+        #[cfg(feature = "lang-make")]
+        out.push("make");
+        #[cfg(feature = "lang-proto")]
+        out.push("proto");
+        #[cfg(feature = "lang-ruby")]
+        out.push("ruby");
+        #[cfg(feature = "lang-scala")]
+        out.push("scala");
+        #[cfg(feature = "lang-sql")]
+        out.push("sql");
+        #[cfg(feature = "lang-swift")]
+        out.push("swift");
         #[cfg(feature = "lang-zig")]
         out.push("zig");
         #[cfg(feature = "lang-md")]
@@ -108,6 +142,8 @@ fn normalize_language_name(language: &str) -> &str {
     let s = language.trim();
     if s.eq_ignore_ascii_case("rs") {
         "rust"
+    } else if s.eq_ignore_ascii_case("sh") {
+        "bash"
     } else if s.eq_ignore_ascii_case("js") || s.eq_ignore_ascii_case("jsx") {
         "javascript"
     } else if s.eq_ignore_ascii_case("ts") || s.eq_ignore_ascii_case("tsx") {
@@ -116,6 +152,22 @@ fn normalize_language_name(language: &str) -> &str {
         "markdown"
     } else if s.eq_ignore_ascii_case("yml") {
         "yaml"
+    } else if s.eq_ignore_ascii_case("py") {
+        "python"
+    } else if s.eq_ignore_ascii_case("rb") {
+        "ruby"
+    } else if s.eq_ignore_ascii_case("c++") {
+        "cpp"
+    } else if s.eq_ignore_ascii_case("c#")
+        || s.eq_ignore_ascii_case("csharp")
+        || s.eq_ignore_ascii_case("c-sharp")
+        || s.eq_ignore_ascii_case("cs")
+    {
+        "csharp"
+    } else if s.eq_ignore_ascii_case("makefile") {
+        "make"
+    } else if s.eq_ignore_ascii_case("protobuf") {
+        "proto"
     } else {
         s
     }
@@ -123,6 +175,24 @@ fn normalize_language_name(language: &str) -> &str {
 
 pub fn config_for(language: &str) -> Option<&'static HighlightConfiguration> {
     match normalize_language_name(language) {
+        #[cfg(feature = "lang-bash")]
+        "bash" => Some(bash_config()),
+        #[cfg(feature = "lang-c")]
+        "c" => Some(c_config()),
+        #[cfg(feature = "lang-cpp")]
+        "cpp" => Some(cpp_config()),
+        #[cfg(feature = "lang-c-sharp")]
+        "csharp" => Some(csharp_config()),
+        #[cfg(feature = "lang-cmake")]
+        "cmake" => Some(cmake_config()),
+        #[cfg(feature = "lang-css")]
+        "css" => Some(css_config()),
+        #[cfg(feature = "lang-diff")]
+        "diff" => Some(diff_config()),
+        #[cfg(feature = "lang-elixir")]
+        "elixir" => Some(elixir_config()),
+        #[cfg(feature = "lang-embedded-template")]
+        "embedded-template" => Some(embedded_template_config()),
         #[cfg(feature = "lang-rust")]
         "rust" => Some(rust_config()),
         #[cfg(feature = "lang-json")]
@@ -135,18 +205,146 @@ pub fn config_for(language: &str) -> Option<&'static HighlightConfiguration> {
         "html" => Some(html_config()),
         #[cfg(feature = "lang-go")]
         "go" => Some(go_config()),
+        #[cfg(feature = "lang-graphql")]
+        "graphql" => Some(graphql_config()),
+        #[cfg(feature = "lang-java")]
+        "java" => Some(java_config()),
+        #[cfg(feature = "lang-make")]
+        "make" => Some(make_config()),
         #[cfg(feature = "lang-zig")]
         "zig" => Some(zig_config()),
         #[cfg(feature = "lang-md")]
         "markdown" => Some(markdown_config()),
+        #[cfg(feature = "lang-proto")]
+        "proto" => Some(proto_config()),
         #[cfg(feature = "lang-python")]
         "python" => Some(python_config()),
+        #[cfg(feature = "lang-ruby")]
+        "ruby" => Some(ruby_config()),
+        #[cfg(feature = "lang-scala")]
+        "scala" => Some(scala_config()),
+        #[cfg(feature = "lang-sql")]
+        "sql" => Some(sql_config()),
+        #[cfg(feature = "lang-swift")]
+        "swift" => Some(swift_config()),
         #[cfg(feature = "lang-yaml")]
         "yaml" => Some(yaml_config()),
         #[cfg(feature = "lang-toml")]
         "toml" => Some(toml_config()),
         _ => None,
     }
+}
+
+#[cfg(feature = "lang-bash")]
+fn bash_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_bash::LANGUAGE.into(), "bash", "", "", "")
+                .expect("valid bash config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-c")]
+fn c_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg = HighlightConfiguration::new(tree_sitter_c::LANGUAGE.into(), "c", "", "", "")
+            .expect("valid c config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-cpp")]
+fn cpp_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_cpp::LANGUAGE.into(), "cpp", "", "", "")
+                .expect("valid cpp config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-c-sharp")]
+fn csharp_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_c_sharp::LANGUAGE.into(), "csharp", "", "", "")
+                .expect("valid csharp config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-cmake")]
+fn cmake_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_cmake::LANGUAGE.into(), "cmake", "", "", "")
+                .expect("valid cmake config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-css")]
+fn css_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_css::LANGUAGE.into(), "css", "", "", "")
+                .expect("valid css config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-diff")]
+fn diff_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_diff::LANGUAGE.into(), "diff", "", "", "")
+                .expect("valid diff config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-elixir")]
+fn elixir_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_elixir::LANGUAGE.into(), "elixir", "", "", "")
+                .expect("valid elixir config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-embedded-template")]
+fn embedded_template_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_embedded_template::LANGUAGE.into(),
+            "embedded-template",
+            "",
+            "",
+            "",
+        )
+        .expect("valid embedded-template config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
 }
 
 #[cfg(feature = "lang-rust")]
@@ -251,6 +449,47 @@ fn go_config() -> &'static HighlightConfiguration {
     })
 }
 
+#[cfg(feature = "lang-graphql")]
+fn graphql_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg = HighlightConfiguration::new(
+            tree_sitter_graphql::LANGUAGE.into(),
+            "graphql",
+            "",
+            "",
+            "",
+        )
+        .expect("valid graphql config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-java")]
+fn java_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_java::LANGUAGE.into(), "java", "", "", "")
+                .expect("valid java config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-make")]
+fn make_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_make::LANGUAGE.into(), "make", "", "", "")
+                .expect("valid make config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
 #[cfg(feature = "lang-zig")]
 fn zig_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
@@ -280,6 +519,18 @@ fn markdown_config() -> &'static HighlightConfiguration {
     })
 }
 
+#[cfg(feature = "lang-proto")]
+fn proto_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_proto::LANGUAGE.into(), "proto", "", "", "")
+                .expect("valid proto config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
 #[cfg(feature = "lang-python")]
 fn python_config() -> &'static HighlightConfiguration {
     static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
@@ -287,6 +538,54 @@ fn python_config() -> &'static HighlightConfiguration {
         let mut cfg =
             HighlightConfiguration::new(tree_sitter_python::LANGUAGE.into(), "python", "", "", "")
                 .expect("valid python config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-ruby")]
+fn ruby_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_ruby::LANGUAGE.into(), "ruby", "", "", "")
+                .expect("valid ruby config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-scala")]
+fn scala_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_scala::LANGUAGE.into(), "scala", "", "", "")
+                .expect("valid scala config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-sql")]
+fn sql_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_sequel::LANGUAGE.into(), "sql", "", "", "")
+                .expect("valid sql config");
+        cfg.configure(&HIGHLIGHT_NAMES);
+        cfg
+    })
+}
+
+#[cfg(feature = "lang-swift")]
+fn swift_config() -> &'static HighlightConfiguration {
+    static CONFIG: OnceLock<HighlightConfiguration> = OnceLock::new();
+    CONFIG.get_or_init(|| {
+        let mut cfg =
+            HighlightConfiguration::new(tree_sitter_swift::LANGUAGE.into(), "swift", "", "", "")
+                .expect("valid swift config");
         cfg.configure(&HIGHLIGHT_NAMES);
         cfg
     })

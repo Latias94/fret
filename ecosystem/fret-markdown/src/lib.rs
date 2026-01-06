@@ -1,14 +1,12 @@
 //! Markdown renderer component(s) for Fret.
 
-use std::ops::Range;
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, ScrollAxis, ScrollProps, TextProps};
+use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_ui::element::{AnyElement, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{LayoutRefinement, Space};
 
 #[derive(Debug, Clone)]
 pub struct Markdown {
@@ -60,7 +58,9 @@ impl Block {
         match self {
             Block::Heading { level, text } => render_heading(cx, theme, level, text),
             Block::Paragraph { text } => render_paragraph(cx, theme, text),
-            Block::CodeBlock { lang, code } => render_code_block(cx, theme, lang.as_deref(), &code),
+            Block::CodeBlock { lang, code } => {
+                fret_code_view::code_block(cx, &code, lang.as_deref(), false)
+            }
         }
     }
 }
@@ -113,160 +113,6 @@ fn render_paragraph<H: UiHost>(
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
     })
-}
-
-fn render_code_block<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    lang: Option<&str>,
-    code: &str,
-) -> AnyElement {
-    let props = decl_style::container_props(
-        theme,
-        ChromeRefinement::default()
-            .p(Space::N2)
-            .rounded(Radius::Md)
-            .border_1()
-            .bg(ColorRef::Color(theme.colors.panel_background))
-            .border_color(ColorRef::Color(theme.colors.panel_border)),
-        LayoutRefinement::default().w_full(),
-    );
-
-    let language = lang.unwrap_or("");
-    let spans = fret_syntax::highlight(code, language).unwrap_or_default();
-
-    cx.container(props, |cx| {
-        let mut scroll_props = ScrollProps::default();
-        scroll_props.axis = ScrollAxis::X;
-
-        vec![cx.scroll(scroll_props, |cx| {
-            let lines = split_lines(code);
-            let mut out = Vec::with_capacity(lines.len());
-            for line in lines {
-                out.push(render_code_line(cx, theme, line, &spans));
-            }
-            out
-        })]
-    })
-}
-
-fn render_code_line<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    line: LineSlice<'_>,
-    spans: &[fret_syntax::HighlightSpan],
-) -> AnyElement {
-    let text_style = TextStyle {
-        font: FontId::monospace(),
-        size: theme.metrics.mono_font_size,
-        weight: FontWeight::NORMAL,
-        line_height: Some(theme.metrics.mono_font_line_height),
-        letter_spacing_em: None,
-    };
-
-    let segments = segments_for_range(line.range.clone(), spans, line.text);
-
-    stack::hstack(cx, stack::HStackProps::default().gap(Space::N0), |cx| {
-        segments
-            .into_iter()
-            .map(|(text, highlight)| {
-                let color = highlight
-                    .and_then(|h| syntax_color(theme, h))
-                    .unwrap_or(theme.colors.text_primary);
-                cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: Arc::<str>::from(text),
-                    style: Some(text_style.clone()),
-                    color: Some(color),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                })
-            })
-            .collect()
-    })
-}
-
-fn syntax_color(theme: &Theme, highlight: &str) -> Option<Color> {
-    let key = format!("color.syntax.{highlight}");
-    if let Some(c) = theme.color_by_key(&key) {
-        return Some(c);
-    }
-
-    let fallback = highlight.split('.').next().unwrap_or(highlight);
-    match fallback {
-        "comment" => Some(theme.colors.text_muted),
-        "string" => Some(theme.colors.viewport_gizmo_y),
-        "number" | "boolean" | "constant" => Some(theme.colors.viewport_rotate_gizmo),
-        "keyword" | "operator" => Some(theme.colors.accent),
-        "type" | "constructor" => Some(theme.colors.viewport_marker),
-        "function" => Some(theme.colors.viewport_drag_line_orbit),
-        "property" | "variable" => Some(theme.colors.text_primary),
-        "punctuation" => Some(theme.colors.text_muted),
-        _ => None,
-    }
-}
-
-#[derive(Debug, Clone)]
-struct LineSlice<'a> {
-    range: Range<usize>,
-    text: &'a str,
-}
-
-fn split_lines(text: &str) -> Vec<LineSlice<'_>> {
-    let mut out = Vec::new();
-    let mut start = 0usize;
-    for (i, b) in text.as_bytes().iter().enumerate() {
-        if *b == b'\n' {
-            out.push(LineSlice {
-                range: start..i,
-                text: &text[start..i],
-            });
-            start = i + 1;
-        }
-    }
-    out.push(LineSlice {
-        range: start..text.len(),
-        text: &text[start..],
-    });
-    out
-}
-
-fn segments_for_range(
-    global_range: Range<usize>,
-    spans: &[fret_syntax::HighlightSpan],
-    line_text: &str,
-) -> Vec<(String, Option<&'static str>)> {
-    let mut segments = Vec::new();
-    let mut cursor = global_range.start;
-
-    for span in spans {
-        if span.range.end <= global_range.start || span.range.start >= global_range.end {
-            continue;
-        }
-        let start = span.range.start.max(global_range.start);
-        let end = span.range.end.min(global_range.end);
-        if cursor < start {
-            let rel = cursor - global_range.start;
-            let rel_end = start - global_range.start;
-            segments.push((line_text[rel..rel_end].to_string(), None));
-        }
-        let rel = start - global_range.start;
-        let rel_end = end - global_range.start;
-        segments.push((line_text[rel..rel_end].to_string(), span.highlight));
-        cursor = end;
-    }
-
-    if cursor < global_range.end {
-        let rel = cursor - global_range.start;
-        let rel_end = global_range.end - global_range.start;
-        segments.push((line_text[rel..rel_end].to_string(), None));
-    }
-
-    if segments.is_empty() {
-        segments.push((line_text.to_string(), None));
-    }
-
-    segments
 }
 
 fn parse_blocks(source: &str) -> Vec<Block> {

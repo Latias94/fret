@@ -10,17 +10,28 @@ default = []
 tree-sitter-languages = [
     "lang-bash",
     "lang-c",
+    "lang-c-sharp",
+    "lang-cmake",
     "lang-cpp",
     "lang-css",
+    "lang-diff",
+    "lang-elixir",
+    "lang-embedded-template",
     "lang-go",
     "lang-graphql",
     "lang-html",
     "lang-java",
     "lang-javascript",
     "lang-json",
+    "lang-make",
     "lang-md",
+    "lang-proto",
     "lang-python",
+    "lang-ruby",
     "lang-rust",
+    "lang-scala",
+    "lang-sql",
+    "lang-swift",
     "lang-toml",
     "lang-typescript",
     "lang-yaml",
@@ -29,17 +40,28 @@ tree-sitter-languages = [
 
 lang-bash = ["dep:tree-sitter-bash"]
 lang-c = ["dep:tree-sitter-c"]
+lang-c-sharp = ["dep:tree-sitter-c-sharp"]
+lang-cmake = ["dep:tree-sitter-cmake"]
 lang-cpp = ["dep:tree-sitter-cpp"]
 lang-css = ["dep:tree-sitter-css"]
+lang-diff = ["dep:tree-sitter-diff"]
+lang-elixir = ["dep:tree-sitter-elixir"]
+lang-embedded-template = ["dep:tree-sitter-embedded-template"]
 lang-go = ["dep:tree-sitter-go"]
 lang-graphql = ["dep:tree-sitter-graphql"]
 lang-html = ["dep:tree-sitter-html"]
 lang-java = ["dep:tree-sitter-java"]
 lang-javascript = ["dep:tree-sitter-javascript", "dep:tree-sitter-jsdoc"]
 lang-json = ["dep:tree-sitter-json"]
+lang-make = ["dep:tree-sitter-make"]
 lang-md = ["dep:tree-sitter-md"]
+lang-proto = ["dep:tree-sitter-proto"]
 lang-python = ["dep:tree-sitter-python"]
+lang-ruby = ["dep:tree-sitter-ruby"]
 lang-rust = ["dep:tree-sitter-rust"]
+lang-scala = ["dep:tree-sitter-scala"]
+lang-sql = ["dep:tree-sitter-sequel"]
+lang-swift = ["dep:tree-sitter-swift"]
 lang-toml = ["dep:tree-sitter-toml-ng"]
 lang-typescript = ["dep:tree-sitter-typescript"]
 lang-yaml = ["dep:tree-sitter-yaml"]
@@ -52,8 +74,13 @@ tree-sitter-highlight.workspace = true
 
 tree-sitter-bash = { workspace = true, optional = true }
 tree-sitter-c = { workspace = true, optional = true }
+tree-sitter-c-sharp = { workspace = true, optional = true }
+tree-sitter-cmake = { workspace = true, optional = true }
 tree-sitter-cpp = { workspace = true, optional = true }
 tree-sitter-css = { workspace = true, optional = true }
+tree-sitter-diff = { workspace = true, optional = true }
+tree-sitter-elixir = { workspace = true, optional = true }
+tree-sitter-embedded-template = { workspace = true, optional = true }
 tree-sitter-go = { workspace = true, optional = true }
 tree-sitter-graphql = { workspace = true, optional = true }
 tree-sitter-html = { workspace = true, optional = true }
@@ -61,11 +88,16 @@ tree-sitter-java = { workspace = true, optional = true }
 tree-sitter-javascript = { workspace = true, optional = true }
 tree-sitter-jsdoc = { workspace = true, optional = true }
 tree-sitter-json = { workspace = true, optional = true }
+tree-sitter-make = { workspace = true, optional = true }
 tree-sitter-md = { workspace = true, optional = true }
+tree-sitter-proto = { workspace = true, optional = true }
 tree-sitter-python = { workspace = true, optional = true }
+tree-sitter-ruby = { workspace = true, optional = true }
 tree-sitter-rust = { workspace = true, optional = true }
+tree-sitter-scala = { workspace = true, optional = true }
+tree-sitter-sequel = { workspace = true, optional = true }
+tree-sitter-swift = { workspace = true, optional = true }
 tree-sitter-toml-ng = { workspace = true, optional = true }
 tree-sitter-typescript = { workspace = true, optional = true }
 tree-sitter-yaml = { workspace = true, optional = true }
 tree-sitter-zig = { workspace = true, optional = true }
-

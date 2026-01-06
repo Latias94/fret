@@ -1,0 +1,45 @@
+[package]
+name = "fret-code-view"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = []
+
+syntax-all = ["fret-syntax/tree-sitter-languages"]
+
+syntax-bash = ["fret-syntax/lang-bash"]
+syntax-c = ["fret-syntax/lang-c"]
+syntax-cpp = ["fret-syntax/lang-cpp"]
+syntax-csharp = ["fret-syntax/lang-c-sharp"]
+syntax-cmake = ["fret-syntax/lang-cmake"]
+syntax-css = ["fret-syntax/lang-css"]
+syntax-diff = ["fret-syntax/lang-diff"]
+syntax-elixir = ["fret-syntax/lang-elixir"]
+syntax-embedded-template = ["fret-syntax/lang-embedded-template"]
+syntax-go = ["fret-syntax/lang-go"]
+syntax-graphql = ["fret-syntax/lang-graphql"]
+syntax-html = ["fret-syntax/lang-html"]
+syntax-java = ["fret-syntax/lang-java"]
+syntax-javascript = ["fret-syntax/lang-javascript"]
+syntax-json = ["fret-syntax/lang-json"]
+syntax-make = ["fret-syntax/lang-make"]
+syntax-markdown = ["fret-syntax/lang-md"]
+syntax-proto = ["fret-syntax/lang-proto"]
+syntax-python = ["fret-syntax/lang-python"]
+syntax-ruby = ["fret-syntax/lang-ruby"]
+syntax-rust = ["fret-syntax/lang-rust"]
+syntax-scala = ["fret-syntax/lang-scala"]
+syntax-sql = ["fret-syntax/lang-sql"]
+syntax-swift = ["fret-syntax/lang-swift"]
+syntax-toml = ["fret-syntax/lang-toml"]
+syntax-typescript = ["fret-syntax/lang-typescript"]
+syntax-yaml = ["fret-syntax/lang-yaml"]
+syntax-zig = ["fret-syntax/lang-zig"]
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../fret-ui-kit" }
+fret-syntax = { path = "../fret-syntax", default-features = false }
+

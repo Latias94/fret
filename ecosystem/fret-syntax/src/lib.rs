@@ -28,7 +28,9 @@ pub fn highlight(source: &str, language: &str) -> Result<Vec<HighlightSpan>, Hig
     let mut highlighter = tree_sitter_highlight::Highlighter::new();
     let mut spans = Vec::new();
 
-    let events = highlighter.highlight(config, source.as_bytes(), None, |_| None)?;
+    let events = highlighter.highlight(config, source.as_bytes(), None, |language| {
+        registry::config_for(language)
+    })?;
     for event in events {
         match event? {
             tree_sitter_highlight::HighlightEvent::Source { start, end } => {
