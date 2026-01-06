@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::OnceLock};
 
 use crate::UiHost;
+use crate::theme_registry::{ThemeTokenKind, canonicalize_token_key};
 use crate::{ThemeColorKey, ThemeMetricKey};
 
 fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
@@ -231,100 +232,13 @@ impl Theme {
     }
 
     pub fn color_by_key(&self, key: &str) -> Option<Color> {
-        self.extra_colors
-            .get(key)
-            .copied()
-            .or_else(|| self.fallback_color_alias(key))
+        let key = canonicalize_token_key(ThemeTokenKind::Color, key);
+        self.extra_colors.get(key).copied()
     }
 
     pub fn metric_by_key(&self, key: &str) -> Option<Px> {
-        self.extra_metrics
-            .get(key)
-            .copied()
-            .or_else(|| self.fallback_metric_alias(key))
-    }
-
-    /// Fallback aliases for gpui-component / shadcn-style semantic keys.
-    ///
-    /// This provides a compatibility bridge without forcing theme files or widgets to adopt a new
-    /// schema in one refactor pass.
-    fn fallback_color_alias(&self, key: &str) -> Option<Color> {
-        match key {
-            // Core shadcn-like semantic palette.
-            "background" => Some(self.colors.surface_background),
-            "foreground" => Some(self.colors.text_primary),
-            "border" => Some(self.colors.panel_border),
-            "input" | "input.border" => Some(self.colors.panel_border),
-            "ring" => Some(self.colors.focus_ring),
-            "ring-offset-background" | "ring_offset_background" => {
-                Some(self.colors.surface_background)
-            }
-
-            // Surfaces.
-            "card" | "card.background" => Some(self.colors.panel_background),
-            "card.foreground" | "card-foreground" => Some(self.colors.text_primary),
-            "card.border" => Some(self.colors.panel_border),
-
-            // Common state semantics.
-            "selection.background" => Some(self.colors.selection_background),
-            "muted" | "muted.background" => Some(self.colors.panel_background),
-            "muted.foreground" | "muted-foreground" => Some(self.colors.text_muted),
-            "accent" | "accent.background" => Some(self.colors.hover_background),
-            "accent.foreground" | "accent-foreground" => Some(self.colors.text_primary),
-
-            // Primary/secondary/destructive semantic palette (best-effort fallbacks).
-            "primary" | "primary.background" => Some(self.colors.accent),
-            "primary.foreground" | "primary-foreground" => Some(self.colors.text_primary),
-            "secondary" | "secondary.background" => Some(self.colors.panel_background),
-            "secondary.foreground" | "secondary-foreground" => Some(self.colors.text_primary),
-            "destructive" | "destructive.background" => Some(self.colors.viewport_gizmo_x),
-            "destructive.foreground" | "destructive-foreground" => Some(self.colors.text_primary),
-
-            // Popovers/menus map well onto the existing menu surface tokens.
-            "popover" | "popover.background" => Some(self.colors.menu_background),
-            "popover.foreground" | "popover-foreground" => Some(self.colors.text_primary),
-            "popover.border" => Some(self.colors.menu_border),
-
-            // List semantics used heavily by gpui-component.
-            "list.background" => Some(self.colors.list_background),
-            "list.hover.background" => Some(self.colors.list_row_hover),
-            "list.active.background" => Some(self.colors.list_row_selected),
-            "list.active.border" => Some(self.colors.accent),
-
-            // Inputs.
-            "input.background" => Some(self.colors.panel_background),
-            "input.foreground" => Some(self.colors.text_primary),
-            "caret" => Some(self.colors.text_primary),
-
-            // Scrollbars.
-            "scrollbar.background" => Some(self.colors.scrollbar_track),
-            "scrollbar.thumb.background" => Some(self.colors.scrollbar_thumb),
-            "scrollbar.thumb.hover.background" => Some(self.colors.scrollbar_thumb_hover),
-
-            // Shadows/elevation. These are intentionally best-effort fallbacks until the theme
-            // schema grows first-class shadow tokens.
-            "shadow" | "shadow.color" => Some(Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 1.0,
-            }),
-
-            _ => None,
-        }
-    }
-
-    fn fallback_metric_alias(&self, key: &str) -> Option<Px> {
-        match key {
-            // gpui-component uses `radius` / `radius.lg` as generic theme knobs.
-            "radius" => Some(self.metrics.radius_sm),
-            "radius.lg" => Some(self.metrics.radius_md),
-            "font.size" => Some(self.metrics.font_size),
-            "mono_font.size" => Some(self.metrics.mono_font_size),
-            "font.line_height" => Some(self.metrics.font_line_height),
-            "mono_font.line_height" => Some(self.metrics.mono_font_line_height),
-            _ => None,
-        }
+        let key = canonicalize_token_key(ThemeTokenKind::Metric, key);
+        self.extra_metrics.get(key).copied()
     }
 
     pub fn snapshot(&self) -> ThemeSnapshot {
@@ -378,6 +292,17 @@ impl Theme {
             };
         }
 
+        macro_rules! apply_semantic_color {
+            ($key:literal, $set:expr) => {
+                if let Some(v) = cfg.colors.get($key) {
+                    if let Some(c) = parse_color_to_linear(v) {
+                        next_colors.insert($key.to_string(), c);
+                        $set(c);
+                    }
+                }
+            };
+        }
+
         macro_rules! apply_metric {
             ($key:literal, $field:expr) => {
                 if let Some(v) = cfg.metrics.get($key).copied() {
@@ -391,6 +316,135 @@ impl Theme {
             };
         }
 
+        macro_rules! apply_semantic_metric {
+            ($key:literal, $set:expr) => {
+                if let Some(v) = cfg.metrics.get($key).copied() {
+                    let px = Px(v);
+                    next_metrics.insert($key.to_string(), px);
+                    $set(px);
+                }
+            };
+        }
+
+        // Apply shadcn semantic keys first; typed tokens are derived from them for consistency.
+        apply_semantic_color!("background", |c| {
+            if self.colors.surface_background != c {
+                self.colors.surface_background = c;
+                changed = true;
+            }
+            next_colors.insert("color.surface.background".to_string(), c);
+        });
+        apply_semantic_color!("foreground", |c| {
+            if self.colors.text_primary != c {
+                self.colors.text_primary = c;
+                changed = true;
+            }
+            next_colors.insert("color.text.primary".to_string(), c);
+        });
+        apply_semantic_color!("border", |c| {
+            if self.colors.panel_border != c {
+                self.colors.panel_border = c;
+                changed = true;
+            }
+            if self.colors.menu_border != c {
+                self.colors.menu_border = c;
+                changed = true;
+            }
+            if self.colors.list_border != c {
+                self.colors.list_border = c;
+                changed = true;
+            }
+            next_colors.insert("color.panel.border".to_string(), c);
+            next_colors.insert("color.menu.border".to_string(), c);
+            next_colors.insert("color.list.border".to_string(), c);
+        });
+        apply_semantic_color!("input", |c| {
+            if self.colors.panel_border != c {
+                self.colors.panel_border = c;
+                changed = true;
+            }
+            next_colors.insert("color.panel.border".to_string(), c);
+        });
+        apply_semantic_color!("ring", |c| {
+            if self.colors.focus_ring != c {
+                self.colors.focus_ring = c;
+                changed = true;
+            }
+            next_colors.insert("color.focus.ring".to_string(), c);
+        });
+        apply_semantic_color!("card", |c| {
+            if self.colors.panel_background != c {
+                self.colors.panel_background = c;
+                changed = true;
+            }
+            next_colors.insert("color.panel.background".to_string(), c);
+        });
+        apply_semantic_color!("popover", |c| {
+            if self.colors.menu_background != c {
+                self.colors.menu_background = c;
+                changed = true;
+            }
+            next_colors.insert("color.menu.background".to_string(), c);
+        });
+        apply_semantic_color!("muted-foreground", |c| {
+            if self.colors.text_muted != c {
+                self.colors.text_muted = c;
+                changed = true;
+            }
+            next_colors.insert("color.text.muted".to_string(), c);
+        });
+        apply_semantic_color!("accent", |c| {
+            if self.colors.hover_background != c {
+                self.colors.hover_background = c;
+                changed = true;
+            }
+            next_colors.insert("color.hover.background".to_string(), c);
+        });
+        apply_semantic_color!("primary", |c| {
+            if self.colors.accent != c {
+                self.colors.accent = c;
+                changed = true;
+            }
+            next_colors.insert("color.accent".to_string(), c);
+        });
+
+        apply_semantic_metric!("radius", |px| {
+            if self.metrics.radius_sm != px {
+                self.metrics.radius_sm = px;
+                changed = true;
+            }
+            next_metrics.insert("metric.radius.sm".to_string(), px);
+        });
+        apply_semantic_metric!("font.size", |px| {
+            if self.metrics.font_size != px {
+                self.metrics.font_size = px;
+                changed = true;
+            }
+            next_metrics.insert("metric.font.size".to_string(), px);
+        });
+        apply_semantic_metric!("mono_font.size", |px| {
+            if self.metrics.mono_font_size != px {
+                self.metrics.mono_font_size = px;
+                changed = true;
+            }
+            next_metrics.insert("metric.font.mono_size".to_string(), px);
+        });
+        apply_semantic_metric!("font.line_height", |px| {
+            if self.metrics.font_line_height != px {
+                self.metrics.font_line_height = px;
+                changed = true;
+            }
+            next_metrics.insert("metric.font.line_height".to_string(), px);
+        });
+        apply_semantic_metric!("mono_font.line_height", |px| {
+            if self.metrics.mono_font_line_height != px {
+                self.metrics.mono_font_line_height = px;
+                changed = true;
+            }
+            next_metrics.insert("metric.font.mono_line_height".to_string(), px);
+        });
+
+        // Now apply legacy dotted keys (they remain supported during the migration window).
         apply_color!("color.surface.background", self.colors.surface_background);
         apply_color!("color.panel.background", self.colors.panel_background);
         apply_color!("color.panel.border", self.colors.panel_border);
@@ -456,10 +510,8 @@ impl Theme {
             self.colors.viewport_rotate_gizmo
         );
 
-        // shadcn/gpui-component compatibility: if a theme only provides semantic keys (e.g.
-        // `background`, `foreground`, `border`, `ring`, ...), backfill the typed baseline tokens.
-        // This avoids subtle drift where legacy/runtime widgets read `theme.colors.*` while
-        // component-layer code reads `theme.color_by_key(...)`.
+        // Migration bridge: if a theme provides semantic keys but not the legacy dotted keys, keep
+        // the dotted tokens synchronized so legacy callsites remain consistent during the refactor.
         macro_rules! backfill_color_from_alias {
             ($canonical:literal, $field:expr, [$($alias:literal),+ $(,)?]) => {
                 if !cfg.colors.contains_key($canonical) {
@@ -562,6 +614,34 @@ impl Theme {
             ]
         );
 
+        // Ensure the semantic keys remain present and mirror the resolved typed baseline.
+        next_colors.insert("background".to_string(), self.colors.surface_background);
+        next_colors.insert("foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("border".to_string(), self.colors.panel_border);
+        next_colors.insert("input".to_string(), self.colors.panel_border);
+        next_colors.insert("ring".to_string(), self.colors.focus_ring);
+        next_colors.insert(
+            "ring-offset-background".to_string(),
+            self.colors.surface_background,
+        );
+        next_colors.insert("card".to_string(), self.colors.panel_background);
+        next_colors.insert("card-foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("popover".to_string(), self.colors.menu_background);
+        next_colors.insert("popover-foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("muted".to_string(), self.colors.panel_background);
+        next_colors.insert("muted-foreground".to_string(), self.colors.text_muted);
+        next_colors.insert("accent".to_string(), self.colors.hover_background);
+        next_colors.insert("accent-foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("primary".to_string(), self.colors.accent);
+        next_colors.insert("primary-foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("secondary".to_string(), self.colors.panel_background);
+        next_colors.insert("secondary-foreground".to_string(), self.colors.text_primary);
+        next_colors.insert("destructive".to_string(), self.colors.viewport_gizmo_x);
+        next_colors.insert(
+            "destructive-foreground".to_string(),
+            self.colors.text_primary,
+        );
+
         apply_metric!("metric.radius.sm", self.metrics.radius_sm);
         apply_metric!("metric.radius.md", self.metrics.radius_md);
         apply_metric!("metric.radius.lg", self.metrics.radius_lg);
@@ -622,6 +702,20 @@ impl Theme {
                 changed = true;
             }
         }
+
+        // Ensure the semantic metric keys remain present and mirror the resolved typed baseline.
+        next_metrics.insert("radius".to_string(), self.metrics.radius_sm);
+        next_metrics.insert("radius.lg".to_string(), self.metrics.radius_md);
+        next_metrics.insert("font.size".to_string(), self.metrics.font_size);
+        next_metrics.insert("mono_font.size".to_string(), self.metrics.mono_font_size);
+        next_metrics.insert(
+            "font.line_height".to_string(),
+            self.metrics.font_line_height,
+        );
+        next_metrics.insert(
+            "mono_font.line_height".to_string(),
+            self.metrics.mono_font_line_height,
+        );
 
         for (k, v) in &cfg.colors {
             if next_colors.contains_key(k) {
