@@ -60,21 +60,30 @@ pub fn compute_flat_row_order<TData>(
         })
         .collect();
 
+    let resolved_column_filters: Vec<(super::FilterFn<TData>, Arc<str>)> = column_filters
+        .iter()
+        .filter_map(|filter| {
+            let filter_fn = columns
+                .iter()
+                .find(|c| c.id.as_ref() == filter.column.as_ref())?
+                .filter_fn
+                .clone()?;
+            Some((filter_fn, filter.value.clone()))
+        })
+        .collect();
+
+    let global_filter_fns: Vec<super::FilterFn<TData>> = if global_filter.is_some() {
+        columns.iter().filter_map(|c| c.filter_fn.clone()).collect()
+    } else {
+        Vec::new()
+    };
+
     let mut order: Vec<usize> = (0..data.len())
         .filter(|&i| {
             let row = &data[i];
 
-            for filter in column_filters {
-                let Some(col) = columns
-                    .iter()
-                    .find(|c| c.id.as_ref() == filter.column.as_ref())
-                else {
-                    continue;
-                };
-                let Some(filter_fn) = col.filter_fn.as_ref() else {
-                    continue;
-                };
-                if !filter_fn(row, filter.value.as_ref()) {
+            for (filter_fn, value) in &resolved_column_filters {
+                if !filter_fn(row, value.as_ref()) {
                     return false;
                 }
             }
@@ -82,10 +91,7 @@ pub fn compute_flat_row_order<TData>(
             let Some(global) = global_filter.as_ref() else {
                 return true;
             };
-            for col in columns {
-                let Some(filter_fn) = col.filter_fn.as_ref() else {
-                    continue;
-                };
+            for filter_fn in &global_filter_fns {
                 if filter_fn(row, global.as_ref()) {
                     return true;
                 }
