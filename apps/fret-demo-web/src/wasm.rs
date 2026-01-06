@@ -13,6 +13,7 @@ enum Demo {
     PlotDemo,
     BarsDemo,
     AreaDemo,
+    CandlestickDemo,
     ErrorBarsDemo,
     HeatmapDemo,
     ShadedDemo,
@@ -38,6 +39,9 @@ fn select_demo() -> Demo {
     }
     if hash.contains("area_demo") || search.contains("demo=area_demo") {
         return Demo::AreaDemo;
+    }
+    if hash.contains("candlestick_demo") || search.contains("demo=candlestick_demo") {
+        return Demo::CandlestickDemo;
     }
     if hash.contains("error_bars_demo") || search.contains("demo=error_bars_demo") {
         return Demo::ErrorBarsDemo;
@@ -91,6 +95,13 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::area_demo::build_runner_config();
             config.main_window_title = "fret-demo area_demo (web)".to_string();
             let driver = fret_examples::area_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::CandlestickDemo => {
+            let app = fret_examples::candlestick_demo::build_app();
+            let mut config = fret_examples::candlestick_demo::build_runner_config();
+            config.main_window_title = "fret-demo candlestick_demo (web)".to_string();
+            let driver = fret_examples::candlestick_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::ErrorBarsDemo => {

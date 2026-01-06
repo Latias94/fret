@@ -1,5 +1,6 @@
 pub mod area_demo;
 pub mod bars_demo;
+pub mod candlestick_demo;
 pub mod components_gallery;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_arbitration_demo;

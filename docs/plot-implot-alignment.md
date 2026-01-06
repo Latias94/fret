@@ -66,7 +66,7 @@ This contract is documented in ADR 0099.
 - [x] Stairs / Step
 - [x] Heatmap (quad-based, portable)
 - [x] Error bars
-- [ ] Candlesticks / OHLC
+- [x] Candlesticks / OHLC
 
 ## Axes
 

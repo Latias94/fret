@@ -435,6 +435,203 @@ impl ErrorBarsPlotModel {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct OhlcPoint {
+    pub x: f64,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
+}
+
+impl OhlcPoint {
+    pub fn is_finite(self) -> bool {
+        self.x.is_finite()
+            && self.open.is_finite()
+            && self.high.is_finite()
+            && self.low.is_finite()
+            && self.close.is_finite()
+    }
+}
+
+#[derive(Debug, Clone)]
+struct OhlcCloseSeriesData {
+    points: Arc<[OhlcPoint]>,
+    sorted_by_x: bool,
+    bounds: Option<DataRect>,
+}
+
+impl OhlcCloseSeriesData {
+    fn new(points: Arc<[OhlcPoint]>, sorted_by_x: bool) -> Self {
+        let mut bounds: Option<DataRect> = None;
+        for p in points.iter().copied() {
+            if !p.is_finite() {
+                continue;
+            }
+            let rect = DataRect {
+                x_min: p.x,
+                x_max: p.x,
+                y_min: p.low.min(p.high).min(p.open).min(p.close),
+                y_max: p.low.max(p.high).max(p.open).max(p.close),
+            };
+            bounds = Some(bounds.map_or(rect, |acc| acc.union(rect)));
+        }
+        Self {
+            points,
+            sorted_by_x,
+            bounds,
+        }
+    }
+}
+
+impl SeriesData for OhlcCloseSeriesData {
+    fn len(&self) -> usize {
+        self.points.len()
+    }
+
+    fn get(&self, index: usize) -> Option<DataPoint> {
+        let p = *self.points.get(index)?;
+        if !p.is_finite() {
+            return None;
+        }
+        Some(DataPoint { x: p.x, y: p.close })
+    }
+
+    fn bounds_hint(&self) -> Option<DataRect> {
+        self.bounds
+    }
+
+    fn is_sorted_by_x(&self) -> bool {
+        self.sorted_by_x
+    }
+
+    fn as_slice(&self) -> Option<&[DataPoint]> {
+        None
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CandlestickSeries {
+    pub id: SeriesId,
+    pub label: Arc<str>,
+    pub points: Arc<[OhlcPoint]>,
+    close_series: Series,
+    pub y_axis: YAxis,
+    /// Candle body width in data-space units (X axis).
+    pub candle_width: f32,
+    pub up_fill: Option<Color>,
+    pub down_fill: Option<Color>,
+    pub wick_color: Option<Color>,
+}
+
+impl CandlestickSeries {
+    pub fn new(label: impl Into<Arc<str>>, points: Arc<[OhlcPoint]>) -> Self {
+        Self::new_sorted(label, points, false)
+    }
+
+    pub fn new_sorted(
+        label: impl Into<Arc<str>>,
+        points: Arc<[OhlcPoint]>,
+        sorted_by_x: bool,
+    ) -> Self {
+        let label = label.into();
+        let close_series = Series::new(OhlcCloseSeriesData::new(points.clone(), sorted_by_x));
+        Self {
+            id: SeriesId::from_label(&label),
+            label,
+            points,
+            close_series,
+            y_axis: YAxis::Left,
+            candle_width: 0.8,
+            up_fill: None,
+            down_fill: None,
+            wick_color: None,
+        }
+    }
+
+    pub fn id(mut self, id: SeriesId) -> Self {
+        self.id = id;
+        self
+    }
+
+    pub fn y_axis(mut self, axis: YAxis) -> Self {
+        self.y_axis = axis;
+        self
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.candle_width = width;
+        self
+    }
+
+    pub fn up_fill(mut self, color: Color) -> Self {
+        self.up_fill = Some(color);
+        self
+    }
+
+    pub fn down_fill(mut self, color: Color) -> Self {
+        self.down_fill = Some(color);
+        self
+    }
+
+    pub fn wick_color(mut self, color: Color) -> Self {
+        self.wick_color = Some(color);
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CandlestickPlotModel {
+    pub data_bounds: DataRect,
+    pub data_bounds_y2: Option<DataRect>,
+    pub series: Vec<CandlestickSeries>,
+}
+
+impl CandlestickPlotModel {
+    pub fn from_series(series: Vec<CandlestickSeries>) -> Self {
+        let bounds_all = compute_data_bounds_from_candlestick_series(&series, |_| true);
+        let bounds_left =
+            compute_data_bounds_from_candlestick_series(&series, |s| s.y_axis == YAxis::Left);
+        let bounds_right =
+            compute_data_bounds_from_candlestick_series(&series, |s| s.y_axis == YAxis::Right);
+
+        let fallback = DataRect {
+            x_min: 0.0,
+            x_max: 1.0,
+            y_min: 0.0,
+            y_max: 1.0,
+        };
+
+        let x_source = bounds_all
+            .or(bounds_left)
+            .or(bounds_right)
+            .unwrap_or(fallback);
+        let y_source = bounds_left.or(bounds_right).unwrap_or(x_source);
+
+        let primary = sanitize_data_rect(DataRect {
+            x_min: x_source.x_min,
+            x_max: x_source.x_max,
+            y_min: y_source.y_min,
+            y_max: y_source.y_max,
+        });
+
+        let y2 = bounds_right.map(|b| {
+            sanitize_data_rect(DataRect {
+                x_min: primary.x_min,
+                x_max: primary.x_max,
+                y_min: b.y_min,
+                y_max: b.y_max,
+            })
+        });
+
+        Self {
+            data_bounds: primary,
+            data_bounds_y2: y2,
+            series,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct SeriesStyle {
     stroke_color: Color,
@@ -1351,6 +1548,110 @@ fn error_bars_commands(
     out
 }
 
+fn candlestick_paths(
+    series: &CandlestickSeries,
+    transform: PlotTransform,
+    view_bounds: DataRect,
+    scale_factor: f32,
+    stroke_width: Px,
+) -> (
+    Vec<fret_core::PathCommand>,
+    Vec<fret_core::PathCommand>,
+    Vec<fret_core::PathCommand>,
+) {
+    let points = &series.points;
+    if points.is_empty() {
+        return (Vec::new(), Vec::new(), Vec::new());
+    }
+
+    let view_x_min = view_bounds.x_min.min(view_bounds.x_max);
+    let view_x_max = view_bounds.x_min.max(view_bounds.x_max);
+
+    let half_w = (series.candle_width.abs() * 0.5) as f64;
+    let max_count = device_point_budget(transform, scale_factor).max(8);
+
+    let mut wick: Vec<fret_core::PathCommand> = Vec::new();
+    let mut body_up: Vec<fret_core::PathCommand> = Vec::new();
+    let mut body_down: Vec<fret_core::PathCommand> = Vec::new();
+
+    let push_rect = |out: &mut Vec<fret_core::PathCommand>, x0: Px, x1: Px, y0: Px, y1: Px| {
+        let left = x0.0.min(x1.0);
+        let right = x0.0.max(x1.0);
+        let top = y0.0.min(y1.0);
+        let bottom = y0.0.max(y1.0);
+
+        let w = (right - left).max(stroke_width.0.max(1.0));
+        let h = (bottom - top).max(stroke_width.0.max(1.0));
+
+        let p0 = Point::new(Px(left), Px(top));
+        let p1 = Point::new(Px(left + w), Px(top));
+        let p2 = Point::new(Px(left + w), Px(top + h));
+        let p3 = Point::new(Px(left), Px(top + h));
+
+        out.push(fret_core::PathCommand::MoveTo(p0));
+        out.push(fret_core::PathCommand::LineTo(p1));
+        out.push(fret_core::PathCommand::LineTo(p2));
+        out.push(fret_core::PathCommand::LineTo(p3));
+        out.push(fret_core::PathCommand::Close);
+    };
+
+    let mut push = |p: OhlcPoint| {
+        if !p.is_finite() {
+            return;
+        }
+        if p.x < view_x_min || p.x > view_x_max {
+            return;
+        }
+
+        let Some(x_px) = transform.data_x_to_px(p.x) else {
+            return;
+        };
+        let Some(y_hi) = transform.data_y_to_px(p.high) else {
+            return;
+        };
+        let Some(y_lo) = transform.data_y_to_px(p.low) else {
+            return;
+        };
+
+        wick.push(fret_core::PathCommand::MoveTo(Point::new(x_px, y_hi)));
+        wick.push(fret_core::PathCommand::LineTo(Point::new(x_px, y_lo)));
+
+        let x0 = p.x - half_w;
+        let x1 = p.x + half_w;
+        let Some(x0_px) = transform.data_x_to_px(x0) else {
+            return;
+        };
+        let Some(x1_px) = transform.data_x_to_px(x1) else {
+            return;
+        };
+        let Some(y_open) = transform.data_y_to_px(p.open) else {
+            return;
+        };
+        let Some(y_close) = transform.data_y_to_px(p.close) else {
+            return;
+        };
+
+        if p.close >= p.open {
+            push_rect(&mut body_up, x0_px, x1_px, y_open, y_close);
+        } else {
+            push_rect(&mut body_down, x0_px, x1_px, y_open, y_close);
+        }
+    };
+
+    if points.len() <= max_count {
+        for p in points.iter().copied() {
+            push(p);
+        }
+    } else {
+        let stride = ((points.len() + max_count - 1) / max_count).max(1);
+        for p in points.iter().copied().step_by(stride) {
+            push(p);
+        }
+    }
+
+    (wick, body_up, body_down)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseReadoutMode {
     /// Show mouse coordinates as a tooltip near the cursor.
@@ -1473,6 +1774,21 @@ impl Default for LinePlotStyle {
 #[derive(Debug)]
 struct CachedPath {
     id: Option<PathId>,
+    series_id: SeriesId,
+    model_revision: u64,
+    scale_factor_bits: u32,
+    viewport_w_bits: u32,
+    viewport_h_bits: u32,
+    stroke_width: Px,
+    view_key: u64,
+    samples: Vec<SamplePoint>,
+}
+
+#[derive(Debug)]
+struct CachedCandlestickPath {
+    wick_id: Option<PathId>,
+    up_id: Option<PathId>,
+    down_id: Option<PathId>,
     series_id: SeriesId,
     model_revision: u64,
     scale_factor_bits: u32,
@@ -1740,6 +2056,13 @@ pub struct ErrorBarsPlotLayer {
 }
 
 pub type ErrorBarsPlotCanvas = PlotCanvas<ErrorBarsPlotLayer>;
+
+#[derive(Debug, Default)]
+pub struct CandlestickPlotLayer {
+    cached_paths: Vec<CachedCandlestickPath>,
+}
+
+pub type CandlestickPlotCanvas = PlotCanvas<CandlestickPlotLayer>;
 
 #[derive(Debug, Default)]
 pub struct StairsPlotLayer {
@@ -2397,6 +2720,12 @@ impl PlotCanvas<ErrorBarsPlotLayer> {
     }
 }
 
+impl PlotCanvas<CandlestickPlotLayer> {
+    pub fn new(model: Model<CandlestickPlotModel>) -> Self {
+        Self::with_layer(model, CandlestickPlotLayer::default())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct HeatmapCacheKey {
     model_revision: u64,
@@ -2696,6 +3025,29 @@ mod hover_segment_tests {
         };
 
         assert!(hit_test_polyline_series_data(&[], &series, args).is_none());
+    }
+}
+
+#[cfg(test)]
+mod candlestick_bounds_tests {
+    use super::*;
+
+    #[test]
+    fn candlestick_bounds_include_wicks_and_width() {
+        let points: Arc<[OhlcPoint]> = Arc::from(vec![OhlcPoint {
+            x: 10.0,
+            open: 2.0,
+            high: 5.0,
+            low: -1.0,
+            close: 3.0,
+        }]);
+        let series = CandlestickSeries::new_sorted("c", points, true).width(2.0);
+        let model = CandlestickPlotModel::from_series(vec![series]);
+
+        assert!((model.data_bounds.x_min - 9.0).abs() < 1.0e-9);
+        assert!((model.data_bounds.x_max - 11.0).abs() < 1.0e-9);
+        assert!((model.data_bounds.y_min - -1.0).abs() < 1.0e-9);
+        assert!((model.data_bounds.y_max - 5.0).abs() < 1.0e-9);
     }
 }
 
@@ -6673,6 +7025,479 @@ impl PlotLayer for ErrorBarsPlotLayer {
     }
 }
 
+impl PlotLayer for CandlestickPlotLayer {
+    type Model = CandlestickPlotModel;
+
+    fn data_bounds(model: &Self::Model) -> DataRect {
+        model.data_bounds
+    }
+
+    fn data_bounds_y2(model: &Self::Model) -> Option<DataRect> {
+        model.data_bounds_y2
+    }
+
+    fn series_meta(model: &Self::Model) -> Vec<SeriesMeta> {
+        model
+            .series
+            .iter()
+            .map(|s| SeriesMeta {
+                id: s.id,
+                label: s.label.clone(),
+                y_axis: s.y_axis,
+                stroke_color: s.wick_color,
+            })
+            .collect()
+    }
+
+    fn series_label(model: &Self::Model, series_id: SeriesId) -> Option<String> {
+        model
+            .series
+            .iter()
+            .find(|s| s.id == series_id)
+            .map(|s| s.label.to_string())
+    }
+
+    fn series_y_axis(model: &Self::Model, series_id: SeriesId) -> YAxis {
+        model
+            .series
+            .iter()
+            .find(|s| s.id == series_id)
+            .map(|s| s.y_axis)
+            .unwrap_or(YAxis::Left)
+    }
+
+    fn cursor_readout(
+        model: &Self::Model,
+        args: PlotCursorReadoutArgs<'_>,
+    ) -> Vec<PlotCursorReadoutRow> {
+        let PlotCursorReadoutArgs {
+            x,
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            scale_factor,
+            hidden,
+        } = args;
+
+        if !x.is_finite() {
+            return Vec::new();
+        }
+
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let view_x = view_x_range(transform);
+        let view_x = (view_x.start().is_finite() && view_x.end().is_finite()).then_some(view_x);
+        let budget = device_point_budget(transform, scale_factor);
+
+        let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
+        for s in &model.series {
+            if hidden.contains(&s.id) {
+                continue;
+            }
+            let y = cursor_readout_y_at_x(&*s.close_series, x, view_x.clone(), budget);
+            out.push(PlotCursorReadoutRow {
+                series_id: s.id,
+                label: s.label.clone(),
+                y_axis: s.y_axis,
+                y,
+            });
+        }
+        out
+    }
+
+    fn paint_paths<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+    ) -> Vec<(SeriesId, PathId, Color)> {
+        let PlotPaintArgs {
+            model_revision,
+            plot,
+            view_bounds,
+            view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
+            style,
+            hidden,
+        } = args;
+
+        let scale_factor_bits = cx.scale_factor.to_bits();
+        let viewport_w_bits = plot.size.width.0.to_bits();
+        let viewport_h_bits = plot.size.height.0.to_bits();
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+
+        let series = &model.series;
+        let series_count = series.len();
+
+        if series_count == 0 {
+            for cached in self.cached_paths.drain(..) {
+                if let Some(id) = cached.wick_id {
+                    cx.services.path().release(id);
+                }
+                if let Some(id) = cached.up_id {
+                    cx.services.path().release(id);
+                }
+                if let Some(id) = cached.down_id {
+                    cx.services.path().release(id);
+                }
+            }
+            return Vec::new();
+        }
+
+        let cached_ok = self.cached_paths.len() == series_count
+            && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                series.get(i).is_some_and(|s| {
+                    let expected_view_key = if s.y_axis == YAxis::Right {
+                        view_key_y2.unwrap_or(view_key_y1)
+                    } else {
+                        view_key_y1
+                    };
+                    s.id == c.series_id && c.view_key == expected_view_key
+                }) && c.model_revision == model_revision
+                    && c.scale_factor_bits == scale_factor_bits
+                    && c.viewport_w_bits == viewport_w_bits
+                    && c.viewport_h_bits == viewport_h_bits
+                    && c.stroke_width == style.stroke_width
+            });
+
+        let default_up = Color {
+            r: 0.25,
+            g: 0.80,
+            b: 0.45,
+            a: 0.85,
+        };
+        let default_down = Color {
+            r: 0.90,
+            g: 0.35,
+            b: 0.45,
+            a: 0.85,
+        };
+
+        if cached_ok {
+            let mut out: Vec<(SeriesId, PathId, Color)> =
+                Vec::with_capacity(series_count.saturating_mul(3));
+            for (i, s) in series.iter().enumerate() {
+                if hidden.contains(&s.id) {
+                    continue;
+                }
+
+                let wick =
+                    s.wick_color
+                        .unwrap_or(resolve_series_color(i, style, series_count, None));
+                let up = s.up_fill.unwrap_or(default_up);
+                let down = s.down_fill.unwrap_or(default_down);
+
+                let Some(cached) = self.cached_paths.get(i) else {
+                    continue;
+                };
+                if let Some(id) = cached.wick_id {
+                    out.push((s.id, id, wick));
+                }
+                if let Some(id) = cached.up_id {
+                    out.push((s.id, id, up));
+                }
+                if let Some(id) = cached.down_id {
+                    out.push((s.id, id, down));
+                }
+            }
+            return out;
+        }
+
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.wick_id {
+                cx.services.path().release(id);
+            }
+            if let Some(id) = cached.up_id {
+                cx.services.path().release(id);
+            }
+            if let Some(id) = cached.down_id {
+                cx.services.path().release(id);
+            }
+        }
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+        let transform_y1 = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
+            viewport: local_viewport,
+            data: b,
+            x_scale,
+            y_scale: y2_scale,
+        });
+
+        let wick_style = PathStyle::Stroke(fret_core::StrokeStyle {
+            width: style.stroke_width,
+        });
+        let fill_style = PathStyle::Fill(fret_core::FillStyle::default());
+        let constraints = PathConstraints {
+            scale_factor: cx.scale_factor,
+        };
+
+        let mut out: Vec<(SeriesId, PathId, Color)> =
+            Vec::with_capacity(series_count.saturating_mul(3));
+        self.cached_paths = Vec::with_capacity(series_count);
+
+        for (series_index, s) in series.iter().enumerate() {
+            let series_id = s.id;
+            if hidden.contains(&series_id) {
+                let view_key = if s.y_axis == YAxis::Right {
+                    view_key_y2.unwrap_or(view_key_y1)
+                } else {
+                    view_key_y1
+                };
+                self.cached_paths.push(CachedCandlestickPath {
+                    wick_id: None,
+                    up_id: None,
+                    down_id: None,
+                    series_id,
+                    model_revision,
+                    scale_factor_bits,
+                    viewport_w_bits,
+                    viewport_h_bits,
+                    stroke_width: style.stroke_width,
+                    view_key,
+                    samples: Vec::new(),
+                });
+                continue;
+            }
+
+            let transform = if s.y_axis == YAxis::Right {
+                transform_y2.unwrap_or(transform_y1)
+            } else {
+                transform_y1
+            };
+            let view_key = if s.y_axis == YAxis::Right {
+                view_key_y2.unwrap_or(view_key_y1)
+            } else {
+                view_key_y1
+            };
+            let view = if s.y_axis == YAxis::Right {
+                view_bounds_y2.unwrap_or(view_bounds)
+            } else {
+                view_bounds
+            };
+
+            let samples = decimate_samples(transform, &*s.close_series, cx.scale_factor, series_id);
+            let (wick_cmds, up_cmds, down_cmds) =
+                candlestick_paths(s, transform, view, cx.scale_factor, style.stroke_width);
+
+            let wick_id = if wick_cmds.is_empty() {
+                None
+            } else {
+                let (id, _metrics) =
+                    cx.services
+                        .path()
+                        .prepare(&wick_cmds, wick_style, constraints);
+                Some(id)
+            };
+            let up_id = if up_cmds.is_empty() {
+                None
+            } else {
+                let (id, _metrics) = cx
+                    .services
+                    .path()
+                    .prepare(&up_cmds, fill_style, constraints);
+                Some(id)
+            };
+            let down_id = if down_cmds.is_empty() {
+                None
+            } else {
+                let (id, _metrics) =
+                    cx.services
+                        .path()
+                        .prepare(&down_cmds, fill_style, constraints);
+                Some(id)
+            };
+
+            self.cached_paths.push(CachedCandlestickPath {
+                wick_id,
+                up_id,
+                down_id,
+                series_id,
+                model_revision,
+                scale_factor_bits,
+                viewport_w_bits,
+                viewport_h_bits,
+                stroke_width: style.stroke_width,
+                view_key,
+                samples,
+            });
+
+            let wick = s.wick_color.unwrap_or(resolve_series_color(
+                series_index,
+                style,
+                series_count,
+                None,
+            ));
+            let up = s.up_fill.unwrap_or(default_up);
+            let down = s.down_fill.unwrap_or(default_down);
+
+            if let Some(id) = wick_id {
+                out.push((series_id, id, wick));
+            }
+            if let Some(id) = up_id {
+                out.push((series_id, id, up));
+            }
+            if let Some(id) = down_id {
+                out.push((series_id, id, down));
+            }
+        }
+
+        out
+    }
+
+    fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover> {
+        let PlotHitTestArgs {
+            model_revision,
+            plot_size,
+            view_bounds,
+            view_bounds_y2,
+            x_scale,
+            y_scale,
+            y2_scale,
+            scale_factor,
+            local,
+            style,
+            hover_threshold,
+            hidden,
+            pinned,
+        } = args;
+
+        let threshold = hover_threshold.0.max(0.0);
+        let threshold2 = threshold * threshold;
+
+        let scale_factor_bits = scale_factor.to_bits();
+        let viewport_w_bits = plot_size.width.0.to_bits();
+        let viewport_h_bits = plot_size.height.0.to_bits();
+        let view_key_y1 = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let view_key_y2 = view_bounds_y2.map(|b| data_rect_key_scaled(b, x_scale, y2_scale));
+
+        let series: Vec<(SeriesId, YAxis, &dyn SeriesData)> = model
+            .series
+            .iter()
+            .map(|s| (s.id, s.y_axis, &*s.close_series))
+            .collect();
+
+        let series_count = series.len();
+        if series_count == 0 {
+            return None;
+        }
+
+        let cached_ok = self.cached_paths.len() == series_count
+            && self.cached_paths.iter().enumerate().all(|(i, c)| {
+                series.get(i).is_some_and(|(id, axis, _data)| {
+                    let expected_view_key = if *axis == YAxis::Right {
+                        view_key_y2.unwrap_or(view_key_y1)
+                    } else {
+                        view_key_y1
+                    };
+                    *id == c.series_id && c.view_key == expected_view_key
+                }) && c.model_revision == model_revision
+                    && c.scale_factor_bits == scale_factor_bits
+                    && c.viewport_w_bits == viewport_w_bits
+                    && c.viewport_h_bits == viewport_h_bits
+                    && c.stroke_width == style.stroke_width
+            });
+
+        let mut best: Option<(SamplePoint, f32)> = None;
+        let mut consider_sample = |s: SamplePoint| {
+            let dx = s.plot_px.x.0 - local.x.0;
+            let dy = s.plot_px.y.0 - local.y.0;
+            let d2 = dx * dx + dy * dy;
+            if !d2.is_finite() {
+                return;
+            }
+            if best.is_none_or(|b| d2 < b.1) {
+                best = Some((s, d2));
+            }
+        };
+
+        if cached_ok {
+            for cached in self.cached_paths.iter() {
+                if hidden.contains(&cached.series_id) {
+                    continue;
+                }
+                if let Some(pinned) = pinned
+                    && cached.series_id != pinned
+                {
+                    continue;
+                }
+                for s in cached.samples.iter().copied() {
+                    consider_sample(s);
+                }
+            }
+        } else {
+            let transform_y1 = PlotTransform {
+                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+                data: view_bounds,
+                x_scale,
+                y_scale,
+            };
+            let transform_y2 = view_bounds_y2.map(|b| PlotTransform {
+                viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+                data: b,
+                x_scale,
+                y_scale: y2_scale,
+            });
+
+            for (series_id, axis, data) in series.iter().copied() {
+                if hidden.contains(&series_id) {
+                    continue;
+                }
+                if let Some(pinned) = pinned
+                    && pinned != series_id
+                {
+                    continue;
+                }
+                let transform = if axis == YAxis::Right {
+                    transform_y2.unwrap_or(transform_y1)
+                } else {
+                    transform_y1
+                };
+                for sample in decimate_samples(transform, data, scale_factor, series_id) {
+                    consider_sample(sample);
+                }
+            }
+        }
+
+        best.and_then(|(s, d2)| {
+            (d2 <= threshold2).then_some(PlotHover {
+                series_id: s.series_id,
+                index: s.index,
+                data: s.data,
+                plot_px: s.plot_px,
+                value: None,
+            })
+        })
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn UiServices) {
+        for cached in self.cached_paths.drain(..) {
+            if let Some(id) = cached.wick_id {
+                services.path().release(id);
+            }
+            if let Some(id) = cached.up_id {
+                services.path().release(id);
+            }
+            if let Some(id) = cached.down_id {
+                services.path().release(id);
+            }
+        }
+    }
+}
+
 impl PlotLayer for StairsPlotLayer {
     type Model = LinePlotModel;
 
@@ -8905,6 +9730,49 @@ fn compute_data_bounds_from_error_bars_series(
                 };
                 consider(idx, p);
             }
+        }
+
+        let Some(bounds) = bounds else {
+            continue;
+        };
+        out = Some(out.map_or(bounds, |acc| acc.union(bounds)));
+    }
+
+    out
+}
+
+fn compute_data_bounds_from_candlestick_series(
+    series: &[CandlestickSeries],
+    include: impl Fn(&CandlestickSeries) -> bool,
+) -> Option<DataRect> {
+    let mut out: Option<DataRect> = None;
+
+    for s in series {
+        if !include(s) {
+            continue;
+        }
+
+        let half_w = f64::from((s.candle_width * 0.5).abs());
+
+        let mut bounds: Option<DataRect> = None;
+        for p in s.points.iter().copied() {
+            if !p.is_finite() {
+                continue;
+            }
+
+            let y_min = p.low.min(p.high).min(p.open).min(p.close);
+            let y_max = p.low.max(p.high).max(p.open).max(p.close);
+            if !y_min.is_finite() || !y_max.is_finite() {
+                continue;
+            }
+
+            let rect = DataRect {
+                x_min: p.x - half_w,
+                x_max: p.x + half_w,
+                y_min,
+                y_max,
+            };
+            bounds = Some(bounds.map_or(rect, |acc| acc.union(rect)));
         }
 
         let Some(bounds) = bounds else {
