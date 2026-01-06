@@ -76,6 +76,7 @@ This contract is documented in ADR 0099.
 - [x] Axis thickness auto-fit (avoid clipped labels)
 - [~] Multi-axes (Y2 supported; no Y3/Y4 yet)
 - [x] Axis lock (lock X/Y pan/zoom)
+- [x] Axis constraints (limits + min/max span)
 
 ## Styling
 
