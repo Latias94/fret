@@ -11,6 +11,17 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
 };
 
+fn contains_svg_icon_like(el: &AnyElement) -> bool {
+    match &el.kind {
+        fret_ui::element::ElementKind::SvgIcon(_) | fret_ui::element::ElementKind::Spinner(_) => {
+            return true;
+        }
+        _ => {}
+    }
+
+    el.children.iter().any(contains_svg_icon_like)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ButtonVariant {
     #[default]
@@ -283,6 +294,8 @@ impl Button {
             let variant = self.variant;
             let text_style = button_text_style(&theme, self.size);
             let is_icon = is_icon_button;
+            let has_svg_icon_like_children =
+                !is_icon_button && self.children.iter().any(contains_svg_icon_like);
             let children = self.children;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
@@ -305,16 +318,18 @@ impl Button {
                 let padding = if variant == ButtonVariant::Link || is_icon {
                     ChromeRefinement::default()
                 } else {
+                    // shadcn/ui: `has-[>svg]:px-*` uses tighter horizontal padding when an icon is present.
+                    let shrink_px = has_svg_icon_like_children;
                     match size {
-                        ComponentSize::Small => {
-                            ChromeRefinement::default().px(Space::N3).py(Space::N1)
-                        }
-                        ComponentSize::Medium => {
-                            ChromeRefinement::default().px(Space::N4).py(Space::N2)
-                        }
-                        ComponentSize::Large => {
-                            ChromeRefinement::default().px(Space::N6).py(Space::N2)
-                        }
+                        ComponentSize::Small => ChromeRefinement::default()
+                            .px(if shrink_px { Space::N2p5 } else { Space::N3 })
+                            .py(Space::N1),
+                        ComponentSize::Medium => ChromeRefinement::default()
+                            .px(if shrink_px { Space::N3 } else { Space::N4 })
+                            .py(Space::N2),
+                        ComponentSize::Large => ChromeRefinement::default()
+                            .px(if shrink_px { Space::N4 } else { Space::N6 })
+                            .py(Space::N2),
                         ComponentSize::XSmall => {
                             ChromeRefinement::default().px(Space::N2).py(Space::N1)
                         }
@@ -407,6 +422,7 @@ mod tests {
         Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
         TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
+    use fret_ui::SvgSource;
     use fret_ui::Theme;
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, SizeStyle};
     use fret_ui::elements;
@@ -542,6 +558,62 @@ mod tests {
 
             assert_eq!(props.layout.size.min_width, Some(expected));
             assert_eq!(props.layout.size.min_height, Some(expected));
+        }
+    }
+
+    #[test]
+    fn button_padding_x_compacts_when_icon_present() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let theme = Theme::global(&app).clone();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(200.0)),
+        );
+
+        let icon_bytes: &'static [u8] =
+            br#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"></svg>"#;
+
+        for (size, expected_px) in [
+            (
+                ButtonSize::Sm,
+                fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N2p5).resolve(&theme),
+            ),
+            (
+                ButtonSize::Default,
+                fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N3).resolve(&theme),
+            ),
+            (
+                ButtonSize::Lg,
+                fret_ui_kit::MetricRef::space(fret_ui_kit::Space::N4).resolve(&theme),
+            ),
+        ] {
+            let element =
+                elements::with_element_cx(&mut app, window, bounds, "button-padding", |cx| {
+                    let icon = cx.svg_icon_props(fret_ui::element::SvgIconProps::new(
+                        SvgSource::Static(icon_bytes),
+                    ));
+                    let text = cx.text("Label");
+
+                    Button::new("Icon label")
+                        .size(size)
+                        .children(vec![icon, text])
+                        .into_element(cx)
+                });
+
+            let ElementKind::Pressable(_props) = &element.kind else {
+                panic!("expected button to render as a Pressable");
+            };
+            let Some(chrome) = element.children.first() else {
+                panic!("expected button pressable to contain chrome container");
+            };
+            let ElementKind::Container(props) = &chrome.kind else {
+                panic!("expected chrome container");
+            };
+
+            assert_eq!(props.padding.left, expected_px);
+            assert_eq!(props.padding.right, expected_px);
         }
     }
 }
