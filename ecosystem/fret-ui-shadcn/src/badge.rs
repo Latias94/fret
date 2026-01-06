@@ -41,44 +41,23 @@ impl Badge {
 }
 
 fn border_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("border")
-        .unwrap_or(theme.colors.panel_border)
+    theme.color_required("border")
 }
 
 fn fg_for(theme: &Theme, variant: BadgeVariant) -> Color {
     match variant {
-        BadgeVariant::Default => theme
-            .color_by_key("primary-foreground")
-            .or_else(|| theme.color_by_key("primary.foreground"))
-            .unwrap_or(theme.colors.text_primary),
-        BadgeVariant::Secondary => theme
-            .color_by_key("secondary-foreground")
-            .or_else(|| theme.color_by_key("secondary.foreground"))
-            .unwrap_or(theme.colors.text_primary),
-        BadgeVariant::Destructive => theme
-            .color_by_key("destructive-foreground")
-            .or_else(|| theme.color_by_key("destructive.foreground"))
-            .unwrap_or(theme.colors.text_primary),
-        BadgeVariant::Outline => theme
-            .color_by_key("foreground")
-            .unwrap_or(theme.colors.text_primary),
+        BadgeVariant::Default => theme.color_required("primary-foreground"),
+        BadgeVariant::Secondary => theme.color_required("secondary-foreground"),
+        BadgeVariant::Destructive => theme.color_required("destructive-foreground"),
+        BadgeVariant::Outline => theme.color_required("foreground"),
     }
 }
 
 fn bg_for(theme: &Theme, variant: BadgeVariant) -> Option<Color> {
     match variant {
-        BadgeVariant::Default => Some(theme.color_by_key("primary").unwrap_or(theme.colors.accent)),
-        BadgeVariant::Secondary => Some(
-            theme
-                .color_by_key("secondary")
-                .unwrap_or(theme.colors.panel_background),
-        ),
-        BadgeVariant::Destructive => Some(
-            theme
-                .color_by_key("destructive")
-                .unwrap_or(theme.colors.accent),
-        ),
+        BadgeVariant::Default => Some(theme.color_required("primary")),
+        BadgeVariant::Secondary => Some(theme.color_required("secondary")),
+        BadgeVariant::Destructive => Some(theme.color_required("destructive")),
         BadgeVariant::Outline => None,
     }
 }
@@ -108,11 +87,11 @@ pub fn badge<H: UiHost>(
     let text_px = theme
         .metric_by_key("component.badge.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or(theme.metrics.font_size);
+        .unwrap_or_else(|| theme.metric_required("font.size"));
     let line_height = theme
         .metric_by_key("component.badge.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or(theme.metrics.font_line_height);
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
     cx.container(props, |cx| {
         vec![cx.text_props(TextProps {

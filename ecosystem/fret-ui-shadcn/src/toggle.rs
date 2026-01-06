@@ -43,40 +43,27 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
 }
 
 fn toggle_bg_hover(theme: &Theme) -> Color {
-    theme
-        .color_by_key("muted")
-        .unwrap_or(theme.colors.hover_background)
+    theme.color_required("muted")
 }
 
 fn toggle_fg_muted(theme: &Theme) -> Color {
-    theme
-        .color_by_key("muted.foreground")
-        .or_else(|| theme.color_by_key("muted-foreground"))
-        .unwrap_or(theme.colors.text_muted)
+    theme.color_required("muted-foreground")
 }
 
 fn toggle_ring_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("ring")
-        .unwrap_or(theme.colors.focus_ring)
+    theme.color_required("ring")
 }
 
 fn toggle_bg_on(theme: &Theme) -> Color {
-    theme.color_by_key("accent").unwrap_or(theme.colors.accent)
+    theme.color_required("accent")
 }
 
 fn toggle_fg_on(theme: &Theme) -> Color {
-    theme
-        .color_by_key("accent-foreground")
-        .or_else(|| theme.color_by_key("accent.foreground"))
-        .unwrap_or(theme.colors.text_primary)
+    theme.color_required("accent-foreground")
 }
 
 fn toggle_border(theme: &Theme) -> Color {
-    theme
-        .color_by_key("input")
-        .or_else(|| theme.color_by_key("border"))
-        .unwrap_or(theme.colors.panel_border)
+    theme.color_required("input")
 }
 
 fn toggle_h(theme: &Theme, size: ToggleSize) -> Px {
@@ -101,11 +88,11 @@ fn toggle_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.toggle.text_px")
         .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or(theme.metrics.font_size);
+        .unwrap_or_else(|| theme.metric_required("font.size"));
     let line_height = theme
         .metric_by_key("component.toggle.line_height")
         .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or(theme.metrics.font_line_height);
+        .unwrap_or_else(|| theme.metric_required("font.line_height"));
     TextStyle {
         size: px,
         weight: FontWeight::MEDIUM,
@@ -240,10 +227,8 @@ impl Toggle {
                 .merge(layout),
         );
 
-        let fg_disabled = theme.colors.text_disabled;
-        let fg_default = theme
-            .color_by_key("foreground")
-            .unwrap_or(theme.colors.text_primary);
+        let fg_default = theme.color_required("foreground");
+        let fg_disabled = alpha_mul(fg_default, 0.5);
         let fg_muted = toggle_fg_muted(&theme);
         let bg_hover = toggle_bg_hover(&theme);
         let bg_on = toggle_bg_on(&theme);
