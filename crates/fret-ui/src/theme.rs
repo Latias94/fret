@@ -243,6 +243,7 @@ impl Theme {
             "background" => Some(self.colors.surface_background),
             "foreground" => Some(self.colors.text_primary),
             "border" => Some(self.colors.panel_border),
+            "input" | "input.border" => Some(self.colors.panel_border),
             "ring" => Some(self.colors.focus_ring),
             "ring-offset-background" | "ring_offset_background" => {
                 Some(self.colors.surface_background)
@@ -280,7 +281,6 @@ impl Theme {
             "list.active.border" => Some(self.colors.accent),
 
             // Inputs.
-            "input" | "input.border" => Some(self.colors.panel_border),
             "input.background" => Some(self.colors.panel_background),
             "input.foreground" => Some(self.colors.text_primary),
             "caret" => Some(self.colors.text_primary),
@@ -478,7 +478,11 @@ impl Theme {
             self.colors.text_primary,
             ["foreground"]
         );
-        backfill_color_from_alias!("color.panel.border", self.colors.panel_border, ["border"]);
+        backfill_color_from_alias!(
+            "color.panel.border",
+            self.colors.panel_border,
+            ["border", "input", "input.border"]
+        );
         backfill_color_from_alias!("color.focus.ring", self.colors.focus_ring, ["ring"]);
         backfill_color_from_alias!(
             "color.panel.background",
@@ -486,14 +490,55 @@ impl Theme {
             ["card", "card.background", "popover", "popover.background"]
         );
         backfill_color_from_alias!(
+            "color.text.muted",
+            self.colors.text_muted,
+            ["muted-foreground", "muted.foreground"]
+        );
+        backfill_color_from_alias!(
             "color.menu.background",
             self.colors.menu_background,
-            ["popover", "popover.background"]
+            [
+                "popover",
+                "popover.background",
+                "card",
+                "card.background",
+                "background"
+            ]
         );
         backfill_color_from_alias!(
             "color.menu.border",
             self.colors.menu_border,
-            ["popover.border"]
+            ["popover.border", "border", "input", "input.border"]
+        );
+        backfill_color_from_alias!(
+            "color.menu.item.hover",
+            self.colors.menu_item_hover,
+            ["accent", "accent.background", "muted", "muted.background"]
+        );
+        backfill_color_from_alias!(
+            "color.list.background",
+            self.colors.list_background,
+            ["background", "card", "card.background"]
+        );
+        backfill_color_from_alias!(
+            "color.list.border",
+            self.colors.list_border,
+            ["border", "input", "input.border"]
+        );
+        backfill_color_from_alias!(
+            "color.list.row.hover",
+            self.colors.list_row_hover,
+            ["accent", "accent.background", "muted", "muted.background"]
+        );
+        backfill_color_from_alias!(
+            "color.list.row.selected",
+            self.colors.list_row_selected,
+            [
+                "accent",
+                "accent.background",
+                "primary",
+                "primary.background"
+            ]
         );
         backfill_color_from_alias!(
             "color.accent",
@@ -859,6 +904,8 @@ mod tests {
             "background",
             "foreground",
             "border",
+            "input",
+            "input.border",
             "ring",
             "ring-offset-background",
             "card",
@@ -878,12 +925,15 @@ mod tests {
             "destructive-foreground",
             "destructive.foreground",
             "muted",
+            "muted-foreground",
             "input.background",
-            "input",
             "input.foreground",
             "accent",
+            "accent-foreground",
             "popover.background",
             "popover.foreground",
+            "popover-foreground",
+            "popover.border",
         ] {
             assert!(theme.color_by_key(key).is_some(), "missing alias {key}");
         }
@@ -899,6 +949,7 @@ mod tests {
         colors.insert("border".to_string(), "#ff0000".to_string());
         colors.insert("ring".to_string(), "#00ff00".to_string());
         colors.insert("primary".to_string(), "#0000ff".to_string());
+        colors.insert("muted-foreground".to_string(), "#00ffff".to_string());
         let cfg = ThemeConfig {
             name: "Semantic Only".to_string(),
             colors,
@@ -913,12 +964,38 @@ mod tests {
         let border = theme.color_by_key("border").expect("border");
         let ring = theme.color_by_key("ring").expect("ring");
         let primary = theme.color_by_key("primary").expect("primary");
+        let muted_fg = theme
+            .color_by_key("muted-foreground")
+            .expect("muted-foreground");
 
         assert_eq!(theme.colors.surface_background, bg);
         assert_eq!(theme.colors.text_primary, fg);
         assert_eq!(theme.colors.panel_border, border);
         assert_eq!(theme.colors.focus_ring, ring);
         assert_eq!(theme.colors.accent, primary);
+        assert_eq!(theme.colors.text_muted, muted_fg);
+    }
+
+    #[test]
+    fn semantic_keys_backfill_panel_border_from_input_when_border_missing() {
+        let mut theme = Theme::global(&crate::test_host::TestHost::default()).clone();
+
+        let mut colors = HashMap::new();
+        colors.insert("background".to_string(), "#000000".to_string());
+        colors.insert("foreground".to_string(), "#ffffff".to_string());
+        colors.insert("input".to_string(), "#ff0000".to_string());
+        let cfg = ThemeConfig {
+            name: "Semantic Input Border".to_string(),
+            colors,
+            ..Default::default()
+        };
+
+        theme.apply_config(&cfg);
+
+        let input = theme.color_by_key("input").expect("input");
+        assert_eq!(theme.colors.panel_border, input);
+        assert_eq!(theme.colors.menu_border, input);
+        assert_eq!(theme.colors.list_border, input);
     }
 
     #[test]
