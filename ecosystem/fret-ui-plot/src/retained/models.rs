@@ -21,6 +21,23 @@ pub enum YAxis {
     Right3,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MarkerShape {
+    Plus,
+    X,
+    Square,
+    Diamond,
+    TriangleUp,
+    TriangleDown,
+    Circle,
+}
+
+impl Default for MarkerShape {
+    fn default() -> Self {
+        Self::Plus
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct LineSeries {
     pub id: SeriesId,
@@ -226,6 +243,7 @@ pub struct ScatterSeries {
     pub stroke_color: Option<Color>,
     pub stroke_width: Option<Px>,
     pub marker_radius: Option<Px>,
+    pub marker_shape: Option<MarkerShape>,
 }
 
 impl ScatterSeries {
@@ -239,6 +257,7 @@ impl ScatterSeries {
             stroke_color: None,
             stroke_width: None,
             marker_radius: None,
+            marker_shape: None,
         }
     }
 
@@ -254,6 +273,11 @@ impl ScatterSeries {
 
     pub fn marker_radius(mut self, radius: Px) -> Self {
         self.marker_radius = Some(radius);
+        self
+    }
+
+    pub fn marker_shape(mut self, shape: MarkerShape) -> Self {
+        self.marker_shape = Some(shape);
         self
     }
 
@@ -463,6 +487,7 @@ pub struct ErrorBarsSeries {
     /// Cross marker radius in plot pixels.
     pub marker_radius: Px,
     pub show_markers: bool,
+    pub marker_shape: MarkerShape,
 }
 
 impl ErrorBarsSeries {
@@ -481,6 +506,7 @@ impl ErrorBarsSeries {
             show_caps: true,
             marker_radius: Px(4.0),
             show_markers: true,
+            marker_shape: MarkerShape::default(),
         }
     }
 
@@ -531,6 +557,11 @@ impl ErrorBarsSeries {
 
     pub fn show_markers(mut self, show: bool) -> Self {
         self.show_markers = show;
+        self
+    }
+
+    pub fn marker_shape(mut self, shape: MarkerShape) -> Self {
+        self.marker_shape = shape;
         self
     }
 }

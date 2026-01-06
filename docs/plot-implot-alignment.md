@@ -82,7 +82,7 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 ## Plot types (P1)
 
 - [x] Line plot
-- [x] Scatter plot (marker crosses)
+- [x] Scatter plot (markers)
 - [x] Bars plot (filled rectangles)
 - [x] Area (fill to baseline)
 - [x] Shaded band (fill between upper/lower series)
@@ -107,7 +107,7 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 ## Styling
 
 - [x] Theme-derived defaults
-- [~] Per-series style overrides beyond color (stroke width; scatter marker radius)
+- [~] Per-series style overrides beyond color (stroke width; scatter marker radius/shape; error bars marker shape)
 - [ ] Dashes / joins / caps (likely requires renderer/path contract follow-up)
 
 ## Demos

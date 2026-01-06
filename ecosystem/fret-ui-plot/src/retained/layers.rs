@@ -475,13 +475,18 @@ fn find_valid_at_or_after(series: &dyn SeriesData, mut idx: usize) -> Option<(us
     }
 }
 
-fn scatter_marker_commands(samples: &[SamplePoint], radius: Px) -> Vec<fret_core::PathCommand> {
+fn scatter_marker_commands_with_shape(
+    samples: &[SamplePoint],
+    radius: Px,
+    shape: MarkerShape,
+) -> Vec<fret_core::PathCommand> {
     if samples.is_empty() {
         return Vec::new();
     }
 
     let r = radius.0.max(0.0);
-    let mut out: Vec<fret_core::PathCommand> = Vec::with_capacity(samples.len().saturating_mul(4));
+    let mut out: Vec<fret_core::PathCommand> = Vec::new();
+    out.reserve(samples.len().saturating_mul(8));
 
     for s in samples {
         let x = s.plot_px.x.0;
@@ -490,14 +495,113 @@ fn scatter_marker_commands(samples: &[SamplePoint], radius: Px) -> Vec<fret_core
             continue;
         }
 
-        // Cross marker: horizontal then vertical.
-        out.push(fret_core::PathCommand::MoveTo(Point::new(Px(x - r), Px(y))));
-        out.push(fret_core::PathCommand::LineTo(Point::new(Px(x + r), Px(y))));
-        out.push(fret_core::PathCommand::MoveTo(Point::new(Px(x), Px(y - r))));
-        out.push(fret_core::PathCommand::LineTo(Point::new(Px(x), Px(y + r))));
+        push_marker_commands(&mut out, Px(x), Px(y), Px(r), shape);
     }
 
     out
+}
+
+fn resolve_marker_shape(override_shape: Option<MarkerShape>) -> MarkerShape {
+    override_shape.unwrap_or_default()
+}
+
+fn push_marker_commands(
+    out: &mut Vec<fret_core::PathCommand>,
+    x: Px,
+    y: Px,
+    radius: Px,
+    shape: MarkerShape,
+) {
+    let x = x.0;
+    let y = y.0;
+    let r = radius.0.max(0.0);
+    if !x.is_finite() || !y.is_finite() || !r.is_finite() || r <= 0.0 {
+        return;
+    }
+
+    match shape {
+        MarkerShape::Plus => {
+            out.push(fret_core::PathCommand::MoveTo(Point::new(Px(x - r), Px(y))));
+            out.push(fret_core::PathCommand::LineTo(Point::new(Px(x + r), Px(y))));
+            out.push(fret_core::PathCommand::MoveTo(Point::new(Px(x), Px(y - r))));
+            out.push(fret_core::PathCommand::LineTo(Point::new(Px(x), Px(y + r))));
+        }
+        MarkerShape::X => {
+            out.push(fret_core::PathCommand::MoveTo(Point::new(
+                Px(x - r),
+                Px(y - r),
+            )));
+            out.push(fret_core::PathCommand::LineTo(Point::new(
+                Px(x + r),
+                Px(y + r),
+            )));
+            out.push(fret_core::PathCommand::MoveTo(Point::new(
+                Px(x - r),
+                Px(y + r),
+            )));
+            out.push(fret_core::PathCommand::LineTo(Point::new(
+                Px(x + r),
+                Px(y - r),
+            )));
+        }
+        MarkerShape::Square => {
+            let p0 = Point::new(Px(x - r), Px(y - r));
+            let p1 = Point::new(Px(x + r), Px(y - r));
+            let p2 = Point::new(Px(x + r), Px(y + r));
+            let p3 = Point::new(Px(x - r), Px(y + r));
+            out.push(fret_core::PathCommand::MoveTo(p0));
+            out.push(fret_core::PathCommand::LineTo(p1));
+            out.push(fret_core::PathCommand::LineTo(p2));
+            out.push(fret_core::PathCommand::LineTo(p3));
+            out.push(fret_core::PathCommand::LineTo(p0));
+        }
+        MarkerShape::Diamond => {
+            let p0 = Point::new(Px(x), Px(y - r));
+            let p1 = Point::new(Px(x + r), Px(y));
+            let p2 = Point::new(Px(x), Px(y + r));
+            let p3 = Point::new(Px(x - r), Px(y));
+            out.push(fret_core::PathCommand::MoveTo(p0));
+            out.push(fret_core::PathCommand::LineTo(p1));
+            out.push(fret_core::PathCommand::LineTo(p2));
+            out.push(fret_core::PathCommand::LineTo(p3));
+            out.push(fret_core::PathCommand::LineTo(p0));
+        }
+        MarkerShape::TriangleUp => {
+            let p0 = Point::new(Px(x), Px(y - r));
+            let p1 = Point::new(Px(x + r), Px(y + r));
+            let p2 = Point::new(Px(x - r), Px(y + r));
+            out.push(fret_core::PathCommand::MoveTo(p0));
+            out.push(fret_core::PathCommand::LineTo(p1));
+            out.push(fret_core::PathCommand::LineTo(p2));
+            out.push(fret_core::PathCommand::LineTo(p0));
+        }
+        MarkerShape::TriangleDown => {
+            let p0 = Point::new(Px(x), Px(y + r));
+            let p1 = Point::new(Px(x + r), Px(y - r));
+            let p2 = Point::new(Px(x - r), Px(y - r));
+            out.push(fret_core::PathCommand::MoveTo(p0));
+            out.push(fret_core::PathCommand::LineTo(p1));
+            out.push(fret_core::PathCommand::LineTo(p2));
+            out.push(fret_core::PathCommand::LineTo(p0));
+        }
+        MarkerShape::Circle => {
+            let segments = 12usize;
+            let step = (std::f32::consts::PI * 2.0) / segments as f32;
+            let t0 = 0.0f32;
+            let p0 = Point::new(Px(x + r * t0.cos()), Px(y + r * t0.sin()));
+            out.push(fret_core::PathCommand::MoveTo(p0));
+
+            for i in 1..=segments {
+                let t = step * i as f32;
+                let px = x + r * t.cos();
+                let py = y + r * t.sin();
+                if !px.is_finite() || !py.is_finite() {
+                    continue;
+                }
+                out.push(fret_core::PathCommand::LineTo(Point::new(Px(px), Px(py))));
+            }
+        }
+    }
 }
 
 fn error_bars_commands(
@@ -510,7 +614,11 @@ fn error_bars_commands(
     }
 
     let cap = series.cap_size.0.max(0.0);
-    let marker = series.marker_radius.0.max(0.0);
+    let marker = if series.show_markers {
+        series.marker_radius.0.max(0.0)
+    } else {
+        0.0
+    };
 
     let mut out: Vec<fret_core::PathCommand> = Vec::new();
 
@@ -567,27 +675,12 @@ fn error_bars_commands(
             }
         }
 
-        if series.show_markers && marker > 0.0 {
+        if marker > 0.0 {
             let Some(y_px) = transform.data_y_to_px(p.y) else {
                 return;
             };
 
-            out.push(fret_core::PathCommand::MoveTo(Point::new(
-                Px(x_px.0 - marker),
-                y_px,
-            )));
-            out.push(fret_core::PathCommand::LineTo(Point::new(
-                Px(x_px.0 + marker),
-                y_px,
-            )));
-            out.push(fret_core::PathCommand::MoveTo(Point::new(
-                x_px,
-                Px(y_px.0 - marker),
-            )));
-            out.push(fret_core::PathCommand::LineTo(Point::new(
-                x_px,
-                Px(y_px.0 + marker),
-            )));
+            push_marker_commands(&mut out, x_px, y_px, Px(marker), series.marker_shape);
         }
     };
 
@@ -712,6 +805,8 @@ struct CachedPath {
     viewport_h_bits: u32,
     stroke_width: Px,
     marker_radius: Px,
+    marker_shape: MarkerShape,
+    cap_size: Px,
     view_key: u64,
     samples: Vec<SamplePoint>,
 }
@@ -1570,6 +1665,8 @@ impl PlotLayer for LinePlotLayer {
                     viewport_h_bits,
                     stroke_width: resolved.stroke_width,
                     marker_radius: Px(0.0),
+                    marker_shape: MarkerShape::default(),
+                    cap_size: Px(0.0),
                     view_key,
                     samples: Vec::new(),
                 });
@@ -1600,6 +1697,8 @@ impl PlotLayer for LinePlotLayer {
                 viewport_h_bits,
                 stroke_width: resolved.stroke_width,
                 marker_radius: Px(0.0),
+                marker_shape: MarkerShape::default(),
+                cap_size: Px(0.0),
                 view_key,
                 samples,
             });
@@ -1779,11 +1878,13 @@ impl PlotLayer for ScatterPlotLayer {
                     let expected_stroke_width = resolve_stroke_width(style, s.stroke_width);
                     let expected_marker_radius =
                         resolve_marker_radius(s.marker_radius, expected_stroke_width);
+                    let expected_marker_shape = resolve_marker_shape(s.marker_shape);
 
                     s.id == c.series_id
                         && c.view_key == expected_view_key
                         && c.stroke_width == expected_stroke_width
                         && c.marker_radius == expected_marker_radius
+                        && c.marker_shape == expected_marker_shape
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
@@ -1855,6 +1956,7 @@ impl PlotLayer for ScatterPlotLayer {
             let series_id = s.id;
             let stroke_width = resolve_stroke_width(style, s.stroke_width);
             let marker_radius = resolve_marker_radius(s.marker_radius, stroke_width);
+            let marker_shape = resolve_marker_shape(s.marker_shape);
             let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
                 width: stroke_width,
             });
@@ -1870,6 +1972,8 @@ impl PlotLayer for ScatterPlotLayer {
                     viewport_h_bits,
                     stroke_width,
                     marker_radius,
+                    marker_shape,
+                    cap_size: Px(0.0),
                     view_key,
                     samples: Vec::new(),
                 });
@@ -1880,7 +1984,8 @@ impl PlotLayer for ScatterPlotLayer {
             let view_key = view_key_for_axis(s.y_axis);
 
             let samples = decimate_points(transform, &*s.data, cx.scale_factor, series_id);
-            let commands = scatter_marker_commands(&samples, marker_radius);
+            let commands =
+                scatter_marker_commands_with_shape(&samples, marker_radius, marker_shape);
             let id = if commands.is_empty() {
                 None
             } else {
@@ -1900,6 +2005,8 @@ impl PlotLayer for ScatterPlotLayer {
                 viewport_h_bits,
                 stroke_width,
                 marker_radius,
+                marker_shape,
+                cap_size: Px(0.0),
                 view_key,
                 samples,
             });
@@ -2078,10 +2185,19 @@ impl PlotLayer for ErrorBarsPlotLayer {
                 series.get(i).is_some_and(|s| {
                     let expected_view_key = view_key_for_axis(s.y_axis);
                     let expected_stroke_width = resolve_stroke_width(style, s.stroke_width);
+                    let expected_marker_radius = if s.show_markers {
+                        s.marker_radius
+                    } else {
+                        Px(0.0)
+                    };
+                    let expected_cap_size = if s.show_caps { s.cap_size } else { Px(0.0) };
 
                     s.id == c.series_id
                         && c.view_key == expected_view_key
                         && c.stroke_width == expected_stroke_width
+                        && c.marker_radius == expected_marker_radius
+                        && c.marker_shape == s.marker_shape
+                        && c.cap_size == expected_cap_size
                 }) && c.model_revision == model_revision
                     && c.scale_factor_bits == scale_factor_bits
                     && c.viewport_w_bits == viewport_w_bits
@@ -2152,6 +2268,12 @@ impl PlotLayer for ErrorBarsPlotLayer {
         for (series_index, s) in series.iter().enumerate() {
             let series_id = s.id;
             let stroke_width = resolve_stroke_width(style, s.stroke_width);
+            let marker_radius = if s.show_markers {
+                s.marker_radius
+            } else {
+                Px(0.0)
+            };
+            let cap_size = if s.show_caps { s.cap_size } else { Px(0.0) };
             let path_style = PathStyle::Stroke(fret_core::StrokeStyle {
                 width: stroke_width,
             });
@@ -2166,7 +2288,9 @@ impl PlotLayer for ErrorBarsPlotLayer {
                     viewport_w_bits,
                     viewport_h_bits,
                     stroke_width,
-                    marker_radius: Px(0.0),
+                    marker_radius,
+                    marker_shape: s.marker_shape,
+                    cap_size,
                     view_key,
                     samples: Vec::new(),
                 });
@@ -2196,7 +2320,9 @@ impl PlotLayer for ErrorBarsPlotLayer {
                 viewport_w_bits,
                 viewport_h_bits,
                 stroke_width,
-                marker_radius: Px(0.0),
+                marker_radius,
+                marker_shape: s.marker_shape,
+                cap_size,
                 view_key,
                 samples,
             });
@@ -2998,6 +3124,8 @@ impl PlotLayer for StairsPlotLayer {
                     viewport_h_bits,
                     stroke_width: resolved.stroke_width,
                     marker_radius: Px(0.0),
+                    marker_shape: MarkerShape::default(),
+                    cap_size: Px(0.0),
                     view_key,
                     samples: Vec::new(),
                 });
@@ -3030,6 +3158,8 @@ impl PlotLayer for StairsPlotLayer {
                 viewport_h_bits,
                 stroke_width: resolved.stroke_width,
                 marker_radius: Px(0.0),
+                marker_shape: MarkerShape::default(),
+                cap_size: Px(0.0),
                 view_key,
                 samples,
             });
@@ -3289,6 +3419,8 @@ impl PlotLayer for BarsPlotLayer {
                     viewport_h_bits,
                     stroke_width: style.stroke_width,
                     marker_radius: Px(0.0),
+                    marker_shape: MarkerShape::default(),
+                    cap_size: Px(0.0),
                     view_key,
                     samples: Vec::new(),
                 });
@@ -3320,6 +3452,8 @@ impl PlotLayer for BarsPlotLayer {
                 viewport_h_bits,
                 stroke_width: style.stroke_width,
                 marker_radius: Px(0.0),
+                marker_shape: MarkerShape::default(),
+                cap_size: Px(0.0),
                 view_key,
                 samples,
             });
