@@ -84,8 +84,9 @@ fn select_scroll_with_buttons<H: UiHost>(
             // appear when content visually fits.
             let scroll_epsilon = Px(0.5);
             let has_scroll = max.y.0 > scroll_epsilon.0;
-            let show_up = has_scroll && offset.y.0 > scroll_epsilon.0;
-            let show_down = has_scroll && (offset.y.0 + scroll_epsilon.0) < max.y.0;
+            let show_up = has_scroll && offset.y.0 > 0.0;
+            // Match Radix Select's `Math.ceil(scrollTop) < maxScroll` guard for zoomed UIs.
+            let show_down = has_scroll && offset.y.0.ceil() < max.y.0;
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                  icon: fret_icons::IconId,
@@ -111,11 +112,25 @@ fn select_scroll_with_buttons<H: UiHost>(
                         ..Default::default()
                     },
                     move |cx, _st| {
-                        cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                        let on_scroll = Arc::new(move |host: &mut dyn fret_ui::action::UiActionHost,
+                                                  action_cx: ActionCx| {
                             let prev = handle.offset();
                             let next = Point::new(prev.x, Px(prev.y.0 + item_step.0 * dir));
                             handle.scroll_to_offset(next);
                             host.request_redraw(action_cx.window);
+                        });
+
+                        let on_scroll_for_activate = on_scroll.clone();
+                        cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                            on_scroll_for_activate(host, action_cx);
+                        }));
+
+                        cx.pressable_add_on_pointer_down(Arc::new(move |host, action_cx, down| {
+                            if down.button != fret_core::MouseButton::Left {
+                                return fret_ui::action::PressablePointerDownResult::Continue;
+                            }
+                            on_scroll(host, action_cx);
+                            fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
                         }));
 
                         vec![cx.container(
