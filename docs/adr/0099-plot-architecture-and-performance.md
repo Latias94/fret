@@ -35,7 +35,7 @@ This ADR synthesizes best practices observed in:
 
 ## Relationship to Other ADRs
 
-- ADR 0097 defines **where plots live** (`ecosystem/fret-ui-plot`) and the **portable scene primitive constraint**
+- ADR 0097 defines **where plots live** (`ecosystem/fret-plot`) and the **portable scene primitive constraint**
   (plots must emit `SceneOp::{Path,Quad,Text}` and remain `wgpu`/`winit` free).
 - ADR 0098 defines the **Plot3D route** (embedded viewport surfaces + input forwarding).
 
@@ -142,7 +142,7 @@ while keeping UI contracts portable and wgpu-free.
 
 ### A) Modules (keep math/policy headless where possible)
 
-In `fret-ui-plot`, prefer a split between:
+In `fret-plot`, prefer a split between:
 
 - `plot/*` (headless-ish):
   - transforms and coordinate math,
@@ -224,7 +224,7 @@ internals, plots should expose:
 
 ### E) 3D UI bridge shape (P0/P1)
 
-`fret-ui-plot3d` provides:
+`fret-plot3d` provides:
 
 - `Plot3dCanvas` that emits `SceneOp::ViewportSurface { target, ... }`,
 - a small data-only `Plot3dInput` -> `ViewportInputEvent` mapping helper,

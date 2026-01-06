@@ -7,7 +7,7 @@ Status: Proposed
 Fret aims to support both general-purpose apps and editor-grade UX. Plot components are useful in both
 domains, and for some products a 3D plot variant (e.g. scatter3d, line3d, surface) is desirable.
 
-For 2D plots, `fret-ui-plot` can emit portable primitives (`SceneOp::{Path,Quad,Text}`) and rely on the
+For 2D plots, `fret-plot` can emit portable primitives (`SceneOp::{Path,Quad,Text}`) and rely on the
 renderer's existing contracts (ADR 0080).
 
 3D changes the constraints:
@@ -39,9 +39,9 @@ This yields:
 
 #### Implications
 
-- `fret-ui-plot` remains focused on 2D primitives.
+- `fret-plot` remains focused on 2D primitives.
 - Plot3D becomes either:
-  - a separate ecosystem crate (`ecosystem/fret-ui-plot3d`) that is UI-facing and data-only, plus a runner/host
+  - a separate ecosystem crate (`ecosystem/fret-plot3d`) that is UI-facing and data-only, plus a runner/host
     integration layer that is wgpu-facing, or
   - an app-owned integration using existing viewport APIs (no additional framework code), with optional
     helper glue provided later.

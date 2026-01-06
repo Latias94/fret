@@ -7,19 +7,19 @@ use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
-use fret_ui_plot::cartesian::{AxisScale, DataPoint};
-use fret_ui_plot::plot::axis::AxisLabelFormatter;
-use fret_ui_plot::retained::{
+use fret_plot::cartesian::{AxisScale, DataPoint};
+use fret_plot::plot::axis::AxisLabelFormatter;
+use fret_plot::retained::{
     LinePlotCanvas, LinePlotStyle, LineSeries, PlotOutput, PlotState, YAxis,
 };
-use fret_ui_plot::series::Series;
+use fret_plot::series::Series;
+use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
 
 struct PlotDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<fret_ui_plot::retained::LinePlotModel>,
+    plot: fret_runtime::Model<fret_plot::retained::LinePlotModel>,
     plot_state: fret_runtime::Model<PlotState>,
     plot_output: fret_runtime::Model<PlotOutput>,
     last_logged_output_revision: u64,
@@ -75,7 +75,7 @@ impl PlotDemoDriver {
 
         let plot = app
             .models_mut()
-            .insert(fret_ui_plot::retained::LinePlotModel::from_series(vec![
+            .insert(fret_plot::retained::LinePlotModel::from_series(vec![
                 LineSeries::new("signal A", Series::from_points_sorted(series0, true)),
                 LineSeries::new("signal B", Series::from_points_sorted(series1, true)),
                 LineSeries::new("signal C", Series::from_points_sorted(series2, true)),

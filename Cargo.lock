@@ -1132,14 +1132,14 @@ dependencies = [
  "fret-icons-lucide",
  "fret-launch",
  "fret-markdown",
+ "fret-plot",
+ "fret-plot3d",
  "fret-render",
  "fret-runtime",
  "fret-ui",
  "fret-ui-app",
  "fret-ui-docking",
  "fret-ui-kit",
- "fret-ui-plot",
- "fret-ui-plot3d",
  "fret-ui-shadcn",
  "tracing",
  "tracing-subscriber",
@@ -1237,6 +1237,25 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "fret-plot"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
+]
+
+[[package]]
+name = "fret-plot3d"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
 ]
 
 [[package]]
@@ -1393,25 +1412,6 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "tracing",
-]
-
-[[package]]
-name = "fret-ui-plot"
-version = "0.1.0"
-dependencies = [
- "fret-core",
- "fret-runtime",
- "fret-ui",
- "fret-ui-kit",
-]
-
-[[package]]
-name = "fret-ui-plot3d"
-version = "0.1.0"
-dependencies = [
- "fret-core",
- "fret-runtime",
- "fret-ui",
 ]
 
 [[package]]

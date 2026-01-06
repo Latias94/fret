@@ -7,15 +7,15 @@ use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
-use fret_ui_plot::cartesian::DataPoint;
-use fret_ui_plot::linking::{LinkedPlotGroup, LinkedPlotMember, PlotLinkPolicy};
-use fret_ui_plot::retained::{
+use fret_plot::cartesian::DataPoint;
+use fret_plot::linking::{LinkedPlotGroup, LinkedPlotMember, PlotLinkPolicy};
+use fret_plot::retained::{
     AreaPlotCanvas, AreaPlotModel, AreaSeries, LinePlotCanvas, LinePlotModel, LinePlotStyle,
     LineSeries, PlotOutput, PlotState,
 };
-use fret_ui_plot::series::Series;
+use fret_plot::series::Series;
+use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Pane {

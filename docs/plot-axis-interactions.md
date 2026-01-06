@@ -1,12 +1,12 @@
 # Plot Axis Interactions (ImPlot Alignment Notes)
 
-This document describes the axis-region interaction policy in `fret-ui-plot` and how it aligns with
+This document describes the axis-region interaction policy in `fret-plot` and how it aligns with
 the baseline UX of ImPlot. It complements `docs/plot-implot-alignment.md` and focuses on the parts
 that often feel "off" in editor-grade UIs: axis-only pan/zoom, fit behavior, and axis locks.
 
 ## Regions
 
-`fret-ui-plot` treats the plot widget as a set of interaction regions:
+`fret-plot` treats the plot widget as a set of interaction regions:
 
 - Plot region: the data viewport.
 - X axis region: the horizontal axis strip below the plot.
@@ -70,5 +70,5 @@ The goal is to keep locks discoverable without forcing a context menu early:
 - `Shift+L` toggles pan lock for the region under the pointer.
 - `Ctrl+L` toggles zoom lock for the region under the pointer.
 
-When `L`-toggling in the plot region, `fret-ui-plot` treats this as a “global lock” toggle and
+When `L`-toggling in the plot region, `fret-plot` treats this as a “global lock” toggle and
 applies it to X and all visible Y axes.

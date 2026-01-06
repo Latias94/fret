@@ -70,7 +70,7 @@ These thresholds are part of runner normalization policy and may be made configu
 
 - Event surface: `crates/fret-core/src/input.rs`
 - Runner normalization: `crates/fret-runner-winit/src/lib.rs` (`WinitInputState` click tracker)
-- Plot alignment: `ecosystem/fret-ui-plot` uses `click_count == 2` to support ImPlot-style fit on
+- Plot alignment: `ecosystem/fret-plot` uses `click_count == 2` to support ImPlot-style fit on
   `LMB double-click`.
  - Viewport forwarding: `ViewportInputKind::{PointerDown,PointerUp}` carries `click_count` for
    tools/embeds.

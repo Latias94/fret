@@ -5,12 +5,12 @@ use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
 use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
-use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
-use fret_ui_plot::cartesian::DataRect;
-use fret_ui_plot::retained::{
+use fret_plot::cartesian::DataRect;
+use fret_plot::retained::{
     HeatmapPlotCanvas, HeatmapPlotModel, LinePlotStyle, PlotOutput, PlotState,
 };
+use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
 
 struct HeatmapDemoWindowState {
     ui: UiTree<App>,

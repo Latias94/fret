@@ -1,6 +1,6 @@
 # Plot / ImPlot Alignment Checklist
 
-This document tracks feature and behavior alignment between `fret-ui-plot` and the baseline UX of
+This document tracks feature and behavior alignment between `fret-plot` and the baseline UX of
 ImPlot. The goal is not strict API compatibility, but to converge on the parts of ImPlot that have
 proven to be ergonomic and predictable for editor-grade UIs.
 
@@ -12,14 +12,14 @@ Status symbols:
 
 ## Scope
 
-- 2D plots only (`fret-ui-plot`).
+- 2D plots only (`fret-plot`).
 - 3D is tracked separately (see ADR 0098 / Plot3D demos).
 
 ## Current architecture (Fret)
 
 - Input state: `PlotState` (caller-owned, optional)
 - Output state: `PlotOutput` (widget-written snapshot, optional)
-- Overlays/annotations: `PlotState.overlays` (caller-owned; ADR 0103)
+- Overlays/annotations: `PlotState.overlays` (caller-owned; ADR 0104)
 - Multi-plot linking: `LinkedPlotGroup`
 
 This contract is documented in ADR 0099.
@@ -48,10 +48,10 @@ See also `docs/plot-axis-interactions.md` for axis-region routing, fit behavior,
 
 ### Keyboard shortcuts & mouse gestures
 
-This table describes the default mapping used by `fret-ui-plot` today, with a side-by-side reference
+This table describes the default mapping used by `fret-plot` today, with a side-by-side reference
 to ImPlot's default `ImPlotInputMap`.
 
-| Action | ImPlot default | `fret-ui-plot` default | Notes |
+| Action | ImPlot default | `fret-plot` default | Notes |
 | --- | --- | --- | --- |
 | Pan | `LMB drag` | `LMB drag` | Matches ImPlot. |
 | Pan (axis-only) | Drag axis region | Drag axis region | X axis drag pans X-only; Y axis drag pans the corresponding Y axis only. |

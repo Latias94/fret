@@ -8,13 +8,13 @@ use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
-use fret_ui_plot::retained::{
+use fret_plot::retained::{
     BarsPlotCanvas, BarsPlotModel, CategoryBarSeries, LinePlotStyle, PlotOutput, PlotState,
     SeriesTooltipMode,
 };
-use fret_ui_plot::series::SeriesId;
+use fret_plot::series::SeriesId;
+use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
 use std::sync::Arc;
 
 struct GroupedBarsDemoWindowState {

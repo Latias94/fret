@@ -7,11 +7,11 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext,
 };
+use fret_plot::cartesian::{DataPoint, DataRect};
+use fret_plot::retained::{LinePlotCanvas, LinePlotModel, LinePlotStyle, LineSeries};
+use fret_plot::series::Series;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
-use fret_ui_plot::cartesian::{DataPoint, DataRect};
-use fret_ui_plot::retained::{LinePlotCanvas, LinePlotModel, LinePlotStyle, LineSeries};
-use fret_ui_plot::series::Series;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -85,7 +85,7 @@ impl PlotStressDriver {
 
         // Getter-backed to avoid allocating/copying large datasets in UI code.
         Series::new(
-            fret_ui_plot::series::GetterSeriesData::new(points, get)
+            fret_plot::series::GetterSeriesData::new(points, get)
                 .sorted_by_x(true)
                 .bounds_hint(bounds),
         )

@@ -7,12 +7,12 @@ use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
-use fret_ui_plot::retained::{
+use fret_plot::retained::{
     CandlestickPlotCanvas, CandlestickPlotModel, CandlestickSeries, LinePlotStyle, OhlcPoint,
     PlotOutput, PlotState,
 };
+use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
 use std::sync::Arc;
 
 struct CandlestickDemoWindowState {

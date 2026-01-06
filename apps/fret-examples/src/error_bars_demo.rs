@@ -7,14 +7,14 @@ use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
-use fret_ui_plot::cartesian::DataPoint;
-use fret_ui_plot::retained::{
+use fret_plot::cartesian::DataPoint;
+use fret_plot::retained::{
     ErrorBar, ErrorBarsPlotCanvas, ErrorBarsPlotModel, ErrorBarsSeries, LinePlotStyle, PlotOutput,
     PlotState, YAxis,
 };
-use fret_ui_plot::series::Series;
+use fret_plot::series::Series;
+use fret_runtime::PlatformCapabilities;
+use fret_ui::UiTree;
 use std::sync::Arc;
 
 struct ErrorBarsDemoWindowState {

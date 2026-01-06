@@ -10,8 +10,8 @@ fret-app-kit = { path = "../../ecosystem/fret-app-kit" }
 fret-ui-docking = { path = "../../ecosystem/fret-ui-docking" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["table"] }
-fret-ui-plot = { path = "../../ecosystem/fret-ui-plot" }
-fret-ui-plot3d = { path = "../../ecosystem/fret-ui-plot3d" }
+fret-plot = { path = "../../ecosystem/fret-plot" }
+fret-plot3d = { path = "../../ecosystem/fret-plot3d" }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }

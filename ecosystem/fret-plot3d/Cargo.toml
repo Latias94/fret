@@ -1,5 +1,5 @@
 [package]
-name = "fret-ui-plot"
+name = "fret-plot3d"
 version.workspace = true
 edition.workspace = true
 
@@ -7,4 +7,3 @@ edition.workspace = true
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
-fret-ui-kit = { path = "../fret-ui-kit" }

@@ -1,4 +1,4 @@
-# ADR 0103: Plot Overlays and Annotations (2D, `fret-ui-plot`)
+# ADR 0104: Plot Overlays and Annotations (2D, `fret-plot`)
 
 Status: Proposed
 
@@ -28,7 +28,7 @@ For Fret, we want these features while keeping:
 - composable (works with all plot canvases),
 - stable across frames (so caching remains effective).
 
-So `fret-ui-plot` adds:
+So `fret-plot` adds:
 
 - `PlotState::overlays: PlotOverlays`
 - `PlotOverlays` contains per-overlay collections (starting with reference lines).
@@ -77,4 +77,3 @@ For Plot3D (ADR 0098), annotations are expected to be implemented either:
 - ImPlot: `ImPlot::DragLineX`, `ImPlot::DragLineY`, `ImPlot::PlotInfLines`
 - egui_plot annotations: `HLine`, `VLine`, marker APIs
 - GPUI component plot substrate: `repo-ref/gpui-component/crates/ui/src/plot/mod.rs`
-
