@@ -1879,3 +1879,26 @@ fn compute_data_bounds_from_shaded_series_by_axis(
 
     out
 }
+
+#[cfg(test)]
+mod candlestick_bounds_tests {
+    use super::*;
+
+    #[test]
+    fn candlestick_bounds_include_wicks_and_width() {
+        let points: Arc<[OhlcPoint]> = Arc::from(vec![OhlcPoint {
+            x: 10.0,
+            open: 2.0,
+            high: 5.0,
+            low: -1.0,
+            close: 3.0,
+        }]);
+        let series = CandlestickSeries::new_sorted("c", points, true).width(2.0);
+        let model = CandlestickPlotModel::from_series(vec![series]);
+
+        assert!((model.data_bounds.x_min - 9.0).abs() < 1.0e-9);
+        assert!((model.data_bounds.x_max - 11.0).abs() < 1.0e-9);
+        assert!((model.data_bounds.y_min - -1.0).abs() < 1.0e-9);
+        assert!((model.data_bounds.y_max - 5.0).abs() < 1.0e-9);
+    }
+}

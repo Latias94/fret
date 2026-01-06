@@ -1,6 +1,7 @@
 use fret_core::geometry::{Point, Px, Rect, Size};
 
-use super::canvas::{YAxis, contains_point};
+use super::YAxis;
+use super::canvas::contains_point;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct PlotLayout {
