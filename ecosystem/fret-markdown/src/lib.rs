@@ -52,176 +52,14 @@ pub fn markdown_with<H: UiHost>(
     components: &MarkdownComponents<H>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
-    let blocks = parse_blocks(source);
 
-    markdown_blocks_with(
-        cx,
-        MarkdownBlocks::from_committed(&blocks),
-        &theme,
-        components,
-    )
-}
+    let mut stream = mdstream::MdStream::default();
+    let update = stream.append(source);
 
-pub fn markdown_blocks<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    blocks: MarkdownBlocks<'_>,
-) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    markdown_blocks_with(cx, blocks, &theme, &MarkdownComponents::default())
-}
+    let mut state = MarkdownPulldownState::default();
+    state.apply_update(update);
 
-pub fn markdown_streaming<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    state: &MarkdownStreamingState,
-) -> AnyElement {
-    markdown_blocks(cx, state.view())
-}
-
-pub fn markdown_streaming_with<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    state: &MarkdownStreamingState,
-    components: &MarkdownComponents<H>,
-) -> AnyElement {
-    let theme = Theme::global(&*cx.app).clone();
-    markdown_blocks_with(cx, state.view(), &theme, components)
-}
-
-pub fn markdown_blocks_with<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    blocks: MarkdownBlocks<'_>,
-    theme: &Theme,
-    components: &MarkdownComponents<H>,
-) -> AnyElement {
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            let mut all =
-                Vec::with_capacity(blocks.committed.len() + usize::from(blocks.pending.is_some()));
-
-            cx.for_each_keyed(
-                blocks.committed,
-                |b| b.id,
-                |cx, _i, block| {
-                    all.push(block.clone().render(cx, theme, components));
-                },
-            );
-
-            if let Some(pending) = blocks.pending {
-                cx.keyed(pending.id, |cx| {
-                    all.push(pending.clone().render(cx, theme, components));
-                });
-            }
-
-            all
-        },
-    )
-}
-
-#[derive(Debug, Clone)]
-pub struct MarkdownBlock {
-    pub id: BlockId,
-    pub kind: MarkdownBlockKind,
-}
-
-impl MarkdownBlock {
-    fn render<H: UiHost>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-        theme: &Theme,
-        components: &MarkdownComponents<H>,
-    ) -> AnyElement {
-        match self.kind {
-            MarkdownBlockKind::Heading { level, text } => {
-                let info = HeadingInfo { level, text };
-                if let Some(render) = &components.heading {
-                    render(cx, info)
-                } else {
-                    render_heading(cx, theme, info.level, info.text)
-                }
-            }
-            MarkdownBlockKind::Paragraph { text } => {
-                let info = ParagraphInfo { text };
-                if let Some(render) = &components.paragraph {
-                    render(cx, info)
-                } else {
-                    render_paragraph(cx, theme, info.text)
-                }
-            }
-            MarkdownBlockKind::CodeBlock { language, code } => {
-                let info = CodeBlockInfo { language, code };
-                if let Some(render) = &components.code_block {
-                    render(cx, info)
-                } else {
-                    render_code_block(cx, info, components)
-                }
-            }
-            MarkdownBlockKind::Raw { kind, text } => match kind {
-                RawBlockKind::ThematicBreak => {
-                    if let Some(render) = &components.thematic_break {
-                        render(cx, ThematicBreakInfo)
-                    } else {
-                        render_thematic_break(cx, theme)
-                    }
-                }
-                RawBlockKind::BlockQuote => {
-                    let info = BlockQuoteInfo {
-                        text: strip_blockquote_prefix(&text),
-                    };
-                    if let Some(render) = &components.blockquote {
-                        render(cx, info)
-                    } else {
-                        render_blockquote(cx, theme, components, info)
-                    }
-                }
-                RawBlockKind::List => {
-                    let info = parse_list_info(&text);
-                    if let Some(render) = &components.list {
-                        render(cx, info)
-                    } else {
-                        render_list(cx, theme, info)
-                    }
-                }
-                RawBlockKind::Table => {
-                    let info = TableInfo { text };
-                    if let Some(render) = &components.table {
-                        render(cx, info)
-                    } else {
-                        render_table(cx, theme, info)
-                    }
-                }
-                _ => {
-                    let info = RawBlockInfo { kind, text };
-                    if let Some(render) = &components.raw_block {
-                        render(cx, info)
-                    } else {
-                        render_paragraph(cx, theme, info.text)
-                    }
-                }
-            },
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum MarkdownBlockKind {
-    Heading {
-        level: u8,
-        text: Arc<str>,
-    },
-    Paragraph {
-        text: Arc<str>,
-    },
-    CodeBlock {
-        language: Option<Arc<str>>,
-        code: Arc<str>,
-    },
-    Raw {
-        kind: RawBlockKind,
-        text: Arc<str>,
-    },
+    markdown_mdstream_pulldown_with(cx, &theme, state.doc(), &state.adapter, components)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -234,21 +72,6 @@ pub enum RawBlockKind {
     MathBlock,
     FootnoteDefinition,
     Unknown,
-}
-
-#[derive(Debug, Clone)]
-pub struct MarkdownBlocks<'a> {
-    pub committed: &'a [MarkdownBlock],
-    pub pending: Option<&'a MarkdownBlock>,
-}
-
-impl<'a> MarkdownBlocks<'a> {
-    pub fn from_committed(committed: &'a [MarkdownBlock]) -> Self {
-        Self {
-            committed,
-            pending: None,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -400,35 +223,6 @@ impl<H: UiHost> MarkdownComponents<H> {
     }
 }
 
-fn render_heading<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    level: u8,
-    text: Arc<str>,
-) -> AnyElement {
-    let size = match level {
-        1 => Px(theme.metrics.font_size.0 * 1.6),
-        2 => Px(theme.metrics.font_size.0 * 1.4),
-        3 => Px(theme.metrics.font_size.0 * 1.2),
-        _ => theme.metrics.font_size,
-    };
-
-    cx.text_props(TextProps {
-        layout: Default::default(),
-        text,
-        style: Some(TextStyle {
-            font: FontId::default(),
-            size,
-            weight: FontWeight::SEMIBOLD,
-            line_height: Some(Px(theme.metrics.font_line_height.0 * 1.2)),
-            letter_spacing_em: None,
-        }),
-        color: Some(theme.colors.text_primary),
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-    })
-}
-
 fn render_paragraph<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -448,98 +242,6 @@ fn render_paragraph<H: UiHost>(
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
     })
-}
-
-fn parse_blocks(source: &str) -> Vec<MarkdownBlock> {
-    use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
-
-    enum State {
-        None,
-        Paragraph { buf: String },
-        Heading { level: u8, buf: String },
-        CodeBlock { lang: Option<Arc<str>>, buf: String },
-    }
-
-    let mut blocks: Vec<MarkdownBlockKind> = Vec::new();
-    let mut state = State::None;
-
-    let parser = Parser::new(source);
-    for event in parser {
-        match (&mut state, event) {
-            (State::None, Event::Start(Tag::Paragraph)) => {
-                state = State::Paragraph { buf: String::new() };
-            }
-            (State::None, Event::Start(Tag::Heading { level, .. })) => {
-                state = State::Heading {
-                    level: heading_level_to_u8(level),
-                    buf: String::new(),
-                };
-            }
-            (State::None, Event::Start(Tag::CodeBlock(kind))) => {
-                let lang = match kind {
-                    CodeBlockKind::Indented => None,
-                    CodeBlockKind::Fenced(info) => parse_fenced_code_language(&info),
-                };
-                state = State::CodeBlock {
-                    lang,
-                    buf: String::new(),
-                };
-            }
-
-            (State::Paragraph { buf }, Event::Text(t)) => buf.push_str(t.as_ref()),
-            (State::Paragraph { buf }, Event::Code(t)) => {
-                buf.push('`');
-                buf.push_str(t.as_ref());
-                buf.push('`');
-            }
-            (State::Paragraph { buf }, Event::SoftBreak) => buf.push(' '),
-            (State::Paragraph { buf }, Event::HardBreak) => buf.push('\n'),
-            (State::Paragraph { buf }, Event::End(TagEnd::Paragraph)) => {
-                if !buf.trim().is_empty() {
-                    blocks.push(MarkdownBlockKind::Paragraph {
-                        text: Arc::<str>::from(buf.trim().to_string()),
-                    });
-                }
-                state = State::None;
-            }
-
-            (State::Heading { buf, .. }, Event::Text(t)) => buf.push_str(t.as_ref()),
-            (State::Heading { buf, .. }, Event::Code(t)) => buf.push_str(t.as_ref()),
-            (State::Heading { buf, .. }, Event::SoftBreak) => buf.push(' '),
-            (State::Heading { buf, .. }, Event::HardBreak) => buf.push(' '),
-            (State::Heading { level, buf }, Event::End(TagEnd::Heading(_))) => {
-                if !buf.trim().is_empty() {
-                    blocks.push(MarkdownBlockKind::Heading {
-                        level: *level,
-                        text: Arc::<str>::from(buf.trim().to_string()),
-                    });
-                }
-                state = State::None;
-            }
-
-            (State::CodeBlock { buf, .. }, Event::Text(t)) => buf.push_str(t.as_ref()),
-            (State::CodeBlock { buf, .. }, Event::SoftBreak) => buf.push('\n'),
-            (State::CodeBlock { buf, .. }, Event::HardBreak) => buf.push('\n'),
-            (State::CodeBlock { lang, buf }, Event::End(TagEnd::CodeBlock)) => {
-                blocks.push(MarkdownBlockKind::CodeBlock {
-                    language: lang.clone(),
-                    code: Arc::<str>::from(buf.clone()),
-                });
-                state = State::None;
-            }
-
-            (_, _) => {}
-        }
-    }
-
-    blocks
-        .into_iter()
-        .enumerate()
-        .map(|(i, kind)| MarkdownBlock {
-            id: BlockId((i as u64) + 1),
-            kind,
-        })
-        .collect()
 }
 
 fn parse_fenced_code_language(info: &str) -> Option<Arc<str>> {
@@ -624,70 +326,6 @@ fn render_thematic_break<H: UiHost>(cx: &mut ElementContext<'_, H>, theme: &Them
         },
         |_cx| Vec::new(),
     )
-}
-
-fn render_blockquote<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    components: &MarkdownComponents<H>,
-    info: BlockQuoteInfo,
-) -> AnyElement {
-    let mut props = ContainerProps::default();
-    props.layout.size.width = Length::Fill;
-    props.padding = Edges::all(theme.metrics.padding_sm);
-    props.border = Edges {
-        top: Px(0.0),
-        right: Px(0.0),
-        bottom: Px(0.0),
-        left: Px(3.0),
-    };
-    props.border_color = Some(theme.colors.panel_border);
-
-    cx.container(props, |cx| vec![markdown_with(cx, &info.text, components)])
-}
-
-fn render_list<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    info: ListInfo,
-) -> AnyElement {
-    if info.items.is_empty() {
-        return cx.text_props(TextProps {
-            layout: Default::default(),
-            text: Arc::<str>::from(""),
-            style: None,
-            color: Some(theme.colors.text_primary),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        });
-    }
-
-    stack::vstack(cx, stack::VStackProps::default().gap(Space::N1), |cx| {
-        info.items
-            .into_iter()
-            .enumerate()
-            .map(|(i, text)| {
-                let marker = if info.ordered {
-                    Arc::<str>::from(format!("{}.", info.start.saturating_add(i as u32)))
-                } else {
-                    Arc::<str>::from("•".to_string())
-                };
-
-                stack::hstack(cx, stack::HStackProps::default().gap(Space::N2), |cx| {
-                    let marker_el = cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: marker,
-                        style: None,
-                        color: Some(theme.colors.text_muted),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                    });
-                    let text_el = render_paragraph(cx, theme, text);
-                    vec![marker_el, text_el]
-                })
-            })
-            .collect()
-    })
 }
 
 fn render_table<H: UiHost>(
@@ -822,149 +460,6 @@ fn parse_list_item_start(line: &str) -> Option<(bool, u32, &str)> {
     }
     let num: u32 = s[..i].parse().ok()?;
     Some((true, num, s[i + 2..].trim_start()))
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct MarkdownStreamingState {
-    committed: Vec<MarkdownBlock>,
-    pending: Option<MarkdownBlock>,
-}
-
-impl MarkdownStreamingState {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn committed(&self) -> &[MarkdownBlock] {
-        &self.committed
-    }
-
-    pub fn pending(&self) -> Option<&MarkdownBlock> {
-        self.pending.as_ref()
-    }
-
-    pub fn view(&self) -> MarkdownBlocks<'_> {
-        MarkdownBlocks {
-            committed: &self.committed,
-            pending: self.pending.as_ref(),
-        }
-    }
-
-    pub fn clear(&mut self) {
-        self.committed.clear();
-        self.pending = None;
-    }
-
-    pub fn apply_update(&mut self, update: mdstream::Update) -> mdstream::AppliedUpdate {
-        if update.reset {
-            self.clear();
-        }
-
-        for block in &update.committed {
-            self.committed.push(convert_mdstream_block(block));
-        }
-
-        self.pending = update.pending.as_ref().map(convert_mdstream_block);
-
-        mdstream::AppliedUpdate {
-            reset: update.reset,
-            invalidated: update.invalidated,
-        }
-    }
-
-    pub fn apply_update_ref(
-        &mut self,
-        update: &mdstream::UpdateRef<'_>,
-    ) -> mdstream::AppliedUpdate {
-        if update.reset {
-            self.clear();
-        }
-
-        for block in update.committed {
-            self.committed.push(convert_mdstream_block(block));
-        }
-
-        self.pending = update.pending.as_ref().map(convert_mdstream_pending_ref);
-
-        mdstream::AppliedUpdate {
-            reset: update.reset,
-            invalidated: update.invalidated.clone(),
-        }
-    }
-}
-
-fn convert_mdstream_pending_ref(p: &mdstream::PendingBlockRef<'_>) -> MarkdownBlock {
-    let raw = p.display.unwrap_or(p.raw);
-    let kind = convert_mdstream_kind(p.kind, raw);
-    MarkdownBlock { id: p.id, kind }
-}
-
-fn convert_mdstream_block(block: &mdstream::Block) -> MarkdownBlock {
-    let raw = block.display_or_raw();
-    let kind = convert_mdstream_kind(block.kind, raw);
-    MarkdownBlock { id: block.id, kind }
-}
-
-fn convert_mdstream_kind(kind: mdstream::BlockKind, raw: &str) -> MarkdownBlockKind {
-    match kind {
-        mdstream::BlockKind::Heading => {
-            if let Some((level, text)) = parse_heading_text(raw) {
-                MarkdownBlockKind::Heading { level, text }
-            } else {
-                MarkdownBlockKind::Raw {
-                    kind: RawBlockKind::Unknown,
-                    text: Arc::<str>::from(raw.trim().to_string()),
-                }
-            }
-        }
-        mdstream::BlockKind::Paragraph => MarkdownBlockKind::Paragraph {
-            text: Arc::<str>::from(normalize_paragraph_text(raw)),
-        },
-        mdstream::BlockKind::CodeFence => {
-            let (language, code) = parse_code_fence_body(raw);
-            MarkdownBlockKind::CodeBlock { language, code }
-        }
-        mdstream::BlockKind::ThematicBreak => MarkdownBlockKind::Raw {
-            kind: RawBlockKind::ThematicBreak,
-            text: Arc::<str>::from(raw.trim().to_string()),
-        },
-        mdstream::BlockKind::List => MarkdownBlockKind::Raw {
-            kind: RawBlockKind::List,
-            text: Arc::<str>::from(raw.trim_end().to_string()),
-        },
-        mdstream::BlockKind::BlockQuote => MarkdownBlockKind::Raw {
-            kind: RawBlockKind::BlockQuote,
-            text: Arc::<str>::from(raw.trim_end().to_string()),
-        },
-        mdstream::BlockKind::Table => MarkdownBlockKind::Raw {
-            kind: RawBlockKind::Table,
-            text: Arc::<str>::from(raw.trim_end().to_string()),
-        },
-        mdstream::BlockKind::HtmlBlock => MarkdownBlockKind::Raw {
-            kind: RawBlockKind::HtmlBlock,
-            text: Arc::<str>::from(raw.trim_end().to_string()),
-        },
-        mdstream::BlockKind::MathBlock => MarkdownBlockKind::Raw {
-            kind: RawBlockKind::MathBlock,
-            text: Arc::<str>::from(raw.trim_end().to_string()),
-        },
-        mdstream::BlockKind::FootnoteDefinition => MarkdownBlockKind::Raw {
-            kind: RawBlockKind::FootnoteDefinition,
-            text: Arc::<str>::from(raw.trim_end().to_string()),
-        },
-        mdstream::BlockKind::Unknown => MarkdownBlockKind::Raw {
-            kind: RawBlockKind::Unknown,
-            text: Arc::<str>::from(raw.trim_end().to_string()),
-        },
-    }
-}
-
-fn normalize_paragraph_text(raw: &str) -> String {
-    raw.split('\n')
-        .map(str::trim_end)
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<_>>()
-        .join(" ")
 }
 
 fn parse_heading_text(raw: &str) -> Option<(u8, Arc<str>)> {
@@ -1218,7 +713,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
         }
         _ => {
             let info = RawBlockInfo {
-                kind: RawBlockKind::Unknown,
+                kind: raw_block_kind_from_mdstream(block.kind),
                 text: Arc::<str>::from(block.display_or_raw().trim_end().to_string()),
             };
             if let Some(render) = &components.raw_block {
@@ -1227,6 +722,16 @@ fn render_mdstream_block_with_events<H: UiHost>(
                 render_paragraph(cx, theme, info.text)
             }
         }
+    }
+}
+
+fn raw_block_kind_from_mdstream(kind: mdstream::BlockKind) -> RawBlockKind {
+    match kind {
+        mdstream::BlockKind::HtmlBlock => RawBlockKind::HtmlBlock,
+        mdstream::BlockKind::MathBlock => RawBlockKind::MathBlock,
+        mdstream::BlockKind::FootnoteDefinition => RawBlockKind::FootnoteDefinition,
+        mdstream::BlockKind::Unknown => RawBlockKind::Unknown,
+        _ => RawBlockKind::Unknown,
     }
 }
 
@@ -1985,29 +1490,38 @@ mod tests {
     }
 
     #[test]
-    fn assigns_stable_index_ids_for_static_parse() {
-        let blocks = parse_blocks("# A\n\nB\n\n```rust\nfn main() {}\n```\n");
-        assert_eq!(blocks.len(), 3);
-        assert_eq!(blocks[0].id, BlockId(1));
-        assert_eq!(blocks[1].id, BlockId(2));
-        assert_eq!(blocks[2].id, BlockId(3));
+    fn mdstream_assigns_stable_ids_for_full_source() {
+        let source = "# A\n\nB\n\n```rust\nfn main() {}\n```\n";
+
+        let mut s1 = mdstream::MdStream::default();
+        let mut st1 = MarkdownPulldownState::new();
+        st1.apply_update(s1.append(source));
+        let ids1: Vec<_> = st1.doc().committed().iter().map(|b| b.id).collect();
+
+        let mut s2 = mdstream::MdStream::default();
+        let mut st2 = MarkdownPulldownState::new();
+        st2.apply_update(s2.append(source));
+        let ids2: Vec<_> = st2.doc().committed().iter().map(|b| b.id).collect();
+
+        assert!(!ids1.is_empty());
+        assert_eq!(ids1, ids2);
     }
 
     #[test]
-    fn mdstream_blocks_apply_incrementally() {
+    fn mdstream_pulldown_state_applies_incrementally() {
         let mut stream = mdstream::MdStream::default();
-        let mut state = MarkdownStreamingState::new();
+        let mut state = MarkdownPulldownState::new();
 
         let u1 = stream.append("Hello\n\n```rust\nfn main() {");
         let a1 = state.apply_update(u1);
         assert!(!a1.reset);
-        assert_eq!(state.committed().len(), 1);
-        assert!(state.pending().is_some());
+        assert_eq!(state.doc().committed().len(), 1);
+        assert!(state.doc().pending().is_some());
 
         let u2 = stream.append("}\n```\n");
         let _a2 = state.apply_update(u2);
-        assert_eq!(state.committed().len(), 2);
-        assert!(state.pending().is_none());
+        assert_eq!(state.doc().committed().len(), 2);
+        assert!(state.doc().pending().is_none());
     }
 
     #[test]
