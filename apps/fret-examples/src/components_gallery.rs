@@ -19,22 +19,13 @@ use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, TextProps,
 };
-use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{Invalidation, Theme, UiTree};
-use fret_ui_kit::headless::table::{ColumnPinningState, TableState, create_column_helper};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
 use fret_ui_kit::{LayoutRefinement, MetricRef, OverlayController};
 use fret_ui_shadcn as shadcn;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-#[derive(Debug, Clone)]
-struct DemoTableRow {
-    id: u32,
-    name: Arc<str>,
-    role: Arc<str>,
-    score: i32,
-}
 struct ComponentsGalleryWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
@@ -58,8 +49,6 @@ struct ComponentsGalleryWindowState {
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
-    table_state: Model<TableState>,
-    table_rows: Arc<[DemoTableRow]>,
     ui_font_override: Model<Option<Arc<str>>>,
     ui_font_override_open: Model<bool>,
     emoji_font_override: Model<Option<Arc<str>>>,
@@ -118,28 +107,6 @@ impl ComponentsGalleryDriver {
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
 
-        let table_rows: Arc<[DemoTableRow]> = (0..10_000)
-            .map(|i| DemoTableRow {
-                id: i as u32,
-                name: Arc::from(format!("User {i}")),
-                role: Arc::from(if i % 7 == 0 { "Admin" } else { "Member" }),
-                score: ((i * 31) % 997) as i32,
-            })
-            .collect::<Vec<_>>()
-            .into();
-
-        let mut table_state = TableState::default();
-        table_state.pagination.page_size = table_rows.len();
-        table_state.column_sizing.insert("id".into(), 72.0);
-        table_state.column_sizing.insert("name".into(), 200.0);
-        table_state.column_sizing.insert("role".into(), 140.0);
-        table_state.column_sizing.insert("score".into(), 100.0);
-        table_state.column_pinning = ColumnPinningState {
-            left: vec!["id".into()],
-            right: vec!["score".into()],
-        };
-        let table_state = app.models_mut().insert(table_state);
-
         let ui_font_override = app.models_mut().insert(None::<Arc<str>>);
         let ui_font_override_open = app.models_mut().insert(false);
         let emoji_font_override = app.models_mut().insert(None::<Arc<str>>);
@@ -171,8 +138,6 @@ impl ComponentsGalleryDriver {
             cmdk_open,
             cmdk_query,
             last_action,
-            table_state,
-            table_rows,
             ui_font_override,
             ui_font_override_open,
             emoji_font_override,
@@ -247,8 +212,6 @@ impl ComponentsGalleryDriver {
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
-        let table_state = state.table_state.clone();
-        let table_rows = state.table_rows.clone();
 
         Self::sync_gallery_shadcn_theme(app, state);
 
@@ -777,100 +740,8 @@ impl ComponentsGalleryDriver {
                                         align: CrossAlign::Stretch,
                                         wrap: false,
                                     },
-                                    |cx| {
-                                        cx.observe_model(&table_state, Invalidation::Layout);
-                                        let (selected, sorting) = cx
-                                            .app
-                                            .models()
-                                            .read(&table_state, |st| {
-                                                let selected = st.row_selection.len();
-                                                let sorting = st
-                                                    .sorting
-                                                    .first()
-                                                    .map(|s| {
-                                                        format!(
-                                                            "{}:{}",
-                                                            s.column.as_ref(),
-                                                            if s.desc { "desc" } else { "asc" }
-                                                        )
-                                                    })
-                                                    .unwrap_or_else(|| "<none>".to_string());
-                                                (selected, sorting)
-                                            })
-                                            .unwrap_or((0, "<none>".to_string()));
-
-                                        let helper = create_column_helper::<DemoTableRow>();
-                                        let columns = vec![
-                                            helper.clone().accessor("id", |r| r.id),
-                                            helper.clone().accessor("name", |r| r.name.clone()),
-                                            helper.clone().accessor("role", |r| r.role.clone()),
-                                            helper.accessor("score", |r| r.score),
-                                        ];
-
-                                        let scroll = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
-
-                                        let theme = Theme::global(&*cx.app);
-                                        let demo = cx.container(
-                                            ContainerProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.width = Length::Fill;
-                                                    layout.size.height = Length::Px(Px(320.0));
-                                                    layout.overflow = Overflow::Clip;
-                                                    layout
-                                                },
-                                                background: Some(theme.colors.panel_background),
-                                                border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.colors.panel_border),
-                                                corner_radii: Corners::all(theme.metrics.radius_md),
-                                                ..Default::default()
-                                            },
-                                            |cx| {
-                                                vec![fret_ui_kit::declarative::table::table_virtualized(
-                                                    cx,
-                                                    &table_rows,
-                                                    columns,
-                                                    table_state.clone(),
-                                                    &scroll,
-                                                    1,
-                                                    fret_ui_kit::declarative::table::TableViewProps {
-                                                        overscan: 6,
-                                                        ..Default::default()
-                                                    },
-                                                    |_row| None,
-                                                    |cx, col, _sort| {
-                                                        let label: Arc<str> = match col.id.as_ref() {
-                                                            "id" => Arc::from("ID"),
-                                                            "name" => Arc::from("Name"),
-                                                            "role" => Arc::from("Role"),
-                                                            "score" => Arc::from("Score"),
-                                                            _ => Arc::from(col.id.as_ref()),
-                                                        };
-                                                        vec![cx.text(label)]
-                                                    },
-                                                    |cx, row, col| {
-                                                        let text = match col.id.as_ref() {
-                                                            "id" => row.original.id.to_string(),
-                                                            "name" => row.original.name.as_ref().to_string(),
-                                                            "role" => row.original.role.as_ref().to_string(),
-                                                            "score" => row.original.score.to_string(),
-                                                            _ => "".to_string(),
-                                                        };
-                                                        vec![cx.text(text)]
-                                                    },
-                                                )]
-                                            },
-                                        );
-
-                                        vec![
-                                            cx.text(Arc::<str>::from(
-                                                "Table (virtualized): click headers to sort; drag handles to resize; ID pinned left, Score pinned right.",
-                                            )),
-                                            cx.text(format!(
-                                                "table_state: selected={selected}, sorting={sorting}"
-                                            )),
-                                            demo,
-                                        ]
+                                    |_cx| {
+                                        Vec::new()
                                     },
                                 ),
                                 cx.flex(
