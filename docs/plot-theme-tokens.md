@@ -12,6 +12,12 @@ For each token, resolution follows this precedence:
 2. `plot.*` (compatibility / third-party themes)
 3. Typed theme baseline (`theme.colors.*`) fallback
 
+Notes:
+
+- Color tokens are used when the corresponding `LinePlotStyle` color fields are `None`.
+- Metric and palette tokens are applied only when the corresponding `LinePlotStyle` fields are left
+  at their default values (so explicit per-canvas styles always win).
+
 ## Tokens (Colors)
 
 All tokens below are optional.
@@ -46,6 +52,20 @@ Tokens:
 Compatibility keys:
 
 - `plot.palette.0` .. `plot.palette.9`
+
+## Tokens (Metrics)
+
+These tokens are interpreted as pixel values (the `ThemeConfig.metrics` map stores `f32`).
+
+- `fret.plot.border_width` (fallback: `LinePlotStyle::default().border_width`)
+- `fret.plot.padding` (fallback: `LinePlotStyle::default().padding`)
+- `fret.plot.axis_gap` (fallback: `LinePlotStyle::default().axis_gap`)
+- `fret.plot.stroke_width` (fallback: `LinePlotStyle::default().stroke_width`)
+- `fret.plot.hover_threshold` (fallback: `LinePlotStyle::default().hover_threshold`)
+
+Compatibility keys:
+
+- `plot.border_width`, `plot.padding`, `plot.axis_gap`, `plot.stroke_width`, `plot.hover_threshold`
 
 ## Example Theme Config Snippet
 

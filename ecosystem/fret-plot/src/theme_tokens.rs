@@ -1,3 +1,4 @@
+use fret_core::Px;
 use fret_core::scene::Color;
 use fret_ui::Theme;
 
@@ -5,6 +6,12 @@ pub(crate) fn color(theme: &Theme, key: &'static str, compat_key: &'static str) 
     theme
         .color_by_key(key)
         .or_else(|| theme.color_by_key(compat_key))
+}
+
+pub(crate) fn metric(theme: &Theme, key: &'static str, compat_key: &'static str) -> Option<Px> {
+    theme
+        .metric_by_key(key)
+        .or_else(|| theme.metric_by_key(compat_key))
 }
 
 pub(crate) fn resolve_series_palette(theme: &Theme, base: [Color; 10]) -> [Color; 10] {

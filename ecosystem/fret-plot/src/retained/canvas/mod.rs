@@ -19,6 +19,7 @@ use fret_core::{
     TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap, UiServices,
 };
 use fret_runtime::{Model, TextFontStackKey};
+use fret_ui::Theme;
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{
     Invalidation, LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt, Widget,
@@ -34,7 +35,7 @@ use super::layers::{
 };
 use super::layout::{PlotLayout, PlotRegion};
 use super::state::{PlotHoverOutput, PlotOutput, PlotOutputSnapshot, PlotState};
-use super::style::{DEFAULT_SERIES_PALETTE, LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
+use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
@@ -860,8 +861,72 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         ui.create_node_retained(canvas)
     }
 
-    fn axis_gaps(&self) -> (Px, Px, Px, Px, Px) {
-        let min = self.style.axis_gap.0.max(0.0);
+    fn resolve_style_from_theme(&self, theme: &Theme) -> LinePlotStyle {
+        let default_style = LinePlotStyle::default();
+
+        let series_palette = if self.style.series_palette == default_style.series_palette {
+            crate::theme_tokens::resolve_series_palette(theme, default_style.series_palette)
+        } else {
+            self.style.series_palette
+        };
+
+        let stroke_color = if self.style.stroke_color == default_style.stroke_color
+            && self.style.series_palette == default_style.series_palette
+        {
+            series_palette[0]
+        } else {
+            self.style.stroke_color
+        };
+
+        let border_width = if self.style.border_width == default_style.border_width {
+            crate::theme_tokens::metric(theme, "fret.plot.border_width", "plot.border_width")
+                .unwrap_or(default_style.border_width)
+        } else {
+            self.style.border_width
+        };
+
+        let padding = if self.style.padding == default_style.padding {
+            crate::theme_tokens::metric(theme, "fret.plot.padding", "plot.padding")
+                .unwrap_or(default_style.padding)
+        } else {
+            self.style.padding
+        };
+
+        let axis_gap = if self.style.axis_gap == default_style.axis_gap {
+            crate::theme_tokens::metric(theme, "fret.plot.axis_gap", "plot.axis_gap")
+                .unwrap_or(default_style.axis_gap)
+        } else {
+            self.style.axis_gap
+        };
+
+        let stroke_width = if self.style.stroke_width == default_style.stroke_width {
+            crate::theme_tokens::metric(theme, "fret.plot.stroke_width", "plot.stroke_width")
+                .unwrap_or(default_style.stroke_width)
+        } else {
+            self.style.stroke_width
+        };
+
+        let hover_threshold = if self.style.hover_threshold == default_style.hover_threshold {
+            crate::theme_tokens::metric(theme, "fret.plot.hover_threshold", "plot.hover_threshold")
+                .unwrap_or(default_style.hover_threshold)
+        } else {
+            self.style.hover_threshold
+        };
+
+        LinePlotStyle {
+            series_palette,
+            stroke_color,
+            border_width,
+            padding,
+            axis_gap,
+            stroke_width,
+            hover_threshold,
+            ..self.style
+        }
+    }
+
+    fn axis_gaps_for_style(&self, axis_gap: Px) -> (Px, Px, Px, Px, Px) {
+        let min = axis_gap.0.max(0.0);
         let y = self.y_axis_thickness.0.max(min);
         let y_right = if self.show_y2_axis {
             self.y_axis_right_thickness.0.max(min)
@@ -1218,6 +1283,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         // Axis enablement is derived from the model (series -> axis assignment), so make sure
         // we don't accidentally interpret "right axis series" using the primary Y transform.
         self.ensure_required_axes_enabled(cx.app);
+        let resolved_style = self.resolve_style_from_theme(cx.theme());
 
         match event {
             Event::KeyDown { key, modifiers, .. } => {
@@ -1238,10 +1304,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         y_axis_right2_gap,
                         y_axis_right3_gap,
                         x_axis_gap,
-                    ) = self.axis_gaps();
+                    ) = self.axis_gaps_for_style(resolved_style.axis_gap);
                     let layout = PlotLayout::from_bounds(
                         cx.bounds,
-                        self.style.padding,
+                        resolved_style.padding,
                         y_axis_gap,
                         y_axis_right_gap,
                         y_axis_right2_gap,
@@ -1454,10 +1520,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     y_axis_right2_gap,
                     y_axis_right3_gap,
                     x_axis_gap,
-                ) = self.axis_gaps();
+                ) = self.axis_gaps_for_style(resolved_style.axis_gap);
                 let layout = PlotLayout::from_bounds(
                     cx.bounds,
-                    self.style.padding,
+                    resolved_style.padding,
                     y_axis_gap,
                     y_axis_right_gap,
                     y_axis_right2_gap,
@@ -1742,10 +1808,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             y_axis_right2_gap,
                             y_axis_right3_gap,
                             x_axis_gap,
-                        ) = self.axis_gaps();
+                        ) = self.axis_gaps_for_style(resolved_style.axis_gap);
                         let layout = PlotLayout::from_bounds(
                             cx.bounds,
-                            self.style.padding,
+                            resolved_style.padding,
                             y_axis_gap,
                             y_axis_right_gap,
                             y_axis_right2_gap,
@@ -1994,10 +2060,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             y_axis_right2_gap,
                             y_axis_right3_gap,
                             x_axis_gap,
-                        ) = self.axis_gaps();
+                        ) = self.axis_gaps_for_style(resolved_style.axis_gap);
                         let layout = PlotLayout::from_bounds(
                             cx.bounds,
-                            self.style.padding,
+                            resolved_style.padding,
                             y_axis_gap,
                             y_axis_right_gap,
                             y_axis_right2_gap,
@@ -2054,10 +2120,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             y_axis_right2_gap,
                             y_axis_right3_gap,
                             x_axis_gap,
-                        ) = self.axis_gaps();
+                        ) = self.axis_gaps_for_style(resolved_style.axis_gap);
                         let layout = PlotLayout::from_bounds(
                             cx.bounds,
-                            self.style.padding,
+                            resolved_style.padding,
                             y_axis_gap,
                             y_axis_right_gap,
                             y_axis_right2_gap,
@@ -2366,10 +2432,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     y_axis_right2_gap,
                     y_axis_right3_gap,
                     x_axis_gap,
-                ) = self.axis_gaps();
+                ) = self.axis_gaps_for_style(resolved_style.axis_gap);
                 let layout = PlotLayout::from_bounds(
                     cx.bounds,
-                    self.style.padding,
+                    resolved_style.padding,
                     y_axis_gap,
                     y_axis_right_gap,
                     y_axis_right2_gap,
@@ -2669,10 +2735,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     y_axis_right2_gap,
                     y_axis_right3_gap,
                     x_axis_gap,
-                ) = self.axis_gaps();
+                ) = self.axis_gaps_for_style(resolved_style.axis_gap);
                 let layout = PlotLayout::from_bounds(
                     cx.bounds,
-                    self.style.padding,
+                    resolved_style.padding,
                     y_axis_gap,
                     y_axis_right_gap,
                     y_axis_right2_gap,
@@ -3107,6 +3173,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
         self.ensure_required_axes_enabled(cx.app);
 
+        let default_style = LinePlotStyle::default();
         let font_stack_key = cx
             .app
             .global::<TextFontStackKey>()
@@ -3127,13 +3194,68 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             tooltip_background,
             tooltip_border,
             tooltip_text_color,
+            resolved_stroke_color,
+            resolved_border_width,
+            resolved_padding,
+            resolved_axis_gap,
+            resolved_stroke_width,
+            resolved_hover_threshold,
         ) = {
             let theme = cx.theme();
-            let resolved_series_palette = if self.style.series_palette == DEFAULT_SERIES_PALETTE {
-                crate::theme_tokens::resolve_series_palette(theme, DEFAULT_SERIES_PALETTE)
+            let resolved_series_palette =
+                if self.style.series_palette == default_style.series_palette {
+                    crate::theme_tokens::resolve_series_palette(theme, default_style.series_palette)
+                } else {
+                    self.style.series_palette
+                };
+
+            let resolved_stroke_color = if self.style.stroke_color == default_style.stroke_color
+                && self.style.series_palette == default_style.series_palette
+            {
+                resolved_series_palette[0]
             } else {
-                self.style.series_palette
+                self.style.stroke_color
             };
+
+            let resolved_border_width = if self.style.border_width == default_style.border_width {
+                crate::theme_tokens::metric(theme, "fret.plot.border_width", "plot.border_width")
+                    .unwrap_or(default_style.border_width)
+            } else {
+                self.style.border_width
+            };
+
+            let resolved_padding = if self.style.padding == default_style.padding {
+                crate::theme_tokens::metric(theme, "fret.plot.padding", "plot.padding")
+                    .unwrap_or(default_style.padding)
+            } else {
+                self.style.padding
+            };
+
+            let resolved_axis_gap = if self.style.axis_gap == default_style.axis_gap {
+                crate::theme_tokens::metric(theme, "fret.plot.axis_gap", "plot.axis_gap")
+                    .unwrap_or(default_style.axis_gap)
+            } else {
+                self.style.axis_gap
+            };
+
+            let resolved_stroke_width = if self.style.stroke_width == default_style.stroke_width {
+                crate::theme_tokens::metric(theme, "fret.plot.stroke_width", "plot.stroke_width")
+                    .unwrap_or(default_style.stroke_width)
+            } else {
+                self.style.stroke_width
+            };
+
+            let resolved_hover_threshold =
+                if self.style.hover_threshold == default_style.hover_threshold {
+                    crate::theme_tokens::metric(
+                        theme,
+                        "fret.plot.hover_threshold",
+                        "plot.hover_threshold",
+                    )
+                    .unwrap_or(default_style.hover_threshold)
+                } else {
+                    self.style.hover_threshold
+                };
 
             let background = self.style.background.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.background", "plot.background")
@@ -3218,11 +3340,23 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 tooltip_background,
                 tooltip_border,
                 tooltip_text_color,
+                resolved_stroke_color,
+                resolved_border_width,
+                resolved_padding,
+                resolved_axis_gap,
+                resolved_stroke_width,
+                resolved_hover_threshold,
             )
         };
 
         let resolved_style = LinePlotStyle {
             series_palette: resolved_series_palette,
+            stroke_color: resolved_stroke_color,
+            border_width: resolved_border_width,
+            padding: resolved_padding,
+            axis_gap: resolved_axis_gap,
+            stroke_width: resolved_stroke_width,
+            hover_threshold: resolved_hover_threshold,
             ..self.style
         };
 
@@ -3230,12 +3364,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             order: DrawOrder(0),
             rect: cx.bounds,
             background,
-            border: fret_core::Edges::all(self.style.border_width),
+            border: fret_core::Edges::all(resolved_style.border_width),
             border_color: border,
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 
-        let min_axis = self.style.axis_gap;
+        let min_axis = resolved_style.axis_gap;
         self.x_axis_thickness = Px(self.x_axis_thickness.0.max(min_axis.0));
         self.y_axis_thickness = Px(self.y_axis_thickness.0.max(min_axis.0));
         if self.show_y2_axis {
@@ -3251,7 +3385,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         // Layout can depend on text metrics (axis thickness). Converge in up to two passes.
         let mut layout = PlotLayout::from_bounds(
             cx.bounds,
-            self.style.padding,
+            resolved_style.padding,
             self.y_axis_thickness,
             self.y_axis_right_thickness,
             self.y_axis_right2_thickness,
@@ -3283,7 +3417,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
             let next_layout = PlotLayout::from_bounds(
                 cx.bounds,
-                self.style.padding,
+                resolved_style.padding,
                 self.y_axis_thickness,
                 self.y_axis_right_thickness,
                 self.y_axis_right2_thickness,
