@@ -1170,8 +1170,10 @@ impl ContextMenu {
         Self {
             open,
             align: DropdownMenuAlign::Start,
-            side: DropdownMenuSide::Bottom,
-            side_offset: Px(4.0),
+            // Match Radix/shadcn defaults:
+            // `ContextMenuPrimitive.Content` uses `side="right" sideOffset={2} align="start"`.
+            side: DropdownMenuSide::Right,
+            side_offset: Px(2.0),
             window_margin: Px(8.0),
             typeahead_timeout_ticks: 30,
             arrow: false,
