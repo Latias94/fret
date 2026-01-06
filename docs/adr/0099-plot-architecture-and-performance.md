@@ -156,8 +156,9 @@ In `fret-ui-plot`, prefer a split between:
   - pointer/scroll/key input -> plot actions,
   - legend/tooltip/crosshair policy.
   - suggested internal split (current codebase):
-    - `retained/canvas.rs`: widget + event routing + scene emission
+    - `retained/canvas.rs`: widget + event routing + scene emission (generic `PlotCanvas<L>`)
     - `retained/layout.rs`: plot/axis region geometry + hit testing
+    - `retained/layers.rs`: `PlotLayer` + concrete plot layers + paint/hit-test helpers
     - `retained/state.rs`: `PlotState` / `PlotOutput` + snapshots
     - `retained/models.rs`: `*Series` / `*PlotModel` data types
     - `retained/style.rs`: `LinePlotStyle` and related styling enums
