@@ -57,6 +57,11 @@ pub enum ElementKind {
     SvgIcon(SvgIconProps),
     Spinner(SpinnerProps),
     HoverRegion(HoverRegionProps),
+    /// An event-only wheel listener that updates an imperative scroll handle.
+    ///
+    /// Unlike `Scroll`, this element does not translate its children; it only mutates the provided
+    /// `ScrollHandle` and invalidates an optional target.
+    WheelRegion(WheelRegionProps),
     Scroll(ScrollProps),
     Scrollbar(ScrollbarProps),
 }
@@ -823,6 +828,27 @@ impl Default for SpinnerProps {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct HoverRegionProps {
     pub layout: LayoutStyle,
+}
+
+/// A wheel listener region that mutates a scroll handle without affecting layout.
+#[derive(Debug, Clone)]
+pub struct WheelRegionProps {
+    pub layout: LayoutStyle,
+    pub axis: ScrollAxis,
+    /// Declarative element id to invalidate when the scroll offset changes.
+    pub scroll_target: Option<GlobalElementId>,
+    pub scroll_handle: crate::scroll::ScrollHandle,
+}
+
+impl Default for WheelRegionProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            axis: ScrollAxis::Y,
+            scroll_target: None,
+            scroll_handle: crate::scroll::ScrollHandle::default(),
+        }
+    }
 }
 
 impl TextProps {

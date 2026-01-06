@@ -419,6 +419,7 @@ fn mount_element<H: UiHost>(
         ElementKind::SvgIcon(p) => ElementInstance::SvgIcon(p),
         ElementKind::Spinner(p) => ElementInstance::Spinner(p),
         ElementKind::HoverRegion(p) => ElementInstance::HoverRegion(p),
+        ElementKind::WheelRegion(p) => ElementInstance::WheelRegion(p),
         ElementKind::Scroll(p) => ElementInstance::Scroll(p),
         ElementKind::Scrollbar(p) => ElementInstance::Scrollbar(p),
     };

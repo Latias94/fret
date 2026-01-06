@@ -10,6 +10,7 @@ mod roving_flex;
 mod scroll;
 mod scrollbar;
 mod text;
+mod wheel_region;
 
 impl ElementHostWidget {
     pub(super) fn event_impl<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
@@ -63,6 +64,11 @@ impl ElementHostWidget {
             }
             ElementInstance::Scrollbar(props) => {
                 if scrollbar::handle_scrollbar(self, cx, window, props, event) {
+                    return;
+                }
+            }
+            ElementInstance::WheelRegion(props) => {
+                if wheel_region::handle_wheel_region(self, cx, window, props, event) {
                     return;
                 }
             }

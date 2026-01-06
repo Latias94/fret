@@ -1101,6 +1101,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn wheel_region(
+        &mut self,
+        props: crate::element::WheelRegionProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::WheelRegion(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn scroll(
         &mut self,
         props: ScrollProps,

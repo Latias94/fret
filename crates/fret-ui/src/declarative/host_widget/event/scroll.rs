@@ -12,7 +12,9 @@ pub(super) fn handle_virtual_list<H: UiHost>(
         return true;
     };
     match pe {
-        fret_core::PointerEvent::Wheel { delta, .. } => {
+        fret_core::PointerEvent::Wheel {
+            delta, modifiers, ..
+        } => {
             let consumed = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
@@ -41,10 +43,10 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                     let delta = match axis {
                         fret_core::Axis::Vertical => delta.y,
                         fret_core::Axis::Horizontal => {
-                            if delta.x.0.abs() > 0.01 {
-                                delta.x
-                            } else {
+                            if modifiers.shift {
                                 delta.y
+                            } else {
+                                delta.x
                             }
                         }
                     };

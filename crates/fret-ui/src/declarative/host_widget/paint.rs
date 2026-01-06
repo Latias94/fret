@@ -479,6 +479,21 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::PopClip);
                 }
             }
+            ElementInstance::WheelRegion(props) => {
+                let clip = matches!(props.layout.overflow, Overflow::Clip);
+                if clip {
+                    cx.scene.push(SceneOp::PushClipRect { rect: cx.bounds });
+                }
+
+                for &child in cx.children {
+                    let bounds = cx.child_bounds(child).unwrap_or(cx.bounds);
+                    cx.paint(child, bounds);
+                }
+
+                if clip {
+                    cx.scene.push(SceneOp::PopClip);
+                }
+            }
             ElementInstance::Scroll(props) => {
                 let clip = matches!(props.layout.overflow, Overflow::Clip);
                 if clip {

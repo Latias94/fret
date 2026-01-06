@@ -44,6 +44,7 @@ pub(crate) enum ElementInstance {
     SvgIcon(crate::element::SvgIconProps),
     Spinner(SpinnerProps),
     HoverRegion(HoverRegionProps),
+    WheelRegion(crate::element::WheelRegionProps),
     Scroll(crate::element::ScrollProps),
     Scrollbar(crate::element::ScrollbarProps),
 }
@@ -144,6 +145,7 @@ pub(super) fn layout_style_for_node<H: UiHost>(
             ElementInstance::SvgIcon(p) => p.layout,
             ElementInstance::Spinner(p) => p.layout,
             ElementInstance::HoverRegion(p) => p.layout,
+            ElementInstance::WheelRegion(p) => p.layout,
             ElementInstance::Scroll(p) => p.layout,
             ElementInstance::Scrollbar(p) => p.layout,
         })

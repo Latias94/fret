@@ -105,6 +105,7 @@ impl ElementHostWidget {
             // These primitives are always hit-test clipped by their own bounds (they are not
             // intended as overflow-visible containers).
             ElementInstance::VirtualList(_)
+            | ElementInstance::WheelRegion(_)
             | ElementInstance::Scrollbar(_)
             | ElementInstance::Image(_)
             | ElementInstance::SvgIcon(_)
@@ -491,6 +492,9 @@ impl ElementHostWidget {
             }
             ElementInstance::HoverRegion(props) => {
                 self.layout_hover_region_impl(cx, window, props.layout)
+            }
+            ElementInstance::WheelRegion(props) => {
+                self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::Scroll(props) => self.layout_scroll_impl(cx, window, props),
             ElementInstance::Scrollbar(props) => self.layout_scrollbar_impl(cx, props),
