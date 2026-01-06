@@ -236,17 +236,23 @@ impl AlertDialog {
                     });
                 }
 
-                let mut request = radix_dialog::modal_dialog_request(
+                let options = radix_alert_dialog::dialog_options_for_alert_dialog(
+                    cx,
+                    open_id,
+                    radix_alert_dialog::AlertDialogOptions::default(),
+                );
+                let initial_focus = is_open.then_some(options.initial_focus).flatten();
+                let options = options.initial_focus(initial_focus);
+
+                let mut request = radix_dialog::modal_dialog_request_with_options(
                     id,
                     id,
                     self.open.clone(),
                     overlay_presence,
+                    options,
                     overlay_children,
                 );
                 request.root_name = Some(overlay_root_name);
-                request.initial_focus = is_open
-                    .then(|| radix_alert_dialog::cancel_element_for_open_model(cx, open_id))
-                    .flatten();
                 radix_dialog::request_modal_dialog(cx, request);
             } else {
                 radix_alert_dialog::clear_cancel_for_open_model(cx, open_id);

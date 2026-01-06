@@ -25,6 +25,33 @@ use fret_ui::{ElementContext, UiHost};
 use crate::declarative::action_hooks::ActionHooksExt as _;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
+#[derive(Debug, Clone, Copy)]
+pub struct DialogOptions {
+    pub dismiss_on_overlay_press: bool,
+    pub initial_focus: Option<GlobalElementId>,
+}
+
+impl Default for DialogOptions {
+    fn default() -> Self {
+        Self {
+            dismiss_on_overlay_press: true,
+            initial_focus: None,
+        }
+    }
+}
+
+impl DialogOptions {
+    pub fn dismiss_on_overlay_press(mut self, dismiss_on_overlay_press: bool) -> Self {
+        self.dismiss_on_overlay_press = dismiss_on_overlay_press;
+        self
+    }
+
+    pub fn initial_focus(mut self, initial_focus: Option<GlobalElementId>) -> Self {
+        self.initial_focus = initial_focus;
+        self
+    }
+}
+
 /// Stable per-overlay root naming convention for dialog-like modal overlays.
 pub fn dialog_root_name(id: GlobalElementId) -> String {
     OverlayController::modal_root_name(id)
@@ -63,8 +90,28 @@ pub fn modal_dialog_request(
     presence: OverlayPresence,
     children: Vec<AnyElement>,
 ) -> OverlayRequest {
+    modal_dialog_request_with_options(
+        id,
+        trigger,
+        open,
+        presence,
+        DialogOptions::default(),
+        children,
+    )
+}
+
+/// Builds an overlay request for a Radix-style modal dialog, with explicit options.
+pub fn modal_dialog_request_with_options(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    options: DialogOptions,
+    children: Vec<AnyElement>,
+) -> OverlayRequest {
     let mut request = OverlayRequest::modal(id, Some(trigger), open, presence, children);
     request.root_name = Some(dialog_root_name(id));
+    request.initial_focus = options.initial_focus;
     request
 }
 
@@ -121,6 +168,21 @@ pub fn modal_barrier<H: UiHost>(
             move |_cx| children,
         )
     }
+}
+
+/// Convenience helper to assemble modal overlay children in a Radix-like order: barrier then
+/// content.
+pub fn modal_dialog_layer_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    options: DialogOptions,
+    barrier_children: Vec<AnyElement>,
+    content: AnyElement,
+) -> Vec<AnyElement> {
+    vec![
+        modal_barrier(cx, open, options.dismiss_on_overlay_press, barrier_children),
+        content,
+    ]
 }
 
 /// Requests a Radix-style modal dialog overlay for the current window.
@@ -187,5 +249,25 @@ mod tests {
         );
         let expected = dialog_root_name(id);
         assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
+    }
+
+    #[test]
+    fn modal_dialog_request_with_options_sets_initial_focus() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+        let id = GlobalElementId(0x123);
+        let trigger = GlobalElementId(0x456);
+        let initial_focus = GlobalElementId(0xbeef);
+
+        let opts = DialogOptions::default().initial_focus(Some(initial_focus));
+        let req = modal_dialog_request_with_options(
+            id,
+            trigger,
+            open,
+            OverlayPresence::instant(true),
+            opts,
+            Vec::new(),
+        );
+        assert_eq!(req.initial_focus, Some(initial_focus));
     }
 }

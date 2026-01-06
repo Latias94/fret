@@ -233,11 +233,13 @@ impl Dialog {
                     });
                 }
 
-                let request = radix_dialog::modal_dialog_request(
+                let options = radix_dialog::DialogOptions::default().initial_focus(None);
+                let request = radix_dialog::modal_dialog_request_with_options(
                     id,
                     id,
                     self.open,
                     overlay_presence,
+                    options,
                     overlay_children,
                 );
                 radix_dialog::request_modal_dialog(cx, request);

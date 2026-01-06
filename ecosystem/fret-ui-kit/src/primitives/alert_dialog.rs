@@ -18,6 +18,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::primitives::dialog as dialog_prim;
+use crate::primitives::dialog::DialogOptions;
 
 #[derive(Default)]
 struct AlertDialogCancelRegistry {
@@ -57,6 +58,48 @@ pub fn cancel_element_for_open_model<H: UiHost>(
         .with_global_mut(AlertDialogCancelRegistry::default, |reg, _app| {
             reg.by_open.get(&open_id).copied()
         })
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum AlertDialogInitialFocus {
+    None,
+    PreferCancel,
+    Element(GlobalElementId),
+}
+
+impl Default for AlertDialogInitialFocus {
+    fn default() -> Self {
+        Self::PreferCancel
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct AlertDialogOptions {
+    pub initial_focus: AlertDialogInitialFocus,
+}
+
+impl AlertDialogOptions {
+    pub fn initial_focus(mut self, initial_focus: AlertDialogInitialFocus) -> Self {
+        self.initial_focus = initial_focus;
+        self
+    }
+}
+
+/// Converts alert-dialog options into dialog options (modal, non-dismissable by outside press).
+pub fn dialog_options_for_alert_dialog<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open_id: ModelId,
+    options: AlertDialogOptions,
+) -> DialogOptions {
+    let initial_focus = match options.initial_focus {
+        AlertDialogInitialFocus::None => None,
+        AlertDialogInitialFocus::Element(id) => Some(id),
+        AlertDialogInitialFocus::PreferCancel => cancel_element_for_open_model(cx, open_id),
+    };
+
+    DialogOptions::default()
+        .dismiss_on_overlay_press(false)
+        .initial_focus(initial_focus)
 }
 
 /// Builds a Radix-style alert-dialog modal barrier (non-dismissable by outside press).
@@ -99,6 +142,24 @@ mod tests {
             );
             clear_cancel_for_open_model(cx, open_id);
             assert_eq!(cancel_element_for_open_model(cx, open_id), None);
+        });
+    }
+
+    #[test]
+    fn dialog_options_for_alert_dialog_prefers_cancel() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let open = app.models_mut().insert(false);
+        let open_id = open.id();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            register_cancel_for_open_model(cx, open_id, GlobalElementId(0xaaa));
+
+            let opts = dialog_options_for_alert_dialog(cx, open_id, AlertDialogOptions::default());
+            assert!(!opts.dismiss_on_overlay_press);
+            assert_eq!(opts.initial_focus, Some(GlobalElementId(0xaaa)));
         });
     }
 }
