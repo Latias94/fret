@@ -6,18 +6,19 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, KeyCode, NodeId, Px, SemanticsRole, TextOverflow,
+    TextStyle, TextWrap,
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps, SizeStyle,
+    TextInputProps, TextProps,
 };
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -30,7 +31,7 @@ use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::layout as shadcn_layout;
-use crate::{Dialog, DialogContent, Input, ScrollArea};
+use crate::{Dialog, DialogContent, ScrollArea};
 
 fn border(theme: &Theme) -> Color {
     theme
@@ -56,6 +57,56 @@ fn item_bg_hover(theme: &Theme) -> Color {
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn command_text_input<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: Model<String>,
+    a11y_label: Arc<str>,
+    placeholder: Option<Arc<str>>,
+    a11y_role: Option<SemanticsRole>,
+    active_descendant: Option<NodeId>,
+    expanded: Option<bool>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+
+    let fg = theme
+        .color_by_key("foreground")
+        .unwrap_or(theme.colors.text_primary);
+    let placeholder_fg = theme
+        .color_by_key("muted-foreground")
+        .unwrap_or(theme.colors.text_muted);
+
+    let mut chrome = TextInputStyle::from_theme(theme.snapshot());
+    chrome.padding = Edges::all(Px(0.0));
+    chrome.corner_radii = Corners::all(Px(0.0));
+    chrome.border = Edges::all(Px(0.0));
+    chrome.background = Color::TRANSPARENT;
+    chrome.border_color = Color::TRANSPARENT;
+    chrome.border_color_focused = Color::TRANSPARENT;
+    chrome.focus_ring = None;
+    chrome.text_color = fg;
+    chrome.placeholder_color = placeholder_fg;
+    chrome.caret_color = fg;
+
+    let mut props = TextInputProps::new(model);
+    props.a11y_label = Some(a11y_label);
+    props.a11y_role = a11y_role;
+    props.placeholder = placeholder;
+    props.active_descendant = active_descendant;
+    props.expanded = expanded;
+    props.chrome = chrome;
+    props.text_style = item_text_style(&theme);
+    props.layout.size = SizeStyle {
+        width: Length::Fill,
+        height: Length::Fill,
+        min_width: Some(Px(0.0)),
+        min_height: Some(Px(0.0)),
+        ..Default::default()
+    };
+    props.layout.overflow = Overflow::Clip;
+
+    cx.text_input(props)
 }
 
 fn cmdk_highlighted_label<H: UiHost>(
@@ -395,6 +446,18 @@ impl CommandInput {
 
             let border = border(&theme);
             let disabled = self.disabled;
+            let wrapper_h = theme
+                .metric_by_key("component.command.input.wrapper_height")
+                .unwrap_or(Px(36.0));
+            let icon_size = theme
+                .metric_by_key("component.command.input.icon_size")
+                .unwrap_or(Px(16.0));
+            let pad_x = theme
+                .metric_by_key("component.command.input.padding_x")
+                .unwrap_or(Px(12.0));
+            let gap = theme
+                .metric_by_key("component.command.input.gap")
+                .unwrap_or(Px(8.0));
             let mut wrapper = decl_style::container_props(
                 &theme,
                 ChromeRefinement::default(),
@@ -407,19 +470,65 @@ impl CommandInput {
                 left: Px(0.0),
             };
             wrapper.border_color = Some(border);
-
-            let input = Input::new(self.model).a11y_label(
-                self.a11y_label
-                    .unwrap_or_else(|| Arc::from("Command input")),
-            );
-            let input = if let Some(placeholder) = self.placeholder.clone() {
-                input.placeholder(placeholder)
-            } else {
-                input
+            if wrapper.layout.size.height == Length::Auto {
+                wrapper.layout.size.height = Length::Px(wrapper_h);
+            }
+            wrapper.padding = Edges {
+                top: Px(0.0),
+                right: pad_x,
+                bottom: Px(0.0),
+                left: pad_x,
             };
 
             cx.container(wrapper, move |cx| {
-                let mut input = input.into_element(cx);
+                let a11y_label = self
+                    .a11y_label
+                    .clone()
+                    .unwrap_or_else(|| Arc::from("Command input"));
+                let placeholder = self.placeholder.clone();
+                let icon_fg = theme
+                    .color_by_key("muted-foreground")
+                    .unwrap_or(theme.colors.text_muted);
+
+                let icon = decl_icon::icon_with(
+                    cx,
+                    ids::ui::SEARCH,
+                    Some(icon_size),
+                    Some(ColorRef::Color(icon_fg)),
+                );
+                let icon = cx.opacity(0.5, move |_cx| vec![icon]);
+
+                let input = command_text_input(
+                    cx,
+                    self.model.clone(),
+                    a11y_label,
+                    placeholder,
+                    None,
+                    None,
+                    None,
+                );
+
+                let mut row = cx.row(
+                    RowProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        gap,
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                    },
+                    move |_cx| vec![icon, input],
+                );
+
+                if disabled {
+                    row = cx.opacity(0.5, move |_cx| vec![row]);
+                }
+
+                let mut input = row;
                 if disabled {
                     input = cx.semantics(
                         fret_ui::element::SemanticsProps {
@@ -748,18 +857,7 @@ impl CommandList {
             // drives highlight via `active_descendant` (ADR 0073).
             if items.is_empty() {
                 let empty = self.empty_text;
-                let fg = theme.colors.text_muted;
-                let text_style = item_text_style(&theme);
-                return cx.container(ContainerProps::default(), move |cx| {
-                    vec![cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: empty,
-                        style: Some(text_style),
-                        color: Some(fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                    })]
-                });
+                return CommandEmpty::new(empty).into_element(cx);
             }
 
             let query_for_render: Arc<str> = highlight_query
@@ -823,7 +921,13 @@ impl CommandList {
                                     },
                                     direction: fret_core::Axis::Vertical,
                                     gap: Px(0.0),
-                                    padding: Edges::all(Px(0.0)),
+                                    // new-york-v4: `CommandList` uses `scroll-py-1`.
+                                    padding: Edges {
+                                        top: Px(4.0),
+                                        right: Px(0.0),
+                                        bottom: Px(4.0),
+                                        left: Px(0.0),
+                                    },
                                     justify: MainAlign::Start,
                                     align: CrossAlign::Stretch,
                                     wrap: false,
@@ -889,7 +993,7 @@ impl CommandList {
                                                         layout: LayoutStyle::default(),
                                                         gap: row_gap,
                                                         padding: Edges::all(Px(0.0)),
-                                                        justify: MainAlign::SpaceBetween,
+                                                        justify: MainAlign::Start,
                                                         align: CrossAlign::Center,
                                                     },
                                                     move |cx| {
@@ -1520,7 +1624,7 @@ impl CommandPalette {
                                                 },
                                                 gap: row_gap,
                                                 padding: Edges::all(Px(0.0)),
-                                                justify: MainAlign::SpaceBetween,
+                                                justify: MainAlign::Start,
                                                 align: CrossAlign::Center,
                                             },
                                             move |cx| {
@@ -1601,6 +1705,18 @@ impl CommandPalette {
             let active_row_element = active_opt.map(|opt| opt.element);
 
             let border = border(&theme);
+            let wrapper_h = theme
+                .metric_by_key("component.command.input.wrapper_height")
+                .unwrap_or(Px(36.0));
+            let icon_size = theme
+                .metric_by_key("component.command.input.icon_size")
+                .unwrap_or(Px(16.0));
+            let pad_x = theme
+                .metric_by_key("component.command.input.padding_x")
+                .unwrap_or(Px(12.0));
+            let gap = theme
+                .metric_by_key("component.command.input.gap")
+                .unwrap_or(Px(8.0));
             let mut wrapper = decl_style::container_props(
                 &theme,
                 ChromeRefinement::default(),
@@ -1614,22 +1730,58 @@ impl CommandPalette {
             };
             wrapper.border_color = Some(border);
 
-            let mut input = Input::new(self.model).a11y_label(self.a11y_label);
-            if let Some(placeholder) = self.placeholder {
-                input = input.placeholder(placeholder);
+            if wrapper.layout.size.height == Length::Auto {
+                wrapper.layout.size.height = Length::Px(wrapper_h);
             }
-            if let Some(role) = self.input_role {
-                input = input.a11y_role(role);
-            }
-            if let Some(active_descendant) = active_descendant {
-                input = input.active_descendant(active_descendant);
-            }
-            if let Some(expanded) = self.input_expanded {
-                input = input.expanded(expanded);
-            }
+            wrapper.padding = Edges {
+                top: Px(0.0),
+                right: pad_x,
+                bottom: Px(0.0),
+                left: pad_x,
+            };
 
-            let mut input = input.into_element(cx);
-            let list_labelled_by = Some(input.id.0);
+            let a11y_label = self
+                .a11y_label
+                .clone()
+                .unwrap_or_else(|| Arc::from("Command input"));
+            let input = command_text_input(
+                cx,
+                self.model.clone(),
+                a11y_label,
+                self.placeholder.clone(),
+                self.input_role,
+                active_descendant,
+                self.input_expanded,
+            );
+            let input_id = input.id;
+
+            let icon_fg = theme
+                .color_by_key("muted-foreground")
+                .unwrap_or(theme.colors.text_muted);
+            let icon = decl_icon::icon_with(
+                cx,
+                ids::ui::SEARCH,
+                Some(icon_size),
+                Some(ColorRef::Color(icon_fg)),
+            );
+            let icon = cx.opacity(0.5, move |_cx| vec![icon]);
+
+            let mut input = cx.row(
+                RowProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    },
+                    gap,
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Center,
+                },
+                move |_cx| vec![icon, input],
+            );
+            let list_labelled_by = Some(input_id.0);
 
             let key_handler = cx.with_state(
                 || {
@@ -1778,9 +1930,10 @@ impl CommandPalette {
                 },
             );
 
-            cx.key_on_key_down_for(input.id, key_handler);
+            cx.key_on_key_down_for(input_id, key_handler);
 
             if disabled {
+                input = cx.opacity(0.5, move |_cx| vec![input]);
                 input = cx.semantics(
                     fret_ui::element::SemanticsProps {
                         role: SemanticsRole::Generic,
@@ -1799,19 +1952,8 @@ impl CommandPalette {
                 },
                 move |cx| {
                     if row_ids.is_empty() {
-                        let fg = theme.colors.text_muted;
-                        let text_style = item_text_style(&theme);
                         let empty = self.empty_text;
-                        return vec![cx.container(ContainerProps::default(), move |cx| {
-                            vec![cx.text_props(TextProps {
-                                layout: LayoutStyle::default(),
-                                text: empty,
-                                style: Some(text_style),
-                                color: Some(fg),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Clip,
-                            })]
-                        })];
+                        return vec![CommandEmpty::new(empty).into_element(cx)];
                     }
 
                     let scroll = self.scroll;
@@ -1826,7 +1968,13 @@ impl CommandPalette {
                             },
                             direction: fret_core::Axis::Vertical,
                             gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
+                            // new-york-v4: `CommandList` uses `scroll-py-1`.
+                            padding: Edges {
+                                top: Px(4.0),
+                                right: Px(0.0),
+                                bottom: Px(4.0),
+                                left: Px(0.0),
+                            },
                             justify: MainAlign::Start,
                             align: CrossAlign::Stretch,
                             wrap: false,
