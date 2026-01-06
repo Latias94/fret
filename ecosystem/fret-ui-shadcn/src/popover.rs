@@ -3,7 +3,7 @@ use std::{cell::Cell, rc::Rc};
 
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{
-    FontId, FontWeight, Point, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
+    FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap, Transform2D,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -326,11 +326,13 @@ impl Popover {
                         anchor,
                         arrow.then_some(arrow_size),
                     );
-                    let slide =
-                        overlay_motion::shadcn_enter_slide_offset(layout.side, opacity, opening);
-                    let origin = Point::new(Px(origin.x.0 + slide.x.0), Px(origin.y.0 + slide.y.0));
-
                     let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                    let slide = if opening {
+                        overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
+                    } else {
+                        Transform2D::IDENTITY
+                    };
+                    let transform = slide * zoom;
 
                     let bg = theme
                         .color_by_key("popover")
@@ -340,12 +342,7 @@ impl Popover {
                         .color_by_key("border")
                         .unwrap_or(theme.colors.panel_border);
 
-                    let mut wrapper_layout =
-                        popper_content::popper_wrapper_layout(placed, wrapper_insets);
-                    wrapper_layout.inset.left =
-                        wrapper_layout.inset.left.map(|v| Px(v.0 + slide.x.0));
-                    wrapper_layout.inset.top =
-                        wrapper_layout.inset.top.map(|v| Px(v.0 + slide.y.0));
+                    let wrapper_layout = popper_content::popper_wrapper_layout(placed, wrapper_insets);
 
                     let wrapper = cx.container(
                         ContainerProps {
@@ -397,7 +394,7 @@ impl Popover {
                             vec![cx.visual_transform_props(
                                 VisualTransformProps {
                                     layout: opacity_layout,
-                                    transform: zoom,
+                                    transform,
                                 },
                                 move |_cx| vec![wrapper],
                             )]
