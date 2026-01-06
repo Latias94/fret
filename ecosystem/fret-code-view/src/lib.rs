@@ -167,7 +167,7 @@ fn render_code_line<H: UiHost>(
 }
 
 fn syntax_color(theme: &Theme, highlight: &str) -> Option<Color> {
-    let key = format!("color.syntax.{highlight}");
+    let key = format!("syntax.{highlight}");
     if let Some(c) = theme.color_by_key(&key) {
         return Some(c);
     }
