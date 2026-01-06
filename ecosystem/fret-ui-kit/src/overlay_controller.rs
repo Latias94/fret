@@ -75,6 +75,10 @@ pub struct OverlayRequest {
     /// When an outside-press observer is dispatched for this overlay, suppress normal hit-tested
     /// pointer-down dispatch to underlay widgets for the same event.
     pub consume_outside_pointer_events: bool,
+    /// Whether this overlay should close when the OS window loses focus.
+    pub close_on_window_focus_lost: bool,
+    /// Whether this overlay should close when the OS window is resized (or scale factor changes).
+    pub close_on_window_resize: bool,
     pub open: Option<Model<bool>>,
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     pub presence: OverlayPresence,
@@ -123,6 +127,8 @@ impl OverlayRequest {
             trigger: Some(trigger),
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: Some(open),
             dismissible_on_pointer_move: None,
             presence,
@@ -162,6 +168,8 @@ impl OverlayRequest {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: Some(open),
             dismissible_on_pointer_move: None,
             presence,
@@ -183,6 +191,8 @@ impl OverlayRequest {
             trigger: None,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: None,
             dismissible_on_pointer_move: None,
             presence,
@@ -200,6 +210,8 @@ impl OverlayRequest {
             trigger: Some(trigger),
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence {
@@ -220,6 +232,8 @@ impl OverlayRequest {
             trigger: None,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence::hidden(),
@@ -234,6 +248,16 @@ impl OverlayRequest {
                 toast_max_width: None,
             }),
         }
+    }
+
+    pub fn close_on_window_focus_lost(mut self, close: bool) -> Self {
+        self.close_on_window_focus_lost = close;
+        self
+    }
+
+    pub fn close_on_window_resize(mut self, close: bool) -> Self {
+        self.close_on_window_resize = close;
+        self
     }
 
     pub fn toast_position(mut self, position: window_overlays::ToastPosition) -> Self {
@@ -349,6 +373,8 @@ impl OverlayController {
                         trigger,
                         dismissable_branches: request.dismissable_branches,
                         consume_outside_pointer_events: request.consume_outside_pointer_events,
+                        close_on_window_focus_lost: request.close_on_window_focus_lost,
+                        close_on_window_resize: request.close_on_window_resize,
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,
@@ -369,6 +395,8 @@ impl OverlayController {
                         id: request.id,
                         root_name,
                         trigger: request.trigger,
+                        close_on_window_focus_lost: request.close_on_window_focus_lost,
+                        close_on_window_resize: request.close_on_window_resize,
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,

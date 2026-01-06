@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use fret_core::{AppWindowId, NodeId};
+use fret_core::{AppWindowId, NodeId, Rect};
 use fret_runtime::FrameId;
 use fret_ui::tree::UiLayerId;
 use fret_ui::{UiHost, UiTree};
@@ -13,6 +13,9 @@ use fret_ui::elements::GlobalElementId;
 #[derive(Default)]
 pub(super) struct WindowOverlayFrame {
     pub(super) frame_id: FrameId,
+    pub(super) last_bounds: Option<Rect>,
+    pub(super) last_focused: Option<bool>,
+    pub(super) last_scale_factor: Option<f32>,
     pub(super) popovers: Vec<DismissiblePopoverRequest>,
     pub(super) modals: Vec<ModalRequest>,
     pub(super) hover_overlays: Vec<HoverOverlayRequest>,

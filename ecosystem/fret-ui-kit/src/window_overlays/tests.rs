@@ -4,6 +4,7 @@ use super::*;
 use crate::declarative::action_hooks::ActionHooksExt;
 use fret_app::App;
 use fret_core::AppWindowId;
+use fret_core::Event;
 use fret_core::{PathCommand, SvgId, SvgService};
 use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
 use fret_core::{
@@ -92,6 +93,135 @@ fn render_base_with_trigger(
     });
     ui.set_root(root);
     trigger_id.expect("trigger id")
+}
+
+#[test]
+fn window_resize_closes_modal_overlays_that_opt_in() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+
+    let open = app.models_mut().insert(true);
+    fret_runtime::apply_window_metrics_event(&mut app, window, &Event::WindowFocusChanged(true));
+
+    let bounds_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+    let bounds_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(120.0)),
+    );
+
+    let _trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds_a,
+        open.clone(),
+    );
+
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: GlobalElementId(0x1),
+            root_name: "modal".into(),
+            trigger: None,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: true,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds_a);
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    begin_frame(&mut app, window);
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: GlobalElementId(0x1),
+            root_name: "modal".into(),
+            trigger: None,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: true,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds_b);
+    assert_eq!(app.models().get_copied(&open), Some(false));
+}
+
+#[test]
+fn window_focus_lost_closes_modal_overlays_that_opt_in() {
+    let mut app = App::new();
+    let mut ui = UiTree::new();
+    let mut services = FakeServices::default();
+    let window = AppWindowId::default();
+
+    let open = app.models_mut().insert(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(200.0), Px(120.0)),
+    );
+
+    let _trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+
+    fret_runtime::apply_window_metrics_event(&mut app, window, &Event::WindowFocusChanged(true));
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: GlobalElementId(0x1),
+            root_name: "modal".into(),
+            trigger: None,
+            close_on_window_focus_lost: true,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    begin_frame(&mut app, window);
+    fret_runtime::apply_window_metrics_event(&mut app, window, &Event::WindowFocusChanged(false));
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: GlobalElementId(0x1),
+            root_name: "modal".into(),
+            trigger: None,
+            close_on_window_focus_lost: true,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            children: Vec::new(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    assert_eq!(app.models().get_copied(&open), Some(false));
 }
 
 fn render_base_with_trigger_and_underlay(
@@ -258,6 +388,8 @@ fn dismissible_popover_closes_on_outside_press() {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -379,6 +511,8 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -478,6 +612,8 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             trigger,
             dismissable_branches: vec![underlay],
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -534,6 +670,8 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             trigger,
             dismissable_branches: vec![underlay],
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -619,6 +757,8 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -726,6 +866,8 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -761,6 +903,8 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -844,6 +988,8 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -880,6 +1026,8 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -966,6 +1114,8 @@ fn modal_blocks_underlay_click_and_closes_on_escape() {
             id: GlobalElementId(0xabc),
             root_name: modal_root_name(GlobalElementId(0xabc)),
             trigger: None,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -1091,6 +1241,8 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
             id: modal_id,
             root_name: modal_root_name(modal_id),
             trigger: None,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open,
             present: true,
             initial_focus: None,
@@ -1207,6 +1359,8 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open,
             present: true,
             initial_focus: None,
@@ -1283,6 +1437,8 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open,
             present: true,
             initial_focus: None,
@@ -1357,6 +1513,8 @@ fn non_modal_overlay_restores_focus_when_focus_is_missing_on_unmount() {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -1485,6 +1643,8 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -1641,6 +1801,8 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: true,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
             open: open.clone(),
             present: true,
             initial_focus: None,

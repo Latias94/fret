@@ -526,6 +526,8 @@ pub fn modal_select_request(
     children: Vec<AnyElement>,
 ) -> OverlayRequest {
     let mut request = OverlayRequest::modal(id, Some(trigger), open, presence, children);
+    request.close_on_window_focus_lost = true;
+    request.close_on_window_resize = true;
     request.root_name = Some(select_root_name(id));
     request
 }
