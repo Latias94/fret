@@ -27,6 +27,7 @@ Fret models Radix checkbox outcomes as:
 
 - Pass: Tri-state behavior is modeled via `CheckedState` (checked / unchecked / indeterminate).
 - Pass: Semantics maps indeterminate to `checked: None` (equivalent to Radix `aria-checked="mixed"`).
+- Pass: Keyboard activation matches Radix outcomes: Space toggles, Enter is consumed (does not toggle).
 - Pass: Optional boolean bindings (`Option<bool>`) can be mapped/toggled via primitives helpers
   (`checked_state_from_optional_bool`, `toggle_optional_bool`), keeping recipes thin.
 - Note: Fret currently does not model DOM-style `name`/form submission semantics.

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, Px};
+use fret_core::{Axis, Color, Corners, Edges, KeyCode, Px};
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
@@ -12,7 +12,9 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::checkbox::{CheckedState, checkbox_a11y, checked_state_from_optional_bool, toggle_optional_bool};
+use fret_ui_kit::primitives::checkbox::{
+    CheckedState, checkbox_a11y, checked_state_from_optional_bool, toggle_optional_bool,
+};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -161,7 +163,13 @@ impl Checkbox {
             let on_click = self.on_click.clone();
             let chrome = self.chrome.clone();
 
-            let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+            let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
+                cx.key_add_on_key_down_for(
+                    id,
+                    Arc::new(|_host, _cx, down| {
+                        matches!(down.key, KeyCode::Enter | KeyCode::NumpadEnter)
+                    }),
+                );
                 cx.pressable_dispatch_command_opt(on_click);
                 match &checked {
                     CheckboxCheckedModel::Bool(model) => cx.pressable_toggle_bool(model),
@@ -294,9 +302,9 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{
-        AppWindowId, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
-        PathStyle, Point, Px, Rect, Scene, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+        AppWindowId, Modifiers, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathService, PathStyle, Point, Px, Rect, Scene, Size as CoreSize, SvgId, SvgService,
+        TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
     use fret_ui::tree::UiTree;
 
@@ -558,5 +566,111 @@ mod tests {
             .find(|n| n.role == fret_core::SemanticsRole::Checkbox)
             .expect("checkbox semantics node");
         assert_eq!(node.flags.checked, Some(true));
+    }
+
+    #[test]
+    fn checkbox_does_not_toggle_on_enter_key() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-checkbox-enter-does-not-toggle",
+            |cx| vec![Checkbox::new(model.clone()).into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable checkbox");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        assert_eq!(app.models().get_copied(&model), Some(false));
+    }
+
+    #[test]
+    fn checkbox_toggles_on_space_key() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-checkbox-space-toggles",
+            |cx| vec![Checkbox::new(model.clone()).into_element(cx)],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable checkbox");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        assert_eq!(app.models().get_copied(&model), Some(true));
     }
 }

@@ -1762,20 +1762,39 @@ impl DropdownMenu {
                                                         match entry {
                                                             DropdownMenuEntry::Label(label) => {
                                                                 let text = label.text.clone();
-                                                                rows.push(cx.text_props(TextProps {
-                                                                    layout: LayoutStyle::default(),
-                                                                    text,
-                                                                    style: Some(TextStyle {
-                                                                        font: FontId::default(),
-                                                                        size: font_size,
-                                                                        weight: FontWeight::MEDIUM,
-                                                                        line_height: Some(font_line_height),
-                                                                        letter_spacing_em: None,
-                                                                    }),
-                                                                    wrap: TextWrap::None,
-                                                                    overflow: TextOverflow::Clip,
-                                                                    color: Some(label_fg),
-                                                                }));
+                                                                let pad_left = if label.inset {
+                                                                    pad_x_inset
+                                                                } else {
+                                                                    pad_x
+                                                                };
+                                                                rows.push(cx.container(
+                                                                    ContainerProps {
+                                                                        layout: LayoutStyle::default(),
+                                                                        padding: Edges {
+                                                                            top: pad_y,
+                                                                            right: pad_x,
+                                                                            bottom: pad_y,
+                                                                            left: pad_left,
+                                                                        },
+                                                                        ..Default::default()
+                                                                    },
+                                                                    move |cx| {
+                                                                        vec![cx.text_props(TextProps {
+                                                                            layout: LayoutStyle::default(),
+                                                                            text,
+                                                                            style: Some(TextStyle {
+                                                                                font: FontId::default(),
+                                                                                size: font_size,
+                                                                                weight: FontWeight::MEDIUM,
+                                                                                line_height: Some(font_line_height),
+                                                                                letter_spacing_em: None,
+                                                                            }),
+                                                                            wrap: TextWrap::None,
+                                                                            overflow: TextOverflow::Clip,
+                                                                            color: Some(label_fg),
+                                                                        })]
+                                                                    },
+                                                                ));
                                                             }
                                                             DropdownMenuEntry::Group(_) => {
                                                                 unreachable!("groups are flattened")
