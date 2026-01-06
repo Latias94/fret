@@ -1,3 +1,5 @@
+//! Retained plot canvas implementation.
+
 use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, SceneOp};
 use fret_core::{
@@ -13,6 +15,9 @@ use fret_ui::retained_bridge::{
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
+
+use super::layout::{PlotLayout, PlotRegion};
+use super::state::{PlotHoverOutput, PlotOutput, PlotOutputSnapshot, PlotState};
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
@@ -931,7 +936,7 @@ fn series_style(
     }
 }
 
-fn contains_point(rect: Rect, p: Point) -> bool {
+pub(super) fn contains_point(rect: Rect, p: Point) -> bool {
     p.x.0 >= rect.origin.x.0
         && p.y.0 >= rect.origin.y.0
         && p.x.0 <= rect.origin.x.0 + rect.size.width.0
@@ -2035,120 +2040,6 @@ struct LegendEntry {
     text: PreparedText,
 }
 
-#[derive(Debug, Clone, Copy)]
-struct PlotLayout {
-    plot: Rect,
-    y_axis_left: Rect,
-    y_axis_right: Rect,
-    y_axis_right2: Rect,
-    y_axis_right3: Rect,
-    x_axis: Rect,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum PlotRegion {
-    Plot,
-    XAxis,
-    YAxis(YAxis),
-}
-
-impl PlotLayout {
-    fn from_bounds(
-        bounds: Rect,
-        padding: Px,
-        y_axis_left_gap: Px,
-        y_axis_right_gap: Px,
-        y_axis_right2_gap: Px,
-        y_axis_right3_gap: Px,
-        x_axis_gap: Px,
-    ) -> Self {
-        let pad = padding.0.max(0.0);
-        let y_axis_left_gap = y_axis_left_gap.0.max(0.0);
-        let y_axis_right_gap = y_axis_right_gap.0.max(0.0);
-        let y_axis_right2_gap = y_axis_right2_gap.0.max(0.0);
-        let y_axis_right3_gap = y_axis_right3_gap.0.max(0.0);
-        let x_axis_gap = x_axis_gap.0.max(0.0);
-
-        let content = Rect::new(
-            Point::new(Px(bounds.origin.x.0 + pad), Px(bounds.origin.y.0 + pad)),
-            Size::new(
-                Px((bounds.size.width.0 - pad * 2.0).max(0.0)),
-                Px((bounds.size.height.0 - pad * 2.0).max(0.0)),
-            ),
-        );
-
-        let plot_w = (content.size.width.0
-            - y_axis_left_gap
-            - y_axis_right_gap
-            - y_axis_right2_gap
-            - y_axis_right3_gap)
-            .max(0.0);
-        let plot_h = (content.size.height.0 - x_axis_gap).max(0.0);
-
-        let plot = Rect::new(
-            Point::new(Px(content.origin.x.0 + y_axis_left_gap), content.origin.y),
-            Size::new(Px(plot_w), Px(plot_h)),
-        );
-
-        let y_axis_left = Rect::new(content.origin, Size::new(Px(y_axis_left_gap), Px(plot_h)));
-
-        let y_axis_right = Rect::new(
-            Point::new(Px(plot.origin.x.0 + plot.size.width.0), plot.origin.y),
-            Size::new(Px(y_axis_right_gap), Px(plot_h)),
-        );
-        let y_axis_right2 = Rect::new(
-            Point::new(
-                Px(y_axis_right.origin.x.0 + y_axis_right.size.width.0),
-                plot.origin.y,
-            ),
-            Size::new(Px(y_axis_right2_gap), Px(plot_h)),
-        );
-        let y_axis_right3 = Rect::new(
-            Point::new(
-                Px(y_axis_right2.origin.x.0 + y_axis_right2.size.width.0),
-                plot.origin.y,
-            ),
-            Size::new(Px(y_axis_right3_gap), Px(plot_h)),
-        );
-
-        let x_axis = Rect::new(
-            Point::new(plot.origin.x, Px(plot.origin.y.0 + plot.size.height.0)),
-            Size::new(Px(plot_w), Px(x_axis_gap)),
-        );
-
-        Self {
-            plot,
-            y_axis_left,
-            y_axis_right,
-            y_axis_right2,
-            y_axis_right3,
-            x_axis,
-        }
-    }
-
-    fn hit_test_region(&self, position: Point) -> Option<PlotRegion> {
-        if contains_point(self.plot, position) {
-            return Some(PlotRegion::Plot);
-        }
-        if contains_point(self.x_axis, position) {
-            return Some(PlotRegion::XAxis);
-        }
-        if contains_point(self.y_axis_left, position) {
-            return Some(PlotRegion::YAxis(YAxis::Left));
-        }
-        if contains_point(self.y_axis_right, position) {
-            return Some(PlotRegion::YAxis(YAxis::Right));
-        }
-        if contains_point(self.y_axis_right2, position) {
-            return Some(PlotRegion::YAxis(YAxis::Right2));
-        }
-        if contains_point(self.y_axis_right3, position) {
-            return Some(PlotRegion::YAxis(YAxis::Right3));
-        }
-        None
-    }
-}
-
 #[derive(Debug)]
 pub struct SeriesMeta {
     pub id: SeriesId,
@@ -2910,117 +2801,6 @@ impl ShadedPlotModel {
             data_bounds_y3: y3,
             data_bounds_y4: y4,
             series,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct PlotHoverOutput {
-    pub series_id: SeriesId,
-    pub data: DataPoint,
-    pub value: Option<f64>,
-}
-
-/// A caller-owned output snapshot for plot interaction state.
-///
-/// This is intended for building higher-level behaviors such as linked plots, inspectors, and
-/// multi-pane coordination without requiring direct access to the plot internals.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct PlotOutputSnapshot {
-    pub view_bounds: DataRect,
-    pub view_bounds_y2: Option<DataRect>,
-    pub view_bounds_y3: Option<DataRect>,
-    pub view_bounds_y4: Option<DataRect>,
-    pub cursor: Option<DataPoint>,
-    pub hover: Option<PlotHoverOutput>,
-    pub query: Option<DataRect>,
-}
-
-/// Plot output state written by the plot widget.
-///
-/// Callers are expected to treat this as write-only from the widget side (i.e. do not mutate it
-/// directly from application code). Use it as an observation point for interaction.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct PlotOutput {
-    pub revision: u64,
-    pub snapshot: PlotOutputSnapshot,
-}
-
-impl Default for PlotOutput {
-    fn default() -> Self {
-        Self {
-            revision: 0,
-            snapshot: PlotOutputSnapshot {
-                view_bounds: DataRect {
-                    x_min: 0.0,
-                    x_max: 1.0,
-                    y_min: 0.0,
-                    y_max: 1.0,
-                },
-                view_bounds_y2: None,
-                view_bounds_y3: None,
-                view_bounds_y4: None,
-                cursor: None,
-                hover: None,
-                query: None,
-            },
-        }
-    }
-}
-
-/// Persistent plot interaction state owned by the caller (optional).
-///
-/// This mirrors common plotting libraries (e.g. ImPlot / egui_plot) where plot view state and user
-/// preferences (hidden series, pinned series) outlive a single render pass.
-///
-/// By default, `PlotCanvas` owns an internal `PlotState`. Callers can provide a `Model<PlotState>`
-/// to store this state externally (so it can be persisted, shared, or controlled programmatically).
-#[derive(Debug, Clone)]
-pub struct PlotState {
-    /// Current view bounds in data space when `view_is_auto == false`.
-    pub view_bounds: Option<DataRect>,
-    /// If true, the plot view is derived from `data_bounds` each frame (auto-fit).
-    pub view_is_auto: bool,
-    /// Current view bounds for the right Y axis (if enabled) when `view_y2_is_auto == false`.
-    pub view_bounds_y2: Option<DataRect>,
-    /// If true, the right Y axis view is derived from `data_bounds` each frame (auto-fit).
-    pub view_y2_is_auto: bool,
-    /// Current view bounds for the 3rd Y axis (if enabled) when `view_y3_is_auto == false`.
-    pub view_bounds_y3: Option<DataRect>,
-    /// If true, the 3rd Y axis view is derived from `data_bounds` each frame (auto-fit).
-    pub view_y3_is_auto: bool,
-    /// Current view bounds for the 4th Y axis (if enabled) when `view_y4_is_auto == false`.
-    pub view_bounds_y4: Option<DataRect>,
-    /// If true, the 4th Y axis view is derived from `data_bounds` each frame (auto-fit).
-    pub view_y4_is_auto: bool,
-    /// An externally linked cursor position in data space.
-    ///
-    /// This is typically written by a plot coordinator (e.g. `LinkedPlotGroup`) so that other plots
-    /// can render a synchronized cursor without requiring pointer hover in each plot.
-    pub linked_cursor_x: Option<f64>,
-    /// User-controlled series visibility.
-    pub hidden_series: HashSet<SeriesId>,
-    /// Optional pinned series ID for emphasis and tooltip pinning.
-    pub pinned_series: Option<SeriesId>,
-    /// Optional user query selection in data space.
-    pub query: Option<DataRect>,
-}
-
-impl Default for PlotState {
-    fn default() -> Self {
-        Self {
-            view_bounds: None,
-            view_is_auto: true,
-            view_bounds_y2: None,
-            view_y2_is_auto: true,
-            view_bounds_y3: None,
-            view_y3_is_auto: true,
-            view_bounds_y4: None,
-            view_y4_is_auto: true,
-            linked_cursor_x: None,
-            hidden_series: HashSet::new(),
-            pinned_series: None,
-            query: None,
         }
     }
 }
