@@ -1723,7 +1723,9 @@ fn select_impl<H: UiHost>(
                             cx.text_props(TextProps {
                                 layout: {
                                     let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
+                                    layout.flex.grow = 1.0;
+                                    layout.flex.shrink = 1.0;
+                                    layout.flex.basis = Length::Px(Px(0.0));
                                     layout
                                 },
                                 text: label,
