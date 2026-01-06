@@ -56,7 +56,7 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
 
-        // 模拟 runner 的单调时钟。
+        // Simulate the runner's monotonic clock.
         app.set_tick_id(TickId(1));
         app.set_frame_id(FrameId(1));
 
