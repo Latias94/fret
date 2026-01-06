@@ -57,89 +57,69 @@ struct MarkdownTheme {
 
 impl MarkdownTheme {
     fn resolve(theme: &Theme) -> Self {
-        let link = theme
-            .color_by_key("markdown.link")
-            .unwrap_or(theme.colors.accent);
-        let muted = theme
-            .color_by_key("markdown.muted")
-            .unwrap_or(theme.colors.text_muted);
-        let hr = theme
-            .color_by_key("markdown.hr")
-            .unwrap_or(theme.colors.panel_border);
+        fn color(theme: &Theme, suffix: &str) -> Option<fret_core::Color> {
+            theme
+                .color_by_key(&format!("fret.markdown.{suffix}"))
+                .or_else(|| theme.color_by_key(&format!("markdown.{suffix}")))
+        }
 
-        let blockquote_border = theme
-            .color_by_key("markdown.blockquote.border")
-            .unwrap_or(theme.colors.panel_border);
-        let blockquote_border_width = theme
-            .metric_by_key("markdown.blockquote.border_width")
-            .unwrap_or(Px(3.0));
-        let blockquote_padding = theme
-            .metric_by_key("markdown.blockquote.padding")
-            .unwrap_or(theme.metrics.padding_sm);
+        fn metric(theme: &Theme, suffix: &str) -> Option<Px> {
+            theme
+                .metric_by_key(&format!("fret.markdown.{suffix}"))
+                .or_else(|| theme.metric_by_key(&format!("markdown.{suffix}")))
+        }
 
-        let inline_code_fg = theme
-            .color_by_key("markdown.inline_code.fg")
-            .unwrap_or(theme.colors.text_primary);
-        let inline_code_bg = theme
-            .color_by_key("markdown.inline_code.bg")
-            .unwrap_or(theme.colors.hover_background);
-        let inline_code_padding_x = theme
-            .metric_by_key("markdown.inline_code.padding_x")
-            .unwrap_or(Px(3.0));
-        let inline_code_padding_y = theme
-            .metric_by_key("markdown.inline_code.padding_y")
-            .unwrap_or(Px(1.0));
+        let link = color(theme, "link").unwrap_or_else(|| theme.color_required("primary"));
+        let muted = color(theme, "muted").unwrap_or_else(|| theme.color_required("muted-foreground"));
+        let hr = color(theme, "hr").unwrap_or_else(|| theme.color_required("border"));
 
-        let task_checked = theme
-            .color_by_key("markdown.task.checked")
-            .unwrap_or(theme.colors.accent);
-        let task_unchecked = theme
-            .color_by_key("markdown.task.unchecked")
-            .unwrap_or(theme.colors.text_muted);
+        let blockquote_border =
+            color(theme, "blockquote.border").unwrap_or_else(|| theme.color_required("border"));
+        let blockquote_border_width = metric(theme, "blockquote.border_width").unwrap_or(Px(3.0));
+        let blockquote_padding =
+            metric(theme, "blockquote.padding").unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
 
-        let table_border = theme
-            .color_by_key("markdown.table.border")
-            .unwrap_or(theme.colors.panel_border);
-        let table_header_bg = theme
-            .color_by_key("markdown.table.header_bg")
-            .unwrap_or(theme.colors.panel_background);
-        let table_cell_padding_x = theme
-            .metric_by_key("markdown.table.cell.padding_x")
-            .unwrap_or(theme.metrics.padding_sm);
-        let table_cell_padding_y = theme
-            .metric_by_key("markdown.table.cell.padding_y")
-            .unwrap_or(Px(theme.metrics.padding_sm.0 * 0.5));
+        let inline_code_fg =
+            color(theme, "inline_code.fg").unwrap_or_else(|| theme.color_required("foreground"));
+        let inline_code_bg =
+            color(theme, "inline_code.bg").unwrap_or_else(|| theme.color_required("accent"));
+        let inline_code_padding_x = metric(theme, "inline_code.padding_x").unwrap_or(Px(3.0));
+        let inline_code_padding_y = metric(theme, "inline_code.padding_y").unwrap_or(Px(1.0));
 
-        let inline_math_fg = theme
-            .color_by_key("markdown.math.inline.fg")
-            .unwrap_or(inline_code_fg);
-        let inline_math_bg = theme
-            .color_by_key("markdown.math.inline.bg")
-            .unwrap_or(inline_code_bg);
-        let inline_math_padding_x = theme
-            .metric_by_key("markdown.math.inline.padding_x")
-            .unwrap_or(inline_code_padding_x);
-        let inline_math_padding_y = theme
-            .metric_by_key("markdown.math.inline.padding_y")
-            .unwrap_or(inline_code_padding_y);
+        let task_checked = color(theme, "task.checked").unwrap_or_else(|| theme.color_required("primary"));
+        let task_unchecked =
+            color(theme, "task.unchecked").unwrap_or_else(|| theme.color_required("muted-foreground"));
+
+        let table_border =
+            color(theme, "table.border").unwrap_or_else(|| theme.color_required("border"));
+        let table_header_bg =
+            color(theme, "table.header_bg").unwrap_or_else(|| theme.color_required("muted"));
+        let table_cell_padding_x =
+            metric(theme, "table.cell.padding_x").unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+        let table_cell_padding_y =
+            metric(theme, "table.cell.padding_y")
+                .unwrap_or_else(|| Px(theme.metric_required("metric.padding.sm").0 * 0.5));
+
+        let inline_math_fg = color(theme, "math.inline.fg").unwrap_or(inline_code_fg);
+        let inline_math_bg = color(theme, "math.inline.bg").unwrap_or(inline_code_bg);
+        let inline_math_padding_x =
+            metric(theme, "math.inline.padding_x").unwrap_or(inline_code_padding_x);
+        let inline_math_padding_y =
+            metric(theme, "math.inline.padding_y").unwrap_or(inline_code_padding_y);
         #[cfg(feature = "mathjax-svg")]
-        let inline_math_height = theme
-            .metric_by_key("markdown.math.inline.height")
-            .unwrap_or(theme.metrics.font_line_height);
+        let inline_math_height =
+            metric(theme, "math.inline.height").unwrap_or_else(|| theme.metric_required("metric.font.line_height"));
 
-        let math_block_fg = theme
-            .color_by_key("markdown.math.block.fg")
-            .unwrap_or(theme.colors.text_primary);
-        let math_block_bg = theme
-            .color_by_key("markdown.math.block.bg")
-            .unwrap_or(theme.colors.panel_background);
-        let math_block_padding = theme
-            .metric_by_key("markdown.math.block.padding")
-            .unwrap_or(theme.metrics.padding_md);
+        let math_block_fg =
+            color(theme, "math.block.fg").unwrap_or_else(|| theme.color_required("foreground"));
+        let math_block_bg =
+            color(theme, "math.block.bg").unwrap_or_else(|| theme.color_required("card"));
+        let math_block_padding =
+            metric(theme, "math.block.padding").unwrap_or_else(|| theme.metric_required("metric.padding.md"));
         #[cfg(feature = "mathjax-svg")]
-        let math_block_height = theme
-            .metric_by_key("markdown.math.block.height")
-            .unwrap_or(Px(theme.metrics.font_line_height.0 * 2.0));
+        let math_block_height =
+            metric(theme, "math.block.height")
+                .unwrap_or_else(|| Px(theme.metric_required("metric.font.line_height").0 * 2.0));
 
         Self {
             link,
@@ -463,17 +443,20 @@ fn render_paragraph<H: UiHost>(
     theme: &Theme,
     text: Arc<str>,
 ) -> AnyElement {
+    let font_size = theme.metric_required("metric.font.size");
+    let line_height = theme.metric_required("metric.font.line_height");
+    let fg = theme.color_required("foreground");
     cx.text_props(TextProps {
         layout: Default::default(),
         text,
         style: Some(TextStyle {
             font: FontId::default(),
-            size: theme.metrics.font_size,
+            size: font_size,
             weight: FontWeight::NORMAL,
-            line_height: Some(theme.metrics.font_line_height),
+            line_height: Some(line_height),
             letter_spacing_em: None,
         }),
-        color: Some(theme.colors.text_primary),
+        color: Some(fg),
         wrap: TextWrap::Word,
         overflow: TextOverflow::Clip,
     })
@@ -999,19 +982,22 @@ fn render_heading_inline<H: UiHost>(
     info: HeadingInfo,
     events: &[pulldown_cmark::Event<'static>],
 ) -> AnyElement {
+    let font_size = theme.metric_required("metric.font.size");
+    let line_height = theme.metric_required("metric.font.line_height");
+    let fg = theme.color_required("foreground");
     let size = match info.level {
-        1 => Px(theme.metrics.font_size.0 * 1.6),
-        2 => Px(theme.metrics.font_size.0 * 1.4),
-        3 => Px(theme.metrics.font_size.0 * 1.2),
-        _ => theme.metrics.font_size,
+        1 => Px(font_size.0 * 1.6),
+        2 => Px(font_size.0 * 1.4),
+        3 => Px(font_size.0 * 1.2),
+        _ => font_size,
     };
 
     let base = InlineBaseStyle {
         font: FontId::default(),
         size,
         weight: FontWeight::SEMIBOLD,
-        line_height: Some(Px(theme.metrics.font_line_height.0 * 1.2)),
-        color: theme.colors.text_primary,
+        line_height: Some(Px(line_height.0 * 1.2)),
+        color: fg,
     };
 
     let pieces = inline_pieces_from_events(events);
@@ -1025,12 +1011,15 @@ fn render_paragraph_inline<H: UiHost>(
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
 ) -> AnyElement {
+    let font_size = theme.metric_required("metric.font.size");
+    let line_height = theme.metric_required("metric.font.line_height");
+    let fg = theme.color_required("foreground");
     let base = InlineBaseStyle {
         font: FontId::default(),
-        size: theme.metrics.font_size,
+        size: font_size,
         weight: FontWeight::NORMAL,
-        line_height: Some(theme.metrics.font_line_height),
-        color: theme.colors.text_primary,
+        line_height: Some(line_height),
+        color: fg,
     };
 
     let pieces = inline_pieces_from_events(events);
@@ -1392,16 +1381,19 @@ fn render_table_cell<H: UiHost>(
     props.border_color = Some(markdown_theme.table_border);
     props.background = is_header.then_some(markdown_theme.table_header_bg);
 
+    let font_size = theme.metric_required("metric.font.size");
+    let line_height = theme.metric_required("metric.font.line_height");
+    let fg = theme.color_required("foreground");
     let base = InlineBaseStyle {
         font: FontId::default(),
-        size: theme.metrics.font_size,
+        size: font_size,
         weight: if is_header {
             FontWeight::SEMIBOLD
         } else {
             FontWeight::NORMAL
         },
-        line_height: Some(theme.metrics.font_line_height),
-        color: theme.colors.text_primary,
+        line_height: Some(line_height),
+        color: fg,
     };
 
     cx.container(props, |cx| {
@@ -1441,7 +1433,8 @@ fn render_math_block<H: UiHost>(
     container.padding = Edges::all(markdown_theme.math_block_padding);
     container.background = Some(markdown_theme.math_block_bg);
     container.border = Edges::all(Px(0.0));
-    container.corner_radii = fret_core::Corners::all(theme.metrics.radius_md);
+    container.corner_radii =
+        fret_core::Corners::all(theme.metric_required("metric.radius.md"));
 
     cx.scroll(scroll_props, |cx| {
         vec![cx.container(container, |cx| {
@@ -1450,9 +1443,9 @@ fn render_math_block<H: UiHost>(
                 text: latex,
                 style: Some(TextStyle {
                     font: FontId::monospace(),
-                    size: theme.metrics.mono_font_size,
+                    size: theme.metric_required("metric.font.mono_size"),
                     weight: FontWeight::NORMAL,
-                    line_height: Some(theme.metrics.mono_font_line_height),
+                    line_height: Some(theme.metric_required("metric.font.mono_line_height")),
                     letter_spacing_em: None,
                 }),
                 color: Some(markdown_theme.math_block_fg),
@@ -1480,7 +1473,8 @@ fn render_math_block_mathjax_svg<H: UiHost>(
     container.padding = Edges::all(markdown_theme.math_block_padding);
     container.background = Some(markdown_theme.math_block_bg);
     container.border = Edges::all(Px(0.0));
-    container.corner_radii = fret_core::Corners::all(theme.metrics.radius_md);
+    container.corner_radii =
+        fret_core::Corners::all(theme.metric_required("metric.radius.md"));
 
     cx.scroll(scroll_props, |cx| {
         vec![cx.container(container, |cx| match entry {
@@ -1498,9 +1492,9 @@ fn render_math_block_mathjax_svg<H: UiHost>(
                     text: latex.clone(),
                     style: Some(TextStyle {
                         font: FontId::monospace(),
-                        size: theme.metrics.mono_font_size,
+                        size: theme.metric_required("metric.font.mono_size"),
                         weight: FontWeight::NORMAL,
-                        line_height: Some(theme.metrics.mono_font_line_height),
+                        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
                         letter_spacing_em: None,
                     }),
                     color: Some(markdown_theme.math_block_fg),
@@ -1795,9 +1789,9 @@ fn render_task_list_marker<H: UiHost>(
         text: Arc::<str>::from(text.to_string()),
         style: Some(TextStyle {
             font: FontId::default(),
-            size: theme.metrics.font_size,
+            size: theme.metric_required("metric.font.size"),
             weight: FontWeight::NORMAL,
-            line_height: Some(theme.metrics.font_line_height),
+            line_height: Some(theme.metric_required("metric.font.line_height")),
             letter_spacing_em: None,
         }),
         color: Some(color),
@@ -2288,8 +2282,8 @@ fn render_inline_token<H: UiHost>(
     let (font, size, line_height) = if style.code {
         (
             FontId::monospace(),
-            theme.metrics.mono_font_size,
-            Some(theme.metrics.mono_font_line_height),
+            theme.metric_required("metric.font.mono_size"),
+            Some(theme.metric_required("metric.font.mono_line_height")),
         )
     } else {
         (base.font.clone(), base.size, base.line_height)
@@ -2319,7 +2313,7 @@ fn render_inline_token<H: UiHost>(
         };
         props.background = Some(markdown_theme.inline_code_bg);
         props.border = Edges::all(Px(0.0));
-        props.corner_radii = fret_core::Corners::all(theme.metrics.radius_sm);
+        props.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.sm"));
 
         return cx.container(props, |cx| {
             vec![cx.text_props(TextProps {
@@ -2528,9 +2522,9 @@ fn render_image_placeholder<H: UiHost>(
                 text: display_text.clone(),
                 style: Some(TextStyle {
                     font: FontId::default(),
-                    size: theme.metrics.font_size,
+                    size: theme.metric_required("metric.font.size"),
                     weight: FontWeight::NORMAL,
-                    line_height: Some(theme.metrics.font_line_height),
+                    line_height: Some(theme.metric_required("metric.font.line_height")),
                     letter_spacing_em: None,
                 }),
                 color: Some(markdown_theme.link),
@@ -2545,9 +2539,9 @@ fn render_image_placeholder<H: UiHost>(
         text: label,
         style: Some(TextStyle {
             font: FontId::default(),
-            size: theme.metrics.font_size,
+            size: theme.metric_required("metric.font.size"),
             weight: FontWeight::NORMAL,
-            line_height: Some(theme.metrics.font_line_height),
+            line_height: Some(theme.metric_required("metric.font.line_height")),
             letter_spacing_em: None,
         }),
         color: Some(markdown_theme.muted),
@@ -2577,7 +2571,7 @@ fn render_inline_math_default<H: UiHost>(
     };
     props.background = Some(markdown_theme.inline_math_bg);
     props.border = Edges::all(Px(0.0));
-    props.corner_radii = fret_core::Corners::all(theme.metrics.radius_sm);
+    props.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.sm"));
 
     cx.container(props, |cx| {
         vec![cx.text_props(TextProps {
@@ -2585,9 +2579,9 @@ fn render_inline_math_default<H: UiHost>(
             text: info.latex,
             style: Some(TextStyle {
                 font: FontId::monospace(),
-                size: theme.metrics.mono_font_size,
+                size: theme.metric_required("metric.font.mono_size"),
                 weight: FontWeight::NORMAL,
-                line_height: Some(theme.metrics.mono_font_line_height),
+                line_height: Some(theme.metric_required("metric.font.mono_line_height")),
                 letter_spacing_em: None,
             }),
             color: Some(markdown_theme.inline_math_fg),
@@ -2636,7 +2630,7 @@ fn render_inline_math_svg<H: UiHost>(
     };
     props.background = Some(markdown_theme.inline_math_bg);
     props.border = Edges::all(Px(0.0));
-    props.corner_radii = fret_core::Corners::all(theme.metrics.radius_sm);
+    props.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.sm"));
 
     cx.container(props, |cx| {
         let mut icon = SvgIconProps::new(SvgSource::Bytes(svg_bytes));
@@ -2664,7 +2658,7 @@ fn render_inline_math_source<H: UiHost>(
     };
     props.background = Some(markdown_theme.inline_math_bg);
     props.border = Edges::all(Px(0.0));
-    props.corner_radii = fret_core::Corners::all(theme.metrics.radius_sm);
+    props.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.sm"));
 
     cx.container(props, |cx| {
         vec![cx.text_props(TextProps {
@@ -2672,9 +2666,9 @@ fn render_inline_math_source<H: UiHost>(
             text: info.latex,
             style: Some(TextStyle {
                 font: FontId::monospace(),
-                size: theme.metrics.mono_font_size,
+                size: theme.metric_required("metric.font.mono_size"),
                 weight: FontWeight::NORMAL,
-                line_height: Some(theme.metrics.mono_font_line_height),
+                line_height: Some(theme.metric_required("metric.font.mono_line_height")),
                 letter_spacing_em: None,
             }),
             color: Some(markdown_theme.inline_math_fg),
