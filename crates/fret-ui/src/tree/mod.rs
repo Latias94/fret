@@ -640,7 +640,11 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub fn set_children(&mut self, parent: NodeId, children: Vec<NodeId>) {
-        let Some(old_children) = self.nodes.get(parent).map(|n| n.children.clone()) else {
+        let Some(old_children) = self
+            .nodes
+            .get_mut(parent)
+            .map(|n| std::mem::take(&mut n.children))
+        else {
             return;
         };
 
