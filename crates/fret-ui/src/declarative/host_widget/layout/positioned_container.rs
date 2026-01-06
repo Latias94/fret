@@ -1,7 +1,8 @@
 use super::super::ElementHostWidget;
 use crate::declarative::frame::layout_style_for_node;
 use crate::declarative::layout_helpers::{
-    clamp_to_constraints, layout_positioned_child, positioned_layout_style,
+    PositionedLayoutStyle, clamp_to_constraints, layout_absolute_child_with_probe_bounds,
+    layout_positioned_child, positioned_layout_style,
 };
 use crate::declarative::prelude::*;
 
@@ -30,7 +31,12 @@ impl ElementHostWidget {
         let base = Rect::new(cx.bounds.origin, desired);
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
-            layout_positioned_child(cx, child, base, positioned_layout_style(child_style));
+            match positioned_layout_style(child_style) {
+                PositionedLayoutStyle::Absolute(inset) => {
+                    layout_absolute_child_with_probe_bounds(cx, child, base, probe_bounds, inset)
+                }
+                style => layout_positioned_child(cx, child, base, style),
+            }
         }
         desired
     }
@@ -92,7 +98,12 @@ impl ElementHostWidget {
         let base = Rect::new(cx.bounds.origin, desired);
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
-            layout_positioned_child(cx, child, base, positioned_layout_style(child_style));
+            match positioned_layout_style(child_style) {
+                PositionedLayoutStyle::Absolute(inset) => {
+                    layout_absolute_child_with_probe_bounds(cx, child, base, probe_bounds, inset)
+                }
+                style => layout_positioned_child(cx, child, base, style),
+            }
         }
         desired
     }
