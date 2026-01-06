@@ -87,17 +87,31 @@ type GetSubRowsFn<'a, TData> = Box<dyn for<'r> Fn(&'r TData, usize) -> Option<&'
 
 pub struct TableBuilder<'a, TData> {
     data: &'a [TData],
+    columns: Vec<super::ColumnDef<TData>>,
     get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
+    state: super::TableState,
 }
 
 impl<'a, TData> TableBuilder<'a, TData> {
     pub fn new(data: &'a [TData]) -> Self {
         Self {
             data,
+            columns: Vec::new(),
             get_row_id: None,
             get_sub_rows: None,
+            state: super::TableState::default(),
         }
+    }
+
+    pub fn columns(mut self, columns: Vec<super::ColumnDef<TData>>) -> Self {
+        self.columns = columns;
+        self
+    }
+
+    pub fn state(mut self, state: super::TableState) -> Self {
+        self.state = state;
+        self
     }
 
     pub fn get_row_id(mut self, f: impl Fn(&TData, usize, Option<&RowId>) -> RowId + 'a) -> Self {
@@ -120,9 +134,14 @@ impl<'a, TData> TableBuilder<'a, TData> {
 
 pub struct Table<'a, TData> {
     data: &'a [TData],
+    columns: Vec<super::ColumnDef<TData>>,
     get_row_id: GetRowIdFn<'a, TData>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
+    state: super::TableState,
     core_row_model: OnceCell<RowModel<'a, TData>>,
+    sorted_row_model: OnceCell<RowModel<'a, TData>>,
+    paginated_row_model: OnceCell<RowModel<'a, TData>>,
+    selected_row_model: OnceCell<RowModel<'a, TData>>,
 }
 
 impl<'a, TData> Table<'a, TData> {
@@ -136,9 +155,14 @@ impl<'a, TData> Table<'a, TData> {
             .unwrap_or_else(|| Box::new(default_row_id_for_index_path));
         Self {
             data: builder.data,
+            columns: builder.columns,
             get_row_id,
             get_sub_rows: builder.get_sub_rows,
+            state: builder.state,
             core_row_model: OnceCell::new(),
+            sorted_row_model: OnceCell::new(),
+            paginated_row_model: OnceCell::new(),
+            selected_row_model: OnceCell::new(),
         }
     }
 
@@ -146,9 +170,51 @@ impl<'a, TData> Table<'a, TData> {
         self.data
     }
 
+    pub fn columns(&self) -> &[super::ColumnDef<TData>] {
+        &self.columns
+    }
+
+    pub fn state(&self) -> &super::TableState {
+        &self.state
+    }
+
     pub fn core_row_model(&self) -> &RowModel<'a, TData> {
         self.core_row_model.get_or_init(|| {
             build_core_row_model(self.data, &*self.get_row_id, self.get_sub_rows.as_deref())
+        })
+    }
+
+    pub fn pre_sorted_row_model(&self) -> &RowModel<'a, TData> {
+        self.core_row_model()
+    }
+
+    pub fn sorted_row_model(&self) -> &RowModel<'a, TData> {
+        self.sorted_row_model.get_or_init(|| {
+            super::sort_row_model(
+                self.pre_sorted_row_model(),
+                &self.columns,
+                &self.state.sorting,
+            )
+        })
+    }
+
+    pub fn pre_pagination_row_model(&self) -> &RowModel<'a, TData> {
+        self.sorted_row_model()
+    }
+
+    pub fn row_model(&self) -> &RowModel<'a, TData> {
+        self.paginated_row_model.get_or_init(|| {
+            super::paginate_row_model(self.pre_pagination_row_model(), self.state.pagination)
+        })
+    }
+
+    pub fn pre_selected_row_model(&self) -> &RowModel<'a, TData> {
+        self.core_row_model()
+    }
+
+    pub fn selected_row_model(&self) -> &RowModel<'a, TData> {
+        self.selected_row_model.get_or_init(|| {
+            super::select_rows_fn(self.pre_selected_row_model(), &self.state.row_selection)
         })
     }
 }
@@ -253,6 +319,7 @@ fn build_core_row_model<'a, TData>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::headless::table::{PaginationState, SortSpec, TableState, create_column_helper};
 
     #[derive(Debug, Clone)]
     struct Person {
@@ -319,5 +386,96 @@ mod tests {
         assert!(model.row_by_id("Person 0").is_some());
         assert!(model.row_by_id("Person 1").is_some());
         assert!(model.row_by_id("0").is_none());
+    }
+
+    #[derive(Debug, Clone)]
+    struct Item {
+        value: i32,
+    }
+
+    #[test]
+    fn table_sorted_row_model_uses_state_sorting() {
+        let data = vec![Item { value: 2 }, Item { value: 1 }, Item { value: 3 }];
+
+        let helper = create_column_helper::<Item>();
+        let columns = vec![helper.accessor("value", |it| it.value)];
+
+        let table = Table::builder(&data)
+            .columns(columns)
+            .state(TableState {
+                sorting: vec![SortSpec {
+                    column: "value".into(),
+                    desc: false,
+                }],
+                ..TableState::default()
+            })
+            .build();
+
+        let sorted = table.sorted_row_model();
+        let ids = sorted
+            .root_rows()
+            .iter()
+            .filter_map(|&i| sorted.row(i).map(|r| r.id.as_ref().to_string()))
+            .collect::<Vec<_>>();
+
+        assert_eq!(ids, vec!["1", "0", "2"]);
+        assert!(std::ptr::eq(sorted, table.sorted_row_model()));
+    }
+
+    #[test]
+    fn table_row_model_applies_pagination_after_sorting() {
+        let data = vec![
+            Item { value: 2 },
+            Item { value: 1 },
+            Item { value: 3 },
+            Item { value: 0 },
+        ];
+
+        let helper = create_column_helper::<Item>();
+        let columns = vec![helper.accessor("value", |it| it.value)];
+
+        let table = Table::builder(&data)
+            .columns(columns)
+            .state(TableState {
+                sorting: vec![SortSpec {
+                    column: "value".into(),
+                    desc: false,
+                }],
+                pagination: PaginationState {
+                    page_index: 0,
+                    page_size: 2,
+                },
+                ..TableState::default()
+            })
+            .build();
+
+        let paged = table.row_model();
+        let ids = paged
+            .root_rows()
+            .iter()
+            .filter_map(|&i| paged.row(i).map(|r| r.id.as_ref().to_string()))
+            .collect::<Vec<_>>();
+
+        assert_eq!(ids, vec!["3", "1"]);
+        assert!(std::ptr::eq(paged, table.row_model()));
+    }
+
+    #[test]
+    fn table_selected_row_model_uses_state_row_selection() {
+        let data = make_people(3, 0);
+        let table = Table::builder(&data)
+            .state(TableState {
+                row_selection: [("1", true)]
+                    .into_iter()
+                    .map(|(id, v)| (Arc::from(id), v))
+                    .collect(),
+                ..TableState::default()
+            })
+            .build();
+
+        let selected = table.selected_row_model();
+        assert_eq!(selected.root_rows().len(), 1);
+        assert!(selected.row_by_id("1").is_some());
+        assert!(std::ptr::eq(selected, table.selected_row_model()));
     }
 }
