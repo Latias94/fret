@@ -64,3 +64,4 @@ Fret does not have CSS animation events. Motion is composed from:
   recipes where used (e.g. NavigationMenu). (`ecosystem/fret-ui-kit/src/headless/easing.rs`)
 - Consider a shared "timeline" headless helper (progress + easing + open/close durations) if more
   components need coordinated multi-property transitions beyond opacity.
+  (`ecosystem/fret-ui-kit/src/headless/transition.rs`, `ecosystem/fret-ui-kit/src/declarative/transition.rs`)

@@ -11,6 +11,7 @@ pub mod model_watch;
 pub mod overlay_motion;
 pub mod prelude;
 pub mod presence;
+pub mod transition;
 pub mod scheduling;
 pub mod scroll;
 pub mod scroll_area_visibility;
