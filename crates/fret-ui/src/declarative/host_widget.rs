@@ -17,11 +17,13 @@ struct TextCache {
     blob: Option<fret_core::TextBlobId>,
     metrics: Option<TextMetrics>,
     prepared_scale_factor_bits: Option<u32>,
+    measured_scale_factor_bits: Option<u32>,
     last_text: Option<std::sync::Arc<str>>,
     last_style: Option<TextStyle>,
     last_wrap: Option<fret_core::TextWrap>,
     last_overflow: Option<TextOverflow>,
     last_width: Option<Px>,
+    last_measure_width: Option<Px>,
     last_theme_revision: Option<u64>,
     last_font_stack_key: Option<u64>,
 }
@@ -29,6 +31,7 @@ struct TextCache {
 pub(super) struct ElementHostWidget {
     element: GlobalElementId,
     text_cache: TextCache,
+    render_transform: Option<fret_core::Transform2D>,
     hit_testable: bool,
     hit_test_children: bool,
     focus_traversal_children: bool,
@@ -51,6 +54,7 @@ impl ElementHostWidget {
         Self {
             element,
             text_cache: TextCache::default(),
+            render_transform: None,
             hit_testable: true,
             hit_test_children: true,
             focus_traversal_children: true,
@@ -447,6 +451,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
     fn clips_hit_test(&self, _bounds: Rect) -> bool {
         self.clips_hit_test
+    }
+
+    fn render_transform(&self, _bounds: Rect) -> Option<fret_core::Transform2D> {
+        self.render_transform
     }
 
     fn clip_hit_test_corner_radii(&self, _bounds: Rect) -> Option<fret_core::Corners> {

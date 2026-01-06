@@ -1,5 +1,6 @@
 use crate::UiHost;
 use crate::elements::{ElementContext, GlobalElementId};
+use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
     Color, Corners, Edges, ImageId, NodeId, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle,
     TextWrap, UvRect,
@@ -39,6 +40,7 @@ pub enum ElementKind {
     InteractivityGate(InteractivityGateProps),
     Opacity(OpacityProps),
     VisualTransform(VisualTransformProps),
+    Anchored(AnchoredProps),
     Pressable(PressableProps),
     PointerRegion(PointerRegionProps),
     RovingFlex(RovingFlexProps),
@@ -377,6 +379,47 @@ pub struct VisualTransformProps {
     /// The runtime composes this around the element's bounds origin so that local transforms can be
     /// expressed in px relative to the element (e.g. rotate around `Point(Px(w/2), Px(h/2))`).
     pub transform: fret_core::Transform2D,
+}
+
+/// Layout-driven anchored placement wrapper for declarative element subtrees (ADR 0104).
+///
+/// This wrapper computes a placement transform during layout (based on the child's intrinsic
+/// size) and applies it via the retained runtime's `Widget::render_transform` hook.
+///
+/// Unlike `VisualTransformProps`, this affects hit-testing and pointer coordinate mapping.
+#[derive(Debug, Clone)]
+pub struct AnchoredProps {
+    pub layout: LayoutStyle,
+    /// Insets applied to the wrapper bounds before placement.
+    pub outer_margin: Edges,
+    /// Anchor rect in the same coordinate space as the wrapper bounds.
+    pub anchor: fret_core::Rect,
+    pub side: Side,
+    pub align: Align,
+    /// Gap between the anchor and the placed subtree.
+    pub side_offset: Px,
+    pub options: AnchoredPanelOptions,
+    /// Optional output model updated with the computed layout during layout.
+    pub layout_out: Option<Model<AnchoredPanelLayout>>,
+}
+
+impl Default for AnchoredProps {
+    fn default() -> Self {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+
+        Self {
+            layout,
+            outer_margin: Edges::all(Px(0.0)),
+            anchor: fret_core::Rect::default(),
+            side: Side::Bottom,
+            align: Align::Start,
+            side_offset: Px(0.0),
+            options: AnchoredPanelOptions::default(),
+            layout_out: None,
+        }
+    }
 }
 
 /// A low-level drop shadow primitive for component-level elevation recipes.

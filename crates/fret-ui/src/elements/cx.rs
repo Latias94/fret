@@ -463,6 +463,19 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn anchored_props(
+        &mut self,
+        props: crate::element::AnchoredProps,
+        f: impl FnOnce(&mut Self) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let children = f(cx);
+            AnyElement::new(id, ElementKind::Anchored(props), children)
+        })
+    }
+
+    #[track_caller]
     pub fn interactivity_gate(
         &mut self,
         present: bool,

@@ -96,6 +96,7 @@ fn build_keyed_rows(
     out
 }
 
+mod anchored;
 mod core;
 mod interactions;
 mod layout;
