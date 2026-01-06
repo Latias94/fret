@@ -103,11 +103,25 @@ pub(super) fn handle_scroll<H: UiHost>(
     let Event::Pointer(pe) = event else {
         return true;
     };
-    if let fret_core::PointerEvent::Wheel { delta, .. } = pe {
-        let scroll_x = props.axis.scroll_x();
-        let scroll_y = props.axis.scroll_y();
-        let delta_x = if scroll_x { delta.x } else { Px(0.0) };
-        let delta_y = if scroll_y { delta.y } else { Px(0.0) };
+    if let fret_core::PointerEvent::Wheel {
+        delta, modifiers, ..
+    } = pe
+    {
+        let (delta_x, delta_y) = match props.axis {
+            crate::element::ScrollAxis::X => {
+                // Trackpads often report diagonal deltas. If the gesture is primarily vertical and
+                // Shift is not held, let the parent (typically a Y-scroll) handle it.
+                if !modifiers.shift && delta.y.0.abs() > delta.x.0.abs() {
+                    (Px(0.0), Px(0.0))
+                } else if modifiers.shift && delta.x.0.abs() < 0.01 {
+                    (delta.y, Px(0.0))
+                } else {
+                    (delta.x, Px(0.0))
+                }
+            }
+            crate::element::ScrollAxis::Y => (Px(0.0), delta.y),
+            crate::element::ScrollAxis::Both => (delta.x, delta.y),
+        };
 
         let consumed = if let Some(handle) = props.scroll_handle.as_ref() {
             let prev = handle.offset();

@@ -70,14 +70,15 @@ impl MarkdownTheme {
         }
 
         let link = color(theme, "link").unwrap_or_else(|| theme.color_required("primary"));
-        let muted = color(theme, "muted").unwrap_or_else(|| theme.color_required("muted-foreground"));
+        let muted =
+            color(theme, "muted").unwrap_or_else(|| theme.color_required("muted-foreground"));
         let hr = color(theme, "hr").unwrap_or_else(|| theme.color_required("border"));
 
         let blockquote_border =
             color(theme, "blockquote.border").unwrap_or_else(|| theme.color_required("border"));
         let blockquote_border_width = metric(theme, "blockquote.border_width").unwrap_or(Px(3.0));
-        let blockquote_padding =
-            metric(theme, "blockquote.padding").unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+        let blockquote_padding = metric(theme, "blockquote.padding")
+            .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
 
         let inline_code_fg =
             color(theme, "inline_code.fg").unwrap_or_else(|| theme.color_required("foreground"));
@@ -86,19 +87,19 @@ impl MarkdownTheme {
         let inline_code_padding_x = metric(theme, "inline_code.padding_x").unwrap_or(Px(3.0));
         let inline_code_padding_y = metric(theme, "inline_code.padding_y").unwrap_or(Px(1.0));
 
-        let task_checked = color(theme, "task.checked").unwrap_or_else(|| theme.color_required("primary"));
-        let task_unchecked =
-            color(theme, "task.unchecked").unwrap_or_else(|| theme.color_required("muted-foreground"));
+        let task_checked =
+            color(theme, "task.checked").unwrap_or_else(|| theme.color_required("primary"));
+        let task_unchecked = color(theme, "task.unchecked")
+            .unwrap_or_else(|| theme.color_required("muted-foreground"));
 
         let table_border =
             color(theme, "table.border").unwrap_or_else(|| theme.color_required("border"));
         let table_header_bg =
             color(theme, "table.header_bg").unwrap_or_else(|| theme.color_required("muted"));
-        let table_cell_padding_x =
-            metric(theme, "table.cell.padding_x").unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
-        let table_cell_padding_y =
-            metric(theme, "table.cell.padding_y")
-                .unwrap_or_else(|| Px(theme.metric_required("metric.padding.sm").0 * 0.5));
+        let table_cell_padding_x = metric(theme, "table.cell.padding_x")
+            .unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+        let table_cell_padding_y = metric(theme, "table.cell.padding_y")
+            .unwrap_or_else(|| Px(theme.metric_required("metric.padding.sm").0 * 0.5));
 
         let inline_math_fg = color(theme, "math.inline.fg").unwrap_or(inline_code_fg);
         let inline_math_bg = color(theme, "math.inline.bg").unwrap_or(inline_code_bg);
@@ -107,19 +108,18 @@ impl MarkdownTheme {
         let inline_math_padding_y =
             metric(theme, "math.inline.padding_y").unwrap_or(inline_code_padding_y);
         #[cfg(feature = "mathjax-svg")]
-        let inline_math_height =
-            metric(theme, "math.inline.height").unwrap_or_else(|| theme.metric_required("metric.font.line_height"));
+        let inline_math_height = metric(theme, "math.inline.height")
+            .unwrap_or_else(|| theme.metric_required("metric.font.line_height"));
 
         let math_block_fg =
             color(theme, "math.block.fg").unwrap_or_else(|| theme.color_required("foreground"));
         let math_block_bg =
             color(theme, "math.block.bg").unwrap_or_else(|| theme.color_required("card"));
-        let math_block_padding =
-            metric(theme, "math.block.padding").unwrap_or_else(|| theme.metric_required("metric.padding.md"));
+        let math_block_padding = metric(theme, "math.block.padding")
+            .unwrap_or_else(|| theme.metric_required("metric.padding.md"));
         #[cfg(feature = "mathjax-svg")]
-        let math_block_height =
-            metric(theme, "math.block.height")
-                .unwrap_or_else(|| Px(theme.metric_required("metric.font.line_height").0 * 2.0));
+        let math_block_height = metric(theme, "math.block.height")
+            .unwrap_or_else(|| Px(theme.metric_required("metric.font.line_height").0 * 2.0));
 
         Self {
             link,
@@ -436,30 +436,6 @@ impl<H: UiHost> MarkdownComponents<H> {
         self.on_link_activate = Some(on_link_activate_open_url());
         self
     }
-}
-
-fn render_paragraph<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
-    text: Arc<str>,
-) -> AnyElement {
-    let font_size = theme.metric_required("metric.font.size");
-    let line_height = theme.metric_required("metric.font.line_height");
-    let fg = theme.color_required("foreground");
-    cx.text_props(TextProps {
-        layout: Default::default(),
-        text,
-        style: Some(TextStyle {
-            font: FontId::default(),
-            size: font_size,
-            weight: FontWeight::NORMAL,
-            line_height: Some(line_height),
-            letter_spacing_em: None,
-        }),
-        color: Some(fg),
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Clip,
-    })
 }
 
 fn parse_fenced_code_language(info: &str) -> Option<Arc<str>> {
@@ -950,7 +926,9 @@ fn render_mdstream_block_with_events<H: UiHost>(
         mdstream::BlockKind::MathBlock => {
             render_pulldown_events_root(cx, theme, markdown_theme, components, events)
         }
-        _ => {
+        mdstream::BlockKind::HtmlBlock
+        | mdstream::BlockKind::FootnoteDefinition
+        | mdstream::BlockKind::Unknown => {
             let info = RawBlockInfo {
                 kind: raw_block_kind_from_mdstream(block.kind),
                 text: Arc::<str>::from(block.display_or_raw().trim_end().to_string()),
@@ -958,7 +936,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
             if let Some(render) = &components.raw_block {
                 render(cx, info)
             } else {
-                render_paragraph(cx, theme, info.text)
+                render_pulldown_events_root(cx, theme, markdown_theme, components, events)
             }
         }
     }
@@ -1433,8 +1411,7 @@ fn render_math_block<H: UiHost>(
     container.padding = Edges::all(markdown_theme.math_block_padding);
     container.background = Some(markdown_theme.math_block_bg);
     container.border = Edges::all(Px(0.0));
-    container.corner_radii =
-        fret_core::Corners::all(theme.metric_required("metric.radius.md"));
+    container.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.md"));
 
     cx.scroll(scroll_props, |cx| {
         vec![cx.container(container, |cx| {
@@ -1473,8 +1450,7 @@ fn render_math_block_mathjax_svg<H: UiHost>(
     container.padding = Edges::all(markdown_theme.math_block_padding);
     container.background = Some(markdown_theme.math_block_bg);
     container.border = Edges::all(Px(0.0));
-    container.corner_radii =
-        fret_core::Corners::all(theme.metric_required("metric.radius.md"));
+    container.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.md"));
 
     cx.scroll(scroll_props, |cx| {
         vec![cx.container(container, |cx| match entry {
@@ -2561,7 +2537,6 @@ fn render_inline_math_default<H: UiHost>(
         return render_inline_math_mathjax_svg(cx, theme, markdown_theme, info);
     }
 
-    #[cfg(not(feature = "mathjax-svg"))]
     let mut props = ContainerProps::default();
     props.padding = Edges {
         top: markdown_theme.inline_math_padding_y,
