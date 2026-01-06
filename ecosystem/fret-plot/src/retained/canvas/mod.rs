@@ -3259,32 +3259,34 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
             let background = self.style.background.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.background", "plot.background")
-                    .unwrap_or(theme.colors.panel_background)
+                    .unwrap_or_else(|| theme.color_required("card"))
             });
             let border = self.style.border.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.border", "plot.border")
-                    .unwrap_or(theme.colors.panel_border)
+                    .unwrap_or_else(|| theme.color_required("border"))
             });
 
             let axis_color = self.style.axis_color.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.axis", "plot.axis")
-                    .unwrap_or(theme.colors.panel_border)
+                    .unwrap_or_else(|| theme.color_required("border"))
             });
             let grid_color = self.style.grid_color.unwrap_or_else(|| {
-                crate::theme_tokens::color(theme, "fret.plot.grid", "plot.grid").unwrap_or(Color {
-                    a: 0.35,
-                    ..theme.colors.panel_border
-                })
+                crate::theme_tokens::color(theme, "fret.plot.grid", "plot.grid").unwrap_or_else(
+                    || Color {
+                        a: 0.35,
+                        ..theme.color_required("border")
+                    },
+                )
             });
             let label_color = self.style.label_color.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.label", "plot.label")
-                    .unwrap_or(theme.colors.text_muted)
+                    .unwrap_or_else(|| theme.color_required("muted-foreground"))
             });
             let crosshair_color = self.style.crosshair_color.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.crosshair", "plot.crosshair")
-                    .unwrap_or(Color {
+                    .unwrap_or_else(|| Color {
                         a: 0.65,
-                        ..theme.colors.accent
+                        ..theme.color_required("primary")
                     })
             });
 
@@ -3310,20 +3312,18 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     "fret.plot.tooltip.background",
                     "plot.tooltip.background",
                 )
-                .unwrap_or(theme.colors.menu_background)
+                .unwrap_or_else(|| theme.color_required("popover"))
             });
             let tooltip_border = self.style.tooltip_border.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.tooltip.border", "plot.tooltip.border")
-                    .unwrap_or(theme.colors.menu_border)
+                    .unwrap_or_else(|| theme.color_required("popover.border"))
             });
             let tooltip_text_color = self.style.tooltip_text_color.unwrap_or_else(|| {
                 crate::theme_tokens::color(theme, "fret.plot.tooltip.text", "plot.tooltip.text")
-                    .unwrap_or(theme.colors.text_primary)
+                    .unwrap_or_else(|| theme.color_required("popover-foreground"))
             });
 
-            let theme_font_size = theme
-                .metric_by_key("font.size")
-                .unwrap_or(theme.metrics.font_size);
+            let theme_font_size = theme.metric_required("metric.font.size");
 
             (
                 theme.revision(),

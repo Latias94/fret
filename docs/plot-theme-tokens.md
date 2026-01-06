@@ -10,7 +10,7 @@ For each token, resolution follows this precedence:
 
 1. `fret.plot.*` (preferred, framework-owned)
 2. `plot.*` (compatibility / third-party themes)
-3. Typed theme baseline (`theme.colors.*`) fallback
+3. Semantic theme keys fallback (e.g. `card`, `border`, `metric.*`)
 
 Notes:
 
@@ -22,17 +22,17 @@ Notes:
 
 All tokens below are optional.
 
-- `fret.plot.background` (fallback: `theme.colors.panel_background`)
-- `fret.plot.border` (fallback: `theme.colors.panel_border`)
-- `fret.plot.axis` (fallback: `theme.colors.panel_border`)
-- `fret.plot.grid` (fallback: `Color { a: 0.35, ..theme.colors.panel_border }`)
-- `fret.plot.label` (fallback: `theme.colors.text_muted`)
-- `fret.plot.crosshair` (fallback: `Color { a: 0.65, ..theme.colors.accent }`)
+- `fret.plot.background` (fallback: `card`)
+- `fret.plot.border` (fallback: `border`)
+- `fret.plot.axis` (fallback: `border`)
+- `fret.plot.grid` (fallback: `Color { a: 0.35, ..border }`)
+- `fret.plot.label` (fallback: `muted-foreground`)
+- `fret.plot.crosshair` (fallback: `Color { a: 0.65, ..primary }`)
 - `fret.plot.selection.stroke` (fallback: `fret.plot.crosshair`)
 - `fret.plot.selection.fill` (fallback: `Color { a: 0.18 * selection_stroke.a, ..selection_stroke }`)
-- `fret.plot.tooltip.background` (fallback: `theme.colors.menu_background`)
-- `fret.plot.tooltip.border` (fallback: `theme.colors.menu_border`)
-- `fret.plot.tooltip.text` (fallback: `theme.colors.text_primary`)
+- `fret.plot.tooltip.background` (fallback: `popover`)
+- `fret.plot.tooltip.border` (fallback: `popover.border`)
+- `fret.plot.tooltip.text` (fallback: `popover-foreground`)
 
 Compatibility keys:
 
