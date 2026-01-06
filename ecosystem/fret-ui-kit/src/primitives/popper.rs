@@ -8,7 +8,9 @@ use fret_ui::overlay_placement::{
     AnchoredPanelLayout, AnchoredPanelOptions, anchored_panel_layout_sized_ex,
 };
 
-pub use fret_ui::overlay_placement::{Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset, Side};
+pub use fret_ui::overlay_placement::{
+    Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset, Side,
+};
 
 /// Build `AnchoredPanelOptions` for popper-like floating content.
 ///

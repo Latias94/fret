@@ -148,13 +148,9 @@ pub fn popover_request(
     children: Vec<AnyElement>,
 ) -> OverlayRequest {
     let mut request = match options.variant {
-        PopoverVariant::NonModal => OverlayRequest::dismissible_popover(
-            id,
-            trigger,
-            open,
-            presence,
-            children,
-        ),
+        PopoverVariant::NonModal => {
+            OverlayRequest::dismissible_popover(id, trigger, open, presence, children)
+        }
         PopoverVariant::Modal => OverlayRequest::modal(id, Some(trigger), open, presence, children),
     };
 
@@ -279,7 +275,10 @@ mod tests {
         assert_eq!(req.kind, crate::OverlayKind::NonModalDismissible);
         assert_eq!(req.consume_outside_pointer_events, true);
         assert_eq!(req.initial_focus, Some(focus));
-        assert_eq!(req.root_name.as_deref(), Some(popover_root_name(id).as_str()));
+        assert_eq!(
+            req.root_name.as_deref(),
+            Some(popover_root_name(id).as_str())
+        );
 
         let req = popover_request(
             id,

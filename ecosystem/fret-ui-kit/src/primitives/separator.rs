@@ -2,8 +2,8 @@ use fret_core::Px;
 use fret_ui::element::{AnyElement, ContainerProps, Length, SizeStyle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use crate::declarative::style as decl_style;
 use crate::LayoutRefinement;
+use crate::declarative::style as decl_style;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SeparatorOrientation {
@@ -87,4 +87,3 @@ impl Separator {
 pub fn separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     Separator::new().into_element(cx)
 }
-

@@ -179,8 +179,7 @@ mod tests {
             )
         }
 
-        fn release(&mut self, _blob: TextBlobId) {
-        }
+        fn release(&mut self, _blob: TextBlobId) {}
     }
 
     impl PathService for FakeUiServices {
@@ -193,8 +192,7 @@ mod tests {
             (PathId::default(), PathMetrics::default())
         }
 
-        fn release(&mut self, _path: PathId) {
-        }
+        fn release(&mut self, _path: PathId) {}
     }
 
     #[test]

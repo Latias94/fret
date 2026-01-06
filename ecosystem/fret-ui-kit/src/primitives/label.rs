@@ -50,4 +50,3 @@ pub fn label<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>
         overflow: TextOverflow::Clip,
     })
 }
-

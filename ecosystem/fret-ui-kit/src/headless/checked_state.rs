@@ -48,7 +48,11 @@ impl CheckedState {
 
 impl From<bool> for CheckedState {
     fn from(value: bool) -> Self {
-        if value { Self::Checked } else { Self::Unchecked }
+        if value {
+            Self::Checked
+        } else {
+            Self::Unchecked
+        }
     }
 }
 
@@ -76,4 +80,3 @@ mod tests {
         assert_eq!(CheckedState::Indeterminate.to_semantics_checked(), None);
     }
 }
-

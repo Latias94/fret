@@ -308,8 +308,14 @@ mod tests {
 
     #[test]
     fn match_ranges_empty_when_search_empty() {
-        assert_eq!(command_match_ranges("Open File", ""), Vec::<Range<usize>>::new());
-        assert_eq!(command_match_ranges("Open File", "   "), Vec::<Range<usize>>::new());
+        assert_eq!(
+            command_match_ranges("Open File", ""),
+            Vec::<Range<usize>>::new()
+        );
+        assert_eq!(
+            command_match_ranges("Open File", "   "),
+            Vec::<Range<usize>>::new()
+        );
     }
 
     #[test]

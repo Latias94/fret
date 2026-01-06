@@ -484,7 +484,12 @@ impl OverlayController {
         open_ticks: u64,
         close_ticks: u64,
     ) -> TransitionOutput {
-        crate::declarative::transition::drive_transition_with_durations(cx, open, open_ticks, close_ticks)
+        crate::declarative::transition::drive_transition_with_durations(
+            cx,
+            open,
+            open_ticks,
+            close_ticks,
+        )
     }
 
     /// Drive a transition timeline with an explicit easing function.

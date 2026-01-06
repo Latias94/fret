@@ -3,7 +3,9 @@ use fret_core::{AppWindowId, ImageColorSpace, ImageId};
 use fret_runtime::{EffectSink, GlobalsHost, TimeHost};
 use fret_ui_kit::primitives::avatar::AvatarImageLoadingStatus;
 
-use crate::image_asset_state::{ImageLoadingStatus, image_state_from_asset_cache, use_rgba8_image_state};
+use crate::image_asset_state::{
+    ImageLoadingStatus, image_state_from_asset_cache, use_rgba8_image_state,
+};
 
 /// Maps an `ImageAssetCache` entry to Radix-like avatar image loading outcomes.
 ///

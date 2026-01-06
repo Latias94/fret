@@ -97,4 +97,3 @@ mod tests {
         assert!(!fallback_visible(AvatarImageLoadingStatus::Loading, false));
     }
 }
-

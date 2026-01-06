@@ -19,7 +19,11 @@ pub fn update_single_slider_model_from_pointer_x(
     step: f32,
     thumb_size: Px,
 ) {
-    let step = if step.is_finite() && step > 0.0 { step } else { 1.0 };
+    let step = if step.is_finite() && step > 0.0 {
+        step
+    } else {
+        1.0
+    };
 
     let thumb_size = thumb_size.0.max(0.0);
     let track_w = (bounds.size.width.0 - thumb_size).max(0.0);
@@ -41,4 +45,3 @@ pub fn update_single_slider_model_from_pointer_x(
     next[0] = v;
     let _ = host.models_mut().update(model, |values| *values = next);
 }
-

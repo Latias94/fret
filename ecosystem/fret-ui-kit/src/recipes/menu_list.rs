@@ -39,7 +39,8 @@ pub fn resolve_menu_list_row_chrome(theme: &Theme, size: Size) -> MenuListRowChr
         .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme));
 
     let disabled_text_color = alpha_mul(
-        theme.color_by_key("muted-foreground")
+        theme
+            .color_by_key("muted-foreground")
             .unwrap_or_else(|| theme.color_required("muted-foreground")),
         0.5,
     );

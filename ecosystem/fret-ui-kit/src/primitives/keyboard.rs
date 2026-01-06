@@ -13,4 +13,3 @@ use fret_core::KeyCode;
 pub fn consume_enter_key_handler() -> fret_ui::action::OnKeyDown {
     Arc::new(|_host, _cx, down| matches!(down.key, KeyCode::Enter | KeyCode::NumpadEnter))
 }
-

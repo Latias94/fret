@@ -126,4 +126,3 @@ mod tests {
         assert!((a3.opacity - 1.0).abs() < 1e-6);
     }
 }
-

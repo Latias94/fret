@@ -65,7 +65,9 @@ impl Progress {
 
     fn value<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Option<f32> {
         match &self.model {
-            ProgressModel::Determinate(model) => Some(cx.watch_model(model).copied().unwrap_or(self.min)),
+            ProgressModel::Determinate(model) => {
+                Some(cx.watch_model(model).copied().unwrap_or(self.min))
+            }
             ProgressModel::Optional(model) => cx.watch_model(model).copied().flatten(),
         }
     }

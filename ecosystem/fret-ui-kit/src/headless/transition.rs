@@ -194,14 +194,9 @@ mod tests {
     fn can_use_shadcn_cubic_bezier_easing() {
         let mut t = TransitionTimeline::default();
         t.set_durations(4, 4);
-        let out = t.update_with_easing(
-            true,
-            0,
-            |x| crate::headless::easing::SHADCN_EASE.sample(x),
-        );
+        let out = t.update_with_easing(true, 0, |x| crate::headless::easing::SHADCN_EASE.sample(x));
         assert!(out.present);
         assert!(out.animating);
         assert!(out.progress >= 0.0 && out.progress <= 1.0);
     }
 }
-

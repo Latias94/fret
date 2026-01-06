@@ -8,6 +8,7 @@ default = []
 
 syntax-rust = ["fret-code-view/syntax-rust"]
 syntax-all = ["fret-code-view/syntax-all"]
+mathjax-svg = ["dep:mathjax_svg"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
@@ -17,3 +18,4 @@ fret-ui-kit = { path = "../fret-ui-kit" }
 fret-code-view = { path = "../fret-code-view", default-features = false }
 pulldown-cmark.workspace = true
 mdstream = { workspace = true, features = ["pulldown"] }
+mathjax_svg = { workspace = true, optional = true }

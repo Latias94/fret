@@ -320,7 +320,9 @@ pub fn overflow_scroll_vstack<H: UiHost>(
     vstack: stack::VStackProps,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
-    overflow_scroll_content(cx, layout, show_scrollbar, |cx| stack::vstack(cx, vstack, f))
+    overflow_scroll_content(cx, layout, show_scrollbar, |cx| {
+        stack::vstack(cx, vstack, f)
+    })
 }
 
 /// Horizontal scrolling with a single content root.
@@ -404,7 +406,9 @@ pub fn overflow_scroll_x_vstack<H: UiHost>(
     vstack: stack::VStackProps,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
-    overflow_scroll_x_content(cx, layout, show_scrollbar_x, |cx| stack::vstack(cx, vstack, f))
+    overflow_scroll_x_content(cx, layout, show_scrollbar_x, |cx| {
+        stack::vstack(cx, vstack, f)
+    })
 }
 
 /// Like `overflow_scroll_with_handle_xy`, but enforces a single content root.
@@ -416,7 +420,12 @@ pub fn overflow_scroll_with_handle_xy_content<H: UiHost>(
     handle: ScrollHandle,
     content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
 ) -> AnyElement {
-    overflow_scroll_with_handle_xy(cx, layout, show_scrollbar_x, show_scrollbar_y, handle, |cx| {
-        vec![content(cx)]
-    })
+    overflow_scroll_with_handle_xy(
+        cx,
+        layout,
+        show_scrollbar_x,
+        show_scrollbar_y,
+        handle,
+        |cx| vec![content(cx)],
+    )
 }

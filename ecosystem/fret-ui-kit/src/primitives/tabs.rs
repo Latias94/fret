@@ -15,8 +15,8 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, UiHost};
 
-use crate::declarative::action_hooks::ActionHooksExt as _;
 use crate::declarative::ModelWatchExt;
+use crate::declarative::action_hooks::ActionHooksExt as _;
 
 /// Matches Radix Tabs `orientation` outcome: horizontal (default) vs vertical layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

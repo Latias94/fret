@@ -30,4 +30,3 @@ pub fn collapsible_trigger_a11y(label: Option<Arc<str>>, open: bool) -> Pressabl
         ..Default::default()
     }
 }
-

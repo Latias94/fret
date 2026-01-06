@@ -129,6 +129,7 @@ pub fn active_highlight_name() -> Option<&'static str> {
     })
 }
 
+#[allow(clippy::vec_init_then_push)]
 pub fn supported_languages() -> &'static [&'static str] {
     static SUPPORTED: OnceLock<Vec<&'static str>> = OnceLock::new();
     SUPPORTED.get_or_init(|| {
@@ -206,9 +207,7 @@ fn normalize_language_name(language: &str) -> &str {
     let s = language.trim();
     if s.eq_ignore_ascii_case("rs") {
         "rust"
-    } else if s.eq_ignore_ascii_case("sh") {
-        "bash"
-    } else if s.eq_ignore_ascii_case("shell") {
+    } else if s.eq_ignore_ascii_case("sh") || s.eq_ignore_ascii_case("shell") {
         "bash"
     } else if s.eq_ignore_ascii_case("js") || s.eq_ignore_ascii_case("jsx") {
         "javascript"

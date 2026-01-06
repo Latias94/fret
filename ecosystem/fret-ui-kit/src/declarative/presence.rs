@@ -37,4 +37,3 @@ pub fn fade_presence_with_durations<H: UiHost>(
         animating: out.animating,
     }
 }
-

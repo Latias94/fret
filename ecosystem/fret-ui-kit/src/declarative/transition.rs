@@ -131,4 +131,3 @@ mod tests {
         assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
     }
 }
-

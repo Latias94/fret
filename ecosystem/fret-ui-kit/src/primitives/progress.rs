@@ -48,4 +48,3 @@ mod tests {
         assert_eq!(normalize_progress_opt(Some(5.0), 0.0, 10.0), Some(0.5));
     }
 }
-

@@ -58,7 +58,10 @@ mod tests {
 
     #[test]
     fn optional_bool_maps_to_tristate() {
-        assert_eq!(checked_state_from_optional_bool(None), CheckedState::Indeterminate);
+        assert_eq!(
+            checked_state_from_optional_bool(None),
+            CheckedState::Indeterminate
+        );
         assert_eq!(
             checked_state_from_optional_bool(Some(true)),
             CheckedState::Checked

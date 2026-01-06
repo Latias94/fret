@@ -76,4 +76,3 @@ mod tests {
         assert_eq!(format_semantics_value(12.00001).as_ref(), "12");
     }
 }
-

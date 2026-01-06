@@ -16,9 +16,8 @@
 pub use crate::headless::tooltip_delay_group::{TooltipDelayGroupConfig, TooltipDelayGroupState};
 
 pub use crate::tooltip_provider::{
-    TooltipProviderConfig, current_config, note_closed, open_delay_ticks, open_delay_ticks_with_base,
-    with_tooltip_provider,
+    TooltipProviderConfig, current_config, note_closed, open_delay_ticks,
+    open_delay_ticks_with_base, with_tooltip_provider,
 };
 
 pub use crate::primitives::popper::{Align, ArrowOptions, LayoutDirection, Side};
-

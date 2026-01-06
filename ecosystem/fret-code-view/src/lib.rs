@@ -158,9 +158,7 @@ fn render_code_line<H: UiHost>(
             .into_iter()
             .map(|(text, highlight)| {
                 let fg = theme.color_required("foreground");
-                let color = highlight
-                    .and_then(|h| syntax_color(theme, h))
-                    .unwrap_or(fg);
+                let color = highlight.and_then(|h| syntax_color(theme, h)).unwrap_or(fg);
                 cx.text_props(TextProps {
                     layout: Default::default(),
                     text: Arc::<str>::from(text),
@@ -190,7 +188,9 @@ fn syntax_color(theme: &Theme, highlight: &str) -> Option<Color> {
         // These are still treated as editor-ish baseline tokens until a dedicated SyntaxTheme
         // subsystem lands.
         "string" => Some(theme.color_required("color.viewport.gizmo.y")),
-        "number" | "boolean" | "constant" => Some(theme.color_required("color.viewport.rotate_gizmo")),
+        "number" | "boolean" | "constant" => {
+            Some(theme.color_required("color.viewport.rotate_gizmo"))
+        }
         "type" | "constructor" => Some(theme.color_required("color.viewport.marker")),
         "function" => Some(theme.color_required("color.viewport.drag_line.orbit")),
         _ => None,

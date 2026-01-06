@@ -28,8 +28,8 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::headless::roving_focus;
 pub use crate::headless::select_item_aligned::{
-    select_item_aligned_position, SelectItemAlignedInputs, SelectItemAlignedOutputs,
-    SELECT_ITEM_ALIGNED_CONTENT_MARGIN,
+    SELECT_ITEM_ALIGNED_CONTENT_MARGIN, SelectItemAlignedInputs, SelectItemAlignedOutputs,
+    select_item_aligned_position,
 };
 use crate::headless::typeahead;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};

@@ -9,13 +9,20 @@ use fret_runtime::Effect;
 use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableProps, ScrollAxis, ScrollProps, TextProps,
+    PositionStyle, PressableProps, ScrollAxis, ScrollProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{LayoutRefinement, Space};
 
 pub use mdstream::BlockId;
+
+#[cfg(feature = "mathjax-svg")]
+use fret_core::SvgFit;
+#[cfg(feature = "mathjax-svg")]
+use fret_ui::SvgSource;
+#[cfg(feature = "mathjax-svg")]
+use fret_ui::element::SvgIconProps;
 
 #[derive(Debug, Clone, Copy)]
 struct MarkdownTheme {
@@ -35,6 +42,17 @@ struct MarkdownTheme {
     table_header_bg: fret_core::Color,
     table_cell_padding_x: Px,
     table_cell_padding_y: Px,
+    inline_math_fg: fret_core::Color,
+    inline_math_bg: fret_core::Color,
+    inline_math_padding_x: Px,
+    inline_math_padding_y: Px,
+    #[cfg(feature = "mathjax-svg")]
+    inline_math_height: Px,
+    math_block_fg: fret_core::Color,
+    math_block_bg: fret_core::Color,
+    math_block_padding: Px,
+    #[cfg(feature = "mathjax-svg")]
+    math_block_height: Px,
 }
 
 impl MarkdownTheme {
@@ -92,6 +110,37 @@ impl MarkdownTheme {
             .metric_by_key("markdown.table.cell.padding_y")
             .unwrap_or(Px(theme.metrics.padding_sm.0 * 0.5));
 
+        let inline_math_fg = theme
+            .color_by_key("markdown.math.inline.fg")
+            .unwrap_or(inline_code_fg);
+        let inline_math_bg = theme
+            .color_by_key("markdown.math.inline.bg")
+            .unwrap_or(inline_code_bg);
+        let inline_math_padding_x = theme
+            .metric_by_key("markdown.math.inline.padding_x")
+            .unwrap_or(inline_code_padding_x);
+        let inline_math_padding_y = theme
+            .metric_by_key("markdown.math.inline.padding_y")
+            .unwrap_or(inline_code_padding_y);
+        #[cfg(feature = "mathjax-svg")]
+        let inline_math_height = theme
+            .metric_by_key("markdown.math.inline.height")
+            .unwrap_or(theme.metrics.font_line_height);
+
+        let math_block_fg = theme
+            .color_by_key("markdown.math.block.fg")
+            .unwrap_or(theme.colors.text_primary);
+        let math_block_bg = theme
+            .color_by_key("markdown.math.block.bg")
+            .unwrap_or(theme.colors.panel_background);
+        let math_block_padding = theme
+            .metric_by_key("markdown.math.block.padding")
+            .unwrap_or(theme.metrics.padding_md);
+        #[cfg(feature = "mathjax-svg")]
+        let math_block_height = theme
+            .metric_by_key("markdown.math.block.height")
+            .unwrap_or(Px(theme.metrics.font_line_height.0 * 2.0));
+
         Self {
             link,
             muted,
@@ -109,6 +158,17 @@ impl MarkdownTheme {
             table_header_bg,
             table_cell_padding_x,
             table_cell_padding_y,
+            inline_math_fg,
+            inline_math_bg,
+            inline_math_padding_x,
+            inline_math_padding_y,
+            #[cfg(feature = "mathjax-svg")]
+            inline_math_height,
+            math_block_fg,
+            math_block_bg,
+            math_block_padding,
+            #[cfg(feature = "mathjax-svg")]
+            math_block_height,
         }
     }
 }
@@ -196,9 +256,54 @@ pub struct CodeBlockInfo {
 }
 
 #[derive(Debug, Clone)]
+pub struct InlineMathInfo {
+    pub latex: Arc<str>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MathBlockInfo {
+    pub latex: Arc<str>,
+}
+
+#[derive(Debug, Clone)]
 pub struct RawBlockInfo {
     pub kind: RawBlockKind,
     pub text: Arc<str>,
+}
+
+#[cfg(feature = "mathjax-svg")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum MathJaxMode {
+    Inline,
+    Display,
+}
+
+#[cfg(feature = "mathjax-svg")]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct MathJaxKey {
+    mode: MathJaxMode,
+    latex: String,
+}
+
+#[cfg(feature = "mathjax-svg")]
+#[derive(Debug, Clone)]
+struct MathJaxSvgReady {
+    svg_bytes: Arc<[u8]>,
+    aspect_ratio: Option<f32>,
+}
+
+#[cfg(feature = "mathjax-svg")]
+#[derive(Debug, Clone)]
+enum MathJaxSvgEntry {
+    Loading,
+    Ready(MathJaxSvgReady),
+    Error(Arc<str>),
+}
+
+#[cfg(feature = "mathjax-svg")]
+#[derive(Default, Clone)]
+struct MathJaxSvgCache {
+    inner: Arc<std::sync::Mutex<std::collections::HashMap<MathJaxKey, MathJaxSvgEntry>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -252,6 +357,10 @@ pub type ThematicBreakRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, ThematicBreakInfo) -> AnyElement;
 pub type LinkRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, LinkInfo) -> AnyElement;
 pub type ImageRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, ImageInfo) -> AnyElement;
+pub type InlineMathRenderer<H> =
+    dyn for<'a> Fn(&mut ElementContext<'a, H>, InlineMathInfo) -> AnyElement;
+pub type MathBlockRenderer<H> =
+    dyn for<'a> Fn(&mut ElementContext<'a, H>, MathBlockInfo) -> AnyElement;
 pub type OnLinkActivate =
     Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason, LinkInfo) + 'static>;
 
@@ -314,6 +423,10 @@ pub struct MarkdownComponents<H: UiHost> {
     /// - `fret-markdown` does not fetch images. The host is responsible for loading and caching.
     /// - See `ecosystem/fret-app-kit` helpers for integrating `ImageAssetCache` / `SvgAssetCache`.
     pub image: Option<Arc<ImageRenderer<H>>>,
+    /// Render an inline math span (`$...$`).
+    pub inline_math: Option<Arc<InlineMathRenderer<H>>>,
+    /// Render a display math block (`$$...$$`).
+    pub math_block: Option<Arc<MathBlockRenderer<H>>>,
     pub on_link_activate: Option<OnLinkActivate>,
 }
 
@@ -331,6 +444,8 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
             thematic_break: None,
             link: None,
             image: None,
+            inline_math: None,
+            math_block: None,
             on_link_activate: None,
         }
     }
@@ -849,6 +964,9 @@ fn render_mdstream_block_with_events<H: UiHost>(
                 render_pulldown_events_root(cx, theme, markdown_theme, components, events)
             }
         }
+        mdstream::BlockKind::MathBlock => {
+            render_pulldown_events_root(cx, theme, markdown_theme, components, events)
+        }
         _ => {
             let info = RawBlockInfo {
                 kind: raw_block_kind_from_mdstream(block.kind),
@@ -1044,6 +1162,16 @@ fn render_pulldown_blocks<H: UiHost>(
                 events,
                 cursor,
             )),
+            Event::DisplayMath(latex) => {
+                out.push(render_math_block(
+                    cx,
+                    theme,
+                    markdown_theme,
+                    components,
+                    Arc::<str>::from(latex.to_string()),
+                ));
+                *cursor += 1;
+            }
             Event::Rule => {
                 out.push(render_thematic_break(cx, theme, markdown_theme));
                 *cursor += 1;
@@ -1246,6 +1374,9 @@ fn render_table_cell<H: UiHost>(
     justify: MainAlign,
 ) -> AnyElement {
     let mut props = ContainerProps::default();
+    props.layout.flex.grow = 1.0;
+    props.layout.flex.basis = Length::Px(Px(0.0));
+    props.layout.size.min_width = Some(Px(0.0));
     props.padding = Edges {
         top: markdown_theme.table_cell_padding_y,
         right: markdown_theme.table_cell_padding_x,
@@ -1281,9 +1412,103 @@ fn render_table_cell<H: UiHost>(
             components,
             base,
             &pieces,
-            InlineLineWidth::Auto,
             justify,
         )]
+    })
+}
+
+fn render_math_block<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
+    latex: Arc<str>,
+) -> AnyElement {
+    if let Some(render) = &components.math_block {
+        return render(cx, MathBlockInfo { latex });
+    }
+
+    #[cfg(feature = "mathjax-svg")]
+    {
+        return render_math_block_mathjax_svg(cx, theme, markdown_theme, latex);
+    }
+
+    let mut scroll_props = ScrollProps::default();
+    scroll_props.axis = ScrollAxis::X;
+
+    let mut container = ContainerProps::default();
+    container.layout.size.width = Length::Fill;
+    container.padding = Edges::all(markdown_theme.math_block_padding);
+    container.background = Some(markdown_theme.math_block_bg);
+    container.border = Edges::all(Px(0.0));
+    container.corner_radii = fret_core::Corners::all(theme.metrics.radius_md);
+
+    cx.scroll(scroll_props, |cx| {
+        vec![cx.container(container, |cx| {
+            vec![cx.text_props(TextProps {
+                layout: Default::default(),
+                text: latex,
+                style: Some(TextStyle {
+                    font: FontId::monospace(),
+                    size: theme.metrics.mono_font_size,
+                    weight: FontWeight::NORMAL,
+                    line_height: Some(theme.metrics.mono_font_line_height),
+                    letter_spacing_em: None,
+                }),
+                color: Some(markdown_theme.math_block_fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })]
+        })]
+    })
+}
+
+#[cfg(feature = "mathjax-svg")]
+fn render_math_block_mathjax_svg<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    latex: Arc<str>,
+) -> AnyElement {
+    let entry = mathjax_svg_entry(cx, MathJaxMode::Display, latex.as_ref());
+
+    let mut scroll_props = ScrollProps::default();
+    scroll_props.axis = ScrollAxis::X;
+
+    let mut container = ContainerProps::default();
+    container.layout.size.width = Length::Fill;
+    container.padding = Edges::all(markdown_theme.math_block_padding);
+    container.background = Some(markdown_theme.math_block_bg);
+    container.border = Edges::all(Px(0.0));
+    container.corner_radii = fret_core::Corners::all(theme.metrics.radius_md);
+
+    cx.scroll(scroll_props, |cx| {
+        vec![cx.container(container, |cx| match entry {
+            MathJaxSvgEntry::Ready(ready) => {
+                let mut icon = SvgIconProps::new(SvgSource::Bytes(ready.svg_bytes));
+                icon.fit = SvgFit::Contain;
+                icon.color = markdown_theme.math_block_fg;
+                icon.layout.size.height = Length::Px(markdown_theme.math_block_height);
+                icon.layout.aspect_ratio = ready.aspect_ratio;
+                vec![cx.svg_icon_props(icon)]
+            }
+            MathJaxSvgEntry::Loading | MathJaxSvgEntry::Error(_) => {
+                vec![cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: latex.clone(),
+                    style: Some(TextStyle {
+                        font: FontId::monospace(),
+                        size: theme.metrics.mono_font_size,
+                        weight: FontWeight::NORMAL,
+                        line_height: Some(theme.metrics.mono_font_line_height),
+                        letter_spacing_em: None,
+                    }),
+                    color: Some(markdown_theme.math_block_fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })]
+            }
+        })]
     })
 }
 
@@ -1647,7 +1872,9 @@ fn plain_text_from_events(events: &[pulldown_cmark::Event<'static>]) -> Arc<str>
         }
 
         match e {
-            Event::Text(t) | Event::Code(t) => out.push_str(t.as_ref()),
+            Event::Text(t) | Event::Code(t) | Event::InlineMath(t) | Event::DisplayMath(t) => {
+                out.push_str(t.as_ref())
+            }
             Event::SoftBreak => out.push(' '),
             Event::HardBreak => out.push('\n'),
             _ => {}
@@ -1688,6 +1915,7 @@ fn is_likely_svg_src(src: &str) -> bool {
 enum InlinePieceKind {
     Text(String),
     Image(ImageInfo),
+    InlineMath(InlineMathInfo),
 }
 
 #[derive(Debug, Clone)]
@@ -1708,6 +1936,7 @@ fn pulldown_options_default() -> pulldown_cmark::Options {
     opts.insert(pulldown_cmark::Options::ENABLE_TASKLISTS);
     opts.insert(pulldown_cmark::Options::ENABLE_STRIKETHROUGH);
     opts.insert(pulldown_cmark::Options::ENABLE_FOOTNOTES);
+    opts.insert(pulldown_cmark::Options::ENABLE_MATH);
     opts
 }
 
@@ -1753,7 +1982,7 @@ fn inline_pieces_from_events_impl(
 
         if let Some((_src, _title, alt_buf)) = image_stack.last_mut() {
             match event {
-                Event::Text(t) | Event::Code(t) => {
+                Event::Text(t) | Event::Code(t) | Event::InlineMath(t) => {
                     alt_buf.push_str(t.as_ref());
                     continue;
                 }
@@ -1836,17 +2065,40 @@ fn inline_pieces_from_events_impl(
                     link: link_stack.last().cloned(),
                 },
             ),
-            Event::Html(t) => push_inline_text(
+            Event::Html(t) | Event::InlineHtml(t) => push_inline_text(
                 &mut pieces,
-                t.as_ref(),
+                {
+                    let s = t.as_ref();
+                    let trimmed = s.trim();
+                    if trimmed.eq_ignore_ascii_case("<br>")
+                        || trimmed.eq_ignore_ascii_case("<br/>")
+                        || trimmed.eq_ignore_ascii_case("<br />")
+                    {
+                        "\n"
+                    } else {
+                        s
+                    }
+                },
                 InlineStyle {
                     strong: strong_depth > 0,
                     emphasis: emphasis_depth > 0,
                     strikethrough: strikethrough_depth > 0,
-                    code: true,
+                    code: false,
                     link: link_stack.last().cloned(),
                 },
             ),
+            Event::InlineMath(t) => pieces.push(InlinePiece {
+                kind: InlinePieceKind::InlineMath(InlineMathInfo {
+                    latex: Arc::<str>::from(t.to_string()),
+                }),
+                style: InlineStyle {
+                    strong: strong_depth > 0,
+                    emphasis: emphasis_depth > 0,
+                    strikethrough: strikethrough_depth > 0,
+                    code: false,
+                    link: link_stack.last().cloned(),
+                },
+            }),
             Event::FootnoteReference(label) => {
                 let href = Arc::<str>::from(format!("#fn-{}", label));
                 push_inline_text(
@@ -1908,12 +2160,6 @@ fn push_inline_text(pieces: &mut Vec<InlinePiece>, text: &str, style: InlineStyl
     });
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum InlineLineWidth {
-    Fill,
-    Auto,
-}
-
 fn render_inline_flow<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -1929,7 +2175,6 @@ fn render_inline_flow<H: UiHost>(
         components,
         base,
         pieces,
-        InlineLineWidth::Fill,
         MainAlign::Start,
     )
 }
@@ -1941,7 +2186,6 @@ fn render_inline_flow_with_layout<H: UiHost>(
     components: &MarkdownComponents<H>,
     base: InlineBaseStyle,
     pieces: &[InlinePiece],
-    line_width: InlineLineWidth,
     justify: MainAlign,
 ) -> AnyElement {
     let mut lines: Vec<Vec<InlinePiece>> = Vec::new();
@@ -1960,28 +2204,33 @@ fn render_inline_flow_with_layout<H: UiHost>(
                     }
                 }
             }
-            InlinePieceKind::Image(_) => cur.push(piece.clone()),
+            InlinePieceKind::Image(_) | InlinePieceKind::InlineMath(_) => cur.push(piece.clone()),
         }
     }
     lines.push(cur);
 
-    stack::vstack(cx, stack::VStackProps::default().gap(Space::N0), |cx| {
-        lines
-            .into_iter()
-            .map(|line| {
-                render_inline_line_with_layout(
-                    cx,
-                    theme,
-                    markdown_theme,
-                    components,
-                    &base,
-                    line,
-                    line_width,
-                    justify,
-                )
-            })
-            .collect()
-    })
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N0)
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            lines
+                .into_iter()
+                .map(|line| {
+                    render_inline_line_with_layout(
+                        cx,
+                        theme,
+                        markdown_theme,
+                        components,
+                        &base,
+                        line,
+                        justify,
+                    )
+                })
+                .collect()
+        },
+    )
 }
 
 fn render_inline_line_with_layout<H: UiHost>(
@@ -1991,13 +2240,10 @@ fn render_inline_line_with_layout<H: UiHost>(
     components: &MarkdownComponents<H>,
     base: &InlineBaseStyle,
     pieces: Vec<InlinePiece>,
-    line_width: InlineLineWidth,
     justify: MainAlign,
 ) -> AnyElement {
     let mut props = FlexProps::default();
-    if line_width == InlineLineWidth::Fill {
-        props.layout.size.width = Length::Fill;
-    }
+    props.layout.size.width = Length::Fill;
     props.direction = Axis::Horizontal;
     props.gap = Px(0.0);
     props.padding = Edges::all(Px(0.0));
@@ -2023,12 +2269,18 @@ fn render_inline_token<H: UiHost>(
 ) -> AnyElement {
     let (kind, style) = (piece.kind, piece.style);
 
-    let text = match kind {
+    let raw_text = match kind {
         InlinePieceKind::Image(info) => {
             if let Some(render) = &components.image {
                 return render(cx, info);
             }
             return render_image_placeholder(cx, theme, markdown_theme, components, info);
+        }
+        InlinePieceKind::InlineMath(info) => {
+            if let Some(render) = &components.inline_math {
+                return render(cx, info);
+            }
+            return render_inline_math_default(cx, theme, markdown_theme, info);
         }
         InlinePieceKind::Text(text) => text,
     };
@@ -2045,14 +2297,14 @@ fn render_inline_token<H: UiHost>(
 
     let weight = if style.strong {
         FontWeight::SEMIBOLD
+    } else if style.emphasis {
+        FontWeight::MEDIUM
     } else {
         base.weight
     };
 
     let color = if style.link.is_some() {
         markdown_theme.link
-    } else if style.strikethrough {
-        markdown_theme.muted
     } else {
         base.color
     };
@@ -2072,7 +2324,7 @@ fn render_inline_token<H: UiHost>(
         return cx.container(props, |cx| {
             vec![cx.text_props(TextProps {
                 layout: Default::default(),
-                text: Arc::<str>::from(text),
+                text: Arc::<str>::from(raw_text),
                 style: Some(TextStyle {
                     font,
                     size,
@@ -2094,14 +2346,14 @@ fn render_inline_token<H: UiHost>(
                 cx,
                 LinkInfo {
                     href,
-                    text: Arc::<str>::from(text.clone()),
+                    text: Arc::<str>::from(raw_text.clone()),
                 },
             );
         }
 
         if let Some(on_link_activate) = components.on_link_activate.clone() {
-            let link_text = Arc::<str>::from(text.trim_end().to_string());
-            let display_text = Arc::<str>::from(text.clone());
+            let link_text = Arc::<str>::from(raw_text.trim_end().to_string());
+            let display_text = Arc::<str>::from(raw_text.clone());
 
             let mut props = PressableProps::default();
             props.a11y.role = Some(SemanticsRole::Button);
@@ -2123,37 +2375,102 @@ fn render_inline_token<H: UiHost>(
                     );
                 }));
 
-                vec![cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: display_text.clone(),
-                    style: Some(TextStyle {
-                        font,
-                        size,
-                        weight,
-                        line_height,
-                        letter_spacing_em: None,
-                    }),
-                    color: Some(color),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                })]
+                vec![render_inline_text_token(
+                    cx,
+                    font,
+                    size,
+                    weight,
+                    line_height,
+                    color,
+                    style.strikethrough,
+                    display_text.clone(),
+                )]
             });
         }
     }
 
-    cx.text_props(TextProps {
-        layout: Default::default(),
-        text: Arc::<str>::from(text),
-        style: Some(TextStyle {
-            font,
-            size,
-            weight,
-            line_height,
-            letter_spacing_em: None,
-        }),
-        color: Some(color),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
+    render_inline_text_token(
+        cx,
+        font,
+        size,
+        weight,
+        line_height,
+        color,
+        style.strikethrough,
+        Arc::<str>::from(raw_text),
+    )
+}
+
+fn render_inline_text_token<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    font: FontId,
+    size: Px,
+    weight: FontWeight,
+    line_height: Option<Px>,
+    color: fret_core::Color,
+    strikethrough: bool,
+    text: Arc<str>,
+) -> AnyElement {
+    if !strikethrough {
+        return cx.text_props(TextProps {
+            layout: Default::default(),
+            text,
+            style: Some(TextStyle {
+                font,
+                size,
+                weight,
+                line_height,
+                letter_spacing_em: None,
+            }),
+            color: Some(color),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        });
+    }
+
+    let effective_line_height = line_height.unwrap_or(Px(size.0.max(1.0)));
+    let line_y = Px(effective_line_height.0 * 0.55);
+
+    let mut props = ContainerProps::default();
+    props.layout.position = PositionStyle::Relative;
+    props.padding = Edges::all(Px(0.0));
+    props.border = Edges::all(Px(0.0));
+
+    cx.container(props, |cx| {
+        let text_el = cx.text_props(TextProps {
+            layout: Default::default(),
+            text,
+            style: Some(TextStyle {
+                font,
+                size,
+                weight,
+                line_height,
+                letter_spacing_em: None,
+            }),
+            color: Some(color),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        });
+
+        let mut line_layout = LayoutStyle::default();
+        line_layout.position = PositionStyle::Absolute;
+        line_layout.inset.left = Some(Px(0.0));
+        line_layout.inset.right = Some(Px(0.0));
+        line_layout.inset.top = Some(line_y);
+        line_layout.size.height = Length::Px(Px(1.0));
+
+        let line_el = cx.container(
+            ContainerProps {
+                layout: line_layout,
+                padding: Edges::all(Px(0.0)),
+                background: Some(color),
+                border: Edges::all(Px(0.0)),
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+
+        vec![text_el, line_el]
     })
 }
 
@@ -2239,6 +2556,241 @@ fn render_image_placeholder<H: UiHost>(
     })
 }
 
+fn render_inline_math_default<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    info: InlineMathInfo,
+) -> AnyElement {
+    #[cfg(feature = "mathjax-svg")]
+    {
+        return render_inline_math_mathjax_svg(cx, theme, markdown_theme, info);
+    }
+
+    #[cfg(not(feature = "mathjax-svg"))]
+    let mut props = ContainerProps::default();
+    props.padding = Edges {
+        top: markdown_theme.inline_math_padding_y,
+        right: markdown_theme.inline_math_padding_x,
+        bottom: markdown_theme.inline_math_padding_y,
+        left: markdown_theme.inline_math_padding_x,
+    };
+    props.background = Some(markdown_theme.inline_math_bg);
+    props.border = Edges::all(Px(0.0));
+    props.corner_radii = fret_core::Corners::all(theme.metrics.radius_sm);
+
+    cx.container(props, |cx| {
+        vec![cx.text_props(TextProps {
+            layout: Default::default(),
+            text: info.latex,
+            style: Some(TextStyle {
+                font: FontId::monospace(),
+                size: theme.metrics.mono_font_size,
+                weight: FontWeight::NORMAL,
+                line_height: Some(theme.metrics.mono_font_line_height),
+                letter_spacing_em: None,
+            }),
+            color: Some(markdown_theme.inline_math_fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })]
+    })
+}
+
+#[cfg(feature = "mathjax-svg")]
+fn render_inline_math_mathjax_svg<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    info: InlineMathInfo,
+) -> AnyElement {
+    let entry = mathjax_svg_entry(cx, MathJaxMode::Inline, info.latex.as_ref());
+    match entry {
+        MathJaxSvgEntry::Ready(ready) => render_inline_math_svg(
+            cx,
+            theme,
+            markdown_theme,
+            ready.svg_bytes,
+            ready.aspect_ratio,
+        ),
+        MathJaxSvgEntry::Loading | MathJaxSvgEntry::Error(_) => {
+            render_inline_math_source(cx, theme, markdown_theme, info)
+        }
+    }
+}
+
+#[cfg(feature = "mathjax-svg")]
+fn render_inline_math_svg<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    svg_bytes: Arc<[u8]>,
+    aspect_ratio: Option<f32>,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.padding = Edges {
+        top: markdown_theme.inline_math_padding_y,
+        right: markdown_theme.inline_math_padding_x,
+        bottom: markdown_theme.inline_math_padding_y,
+        left: markdown_theme.inline_math_padding_x,
+    };
+    props.background = Some(markdown_theme.inline_math_bg);
+    props.border = Edges::all(Px(0.0));
+    props.corner_radii = fret_core::Corners::all(theme.metrics.radius_sm);
+
+    cx.container(props, |cx| {
+        let mut icon = SvgIconProps::new(SvgSource::Bytes(svg_bytes));
+        icon.fit = SvgFit::Contain;
+        icon.color = markdown_theme.inline_math_fg;
+        icon.layout.size.height = Length::Px(markdown_theme.inline_math_height);
+        icon.layout.aspect_ratio = aspect_ratio;
+        vec![cx.svg_icon_props(icon)]
+    })
+}
+
+#[cfg(feature = "mathjax-svg")]
+fn render_inline_math_source<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    info: InlineMathInfo,
+) -> AnyElement {
+    let mut props = ContainerProps::default();
+    props.padding = Edges {
+        top: markdown_theme.inline_math_padding_y,
+        right: markdown_theme.inline_math_padding_x,
+        bottom: markdown_theme.inline_math_padding_y,
+        left: markdown_theme.inline_math_padding_x,
+    };
+    props.background = Some(markdown_theme.inline_math_bg);
+    props.border = Edges::all(Px(0.0));
+    props.corner_radii = fret_core::Corners::all(theme.metrics.radius_sm);
+
+    cx.container(props, |cx| {
+        vec![cx.text_props(TextProps {
+            layout: Default::default(),
+            text: info.latex,
+            style: Some(TextStyle {
+                font: FontId::monospace(),
+                size: theme.metrics.mono_font_size,
+                weight: FontWeight::NORMAL,
+                line_height: Some(theme.metrics.mono_font_line_height),
+                letter_spacing_em: None,
+            }),
+            color: Some(markdown_theme.inline_math_fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })]
+    })
+}
+
+#[cfg(feature = "mathjax-svg")]
+fn mathjax_svg_entry<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    mode: MathJaxMode,
+    latex: &str,
+) -> MathJaxSvgEntry {
+    let key = MathJaxKey {
+        mode,
+        latex: latex.to_string(),
+    };
+
+    let mut spawn = None::<(
+        Arc<std::sync::Mutex<std::collections::HashMap<MathJaxKey, MathJaxSvgEntry>>>,
+        MathJaxKey,
+    )>;
+    let entry = cx
+        .app
+        .with_global_mut(MathJaxSvgCache::default, |cache, host| {
+            let map = cache.inner.clone();
+            let mut map_guard = map.lock().expect("mathjax svg cache lock");
+
+            match map_guard.get(&key) {
+                Some(existing) => {
+                    if matches!(existing, MathJaxSvgEntry::Loading) {
+                        host.request_redraw(cx.window);
+                    }
+                    return existing.clone();
+                }
+                None => {
+                    map_guard.insert(key.clone(), MathJaxSvgEntry::Loading);
+                    host.request_redraw(cx.window);
+                    spawn = Some((map.clone(), key.clone()));
+                    MathJaxSvgEntry::Loading
+                }
+            }
+        });
+
+    if let Some((map, key)) = spawn {
+        std::thread::spawn(move || {
+            let latex = key.latex.clone();
+            let result = match key.mode {
+                MathJaxMode::Inline => mathjax_svg::convert_to_svg_inline(&latex),
+                MathJaxMode::Display => mathjax_svg::convert_to_svg(&latex),
+            };
+
+            let mut map_guard = map.lock().expect("mathjax svg cache lock");
+            match result {
+                Ok(svg) => {
+                    let aspect_ratio = svg_viewbox_aspect_ratio(&svg);
+                    map_guard.insert(
+                        key,
+                        MathJaxSvgEntry::Ready(MathJaxSvgReady {
+                            svg_bytes: Arc::<[u8]>::from(svg.into_bytes()),
+                            aspect_ratio,
+                        }),
+                    );
+                }
+                Err(err) => {
+                    map_guard.insert(
+                        key,
+                        MathJaxSvgEntry::Error(Arc::<str>::from(err.to_string())),
+                    );
+                }
+            }
+        });
+    }
+
+    entry
+}
+
+#[cfg(feature = "mathjax-svg")]
+fn svg_viewbox_aspect_ratio(svg: &str) -> Option<f32> {
+    let idx = svg.find("viewBox=")?;
+    let rest = &svg[idx + "viewBox=".len()..];
+    let mut chars = rest.chars();
+    let quote = chars.next()?;
+    if quote != '"' && quote != '\'' {
+        return None;
+    }
+    let rest = chars.as_str();
+    let end = rest.find(quote)?;
+    let value = &rest[..end];
+
+    let mut nums: [f32; 4] = [0.0; 4];
+    let mut i = 0usize;
+    for part in value.split(|c: char| c.is_whitespace() || c == ',') {
+        let part = part.trim();
+        if part.is_empty() {
+            continue;
+        }
+        if i >= 4 {
+            break;
+        }
+        nums[i] = part.parse::<f32>().ok()?;
+        i += 1;
+    }
+    if i < 4 {
+        return None;
+    }
+    let w = nums[2];
+    let h = nums[3];
+    if !w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0 {
+        return None;
+    }
+    Some(w / h)
+}
+
 fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> {
     if text.trim().is_empty() {
         return Vec::new();
@@ -2253,8 +2805,72 @@ fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> 
     let mut out: Vec<InlinePiece> = Vec::new();
     let words: Vec<&str> = text.split_whitespace().filter(|s| !s.is_empty()).collect();
     for (i, w) in words.iter().enumerate() {
+        let trailing_space = i + 1 < words.len();
+
+        if style.link.is_none() {
+            let mut start = 0usize;
+            while start < w.len() {
+                let b = w.as_bytes()[start];
+                if matches!(b, b'(' | b'[' | b'{') {
+                    start += 1;
+                } else {
+                    break;
+                }
+            }
+
+            let mut end = w.len();
+            while end > start {
+                let b = w.as_bytes()[end - 1];
+                if matches!(
+                    b,
+                    b'.' | b',' | b';' | b':' | b'!' | b'?' | b')' | b']' | b'}'
+                ) {
+                    end -= 1;
+                } else {
+                    break;
+                }
+            }
+
+            let prefix = &w[..start];
+            let candidate = &w[start..end];
+            let suffix = &w[end..];
+
+            if (candidate.starts_with("http://") || candidate.starts_with("https://"))
+                && is_safe_open_url(candidate)
+            {
+                if !prefix.is_empty() {
+                    out.push(InlinePiece {
+                        kind: InlinePieceKind::Text(prefix.to_string()),
+                        style: style.clone(),
+                    });
+                }
+
+                let mut link_style = style.clone();
+                link_style.link = Some(Arc::<str>::from(candidate.to_string()));
+                out.push(InlinePiece {
+                    kind: InlinePieceKind::Text(candidate.to_string()),
+                    style: link_style,
+                });
+
+                if !suffix.is_empty() {
+                    out.push(InlinePiece {
+                        kind: InlinePieceKind::Text(suffix.to_string()),
+                        style: style.clone(),
+                    });
+                }
+
+                if trailing_space {
+                    out.push(InlinePiece {
+                        kind: InlinePieceKind::Text(" ".to_string()),
+                        style: style.clone(),
+                    });
+                }
+                continue;
+            }
+        }
+
         let mut token = w.to_string();
-        if i + 1 < words.len() {
+        if trailing_space {
             token.push(' ');
         }
         out.push(InlinePiece {
@@ -2416,6 +3032,20 @@ mod tests {
     }
 
     #[test]
+    fn pulldown_parses_gfm_autolinks_when_enabled() {
+        let events = parse_events("<https://example.com>\n");
+        let pieces = inline_pieces_from_events_unwrapped(&events);
+
+        assert!(pieces.iter().any(|p| {
+            let InlinePieceKind::Text(text) = &p.kind else {
+                return false;
+            };
+            text.contains("https://example.com")
+                && p.style.link.as_deref() == Some("https://example.com")
+        }));
+    }
+
+    #[test]
     fn pulldown_parses_strikethrough_when_enabled() {
         use pulldown_cmark::{Event, Tag};
         let events = parse_events("~~gone~~\n");
@@ -2444,6 +3074,50 @@ mod tests {
         assert_eq!(imgs[0].alt.as_ref(), "alt bold code");
         assert_eq!(imgs[0].title.as_deref(), Some("t"));
         assert!(!imgs[0].is_svg);
+    }
+
+    #[test]
+    fn pulldown_maps_inline_br_html_to_line_break() {
+        let events = parse_events("a<br>b\n");
+        let pieces = inline_pieces_from_events_unwrapped(&events);
+        assert!(
+            pieces
+                .iter()
+                .any(|p| matches!(&p.kind, InlinePieceKind::Text(t) if t.contains('\n')))
+        );
+    }
+
+    #[test]
+    fn autolinks_bare_urls_in_plain_text() {
+        let style = InlineStyle {
+            strong: false,
+            emphasis: false,
+            strikethrough: false,
+            code: false,
+            link: None,
+        };
+        let pieces = split_piece_into_tokens("See https://example.com).", &style);
+
+        assert!(pieces.iter().any(|p| {
+            let InlinePieceKind::Text(text) = &p.kind else {
+                return false;
+            };
+            text == "https://example.com" && p.style.link.as_deref() == Some("https://example.com")
+        }));
+    }
+
+    #[test]
+    fn pulldown_parses_inline_math_when_enabled() {
+        use pulldown_cmark::Event;
+        let events = parse_events("$x^2$\n");
+        assert!(events.iter().any(|e| matches!(e, Event::InlineMath(_))));
+    }
+
+    #[test]
+    fn pulldown_parses_display_math_when_enabled() {
+        use pulldown_cmark::Event;
+        let events = parse_events("$$x^2$$\n");
+        assert!(events.iter().any(|e| matches!(e, Event::DisplayMath(_))));
     }
 
     #[test]
