@@ -93,6 +93,7 @@ fn render_transform_affects_hit_testing_and_pointer_event_coordinates() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -103,6 +104,7 @@ fn render_transform_affects_hit_testing_and_pointer_event_coordinates() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -219,6 +221,7 @@ fn nested_render_transforms_compose_for_pointer_event_coordinates() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 

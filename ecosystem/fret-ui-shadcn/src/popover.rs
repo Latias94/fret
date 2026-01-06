@@ -928,6 +928,7 @@ mod tests {
                 position: underlay_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -937,6 +938,7 @@ mod tests {
                 position: underlay_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1004,6 +1006,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -1013,6 +1016,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
@@ -1198,6 +1202,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -1207,6 +1212,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
@@ -1242,6 +1248,7 @@ mod tests {
                 position: Point::new(Px(410.0), Px(310.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -1251,6 +1258,7 @@ mod tests {
                 position: Point::new(Px(410.0), Px(310.0)),
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
@@ -1329,6 +1337,7 @@ mod tests {
                 position: click_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -1338,6 +1347,7 @@ mod tests {
                 position: click_point,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
@@ -1430,6 +1440,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -1439,6 +1450,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(true));
@@ -1478,6 +1490,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -1487,6 +1500,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1600,6 +1614,7 @@ mod tests {
                 position: Point::new(Px(12.0), Px(12.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -1609,6 +1624,7 @@ mod tests {
                 position: Point::new(Px(12.0), Px(12.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_eq!(app.models().get_copied(&open_model), Some(true));
@@ -1724,6 +1740,7 @@ mod tests {
                 position: Point::new(Px(12.0), Px(12.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -1733,6 +1750,7 @@ mod tests {
                 position: Point::new(Px(12.0), Px(12.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         assert_eq!(app.models().get_copied(&open_model), Some(true));
@@ -1750,6 +1768,7 @@ mod tests {
                 position: Point::new(Px(245.0), Px(125.0)),
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

@@ -98,6 +98,7 @@ fn text_area_hover_sets_text_cursor_effect() {
             position: Point::new(Px(12.0), Px(12.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -586,6 +587,7 @@ fn ime_cursor_area_reflects_scroll_offset_in_paint_space() {
                 position: Point::new(Px(0.0), Px(0.0)),
                 delta: Point::new(Px(0.0), Px(-10.0)),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
     }

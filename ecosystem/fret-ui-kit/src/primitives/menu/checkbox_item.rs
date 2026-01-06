@@ -201,6 +201,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -211,6 +212,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

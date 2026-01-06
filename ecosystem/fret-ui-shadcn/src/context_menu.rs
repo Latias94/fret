@@ -2459,6 +2459,7 @@ mod tests {
                 position,
                 button: fret_core::MouseButton::Right,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -2468,6 +2469,7 @@ mod tests {
                 position,
                 button: fret_core::MouseButton::Right,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

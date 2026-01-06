@@ -4,8 +4,9 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use fret_core::{Color, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, ScrollAxis, ScrollProps, TextProps};
+use fret_ui::element::{AnyElement, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
@@ -70,32 +71,35 @@ pub fn code_block<H: UiHost>(
     };
 
     cx.container(props, |cx| {
-        let mut scroll_props = ScrollProps::default();
-        scroll_props.axis = ScrollAxis::X;
+        vec![decl_scroll::overflow_scroll_x_vstack(
+            cx,
+            LayoutRefinement::default().w_full(),
+            false,
+            stack::VStackProps::default().gap(Space::N0),
+            |cx| {
+                let lines = split_lines(code);
+                let line_number_width = line_number_width(lines.len());
 
-        vec![cx.scroll(scroll_props, |cx| {
-            let lines = split_lines(code);
-            let line_number_width = line_number_width(lines.len());
-
-            lines
-                .into_iter()
-                .enumerate()
-                .map(|(i, line)| {
-                    if show_line_numbers {
-                        render_code_line_with_number(
-                            cx,
-                            &theme,
-                            i + 1,
-                            line_number_width,
-                            line,
-                            &spans,
-                        )
-                    } else {
-                        render_code_line(cx, &theme, line, &spans)
-                    }
-                })
-                .collect()
-        })]
+                lines
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, line)| {
+                        if show_line_numbers {
+                            render_code_line_with_number(
+                                cx,
+                                &theme,
+                                i + 1,
+                                line_number_width,
+                                line,
+                                &spans,
+                            )
+                        } else {
+                            render_code_line(cx, &theme, line, &spans)
+                        }
+                    })
+                    .collect()
+            },
+        )]
     })
 }
 

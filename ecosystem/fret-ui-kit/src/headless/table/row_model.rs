@@ -1,37 +1,45 @@
 use std::cell::OnceCell;
 use std::collections::HashMap;
-use std::sync::Arc;
 
-/// Stable identifier for a row in the table.
+/// Stable identity for a row in the table.
 ///
-/// This is intentionally string-based (TanStack-compatible), because the default row-id strategy
-/// uses index paths like `0.1.2`. For data sourced from a backend, callers should supply their own
-/// stable IDs (e.g. a database primary key).
-pub type RowId = Arc<str>;
+/// This is aligned with TanStack Table's `getRowId` guidance, but uses an efficient numeric key so
+/// it can be used in hot paths (selection, row maps, virtualization keys) without heap allocation.
+///
+/// The default key strategy is index-path based, so callers should supply their own stable key
+/// (e.g. a database primary key) when the underlying data can reorder or change over time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct RowKey(pub u64);
+
+impl RowKey {
+    pub fn from_index(index: usize) -> Self {
+        Self(index as u64)
+    }
+}
 
 /// Index into a [`RowModel`] arena.
 pub type RowIndex = usize;
 
 #[derive(Debug)]
 pub struct Row<'a, TData> {
-    pub id: RowId,
+    pub key: RowKey,
     pub original: &'a TData,
     pub index: usize,
     pub depth: u16,
     pub parent: Option<RowIndex>,
-    pub parent_id: Option<RowId>,
+    pub parent_key: Option<RowKey>,
     pub sub_rows: Vec<RowIndex>,
 }
 
 impl<'a, TData> Clone for Row<'a, TData> {
     fn clone(&self) -> Self {
         Self {
-            id: self.id.clone(),
+            key: self.key,
             original: self.original,
             index: self.index,
             depth: self.depth,
             parent: self.parent,
-            parent_id: self.parent_id.clone(),
+            parent_key: self.parent_key,
             sub_rows: self.sub_rows.clone(),
         }
     }
@@ -41,7 +49,7 @@ impl<'a, TData> Clone for Row<'a, TData> {
 pub struct RowModel<'a, TData> {
     pub(super) root_rows: Vec<RowIndex>,
     pub(super) flat_rows: Vec<RowIndex>,
-    pub(super) rows_by_id: HashMap<RowId, RowIndex>,
+    pub(super) rows_by_key: HashMap<RowKey, RowIndex>,
     pub(super) arena: Vec<Row<'a, TData>>,
 }
 
@@ -50,7 +58,7 @@ impl<'a, TData> Clone for RowModel<'a, TData> {
         Self {
             root_rows: self.root_rows.clone(),
             flat_rows: self.flat_rows.clone(),
-            rows_by_id: self.rows_by_id.clone(),
+            rows_by_key: self.rows_by_key.clone(),
             arena: self.arena.clone(),
         }
     }
@@ -69,12 +77,12 @@ impl<'a, TData> RowModel<'a, TData> {
         self.arena.get(index)
     }
 
-    pub fn row_by_id(&self, id: &str) -> Option<RowIndex> {
-        self.rows_by_id.get(id).copied()
+    pub fn row_by_key(&self, key: RowKey) -> Option<RowIndex> {
+        self.rows_by_key.get(&key).copied()
     }
 
-    pub fn rows_by_id(&self) -> &HashMap<RowId, RowIndex> {
-        &self.rows_by_id
+    pub fn rows_by_key(&self) -> &HashMap<RowKey, RowIndex> {
+        &self.rows_by_key
     }
 
     pub fn arena(&self) -> &[Row<'a, TData>] {
@@ -82,13 +90,13 @@ impl<'a, TData> RowModel<'a, TData> {
     }
 }
 
-type GetRowIdFn<'a, TData> = Box<dyn Fn(&TData, usize, Option<&RowId>) -> RowId + 'a>;
+type GetRowKeyFn<'a, TData> = Box<dyn Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'a>;
 type GetSubRowsFn<'a, TData> = Box<dyn for<'r> Fn(&'r TData, usize) -> Option<&'r [TData]> + 'a>;
 
 pub struct TableBuilder<'a, TData> {
     data: &'a [TData],
     columns: Vec<super::ColumnDef<TData>>,
-    get_row_id: Option<GetRowIdFn<'a, TData>>,
+    get_row_key: Option<GetRowKeyFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     state: super::TableState,
 }
@@ -98,7 +106,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
         Self {
             data,
             columns: Vec::new(),
-            get_row_id: None,
+            get_row_key: None,
             get_sub_rows: None,
             state: super::TableState::default(),
         }
@@ -114,8 +122,11 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
-    pub fn get_row_id(mut self, f: impl Fn(&TData, usize, Option<&RowId>) -> RowId + 'a) -> Self {
-        self.get_row_id = Some(Box::new(f));
+    pub fn get_row_key(
+        mut self,
+        f: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'a,
+    ) -> Self {
+        self.get_row_key = Some(Box::new(f));
         self
     }
 
@@ -135,7 +146,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
 pub struct Table<'a, TData> {
     data: &'a [TData],
     columns: Vec<super::ColumnDef<TData>>,
-    get_row_id: GetRowIdFn<'a, TData>,
+    get_row_key: GetRowKeyFn<'a, TData>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     state: super::TableState,
     core_row_model: OnceCell<RowModel<'a, TData>>,
@@ -150,13 +161,13 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     fn new(builder: TableBuilder<'a, TData>) -> Self {
-        let get_row_id = builder
-            .get_row_id
-            .unwrap_or_else(|| Box::new(default_row_id_for_index_path));
+        let get_row_key = builder
+            .get_row_key
+            .unwrap_or_else(|| Box::new(default_row_key_for_index_path));
         Self {
             data: builder.data,
             columns: builder.columns,
-            get_row_id,
+            get_row_key,
             get_sub_rows: builder.get_sub_rows,
             state: builder.state,
             core_row_model: OnceCell::new(),
@@ -211,7 +222,7 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn core_row_model(&self) -> &RowModel<'a, TData> {
         self.core_row_model.get_or_init(|| {
-            build_core_row_model(self.data, &*self.get_row_id, self.get_sub_rows.as_deref())
+            build_core_row_model(self.data, &*self.get_row_key, self.get_sub_rows.as_deref())
         })
     }
 
@@ -250,51 +261,68 @@ impl<'a, TData> Table<'a, TData> {
     }
 }
 
-fn default_row_id_for_index_path<TData>(_: &TData, index: usize, parent: Option<&RowId>) -> RowId {
+fn splitmix64(mut z: u64) -> u64 {
+    z = z.wrapping_add(0x9e37_79b9_7f4a_7c15);
+    z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    z ^ (z >> 31)
+}
+
+fn default_row_key_for_index_path<TData>(
+    _: &TData,
+    index: usize,
+    parent: Option<&RowKey>,
+) -> RowKey {
     if let Some(parent) = parent {
-        Arc::from(format!("{parent}.{index}"))
+        // Mix parent and child index in an order-sensitive way (avoid trivial collisions like
+        // `(parent=0, i=1)` vs `(parent=1, i=0)` that happen with XOR).
+        let z = parent
+            .0
+            .wrapping_mul(0x9e37_79b9_7f4a_7c15)
+            .wrapping_add((index as u64).wrapping_add(0xbf58_476d_1ce4_e5b9));
+        RowKey(splitmix64(z))
     } else {
-        Arc::from(index.to_string())
+        RowKey::from_index(index)
     }
 }
 
 fn build_core_row_model<'a, TData>(
     data: &'a [TData],
-    get_row_id: &dyn Fn(&TData, usize, Option<&RowId>) -> RowId,
+    get_row_key: &dyn Fn(&TData, usize, Option<&RowKey>) -> RowKey,
     get_sub_rows: Option<&dyn for<'r> Fn(&'r TData, usize) -> Option<&'r [TData]>>,
 ) -> RowModel<'a, TData> {
     let mut root_rows: Vec<RowIndex> = Vec::new();
     let mut flat_rows: Vec<RowIndex> = Vec::new();
-    let mut rows_by_id: HashMap<RowId, RowIndex> = HashMap::new();
+    let mut rows_by_key: HashMap<RowKey, RowIndex> = HashMap::new();
     let mut arena: Vec<Row<'a, TData>> = Vec::new();
 
     fn access_rows<'a, TData>(
         original_rows: &'a [TData],
         depth: u16,
         parent: Option<RowIndex>,
-        parent_id: Option<&RowId>,
-        get_row_id: &dyn Fn(&TData, usize, Option<&RowId>) -> RowId,
+        parent_key: Option<&RowKey>,
+        get_row_key: &dyn Fn(&TData, usize, Option<&RowKey>) -> RowKey,
         get_sub_rows: Option<&dyn for<'r> Fn(&'r TData, usize) -> Option<&'r [TData]>>,
         root_out: &mut Vec<RowIndex>,
         flat_out: &mut Vec<RowIndex>,
-        rows_by_id: &mut HashMap<RowId, RowIndex>,
+        rows_by_key: &mut HashMap<RowKey, RowIndex>,
         arena: &mut Vec<Row<'a, TData>>,
     ) -> Vec<RowIndex> {
         let mut rows: Vec<RowIndex> = Vec::with_capacity(original_rows.len());
         for (index, original) in original_rows.iter().enumerate() {
-            let id = get_row_id(original, index, parent_id);
+            let key = get_row_key(original, index, parent_key);
             let row_index = arena.len();
             arena.push(Row {
-                id: id.clone(),
+                key,
                 original,
                 index,
                 depth,
                 parent,
-                parent_id: parent_id.cloned(),
+                parent_key: parent_key.copied(),
                 sub_rows: Vec::new(),
             });
             flat_out.push(row_index);
-            rows_by_id.insert(id.clone(), row_index);
+            rows_by_key.insert(key, row_index);
             rows.push(row_index);
 
             if let Some(get_sub_rows) = get_sub_rows
@@ -305,12 +333,12 @@ fn build_core_row_model<'a, TData>(
                     sub,
                     depth.saturating_add(1),
                     Some(row_index),
-                    Some(&id),
-                    get_row_id,
+                    Some(&key),
+                    get_row_key,
                     Some(get_sub_rows),
                     root_out,
                     flat_out,
-                    rows_by_id,
+                    rows_by_key,
                     arena,
                 );
                 if let Some(row) = arena.get_mut(row_index) {
@@ -331,18 +359,18 @@ fn build_core_row_model<'a, TData>(
         0,
         None,
         None,
-        get_row_id,
+        get_row_key,
         get_sub_rows,
         &mut root_rows,
         &mut flat_rows,
-        &mut rows_by_id,
+        &mut rows_by_key,
         &mut arena,
     );
 
     RowModel {
         root_rows,
         flat_rows,
-        rows_by_id,
+        rows_by_key,
         arena,
     }
 }
@@ -375,20 +403,20 @@ mod tests {
     }
 
     #[test]
-    fn core_row_model_produces_flat_rows_and_id_map() {
+    fn core_row_model_produces_flat_rows_and_key_map() {
         let data = make_people(3, 0);
         let table = Table::builder(&data).build();
         let model = table.core_row_model();
 
         assert_eq!(model.root_rows().len(), 3);
         assert_eq!(model.flat_rows().len(), 3);
-        assert!(model.row_by_id("0").is_some());
-        assert!(model.row_by_id("1").is_some());
-        assert!(model.row_by_id("2").is_some());
+        assert!(model.row_by_key(RowKey::from_index(0)).is_some());
+        assert!(model.row_by_key(RowKey::from_index(1)).is_some());
+        assert!(model.row_by_key(RowKey::from_index(2)).is_some());
     }
 
     #[test]
-    fn core_row_model_recurses_into_sub_rows_and_uses_index_path_ids() {
+    fn core_row_model_recurses_into_sub_rows_and_assigns_unique_keys() {
         let data = make_people(3, 2);
         let table = Table::builder(&data)
             .get_sub_rows(|p, _| p.sub_rows.as_deref())
@@ -401,22 +429,26 @@ mod tests {
         let root_0 = model.row(model.root_rows()[0]).expect("root row 0");
         assert_eq!(root_0.sub_rows.len(), 2);
 
-        assert!(model.row_by_id("0.0").is_some());
-        assert!(model.row_by_id("0.1").is_some());
-        assert!(model.row_by_id("2.1").is_some());
+        let c0 = model.row(root_0.sub_rows[0]).expect("root 0 child 0").key;
+        let c1 = model.row(root_0.sub_rows[1]).expect("root 0 child 1").key;
+        assert_ne!(c0, c1);
+        assert_ne!(c0, root_0.key);
+        assert_ne!(c1, root_0.key);
+        assert!(model.row_by_key(c0).is_some());
+        assert!(model.row_by_key(c1).is_some());
     }
 
     #[test]
-    fn core_row_model_allows_custom_stable_row_ids() {
+    fn core_row_model_allows_custom_stable_row_keys() {
         let data = make_people(2, 0);
         let table = Table::builder(&data)
-            .get_row_id(|p, _i, _parent| Arc::from(p.name.as_str()))
+            .get_row_key(|_p, i, _parent| RowKey(10_000 + i as u64))
             .build();
         let model = table.core_row_model();
 
-        assert!(model.row_by_id("Person 0").is_some());
-        assert!(model.row_by_id("Person 1").is_some());
-        assert!(model.row_by_id("0").is_none());
+        assert!(model.row_by_key(RowKey(10_000)).is_some());
+        assert!(model.row_by_key(RowKey(10_001)).is_some());
+        assert!(model.row_by_key(RowKey::from_index(0)).is_none());
     }
 
     #[derive(Debug, Clone)]
@@ -443,13 +475,13 @@ mod tests {
             .build();
 
         let sorted = table.sorted_row_model();
-        let ids = sorted
+        let keys = sorted
             .root_rows()
             .iter()
-            .filter_map(|&i| sorted.row(i).map(|r| r.id.as_ref().to_string()))
+            .filter_map(|&i| sorted.row(i).map(|r| r.key.0))
             .collect::<Vec<_>>();
 
-        assert_eq!(ids, vec!["1", "0", "2"]);
+        assert_eq!(keys, vec![1, 0, 2]);
         assert!(std::ptr::eq(sorted, table.sorted_row_model()));
     }
 
@@ -481,13 +513,13 @@ mod tests {
             .build();
 
         let paged = table.row_model();
-        let ids = paged
+        let keys = paged
             .root_rows()
             .iter()
-            .filter_map(|&i| paged.row(i).map(|r| r.id.as_ref().to_string()))
+            .filter_map(|&i| paged.row(i).map(|r| r.key.0))
             .collect::<Vec<_>>();
 
-        assert_eq!(ids, vec!["3", "1"]);
+        assert_eq!(keys, vec![3, 1]);
         assert!(std::ptr::eq(paged, table.row_model()));
     }
 
@@ -496,17 +528,14 @@ mod tests {
         let data = make_people(3, 0);
         let table = Table::builder(&data)
             .state(TableState {
-                row_selection: [("1", true)]
-                    .into_iter()
-                    .map(|(id, v)| (Arc::from(id), v))
-                    .collect(),
+                row_selection: [RowKey(1)].into_iter().collect(),
                 ..TableState::default()
             })
             .build();
 
         let selected = table.selected_row_model();
         assert_eq!(selected.root_rows().len(), 1);
-        assert!(selected.row_by_id("1").is_some());
+        assert!(selected.row_by_key(RowKey(1)).is_some());
         assert!(std::ptr::eq(selected, table.selected_row_model()));
     }
 

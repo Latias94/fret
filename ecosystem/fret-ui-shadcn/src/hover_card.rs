@@ -629,6 +629,7 @@ mod tests {
                 position: Point::new(Px(12.0), Px(12.0)),
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -830,6 +831,7 @@ mod tests {
                 position: Point::new(Px(2000.0), Px(2000.0)),
                 buttons: MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

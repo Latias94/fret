@@ -164,6 +164,7 @@ fn hit_test_can_make_overlay_pointer_transparent() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -207,6 +208,7 @@ fn layer_hit_testable_flag_can_make_overlay_pointer_transparent() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -314,6 +316,7 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -324,6 +327,7 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -347,6 +351,7 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -357,6 +362,7 @@ fn overlay_render_transform_affects_hit_testing_and_event_coordinates() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -442,6 +448,7 @@ fn modal_barrier_blocks_underlay_pointer_events_even_when_modal_root_is_pointer_
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -670,6 +677,7 @@ fn modal_barrier_fallback_delivers_transformed_event_coordinates() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 

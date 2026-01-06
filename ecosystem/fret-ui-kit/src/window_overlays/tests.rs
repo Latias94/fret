@@ -224,6 +224,7 @@ fn dismissible_popover_closes_on_outside_press() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -234,6 +235,7 @@ fn dismissible_popover_closes_on_outside_press() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -280,6 +282,7 @@ fn dismissible_popover_closes_on_outside_press() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(false));
@@ -320,6 +323,7 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -330,6 +334,7 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -401,6 +406,7 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -443,6 +449,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -453,6 +460,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -498,6 +506,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -508,6 +517,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
 
@@ -584,6 +594,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -594,6 +605,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -640,6 +652,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -650,6 +663,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
 
@@ -692,6 +706,7 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -702,6 +717,7 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -810,6 +826,7 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -820,6 +837,7 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -985,6 +1003,7 @@ fn modal_blocks_underlay_click_and_closes_on_escape() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -995,6 +1014,7 @@ fn modal_blocks_underlay_click_and_closes_on_escape() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
 
@@ -1109,6 +1129,7 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -1119,6 +1140,7 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
 
@@ -1226,6 +1248,7 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -1236,6 +1259,7 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
 
@@ -1425,6 +1449,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -1435,6 +1460,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -1506,6 +1532,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
     ui.dispatch_event(
@@ -1516,6 +1543,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: Default::default(),
         }),
     );
 
@@ -1580,6 +1608,8 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -1589,6 +1619,8 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             position: Point::new(Px(10.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     assert_eq!(app.models().get_copied(&open), Some(true));
@@ -1658,6 +1690,8 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -1667,6 +1701,8 @@ fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
             position: Point::new(Px(10.0), Px(130.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 

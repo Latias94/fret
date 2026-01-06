@@ -95,6 +95,7 @@ fn modal_barrier_clears_focus_and_capture_in_underlay() {
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     assert_eq!(ui.focus(), Some(underlay));
@@ -848,6 +849,7 @@ fn event_cx_bounds_tracks_translated_nodes() {
             position: Point::new(Px(10.0), Px(110.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 

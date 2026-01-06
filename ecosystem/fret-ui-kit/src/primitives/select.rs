@@ -17,9 +17,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{AppWindowId, KeyCode, Modifiers};
+use fret_core::{AppWindowId, KeyCode, Modifiers, Point, PointerType};
 use fret_runtime::{Effect, Model, TimerToken};
-use fret_ui::action::UiActionHost;
+use fret_ui::action::{
+    ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
+};
 use fret_ui::element::{AnyElement, ElementKind, PressableA11y, PressableProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -76,6 +78,11 @@ pub fn is_select_open_key(key: KeyCode) -> bool {
 pub fn select_open_key_suppresses_activate(key: KeyCode) -> bool {
     matches!(key, KeyCode::Space | KeyCode::Enter)
 }
+
+/// Radix uses a 10px movement threshold to distinguish click-vs-drag outcomes after opening.
+///
+/// We reuse that threshold when emulating touch/pen click-to-open behavior for the trigger.
+pub const SELECT_TRIGGER_CLICK_SLOP_PX: f32 = 10.0;
 
 /// Radix-like select typeahead clear timeout (in milliseconds).
 ///
@@ -250,6 +257,124 @@ impl SelectTriggerKeyState {
     }
 }
 
+/// Pointer policy for Radix-style select triggers.
+///
+/// Upstream Radix opens on `pointerdown` for mouse (and prevents the trigger from stealing focus),
+/// while touch/pen devices open on click to avoid scroll-to-open.
+#[derive(Debug, Default)]
+pub struct SelectTriggerPointerState {
+    down_pos: Option<Point>,
+    moved: bool,
+    captured: bool,
+}
+
+impl SelectTriggerPointerState {
+    fn reset(&mut self) {
+        self.down_pos = None;
+        self.moved = false;
+        self.captured = false;
+    }
+
+    fn moved_beyond_slop(&self, current: Point) -> bool {
+        let Some(down) = self.down_pos else {
+            return false;
+        };
+        (down.x.0 - current.x.0).abs() > SELECT_TRIGGER_CLICK_SLOP_PX
+            || (down.y.0 - current.y.0).abs() > SELECT_TRIGGER_CLICK_SLOP_PX
+    }
+
+    pub fn handle_pointer_down(
+        &mut self,
+        host: &mut dyn UiPointerActionHost,
+        action_cx: ActionCx,
+        down: PointerDownCx,
+        open: &Model<bool>,
+        enabled: bool,
+    ) -> bool {
+        if !enabled {
+            return false;
+        }
+        if down.button != fret_core::MouseButton::Left {
+            return false;
+        }
+
+        let is_macos_ctrl_click = cfg!(target_os = "macos")
+            && down.modifiers.ctrl
+            && down.pointer_type == PointerType::Mouse;
+        if is_macos_ctrl_click {
+            return false;
+        }
+
+        match down.pointer_type {
+            PointerType::Mouse | PointerType::Unknown => {
+                let _ = host.models_mut().update(open, |v| *v = true);
+                host.request_redraw(action_cx.window);
+                true
+            }
+            PointerType::Touch | PointerType::Pen => {
+                self.down_pos = Some(down.position);
+                self.moved = false;
+                self.captured = true;
+                host.capture_pointer();
+                true
+            }
+        }
+    }
+
+    pub fn handle_pointer_move(
+        &mut self,
+        _host: &mut dyn UiPointerActionHost,
+        _action_cx: ActionCx,
+        mv: PointerMoveCx,
+    ) -> bool {
+        if !self.captured {
+            return false;
+        }
+        if !self.moved && self.moved_beyond_slop(mv.position) {
+            self.moved = true;
+        }
+        true
+    }
+
+    pub fn handle_pointer_up(
+        &mut self,
+        host: &mut dyn UiPointerActionHost,
+        action_cx: ActionCx,
+        up: PointerUpCx,
+        open: &Model<bool>,
+        enabled: bool,
+    ) -> bool {
+        if !enabled {
+            self.reset();
+            return false;
+        }
+        if up.button != fret_core::MouseButton::Left {
+            self.reset();
+            return false;
+        }
+        if !self.captured {
+            self.reset();
+            return false;
+        }
+
+        host.release_pointer_capture();
+        self.captured = false;
+
+        let should_open = !self.moved
+            && self.down_pos.is_some()
+            && !self.moved_beyond_slop(up.position)
+            && host.bounds().contains(up.position);
+
+        self.reset();
+
+        if should_open {
+            let _ = host.models_mut().update(open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        }
+        true
+    }
+}
+
 /// Open-state listbox policy for Radix-style select content.
 ///
 /// This mirrors Radix outcomes inside `SelectContent`:
@@ -412,7 +537,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, Size};
-    use fret_ui::action::UiActionHostAdapter;
+    use fret_ui::action::{UiActionHostAdapter, UiFocusActionHost, UiPointerActionHost};
     use fret_ui::element::{LayoutStyle, PressableProps};
     use std::time::Duration;
 
@@ -421,6 +546,45 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         )
+    }
+
+    struct PointerHost<'a> {
+        app: &'a mut App,
+        bounds: Rect,
+    }
+
+    impl fret_ui::action::UiActionHost for PointerHost<'_> {
+        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+            self.app.models_mut()
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.app.push_effect(effect);
+        }
+
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.app.request_redraw(window);
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.app.next_timer_token()
+        }
+    }
+
+    impl UiFocusActionHost for PointerHost<'_> {
+        fn request_focus(&mut self, _target: GlobalElementId) {}
+    }
+
+    impl UiPointerActionHost for PointerHost<'_> {
+        fn bounds(&self) -> Rect {
+            self.bounds
+        }
+
+        fn capture_pointer(&mut self) {}
+
+        fn release_pointer_capture(&mut self) {}
+
+        fn set_cursor_icon(&mut self, _icon: fret_core::CursorIcon) {}
     }
 
     #[test]
@@ -627,5 +791,144 @@ mod tests {
             app.models().get_cloned(&value).flatten().as_deref(),
             Some("beta")
         );
+    }
+
+    #[test]
+    fn trigger_pointer_mouse_down_opens() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let mut state = SelectTriggerPointerState::default();
+        let mut host = PointerHost {
+            app: &mut app,
+            bounds: bounds(),
+        };
+
+        assert!(state.handle_pointer_down(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            PointerDownCx {
+                position: Point::new(Px(10.0), Px(12.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            },
+            &open,
+            true,
+        ));
+        assert!(host.models_mut().get_copied(&open).unwrap_or(false));
+    }
+
+    #[test]
+    fn trigger_pointer_touch_opens_on_click_like_up() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let mut state = SelectTriggerPointerState::default();
+        let mut host = PointerHost {
+            app: &mut app,
+            bounds: bounds(),
+        };
+
+        assert!(state.handle_pointer_down(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            PointerDownCx {
+                position: Point::new(Px(10.0), Px(12.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Touch,
+            },
+            &open,
+            true,
+        ));
+        assert!(!host.models_mut().get_copied(&open).unwrap_or(false));
+
+        assert!(state.handle_pointer_up(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            PointerUpCx {
+                position: Point::new(Px(13.0), Px(15.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Touch,
+            },
+            &open,
+            true,
+        ));
+        assert!(host.models_mut().get_copied(&open).unwrap_or(false));
+    }
+
+    #[test]
+    fn trigger_pointer_touch_drag_does_not_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let mut state = SelectTriggerPointerState::default();
+        let mut host = PointerHost {
+            app: &mut app,
+            bounds: bounds(),
+        };
+
+        assert!(state.handle_pointer_down(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            PointerDownCx {
+                position: Point::new(Px(10.0), Px(12.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Touch,
+            },
+            &open,
+            true,
+        ));
+        assert!(state.handle_pointer_move(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            PointerMoveCx {
+                position: Point::new(Px(40.0), Px(12.0)),
+                buttons: fret_core::MouseButtons {
+                    left: true,
+                    right: false,
+                    middle: false,
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Touch,
+            },
+        ));
+        assert!(state.handle_pointer_up(
+            &mut host,
+            ActionCx {
+                window,
+                target: GlobalElementId(1),
+            },
+            PointerUpCx {
+                position: Point::new(Px(40.0), Px(12.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Touch,
+            },
+            &open,
+            true,
+        ));
+        assert!(!host.models_mut().get_copied(&open).unwrap_or(false));
     }
 }

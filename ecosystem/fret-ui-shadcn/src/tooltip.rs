@@ -1108,6 +1108,7 @@ mod tests {
                 position: Point::new(Px(200.0), Px(200.0)),
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1119,6 +1120,7 @@ mod tests {
                 position: Point::new(Px(10.0), Px(10.0)),
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1176,6 +1178,7 @@ mod tests {
                 position: Point::new(Px(200.0), Px(200.0)),
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1424,6 +1427,7 @@ mod tests {
                 position: trigger_1_point,
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1457,6 +1461,7 @@ mod tests {
                 position: trigger_2_point,
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1594,6 +1599,7 @@ mod tests {
                 position: center(trigger_bounds),
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1625,6 +1631,7 @@ mod tests {
                 position: center(content_bounds),
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1764,6 +1771,7 @@ mod tests {
                 position: center(trigger_bounds),
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1827,6 +1835,7 @@ mod tests {
                 position: content_point,
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -1999,6 +2008,7 @@ mod tests {
                 position: Point::new(Px(12.0), Px(12.0)),
                 buttons: fret_core::MouseButtons::default(),
                 modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

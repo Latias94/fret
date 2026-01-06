@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use super::{ColumnDef, ColumnId, RowId, RowIndex, RowModel};
+use super::{ColumnDef, ColumnId, RowIndex, RowKey, RowModel};
 
 #[derive(Debug, Clone)]
 pub struct SortSpec {
@@ -27,8 +27,8 @@ pub fn sort_row_model<'a, TData>(
 
     let mut out = row_model.clone();
 
-    fn tiebreaker(a: &RowId, b: &RowId) -> Ordering {
-        a.as_ref().cmp(b.as_ref())
+    fn tiebreaker(a: RowKey, b: RowKey) -> Ordering {
+        a.cmp(&b)
     }
 
     fn cmp_rows<TData>(
@@ -58,7 +58,7 @@ pub fn sort_row_model<'a, TData>(
             }
         }
 
-        tiebreaker(&a_row.id, &b_row.id)
+        tiebreaker(a_row.key, b_row.key)
     }
 
     fn sort_children<TData>(
@@ -137,10 +137,10 @@ mod tests {
         let ids = sorted
             .root_rows()
             .iter()
-            .filter_map(|&i| sorted.row(i).map(|r| r.id.as_ref().to_string()))
+            .filter_map(|&i| sorted.row(i).map(|r| r.key.0))
             .collect::<Vec<_>>();
 
-        assert_eq!(ids, vec!["1", "0", "2"]);
+        assert_eq!(ids, vec![1, 0, 2]);
     }
 
     #[test]
@@ -160,14 +160,14 @@ mod tests {
         let ids = sorted
             .root_rows()
             .iter()
-            .filter_map(|&i| sorted.row(i).map(|r| r.id.as_ref().to_string()))
+            .filter_map(|&i| sorted.row(i).map(|r| r.key.0))
             .collect::<Vec<_>>();
 
-        assert_eq!(ids, vec!["2", "0", "1"]);
+        assert_eq!(ids, vec![2, 0, 1]);
     }
 
     #[test]
-    fn sort_row_model_uses_row_id_tiebreaker_for_determinism() {
+    fn sort_row_model_uses_row_key_tiebreaker_for_determinism() {
         let data = vec![Item { value: 1 }, Item { value: 1 }, Item { value: 1 }];
         let table = Table::builder(&data).build();
         let core = table.core_row_model();
@@ -183,9 +183,9 @@ mod tests {
         let ids = sorted
             .root_rows()
             .iter()
-            .filter_map(|&i| sorted.row(i).map(|r| r.id.as_ref().to_string()))
+            .filter_map(|&i| sorted.row(i).map(|r| r.key.0))
             .collect::<Vec<_>>();
 
-        assert_eq!(ids, vec!["0", "1", "2"]);
+        assert_eq!(ids, vec![0, 1, 2]);
     }
 }

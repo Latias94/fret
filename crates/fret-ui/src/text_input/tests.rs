@@ -119,6 +119,7 @@ fn text_input_hover_sets_text_cursor_effect() {
             position: Point::new(Px(10.0), Px(10.0)),
             buttons: fret_core::MouseButtons::default(),
             modifiers: fret_core::Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 

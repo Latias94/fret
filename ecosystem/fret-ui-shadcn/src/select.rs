@@ -5,10 +5,11 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::Model;
+use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    OpacityProps, Overflow, PositionStyle, PressableA11y, PressableProps, ScrollProps, SizeStyle,
-    StackProps, TextProps, VisualTransformProps,
+    OpacityProps, Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps,
+    ScrollProps, SizeStyle, StackProps, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
@@ -664,6 +665,7 @@ fn select_impl<H: UiHost>(
         #[derive(Debug)]
         struct SelectTriggerKeyState {
             trigger: radix_select::SelectTriggerKeyState,
+            pointer: radix_select::SelectTriggerPointerState,
             content: radix_select::SelectContentKeyState,
             was_open: bool,
         }
@@ -672,6 +674,7 @@ fn select_impl<H: UiHost>(
             fn new() -> Self {
                 Self {
                     trigger: radix_select::SelectTriggerKeyState::default(),
+                    pointer: radix_select::SelectTriggerPointerState::default(),
                     content: radix_select::SelectContentKeyState::default(),
                     was_open: false,
                 }
@@ -700,7 +703,11 @@ fn select_impl<H: UiHost>(
             }
         }
 
-        decl_chrome::control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
+        // `control_chrome_pressable_with_id_props` stores handlers; avoid moving `open` into the
+        // trigger closure so it can still be used for pointer handling later.
+        let open_for_trigger = open.clone();
+
+        let trigger = decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
             let mut typeahead_values: Vec<Arc<str>> = Vec::new();
             let mut typeahead_labels: Vec<Arc<str>> = Vec::new();
             let mut typeahead_disabled: Vec<bool> = Vec::new();
@@ -733,7 +740,7 @@ fn select_impl<H: UiHost>(
                 }),
             );
 
-            let open_for_key = open.clone();
+            let open_for_key = open_for_trigger.clone();
             let model_for_key = model.clone();
             let values_for_key = typeahead_values.clone();
             let labels_for_key = typeahead_labels.clone();
@@ -760,7 +767,7 @@ fn select_impl<H: UiHost>(
                 }),
             );
 
-            let open_for_activate = open.clone();
+            let open_for_activate = open_for_trigger.clone();
             let state_for_activate = trigger_state.clone();
             cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
                 let mut state = state_for_activate
@@ -773,7 +780,7 @@ fn select_impl<H: UiHost>(
 
                 state.trigger.clear_typeahead(host);
 
-                let _ = host.models_mut().update(&open_for_activate, |v| *v = !*v);
+                let _ = host.models_mut().update(&open_for_activate, |v| *v = true);
                 host.request_redraw(action_cx.window);
             }));
 
@@ -872,7 +879,7 @@ fn select_impl<H: UiHost>(
 
                     let theme_for_overlay = theme.clone();
                     let text_style_for_overlay = text_style.clone();
-                    let open_for_overlay = open.clone();
+                    let open_for_overlay = open_for_trigger.clone();
                     let list_focus_id_out_cell = Cell::new(None::<GlobalElementId>);
                     let list_focus_id_out = &list_focus_id_out_cell;
 
@@ -1469,7 +1476,7 @@ fn select_impl<H: UiHost>(
                     let mut request = radix_select::modal_select_request(
                         trigger_id,
                         trigger_id,
-                        open,
+                        open_for_trigger.clone(),
                         overlay_presence,
                         overlay_children,
                     );
@@ -1535,6 +1542,79 @@ fn select_impl<H: UiHost>(
             };
 
             (props, chrome, content)
+        });
+
+        let trigger_id = trigger.id;
+        let trigger_state: Arc<Mutex<SelectTriggerKeyState>> = cx.with_state_for(
+            trigger_id,
+            || Arc::new(Mutex::new(SelectTriggerKeyState::new())),
+            |s| s.clone(),
+        );
+
+        let open_for_pointer_down = open.clone();
+        let open_for_pointer_up = open.clone();
+        let enabled_for_pointer = enabled;
+        let state_for_pointer_down = trigger_state.clone();
+        let state_for_pointer_move = trigger_state.clone();
+        let state_for_pointer_up = trigger_state.clone();
+
+        cx.pointer_region(PointerRegionProps::default(), move |cx| {
+            cx.pointer_region_on_pointer_down(Arc::new(
+                move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, down: PointerDownCx| {
+                    let mut state = state_for_pointer_down
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    let handled = state.pointer.handle_pointer_down(
+                        host,
+                        action_cx,
+                        down,
+                        &open_for_pointer_down,
+                        enabled_for_pointer,
+                    );
+                    if handled && matches!(down.pointer_type, fret_core::PointerType::Mouse | fret_core::PointerType::Unknown) {
+                        state.trigger.clear_typeahead(host);
+                    }
+                    handled
+                },
+            ));
+
+            cx.pointer_region_on_pointer_move(Arc::new(
+                move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, mv: PointerMoveCx| {
+                    let mut state = state_for_pointer_move
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    state.pointer.handle_pointer_move(host, action_cx, mv)
+                },
+            ));
+
+            cx.pointer_region_on_pointer_up(Arc::new(
+                move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, up: PointerUpCx| {
+                    let was_open = host.models_mut().get_copied(&open_for_pointer_up).unwrap_or(false);
+
+                    let mut state = state_for_pointer_up
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    let handled = state.pointer.handle_pointer_up(
+                        host,
+                        action_cx,
+                        up,
+                        &open_for_pointer_up,
+                        enabled_for_pointer,
+                    );
+
+                    if handled
+                        && !was_open
+                        && host.models_mut().get_copied(&open_for_pointer_up).unwrap_or(false)
+                        && matches!(up.pointer_type, fret_core::PointerType::Touch | fret_core::PointerType::Pen)
+                    {
+                        state.trigger.clear_typeahead(host);
+                    }
+
+                    handled
+                },
+            ));
+
+            vec![trigger]
         })
     })
 }
@@ -2211,6 +2291,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -2220,6 +2301,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 
@@ -2327,6 +2409,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
         ui.dispatch_event(
@@ -2336,6 +2419,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

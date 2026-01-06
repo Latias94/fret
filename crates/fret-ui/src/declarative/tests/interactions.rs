@@ -187,6 +187,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -200,6 +201,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
                 ..Default::default()
             },
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -211,6 +213,7 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -294,6 +297,7 @@ fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -377,6 +381,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
             position: p,
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     assert_eq!(app.models().get_copied(&moves), Some(1));
@@ -389,6 +394,7 @@ fn dismissible_layer_pointer_move_observer_does_not_break_click_through() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     assert_eq!(
@@ -461,6 +467,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -470,6 +477,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             position: Point::new(Px(128.0), Px(20.0)),
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -480,6 +488,7 @@ fn declarative_resizable_panel_group_updates_model_on_drag() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -546,6 +555,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
     ui.dispatch_event(
@@ -556,6 +566,7 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -616,6 +627,7 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
             position: inside,
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -628,6 +640,7 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
             position: Point::new(Px(pressable_bounds.origin.x.0 + 200.0), Px(2.0)),
             buttons: MouseButtons::default(),
             modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 
@@ -809,6 +822,7 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
             button: MouseButton::Left,
             modifiers: Modifiers::default(),
             click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
         }),
     );
 

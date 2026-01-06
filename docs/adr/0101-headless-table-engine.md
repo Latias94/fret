@@ -1,6 +1,6 @@
 # ADR 0101: Headless Table Engine (TanStack-Aligned) and UI Recipes
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -65,9 +65,9 @@ We will adopt TanStack’s core concepts and vocabulary where they improve ergon
 
 We will NOT try to replicate React hook APIs. Instead, we expose explicit Rust types and methods.
 
-### 3) Stable IDs are a first-class requirement
+### 3) Stable row identity is a first-class requirement
 
-The engine MUST provide stable IDs needed for:
+The engine MUST provide stable row identity needed for:
 
 - caching keyed UI subtrees (ADR 0039),
 - row selection state that survives sorting/filtering,
@@ -76,10 +76,21 @@ The engine MUST provide stable IDs needed for:
 Contract:
 
 - `ColumnId`: stable string identifier (recommended: `Arc<str>`).
-- `RowId`: stable identifier chosen by the caller (recommended: `u64` or `Arc<str>`).
-- `CellId`: derived from `(row_id, column_id)`; stable across row-model transforms.
+- `RowKey`: stable numeric identity chosen by the caller (`u64` newtype).
+- `CellId`: derived from `(row_key, column_id)`; stable across row-model transforms.
 
 The engine will not assume that row indices are stable.
+
+Rationale (performance and future-proofing):
+
+- Using `RowKey(u64)` makes row identity usable in hot paths (selection, row maps, virtualization
+  keys, derived-model tie-breakers) without heap allocation and with low hash/compare cost.
+- Callers that already have a stable backend primary key can use it directly.
+- Callers that only have a string identifier can map it to a `RowKey` (e.g. a stable numeric id in
+  the data model, or a persisted mapping), but the headless core does not force string allocation.
+
+We may still carry optional human-readable row labels/paths for debugging and diagnostics, but they
+must not be required for correctness and must not be used as the primary hot-path key.
 
 ### 4) Table state is explicitly owned by the caller
 
@@ -113,7 +124,7 @@ The recipes:
 
 The headless engine produces:
 
-- ordered row IDs for the active model,
+- ordered row keys for the active model,
 - per-row visible cells / per-column metadata,
 - column sizing results (future).
 
@@ -122,6 +133,10 @@ Virtualization is applied by the UI layer:
 - `DataTable`: vertical virtualization via `VirtualList`.
 - `DataGrid`: 2D virtualization via `(VirtualList rows) + (VirtualList columns)` or an eventual
   dedicated 2D virtualization primitive.
+
+UI recipes MUST ensure the virtualization viewport is bounded (e.g. `Fill` size + `flex: 1` and
+`overflow: clip/scroll` on the container); otherwise virtualization may degenerate into “render all
+rows”, causing severe frame-time spikes (ADR 0070, ADR 0088).
 
 ## Design Outline (Non-Normative)
 
@@ -139,7 +154,7 @@ This section describes the intended shape; exact names may change during impleme
   - `column_filters: Vec<FilterSpec>`
   - `column_visibility: HashMap<ColumnId, bool>`
   - `pagination: PaginationState`
-  - `row_selection: HashSet<RowId>` (or bitset keyed by stable row ids)
+  - `row_selection: HashSet<RowKey>` (future: bitset when `RowKey` is dense)
   - future: `column_order`, `column_sizing`, `column_pinning`
 - `Table<TData>` / `TableInstance<TData>`:
   - accepts `data: Arc<[TData]>` (or a data provider + revision)
@@ -149,12 +164,23 @@ This section describes the intended shape; exact names may change during impleme
 
 We standardize the initial pipeline order:
 
-1. **Core**: materialize rows with stable row IDs and base cells.
+1. **Core**: materialize rows with stable row keys and base cells.
 2. **Filtering**: apply column filters and/or global filter (optional).
-3. **Sorting**: stable sort (tie-breaker by row ID) using column sort functions.
+3. **Sorting**: stable sort (tie-breaker by row key) using column sort functions.
 4. **Pagination**: apply page index/page size.
 
 Later steps (deferred): grouping, expanded rows, column pinning, column ordering/sizing.
+
+### Memoization model (TanStack-aligned)
+
+To match TanStack Table's performance characteristics, derived models SHOULD be computed through a
+dependency-driven memo layer (similar to TanStack's `memo(getDeps, fn)`):
+
+- Each derived model (`core`, `sorted`, `paginated`, `selected`, etc.) has explicit dependencies
+  (data revision + relevant slice of `TableState` + column defs revision).
+- The engine recomputes only the models whose dependency tuple changed.
+
+This avoids accidental O(n) work per-frame and makes “large table” performance predictable.
 
 ## Accessibility Requirements
 
@@ -198,4 +224,3 @@ backend; see ADR 0033 and platform conformance work).
 3) Implement filtering (column + optional global).
 4) Add initial shadcn recipes behind a feature flag.
 5) Add column sizing/resizing + pinning (needed for production-grade DataGrid).
-

@@ -1710,6 +1710,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 button,
                 modifiers,
                 click_count,
+                ..
             }) => {
                 self.last_pointer_pos = Some(*position);
                 if self.pan_button == Some(*button)
@@ -2344,6 +2345,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 position,
                 delta,
                 modifiers,
+                ..
             }) => {
                 self.last_pointer_pos = Some(*position);
                 let (

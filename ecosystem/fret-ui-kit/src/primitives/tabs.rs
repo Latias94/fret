@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use fret_core::SemanticsRole;
+use fret_core::{Modifiers, MouseButton, PointerType, SemanticsRole};
 use fret_ui::element::PressableA11y;
 
 /// Matches Radix Tabs `orientation` outcome: horizontal (default) vs vertical layout.
@@ -27,6 +27,43 @@ pub enum TabsActivationMode {
     #[default]
     Automatic,
     Manual,
+}
+
+/// Mirrors the Radix `TabsTrigger` `onMouseDown` behavior:
+/// - left mouse down selects the tab,
+/// - other mouse buttons / ctrl-click do not select and should avoid focusing the trigger.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TabsTriggerPointerDownAction {
+    Select,
+    PreventFocus,
+    Ignore,
+}
+
+/// Decide what to do with a pointer down event on a tabs trigger.
+///
+/// Radix selects on `onMouseDown` (left button only, no ctrl key) and prevents focus for other
+/// mouse downs. Touch/pen are ignored here so they can keep the click-like "activate on up"
+/// behavior.
+pub fn tabs_trigger_pointer_down_action(
+    pointer_type: PointerType,
+    button: MouseButton,
+    modifiers: Modifiers,
+    disabled: bool,
+) -> TabsTriggerPointerDownAction {
+    match pointer_type {
+        PointerType::Touch | PointerType::Pen => TabsTriggerPointerDownAction::Ignore,
+        PointerType::Mouse | PointerType::Unknown => {
+            if disabled {
+                return TabsTriggerPointerDownAction::PreventFocus;
+            }
+
+            if button == MouseButton::Left && !modifiers.ctrl {
+                TabsTriggerPointerDownAction::Select
+            } else {
+                TabsTriggerPointerDownAction::PreventFocus
+            }
+        }
+    }
 }
 
 /// A11y metadata for a tab-like pressable.
@@ -68,4 +105,45 @@ pub fn active_index_from_values(
     disabled: &[bool],
 ) -> Option<usize> {
     crate::headless::roving_focus::active_index_from_str_keys(values, selected, disabled)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tabs_trigger_pointer_down_selects_on_left_mouse_down() {
+        let action = tabs_trigger_pointer_down_action(
+            PointerType::Mouse,
+            MouseButton::Left,
+            Modifiers::default(),
+            false,
+        );
+        assert_eq!(action, TabsTriggerPointerDownAction::Select);
+    }
+
+    #[test]
+    fn tabs_trigger_pointer_down_prevents_focus_on_ctrl_click() {
+        let mut modifiers = Modifiers::default();
+        modifiers.ctrl = true;
+
+        let action = tabs_trigger_pointer_down_action(
+            PointerType::Mouse,
+            MouseButton::Left,
+            modifiers,
+            false,
+        );
+        assert_eq!(action, TabsTriggerPointerDownAction::PreventFocus);
+    }
+
+    #[test]
+    fn tabs_trigger_pointer_down_ignores_touch_to_preserve_click_like_activation() {
+        let action = tabs_trigger_pointer_down_action(
+            PointerType::Touch,
+            MouseButton::Left,
+            Modifiers::default(),
+            false,
+        );
+        assert_eq!(action, TabsTriggerPointerDownAction::Ignore);
+    }
 }

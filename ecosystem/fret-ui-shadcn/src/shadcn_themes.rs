@@ -219,9 +219,26 @@ fn with_oklch_alpha(raw: &str, alpha: f32) -> Option<String> {
     let raw = raw.trim();
     let inner = raw.strip_prefix("oklch(")?.strip_suffix(')')?.trim();
 
-    // `oklch(L C H)` -> `oklch(L C H / XX%)`
-    // `oklch(L C H / YY%)` -> `oklch(L C H / XX%)`
-    let inner = inner.split('/').next()?.trim();
-    let pct = (alpha * 100.0).round().clamp(0.0, 100.0) as u32;
-    Some(format!("oklch({inner} / {pct}%)"))
+    let (main, base_alpha) = if let Some((main, alpha_part)) = inner.split_once('/') {
+        let alpha_part = alpha_part.trim();
+        let base_alpha = if alpha_part.ends_with('%') {
+            let pct: f32 = alpha_part.trim_end_matches('%').trim().parse().ok()?;
+            (pct / 100.0).clamp(0.0, 1.0)
+        } else {
+            alpha_part.parse::<f32>().ok()?.clamp(0.0, 1.0)
+        };
+        (main.trim(), base_alpha)
+    } else {
+        (inner, 1.0)
+    };
+
+    // Tailwind-style opacity modifiers (e.g. `bg-input/30`) should multiply alpha when the base
+    // token already includes one (shadcn v4 dark themes often do).
+    let out_alpha = (base_alpha * alpha).clamp(0.0, 1.0);
+    let pct = ((out_alpha * 1000.0).round() / 10.0).clamp(0.0, 100.0);
+    if (pct.fract() - 0.0).abs() < f32::EPSILON {
+        Some(format!("oklch({main} / {}%)", pct as u32))
+    } else {
+        Some(format!("oklch({main} / {pct:.1}%)"))
+    }
 }

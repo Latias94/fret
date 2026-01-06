@@ -921,6 +921,7 @@ pub struct VirtualListProps {
     pub len: usize,
     pub items_revision: u64,
     pub estimate_row_height: Px,
+    pub measure_mode: VirtualListMeasureMode,
     pub overscan: usize,
     pub scroll_margin: Px,
     pub gap: Px,
@@ -928,11 +929,22 @@ pub struct VirtualListProps {
     pub visible_items: Vec<crate::virtual_list::VirtualItem>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VirtualListMeasureMode {
+    /// Performs a measurement pass for all visible items and updates the virtualizer with the
+    /// measured sizes. Correct for variable-height items.
+    Measured,
+    /// Skips the measurement pass and assumes all items have the estimated size.
+    /// Intended for fixed-height lists/tables.
+    Fixed,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct VirtualListOptions {
     pub axis: fret_core::Axis,
     pub items_revision: u64,
     pub estimate_row_height: Px,
+    pub measure_mode: VirtualListMeasureMode,
     pub overscan: usize,
     pub scroll_margin: Px,
     pub gap: Px,
@@ -944,9 +956,17 @@ impl VirtualListOptions {
             axis: fret_core::Axis::Vertical,
             items_revision: 0,
             estimate_row_height,
+            measure_mode: VirtualListMeasureMode::Measured,
             overscan,
             scroll_margin: Px(0.0),
             gap: Px(0.0),
+        }
+    }
+
+    pub fn fixed(estimate_row_height: Px, overscan: usize) -> Self {
+        Self {
+            measure_mode: VirtualListMeasureMode::Fixed,
+            ..Self::new(estimate_row_height, overscan)
         }
     }
 }

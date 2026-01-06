@@ -246,6 +246,7 @@ pub struct WinitInputState {
     pub modifiers: Modifiers,
     pub raw_modifiers: ModifiersState,
     pub alt_gr_down: bool,
+    pub last_pointer_type: fret_core::PointerType,
     click: ClickTracker,
 }
 
@@ -524,6 +525,7 @@ impl WinitInputState {
                     position: self.cursor_pos,
                     buttons: self.pressed_buttons,
                     modifiers: self.modifiers,
+                    pointer_type: self.last_pointer_type,
                 }));
             }
             WindowEvent::PointerButton {
@@ -535,6 +537,9 @@ impl WinitInputState {
                 self.cursor_pos_physical = Some(*position);
                 let logical: LogicalPosition<f32> = position.to_logical(window_scale_factor);
                 self.cursor_pos = Point::new(Px(logical.x), Px(logical.y));
+
+                let pointer_type = map_pointer_type(button);
+                self.last_pointer_type = pointer_type;
 
                 let Some(winit_button) = map_pointer_button(button) else {
                     return;
@@ -551,6 +556,7 @@ impl WinitInputState {
                         button: mapped_button,
                         modifiers: self.modifiers,
                         click_count,
+                        pointer_type,
                     }
                 } else {
                     let click_count = self.click.end_press(mapped_button, self.cursor_pos);
@@ -559,6 +565,7 @@ impl WinitInputState {
                         button: mapped_button,
                         modifiers: self.modifiers,
                         click_count,
+                        pointer_type,
                     }
                 };
                 out.push(Event::Pointer(evt));
@@ -569,6 +576,7 @@ impl WinitInputState {
                     position: self.cursor_pos,
                     delta: scroll,
                     modifiers: self.modifiers,
+                    pointer_type: fret_core::PointerType::Mouse,
                 }));
             }
             WindowEvent::SurfaceResized(size) => {
@@ -609,6 +617,7 @@ impl WinitInputState {
                 position: self.cursor_pos,
                 buttons: self.pressed_buttons,
                 modifiers: self.modifiers,
+                pointer_type: self.last_pointer_type,
             }));
         }
     }
@@ -715,6 +724,15 @@ pub fn map_pointer_button(button: &ButtonSource) -> Option<WinitMouseButton> {
         ButtonSource::Touch { .. } => Some(WinitMouseButton::Left),
         ButtonSource::TabletTool { .. } => Some(WinitMouseButton::Left),
         ButtonSource::Unknown(_) => None,
+    }
+}
+
+pub fn map_pointer_type(button: &ButtonSource) -> fret_core::PointerType {
+    match button {
+        ButtonSource::Mouse(_) => fret_core::PointerType::Mouse,
+        ButtonSource::Touch { .. } => fret_core::PointerType::Touch,
+        ButtonSource::TabletTool { .. } => fret_core::PointerType::Pen,
+        ButtonSource::Unknown(_) => fret_core::PointerType::Unknown,
     }
 }
 
