@@ -669,13 +669,12 @@ fn select_impl<H: UiHost>(
 
         let min_width = theme
             .metric_by_key("component.select.min_width")
-            .unwrap_or(Px(180.0));
+            // new-york-v4: Select content uses `min-w-[8rem]`.
+            .unwrap_or(Px(128.0));
 
         let mut trigger_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .w_full()
-                .min_w(MetricRef::Px(min_width))
                 .min_h(MetricRef::Px(resolved.min_height))
                 .merge(layout),
         );
@@ -1698,10 +1697,16 @@ fn select_impl<H: UiHost>(
             }
 
             props.a11y.controls_element = listbox_controls_element.get();
+            let chrome_width = props.layout.size.width;
+            let content_width = if matches!(chrome_width, Length::Auto) {
+                Length::Auto
+            } else {
+                Length::Fill
+            };
             let chrome = input_chrome_container_props(
                 {
                     let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Fill;
+                    layout.size.width = chrome_width;
                     layout
                 },
                 resolved,
@@ -1715,7 +1720,7 @@ fn select_impl<H: UiHost>(
                     FlexProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
+                            layout.size.width = content_width;
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
