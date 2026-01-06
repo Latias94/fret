@@ -24,20 +24,10 @@ pub fn overflow_scroll<H: UiHost>(
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
 
-        let scrollbar_w = theme
-            .metric_by_key("metric.scrollbar.width")
-            .unwrap_or(theme.metrics.scrollbar_width);
+        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
 
-        let thumb = theme
-            .color_by_key("scrollbar.thumb.background")
-            .unwrap_or(theme.colors.scrollbar_thumb);
-        let thumb_hover = theme
-            .color_by_key("scrollbar.thumb.hover.background")
-            .unwrap_or(
-                theme
-                    .color_by_key("scrollbar.thumb.background")
-                    .unwrap_or(theme.colors.scrollbar_thumb_hover),
-            );
+        let thumb = theme.color_required("scrollbar.thumb.background");
+        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
 
         (layout, scrollbar_w, thumb, thumb_hover)
     };
@@ -104,20 +94,10 @@ pub fn overflow_scroll_with_handle<H: UiHost>(
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
 
-        let scrollbar_w = theme
-            .metric_by_key("metric.scrollbar.width")
-            .unwrap_or(theme.metrics.scrollbar_width);
+        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
 
-        let thumb = theme
-            .color_by_key("scrollbar.thumb.background")
-            .unwrap_or(theme.colors.scrollbar_thumb);
-        let thumb_hover = theme
-            .color_by_key("scrollbar.thumb.hover.background")
-            .unwrap_or(
-                theme
-                    .color_by_key("scrollbar.thumb.background")
-                    .unwrap_or(theme.colors.scrollbar_thumb_hover),
-            );
+        let thumb = theme.color_required("scrollbar.thumb.background");
+        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
 
         (layout, scrollbar_w, thumb, thumb_hover)
     };
@@ -184,20 +164,10 @@ pub fn overflow_scroll_with_handle_xy<H: UiHost>(
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
 
-        let scrollbar_w = theme
-            .metric_by_key("metric.scrollbar.width")
-            .unwrap_or(theme.metrics.scrollbar_width);
+        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
 
-        let thumb = theme
-            .color_by_key("scrollbar.thumb.background")
-            .unwrap_or(theme.colors.scrollbar_thumb);
-        let thumb_hover = theme
-            .color_by_key("scrollbar.thumb.hover.background")
-            .unwrap_or(
-                theme
-                    .color_by_key("scrollbar.thumb.background")
-                    .unwrap_or(theme.colors.scrollbar_thumb_hover),
-            );
+        let thumb = theme.color_required("scrollbar.thumb.background");
+        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
 
         let corner_bg = theme
             .color_by_key("scrollbar.corner.background")
@@ -364,20 +334,10 @@ pub fn overflow_scroll_x_content<H: UiHost>(
         let theme = Theme::global(&*cx.app);
         let layout = style::layout_style(theme, layout);
 
-        let scrollbar_w = theme
-            .metric_by_key("metric.scrollbar.width")
-            .unwrap_or(theme.metrics.scrollbar_width);
+        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
 
-        let thumb = theme
-            .color_by_key("scrollbar.thumb.background")
-            .unwrap_or(theme.colors.scrollbar_thumb);
-        let thumb_hover = theme
-            .color_by_key("scrollbar.thumb.hover.background")
-            .unwrap_or(
-                theme
-                    .color_by_key("scrollbar.thumb.background")
-                    .unwrap_or(theme.colors.scrollbar_thumb_hover),
-            );
+        let thumb = theme.color_required("scrollbar.thumb.background");
+        let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
 
         (layout, scrollbar_w, thumb, thumb_hover)
     };

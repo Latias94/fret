@@ -595,10 +595,10 @@ pub fn render<H: UiHost>(
                 }
 
                 let theme = fret_ui::Theme::global(&*cx.app).clone();
-                let margin = margin_override.unwrap_or(theme.metrics.padding_md);
-                let gap = gap_override.unwrap_or(theme.metrics.padding_sm);
-                let toast_padding = theme.metrics.padding_sm;
-                let radius = theme.metrics.radius_md;
+                let margin = margin_override.unwrap_or_else(|| theme.metric_required("metric.padding.md"));
+                let gap = gap_override.unwrap_or_else(|| theme.metric_required("metric.padding.sm"));
+                let toast_padding = theme.metric_required("metric.padding.sm");
+                let radius = theme.metric_required("metric.radius.md");
                 let store_for_toasts = store_for_render.clone();
 
                 let mut wrapper_layout = fret_ui::element::LayoutStyle {
@@ -677,10 +677,10 @@ pub fn render<H: UiHost>(
 
                             let bg_default = theme
                                 .color_by_key("popover")
-                                .unwrap_or(theme.colors.panel_background);
+                                .unwrap_or_else(|| theme.color_required("popover"));
                             let fg_default = theme
                                 .color_by_key("popover-foreground")
-                                .unwrap_or(theme.colors.text_primary);
+                                .unwrap_or_else(|| theme.color_required("popover-foreground"));
                             let (bg, fg) = match toast.variant {
                                 ToastVariant::Default => (bg_default, fg_default),
                                 ToastVariant::Destructive | ToastVariant::Error => (
@@ -709,14 +709,14 @@ pub fn render<H: UiHost>(
                             };
                             let border_color = theme
                                 .color_by_key("border")
-                                .unwrap_or(theme.colors.panel_border);
+                                .unwrap_or_else(|| theme.color_required("border"));
                             let fg_muted = theme
                                 .color_by_key("muted-foreground")
-                                .unwrap_or(theme.colors.text_muted);
+                                .unwrap_or_else(|| theme.color_required("muted-foreground"));
 
                             let button_bg = theme
                                 .color_by_key("muted")
-                                .unwrap_or(theme.colors.hover_background);
+                                .unwrap_or_else(|| theme.color_required("muted"));
                             let button_radius = Px(6.0);
                             let button_pad_x = Px(8.0);
                             let button_pad_y = Px(4.0);
@@ -947,7 +947,7 @@ pub fn render<H: UiHost>(
                                 fret_ui::element::FlexProps {
                                     layout: fret_ui::element::LayoutStyle::default(),
                                     direction: fret_core::Axis::Horizontal,
-                                    gap: theme.metrics.padding_sm,
+                                    gap: theme.metric_required("metric.padding.sm"),
                                     padding: fret_core::Edges::all(fret_core::Px(0.0)),
                                     justify: fret_ui::element::MainAlign::Start,
                                     align: fret_ui::element::CrossAlign::Center,
@@ -1001,7 +1001,7 @@ pub fn render<H: UiHost>(
                                             fret_ui::element::FlexProps {
                                                 layout: fret_ui::element::LayoutStyle::default(),
                                                 direction: fret_core::Axis::Horizontal,
-                                                gap: theme.metrics.padding_sm,
+                                                gap: theme.metric_required("metric.padding.sm"),
                                                 padding: fret_core::Edges::all(Px(0.0)),
                                                 justify: fret_ui::element::MainAlign::End,
                                                 align: fret_ui::element::CrossAlign::Center,

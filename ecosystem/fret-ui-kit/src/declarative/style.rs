@@ -190,10 +190,10 @@ pub fn focus_ring(theme: &Theme, radius: Px) -> RingStyle {
     let color = theme
         .color_by_key("ring/50")
         .or_else(|| theme.color_by_key("ring"))
-        .unwrap_or(theme.colors.focus_ring);
+        .unwrap_or_else(|| theme.color_required("ring"));
     let offset_color = theme
         .color_by_key("ring-offset-background")
-        .unwrap_or(theme.colors.surface_background);
+        .unwrap_or_else(|| theme.color_required("ring-offset-background"));
 
     RingStyle {
         placement: RingPlacement::Outset,

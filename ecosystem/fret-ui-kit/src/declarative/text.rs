@@ -7,13 +7,13 @@ use fret_ui::{ElementContext, Theme, UiHost};
 fn font_size(theme: &Theme) -> Px {
     theme
         .metric_by_key("font.size")
-        .unwrap_or(theme.metrics.font_size)
+        .unwrap_or_else(|| theme.metric_required("font.size"))
 }
 
 fn font_line_height(theme: &Theme) -> Px {
     theme
         .metric_by_key("font.line_height")
-        .unwrap_or(theme.metrics.font_line_height)
+        .unwrap_or_else(|| theme.metric_required("font.line_height"))
 }
 
 fn text_sm_style(theme: &Theme) -> TextStyle {
