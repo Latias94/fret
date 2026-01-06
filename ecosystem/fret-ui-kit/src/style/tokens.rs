@@ -1,6 +1,11 @@
 use fret_core::{Color, Px};
 use fret_ui::Theme;
 
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
 /// Tailwind-like spacing scale for component libraries.
 ///
 /// This is intentionally small and opinionated. It is used by component-level style refinements
@@ -89,28 +94,16 @@ impl MetricFallback {
     pub(super) fn resolve(&self, theme: &Theme) -> Px {
         match *self {
             Self::Px(px) => px,
-            Self::ThemeRadiusSm => theme
-                .metric_by_key("metric.radius.sm")
-                .unwrap_or(theme.metrics.radius_sm),
-            Self::ThemeRadiusMd => theme
-                .metric_by_key("metric.radius.md")
-                .unwrap_or(theme.metrics.radius_md),
-            Self::ThemeRadiusLg => theme
-                .metric_by_key("metric.radius.lg")
-                .unwrap_or(theme.metrics.radius_lg),
-            Self::ThemePaddingSm => theme
-                .metric_by_key("metric.padding.sm")
-                .unwrap_or(theme.metrics.padding_sm),
-            Self::ThemePaddingMd => theme
-                .metric_by_key("metric.padding.md")
-                .unwrap_or(theme.metrics.padding_md),
+            Self::ThemeRadiusSm => theme.metric_required("metric.radius.sm"),
+            Self::ThemeRadiusMd => theme.metric_required("metric.radius.md"),
+            Self::ThemeRadiusLg => theme.metric_required("metric.radius.lg"),
+            Self::ThemePaddingSm => theme.metric_required("metric.padding.sm"),
+            Self::ThemePaddingMd => theme.metric_required("metric.padding.md"),
             Self::ThemePaddingSmMulDiv { mul, div } => {
                 if div == 0 {
                     return Px(0.0);
                 }
-                let base = theme
-                    .metric_by_key("metric.padding.sm")
-                    .unwrap_or(theme.metrics.padding_sm);
+                let base = theme.metric_required("metric.padding.sm");
                 Px(base.0 * (mul as f32) / (div as f32))
             }
         }
@@ -136,16 +129,16 @@ impl ColorFallback {
     pub(super) fn resolve(&self, theme: &Theme) -> Color {
         match *self {
             Self::Color(c) => c,
-            Self::ThemeSurfaceBackground => theme.colors.surface_background,
-            Self::ThemePanelBackground => theme.colors.panel_background,
-            Self::ThemePanelBorder => theme.colors.panel_border,
-            Self::ThemeTextPrimary => theme.colors.text_primary,
-            Self::ThemeTextMuted => theme.colors.text_muted,
-            Self::ThemeTextDisabled => theme.colors.text_disabled,
-            Self::ThemeAccent => theme.colors.accent,
-            Self::ThemeHoverBackground => theme.colors.hover_background,
-            Self::ThemeSelectionBackground => theme.colors.selection_background,
-            Self::ThemeFocusRing => theme.colors.focus_ring,
+            Self::ThemeSurfaceBackground => theme.color_required("background"),
+            Self::ThemePanelBackground => theme.color_required("card"),
+            Self::ThemePanelBorder => theme.color_required("border"),
+            Self::ThemeTextPrimary => theme.color_required("foreground"),
+            Self::ThemeTextMuted => theme.color_required("muted-foreground"),
+            Self::ThemeTextDisabled => alpha_mul(theme.color_required("muted-foreground"), 0.5),
+            Self::ThemeAccent => theme.color_required("primary"),
+            Self::ThemeHoverBackground => theme.color_required("accent"),
+            Self::ThemeSelectionBackground => theme.color_required("selection.background"),
+            Self::ThemeFocusRing => theme.color_required("ring"),
         }
     }
 }

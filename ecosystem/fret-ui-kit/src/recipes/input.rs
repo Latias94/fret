@@ -126,26 +126,26 @@ pub fn resolve_input_chrome(
         .map(|c| c.resolve(theme))
         .or_else(|| keys.bg.and_then(|k| theme.color_by_key(k)))
         .or_else(|| theme.color_by_key("component.input.bg"))
-        .unwrap_or(theme.colors.panel_background);
+        .unwrap_or_else(|| theme.color_required("background"));
     let border_color = style
         .border_color
         .as_ref()
         .map(|c| c.resolve(theme))
         .or_else(|| keys.border.and_then(|k| theme.color_by_key(k)))
         .or_else(|| theme.color_by_key("component.input.border"))
-        .unwrap_or(theme.colors.panel_border);
+        .unwrap_or_else(|| theme.color_required("input"));
     let border_color_focused = keys
         .border_focus
         .and_then(|k| theme.color_by_key(k))
         .or_else(|| theme.color_by_key("component.input.border_focus"))
-        .unwrap_or(theme.colors.focus_ring);
+        .unwrap_or_else(|| theme.color_required("ring"));
     let text_color = style
         .text_color
         .as_ref()
         .map(|c| c.resolve(theme))
         .or_else(|| keys.fg.and_then(|k| theme.color_by_key(k)))
         .or_else(|| theme.color_by_key("component.input.fg"))
-        .unwrap_or(theme.colors.text_primary);
+        .unwrap_or_else(|| theme.color_required("foreground"));
     let text_px = keys
         .text_px
         .and_then(|k| theme.metric_by_key(k))
@@ -155,7 +155,7 @@ pub fn resolve_input_chrome(
         .selection
         .and_then(|k| theme.color_by_key(k))
         .or_else(|| theme.color_by_key("component.input.selection"))
-        .unwrap_or(theme.colors.selection_background);
+        .unwrap_or_else(|| theme.color_required("selection.background"));
 
     let padding_top = style
         .padding
@@ -210,34 +210,47 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
         .unwrap_or(Px(2.0));
     let ring_color = theme
         .color_by_key("ring")
-        .unwrap_or(theme.colors.focus_ring);
+        .unwrap_or_else(|| theme.color_required("ring"));
     let ring_offset_color = theme
         .color_by_key("ring-offset-background")
-        .unwrap_or(theme.colors.surface_background);
+        .unwrap_or_else(|| theme.color_required("ring-offset-background"));
+
+    let background = theme
+        .color_by_key("component.input.bg")
+        .unwrap_or_else(|| theme.color_required("background"));
+    let border_color = theme
+        .color_by_key("component.input.border")
+        .unwrap_or_else(|| theme.color_required("input"));
+    let radius = theme
+        .metric_by_key("component.input.radius")
+        .unwrap_or_else(|| theme.metric_required("metric.radius.sm"));
+    let selection = theme
+        .color_by_key("component.input.selection")
+        .unwrap_or_else(|| theme.color_required("selection.background"));
 
     fret_ui::TextInputStyle {
         padding: Edges::all(Px(0.0)),
-        background: theme.colors.panel_background,
+        background,
         border: Edges::all(Px(1.0)),
-        border_color: theme.colors.panel_border,
-        border_color_focused: theme.colors.panel_border,
+        border_color,
+        border_color_focused: border_color,
         focus_ring: Some(RingStyle {
             placement: RingPlacement::Outset,
             width: ring_width,
             offset: ring_offset,
             color: ring_color,
             offset_color: Some(ring_offset_color),
-            corner_radii: Corners::all(theme.metrics.radius_sm),
+            corner_radii: Corners::all(radius),
         }),
-        corner_radii: Corners::all(theme.metrics.radius_sm),
-        text_color: theme.colors.text_primary,
-        placeholder_color: theme.colors.text_muted,
+        corner_radii: Corners::all(radius),
+        text_color: theme.color_required("foreground"),
+        placeholder_color: theme.color_required("muted-foreground"),
         selection_color: Color {
             a: 1.0,
-            ..theme.colors.selection_background
+            ..selection
         },
-        caret_color: theme.colors.text_primary,
-        preedit_color: theme.colors.accent,
+        caret_color: theme.color_required("foreground"),
+        preedit_color: theme.color_required("primary"),
     }
 }
 
