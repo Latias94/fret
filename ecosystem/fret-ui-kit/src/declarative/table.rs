@@ -27,12 +27,12 @@ fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
         .color_by_key("table.background")
         .or_else(|| theme.color_by_key("list.background"))
         .or_else(|| theme.color_by_key("card"))
-        .unwrap_or(theme.colors.panel_background);
+        .unwrap_or_else(|| theme.color_required("card"));
     let border = theme
         .color_by_key("table.border")
         .or_else(|| theme.color_by_key("border"))
         .or_else(|| theme.color_by_key("list.border"))
-        .unwrap_or(theme.colors.panel_border);
+        .unwrap_or_else(|| theme.color_required("border"));
     let header_bg = theme
         .color_by_key("table.header.background")
         .or_else(|| theme.color_by_key("muted"))
@@ -42,13 +42,13 @@ fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
         .or_else(|| theme.color_by_key("list.hover.background"))
         .or_else(|| theme.color_by_key("list.row.hover"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or(theme.colors.list_row_hover);
+        .unwrap_or_else(|| theme.color_required("accent"));
     let row_active = theme
         .color_by_key("table.row.active")
         .or_else(|| theme.color_by_key("list.active.background"))
         .or_else(|| theme.color_by_key("list.row.active"))
         .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or(theme.colors.list_row_selected);
+        .unwrap_or_else(|| theme.color_required("accent"));
     (table_bg, border, header_bg, row_hover, row_active)
 }
 
@@ -210,7 +210,7 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let theme = Theme::global(&*cx.app);
     let (table_bg, border, header_bg, row_hover, row_active) = resolve_table_colors(theme);
-    let radius = theme.metrics.radius_md;
+    let radius = theme.metric_required("metric.radius.md");
 
     let row_h = props
         .row_height
