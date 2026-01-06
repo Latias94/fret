@@ -225,7 +225,6 @@ fn select_scroll_with_buttons<H: UiHost>(
                                     layout: {
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Fill;
-                                        layout.size.height = Length::Fill;
                                         layout
                                     },
                                     // new-york-v4: `SelectPrimitive.Viewport` uses `p-1`.
@@ -2800,6 +2799,132 @@ mod tests {
                 n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll up")
             }),
             "expected scroll up to appear after scrolling down"
+        );
+    }
+
+    #[test]
+    fn select_wheel_scroll_clamps_to_last_item_without_blank_space() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..60)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        // Third frame: allow the scroll handle to observe content overflow.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("list node");
+        let list_bounds = ui.debug_node_bounds(list.id).expect("list bounds");
+        let wheel_pos = Point::new(
+            Px(list_bounds.origin.x.0 + list_bounds.size.width.0 * 0.5),
+            Px(list_bounds.origin.y.0 + list_bounds.size.height.0 * 0.5),
+        );
+
+        // Simulate repeated wheel scrolling (large delta) and ensure we clamp to the bottom.
+        for _ in 0..40 {
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                    position: wheel_pos,
+                    delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
+                    modifiers: Modifiers::default(),
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+        }
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("semantics snapshot after wheel");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("list node after wheel");
+        let last = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Item 59")
+            })
+            .expect("last item node after wheel");
+
+        let list_bounds = ui
+            .debug_node_bounds(list.id)
+            .expect("list bounds after wheel");
+        let last_bounds = ui
+            .debug_node_bounds(last.id)
+            .expect("last item bounds after wheel");
+        let list_top = list_bounds.origin.y.0;
+        let list_bottom = list_bounds.origin.y.0 + list_bounds.size.height.0;
+        let last_top = last_bounds.origin.y.0;
+        let last_bottom = last_bounds.origin.y.0 + last_bounds.size.height.0;
+
+        assert!(
+            last_bottom > list_top + 0.01 && last_top < list_bottom - 0.01,
+            "expected last item to remain visible after wheel scrolling; list={list_bounds:?} last={last_bounds:?}"
         );
     }
 }
