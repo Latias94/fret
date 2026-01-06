@@ -50,7 +50,7 @@ impl Space {
             Self::N1 => MetricFallback::ThemePaddingSmMulDiv { mul: 1, div: 2 },
             Self::N1p5 => MetricFallback::ThemePaddingSmMulDiv { mul: 3, div: 4 },
             Self::N2 => MetricFallback::ThemePaddingSm,
-            // This is intentionally tied to the baseline `metric.padding.md` token to avoid value
+            // This is intentionally tied to the baseline `fret.padding.md` token to avoid value
             // duplication drift when themes omit `component.space.*` (ADR 0032 / ADR 0050).
             Self::N2p5 => MetricFallback::ThemePaddingMd,
             Self::N3 => MetricFallback::ThemePaddingSmMulDiv { mul: 3, div: 2 },
@@ -89,28 +89,16 @@ impl MetricFallback {
     pub(super) fn resolve(&self, theme: &Theme) -> Px {
         match *self {
             Self::Px(px) => px,
-            Self::ThemeRadiusSm => theme
-                .metric_by_key("metric.radius.sm")
-                .unwrap_or(theme.metrics.radius_sm),
-            Self::ThemeRadiusMd => theme
-                .metric_by_key("metric.radius.md")
-                .unwrap_or(theme.metrics.radius_md),
-            Self::ThemeRadiusLg => theme
-                .metric_by_key("metric.radius.lg")
-                .unwrap_or(theme.metrics.radius_lg),
-            Self::ThemePaddingSm => theme
-                .metric_by_key("metric.padding.sm")
-                .unwrap_or(theme.metrics.padding_sm),
-            Self::ThemePaddingMd => theme
-                .metric_by_key("metric.padding.md")
-                .unwrap_or(theme.metrics.padding_md),
+            Self::ThemeRadiusSm => theme.metrics.radius_sm,
+            Self::ThemeRadiusMd => theme.metrics.radius_md,
+            Self::ThemeRadiusLg => theme.metrics.radius_lg,
+            Self::ThemePaddingSm => theme.metrics.padding_sm,
+            Self::ThemePaddingMd => theme.metrics.padding_md,
             Self::ThemePaddingSmMulDiv { mul, div } => {
                 if div == 0 {
                     return Px(0.0);
                 }
-                let base = theme
-                    .metric_by_key("metric.padding.sm")
-                    .unwrap_or(theme.metrics.padding_sm);
+                let base = theme.metrics.padding_sm;
                 Px(base.0 * (mul as f32) / (div as f32))
             }
         }

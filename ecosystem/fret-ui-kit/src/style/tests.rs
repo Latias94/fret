@@ -10,8 +10,8 @@ fn space_falls_back_to_theme_padding_scale() {
     let cfg = ThemeConfig {
         name: "Test".to_string(),
         metrics: std::collections::HashMap::from([
-            ("metric.padding.sm".to_string(), 12.0),
-            ("metric.padding.md".to_string(), 14.0),
+            ("fret.padding.sm".to_string(), 12.0),
+            ("fret.padding.md".to_string(), 14.0),
         ]),
         ..ThemeConfig::default()
     };
@@ -32,7 +32,7 @@ fn space_token_overrides_theme_fallback() {
     let cfg = ThemeConfig {
         name: "Test".to_string(),
         metrics: std::collections::HashMap::from([
-            ("metric.padding.sm".to_string(), 12.0),
+            ("fret.padding.sm".to_string(), 12.0),
             ("component.space.2".to_string(), 20.0),
         ]),
         ..ThemeConfig::default()
@@ -50,8 +50,7 @@ fn radius_falls_back_to_baseline_metric_tokens() {
     let cfg = ThemeConfig {
         name: "Test".to_string(),
         metrics: std::collections::HashMap::from([
-            ("metric.radius.sm".to_string(), 11.0),
-            ("metric.radius.md".to_string(), 9.0),
+            ("radius".to_string(), 15.0),
             ("component.radius.md".to_string(), 12.0),
         ]),
         ..ThemeConfig::default()

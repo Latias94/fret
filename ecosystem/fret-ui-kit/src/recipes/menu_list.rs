@@ -47,13 +47,14 @@ pub fn resolve_menu_list_row_chrome(theme: &Theme, size: Size) -> MenuListRowChr
             .color_by_key("foreground")
             .unwrap_or(theme.colors.text_primary),
         disabled_text_color: theme
-            .color_by_key("muted.foreground")
+            .color_by_key("fret.text.disabled")
+            .or_else(|| theme.color_by_key("muted-foreground"))
             .unwrap_or(theme.colors.text_disabled),
         row_hover: theme
-            .color_by_key("list.hover.background")
+            .color_by_key("fret.menu.item.hover")
             .unwrap_or(theme.colors.menu_item_hover),
         row_selected: theme
-            .color_by_key("list.active.background")
+            .color_by_key("fret.menu.item.selected")
             .unwrap_or(theme.colors.menu_item_selected),
     }
 }

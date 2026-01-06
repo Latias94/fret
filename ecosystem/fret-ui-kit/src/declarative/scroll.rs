@@ -24,7 +24,7 @@ pub fn overflow_scroll<H: UiHost>(
         let layout = style::layout_style(theme, layout);
 
         let scrollbar_w = theme
-            .metric_by_key("metric.scrollbar.width")
+            .metric_by_key("fret.scrollbar.width")
             .unwrap_or(theme.metrics.scrollbar_width);
 
         let thumb = theme
@@ -104,7 +104,7 @@ pub fn overflow_scroll_with_handle<H: UiHost>(
         let layout = style::layout_style(theme, layout);
 
         let scrollbar_w = theme
-            .metric_by_key("metric.scrollbar.width")
+            .metric_by_key("fret.scrollbar.width")
             .unwrap_or(theme.metrics.scrollbar_width);
 
         let thumb = theme
@@ -184,7 +184,7 @@ pub fn overflow_scroll_with_handle_xy<H: UiHost>(
         let layout = style::layout_style(theme, layout);
 
         let scrollbar_w = theme
-            .metric_by_key("metric.scrollbar.width")
+            .metric_by_key("fret.scrollbar.width")
             .unwrap_or(theme.metrics.scrollbar_width);
 
         let thumb = theme
