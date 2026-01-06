@@ -468,12 +468,19 @@ fn flatten_entries(into: &mut Vec<DropdownMenuEntry>, entries: Vec<DropdownMenuE
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CheckableIndicatorKind {
+    Check,
+    RadioDot,
+}
+
 fn checkable_menu_row_children<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
     leading: Option<AnyElement>,
     reserve_leading_slot: bool,
     trailing: Option<AnyElement>,
+    indicator_kind: CheckableIndicatorKind,
     indicator_on: bool,
     disabled: bool,
     row_bg: fret_core::Color,
@@ -482,10 +489,13 @@ fn checkable_menu_row_children<H: UiHost>(
     _font_size: Px,
     _font_line_height: Px,
     pad_x: Px,
+    pad_x_inset: Px,
     pad_y: Px,
     radius_sm: Px,
     text_disabled: fret_core::Color,
 ) -> Vec<AnyElement> {
+    let indicator_fg = if disabled { text_disabled } else { row_fg };
+
     vec![cx.container(
         ContainerProps {
             layout: LayoutStyle::default(),
@@ -493,47 +503,84 @@ fn checkable_menu_row_children<H: UiHost>(
                 top: pad_y,
                 right: pad_x,
                 bottom: pad_y,
-                left: pad_x,
+                // new-york-v4: checkbox/radio items use `pl-8`.
+                left: pad_x_inset,
             },
             background: Some(row_bg),
             corner_radii: fret_core::Corners::all(radius_sm),
             ..Default::default()
         },
         move |cx| {
-            let mut row: Vec<AnyElement> = Vec::with_capacity(
-                3 + usize::from(leading.is_some() || reserve_leading_slot)
-                    + usize::from(trailing.is_some()),
-            );
-
-            let indicator_fg = if disabled { text_disabled } else { row_fg };
-            row.push(cx.flex(
-                FlexProps {
-                    layout: {
-                        let mut layout = LayoutStyle::default();
-                        layout.size.width = Length::Px(Px(16.0));
-                        layout.size.height = Length::Px(Px(16.0));
-                        layout
+            let indicator = cx.container(
+                ContainerProps {
+                    layout: LayoutStyle {
+                        position: fret_ui::element::PositionStyle::Absolute,
+                        inset: fret_ui::element::InsetStyle {
+                            top: Some(Px(0.0)),
+                            right: None,
+                            bottom: Some(Px(0.0)),
+                            // new-york-v4: indicator slot uses `left-2`.
+                            left: Some(pad_x),
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(Px(16.0)),
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
                     },
-                    direction: fret_core::Axis::Horizontal,
-                    gap: Px(0.0),
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Center,
-                    align: CrossAlign::Center,
-                    wrap: false,
+                    ..Default::default()
                 },
                 move |cx| {
-                    if !indicator_on {
-                        return Vec::new();
-                    }
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Center,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            if !indicator_on {
+                                return Vec::new();
+                            }
 
-                    vec![decl_icon::icon_with(
-                        cx,
-                        ids::ui::CHECK,
-                        Some(Px(16.0)),
-                        Some(ColorRef::Color(indicator_fg)),
+                            match indicator_kind {
+                                CheckableIndicatorKind::Check => vec![decl_icon::icon_with(
+                                    cx,
+                                    ids::ui::CHECK,
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(indicator_fg)),
+                                )],
+                                CheckableIndicatorKind::RadioDot => vec![cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(8.0));
+                                            layout.size.height = Length::Px(Px(8.0));
+                                            layout
+                                        },
+                                        padding: Edges::all(Px(0.0)),
+                                        background: Some(indicator_fg),
+                                        shadow: None,
+                                        border: Edges::all(Px(0.0)),
+                                        border_color: None,
+                                        corner_radii: fret_core::Corners::all(Px(999.0)),
+                                    },
+                                    |_cx| Vec::new(),
+                                )],
+                            }
+                        },
                     )]
                 },
-            ));
+            );
+
+            let mut row: Vec<AnyElement> = Vec::with_capacity(
+                2 + usize::from(leading.is_some() || reserve_leading_slot)
+                    + usize::from(trailing.is_some()),
+            );
 
             if let Some(l) = leading.clone() {
                 row.push(menu_icon_slot(cx, l));
@@ -558,7 +605,7 @@ fn checkable_menu_row_children<H: UiHost>(
                 row.push(t);
             }
 
-            vec![cx.flex(
+            let content = cx.flex(
                 FlexProps {
                     layout: {
                         let mut layout = LayoutStyle::default();
@@ -573,7 +620,9 @@ fn checkable_menu_row_children<H: UiHost>(
                     wrap: false,
                 },
                 move |_cx| row.clone(),
-            )]
+            );
+
+            vec![content, indicator]
         },
     )]
 }
@@ -590,6 +639,7 @@ fn submenu_chevron_right_text<H: UiHost>(
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Px(Px(16.0));
                 layout.size.height = Length::Px(Px(16.0));
+                layout.margin.left = fret_ui::element::MarginEdge::Auto;
                 layout
             },
             direction: fret_core::Axis::Horizontal,
@@ -1023,7 +1073,7 @@ impl DropdownMenu {
                                                             theme.color_by_key("destructive.background")
                                                         })
                                                         .unwrap_or(theme.colors.text_primary);
-                                                    let destructive_bg = alpha_mul(destructive_fg, 0.12);
+                                                    let destructive_bg = alpha_mul(destructive_fg, 0.10);
 
                                                     let text_style = TextStyle {
                                                         font: fret_core::FontId::default(),
@@ -1199,6 +1249,7 @@ impl DropdownMenu {
                                                                         leading.clone(),
                                                                         reserve_leading_slot,
                                                                         trailing.clone(),
+                                                                        CheckableIndicatorKind::Check,
                                                                         checked_now,
                                                                         disabled,
                                                                         row_bg,
@@ -1207,6 +1258,7 @@ impl DropdownMenu {
                                                                         font_size,
                                                                         font_line_height,
                                                                         pad_x,
+                                                                        pad_x_inset,
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_disabled,
@@ -1319,6 +1371,7 @@ impl DropdownMenu {
                                                                         leading.clone(),
                                                                         reserve_leading_slot,
                                                                         trailing.clone(),
+                                                                        CheckableIndicatorKind::RadioDot,
                                                                         is_selected,
                                                                         disabled,
                                                                         row_bg,
@@ -1327,6 +1380,7 @@ impl DropdownMenu {
                                                                         font_size,
                                                                         font_line_height,
                                                                         pad_x,
+                                                                        pad_x_inset,
                                                                         pad_y,
                                                                         radius_sm,
                                                                         text_disabled,
@@ -1602,7 +1656,7 @@ impl DropdownMenu {
                                                 .color_by_key("destructive")
                                                 .or_else(|| theme.color_by_key("destructive.background"))
                                                 .unwrap_or(theme.colors.text_primary);
-                                            let destructive_bg = alpha_mul(destructive_fg, 0.12);
+                                            let destructive_bg = alpha_mul(destructive_fg, 0.10);
                                             let label_fg = theme
                                                 .color_by_key("muted.foreground")
                                                 .or_else(|| theme.color_by_key("muted-foreground"))
@@ -1798,6 +1852,7 @@ impl DropdownMenu {
                                                                                 leading.clone(),
                                                                                 reserve_leading_slot,
                                                                                 trailing.clone(),
+                                                                                CheckableIndicatorKind::Check,
                                                                                 checked_now,
                                                                                 disabled,
                                                                                 row_bg,
@@ -1806,6 +1861,7 @@ impl DropdownMenu {
                                                                                 font_size,
                                                                                 font_line_height,
                                                                                 pad_x,
+                                                                                pad_x_inset,
                                                                                 pad_y,
                                                                                 radius_sm,
                                                                                 text_disabled,
@@ -1902,6 +1958,7 @@ impl DropdownMenu {
                                                                                 leading.clone(),
                                                                                 reserve_leading_slot,
                                                                                 trailing.clone(),
+                                                                                CheckableIndicatorKind::RadioDot,
                                                                                 is_selected,
                                                                                 disabled,
                                                                                 row_bg,
@@ -1910,6 +1967,7 @@ impl DropdownMenu {
                                                                                 font_size,
                                                                                 font_line_height,
                                                                                 pad_x,
+                                                                                pad_x_inset,
                                                                                 pad_y,
                                                                                 radius_sm,
                                                                                 text_disabled,
