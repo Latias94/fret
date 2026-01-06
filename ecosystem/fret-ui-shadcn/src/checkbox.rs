@@ -38,24 +38,19 @@ fn checkbox_border(theme: &Theme) -> Color {
     theme
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
-        .unwrap_or(theme.colors.panel_border)
+        .expect("missing theme token: input/border")
 }
 
 fn checkbox_bg_checked(theme: &Theme) -> Color {
-    theme.color_by_key("primary").unwrap_or(theme.colors.accent)
+    theme.color_required("primary")
 }
 
 fn checkbox_fg_checked(theme: &Theme) -> Color {
-    theme
-        .color_by_key("primary-foreground")
-        .or_else(|| theme.color_by_key("primary.foreground"))
-        .unwrap_or(theme.colors.text_primary)
+    theme.color_required("primary-foreground")
 }
 
 fn checkbox_ring_color(theme: &Theme) -> Color {
-    theme
-        .color_by_key("ring")
-        .unwrap_or(theme.colors.focus_ring)
+    theme.color_required("ring")
 }
 
 #[derive(Clone)]
