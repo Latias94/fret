@@ -891,7 +891,11 @@ impl DropdownMenu {
                     let border = theme
                         .color_by_key("border")
                         .unwrap_or(theme.colors.panel_border);
-                    let shadow = decl_style::shadow_sm(&theme, theme.metrics.radius_sm);
+                    // new-york-v4:
+                    // - `DropdownMenuContent`: `shadow-md`
+                    // - `DropdownMenuSubContent`: `shadow-lg`
+                    let shadow = decl_style::shadow_md(&theme, theme.metrics.radius_sm);
+                    let shadow_submenu = decl_style::shadow_lg(&theme, theme.metrics.radius_sm);
                     let ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
                     // new-york-v4: item rows use `px-2`.
                     let pad_x = MetricRef::space(Space::N2).resolve(&theme);
@@ -1657,7 +1661,7 @@ impl DropdownMenu {
                                                     layout,
                                                     padding: Edges::all(Px(4.0)),
                                                     background: Some(bg),
-                                                    shadow: Some(shadow),
+                                                    shadow: Some(shadow_submenu),
                                                     border: Edges::all(Px(1.0)),
                                                     border_color: Some(border),
                                                     corner_radii: fret_core::Corners::all(
