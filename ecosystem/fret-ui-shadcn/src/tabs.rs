@@ -16,6 +16,11 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a *= mul;
+    c
+}
+
 fn apply_trigger_inherited_style(
     mut element: AnyElement,
     fg: Color,
@@ -123,8 +128,8 @@ fn tabs_trigger_border_width(theme: &Theme) -> Px {
         .unwrap_or(Px(1.0))
 }
 
-pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 use fret_ui_kit::primitives::tabs as radix_tabs;
+pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
 
 #[derive(Debug, Clone)]
 pub struct TabsItem {

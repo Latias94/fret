@@ -1360,7 +1360,8 @@ fn select_impl<H: UiHost>(
                                                                             let pos = item_ordinal;
                                                                             item_ordinal = item_ordinal.saturating_add(1);
                                                                             let state_for_hover =
-                                                                                trigger_state_for_overlay.clone();
+                                                                                trigger_state_for_overlay_in_content
+                                                                                    .clone();
                                                                             let row_idx_for_hover = row_idx;
 
                                                                             out.push(cx.pressable_with_id(

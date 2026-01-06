@@ -1130,6 +1130,7 @@ impl MenubarMenuEntries {
                         let trigger_registry_for_overlay_for_content =
                             trigger_registry_for_overlay.clone();
 
+                        let theme_for_content = theme.clone();
                         let content = cx.semantics(
                             SemanticsProps {
                                 layout: LayoutStyle::default(),
@@ -1137,6 +1138,7 @@ impl MenubarMenuEntries {
                                 ..Default::default()
                             },
                             move |cx| {
+                                let theme = theme_for_content.clone();
                                 vec![menu::content_panel::menu_panel_container_at(
                                     cx,
                                     placed,
@@ -1271,6 +1273,7 @@ impl MenubarMenuEntries {
                                                             let trigger_registry =
                                                                 trigger_registry_for_overlay_for_content.clone();
 
+                                                            let theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let checked_now = cx
@@ -1401,6 +1404,7 @@ impl MenubarMenuEntries {
                                                             let trigger_registry =
                                                                 trigger_registry_for_overlay_for_content.clone();
 
+                                                            let theme = theme.clone();
                                                             out.push(cx.keyed(value.clone(), move |cx| {
                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let selected = cx
@@ -1549,6 +1553,7 @@ impl MenubarMenuEntries {
                                                              let value = item.value.clone();
                                                              let pad_left =
                                                                  if item.inset { pad_x_inset } else { pad_x };
+                                                             let theme = theme.clone();
                                                              out.push(cx.keyed(value.clone(), move |cx| {
                                                                  cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let geometry_hint = has_submenu.then_some(
@@ -2079,6 +2084,7 @@ impl MenubarMenuEntries {
                                                                         let checked = item.checked.clone();
                                                                         let text_style = text_style.clone();
 
+                                                                        let theme = theme.clone();
                                                                         out.push(cx.keyed(value.clone(), move |cx| {
                                                                             cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                                 menu::sub_content::wire_item(
@@ -2196,6 +2202,7 @@ impl MenubarMenuEntries {
                                                                         let group_value = item.group_value.clone();
                                                                         let text_style = text_style.clone();
 
+                                                                        let theme = theme.clone();
                                                                         out.push(cx.keyed(value.clone(), move |cx| {
                                                                             cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                                 menu::sub_content::wire_item(
@@ -2320,6 +2327,7 @@ impl MenubarMenuEntries {
                                                                             if item.inset { pad_x_inset } else { pad_x };
                                                                         let text_style = text_style.clone();
 
+                                                                        let theme = theme.clone();
                                                                         out.push(cx.keyed(value.clone(), move |cx| {
                                                                             cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                                 menu::sub_content::wire_item(
