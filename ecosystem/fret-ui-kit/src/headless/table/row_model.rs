@@ -154,6 +154,11 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    pub fn keep_pinned_rows(mut self, keep: bool) -> Self {
+        self.options.keep_pinned_rows = keep;
+        self
+    }
+
     pub fn get_row_key(
         mut self,
         f: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'a,
@@ -280,6 +285,61 @@ impl<'a, TData> Table<'a, TData> {
         model
             .row_by_key(row_key)
             .is_some_and(|i| super::row_is_all_parents_expanded(model, &self.state.expanding, i))
+    }
+
+    pub fn is_some_rows_pinned(&self, position: Option<super::RowPinPosition>) -> bool {
+        super::is_some_rows_pinned(&self.state.row_pinning, position)
+    }
+
+    pub fn row_is_pinned(&self, row_key: RowKey) -> Option<super::RowPinPosition> {
+        super::is_row_pinned(row_key, &self.state.row_pinning)
+    }
+
+    pub fn top_row_keys(&self) -> Vec<RowKey> {
+        self.pinned_row_keys(super::RowPinPosition::Top)
+    }
+
+    pub fn bottom_row_keys(&self) -> Vec<RowKey> {
+        self.pinned_row_keys(super::RowPinPosition::Bottom)
+    }
+
+    pub fn center_row_keys(&self) -> Vec<RowKey> {
+        let model = self.row_model();
+        super::center_row_keys(model.root_rows(), model, &self.state.row_pinning)
+    }
+
+    fn pinned_row_keys(&self, position: super::RowPinPosition) -> Vec<RowKey> {
+        let keys = match position {
+            super::RowPinPosition::Top => self.state.row_pinning.top.as_slice(),
+            super::RowPinPosition::Bottom => self.state.row_pinning.bottom.as_slice(),
+        };
+        if keys.is_empty() {
+            return Vec::new();
+        }
+
+        if !self.options.keep_pinned_rows {
+            let model = self.row_model();
+            let visible: std::collections::HashSet<RowKey> = model
+                .root_rows()
+                .iter()
+                .filter_map(|&i| model.row(i).map(|r| r.key))
+                .collect();
+            return keys
+                .iter()
+                .copied()
+                .filter(|k| visible.contains(k))
+                .collect();
+        }
+
+        let core = self.core_row_model();
+        keys.iter()
+            .copied()
+            .filter(|k| {
+                core.row_by_key(*k).is_some_and(|i| {
+                    super::row_is_all_parents_expanded(core, &self.state.expanding, i)
+                })
+            })
+            .collect()
     }
 
     pub fn ordered_columns(&self) -> Vec<&super::ColumnDef<TData>> {
@@ -529,6 +589,7 @@ mod tests {
 
     #[derive(Debug, Clone)]
     struct Person {
+        #[allow(dead_code)]
         name: String,
         sub_rows: Option<Vec<Person>>,
     }
@@ -987,6 +1048,7 @@ mod tests {
     fn manual_pagination_skips_row_model() {
         #[derive(Debug, Clone)]
         struct Item {
+            #[allow(dead_code)]
             value: i32,
         }
 
@@ -1034,5 +1096,101 @@ mod tests {
         assert!(table.is_all_rows_expanded());
         assert!(table.row_can_expand(RowKey(1)));
         assert!(table.row_is_all_parents_expanded(RowKey(10)));
+    }
+
+    #[test]
+    fn keep_pinned_rows_true_keeps_pins_across_pagination() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = (0..20).map(|i| Item { value: i }).collect::<Vec<_>>();
+
+        let mut state = TableState::default();
+        state.pagination = PaginationState {
+            page_index: 1,
+            page_size: 5,
+        };
+        state.row_pinning.top = vec![RowKey(1)];
+
+        let table_keep = Table::builder(&data)
+            .state(state.clone())
+            .options(TableOptions {
+                keep_pinned_rows: true,
+                ..Default::default()
+            })
+            .build();
+        assert_eq!(table_keep.top_row_keys(), vec![RowKey(1)]);
+
+        let table_no_keep = Table::builder(&data)
+            .state(state)
+            .options(TableOptions {
+                keep_pinned_rows: false,
+                ..Default::default()
+            })
+            .build();
+        assert!(table_no_keep.top_row_keys().is_empty());
+    }
+
+    #[test]
+    fn keep_pinned_rows_true_respects_expanded_parents() {
+        let data = vec![TreeNode {
+            id: 1,
+            children: vec![TreeNode {
+                id: 10,
+                children: Vec::new(),
+            }],
+        }];
+
+        let mut collapsed = TableState::default();
+        collapsed.row_pinning.top = vec![RowKey(10)];
+
+        let table_collapsed = Table::builder(&data)
+            .get_row_key(|n, _i, _p| RowKey(n.id))
+            .get_sub_rows(|n, _i| Some(n.children.as_slice()))
+            .state(collapsed)
+            .options(TableOptions {
+                keep_pinned_rows: true,
+                ..Default::default()
+            })
+            .build();
+        assert!(table_collapsed.top_row_keys().is_empty());
+
+        let mut expanded = TableState::default();
+        expanded.expanding = [RowKey(1)].into_iter().collect();
+        expanded.row_pinning.top = vec![RowKey(10)];
+
+        let table_expanded = Table::builder(&data)
+            .get_row_key(|n, _i, _p| RowKey(n.id))
+            .get_sub_rows(|n, _i| Some(n.children.as_slice()))
+            .state(expanded)
+            .options(TableOptions {
+                keep_pinned_rows: true,
+                ..Default::default()
+            })
+            .build();
+        assert_eq!(table_expanded.top_row_keys(), vec![RowKey(10)]);
+    }
+
+    #[test]
+    fn center_row_keys_excludes_pinned_rows() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            #[allow(dead_code)]
+            value: usize,
+        }
+
+        let data = (0..5).map(|i| Item { value: i }).collect::<Vec<_>>();
+        let mut state = TableState::default();
+        state.row_pinning.top = vec![RowKey(0)];
+        state.row_pinning.bottom = vec![RowKey(4)];
+
+        let table = Table::builder(&data).state(state).build();
+        assert_eq!(
+            table.center_row_keys(),
+            vec![RowKey(1), RowKey(2), RowKey(3)]
+        );
     }
 }

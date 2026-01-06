@@ -15,6 +15,7 @@ mod options;
 mod pagination;
 mod row_expanding;
 mod row_model;
+mod row_pinning;
 mod row_selection;
 mod sorting;
 mod state;
@@ -38,6 +39,10 @@ pub use row_expanding::{
     toggle_row_expanded,
 };
 pub use row_model::{Row, RowIndex, RowKey, RowModel, Table, TableBuilder};
+pub use row_pinning::{
+    RowPinPosition, RowPinningState, center_row_keys, is_row_pinned, is_some_rows_pinned, pin_row,
+    pin_rows,
+};
 pub use row_selection::{RowSelectionState, is_row_selected, select_rows_fn};
 pub use sorting::{
     SortSpec, SortingState, sort_for_column, sort_row_model, toggle_sort_for_column,

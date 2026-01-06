@@ -35,11 +35,10 @@ pub fn paginate_row_model<'a, TData>(
     let page_end = page_start.saturating_add(pagination.page_size);
 
     let mut out = row_model.clone();
-    out.root_rows = out
-        .root_rows
-        .get(page_start..page_end)
-        .unwrap_or_default()
-        .to_vec();
+    let roots = out.root_rows.clone();
+    let start = page_start.min(roots.len());
+    let end = page_end.min(roots.len());
+    out.root_rows = roots[start..end].to_vec();
 
     out.flat_rows.clear();
     fn push_flat<TData>(row_model: &mut RowModel<'_, TData>, row: RowIndex) {
@@ -101,5 +100,27 @@ mod tests {
             paged.row_by_key(RowKey::from_index(4)).is_some(),
             "rows_by_key remains full"
         );
+    }
+
+    #[test]
+    fn paginate_row_model_clamps_page_end_to_row_count() {
+        let data = (0..5).map(|i| Item { value: i }).collect::<Vec<_>>();
+        let table = Table::builder(&data).build();
+        let core = table.core_row_model();
+
+        let paged = paginate_row_model(
+            core,
+            PaginationState {
+                page_index: 0,
+                page_size: 10,
+            },
+        );
+
+        let ids = paged
+            .root_rows()
+            .iter()
+            .filter_map(|&i| paged.row(i).map(|r| r.key.0))
+            .collect::<Vec<_>>();
+        assert_eq!(ids, vec![0, 1, 2, 3, 4]);
     }
 }
