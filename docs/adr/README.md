@@ -140,6 +140,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md` (engine integration without queue ownership)
 - `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md` (composable authoring layer)
 - `docs/adr/0040-color-management-and-compositing-contracts.md` (linear compositor + viewport encoding metadata)
+- `docs/adr/0102-semantic-theme-keys-and-extensible-token-registry.md` (semantic-first theming, shadcn alignment)
 - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md` (cross-window internal drag + clipboard boundary)
 - `docs/adr/0042-virtualization-and-large-lists.md` (virtualization contract for editor-scale surfaces)
 - `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md` (shortcut arbitration + AltGr + pending bindings)
@@ -197,6 +198,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 - `docs/adr/0032-style-tokens-and-theme-resolution.md`
 - `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
+- `docs/adr/0102-semantic-theme-keys-and-extensible-token-registry.md`
 - `docs/adr/0056-component-size-and-density-system.md`
 - `docs/adr/0060-shadows-and-elevation.md`
 - `docs/adr/0061-focus-rings-and-focus-visible.md`
@@ -211,6 +213,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0070-virtualization-contract.md`
 - `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - `docs/adr/0047-virtual-list-data-source-and-stable-item-keys.md`
+- `docs/adr/0100-markdown-rendering-streaming-and-injection.md`
 - `docs/adr/0065-icon-system-and-asset-packaging.md`
 - `docs/adr/0044-text-editing-state-and-commands.md`
 - `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`
@@ -262,6 +265,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0098-plot3d-rendering-strategy.md`
 - `docs/adr/0093-crate-structure-core-backends-apps.md`
 - `docs/adr/0090-radix-aligned-headless-primitives-in-fret-ui-kit.md`
+- `docs/adr/0101-headless-table-engine.md`
 - `docs/adr/0058-typography-v1-textstyle-weight-lineheight-tracking.md`
 - `docs/adr/0059-text-overflow-ellipsis-and-truncation.md`
 - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`

@@ -15,6 +15,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::hover_card::{HoverCard, HoverCardAlign};
+use crate::layout as shadcn_layout;
 
 fn sidebar_width(theme: &Theme) -> Px {
     theme
@@ -148,7 +149,7 @@ impl Sidebar {
         props.layout.overflow = Overflow::Clip;
 
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -170,7 +171,7 @@ impl SidebarHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -192,7 +193,7 @@ impl SidebarFooter {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -261,7 +262,7 @@ impl SidebarGroup {
         let chrome = ChromeRefinement::default().p(Space::N2);
         let props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 

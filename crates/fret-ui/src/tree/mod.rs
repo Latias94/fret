@@ -31,7 +31,9 @@ use layers::UiLayer;
 pub use layers::UiLayerId;
 pub use paint_cache::PaintCachePolicy;
 use paint_cache::{PaintCacheEntry, PaintCacheKey, PaintCacheState};
-use shortcuts::{KeydownShortcutParams, PendingShortcut, PointerDownOutsideParams};
+use shortcuts::{
+    KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct InvalidationFlags {
@@ -626,8 +628,15 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(node) = self.nodes.get(id) {
-                for &child in node.children.iter().rev() {
-                    stack.push(child);
+                let traverse_children = node
+                    .widget
+                    .as_ref()
+                    .map(|w| w.focus_traversal_children())
+                    .unwrap_or(true);
+                if traverse_children {
+                    for &child in node.children.iter().rev() {
+                        stack.push(child);
+                    }
                 }
             }
         }
@@ -649,27 +658,44 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<NodeId> {
         let mut stack = vec![root];
         while let Some(id) = stack.pop() {
-            let focusable = if let Some(record) =
+            let (focusable, traverse_children) = if let Some(record) =
                 crate::declarative::element_record_for_node(app, window, id)
             {
-                match record.instance {
+                let focusable = match &record.instance {
                     crate::declarative::ElementInstance::TextInput(_) => true,
                     crate::declarative::ElementInstance::TextArea(_) => true,
                     crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
                     _ => false,
-                }
+                };
+                let traverse_children = match &record.instance {
+                    crate::declarative::ElementInstance::Pressable(p) => p.enabled,
+                    crate::declarative::ElementInstance::InteractivityGate(p) => {
+                        p.present && p.interactive
+                    }
+                    crate::declarative::ElementInstance::Spinner(_) => false,
+                    _ => true,
+                };
+                (focusable, traverse_children)
             } else {
-                self.nodes
+                let traverse_children = self
+                    .nodes
                     .get(id)
                     .and_then(|n| n.widget.as_ref())
-                    .is_some_and(|w| w.is_focusable())
+                    .map(|w| w.focus_traversal_children())
+                    .unwrap_or(true);
+                let focusable = self
+                    .nodes
+                    .get(id)
+                    .and_then(|n| n.widget.as_ref())
+                    .is_some_and(|w| w.is_focusable());
+                (focusable, traverse_children)
             };
 
             if focusable {
                 return Some(id);
             }
 
-            if let Some(node) = self.nodes.get(id) {
+            if traverse_children && let Some(node) = self.nodes.get(id) {
                 for &child in node.children.iter().rev() {
                     stack.push(child);
                 }
@@ -683,7 +709,7 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         services: &mut dyn UiServices,
         params: PointerDownOutsideParams<'_>,
-    ) {
+    ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
         let hit_root = hit.and_then(|n| self.node_root(n));
 
@@ -730,15 +756,22 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
+            let root = layer.root;
+            let consume = layer.consume_pointer_down_outside_events;
             self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
                 params.input_ctx,
-                layer.root,
+                root,
                 params.event,
             );
-            break;
+            return PointerDownOutsideOutcome {
+                dispatched: true,
+                suppress_hit_test_dispatch: consume,
+            };
         }
+
+        PointerDownOutsideOutcome::default()
     }
 
     fn rects_intersect(a: Rect, b: Rect) -> bool {
@@ -781,8 +814,16 @@ impl<H: UiHost> UiTree<H> {
         if n.widget.as_ref().is_some_and(|w| w.is_focusable()) {
             out.push(node);
         }
-        for &child in &n.children {
-            self.collect_focusables(child, active_layers, scope_bounds, out);
+
+        let traverse_children = n
+            .widget
+            .as_ref()
+            .map(|w| w.focus_traversal_children())
+            .unwrap_or(true);
+        if traverse_children {
+            for &child in &n.children {
+                self.collect_focusables(child, active_layers, scope_bounds, out);
+            }
         }
     }
 
@@ -1072,6 +1113,9 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
+        let element_id_map: HashMap<u64, NodeId> =
+            crate::declarative::frame::element_id_map_for_window(app, window);
+
         let mut barrier_index: Option<usize> = None;
         for (idx, layer) in visible_layers.iter().enumerate() {
             if self.layers[*layer].blocks_underlay_input {
@@ -1112,6 +1156,9 @@ impl<H: UiHost> UiTree<H> {
                 let Some(node) = self.nodes.get_mut(id) else {
                     continue;
                 };
+                if node.widget.as_ref().is_some_and(|w| !w.semantics_present()) {
+                    continue;
+                }
                 let parent = node.parent;
                 let bounds = node.bounds;
                 let children = node.children.as_slice();
@@ -1142,6 +1189,9 @@ impl<H: UiHost> UiTree<H> {
                 let mut value: Option<String> = None;
                 let mut text_selection: Option<(u32, u32)> = None;
                 let mut text_composition: Option<(u32, u32)> = None;
+                let mut labelled_by: Vec<NodeId> = Vec::new();
+                let mut described_by: Vec<NodeId> = Vec::new();
+                let mut controls: Vec<NodeId> = Vec::new();
                 let mut actions = fret_core::SemanticsActions {
                     focus: is_focusable || is_text_input,
                     invoke: false,
@@ -1149,17 +1199,13 @@ impl<H: UiHost> UiTree<H> {
                     set_text_selection: is_text_input,
                 };
 
-                // Preserve a stable-ish order: visit children in declared order.
-                for &child in children.iter().rev() {
-                    stack.push(child);
-                }
-
                 // Allow widgets to override semantics metadata.
                 if let Some(widget) = node.widget.as_mut() {
                     let mut cx = SemanticsCx {
                         app,
                         node: id,
                         window: Some(window),
+                        element_id_map: Some(&element_id_map),
                         bounds,
                         children,
                         focus,
@@ -1174,6 +1220,9 @@ impl<H: UiHost> UiTree<H> {
                         active_descendant: &mut active_descendant,
                         pos_in_set: &mut pos_in_set,
                         set_size: &mut set_size,
+                        labelled_by: &mut labelled_by,
+                        described_by: &mut described_by,
+                        controls: &mut controls,
                     };
                     widget.semantics(&mut cx);
                 }
@@ -1205,7 +1254,61 @@ impl<H: UiHost> UiTree<H> {
                     text_selection,
                     text_composition,
                     actions,
+                    labelled_by,
+                    described_by,
+                    controls,
                 });
+
+                let traverse_children = node
+                    .widget
+                    .as_ref()
+                    .map(|w| w.semantics_children())
+                    .unwrap_or(true);
+                if traverse_children {
+                    // Preserve a stable-ish order: visit children in declared order.
+                    for &child in children.iter().rev() {
+                        stack.push(child);
+                    }
+                }
+            }
+        }
+
+        // Normalize relation edges: for some composite widgets, authoring only sets `labelled_by`
+        // (e.g. TabPanel -> Tab) but the platform-facing semantics want the controller to also
+        // advertise `controls` (e.g. Tab -> TabPanel). We derive that edge for the subset of
+        // role pairs where this bidirectional link is expected.
+        let mut index_by_id: HashMap<NodeId, usize> = HashMap::with_capacity(nodes.len());
+        for (idx, node) in nodes.iter().enumerate() {
+            index_by_id.insert(node.id, idx);
+        }
+        for idx in 0..nodes.len() {
+            let controlled = nodes[idx].id;
+            let controlled_role = nodes[idx].role;
+            let controllers = nodes[idx].labelled_by.clone();
+            for controller in controllers {
+                if let Some(&controller_idx) = index_by_id.get(&controller) {
+                    let controller_role = nodes[controller_idx].role;
+                    let derive = matches!(
+                        controlled_role,
+                        SemanticsRole::TabPanel | SemanticsRole::ListBox
+                    ) && matches!(
+                        controller_role,
+                        SemanticsRole::Tab
+                            | SemanticsRole::TextField
+                            | SemanticsRole::ComboBox
+                            | SemanticsRole::Button
+                    );
+                    if !derive {
+                        continue;
+                    }
+                    if !nodes[controller_idx]
+                        .controls
+                        .iter()
+                        .any(|id| *id == controlled)
+                    {
+                        nodes[controller_idx].controls.push(controlled);
+                    }
+                }
             }
         }
 

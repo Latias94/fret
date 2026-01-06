@@ -51,7 +51,9 @@ fn map_role(role: SemanticsRole) -> Role {
         SemanticsRole::ComboBox => Role::ComboBox,
         SemanticsRole::RadioGroup => Role::RadioGroup,
         SemanticsRole::RadioButton => Role::RadioButton,
+        SemanticsRole::TabList => Role::TabList,
         SemanticsRole::Tab => Role::Tab,
+        SemanticsRole::TabPanel => Role::TabPanel,
         SemanticsRole::MenuBar => Role::MenuBar,
         SemanticsRole::Menu => Role::Menu,
         SemanticsRole::MenuItem => Role::MenuItem,
@@ -131,6 +133,16 @@ fn utf8_character_lengths(value: &str) -> Vec<u8> {
     value.chars().map(|c| c.len_utf8() as u8).collect()
 }
 
+fn root_for_node(
+    mut node: fret_core::NodeId,
+    parents: &HashMap<fret_core::NodeId, Option<fret_core::NodeId>>,
+) -> fret_core::NodeId {
+    while let Some(parent) = parents.get(&node).copied().flatten() {
+        node = parent;
+    }
+    node
+}
+
 fn byte_to_character_index(value: &str, byte_offset: u32) -> usize {
     let target = byte_offset.min(value.len() as u32);
     let mut offset: u32 = 0;
@@ -153,6 +165,8 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
     let visible_roots = choose_visible_roots(snapshot);
     let children = build_children_index(&snapshot.nodes);
     let reachable = collect_reachable(&visible_roots, &children);
+    let parents: HashMap<fret_core::NodeId, Option<fret_core::NodeId>> =
+        snapshot.nodes.iter().map(|n| (n.id, n.parent)).collect();
 
     let mut nodes_out: Vec<(NodeId, Node)> = Vec::new();
 
@@ -228,6 +242,18 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             });
         }
 
+        if snapshot.barrier_root.is_some()
+            && matches!(
+                node.role,
+                SemanticsRole::Dialog | SemanticsRole::AlertDialog
+            )
+        {
+            let root = root_for_node(node.id, &parents);
+            if snapshot.barrier_root == Some(root) {
+                out.set_modal();
+            }
+        }
+
         if node.actions.focus {
             out.add_action(Action::Focus);
         }
@@ -259,6 +285,45 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
             && reachable.contains(&active)
         {
             out.set_active_descendant(to_accesskit_id(active));
+        }
+
+        if !node.labelled_by.is_empty() {
+            let labelled_by: Vec<NodeId> = node
+                .labelled_by
+                .iter()
+                .copied()
+                .filter(|id| reachable.contains(id))
+                .map(to_accesskit_id)
+                .collect();
+            if !labelled_by.is_empty() {
+                out.set_labelled_by(labelled_by);
+            }
+        }
+
+        if !node.controls.is_empty() {
+            let controls: Vec<NodeId> = node
+                .controls
+                .iter()
+                .copied()
+                .filter(|id| reachable.contains(id))
+                .map(to_accesskit_id)
+                .collect();
+            if !controls.is_empty() {
+                out.set_controls(controls);
+            }
+        }
+
+        if !node.described_by.is_empty() {
+            let described_by: Vec<NodeId> = node
+                .described_by
+                .iter()
+                .copied()
+                .filter(|id| reachable.contains(id))
+                .map(to_accesskit_id)
+                .collect();
+            if !described_by.is_empty() {
+                out.set_described_by(described_by);
+            }
         }
 
         if let Some(pos_in_set) = node.pos_in_set.and_then(|p| usize::try_from(p).ok()) {
@@ -478,6 +543,9 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -500,6 +568,9 @@ mod tests {
                         set_value: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: list,
@@ -515,6 +586,9 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: item,
@@ -533,6 +607,9 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -551,6 +628,164 @@ mod tests {
             input_node.active_descendant(),
             Some(item_id),
             "focused text field should reference the active descendant"
+        );
+    }
+
+    #[test]
+    fn active_descendant_is_not_emitted_when_not_reachable_under_modal_barrier() {
+        let window = AppWindowId::default();
+        let underlay_root = node(1);
+        let underlay_list = node(2);
+        let underlay_item = node(3);
+
+        let modal_root = node(10);
+        let input = node(11);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        // The focused input lives in the modal barrier layer, but it (incorrectly) points its
+        // active descendant at an underlay list item. The bridge must not emit that association.
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![
+                SemanticsRoot {
+                    root: underlay_root,
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: modal_root,
+                    visible: true,
+                    blocks_underlay_input: true,
+                    hit_testable: true,
+                    z_index: 1,
+                },
+            ],
+            barrier_root: Some(modal_root),
+            focus: Some(input),
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: underlay_root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: underlay_list,
+                    parent: Some(underlay_root),
+                    role: SemanticsRole::ListBox,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Underlay list".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: underlay_item,
+                    parent: Some(underlay_list),
+                    role: SemanticsRole::ListBoxOption,
+                    bounds,
+                    flags: SemanticsFlags {
+                        selected: true,
+                        ..SemanticsFlags::default()
+                    },
+                    active_descendant: None,
+                    pos_in_set: Some(1),
+                    set_size: Some(1),
+                    label: Some("Underlay item".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: modal_root,
+                    parent: None,
+                    role: SemanticsRole::Dialog,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Modal".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: input,
+                    parent: Some(modal_root),
+                    role: SemanticsRole::TextField,
+                    bounds,
+                    flags: SemanticsFlags {
+                        focused: true,
+                        ..SemanticsFlags::default()
+                    },
+                    active_descendant: Some(underlay_item),
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Command input".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions {
+                        focus: true,
+                        set_value: true,
+                        ..SemanticsActions::default()
+                    },
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let input_id = to_accesskit_id(input);
+
+        let input_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == input_id).then_some(n))
+            .expect("input node present");
+
+        assert_eq!(
+            input_node.active_descendant(),
+            None,
+            "active_descendant must be suppressed when it points under the modal barrier"
         );
     }
 
@@ -593,6 +828,9 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: list,
@@ -608,6 +846,9 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: item,
@@ -623,6 +864,9 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -638,6 +882,228 @@ mod tests {
 
         assert_eq!(item_node.position_in_set(), Some(57));
         assert_eq!(item_node.size_of_set(), Some(1200));
+    }
+
+    #[test]
+    fn described_by_is_emitted_for_reachable_descendant() {
+        let window = AppWindowId::default();
+        let root = node(1);
+        let dialog = node(2);
+        let title = node(3);
+        let description = node(4);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: dialog,
+                    parent: Some(root),
+                    role: SemanticsRole::Dialog,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: vec![title],
+                    described_by: vec![description],
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: title,
+                    parent: Some(dialog),
+                    role: SemanticsRole::Text,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Title".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: description,
+                    parent: Some(dialog),
+                    role: SemanticsRole::Text,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Description".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let dialog_id = to_accesskit_id(dialog);
+
+        let dialog_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == dialog_id).then_some(n))
+            .expect("dialog node present");
+
+        let expected_labelled_by = vec![to_accesskit_id(title)];
+        assert_eq!(dialog_node.labelled_by(), expected_labelled_by.as_slice());
+
+        let expected_described_by = vec![to_accesskit_id(description)];
+        assert_eq!(dialog_node.described_by(), expected_described_by.as_slice());
+    }
+
+    #[test]
+    fn modal_dialogs_are_marked_modal_under_barrier_root() {
+        let window = AppWindowId::default();
+        let underlay_root = node(1);
+        let modal_root = node(10);
+        let dialog = node(11);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(10.0), Px(10.0)),
+        );
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![
+                SemanticsRoot {
+                    root: underlay_root,
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: modal_root,
+                    visible: true,
+                    blocks_underlay_input: true,
+                    hit_testable: true,
+                    z_index: 1,
+                },
+            ],
+            barrier_root: Some(modal_root),
+            focus: None,
+            captured: None,
+            nodes: vec![
+                SemanticsNode {
+                    id: underlay_root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: modal_root,
+                    parent: None,
+                    role: SemanticsRole::Window,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: None,
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+                SemanticsNode {
+                    id: dialog,
+                    parent: Some(modal_root),
+                    role: SemanticsRole::Dialog,
+                    bounds,
+                    flags: SemanticsFlags::default(),
+                    active_descendant: None,
+                    pos_in_set: None,
+                    set_size: None,
+                    label: Some("Modal dialog".to_string()),
+                    value: None,
+                    text_selection: None,
+                    text_composition: None,
+                    actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
+                },
+            ],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let dialog_id = to_accesskit_id(dialog);
+        let dialog_node = update
+            .nodes
+            .iter()
+            .find_map(|(id, n)| (*id == dialog_id).then_some(n))
+            .expect("dialog node present");
+
+        assert!(
+            dialog_node.is_modal(),
+            "dialogs in the barrier layer must be marked modal"
+        );
     }
 
     #[test]
@@ -678,6 +1144,9 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -700,6 +1169,9 @@ mod tests {
                         set_value: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -774,6 +1246,9 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -796,6 +1271,9 @@ mod tests {
                         set_text_selection: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -862,6 +1340,9 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -884,6 +1365,9 @@ mod tests {
                         set_value: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };
@@ -949,6 +1433,9 @@ mod tests {
                     text_selection: None,
                     text_composition: None,
                     actions: SemanticsActions::default(),
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
                 SemanticsNode {
                     id: input,
@@ -971,6 +1458,9 @@ mod tests {
                         set_value: true,
                         ..SemanticsActions::default()
                     },
+                    labelled_by: Vec::new(),
+                    described_by: Vec::new(),
+                    controls: Vec::new(),
                 },
             ],
         };

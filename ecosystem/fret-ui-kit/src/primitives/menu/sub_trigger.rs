@@ -101,6 +101,15 @@ pub fn wire<H: UiHost>(
                     true
                 }
                 KeyCode::ArrowLeft => {
+                    let is_open = host
+                        .models_mut()
+                        .read(&models_for_key.open_value, |v| v.is_some())
+                        .ok()
+                        .unwrap_or(false);
+                    if !is_open {
+                        return false;
+                    }
+
                     sub::close_on_arrow_left(host, acx, &models_for_key);
                     true
                 }

@@ -1,0 +1,63 @@
+# shadcn/ui v4 Audit - Command (cmdk)
+
+This audit compares Fret's shadcn-aligned `Command` surface (backed by cmdk-style behavior) against
+the upstream shadcn/ui v4 docs and registry implementations, focusing on **behavioral outcomes**
+instead of API compatibility.
+
+## Upstream references (source of truth)
+
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/command.mdx`
+- shadcn registry (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx`
+- cmdk repo: `repo-ref/cmdk`
+
+Key upstream semantics:
+
+- `Command` is a composite (input + results list) where focus typically stays in the input.
+- Highlight moves via `aria-activedescendant` (active descendant); `Enter` activates the highlighted item.
+- Filtering/ranking is fuzzy-scored; `value`/`keywords` participate in matching.
+- Structure primitives exist: `CommandGroup` (optional heading), `CommandSeparator`, `CommandEmpty`.
+- Visual conventions commonly used by shadcn: optional check indicator and right-side shortcut text.
+
+## Fret implementation anchors
+
+- Component code: `ecosystem/fret-ui-shadcn/src/command.rs`
+- Headless scoring/selection: `ecosystem/fret-ui-kit/src/headless/cmdk_score.rs`,
+  `ecosystem/fret-ui-kit/src/headless/cmdk_selection.rs`
+- Active descendant contract: `docs/adr/0073-active-descendant-and-composite-widget-semantics.md`
+
+## Audit checklist
+
+### Composition & navigation (cmdk-style)
+
+- Pass: `CommandPalette` is a unified implementation (input + list) keeping focus in the input and driving highlight via active-descendant.
+- Pass: `ArrowUp/Down`, `Home/End`, `PageUp/PageDown` update highlight; `Enter` triggers `on_select` / `command`.
+- Pass: Hover moves highlight without stealing focus (matches cmdk expectations).
+
+### Filtering / ranking semantics
+
+- Pass: `CommandPalette` provides built-in filtering/ranking via `fret-ui-kit::headless::cmdk_score`.
+- Pass: `CommandItem.value` participates as an alias when `value != label`.
+- Pass: `CommandItem.keywords([...])` aligns with cmdk's `keywords` semantics (matching can hit non-label strings).
+
+### Structure primitives (Group / Separator / Empty)
+
+- Pass: Supports `CommandGroup` (optional heading) and `CommandSeparator`, and trims leading/trailing/consecutive separators after filtering.
+- Pass: Shows `empty_text` when no results; provides `CommandEmpty` as a convenience (`CommandPalette::empty(...)`).
+
+### Visual/content conventions (shadcn)
+
+- Pass: `CommandItem.checkmark(bool)` + `CommandShortcut` support the common "left check + right shortcut" row layout.
+- Pass: `CommandItem.children(...)` allows rich custom row content.
+- Pass: Default `CommandPalette` rows can render cmdk-style match highlighting (matched characters use `foreground`; non-matched characters use `muted-foreground`).
+
+### CommandDialog
+
+- Pass: `CommandDialog` supports `entries(...)`, so `CommandGroup/Separator/...` can be used inside a dialog.
+
+## Validation
+
+- `cargo test -p fret-ui-shadcn --lib command::tests`
+
+## Follow-ups (non-P0)
+
+- Composability: if split authoring (`CommandInput`/`CommandList`/`CommandItem`) becomes a goal, introduce a shared context model (query + active + selection) with an explicit contract/ADR first.

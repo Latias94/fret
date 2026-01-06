@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, CursorIcon, Edges, MouseButton, Px, Rect, SemanticsRole};
+use fret_core::{Color, Corners, CursorIcon, Edges, MouseButton, Px};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPointerActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps, PositionStyle,
-    SemanticsProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::slider as radix_slider;
 
 #[derive(Debug, Clone)]
 pub struct SliderStyle {
@@ -200,17 +200,10 @@ pub fn slider<H: UiHost>(
             .ok()
             .flatten()
             .unwrap_or(min);
-        let t = norm_value(value, min, max);
-        let a11y_value = fmt_a11y_value(value);
-
-        let semantics = SemanticsProps {
-            layout: semantics_layout,
-            role: SemanticsRole::Slider,
-            label: a11y_label.clone(),
-            value: Some(a11y_value),
-            disabled,
-            ..Default::default()
-        };
+        let t = radix_slider::normalize_value(value, min, max);
+        let mut semantics =
+            radix_slider::slider_root_semantics(a11y_label.clone(), value, disabled);
+        semantics.layout = semantics_layout;
 
         let min_value = min;
         let max_value = max;
@@ -231,7 +224,7 @@ pub fn slider<H: UiHost>(
                     host.capture_pointer();
 
                     let bounds = host.bounds();
-                    update_slider_model(
+                    radix_slider::update_single_slider_model_from_pointer_x(
                         host,
                         &model_on_down,
                         bounds,
@@ -254,7 +247,7 @@ pub fn slider<H: UiHost>(
                     }
 
                     let bounds = host.bounds();
-                    update_slider_model(
+                    radix_slider::update_single_slider_model_from_pointer_x(
                         host,
                         &model_on_move,
                         bounds,
@@ -313,7 +306,7 @@ pub fn slider<H: UiHost>(
                         _ => return false,
                     };
 
-                    let v = snap_value(next, min_value, max_value, step);
+                    let v = radix_slider::snap_value(next, min_value, max_value, step);
                     let mut values = host
                         .models_mut()
                         .get_cloned(&model_on_key)
@@ -439,77 +432,6 @@ pub fn slider<H: UiHost>(
             })]
         })
     })
-}
-
-fn fmt_a11y_value(value: f32) -> Arc<str> {
-    if !value.is_finite() {
-        return Arc::from("NaN");
-    }
-    let rounded = value.round();
-    if (value - rounded).abs() < 1e-4 {
-        return Arc::from(format!("{}", rounded as i64).into_boxed_str());
-    }
-    Arc::from(format!("{value:.2}").into_boxed_str())
-}
-
-fn norm_value(v: f32, min: f32, max: f32) -> f32 {
-    if !v.is_finite() || !min.is_finite() || !max.is_finite() {
-        return 0.0;
-    }
-    let span = max - min;
-    if !span.is_finite() || span.abs() <= f32::EPSILON {
-        return 0.0;
-    }
-    ((v - min) / span).clamp(0.0, 1.0)
-}
-
-fn snap_value(v: f32, min: f32, max: f32, step: f32) -> f32 {
-    if !v.is_finite() || !min.is_finite() || !max.is_finite() {
-        return min;
-    }
-    let mut out = v.clamp(min, max);
-    if step.is_finite() && step > 0.0 {
-        let steps = ((out - min) / step).round();
-        out = (min + steps * step).clamp(min, max);
-    }
-    out
-}
-
-fn update_slider_model(
-    host: &mut dyn UiPointerActionHost,
-    model: &Model<Vec<f32>>,
-    bounds: Rect,
-    pointer_x: Px,
-    min: f32,
-    max: f32,
-    step: f32,
-    thumb_size: Px,
-) {
-    let step = if step.is_finite() && step > 0.0 {
-        step
-    } else {
-        1.0
-    };
-
-    let thumb_size = thumb_size.0.max(0.0);
-    let track_w = (bounds.size.width.0 - thumb_size).max(0.0);
-    if track_w <= 0.0 {
-        return;
-    }
-
-    let left = bounds.origin.x.0 + thumb_size * 0.5;
-    let t = ((pointer_x.0 - left) / track_w).clamp(0.0, 1.0);
-    let v = snap_value(min + (max - min) * t, min, max, step);
-
-    let mut next = host
-        .models_mut()
-        .get_cloned(model)
-        .unwrap_or_else(|| vec![min]);
-    if next.is_empty() {
-        next.push(min);
-    }
-    next[0] = v;
-    let _ = host.models_mut().update(model, |values| *values = next);
 }
 
 #[cfg(test)]

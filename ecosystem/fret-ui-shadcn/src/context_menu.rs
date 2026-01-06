@@ -4,56 +4,261 @@ use std::sync::Arc;
 
 use fret_core::{
     Edges, MouseButton, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle, TextWrap,
+    Transform2D,
 };
+use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::PointerDownCx;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps, RovingFocusProps,
-    SemanticsProps, TextProps,
+    OpacityProps, PointerRegionProps, PointerRegionState, PressableProps, RovingFlexProps,
+    RovingFocusProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::{MetricRef, OverlayController, OverlayPresence, OverlayRequest, Space};
+use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Space};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
+use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 
 #[derive(Debug, Clone)]
 pub enum ContextMenuEntry {
     Item(ContextMenuItem),
+    CheckboxItem(ContextMenuCheckboxItem),
+    RadioGroup(ContextMenuRadioGroup),
+    RadioItem(ContextMenuRadioItem),
+    Label(ContextMenuLabel),
+    Group(ContextMenuGroup),
     Separator,
+}
+
+fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ContextMenuItemVariant {
+    #[default]
+    Default,
+    Destructive,
 }
 
 #[derive(Debug, Clone)]
 pub struct ContextMenuItem {
     pub label: Arc<str>,
+    pub value: Arc<str>,
+    pub inset: bool,
+    pub leading: Option<AnyElement>,
     pub disabled: bool,
+    pub close_on_select: bool,
     pub command: Option<CommandId>,
     pub a11y_label: Option<Arc<str>>,
+    pub trailing: Option<AnyElement>,
+    pub submenu: Option<Vec<ContextMenuEntry>>,
+    pub variant: ContextMenuItemVariant,
 }
 
 impl ContextMenuItem {
     pub fn new(label: impl Into<Arc<str>>) -> Self {
+        let label = label.into();
         Self {
-            label: label.into(),
+            label: label.clone(),
+            value: label,
+            inset: false,
+            leading: None,
             disabled: false,
+            close_on_select: true,
             command: None,
             a11y_label: None,
+            trailing: None,
+            submenu: None,
+            variant: ContextMenuItemVariant::Default,
         }
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.value = value.into();
+        self
+    }
+
+    pub fn inset(mut self, inset: bool) -> Self {
+        self.inset = inset;
+        self
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
+    pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
+        self
+    }
+
+    pub fn submenu(mut self, entries: Vec<ContextMenuEntry>) -> Self {
+        self.submenu = Some(entries);
+        self
+    }
+
+    pub fn variant(mut self, variant: ContextMenuItemVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.trailing = Some(element);
+        self
+    }
+}
+
+/// shadcn/ui `ContextMenuLabel` (v4).
+#[derive(Debug, Clone)]
+pub struct ContextMenuLabel {
+    pub text: Arc<str>,
+    pub inset: bool,
+}
+
+impl ContextMenuLabel {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: text.into(),
+            inset: false,
+        }
+    }
+
+    pub fn inset(mut self, inset: bool) -> Self {
+        self.inset = inset;
+        self
+    }
+}
+
+/// shadcn/ui `ContextMenuGroup` (v4).
+///
+/// In the upstream DOM implementation, this is a structural wrapper. In Fret, we currently treat
+/// it as a transparent grouping node and simply flatten its entries for rendering/navigation.
+#[derive(Debug, Clone)]
+pub struct ContextMenuGroup {
+    pub entries: Vec<ContextMenuEntry>,
+}
+
+impl ContextMenuGroup {
+    pub fn new(entries: Vec<ContextMenuEntry>) -> Self {
+        Self { entries }
+    }
+}
+
+/// shadcn/ui `ContextMenuShortcut` (v4).
+///
+/// This is typically rendered as trailing, muted text inside a menu item.
+#[derive(Debug, Clone)]
+pub struct ContextMenuShortcut {
+    pub text: Arc<str>,
+}
+
+impl ContextMenuShortcut {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let fg = theme
+            .color_by_key("muted.foreground")
+            .or_else(|| theme.color_by_key("muted-foreground"))
+            .unwrap_or(theme.colors.text_muted);
+
+        cx.text_props(TextProps {
+            layout: LayoutStyle::default(),
+            text: self.text,
+            style: Some(TextStyle {
+                font: fret_core::FontId::default(),
+                size: theme.metrics.font_size,
+                weight: fret_core::FontWeight::NORMAL,
+                line_height: Some(theme.metrics.font_line_height),
+                letter_spacing_em: Some(0.12),
+            }),
+            color: Some(fg),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        })
+    }
+}
+
+/// shadcn/ui `ContextMenuCheckboxItem` (v4).
+#[derive(Debug, Clone)]
+pub struct ContextMenuCheckboxItem {
+    pub label: Arc<str>,
+    pub value: Arc<str>,
+    pub checked: Model<bool>,
+    pub leading: Option<AnyElement>,
+    pub disabled: bool,
+    pub close_on_select: bool,
+    pub command: Option<CommandId>,
+    pub a11y_label: Option<Arc<str>>,
+    pub trailing: Option<AnyElement>,
+}
+
+impl ContextMenuCheckboxItem {
+    pub fn new(checked: Model<bool>, label: impl Into<Arc<str>>) -> Self {
+        let label = label.into();
+        Self {
+            label: label.clone(),
+            value: label,
+            checked,
+            leading: None,
+            disabled: false,
+            close_on_select: false,
+            command: None,
+            a11y_label: None,
+            trailing: None,
+        }
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.value = value.into();
+        self
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
         self
     }
 
@@ -66,6 +271,873 @@ impl ContextMenuItem {
         self.a11y_label = Some(label.into());
         self
     }
+
+    pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.trailing = Some(element);
+        self
+    }
+}
+
+/// shadcn/ui `ContextMenuRadioGroup` (v4).
+#[derive(Debug, Clone)]
+pub struct ContextMenuRadioGroup {
+    pub value: Model<Option<Arc<str>>>,
+    pub items: Vec<ContextMenuRadioItemSpec>,
+}
+
+impl ContextMenuRadioGroup {
+    pub fn new(value: Model<Option<Arc<str>>>) -> Self {
+        Self {
+            value,
+            items: Vec::new(),
+        }
+    }
+
+    pub fn item(mut self, item: ContextMenuRadioItemSpec) -> Self {
+        self.items.push(item);
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ContextMenuRadioItemSpec {
+    pub label: Arc<str>,
+    pub value: Arc<str>,
+    pub leading: Option<AnyElement>,
+    pub disabled: bool,
+    pub close_on_select: bool,
+    pub command: Option<CommandId>,
+    pub a11y_label: Option<Arc<str>>,
+    pub trailing: Option<AnyElement>,
+}
+
+impl ContextMenuRadioItemSpec {
+    pub fn new(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        let value = value.into();
+        let label = label.into();
+        Self {
+            label,
+            value,
+            leading: None,
+            disabled: false,
+            close_on_select: true,
+            command: None,
+            a11y_label: None,
+            trailing: None,
+        }
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
+    pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.trailing = Some(element);
+        self
+    }
+
+    fn into_item(self, group_value: Model<Option<Arc<str>>>) -> ContextMenuRadioItem {
+        ContextMenuRadioItem {
+            label: self.label,
+            value: self.value,
+            group_value,
+            leading: self.leading,
+            disabled: self.disabled,
+            close_on_select: self.close_on_select,
+            command: self.command,
+            a11y_label: self.a11y_label,
+            trailing: self.trailing,
+        }
+    }
+}
+
+/// shadcn/ui `ContextMenuRadioItem` (v4).
+#[derive(Debug, Clone)]
+pub struct ContextMenuRadioItem {
+    pub label: Arc<str>,
+    pub value: Arc<str>,
+    pub group_value: Model<Option<Arc<str>>>,
+    pub leading: Option<AnyElement>,
+    pub disabled: bool,
+    pub close_on_select: bool,
+    pub command: Option<CommandId>,
+    pub a11y_label: Option<Arc<str>>,
+    pub trailing: Option<AnyElement>,
+}
+
+impl ContextMenuRadioItem {
+    pub fn new(
+        group_value: Model<Option<Arc<str>>>,
+        value: impl Into<Arc<str>>,
+        label: impl Into<Arc<str>>,
+    ) -> Self {
+        let value = value.into();
+        let label = label.into();
+        Self {
+            label,
+            value,
+            group_value,
+            leading: None,
+            disabled: false,
+            close_on_select: true,
+            command: None,
+            a11y_label: None,
+            trailing: None,
+        }
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn close_on_select(mut self, close: bool) -> Self {
+        self.close_on_select = close;
+        self
+    }
+
+    pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn leading(mut self, element: AnyElement) -> Self {
+        self.leading = Some(element);
+        self
+    }
+
+    pub fn trailing(mut self, element: AnyElement) -> Self {
+        self.trailing = Some(element);
+        self
+    }
+}
+
+fn flatten_entries(into: &mut Vec<ContextMenuEntry>, entries: Vec<ContextMenuEntry>) {
+    for entry in entries {
+        match entry {
+            ContextMenuEntry::Group(group) => flatten_entries(into, group.entries),
+            ContextMenuEntry::RadioGroup(group) => {
+                for item in group.items {
+                    into.push(ContextMenuEntry::RadioItem(
+                        item.into_item(group.value.clone()),
+                    ));
+                }
+            }
+            other => into.push(other),
+        }
+    }
+}
+
+fn find_submenu_entries_by_value(
+    entries: &[ContextMenuEntry],
+    open_value: &str,
+) -> Option<Vec<ContextMenuEntry>> {
+    for entry in entries {
+        let ContextMenuEntry::Item(item) = entry else {
+            continue;
+        };
+        if item.value.as_ref() == open_value {
+            return item.submenu.clone();
+        }
+    }
+    None
+}
+
+fn menu_row_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    leading: Option<AnyElement>,
+    reserve_leading_slot: bool,
+    trailing: Option<AnyElement>,
+    submenu: bool,
+    indicator_on: Option<bool>,
+    disabled: bool,
+    row_bg: fret_core::Color,
+    row_fg: fret_core::Color,
+    text_style: TextStyle,
+    _font_size: Px,
+    _font_line_height: Px,
+    pad_left: Px,
+    pad_x: Px,
+    pad_y: Px,
+    radius_sm: Px,
+    text_disabled: fret_core::Color,
+) -> Vec<AnyElement> {
+    vec![cx.container(
+        ContainerProps {
+            layout: LayoutStyle::default(),
+            padding: Edges {
+                top: pad_y,
+                right: pad_x,
+                bottom: pad_y,
+                left: pad_left,
+            },
+            background: Some(row_bg),
+            corner_radii: fret_core::Corners::all(radius_sm),
+            ..Default::default()
+        },
+        move |cx| {
+            let has_indicator = indicator_on.is_some();
+            let has_leading_slot = leading.is_some() || reserve_leading_slot;
+            let mut row: Vec<AnyElement> = Vec::with_capacity(
+                usize::from(has_indicator)
+                    + usize::from(has_leading_slot)
+                    + 1
+                    + usize::from(trailing.is_some())
+                    + usize::from(submenu),
+            );
+
+            if let Some(is_on) = indicator_on {
+                let indicator_fg = if disabled { text_disabled } else { row_fg };
+                row.push(cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(16.0));
+                            layout.size.height = Length::Px(Px(16.0));
+                            layout.flex.shrink = 0.0;
+                            layout
+                        },
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(0.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Center,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                    },
+                    move |cx| {
+                        if !is_on {
+                            return Vec::new();
+                        }
+
+                        vec![decl_icon::icon_with(
+                            cx,
+                            ids::ui::CHECK,
+                            Some(Px(16.0)),
+                            Some(ColorRef::Color(indicator_fg)),
+                        )]
+                    },
+                ));
+            }
+
+            if let Some(l) = leading.clone() {
+                row.push(menu_icon_slot(cx, l));
+            } else if reserve_leading_slot {
+                row.push(menu_icon_slot_empty(cx));
+            }
+
+            row.push(cx.text_props(TextProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.min_width = Some(Px(0.0));
+                    layout.flex.grow = 1.0;
+                    layout.flex.shrink = 1.0;
+                    layout.flex.basis = Length::Px(Px(0.0));
+                    layout
+                },
+                text: label.clone(),
+                style: Some(text_style.clone()),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                color: Some(if disabled { text_disabled } else { row_fg }),
+            }));
+
+            if let Some(t) = trailing.clone() {
+                row.push(t);
+            }
+
+            if submenu {
+                row.push(submenu_chevron_right_icon(
+                    cx,
+                    if disabled { text_disabled } else { row_fg },
+                ));
+            }
+
+            vec![cx.flex(
+                FlexProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(8.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| row.clone(),
+            )]
+        },
+    )]
+}
+
+fn submenu_chevron_right_icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    fg: fret_core::Color,
+) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(16.0));
+                layout.size.height = Length::Px(Px(16.0));
+                layout.flex.shrink = 0.0;
+                layout
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        move |cx| {
+            vec![decl_icon::icon_with(
+                cx,
+                ids::ui::CHEVRON_RIGHT,
+                Some(Px(16.0)),
+                Some(ColorRef::Color(fg)),
+            )]
+        },
+    )
+}
+
+fn menu_icon_slot<H: UiHost>(cx: &mut ElementContext<'_, H>, element: AnyElement) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(16.0));
+                layout.size.height = Length::Px(Px(16.0));
+                layout.flex.shrink = 0.0;
+                layout
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        move |_cx| vec![element.clone()],
+    )
+}
+
+fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    cx.flex(
+        FlexProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Px(Px(16.0));
+                layout.size.height = Length::Px(Px(16.0));
+                layout.flex.shrink = 0.0;
+                layout
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(0.0),
+            padding: Edges::all(Px(0.0)),
+            justify: MainAlign::Center,
+            align: CrossAlign::Center,
+            wrap: false,
+        },
+        |_cx| Vec::new(),
+    )
+}
+
+fn context_menu_submenu_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    placed: Rect,
+    entries: Vec<ContextMenuEntry>,
+    open: Model<bool>,
+    typeahead_timeout_ticks: u64,
+    align_leading_icons: bool,
+    submenu_models: menu::sub::MenuSubmenuModels,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+
+    let mut flat: Vec<ContextMenuEntry> = Vec::new();
+    flatten_entries(&mut flat, entries);
+    let entries = flat;
+
+    let reserve_leading_slot = align_leading_icons
+        && entries.iter().any(|e| match e {
+            ContextMenuEntry::Item(item) => item.leading.is_some(),
+            ContextMenuEntry::CheckboxItem(item) => item.leading.is_some(),
+            ContextMenuEntry::RadioItem(item) => item.leading.is_some(),
+            ContextMenuEntry::Label(_)
+            | ContextMenuEntry::Group(_)
+            | ContextMenuEntry::RadioGroup(_)
+            | ContextMenuEntry::Separator => false,
+        });
+
+    let item_count = entries
+        .iter()
+        .filter(|e| {
+            matches!(
+                e,
+                ContextMenuEntry::Item(_)
+                    | ContextMenuEntry::CheckboxItem(_)
+                    | ContextMenuEntry::RadioItem(_)
+            )
+        })
+        .count();
+
+    let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
+        .iter()
+        .map(|e| match e {
+            ContextMenuEntry::Item(item) => (item.label.clone(), item.disabled),
+            ContextMenuEntry::CheckboxItem(item) => (item.label.clone(), item.disabled),
+            ContextMenuEntry::RadioItem(item) => (item.label.clone(), item.disabled),
+            ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => (Arc::from(""), true),
+            ContextMenuEntry::Group(_) | ContextMenuEntry::RadioGroup(_) => {
+                unreachable!("entries are flattened")
+            }
+        })
+        .unzip();
+
+    let labels_arc: Arc<[Arc<str>]> = Arc::from(labels.into_boxed_slice());
+    let disabled_arc: Arc<[bool]> = Arc::from(disabled_flags.into_boxed_slice());
+
+    let border = theme
+        .color_by_key("border")
+        .unwrap_or(theme.colors.panel_border);
+    let shadow = decl_style::shadow_sm(&theme, theme.metrics.radius_sm);
+    let ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
+    let pad_x = MetricRef::space(Space::N3).resolve(&theme);
+    let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
+    let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+    let text_style = TextStyle {
+        font: fret_core::FontId::default(),
+        size: theme.metrics.font_size,
+        weight: fret_core::FontWeight::NORMAL,
+        line_height: Some(theme.metrics.font_line_height),
+        letter_spacing_em: None,
+    };
+    let radius_sm = theme.metrics.radius_sm;
+    let text_disabled = theme.colors.text_disabled;
+    let label_fg = theme
+        .color_by_key("muted.foreground")
+        .or_else(|| theme.color_by_key("muted-foreground"))
+        .unwrap_or(theme.colors.text_muted);
+    let accent = theme
+        .color_by_key("accent")
+        .unwrap_or(theme.colors.hover_background);
+    let accent_fg = theme
+        .color_by_key("accent.foreground")
+        .or_else(|| theme.color_by_key("accent-foreground"))
+        .unwrap_or(theme.colors.text_primary);
+    let fg = theme.colors.text_primary;
+    let destructive_fg = theme
+        .color_by_key("destructive")
+        .or_else(|| theme.color_by_key("destructive.background"))
+        .unwrap_or(fg);
+    let destructive_bg = alpha_mul(destructive_fg, 0.12);
+
+    menu::sub_content::submenu_panel_at(
+        cx,
+        placed,
+        move |layout| ContainerProps {
+            layout,
+            padding: Edges::all(Px(4.0)),
+            background: Some(theme.colors.panel_background),
+            shadow: Some(shadow),
+            border: Edges::all(Px(1.0)),
+            border_color: Some(border),
+            corner_radii: fret_core::Corners::all(theme.metrics.radius_sm),
+        },
+        move |cx| {
+            let mut item_ix: usize = 0;
+            let mut out: Vec<AnyElement> = Vec::with_capacity(entries.len());
+
+            for entry in entries.clone() {
+                match entry {
+                    ContextMenuEntry::Label(label) => {
+                        let pad_left = if label.inset { pad_x_inset } else { pad_x };
+                        let text = label.text.clone();
+                        out.push(cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle::default(),
+                                padding: Edges {
+                                    top: pad_y,
+                                    right: pad_x,
+                                    bottom: pad_y,
+                                    left: pad_left,
+                                },
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                vec![cx.text_props(TextProps {
+                                    layout: LayoutStyle::default(),
+                                    text,
+                                    style: Some(TextStyle {
+                                        font: fret_core::FontId::default(),
+                                        size: theme.metrics.font_size,
+                                        weight: fret_core::FontWeight::MEDIUM,
+                                        line_height: Some(theme.metrics.font_line_height),
+                                        letter_spacing_em: None,
+                                    }),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                    color: Some(label_fg),
+                                })]
+                            },
+                        ));
+                    }
+                    ContextMenuEntry::Group(_) => unreachable!("groups are flattened"),
+                    ContextMenuEntry::RadioGroup(_) => unreachable!("radio groups are flattened"),
+                    ContextMenuEntry::Separator => {
+                        out.push(cx.container(
+                            ContainerProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Fill;
+                                    layout.size.height = Length::Px(Px(1.0));
+                                    // new-york-v4: `Separator` uses `-mx-1 my-1`.
+                                    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                    layout.margin.right =
+                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                    layout.margin.top = fret_ui::element::MarginEdge::Px(Px(4.0));
+                                    layout.margin.bottom =
+                                        fret_ui::element::MarginEdge::Px(Px(4.0));
+                                    layout
+                                },
+                                padding: Edges::all(Px(0.0)),
+                                background: Some(border),
+                                ..Default::default()
+                            },
+                            |_cx| Vec::new(),
+                        ));
+                    }
+                    ContextMenuEntry::Item(item) => {
+                        let collection_index = item_ix;
+                        item_ix = item_ix.saturating_add(1);
+
+                        let label = item.label.clone();
+                        let value = item.value.clone();
+                        let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
+                        let disabled = item.disabled;
+                        let close_on_select = item.close_on_select;
+                        let command = item.command;
+                        let leading = item.leading.clone();
+                        let trailing = item.trailing.clone();
+                        let variant = item.variant;
+                        let pad_left = if item.inset { pad_x_inset } else { pad_x };
+                        let open_for_item = open.clone();
+                        let text_style = text_style.clone();
+                        let submenu_for_item = submenu_models.clone();
+
+                        out.push(cx.keyed(value.clone(), |cx| {
+                            cx.pressable_with_id_props(move |cx, st, item_id| {
+                                menu::sub_content::wire_item(
+                                    cx,
+                                    item_id,
+                                    disabled,
+                                    &submenu_for_item,
+                                );
+
+                                if !disabled {
+                                    cx.pressable_dispatch_command_opt(command);
+                                    if close_on_select {
+                                        cx.pressable_set_bool(&open_for_item, false);
+                                    }
+                                }
+
+                                let props = PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.min_height = Some(Px(28.0));
+                                        layout
+                                    },
+                                    enabled: !disabled,
+                                    focusable: !disabled,
+                                    focus_ring: Some(ring),
+                                    a11y: menu::item::menu_item_a11y(a11y_label, None)
+                                        .with_collection_position(collection_index, item_count),
+                                    ..Default::default()
+                                };
+
+                                let mut row_bg = fret_core::Color::TRANSPARENT;
+                                let mut row_fg = if variant == ContextMenuItemVariant::Destructive {
+                                    destructive_fg
+                                } else {
+                                    fg
+                                };
+                                if st.hovered || st.pressed || st.focused {
+                                    if variant == ContextMenuItemVariant::Destructive {
+                                        row_bg = destructive_bg;
+                                        row_fg = destructive_fg;
+                                    } else {
+                                        row_bg = accent;
+                                        row_fg = accent_fg;
+                                    }
+                                }
+
+                                let children = menu_row_children(
+                                    cx,
+                                    label.clone(),
+                                    leading.clone(),
+                                    reserve_leading_slot,
+                                    trailing.clone(),
+                                    false,
+                                    None,
+                                    disabled,
+                                    row_bg,
+                                    row_fg,
+                                    text_style.clone(),
+                                    theme.metrics.font_size,
+                                    theme.metrics.font_line_height,
+                                    pad_left,
+                                    pad_x,
+                                    pad_y,
+                                    radius_sm,
+                                    text_disabled,
+                                );
+
+                                (props, children)
+                            })
+                        }));
+                    }
+                    ContextMenuEntry::CheckboxItem(item) => {
+                        let collection_index = item_ix;
+                        item_ix = item_ix.saturating_add(1);
+
+                        let label = item.label.clone();
+                        let value = item.value.clone();
+                        let checked = item.checked.clone();
+                        let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
+                        let disabled = item.disabled;
+                        let close_on_select = item.close_on_select;
+                        let command = item.command;
+                        let leading = item.leading.clone();
+                        let trailing = item.trailing.clone();
+                        let open_for_item = open.clone();
+                        let submenu_for_item = submenu_models.clone();
+                        let text_style = text_style.clone();
+
+                        out.push(cx.keyed(value.clone(), |cx| {
+                            cx.pressable_with_id_props(move |cx, st, item_id| {
+                                menu::sub_content::wire_item(
+                                    cx,
+                                    item_id,
+                                    disabled,
+                                    &submenu_for_item,
+                                );
+
+                                let checked_now =
+                                    cx.watch_model(&checked).copied().unwrap_or(false);
+                                if !disabled {
+                                    menu::checkbox_item::wire_toggle_on_activate(
+                                        cx,
+                                        checked.clone(),
+                                    );
+                                }
+                                cx.pressable_dispatch_command_opt(command);
+                                if !disabled && close_on_select {
+                                    cx.pressable_set_bool(&open_for_item, false);
+                                }
+
+                                let props = PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.min_height = Some(Px(28.0));
+                                        layout
+                                    },
+                                    enabled: !disabled,
+                                    focusable: !disabled,
+                                    focus_ring: Some(ring),
+                                    a11y: menu::item::menu_item_checkbox_a11y(
+                                        a11y_label,
+                                        checked_now,
+                                    )
+                                    .with_collection_position(collection_index, item_count),
+                                    ..Default::default()
+                                };
+
+                                let mut row_bg = fret_core::Color::TRANSPARENT;
+                                let mut row_fg = fg;
+                                if st.hovered || st.pressed || st.focused {
+                                    row_bg = accent;
+                                    row_fg = accent_fg;
+                                }
+
+                                let children = menu_row_children(
+                                    cx,
+                                    label.clone(),
+                                    leading.clone(),
+                                    reserve_leading_slot,
+                                    trailing.clone(),
+                                    false,
+                                    Some(checked_now),
+                                    disabled,
+                                    row_bg,
+                                    row_fg,
+                                    text_style.clone(),
+                                    theme.metrics.font_size,
+                                    theme.metrics.font_line_height,
+                                    pad_x,
+                                    pad_x,
+                                    pad_y,
+                                    radius_sm,
+                                    text_disabled,
+                                );
+
+                                (props, children)
+                            })
+                        }));
+                    }
+                    ContextMenuEntry::RadioItem(item) => {
+                        let collection_index = item_ix;
+                        item_ix = item_ix.saturating_add(1);
+
+                        let label = item.label.clone();
+                        let value = item.value.clone();
+                        let group_value = item.group_value.clone();
+                        let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
+                        let disabled = item.disabled;
+                        let close_on_select = item.close_on_select;
+                        let command = item.command;
+                        let leading = item.leading.clone();
+                        let trailing = item.trailing.clone();
+                        let open_for_item = open.clone();
+                        let submenu_for_item = submenu_models.clone();
+                        let text_style = text_style.clone();
+
+                        out.push(cx.keyed(value.clone(), |cx| {
+                            let selected = cx.watch_model(&group_value).cloned().flatten();
+                            let is_selected =
+                                menu::radio_group::is_selected(selected.as_ref(), &value);
+
+                            cx.pressable_with_id_props(move |cx, st, item_id| {
+                                menu::sub_content::wire_item(
+                                    cx,
+                                    item_id,
+                                    disabled,
+                                    &submenu_for_item,
+                                );
+
+                                if !disabled {
+                                    menu::radio_group::wire_select_on_activate(
+                                        cx,
+                                        group_value.clone(),
+                                        value.clone(),
+                                    );
+                                }
+                                cx.pressable_dispatch_command_opt(command);
+                                if !disabled && close_on_select {
+                                    cx.pressable_set_bool(&open_for_item, false);
+                                }
+
+                                let props = PressableProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.min_height = Some(Px(28.0));
+                                        layout
+                                    },
+                                    enabled: !disabled,
+                                    focusable: !disabled,
+                                    focus_ring: Some(ring),
+                                    a11y: menu::item::menu_item_radio_a11y(
+                                        a11y_label.clone(),
+                                        is_selected,
+                                    )
+                                    .with_collection_position(collection_index, item_count),
+                                    ..Default::default()
+                                };
+
+                                let mut row_bg = fret_core::Color::TRANSPARENT;
+                                let mut row_fg = fg;
+                                if st.hovered || st.pressed || st.focused {
+                                    row_bg = accent;
+                                    row_fg = accent_fg;
+                                }
+
+                                let children = menu_row_children(
+                                    cx,
+                                    label.clone(),
+                                    leading.clone(),
+                                    reserve_leading_slot,
+                                    trailing.clone(),
+                                    false,
+                                    Some(is_selected),
+                                    disabled,
+                                    row_bg,
+                                    row_fg,
+                                    text_style.clone(),
+                                    theme.metrics.font_size,
+                                    theme.metrics.font_line_height,
+                                    pad_x,
+                                    pad_x,
+                                    pad_y,
+                                    radius_sm,
+                                    text_disabled,
+                                );
+
+                                (props, children)
+                            })
+                        }));
+                    }
+                }
+            }
+
+            vec![
+                menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
+                    cx,
+                    RovingFlexProps {
+                        flex: FlexProps {
+                            layout: LayoutStyle::default(),
+                            direction: fret_core::Axis::Vertical,
+                            gap: Px(0.0),
+                            padding: Edges::all(Px(0.0)),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        roving: RovingFocusProps {
+                            enabled: true,
+                            wrap: true,
+                            disabled: disabled_arc.clone(),
+                            ..Default::default()
+                        },
+                    },
+                    labels_arc.clone(),
+                    typeahead_timeout_ticks,
+                    move |_cx| out.clone(),
+                ),
+            ]
+        },
+    )
 }
 
 /// shadcn/ui `ContextMenu` root (v4).
@@ -89,6 +1161,7 @@ pub struct ContextMenu {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    align_leading_icons: bool,
 }
 
 impl std::fmt::Debug for ContextMenu {
@@ -116,6 +1189,7 @@ impl ContextMenu {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
+            align_leading_icons: true,
         }
     }
 
@@ -144,6 +1218,11 @@ impl ContextMenu {
         self
     }
 
+    pub fn align_leading_icons(mut self, align: bool) -> Self {
+        self.align_leading_icons = align;
+        self
+    }
+
     /// Enables a ContextMenu arrow (Radix `ContextMenuArrow`-style).
     pub fn arrow(mut self, arrow: bool) -> Self {
         self.arrow = arrow;
@@ -169,6 +1248,19 @@ impl ContextMenu {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
+            let motion = OverlayController::transition_with_durations_and_easing(
+                cx,
+                is_open,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::shadcn_ease,
+            );
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: is_open,
+            };
+            let opacity = motion.progress;
+            let opening = is_open;
             let arrow = self.arrow;
             let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
                 theme
@@ -214,36 +1306,69 @@ impl ContextMenu {
             let pointer_down = cx.with_state(PointerRegionState::default, |st| st.last_down);
             let anchor_point = pointer_down.map(|it| it.position);
 
-            if is_open {
-                let overlay_root_name = OverlayController::popover_root_name(id);
+            let overlay_root_name = OverlayController::popover_root_name(id);
+            let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
+            let submenu = cx.with_root_name(&overlay_root_name, |cx| {
+                menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
+            });
 
+            if overlay_presence.present {
                 let align = self.align;
                 let side = self.side;
                 let side_offset = self.side_offset;
                 let window_margin = self.window_margin;
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
+                let align_leading_icons = self.align_leading_icons;
                 let open_for_overlay = open.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
 
-                let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
+                let (overlay_children, dismissible_on_pointer_move) =
+                    cx.with_root_name(&overlay_root_name, move |cx| {
                     let trigger_bounds =
                         overlay::anchor_bounds_for_element(cx, trigger_id);
                     let anchor = anchor_point.or_else(|| trigger_bounds.map(|r| r.origin));
                     let Some(anchor) = anchor else {
-                        return Vec::new();
+                        return (Vec::new(), None);
                     };
 
-                    let entries = entries(cx);
+                    let mut flat: Vec<ContextMenuEntry> = Vec::new();
+                    flatten_entries(&mut flat, entries(cx));
+                    let entries = flat;
+                    let reserve_leading_slot = align_leading_icons
+                        && entries.iter().any(|e| match e {
+                            ContextMenuEntry::Item(item) => item.leading.is_some(),
+                            ContextMenuEntry::CheckboxItem(item) => item.leading.is_some(),
+                            ContextMenuEntry::RadioItem(item) => item.leading.is_some(),
+                            ContextMenuEntry::Label(_)
+                            | ContextMenuEntry::Group(_)
+                            | ContextMenuEntry::RadioGroup(_)
+                            | ContextMenuEntry::Separator => false,
+                        });
+
                     let item_count = entries
                         .iter()
-                        .filter(|e| matches!(e, ContextMenuEntry::Item(_)))
+                        .filter(|e| {
+                            matches!(
+                                e,
+                                ContextMenuEntry::Item(_)
+                                    | ContextMenuEntry::CheckboxItem(_)
+                                    | ContextMenuEntry::RadioItem(_)
+                            )
+                        })
                         .count();
                     let (labels, disabled_flags): (Vec<Arc<str>>, Vec<bool>) = entries
                         .iter()
                         .map(|e| match e {
                             ContextMenuEntry::Item(item) => (item.label.clone(), item.disabled),
-                            ContextMenuEntry::Separator => (Arc::from(""), true),
+                            ContextMenuEntry::CheckboxItem(item) => (item.label.clone(), item.disabled),
+                            ContextMenuEntry::RadioItem(item) => (item.label.clone(), item.disabled),
+                            ContextMenuEntry::Label(_) | ContextMenuEntry::Separator => {
+                                (Arc::from(""), true)
+                            }
+                            ContextMenuEntry::Group(_) | ContextMenuEntry::RadioGroup(_) => {
+                                unreachable!("entries are flattened")
+                            }
                         })
                         .unzip();
 
@@ -287,6 +1412,18 @@ impl ContextMenu {
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
                     let extra_left = wrapper_insets.left;
                     let extra_top = wrapper_insets.top;
+                    let origin = popper::popper_content_transform_origin(
+                        &layout,
+                        anchor_rect,
+                        arrow.then_some(arrow_size),
+                    );
+                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                    let slide = if opening {
+                        overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
+                    } else {
+                        Transform2D::IDENTITY
+                    };
+                    let transform = slide * zoom;
 
                     let border = theme
                         .color_by_key("border")
@@ -294,7 +1431,34 @@ impl ContextMenu {
                     let shadow = decl_style::shadow_sm(&theme, theme.metrics.radius_sm);
                     let ring = decl_style::focus_ring(&theme, theme.metrics.radius_sm);
                     let pad_x = MetricRef::space(Space::N3).resolve(&theme);
+                    let pad_x_inset = MetricRef::space(Space::N8).resolve(&theme);
                     let pad_y = MetricRef::space(Space::N2).resolve(&theme);
+                    let text_style = TextStyle {
+                        font: fret_core::FontId::default(),
+                        size: theme.metrics.font_size,
+                        weight: fret_core::FontWeight::NORMAL,
+                        line_height: Some(theme.metrics.font_line_height),
+                        letter_spacing_em: None,
+                    };
+                    let radius_sm = theme.metrics.radius_sm;
+                    let text_disabled = theme.colors.text_disabled;
+                    let label_fg = theme
+                        .color_by_key("muted.foreground")
+                        .or_else(|| theme.color_by_key("muted-foreground"))
+                        .unwrap_or(theme.colors.text_muted);
+                    let accent = theme
+                        .color_by_key("accent")
+                        .unwrap_or(theme.colors.hover_background);
+                    let accent_fg = theme
+                        .color_by_key("accent.foreground")
+                        .or_else(|| theme.color_by_key("accent-foreground"))
+                        .unwrap_or(theme.colors.text_primary);
+                    let fg = theme.colors.text_primary;
+                    let destructive_fg = theme
+                        .color_by_key("destructive")
+                        .or_else(|| theme.color_by_key("destructive.background"))
+                        .unwrap_or(fg);
+                    let destructive_bg = alpha_mul(destructive_fg, 0.12);
 
                     let arrow_el = popper_arrow::diamond_arrow_element(
                         cx,
@@ -307,6 +1471,11 @@ impl ContextMenu {
                             border_width: Px(1.0),
                         },
                     );
+
+                    let entries_for_submenu = entries.clone();
+                    let open_for_submenu = open_for_overlay.clone();
+                    let submenu_for_content = submenu.clone();
+                    let submenu_for_panel = submenu.clone();
 
                     let content = cx.semantics(
                         SemanticsProps {
@@ -358,22 +1527,54 @@ impl ContextMenu {
                                                 },
                                                 labels_arc.clone(),
                                                 typeahead_timeout_ticks,
-                                                move |cx| {
-
-                                            let text_style = TextStyle {
-                                                font: fret_core::FontId::default(),
-                                                size: theme.metrics.font_size,
-                                                weight: fret_core::FontWeight::NORMAL,
-                                                line_height: Some(theme.metrics.font_line_height),
-                                                letter_spacing_em: None,
-                                            };
-
-                                            let mut out: Vec<AnyElement> =
-                                                Vec::with_capacity(entries.len());
+                                                 move |cx| {
+                                             let mut out: Vec<AnyElement> =
+                                                 Vec::with_capacity(entries.len());
 
                                             let mut item_ix: usize = 0;
                                             for entry in entries.clone() {
                                                 match entry {
+                                                    ContextMenuEntry::Label(label) => {
+                                                        let pad_left =
+                                                            if label.inset { pad_x_inset } else { pad_x };
+                                                        let text = label.text.clone();
+                                                        out.push(cx.container(
+                                                            ContainerProps {
+                                                                layout: LayoutStyle::default(),
+                                                                padding: Edges {
+                                                                    top: pad_y,
+                                                                    right: pad_x,
+                                                                    bottom: pad_y,
+                                                                    left: pad_left,
+                                                                },
+                                                                ..Default::default()
+                                                            },
+                                                            move |cx| {
+                                                                vec![cx.text_props(TextProps {
+                                                                    layout: LayoutStyle::default(),
+                                                                    text,
+                                                                    style: Some(TextStyle {
+                                                                        font: fret_core::FontId::default(),
+                                                                        size: theme.metrics.font_size,
+                                                                        weight: fret_core::FontWeight::MEDIUM,
+                                                                        line_height: Some(
+                                                                            theme.metrics.font_line_height,
+                                                                        ),
+                                                                        letter_spacing_em: None,
+                                                                    }),
+                                                                    wrap: TextWrap::None,
+                                                                    overflow: TextOverflow::Clip,
+                                                                    color: Some(label_fg),
+                                                                })]
+                                                            },
+                                                        ));
+                                                    }
+                                                    ContextMenuEntry::Group(_) => {
+                                                        unreachable!("groups are flattened")
+                                                    }
+                                                    ContextMenuEntry::RadioGroup(_) => {
+                                                        unreachable!("radio groups are flattened")
+                                                    }
                                                     ContextMenuEntry::Separator => {
                                                         out.push(cx.container(
                                                             ContainerProps {
@@ -383,6 +1584,15 @@ impl ContextMenu {
                                                                     layout.size.width = Length::Fill;
                                                                     layout.size.height =
                                                                         Length::Px(Px(1.0));
+                                                                    // new-york-v4: `Separator` uses `-mx-1 my-1`.
+                                                                    layout.margin.left =
+                                                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                    layout.margin.right =
+                                                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                                                    layout.margin.top =
+                                                                        fret_ui::element::MarginEdge::Px(Px(4.0));
+                                                                    layout.margin.bottom =
+                                                                        fret_ui::element::MarginEdge::Px(Px(4.0));
                                                                     layout
                                                                 },
                                                                 padding: Edges::all(Px(0.0)),
@@ -397,88 +1607,348 @@ impl ContextMenu {
                                                         item_ix = item_ix.saturating_add(1);
 
                                                         let label = item.label.clone();
+                                                        let value = item.value.clone();
                                                         let a11y_label = item
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
                                                         let disabled = item.disabled;
+                                                        let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let leading = item.leading.clone();
+                                                        let trailing = item.trailing.clone();
+                                                        let has_submenu = item.submenu.is_some();
+                                                        let variant = item.variant;
+                                                        let pad_left =
+                                                            if item.inset { pad_x_inset } else { pad_x };
+                                                        let open = open_for_overlay.clone();
+                                                        let text_style = text_style.clone();
+                                                        let submenu_for_item = submenu_for_content.clone();
+
+                                                        out.push(cx.keyed(value.clone(), |cx| {
+                                                            cx.pressable_with_id_props(
+                                                                move |cx, st, item_id| {
+                                                                    let geometry_hint =
+                                                                        has_submenu.then(|| {
+                                                                            let desired = Size::new(
+                                                                                Px(192.0),
+                                                                                Px(1.0e9),
+                                                                            );
+                                                                            menu::sub_trigger::MenuSubTriggerGeometryHint {
+                                                                                outer:
+                                                                                    overlay::outer_bounds_with_window_margin(
+                                                                                        cx.bounds,
+                                                                                        window_margin,
+                                                                                    ),
+                                                                                desired,
+                                                                            }
+                                                                        });
+                                                                    let is_open_submenu = menu::sub_trigger::wire(
+                                                                        cx,
+                                                                        st,
+                                                                        item_id,
+                                                                        disabled,
+                                                                        has_submenu,
+                                                                        value.clone(),
+                                                                        &submenu_for_item,
+                                                                        submenu_cfg,
+                                                                        geometry_hint,
+                                                                    )
+                                                                    .unwrap_or(false);
+
+                                                                    if !has_submenu && !disabled {
+                                                                        cx.pressable_dispatch_command_opt(command);
+                                                                        if close_on_select {
+                                                                            cx.pressable_set_bool(
+                                                                                &open, false,
+                                                                            );
+                                                                        }
+                                                                    }
+
+                                                                    let props = PressableProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Fill;
+                                                                            layout.size.min_height =
+                                                                                Some(Px(28.0));
+                                                                            layout
+                                                                        },
+                                                                        enabled: !disabled,
+                                                                        focusable: !disabled,
+                                                                        focus_ring: Some(ring),
+                                                                        a11y: menu::item::menu_item_a11y(
+                                                                            a11y_label,
+                                                                            has_submenu.then_some(
+                                                                                is_open_submenu,
+                                                                            ),
+                                                                        )
+                                                                        .with_collection_position(
+                                                                            collection_index,
+                                                                            item_count,
+                                                                        ),
+                                                                        ..Default::default()
+                                                                    };
+
+                                                                    let mut row_bg =
+                                                                        fret_core::Color::TRANSPARENT;
+                                                                    let mut row_fg = if variant == ContextMenuItemVariant::Destructive {
+                                                                        destructive_fg
+                                                                    } else {
+                                                                        fg
+                                                                    };
+                                                                    if st.hovered
+                                                                        || st.pressed
+                                                                        || st.focused
+                                                                        || is_open_submenu
+                                                                    {
+                                                                        if variant == ContextMenuItemVariant::Destructive {
+                                                                            row_bg = destructive_bg;
+                                                                            row_fg = destructive_fg;
+                                                                        } else {
+                                                                            row_bg = accent;
+                                                                            row_fg = accent_fg;
+                                                                        }
+                                                                    }
+
+                                                                    let children = menu_row_children(
+                                                                        cx,
+                                                                        label.clone(),
+                                                                        leading.clone(),
+                                                                        reserve_leading_slot,
+                                                                        trailing.clone(),
+                                                                        has_submenu,
+                                                                        None,
+                                                                        disabled,
+                                                                        row_bg,
+                                                                        row_fg,
+                                                                        text_style.clone(),
+                                                                        theme.metrics.font_size,
+                                                                        theme.metrics.font_line_height,
+                                                                        pad_left,
+                                                                        pad_x,
+                                                                        pad_y,
+                                                                        radius_sm,
+                                                                        text_disabled,
+                                                                    );
+
+                                                                    (props, children)
+                                                                },
+                                                            )
+                                                          }));
+                                                      }
+                                                    ContextMenuEntry::CheckboxItem(item) => {
+                                                        let collection_index = item_ix;
+                                                        item_ix = item_ix.saturating_add(1);
+
+                                                        let label = item.label.clone();
+                                                        let value = item.value.clone();
+                                                        let checked = item.checked.clone();
+                                                        let a11y_label = item
+                                                            .a11y_label
+                                                            .clone()
+                                                            .or_else(|| Some(label.clone()));
+                                                        let disabled = item.disabled;
+                                                        let close_on_select = item.close_on_select;
+                                                        let command = item.command;
+                                                        let leading = item.leading.clone();
+                                                        let trailing = item.trailing.clone();
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
 
-                                                        out.push(cx.pressable(
-                                                            PressableProps {
-                                                                layout: {
-                                                                    let mut layout =
-                                                                        LayoutStyle::default();
-                                                                    layout.size.width = Length::Fill;
-                                                                    layout.size.min_height =
-                                                                        Some(Px(28.0));
-                                                                    layout
+                                                        out.push(cx.keyed(value.clone(), |cx| {
+                                                            let checked_now = cx
+                                                                .watch_model(&checked)
+                                                                .copied()
+                                                                .unwrap_or(false);
+                                                            cx.pressable(
+                                                                PressableProps {
+                                                                    layout: {
+                                                                        let mut layout =
+                                                                            LayoutStyle::default();
+                                                                        layout.size.width =
+                                                                            Length::Fill;
+                                                                        layout.size.min_height =
+                                                                            Some(Px(28.0));
+                                                                        layout
+                                                                    },
+                                                                    enabled: !disabled,
+                                                                    focusable: !disabled,
+                                                                    focus_ring: Some(ring),
+                                                                    a11y: menu::item::menu_item_checkbox_a11y(
+                                                                        a11y_label.clone(),
+                                                                        checked_now,
+                                                                    )
+                                                                    .with_collection_position(
+                                                                        collection_index,
+                                                                        item_count,
+                                                                    ),
+                                                                    ..Default::default()
                                                                 },
-                                                                enabled: !disabled,
-                                                                focusable: !disabled,
-                                                                focus_ring: Some(ring),
-                                                                a11y: menu::item::menu_item_a11y(
-                                                                    a11y_label,
-                                                                    None,
-                                                                )
-                                                                .with_collection_position(
-                                                                    collection_index,
-                                                                    item_count,
-                                                                ),
-                                                                ..Default::default()
-                                                            },
-                                                            move |cx, st| {
-                                                                cx.pressable_dispatch_command_opt(command);
-                                                                if !disabled {
-                                                                    cx.pressable_set_bool(&open, false);
-                                                                }
+                                                                move |cx, st| {
+                                                                    let checked_now = cx
+                                                                        .watch_model(&checked)
+                                                                        .copied()
+                                                                        .unwrap_or(false);
 
-                                                                let theme = Theme::global(&*cx.app).clone();
-                                                                let mut bg = fret_core::Color::TRANSPARENT;
-                                                                if st.hovered || st.pressed {
-                                                                    bg = theme
-                                                                        .color_by_key("muted")
-                                                                        .unwrap_or(theme.colors.hover_background);
-                                                                }
+                                                                    if !disabled {
+                                                                        menu::checkbox_item::wire_toggle_on_activate(
+                                                                            cx,
+                                                                            checked.clone(),
+                                                                        );
+                                                                    }
+                                                                    cx.pressable_dispatch_command_opt(command);
+                                                                    if !disabled && close_on_select {
+                                                                        cx.pressable_set_bool(&open, false);
+                                                                    }
 
-                                                                vec![cx.container(
-                                                                    ContainerProps {
-                                                                        layout: LayoutStyle::default(),
-                                                                        padding: Edges {
-                                                                            top: pad_y,
-                                                                            right: pad_x,
-                                                                            bottom: pad_y,
-                                                                            left: pad_x,
-                                                                        },
-                                                                        background: Some(bg),
-                                                                        corner_radii:
-                                                                            fret_core::Corners::all(
-                                                                                theme.metrics.radius_sm,
-                                                                            ),
-                                                                        ..Default::default()
-                                                                    },
-                                                                    move |cx| {
-                                                                        vec![cx.text_props(TextProps {
-                                                                            layout: LayoutStyle::default(),
-                                                                            text: label.clone(),
-                                                                            style: Some(text_style.clone()),
-                                                                            wrap: TextWrap::None,
-                                                                            overflow: TextOverflow::Ellipsis,
-                                                                            color: Some(if disabled {
-                                                                                theme.colors.text_disabled
-                                                                            } else {
-                                                                                theme.colors.text_primary
-                                                                            }),
-                                                                        })]
-                                                                    },
-                                                                )]
-                                                            },
-                                                        ));
+                                                                    let mut row_bg =
+                                                                        fret_core::Color::TRANSPARENT;
+                                                                    let mut row_fg = fg;
+                                                                    if st.hovered
+                                                                        || st.pressed
+                                                                        || st.focused
+                                                                    {
+                                                                        row_bg = accent;
+                                                                        row_fg = accent_fg;
+                                                                    }
+
+                                                                    menu_row_children(
+                                                                        cx,
+                                                                        label.clone(),
+                                                                        leading.clone(),
+                                                                        reserve_leading_slot,
+                                                                        trailing.clone(),
+                                                                        false,
+                                                                        Some(checked_now),
+                                                                        disabled,
+                                                                        row_bg,
+                                                                        row_fg,
+                                                                        text_style.clone(),
+                                                                        theme.metrics.font_size,
+                                                                        theme.metrics.font_line_height,
+                                                                        pad_x,
+                                                                        pad_x,
+                                                                        pad_y,
+                                                                        radius_sm,
+                                                                        text_disabled,
+                                                                    )
+                                                                },
+                                                            )
+                                                        }));
                                                     }
-                                                }
-                                            }
+                                                    ContextMenuEntry::RadioItem(item) => {
+                                                        let collection_index = item_ix;
+                                                        item_ix = item_ix.saturating_add(1);
+
+                                                        let label = item.label.clone();
+                                                        let value = item.value.clone();
+                                                        let group_value = item.group_value.clone();
+                                                        let a11y_label = item
+                                                            .a11y_label
+                                                            .clone()
+                                                            .or_else(|| Some(label.clone()));
+                                                        let disabled = item.disabled;
+                                                        let close_on_select = item.close_on_select;
+                                                        let command = item.command;
+                                                        let leading = item.leading.clone();
+                                                        let trailing = item.trailing.clone();
+                                                        let open = open_for_overlay.clone();
+                                                        let text_style = text_style.clone();
+
+                                                        out.push(cx.keyed(value.clone(), |cx| {
+                                                            let selected = cx
+                                                                .watch_model(&group_value)
+                                                                .cloned()
+                                                                .flatten();
+                                                            let is_selected = menu::radio_group::is_selected(
+                                                                selected.as_ref(),
+                                                                &value,
+                                                            );
+                                                            cx.pressable(
+                                                                PressableProps {
+                                                                    layout: {
+                                                                        let mut layout =
+                                                                            LayoutStyle::default();
+                                                                        layout.size.width =
+                                                                            Length::Fill;
+                                                                        layout.size.min_height =
+                                                                            Some(Px(28.0));
+                                                                        layout
+                                                                    },
+                                                                    enabled: !disabled,
+                                                                    focusable: !disabled,
+                                                                    focus_ring: Some(ring),
+                                                                    a11y: menu::item::menu_item_radio_a11y(
+                                                                        a11y_label.clone(),
+                                                                        is_selected,
+                                                                    )
+                                                                    .with_collection_position(
+                                                                        collection_index,
+                                                                        item_count,
+                                                                    ),
+                                                                    ..Default::default()
+                                                                },
+                                                                move |cx, st| {
+                                                                    let selected = cx
+                                                                        .watch_model(&group_value)
+                                                                        .cloned()
+                                                                        .flatten();
+                                                                    let is_selected = menu::radio_group::is_selected(
+                                                                        selected.as_ref(),
+                                                                        &value,
+                                                                    );
+
+                                                                    if !disabled {
+                                                                        menu::radio_group::wire_select_on_activate(
+                                                                            cx,
+                                                                            group_value.clone(),
+                                                                            value.clone(),
+                                                                        );
+                                                                    }
+                                                                    cx.pressable_dispatch_command_opt(command);
+                                                                    if !disabled && close_on_select {
+                                                                        cx.pressable_set_bool(&open, false);
+                                                                    }
+
+                                                                    let mut row_bg =
+                                                                        fret_core::Color::TRANSPARENT;
+                                                                    let mut row_fg = fg;
+                                                                    if st.hovered
+                                                                        || st.pressed
+                                                                        || st.focused
+                                                                    {
+                                                                        row_bg = accent;
+                                                                        row_fg = accent_fg;
+                                                                    }
+
+                                                                    menu_row_children(
+                                                                        cx,
+                                                                        label.clone(),
+                                                                        leading.clone(),
+                                                                        reserve_leading_slot,
+                                                                        trailing.clone(),
+                                                                        false,
+                                                                        Some(is_selected),
+                                                                        disabled,
+                                                                        row_bg,
+                                                                        row_fg,
+                                                                        text_style.clone(),
+                                                                        theme.metrics.font_size,
+                                                                        theme.metrics.font_line_height,
+                                                                        pad_x,
+                                                                        pad_x,
+                                                                        pad_y,
+                                                                        radius_sm,
+                                                                        text_disabled,
+                                                                    )
+                                                                },
+                                                            )
+                                                        }));
+                                                    }
+                                                  }
+                                              }
 
                                                     out
                                                 },
@@ -500,20 +1970,164 @@ impl ContextMenu {
                         },
                     );
 
-                    vec![content]
+                    let opacity_layout = LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    let content = cx.opacity_props(
+                        OpacityProps {
+                            layout: opacity_layout.clone(),
+                            opacity,
+                        },
+                        move |cx| {
+                            vec![cx.visual_transform_props(
+                                VisualTransformProps {
+                                    layout: opacity_layout,
+                                    transform,
+                                },
+                                move |_cx| vec![content],
+                            )]
+                        },
+                    );
+
+                    let dismissible_on_pointer_move =
+                        menu::root::submenu_pointer_move_handler(submenu.clone(), submenu_cfg);
+
+                    let mut children = vec![content];
+                    let desired = Size::new(Px(192.0), Px(1.0e9));
+                    let submenu_open_value = cx
+                        .app
+                        .models_mut()
+                        .read(&submenu_for_panel.open_value, |v| v.clone())
+                        .ok()
+                        .flatten();
+                    let submenu_is_open = submenu_open_value.is_some();
+                    let submenu_motion = OverlayController::transition_with_durations_and_easing(
+                        cx,
+                        submenu_is_open,
+                        overlay_motion::SHADCN_MOTION_TICKS_100,
+                        overlay_motion::SHADCN_MOTION_TICKS_100,
+                        overlay_motion::shadcn_ease,
+                    );
+
+                    let open_submenu = menu::sub::with_open_submenu(
+                        cx,
+                        &submenu_for_panel,
+                        outer,
+                        desired,
+                        |_cx, open_value, geometry| (open_value, geometry),
+                    );
+
+                    #[derive(Default)]
+                    struct SubmenuLast {
+                        open_value: Option<Arc<str>>,
+                        geometry: Option<menu::sub::MenuSubmenuGeometry>,
+                    }
+
+                    let (last_value, last_geometry) = cx.with_state(SubmenuLast::default, |st| {
+                        if let Some((open_value, geometry)) = open_submenu.as_ref() {
+                            st.open_value = Some(open_value.clone());
+                            st.geometry = Some(*geometry);
+                        }
+                        (st.open_value.clone(), st.geometry)
+                    });
+
+                    if submenu_motion.present {
+                        let open_value = open_submenu
+                            .as_ref()
+                            .map(|(open_value, _)| open_value.clone())
+                            .or(last_value);
+                        let geometry = open_submenu
+                            .map(|(_, geometry)| geometry)
+                            .or(last_geometry);
+
+                        let (Some(open_value), Some(geometry)) = (open_value, geometry) else {
+                            return (children, Some(dismissible_on_pointer_move));
+                        };
+
+                        if let Some(submenu_entries) =
+                            find_submenu_entries_by_value(&entries_for_submenu, open_value.as_ref())
+                        {
+                            let submenu_panel = context_menu_submenu_panel(
+                                cx,
+                                geometry.floating,
+                                submenu_entries,
+                                open_for_submenu.clone(),
+                                typeahead_timeout_ticks,
+                                align_leading_icons,
+                                submenu_for_panel.clone(),
+                            );
+
+                            let side =
+                                overlay_motion::anchored_side(geometry.reference, geometry.floating);
+                            let origin = overlay_motion::shadcn_transform_origin_for_anchored_rect(
+                                geometry.reference,
+                                geometry.floating,
+                                side,
+                            );
+                            let zoom = overlay_motion::shadcn_zoom_transform(
+                                origin,
+                                submenu_motion.progress,
+                            );
+                            let slide = overlay_motion::shadcn_enter_slide_transform(
+                                side,
+                                submenu_motion.progress,
+                                true,
+                            );
+                            let transform = slide * zoom;
+
+                            let opacity_layout = LayoutStyle {
+                                size: SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            };
+                            let opacity = submenu_motion.progress;
+                            let submenu_panel = cx.interactivity_gate(
+                                submenu_motion.present,
+                                submenu_is_open,
+                                move |cx| {
+                                    vec![cx.opacity_props(
+                                        OpacityProps {
+                                            layout: opacity_layout.clone(),
+                                            opacity,
+                                        },
+                                        move |cx| {
+                                            vec![cx.visual_transform_props(
+                                                VisualTransformProps {
+                                                    layout: opacity_layout,
+                                                    transform,
+                                                },
+                                                move |_cx| vec![submenu_panel],
+                                            )]
+                                        },
+                                    )]
+                                },
+                            );
+                            children.push(submenu_panel);
+                        }
+                    }
+
+                    (children, Some(dismissible_on_pointer_move))
                 });
 
-                let mut request = OverlayRequest::dismissible_popover(
+                let request = menu::root::dismissible_menu_request(
+                    cx,
                     id,
                     trigger_id,
                     open,
-                    OverlayPresence::instant(true),
+                    overlay_presence,
                     overlay_children,
+                    overlay_root_name,
+                    content_focus_id.get(),
+                    dismissible_on_pointer_move,
                 );
-                request.root_name = Some(overlay_root_name);
-                if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
-                    request.initial_focus = content_focus_id.get();
-                }
                 OverlayController::request(cx, request);
             }
 
@@ -676,6 +2290,58 @@ mod tests {
                         )
                     },
                     |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_focusable_trigger_with_entries(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        entries: Vec<ContextMenuEntry>,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "context-menu-submenu-arrow-right",
+            move |cx| {
+                vec![ContextMenu::new(open).into_element(
+                    cx,
+                    |cx| {
+                        cx.pressable(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st| {
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        )
+                    },
+                    move |_cx| entries,
                 )]
             },
         );
@@ -872,5 +2538,85 @@ mod tests {
             .expect("Beta menu item");
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(3));
+    }
+
+    #[test]
+    fn context_menu_submenu_opens_on_arrow_right_without_pointer_move() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![ContextMenuEntry::Item(
+            ContextMenuItem::new("More").submenu(vec![
+                ContextMenuEntry::Item(ContextMenuItem::new("Sub Alpha")),
+                ContextMenuEntry::Item(ContextMenuItem::new("Sub Beta")),
+            ]),
+        )];
+
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let more = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
+            .expect("More menu item");
+        ui.set_focus(Some(more.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Sub Alpha")
+            }),
+            "submenu items should render after ArrowRight opens the submenu"
+        );
     }
 }

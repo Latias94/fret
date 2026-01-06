@@ -15,6 +15,7 @@ and the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Depends on overlay policy/infra:
   - `ecosystem/fret-ui-kit/src/window_overlays/*` (modal overlays, focus restore/initial focus)
   - `ecosystem/fret-ui-kit/src/overlay_controller.rs` (overlay requests + presence)
+  - `ecosystem/fret-ui-kit/src/primitives/dialog.rs` (Radix-aligned trigger a11y + request facade)
   - `crates/fret-ui/src/tree/*` (modal barrier scoping + focus traversal contract, ADR 0068)
 
 ## What upstream exports (new-york)
@@ -55,7 +56,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 ### Visual parity (new-york)
 
 - Partial: Motion/animations are simplified (Fret uses a small fade presence).
-- Partial: Some sizing defaults differ from Tailwind classes; Fret favors theme-driven metrics.
+- Pass: Default sizing matches the upstream `w-full max-w-[calc(100%-2rem)] sm:max-w-lg` intent via
+  a padded center layout + `DialogContent` max-width.
 
 ## Validation
 

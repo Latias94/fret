@@ -6,6 +6,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost, UiTree};
 
 use crate::headless::presence::PresenceOutput;
+use crate::headless::transition::TransitionOutput;
 use crate::primitives::presence;
 use crate::window_overlays;
 
@@ -55,6 +56,10 @@ pub enum OverlayKind {
 pub struct ToastLayerSpec {
     pub store: Model<window_overlays::ToastStore>,
     pub position: window_overlays::ToastPosition,
+    pub margin: Option<fret_core::Px>,
+    pub gap: Option<fret_core::Px>,
+    pub toast_min_width: Option<fret_core::Px>,
+    pub toast_max_width: Option<fret_core::Px>,
 }
 
 #[derive(Clone)]
@@ -67,6 +72,9 @@ pub struct OverlayRequest {
     ///
     /// This is used to align Radix `DismissableLayerBranch` outcomes across disjoint subtrees.
     pub dismissable_branches: Vec<GlobalElementId>,
+    /// When an outside-press observer is dispatched for this overlay, suppress normal hit-tested
+    /// pointer-down dispatch to underlay widgets for the same event.
+    pub consume_outside_pointer_events: bool,
     pub open: Option<Model<bool>>,
     pub dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
     pub presence: OverlayPresence,
@@ -83,6 +91,10 @@ impl std::fmt::Debug for OverlayRequest {
             .field("root_name", &self.root_name)
             .field("trigger", &self.trigger)
             .field("dismissable_branches_len", &self.dismissable_branches.len())
+            .field(
+                "consume_outside_pointer_events",
+                &self.consume_outside_pointer_events,
+            )
             .field("open", &self.open)
             .field(
                 "dismissible_on_pointer_move",
@@ -110,6 +122,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: Some(trigger),
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: Some(open),
             dismissible_on_pointer_move: None,
             presence,
@@ -117,6 +130,22 @@ impl OverlayRequest {
             children,
             toast_layer: None,
         }
+    }
+
+    /// Dismissible overlay with non-click-through outside press behavior.
+    ///
+    /// This matches Radix-aligned "menu-like" overlays where an outside click closes the overlay
+    /// without activating the underlay (ADR 0069).
+    pub fn dismissible_menu(
+        id: GlobalElementId,
+        trigger: GlobalElementId,
+        open: Model<bool>,
+        presence: OverlayPresence,
+        children: Vec<AnyElement>,
+    ) -> Self {
+        let mut req = Self::dismissible_popover(id, trigger, open, presence, children);
+        req.consume_outside_pointer_events = true;
+        req
     }
 
     pub fn modal(
@@ -132,6 +161,7 @@ impl OverlayRequest {
             root_name: None,
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: Some(open),
             dismissible_on_pointer_move: None,
             presence,
@@ -152,6 +182,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: None,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: None,
             dismissible_on_pointer_move: None,
             presence,
@@ -168,6 +199,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: Some(trigger),
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence {
@@ -187,6 +219,7 @@ impl OverlayRequest {
             root_name: None,
             trigger: None,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: None,
             dismissible_on_pointer_move: None,
             presence: OverlayPresence::hidden(),
@@ -195,6 +228,10 @@ impl OverlayRequest {
             toast_layer: Some(ToastLayerSpec {
                 store,
                 position: window_overlays::ToastPosition::default(),
+                margin: None,
+                gap: None,
+                toast_min_width: None,
+                toast_max_width: None,
             }),
         }
     }
@@ -208,8 +245,49 @@ impl OverlayRequest {
         self
     }
 
+    pub fn toast_margin(mut self, margin: fret_core::Px) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_margin requires a ToastLayer request");
+        spec.margin = Some(margin);
+        self
+    }
+
+    pub fn toast_gap(mut self, gap: fret_core::Px) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_gap requires a ToastLayer request");
+        spec.gap = Some(gap);
+        self
+    }
+
+    pub fn toast_min_width(mut self, width: fret_core::Px) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_min_width requires a ToastLayer request");
+        spec.toast_min_width = Some(width);
+        self
+    }
+
+    pub fn toast_max_width(mut self, width: fret_core::Px) -> Self {
+        let spec = self
+            .toast_layer
+            .as_mut()
+            .expect("toast_max_width requires a ToastLayer request");
+        spec.toast_max_width = Some(width);
+        self
+    }
+
     pub fn dismissable_branches(mut self, branches: Vec<GlobalElementId>) -> Self {
         self.dismissable_branches = branches;
+        self
+    }
+
+    pub fn consume_outside_pointer_events(mut self, consume: bool) -> Self {
+        self.consume_outside_pointer_events = consume;
         self
     }
 }
@@ -270,6 +348,7 @@ impl OverlayController {
                         root_name,
                         trigger,
                         dismissable_branches: request.dismissable_branches,
+                        consume_outside_pointer_events: request.consume_outside_pointer_events,
                         open,
                         present: request.presence.present,
                         initial_focus: request.initial_focus,
@@ -338,13 +417,23 @@ impl OverlayController {
                 let root_name = request
                     .root_name
                     .unwrap_or_else(|| window_overlays::toast_layer_root_name(request.id));
-                window_overlays::request_toast_layer_for_window(
-                    app,
-                    window,
-                    window_overlays::ToastLayerRequest::new(request.id, spec.store)
-                        .position(spec.position)
-                        .root_name(root_name),
-                );
+
+                let mut toast_req = window_overlays::ToastLayerRequest::new(request.id, spec.store)
+                    .position(spec.position)
+                    .root_name(root_name);
+                if let Some(margin) = spec.margin {
+                    toast_req = toast_req.margin(margin);
+                }
+                if let Some(gap) = spec.gap {
+                    toast_req = toast_req.gap(gap);
+                }
+                if let Some(width) = spec.toast_min_width {
+                    toast_req = toast_req.toast_min_width(width);
+                }
+                if let Some(width) = spec.toast_max_width {
+                    toast_req = toast_req.toast_max_width(width);
+                }
+                window_overlays::request_toast_layer_for_window(app, window, toast_req);
             }
         }
     }
@@ -365,6 +454,62 @@ impl OverlayController {
         fade_ticks: u64,
     ) -> PresenceOutput {
         presence::fade_presence(cx, open, fade_ticks)
+    }
+
+    pub fn fade_presence_with_durations<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_ticks: u64,
+        close_ticks: u64,
+    ) -> PresenceOutput {
+        presence::fade_presence_with_durations(cx, open, open_ticks, close_ticks)
+    }
+
+    /// Drive a general transition timeline using the UI runtime's monotonic frame clock.
+    ///
+    /// This is the generalized form of `fade_presence*` and is useful for driving multiple
+    /// properties (opacity/scale/translation) with a shared open/close timeline.
+    pub fn transition<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        ticks: u64,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition(cx, open, ticks)
+    }
+
+    /// Drive a general transition timeline with separate open/close durations.
+    pub fn transition_with_durations<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_ticks: u64,
+        close_ticks: u64,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition_with_durations(
+            cx,
+            open,
+            open_ticks,
+            close_ticks,
+        )
+    }
+
+    /// Drive a transition timeline with an explicit easing function.
+    ///
+    /// This enables CSS-style easing (e.g. cubic-bezier) while staying deterministic and
+    /// renderer-agnostic.
+    pub fn transition_with_durations_and_easing<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: bool,
+        open_ticks: u64,
+        close_ticks: u64,
+        ease: fn(f32) -> f32,
+    ) -> TransitionOutput {
+        crate::declarative::transition::drive_transition_with_durations_and_easing(
+            cx,
+            open,
+            open_ticks,
+            close_ticks,
+            ease,
+        )
     }
 
     pub fn toast_store<H: UiHost>(app: &mut H) -> Model<window_overlays::ToastStore> {

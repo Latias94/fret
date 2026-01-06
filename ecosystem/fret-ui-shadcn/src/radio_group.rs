@@ -87,6 +87,14 @@ fn radio_indicator(theme: &Theme) -> Color {
     theme.color_by_key("primary").unwrap_or(theme.colors.accent)
 }
 
+/// Matches Radix RadioGroup `orientation` outcome.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RadioGroupOrientation {
+    #[default]
+    Vertical,
+    Horizontal,
+}
+
 #[derive(Debug, Clone)]
 pub struct RadioGroupItem {
     pub value: Arc<str>,
@@ -115,6 +123,8 @@ pub struct RadioGroup {
     items: Vec<RadioGroupItem>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
+    orientation: RadioGroupOrientation,
+    loop_navigation: bool,
 }
 
 impl RadioGroup {
@@ -124,6 +134,8 @@ impl RadioGroup {
             items: Vec::new(),
             disabled: false,
             a11y_label: None,
+            orientation: RadioGroupOrientation::default(),
+            loop_navigation: true,
         }
     }
 
@@ -139,6 +151,17 @@ impl RadioGroup {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn orientation(mut self, orientation: RadioGroupOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    /// When `true` (default), roving navigation loops at the ends (Radix `loop` behavior).
+    pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
+        self.loop_navigation = loop_navigation;
         self
     }
 
@@ -161,6 +184,8 @@ impl RadioGroup {
             let group_label = self.a11y_label.clone();
             let items = self.items.clone();
             let model = self.model;
+            let orientation = self.orientation;
+            let loop_navigation = self.loop_navigation;
 
             cx.semantics(
                 radio_group_prim::radio_group_semantics(group_label.clone(), group_disabled),
@@ -176,7 +201,7 @@ impl RadioGroup {
                     let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
                     let roving = RovingFocusProps {
                         enabled: !group_disabled,
-                        wrap: true,
+                        wrap: loop_navigation,
                         disabled: Arc::from(disabled.clone().into_boxed_slice()),
                         ..Default::default()
                     };
@@ -184,11 +209,20 @@ impl RadioGroup {
                     vec![cx.roving_flex(
                         RovingFlexProps {
                             flex: FlexProps {
-                                direction: fret_core::Axis::Vertical,
-                                gap: gap_y,
+                                direction: match orientation {
+                                    RadioGroupOrientation::Vertical => fret_core::Axis::Vertical,
+                                    RadioGroupOrientation::Horizontal => fret_core::Axis::Horizontal,
+                                },
+                                gap: match orientation {
+                                    RadioGroupOrientation::Vertical => gap_y,
+                                    RadioGroupOrientation::Horizontal => gap_x,
+                                },
                                 padding: Edges::all(Px(0.0)),
                                 justify: MainAlign::Start,
-                                align: CrossAlign::Stretch,
+                                align: match orientation {
+                                    RadioGroupOrientation::Vertical => CrossAlign::Stretch,
+                                    RadioGroupOrientation::Horizontal => CrossAlign::Center,
+                                },
                                 wrap: false,
                                 ..Default::default()
                             },
@@ -217,7 +251,7 @@ impl RadioGroup {
                                 let pressable_item_value = item.value.clone();
                                 let model = model.clone();
                                 let text_style = text_style.clone();
-                                out.push(cx.pressable(
+                                out.push(cx.pressable_with_id(
                                     PressableProps {
                                         layout: pressable_layout,
                                         enabled: item_enabled,
@@ -230,7 +264,11 @@ impl RadioGroup {
                                         .with_collection_position(idx, items.len()),
                                         ..Default::default()
                                     },
-                                    move |cx, st| {
+                                    move |cx, st, id| {
+                                        cx.key_add_on_key_down_for(
+                                            id,
+                                            fret_ui_kit::primitives::keyboard::consume_enter_key_handler(),
+                                        );
                                         cx.pressable_set_option_arc_str(
                                             &model,
                                             pressable_item_value.clone(),
@@ -238,9 +276,10 @@ impl RadioGroup {
 
                                         let theme = Theme::global(&*cx.app).clone();
 
-                                        let mut border_color =
-                                            if is_selected { dot } else { border };
-                                        if item_enabled && (st.hovered || st.pressed) {
+                                        let mut border_color = border;
+                                        if item_enabled && st.focused {
+                                            border_color = ring;
+                                        } else if item_enabled && (st.hovered || st.pressed) {
                                             border_color = alpha_mul(ring, 0.8);
                                         }
 
@@ -262,7 +301,7 @@ impl RadioGroup {
                                             layout: icon_layout,
                                             padding: Edges::all(Px(0.0)),
                                             background: None,
-                                            shadow: None,
+                                            shadow: Some(decl_style::shadow_xs(&theme, radius)),
                                             border: Edges::all(Px(1.0)),
                                             border_color: Some(border_color),
                                             corner_radii: Corners::all(radius),
@@ -377,9 +416,10 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, PathCommand, SemanticsRole, SvgId, SvgService, TextBlobId, TextConstraints,
-        TextMetrics, TextService, TextStyle,
+        AppWindowId, Modifiers, PathCommand, SemanticsRole, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle,
     };
+    use fret_core::{Event, KeyCode};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Point, Px, Rect};
     use fret_ui::{Theme, ThemeConfig, UiTree};
@@ -503,5 +543,340 @@ mod tests {
         assert_eq!(beta.flags.checked, Some(true));
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(2));
+    }
+
+    fn render(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        orientation: RadioGroupOrientation,
+        loop_navigation: bool,
+    ) -> fret_core::NodeId {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![
+                    RadioGroup::new(model)
+                        .a11y_label("Options")
+                        .orientation(orientation)
+                        .loop_navigation(loop_navigation)
+                        .item(RadioGroupItem::new("alpha", "Alpha"))
+                        .item(RadioGroupItem::new("beta", "Beta"))
+                        .item(RadioGroupItem::new("gamma", "Gamma"))
+                        .into_element(cx),
+                ]
+            });
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    #[test]
+    fn radio_group_horizontal_arrow_right_moves_and_selects() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focus = snap.focus.expect("focus");
+        let focused_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focus)
+            .expect("focused node");
+        assert_eq!(focused_node.role, SemanticsRole::RadioButton);
+        assert_eq!(focused_node.label.as_deref(), Some("Beta"));
+    }
+
+    #[test]
+    fn radio_group_loop_false_does_not_wrap_at_end() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("gamma")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            false,
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            false,
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("gamma"));
+    }
+
+    #[test]
+    fn radio_group_does_not_select_on_enter_key() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+
+        let _ = app
+            .models_mut()
+            .update(&model, |v| *v = Some(Arc::from("alpha")));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyUp {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+    }
+
+    #[test]
+    fn radio_group_selects_on_space_key() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+
+        let _ = app
+            .models_mut()
+            .update(&model, |v| *v = Some(Arc::from("alpha")));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyUp {
+                key: KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("beta"));
     }
 }

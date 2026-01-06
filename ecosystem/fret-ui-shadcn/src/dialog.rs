@@ -1,29 +1,37 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
-use fret_runtime::Model;
+use fret_icons::ids;
+use fret_runtime::{Model, ModelId};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, PressableA11y, PressableProps, SemanticsProps, SizeStyle, TextProps,
+    PositionStyle, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticsProps,
+    SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    OverlayRequest, Radius, Size as ComponentSize, Space,
+    Radius, Space,
 };
+
+use crate::layout as shadcn_layout;
+use crate::overlay_motion;
 
 fn default_overlay_color() -> Color {
     Color {
         r: 0.0,
         g: 0.0,
         b: 0.0,
-        a: 0.8,
+        a: 0.5,
     }
 }
 
@@ -61,7 +69,7 @@ impl Dialog {
             open,
             overlay_closable: true,
             overlay_color: None,
-            window_padding: Space::N6,
+            window_padding: Space::N4,
         }
     }
 
@@ -89,20 +97,41 @@ impl Dialog {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
+            let open_id: ModelId = self.open.id();
+
+            #[derive(Default)]
+            struct DialogA11yState {
+                content_element: Option<fret_ui::elements::GlobalElementId>,
+            }
 
             let trigger = trigger(cx);
             let id = trigger.id;
-            let overlay_root_name = OverlayController::modal_root_name(id);
+            let overlay_root_name = radix_dialog::dialog_root_name(id);
+            let prev_content_element =
+                cx.with_state(DialogA11yState::default, |st| st.content_element);
 
-            let presence = OverlayController::fade_presence(cx, is_open, 4);
-            let overlay_presence = OverlayPresence::from_fade(is_open, presence);
+            let motion = OverlayController::transition_with_durations_and_easing(
+                cx,
+                is_open,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::shadcn_ease,
+            );
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: is_open,
+            };
+
+            let content_element_for_trigger: std::cell::Cell<
+                Option<fret_ui::elements::GlobalElementId>,
+            > = std::cell::Cell::new(None);
 
             if overlay_presence.present {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
 
-                let opacity = presence.opacity;
+                let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let barrier_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
@@ -169,15 +198,19 @@ impl Dialog {
                         )
                     };
 
-                    let content = content(cx);
-
                     let outer = cx.bounds;
                     let available_w = Px((outer.size.width.0 - window_padding_px.0 * 2.0).max(0.0));
                     let available_h =
                         Px((outer.size.height.0 - window_padding_px.0 * 2.0).max(0.0));
 
+                    crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
+                    let content = content(cx);
+                    content_element_for_trigger.set(Some(content.id));
+                    crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
                     let last_size = cx.last_bounds_for_element(content.id).map(|r| r.size);
 
+                    // These defaults match upstream's `sm:max-w-lg` intent and provide a stable
+                    // first-frame anchor without forcing a fixed size.
                     let desired_w = last_size.map(|s| s.width).unwrap_or(Px(512.0));
                     let desired_h = last_size.map(|s| s.height).unwrap_or(Px(320.0));
 
@@ -191,8 +224,14 @@ impl Dialog {
                         + window_padding_px.0
                         + ((available_h.0 - content_h.0) * 0.5).max(0.0));
 
-                    let wrapper = cx.container(
-                        ContainerProps {
+                    let origin = Point::new(
+                        Px(left.0 + content_w.0 * 0.5),
+                        Px(top.0 + content_h.0 * 0.5),
+                    );
+                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+
+                    let dialog = cx.visual_transform_props(
+                        VisualTransformProps {
                             layout: LayoutStyle {
                                 position: PositionStyle::Absolute,
                                 inset: InsetStyle {
@@ -201,15 +240,10 @@ impl Dialog {
                                     right: None,
                                     bottom: None,
                                 },
-                                size: SizeStyle {
-                                    width: Length::Px(content_w),
-                                    height: Length::Px(content_h),
-                                    ..Default::default()
-                                },
                                 overflow: Overflow::Visible,
                                 ..Default::default()
                             },
-                            ..Default::default()
+                            transform: zoom,
                         },
                         move |_cx| vec![content],
                     );
@@ -224,25 +258,31 @@ impl Dialog {
                     };
                     vec![cx.opacity_props(
                         OpacityProps {
-                            layout: opacity_layout,
+                            layout: opacity_layout.clone(),
                             opacity,
                         },
-                        |_cx| vec![barrier, wrapper],
+                        move |_cx| vec![barrier, dialog],
                     )]
                 });
 
-                let mut request = OverlayRequest::modal(
+                if let Some(content_element) = content_element_for_trigger.get() {
+                    cx.with_state(DialogA11yState::default, |st| {
+                        st.content_element = Some(content_element)
+                    });
+                }
+
+                let request = radix_dialog::modal_dialog_request(
                     id,
-                    Some(id),
+                    id,
                     self.open,
                     overlay_presence,
                     overlay_children,
                 );
-                request.root_name = Some(overlay_root_name);
-                OverlayController::request(cx, request);
+                radix_dialog::request_modal_dialog(cx, request);
             }
 
-            trigger
+            let content_element = content_element_for_trigger.get().or(prev_content_element);
+            radix_dialog::apply_dialog_trigger_a11y(trigger, is_open, content_element)
         })
     }
 }
@@ -302,17 +342,23 @@ impl DialogContent {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
-        let container = cx.container(
+        let container = shadcn_layout::container_vstack_gap(
+            cx,
             ContainerProps {
                 shadow: Some(shadow),
                 ..props
             },
-            move |_cx| children,
+            Space::N4,
+            children,
         );
 
+        let (labelled_by_element, described_by_element) =
+            crate::a11y_modal::modal_relations_for_current_scope(cx.app);
         cx.semantics(
             SemanticsProps {
                 role: SemanticsRole::Dialog,
+                labelled_by_element,
+                described_by_element,
                 ..Default::default()
             },
             move |_cx| vec![container],
@@ -369,25 +415,16 @@ impl DialogClose {
                 .color_by_key("muted.foreground")
                 .or_else(|| theme.color_by_key("muted-foreground"))
                 .unwrap_or(theme.colors.text_muted);
-            let bg_hover = theme
-                .color_by_key("accent")
-                .or_else(|| theme.color_by_key("accent.background"))
-                .unwrap_or(theme.colors.hover_background);
-            let bg_active = theme.colors.selection_background;
 
             let a11y_label: Arc<str> = Arc::from("Close");
             let open = self.open.clone();
 
-            let size = ComponentSize::Medium;
-            let radius = size.control_radius(&theme);
-            let icon_button_size = size.icon_button_size(&theme);
+            let radius = Px(2.0);
 
             let base_layout = LayoutRefinement::default()
                 .absolute()
                 .top(Space::N4)
                 .right(Space::N4)
-                .min_w(MetricRef::Px(icon_button_size))
-                .min_h(MetricRef::Px(icon_button_size))
                 .merge(self.layout);
             let pressable_layout = decl_style::layout_style(&theme, base_layout);
 
@@ -400,17 +437,11 @@ impl DialogClose {
                 let hovered = st.hovered;
                 let pressed = st.pressed;
 
-                let bg = if pressed {
-                    bg_active
-                } else if hovered {
-                    bg_hover
-                } else {
-                    Color::TRANSPARENT
-                };
-
-                let mut chrome = ChromeRefinement::default().rounded(Radius::Sm);
+                // new-york-v4: `rounded-xs opacity-70 hover:opacity-100` (no default hover bg).
+                let mut chrome = ChromeRefinement::default();
+                chrome.radius = Some(MetricRef::Px(radius));
                 if !user_bg_override {
-                    chrome.background = Some(ColorRef::Color(bg));
+                    chrome.background = Some(ColorRef::Color(Color::TRANSPARENT));
                 }
                 chrome = chrome.merge(user_chrome.clone());
 
@@ -418,11 +449,25 @@ impl DialogClose {
                     decl_style::container_props(&theme, chrome, LayoutRefinement::default());
                 chrome_props.layout.size = pressable_layout.size;
 
+                let ring_color = theme
+                    .color_by_key("ring")
+                    .unwrap_or(theme.colors.focus_ring);
+                let ring_offset_bg = theme
+                    .color_by_key("ring-offset-background")
+                    .unwrap_or(theme.colors.surface_background);
+
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: true,
                     focusable: true,
-                    focus_ring: Some(decl_style::focus_ring(&theme, radius)),
+                    focus_ring: Some(RingStyle {
+                        placement: RingPlacement::Outset,
+                        width: Px(2.0),
+                        offset: Px(2.0),
+                        color: ring_color,
+                        offset_color: Some(ring_offset_bg),
+                        corner_radii: Corners::all(radius),
+                    }),
                     a11y: PressableA11y {
                         label: Some(a11y_label.clone()),
                         ..Default::default()
@@ -431,21 +476,14 @@ impl DialogClose {
                 };
 
                 let children = move |cx: &mut ElementContext<'_, H>| {
-                    let icon_px = Px(size.control_text_px(&theme).0 + 2.0);
-                    let icon = cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: Arc::from("×"),
-                        style: Some(TextStyle {
-                            font: FontId::default(),
-                            size: icon_px,
-                            weight: FontWeight::MEDIUM,
-                            line_height: None,
-                            letter_spacing_em: None,
-                        }),
-                        color: Some(fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                    });
+                    let opacity = if hovered || pressed { 1.0 } else { 0.7 };
+                    let icon = decl_icon::icon_with(
+                        cx,
+                        ids::ui::CLOSE,
+                        Some(Px(16.0)),
+                        Some(ColorRef::Color(fg)),
+                    );
+                    let icon = cx.opacity(opacity, move |_cx| vec![icon]);
 
                     vec![fret_ui_kit::declarative::stack::hstack(
                         cx,
@@ -480,7 +518,7 @@ impl DialogHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
     }
 }
 
@@ -502,7 +540,15 @@ impl DialogFooter {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_hstack(
+            cx,
+            props,
+            fret_ui_kit::declarative::stack::HStackProps::default()
+                .gap(Space::N2)
+                .justify_end()
+                .items_center(),
+            children,
+        )
     }
 }
 
@@ -532,7 +578,7 @@ impl DialogTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or(theme.metrics.font_line_height);
 
-        cx.text_props(TextProps {
+        let title = cx.text_props(TextProps {
             layout: Default::default(),
             text: self.text,
             style: Some(TextStyle {
@@ -545,7 +591,9 @@ impl DialogTitle {
             color: Some(fg),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
-        })
+        });
+        crate::a11y_modal::register_modal_title(cx.app, title.id);
+        title
     }
 }
 
@@ -576,7 +624,7 @@ impl DialogDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or(theme.metrics.font_line_height);
 
-        cx.text_props(TextProps {
+        let description = cx.text_props(TextProps {
             layout: Default::default(),
             text: self.text,
             style: Some(TextStyle {
@@ -589,7 +637,9 @@ impl DialogDescription {
             color: Some(fg),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
-        })
+        });
+        crate::a11y_modal::register_modal_description(cx.app, description.id);
+        description
     }
 }
 
@@ -814,7 +864,15 @@ mod tests {
         assert!(content_id.get().is_some());
 
         // Click inside content should not close.
-        let inside = Point::new(Px(400.0), Px(300.0));
+        let content_rect = content_id
+            .get()
+            .and_then(|id| fret_ui::elements::node_for_element(&mut app, window, id))
+            .and_then(|node| ui.debug_node_bounds(node))
+            .expect("content bounds");
+        let inside = Point::new(
+            Px(content_rect.origin.x.0 + content_rect.size.width.0 * 0.5),
+            Px(content_rect.origin.y.0 + content_rect.size.height.0 * 0.5),
+        );
         ui.dispatch_event(
             &mut app,
             &mut services,
@@ -836,11 +894,22 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(true));
 
         // Click outside content should close via barrier.
+        let mut outside = Point::new(Px(bounds.origin.x.0 + 4.0), Px(bounds.origin.y.0 + 4.0));
+        if content_rect.contains(outside) {
+            outside = Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 - 4.0),
+                Px(bounds.origin.y.0 + bounds.size.height.0 - 4.0),
+            );
+        }
+        assert!(
+            !content_rect.contains(outside),
+            "expected an outside point that is not inside the dialog content"
+        );
         ui.dispatch_event(
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
-                position: Point::new(Px(4.0), Px(4.0)),
+                position: outside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
             }),
@@ -849,7 +918,7 @@ mod tests {
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
-                position: Point::new(Px(4.0), Px(4.0)),
+                position: outside,
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
             }),
@@ -1047,7 +1116,8 @@ mod tests {
 
         // Render a few frames to allow the close animation to finish and the overlay manager to
         // apply focus restore when the layer is uninstalled.
-        for _ in 0..4 {
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 1;
+        for _ in 0..settle_frames {
             let _ = render_dialog_frame(
                 &mut ui,
                 &mut app,
@@ -1171,7 +1241,8 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(false));
 
         // Render a few frames to allow presence to complete and focus restore to apply.
-        for _ in 0..4 {
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_200 as usize + 1;
+        for _ in 0..settle_frames {
             let _ = render_dialog_frame(
                 &mut ui,
                 &mut app,
@@ -1462,5 +1533,134 @@ mod tests {
         let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_element)
             .expect("trigger");
         assert_ne!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    fn dialog_content_exposes_labelled_by_and_described_by_relations() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, services: &mut dyn fret_core::UiServices| {
+                OverlayController::begin_frame(app, window);
+
+                let mut trigger_id: Option<fret_ui::elements::GlobalElementId> = None;
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "dialog-a11y-relations",
+                    |cx| {
+                        let trigger = cx.pressable_with_id(
+                            PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            |cx, _st, id| {
+                                cx.pressable_toggle_bool(&open);
+                                trigger_id = Some(id);
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                            },
+                        );
+
+                        let dialog = Dialog::new(open.clone()).into_element(
+                            cx,
+                            |_cx| trigger,
+                            |cx| {
+                                let title = DialogTitle::new("Dialog Title").into_element(cx);
+                                let description =
+                                    DialogDescription::new("Dialog Description").into_element(cx);
+                                DialogContent::new(vec![title, description]).into_element(cx)
+                            },
+                        );
+
+                        vec![dialog]
+                    },
+                );
+
+                ui.set_root(root);
+                OverlayController::render(ui, app, services, window, bounds);
+                trigger_id.expect("trigger id")
+            };
+
+        // Frame 1: closed.
+        let _trigger = render_frame(&mut ui, &mut app, &mut services);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Open via trigger click.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: open + semantics snapshot.
+        let _ = render_frame(&mut ui, &mut app, &mut services);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let dialog = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Dialog)
+            .expect("dialog semantics node");
+        let title = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Text
+                    && n.label.as_deref() == Some("Dialog Title")
+            })
+            .expect("title semantics node");
+        let description = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Text
+                    && n.label.as_deref() == Some("Dialog Description")
+            })
+            .expect("description semantics node");
+
+        assert!(
+            dialog.labelled_by.iter().any(|id| *id == title.id),
+            "dialog should be labelled by its title"
+        );
+        assert!(
+            dialog.described_by.iter().any(|id| *id == description.id),
+            "dialog should be described by its description"
+        );
     }
 }

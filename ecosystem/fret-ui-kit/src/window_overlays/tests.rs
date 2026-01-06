@@ -257,6 +257,7 @@ fn dismissible_popover_closes_on_outside_press() {
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -377,6 +378,7 @@ fn dismissible_popover_does_not_close_on_inside_press() {
             root_name,
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -475,6 +477,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: vec![underlay],
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -530,6 +533,7 @@ fn dismissible_popover_does_not_close_on_outside_press_in_branch_subtree() {
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: vec![underlay],
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -614,6 +618,7 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -720,6 +725,7 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -754,6 +760,7 @@ fn dismissible_popover_closes_on_focus_change_outside() {
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -836,6 +843,7 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -871,6 +879,7 @@ fn dismissible_popover_does_not_close_on_focus_change_to_trigger() {
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -1197,6 +1206,7 @@ fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_a
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open,
             present: true,
             initial_focus: None,
@@ -1272,6 +1282,7 @@ fn non_modal_overlay_does_not_request_outside_press_observer_while_closing() {
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open,
             present: true,
             initial_focus: None,
@@ -1345,6 +1356,7 @@ fn non_modal_overlay_restores_focus_when_focus_is_missing_on_unmount() {
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -1472,6 +1484,7 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
             root_name: popover_root_name(trigger),
             trigger,
             dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: false,
             open: open.clone(),
             present: true,
             initial_focus: None,
@@ -1529,4 +1542,153 @@ fn non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmo
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
     assert_eq!(ui.focus(), Some(underlay_node));
+}
+
+#[test]
+fn non_modal_overlay_can_consume_outside_press_to_block_underlay_activation() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+    let underlay_clicked = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable bounds for the trigger element.
+    let (trigger, _underlay) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Open via click on trigger.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Second frame: request and render a dismissible popover that consumes outside presses.
+    begin_frame(&mut app, window);
+    let (_trigger2, _underlay2) = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+
+    let overlay_children =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "overlay-children", |cx| {
+            vec![cx.container(
+                ContainerProps {
+                    layout: {
+                        LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                left: Some(Px(0.0)),
+                                top: Some(Px(40.0)),
+                                ..Default::default()
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(Px(200.0)),
+                                height: Length::Px(Px(40.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
+                    },
+                    ..Default::default()
+                },
+                |_| Vec::new(),
+            )]
+        });
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: trigger,
+            root_name: popover_root_name(trigger),
+            trigger,
+            dismissable_branches: Vec::new(),
+            consume_outside_pointer_events: true,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_pointer_move: None,
+            children: overlay_children,
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Click underlay while popover is open: outside press closes, but must not activate the underlay.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(130.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&open), Some(false));
+    assert_eq!(app.models().get_copied(&underlay_clicked), Some(false));
+
+    // Third frame: unmount the popover. Focus should restore to the trigger (since focus stayed inside the overlay).
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger_and_underlay(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+        underlay_clicked.clone(),
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let trigger_node =
+        fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+    assert_eq!(ui.focus(), Some(trigger_node));
 }

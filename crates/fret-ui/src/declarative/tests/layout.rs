@@ -557,6 +557,7 @@ fn scroll_thumb_drag_updates_offset() {
 
                     let scrollbar = cx.scrollbar(crate::element::ScrollbarProps {
                         layout: scrollbar_layout,
+                        axis: crate::element::ScrollbarAxis::Vertical,
                         scroll_target: Some(scroll.id),
                         scroll_handle: scroll_handle.clone(),
                         style: crate::element::ScrollbarStyle::default(),
@@ -636,6 +637,163 @@ fn scroll_thumb_drag_updates_offset() {
         "expected content to move up after thumb drag: before={:?} after={:?}",
         before.origin.y,
         after.origin.y
+    );
+}
+
+#[test]
+fn scroll_thumb_drag_updates_offset_horizontal() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp-scrollbar-drag-x",
+        |cx| {
+            let scroll_handle = scroll_handle.clone();
+
+            let mut stack_layout = crate::element::LayoutStyle::default();
+            stack_layout.size.width = crate::element::Length::Fill;
+            stack_layout.size.height = crate::element::Length::Px(Px(20.0));
+
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: stack_layout,
+                },
+                |cx| {
+                    let mut scroll_layout = crate::element::LayoutStyle::default();
+                    scroll_layout.size.width = crate::element::Length::Fill;
+                    scroll_layout.size.height = crate::element::Length::Fill;
+                    scroll_layout.overflow = crate::element::Overflow::Clip;
+
+                    let scroll = cx.scroll(
+                        crate::element::ScrollProps {
+                            layout: scroll_layout,
+                            axis: crate::element::ScrollAxis::X,
+                            scroll_handle: Some(scroll_handle.clone()),
+                        },
+                        |cx| {
+                            let mut content_layout = crate::element::LayoutStyle::default();
+                            content_layout.size.width = crate::element::Length::Px(Px(300.0));
+                            content_layout.size.height = crate::element::Length::Fill;
+
+                            vec![cx.container(
+                                crate::element::ContainerProps {
+                                    layout: content_layout,
+                                    ..Default::default()
+                                },
+                                |cx| vec![cx.text("abc")],
+                            )]
+                        },
+                    );
+
+                    let scrollbar_layout = crate::element::LayoutStyle {
+                        position: crate::element::PositionStyle::Absolute,
+                        inset: crate::element::InsetStyle {
+                            top: None,
+                            right: Some(Px(0.0)),
+                            bottom: Some(Px(0.0)),
+                            left: Some(Px(0.0)),
+                        },
+                        size: crate::element::SizeStyle {
+                            height: crate::element::Length::Px(Px(10.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+
+                    let scrollbar = cx.scrollbar(crate::element::ScrollbarProps {
+                        layout: scrollbar_layout,
+                        axis: crate::element::ScrollbarAxis::Horizontal,
+                        scroll_target: Some(scroll.id),
+                        scroll_handle: scroll_handle.clone(),
+                        style: crate::element::ScrollbarStyle::default(),
+                    });
+
+                    vec![scroll, scrollbar]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let stack_node = ui.children(root)[0];
+    let scroll_node = ui.children(stack_node)[0];
+    let scrollbar_node = ui.children(stack_node)[1];
+    let content_node = ui.children(scroll_node)[0];
+    let before = ui.debug_node_bounds(content_node).expect("content bounds");
+
+    let scrollbar_bounds = ui
+        .debug_node_bounds(scrollbar_node)
+        .expect("scrollbar bounds");
+    let down_pos = fret_core::Point::new(
+        Px(scrollbar_bounds.origin.x.0 + 2.0),
+        Px(scrollbar_bounds.origin.y.0 + 1.0),
+    );
+    let move_pos = fret_core::Point::new(Px(down_pos.x.0 + 12.0), down_pos.y);
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: move_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: move_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+        }),
+    );
+
+    assert!(
+        scroll_handle.offset().x.0 > 0.01,
+        "expected thumb drag to update scroll handle offset, got {:?}",
+        scroll_handle.offset().x
+    );
+
+    ui.invalidate(scroll_node, Invalidation::Layout);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let after = ui
+        .debug_node_bounds(content_node)
+        .expect("content bounds after drag");
+
+    assert!(
+        after.origin.x.0 < before.origin.x.0,
+        "expected content to move left after thumb drag: before={:?} after={:?}",
+        before.origin.x,
+        after.origin.x
     );
 }
 

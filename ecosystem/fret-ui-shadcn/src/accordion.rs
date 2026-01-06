@@ -1,19 +1,26 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Color, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Transform2D,
 };
+use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, PressableA11y,
-    PressableProps, RovingFlexProps, RovingFocusProps, RowProps, SemanticsProps, TextProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, PressableProps,
+    RovingFlexProps, RovingFocusProps, RowProps, SemanticsProps, StackProps, TextProps,
+    VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::collapsible_motion;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::roving_focus;
+use fret_ui_kit::declarative::transition;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+
+use crate::overlay_motion;
 
 fn border_color(theme: &Theme) -> Color {
     theme
@@ -40,11 +47,13 @@ fn trigger_text_style(theme: &Theme) -> TextStyle {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AccordionKind {
-    Single,
-    Multiple,
+fn trigger_gap(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.accordion.trigger.gap")
+        .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
 }
+
+pub use fret_ui_kit::primitives::accordion::AccordionKind;
 
 #[derive(Clone)]
 enum AccordionModel {
@@ -143,12 +152,10 @@ impl AccordionTrigger {
                 enabled,
                 focusable,
                 focus_ring: Some(decl_style::focus_ring(&theme, radius)),
-                a11y: PressableA11y {
-                    role: Some(SemanticsRole::Button),
-                    label: Some(a11y_label.clone()),
-                    expanded: Some(is_open),
-                    ..Default::default()
-                },
+                a11y: fret_ui_kit::primitives::accordion::accordion_trigger_a11y(
+                    a11y_label.clone(),
+                    is_open,
+                ),
                 ..Default::default()
             },
             move |cx, _state| {
@@ -177,6 +184,7 @@ impl AccordionTrigger {
                 let chrome = ChromeRefinement::default()
                     .px(Space::N0)
                     .py(Space::N4)
+                    .rounded(Radius::Md)
                     .merge(chrome.clone());
                 let mut props = decl_style::container_props(&theme, chrome, Default::default());
                 props.layout.size = container_layout.size;
@@ -193,16 +201,55 @@ impl AccordionTrigger {
                         corner_radii: props.corner_radii,
                     },
                     move |cx| {
+                        let chevron_fg = theme
+                            .color_by_key("muted-foreground")
+                            .unwrap_or(theme.colors.text_muted);
+                        let chevron_layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default()
+                                .w_px(MetricRef::Px(Px(16.0)))
+                                .h_px(MetricRef::Px(Px(16.0)))
+                                .flex_shrink_0()
+                                .mt(Space::N0p5),
+                        );
+                        let mut chevron_center = Point::new(Px(8.0), Px(8.0));
+                        if let (fret_ui::element::Length::Px(w), fret_ui::element::Length::Px(h)) =
+                            (chevron_layout.size.width, chevron_layout.size.height)
+                        {
+                            chevron_center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
+                        }
+                        let chevron_rotation = if is_open { 180.0 } else { 0.0 };
+                        let chevron_transform =
+                            Transform2D::rotation_about_degrees(chevron_rotation, chevron_center);
+                        let chevron = cx.visual_transform_props(
+                            VisualTransformProps {
+                                layout: chevron_layout,
+                                transform: chevron_transform,
+                            },
+                            move |cx| {
+                                vec![decl_icon::icon_with(
+                                    cx,
+                                    ids::ui::CHEVRON_DOWN,
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(chevron_fg)),
+                                )]
+                            },
+                        );
+
+                        let left_layout = decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().flex_1().min_w_0(),
+                        );
                         vec![cx.row(
                             RowProps {
                                 layout: LayoutStyle::default(),
-                                gap: MetricRef::space(Space::N2).resolve(&theme),
+                                gap: trigger_gap(&theme),
                                 padding: Edges::all(Px(0.0)),
                                 justify: MainAlign::SpaceBetween,
-                                align: CrossAlign::Center,
+                                align: CrossAlign::Start,
                             },
                             move |cx| {
-                                if children.is_empty() {
+                                let left_children = if children.is_empty() {
                                     vec![cx.text_props(TextProps {
                                         layout: LayoutStyle::default(),
                                         text: a11y_label.clone(),
@@ -213,7 +260,18 @@ impl AccordionTrigger {
                                     })]
                                 } else {
                                     children
-                                }
+                                };
+
+                                vec![
+                                    cx.container(
+                                        ContainerProps {
+                                            layout: left_layout,
+                                            ..Default::default()
+                                        },
+                                        |_cx| left_children,
+                                    ),
+                                    chevron,
+                                ]
                             },
                         )]
                     },
@@ -442,20 +500,17 @@ impl Accordion {
                 items.iter().map(|i| group_disabled || i.disabled).collect();
 
             let tab_stop = match (open_single.as_deref(), open_multi.as_ref()) {
-                (Some(selected), _) => roving_focus::active_index_from_str_keys(
+                (Some(open), _) => fret_ui_kit::primitives::accordion::tab_stop_index_single(
                     &values,
-                    Some(selected),
+                    Some(open),
                     &disabled_flags,
                 ),
-                (_, Some(selected)) => {
-                    let first_open_enabled = values.iter().enumerate().find_map(|(idx, v)| {
-                        let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                        let open = selected.iter().any(|s| s.as_ref() == v.as_ref());
-                        (enabled && open).then_some(idx)
-                    });
-                    first_open_enabled.or_else(|| roving_focus::first_enabled(&disabled_flags))
-                }
-                _ => roving_focus::first_enabled(&disabled_flags),
+                (_, Some(open)) => fret_ui_kit::primitives::accordion::tab_stop_index_multiple(
+                    &values,
+                    open,
+                    &disabled_flags,
+                ),
+                _ => fret_ui_kit::headless::roving_focus::first_enabled(&disabled_flags),
             };
 
             let roving = RovingFocusProps {
@@ -499,6 +554,7 @@ impl Accordion {
                             move |cx| {
                                 cx.roving_nav_apg();
                                 let mut out = Vec::with_capacity(items.len());
+                                let item_len = items.len();
 
                                 for (idx, item) in items.into_iter().enumerate() {
                                     let item_disabled =
@@ -524,7 +580,8 @@ impl Accordion {
                                         is_open,
                                     );
 
-                                    let content = is_open.then(|| item.content.into_element(cx));
+                                    let content = item.content;
+                                    let theme = theme.clone();
 
                                     let mut props = decl_style::container_props(
                                         &theme,
@@ -537,12 +594,62 @@ impl Accordion {
                                         bottom: props.border.bottom,
                                         left: Px(0.0),
                                     };
+                                    if idx + 1 == item_len {
+                                        props.border.bottom = Px(0.0);
+                                    }
 
-                                    out.push(cx.container(props, move |_cx| {
+                                    out.push(cx.container(props, move |cx| {
                                         let mut children = Vec::new();
                                         children.push(trigger);
-                                        if let Some(content) = content {
-                                            children.push(content);
+
+                                        let motion =
+                                            transition::drive_transition_with_durations_and_easing(
+                                                cx,
+                                                is_open,
+                                                8,
+                                                8,
+                                                overlay_motion::shadcn_ease,
+                                            );
+                                        let state_id = cx.root_id();
+                                        let last_height =
+                                            collapsible_motion::last_measured_height_for(
+                                                cx, state_id,
+                                            );
+                                        let (should_render, wrapper) =
+                                            collapsible_motion::collapsible_height_wrapper_refinement(
+                                                is_open,
+                                                false,
+                                                true,
+                                                motion,
+                                                last_height,
+                                            );
+
+                                        if should_render {
+                                            let wrapper_layout =
+                                                decl_style::layout_style(&theme, wrapper);
+
+                                            let content_el = content.clone().into_element(cx);
+                                            let wrapper_el =
+                                                cx.keyed("accordion-content", |cx| {
+                                                    cx.stack_props(
+                                                        StackProps {
+                                                            layout: wrapper_layout,
+                                                        },
+                                                        move |_cx| vec![content_el],
+                                                    )
+                                                });
+                                            let wrapper_id = wrapper_el.id;
+
+                                            let _ = collapsible_motion::
+                                                update_measured_height_if_open_for(
+                                                    cx,
+                                                    state_id,
+                                                    wrapper_id,
+                                                    is_open,
+                                                    motion.animating,
+                                                );
+
+                                            children.push(wrapper_el);
                                         }
                                         children
                                     }));
@@ -584,6 +691,7 @@ mod tests {
     use fret_core::{
         Px, TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
     };
+    use fret_runtime::{FrameId, TickId};
     use fret_ui::UiTree;
     use fret_ui_kit::LayoutRefinement;
     use fret_ui_kit::MetricRef;
@@ -668,6 +776,23 @@ mod tests {
             });
 
         ui.set_root(root);
+    }
+
+    fn render_accordion_frame_with_semantics(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: fret_runtime::Model<Option<Arc<str>>>,
+        collapsible: bool,
+    ) {
+        app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+        render_accordion_frame(ui, app, services, window, bounds, open, collapsible);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
     }
 
     #[test]
@@ -837,5 +962,131 @@ mod tests {
             app.models().get_cloned(&open).flatten().as_deref(),
             Some("item-1")
         );
+    }
+
+    #[derive(Default)]
+    struct MeasuredServices;
+
+    impl TextService for MeasuredServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &CoreTextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for MeasuredServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for MeasuredServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn accordion_content_remains_mounted_for_close_animation_when_measured() {
+        fn snapshot_has_label(ui: &UiTree<App>, label: &str) -> bool {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .any(|n| n.label.as_deref() == Some(label))
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert::<Option<Arc<str>>>(None);
+        let mut services = MeasuredServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        render_accordion_frame_with_semantics(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+        );
+        assert!(!snapshot_has_label(&ui, "Content 1"));
+
+        let _ = app
+            .models_mut()
+            .update(&open, |v| *v = Some(Arc::from("item-1")));
+
+        // Render enough frames for presence to settle and for height to be measured.
+        for _ in 0..12 {
+            render_accordion_frame_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                true,
+            );
+        }
+        assert!(snapshot_has_label(&ui, "Content 1"));
+
+        let _ = app.models_mut().update(&open, |v| *v = None);
+
+        // First close frame: content should still be mounted (present=true) for the transition.
+        render_accordion_frame_with_semantics(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            true,
+        );
+        assert!(snapshot_has_label(&ui, "Content 1"));
+
+        // After enough frames, presence completes and content unmounts.
+        for _ in 0..16 {
+            render_accordion_frame_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                true,
+            );
+        }
+        assert!(!snapshot_has_label(&ui, "Content 1"));
     }
 }

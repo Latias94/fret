@@ -75,7 +75,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | chart | `chart` | Defer | Unreviewed | Not editor-critical |
 | checkbox | `checkbox` | Present | Unreviewed |  |
 | collapsible | `collapsible` | Present | Unreviewed | Headless open/close + a11y semantics |
-| command | `command` | Present | Unreviewed | First pass: visual shell + roving list navigation; filtering is app-owned |
+| command | `command` | Present | In review | `CommandPalette` provides cmdk-style active-descendant navigation + filtering/scoring (value + keywords), plus group/separator/empty + checkmark/shortcut |
 | context-menu | `context_menu` | Present | In review | Right click + (macOS) ctrl-click + Shift+F10; audit: `docs/audits/shadcn-context-menu.md` |
 | dialog | `dialog` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
 | drawer | `drawer` | Present | Unreviewed | `sheet` facade (defaults to bottom); overlay policy |
@@ -99,13 +99,13 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | radio-group | `radio_group` | Present | Unreviewed |  |
 | resizable | `resizable` | Present | Unreviewed | Runtime-owned drag + layout; multi-panel group; a11y TBD |
 | scroll-area | `scroll_area` | Present | Unreviewed | Declarative wrapper over `Scroll` + styling |
-| select | `select` | Present | Unreviewed | Uses `window_overlays` dismissible popover infra |
+| select | `select` | Present | In review | Anchored placement supports `side`/`align` + offsets; roving navigation supports `loop` default; audit: `docs/audits/shadcn-select.md` |
 | separator | `separator` | Present | Unreviewed | Simple primitive; declarative-only |
 | sheet | `sheet` | Present | Unreviewed | Modal barrier + Escape + overlay dismissal; Tab traversal wraps within modal barrier (ADR 0068) |
 | sidebar | `sidebar` | Present | Unreviewed |  |
 | skeleton | `skeleton` | Present | Unreviewed |  |
 | slider | `slider` | Present | Unreviewed | Declarative composition over primitives (PointerRegion hooks + bounds); a11y TBD |
-| sonner | `sonner` | Present | Unreviewed | Toast store + overlay layer + timers (no a11y yet) |
+| sonner | `sonner` | Present | In review | Toast store + overlay layer + timers; upsert-by-id; swipe-to-dismiss; hover pause/resume; max-toasts eviction; action/cancel; manual promise handle; audit: `docs/audits/shadcn-sonner.md` |
 | spinner | `spinner` | Present | Unreviewed |  |
 | switch | `switch` | Present | Unreviewed |  |
 | table | `table` | Present | Unreviewed |  |

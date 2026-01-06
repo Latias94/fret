@@ -188,7 +188,8 @@ pub fn focus_ring(theme: &Theme, radius: Px) -> RingStyle {
         .metric_by_key("component.ring.offset")
         .unwrap_or(Px(2.0));
     let color = theme
-        .color_by_key("ring")
+        .color_by_key("ring/50")
+        .or_else(|| theme.color_by_key("ring"))
         .unwrap_or(theme.colors.focus_ring);
     let offset_color = theme
         .color_by_key("ring-offset-background")
@@ -199,7 +200,7 @@ pub fn focus_ring(theme: &Theme, radius: Px) -> RingStyle {
         width,
         offset,
         color,
-        offset_color: Some(offset_color),
+        offset_color: (offset.0 > 0.0).then_some(offset_color),
         corner_radii: Corners::all(radius),
     }
 }
@@ -238,6 +239,23 @@ fn shadow_style(
 
     ShadowStyle {
         color: shadow_color(theme, fallback_alpha),
+        offset_x,
+        offset_y,
+        spread,
+        softness,
+        corner_radii: Corners::all(radius),
+    }
+}
+
+pub fn shadow_xs(theme: &Theme, radius: Px) -> ShadowStyle {
+    let offset_x = shadow_metric(theme, "component.shadow.xs.offset_x", Px(0.0));
+    let offset_y = shadow_metric(theme, "component.shadow.xs.offset_y", Px(1.0));
+    let spread = shadow_metric(theme, "component.shadow.xs.spread", Px(0.0));
+    let softness_px = shadow_metric(theme, "component.shadow.xs.softness", Px(1.0));
+    let softness = softness_px.0.round().clamp(0.0, 8.0) as u8;
+
+    ShadowStyle {
+        color: shadow_color(theme, 0.12),
         offset_x,
         offset_y,
         spread,

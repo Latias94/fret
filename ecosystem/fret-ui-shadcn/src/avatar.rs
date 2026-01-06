@@ -1,11 +1,15 @@
 use std::sync::Arc;
 
 use fret_core::{FontId, FontWeight, ImageId, Px, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, ImageProps, MainAlign, Overflow, TextProps,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, ImageProps,
+    InteractivityGateProps, MainAlign, Overflow, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::avatar as radix_avatar;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 /// shadcn/ui `Avatar` root.
@@ -63,15 +67,48 @@ impl Avatar {
 /// shadcn/ui `AvatarImage`.
 #[derive(Debug, Clone)]
 pub struct AvatarImage {
-    image: ImageId,
+    source: AvatarImageSource,
     opacity: f32,
     layout: LayoutRefinement,
+}
+
+#[derive(Debug, Clone)]
+enum AvatarImageSource {
+    Ready(ImageId),
+    Optional(Option<ImageId>),
+    Model(Model<Option<ImageId>>),
+}
+
+impl AvatarImageSource {
+    fn resolve<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Option<ImageId> {
+        match self {
+            Self::Ready(image) => Some(*image),
+            Self::Optional(image) => *image,
+            Self::Model(model) => cx.watch_model(model).copied().flatten(),
+        }
+    }
 }
 
 impl AvatarImage {
     pub fn new(image: ImageId) -> Self {
         Self {
-            image,
+            source: AvatarImageSource::Ready(image),
+            opacity: 1.0,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn maybe(image: Option<ImageId>) -> Self {
+        Self {
+            source: AvatarImageSource::Optional(image),
+            opacity: 1.0,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn model(image: Model<Option<ImageId>>) -> Self {
+        Self {
+            source: AvatarImageSource::Model(image),
             opacity: 1.0,
             layout: LayoutRefinement::default(),
         }
@@ -88,23 +125,42 @@ impl AvatarImage {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        cx.scope(|cx| {
+            let id = cx.root_id();
+            let image = self.source.resolve(cx);
 
-        let layout = decl_style::layout_style(
-            &theme,
-            LayoutRefinement::default()
-                .absolute()
-                .inset(Space::N0)
-                .size_full()
-                .aspect_ratio(1.0)
-                .merge(self.layout),
-        );
+            let present = image.is_some();
+            let children = if let Some(image) = image {
+                let theme = Theme::global(&*cx.app).clone();
+                let layout = decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default()
+                        .absolute()
+                        .inset(Space::N0)
+                        .size_full()
+                        .aspect_ratio(1.0)
+                        .merge(self.layout),
+                );
 
-        cx.image_props(ImageProps {
-            layout,
-            image: self.image,
-            opacity: self.opacity.clamp(0.0, 1.0),
-            uv: None,
+                vec![cx.image_props(ImageProps {
+                    layout,
+                    image,
+                    opacity: self.opacity.clamp(0.0, 1.0),
+                    uv: None,
+                })]
+            } else {
+                Vec::new()
+            };
+
+            AnyElement::new(
+                id,
+                ElementKind::InteractivityGate(InteractivityGateProps {
+                    present,
+                    interactive: false,
+                    ..Default::default()
+                }),
+                children,
+            )
         })
     }
 }
@@ -113,6 +169,8 @@ impl AvatarImage {
 #[derive(Debug, Clone)]
 pub struct AvatarFallback {
     text: Arc<str>,
+    show_when_image_missing: Option<AvatarImageSource>,
+    delay_frames: Option<u64>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -121,9 +179,36 @@ impl AvatarFallback {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
             text: text.into(),
+            show_when_image_missing: None,
+            delay_frames: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Gate fallback rendering to the "image is not loaded" outcome, using an optional image id.
+    pub fn when_image_missing(mut self, image: Option<ImageId>) -> Self {
+        self.show_when_image_missing = Some(AvatarImageSource::Optional(image));
+        self
+    }
+
+    /// Gate fallback rendering to the "image is not loaded" outcome, using an image model.
+    pub fn when_image_missing_model(mut self, image: Model<Option<ImageId>>) -> Self {
+        self.show_when_image_missing = Some(AvatarImageSource::Model(image));
+        self
+    }
+
+    /// Delay rendering fallback by a number of frames (60fps-ish ticks).
+    pub fn delay_frames(mut self, frames: u64) -> Self {
+        self.delay_frames = Some(frames);
+        self
+    }
+
+    /// Delay rendering fallback by a best-effort millisecond value (converted to frames).
+    pub fn delay_ms(mut self, ms: u64) -> Self {
+        let frames = ms.saturating_mul(60).saturating_add(999) / 1000;
+        self.delay_frames = Some(frames);
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -137,70 +222,290 @@ impl AvatarFallback {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
+        cx.scope(|cx| {
+            let id = cx.root_id();
+            let theme = Theme::global(&*cx.app).clone();
 
-        let bg = theme
-            .color_by_key("muted")
-            .unwrap_or(theme.colors.panel_background);
-        let fg = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or(theme.colors.text_muted);
+            let image_loaded = self
+                .show_when_image_missing
+                .as_ref()
+                .and_then(|src| src.resolve(cx))
+                .is_some();
+            let status = if image_loaded {
+                radix_avatar::AvatarImageLoadingStatus::Loaded
+            } else {
+                radix_avatar::AvatarImageLoadingStatus::Loading
+            };
 
-        let base_chrome = ChromeRefinement::default()
-            .rounded(Radius::Full)
-            .bg(ColorRef::Color(bg));
+            let want_render = match &self.show_when_image_missing {
+                Some(_) => !image_loaded,
+                None => true,
+            };
 
-        let base_layout = LayoutRefinement::default()
-            .absolute()
-            .inset(Space::N0)
-            .size_full()
-            .aspect_ratio(1.0);
+            let now_frame = cx.app.frame_id().0;
+            let delay_ready =
+                cx.with_state_for(id, radix_avatar::AvatarFallbackDelay::default, |gate| {
+                    gate.drive(now_frame, self.delay_frames, want_render)
+                });
 
-        let props = decl_style::container_props(
-            &theme,
-            base_chrome.merge(self.chrome),
-            base_layout.merge(self.layout),
+            let present = if self.show_when_image_missing.is_some() {
+                radix_avatar::fallback_visible(status, delay_ready)
+            } else {
+                delay_ready
+            };
+
+            let bg = theme
+                .color_by_key("muted")
+                .unwrap_or(theme.colors.panel_background);
+            let fg = theme
+                .color_by_key("muted.foreground")
+                .or_else(|| theme.color_by_key("muted-foreground"))
+                .unwrap_or(theme.colors.text_muted);
+
+            let base_chrome = ChromeRefinement::default()
+                .rounded(Radius::Full)
+                .bg(ColorRef::Color(bg));
+
+            let base_layout = LayoutRefinement::default()
+                .absolute()
+                .inset(Space::N0)
+                .size_full()
+                .aspect_ratio(1.0);
+
+            let props = decl_style::container_props(
+                &theme,
+                base_chrome.merge(self.chrome),
+                base_layout.merge(self.layout),
+            );
+
+            let text_px = theme
+                .metric_by_key("component.avatar.fallback_text_px")
+                .or_else(|| theme.metric_by_key("font.size"))
+                .unwrap_or(theme.metrics.font_size);
+            let line_height = theme
+                .metric_by_key("component.avatar.fallback_line_height")
+                .or_else(|| theme.metric_by_key("font.line_height"))
+                .unwrap_or(theme.metrics.font_line_height);
+
+            let label = cx.text_props(TextProps {
+                layout: Default::default(),
+                text: self.text,
+                style: Some(TextStyle {
+                    font: FontId::default(),
+                    size: text_px,
+                    weight: FontWeight::MEDIUM,
+                    line_height: Some(line_height),
+                    letter_spacing_em: None,
+                }),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            });
+
+            let flex_layout =
+                decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
+            let flex = cx.flex(
+                FlexProps {
+                    layout: flex_layout,
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: fret_core::Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| vec![label],
+            );
+
+            let child = cx.container(ContainerProps { ..props }, move |_cx| vec![flex]);
+
+            AnyElement::new(
+                id,
+                ElementKind::InteractivityGate(InteractivityGateProps {
+                    present,
+                    interactive: false,
+                    ..Default::default()
+                }),
+                vec![child],
+            )
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextMetrics, TextService, TextStyle as CoreTextStyle,
+    };
+    use fret_runtime::FrameId;
+    use fret_ui::tree::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &CoreTextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: CoreSize::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        image: Model<Option<ImageId>>,
+        delay_frames: u64,
+    ) {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let image_el = AvatarImage::model(image.clone()).into_element(cx);
+                let fallback_el = AvatarFallback::new("JD")
+                    .when_image_missing_model(image.clone())
+                    .delay_frames(delay_frames)
+                    .into_element(cx);
+                vec![Avatar::new(vec![image_el, fallback_el]).into_element(cx)]
+            });
+        ui.set_root(root);
+    }
+
+    fn snapshot_contains_label(snap: &fret_core::SemanticsSnapshot, text: &str) -> bool {
+        snap.nodes.iter().any(|n| {
+            n.role == SemanticsRole::Text
+                && (n.label.as_deref() == Some(text) || n.value.as_deref() == Some(text))
+        })
+    }
+
+    #[test]
+    fn avatar_fallback_delay_gates_text_until_elapsed() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let image = app.models_mut().insert(None::<ImageId>);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
         );
 
-        let text_px = theme
-            .metric_by_key("component.avatar.fallback_text_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or(theme.metrics.font_size);
-        let line_height = theme
-            .metric_by_key("component.avatar.fallback_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+        for frame in 1..=3 {
+            app.set_frame_id(FrameId(frame));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                image.clone(),
+                2,
+            );
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let visible = snapshot_contains_label(&snap, "JD");
+            assert_eq!(visible, frame >= 3);
+        }
+    }
 
-        let label = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: self.text,
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: text_px,
-                weight: FontWeight::MEDIUM,
-                line_height: Some(line_height),
-                letter_spacing_em: None,
-            }),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-        });
+    #[test]
+    fn avatar_fallback_hides_when_image_becomes_available() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
 
-        let flex_layout = decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
-        let flex = cx.flex(
-            FlexProps {
-                layout: flex_layout,
-                direction: fret_core::Axis::Horizontal,
-                gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
-                justify: MainAlign::Center,
-                align: CrossAlign::Center,
-                wrap: false,
-            },
-            move |_cx| vec![label],
+        let image = app.models_mut().insert(None::<ImageId>);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
         );
 
-        cx.container(ContainerProps { ..props }, move |_cx| vec![flex])
+        // Let the delay elapse so fallback becomes visible.
+        for frame in 1..=3 {
+            app.set_frame_id(FrameId(frame));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                image.clone(),
+                2,
+            );
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        ui.request_semantics_snapshot();
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(snapshot_contains_label(&snap, "JD"));
+
+        // Image becomes available -> fallback hides immediately (Radix `status === loaded`).
+        let _ = app
+            .models_mut()
+            .update(&image, |v| *v = Some(ImageId::default()));
+        app.set_frame_id(FrameId(4));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            image.clone(),
+            2,
+        );
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.request_semantics_snapshot();
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(!snapshot_contains_label(&snap, "JD"));
     }
 }

@@ -82,6 +82,34 @@ Fret defines a minimal, stable schema that is sufficient for editor workflows:
 - Roles: `Window`, `Panel`, `Button`, `Tab`, `Menu`, `MenuItem`, `TextField`, `List`, `TreeItem`, `Viewport`, etc.
 - States: `Focused`, `Disabled`, `Selected`, `Expanded`, `Checked`, etc.
 - Actions: `Focus`, `Invoke`, `SetValue` (text), `ScrollBy`, `Increment/Decrement` (optional).
+- Relations (P0, minimal):
+  - `labelled_by`: declare that this node’s accessible name is provided by another node (e.g. a
+    `TabPanel` is labelled by its selected `Tab`).
+  - `described_by`: declare that this node’s accessible description is provided by another node
+    (e.g. a `Dialog` is described by a `DialogDescription` text node).
+  - `controls`: declare that this node controls another node (e.g. the selected `Tab` controls its
+    active `TabPanel`).
+
+Relationship edges are part of the **portable semantics contract**, not platform-specific glue.
+Backends may ignore relations they cannot represent, but `fret-ui` must preserve them in snapshots.
+
+Tabs baseline (P0):
+
+- A tabs widget must expose `TabList` / `Tab` / `TabPanel` roles.
+- The active `TabPanel` must be `labelled_by` the selected `Tab`.
+- The selected `Tab` must `controls` the active `TabPanel`.
+
+Dialog baseline (P0):
+
+- A dialog content root must expose `Dialog` / `AlertDialog` roles.
+- A dialog must be `labelled_by` its title text node when present.
+- A dialog may be `described_by` its description text node when present.
+- When a dialog is installed as a modal barrier layer (`barrier_root`), the platform bridge should
+  mark it as modal where the backend supports it (e.g. AccessKit `modal` flag, comparable to
+  `aria-modal="true"` on the web).
+- When a modal barrier layer (`barrier_root`) is active, the bridge should also apply "hide others"
+  semantics by only exposing roots at-or-above the barrier z-index (Radix uses `hideOthers(content)`
+  for `Select` and similar overlays even though the content is not a dialog).
 
 This schema is framework-level infrastructure; editor-domain meanings (e.g. “Gizmo Mode”) remain app-owned.
 

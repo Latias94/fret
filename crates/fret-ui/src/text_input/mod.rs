@@ -3,7 +3,7 @@ mod cx;
 mod input;
 mod widget;
 
-use fret_core::{Px, Rect, TextMetrics, TextStyle};
+use fret_core::{Px, Rect, SemanticsRole, TextMetrics, TextStyle};
 
 use crate::TextInputStyle;
 
@@ -11,6 +11,7 @@ pub use bound::BoundTextInput;
 
 #[derive(Debug)]
 pub struct TextInput {
+    a11y_role: SemanticsRole,
     text: String,
     caret: usize,
     selection_anchor: usize,

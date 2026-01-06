@@ -1,6 +1,7 @@
 # Upstream: repo-ref/icons/packages/radix-icons/icons/*
 check.svg
 chevron-down.svg
+chevron-right.svg
 cross-1.svg
 gear.svg
 magnifying-glass.svg

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, NodeId, Rect};
+use fret_core::{AppWindowId, Color, NodeId, Point, Px, Rect, Transform2D};
 use fret_runtime::DragKind;
 use fret_ui::action::{DismissReason, UiActionHostExt};
 use fret_ui::declarative;
@@ -17,8 +17,29 @@ use super::state::{
     ActiveHoverOverlay, ActiveModal, ActivePopover, ActiveToastLayer, ActiveTooltip, OverlayLayer,
     WindowOverlays,
 };
-use super::toast::ToastEntry;
+use super::toast::{ToastEntry, ToastTimerOutcome};
 use super::{ToastPosition, ToastVariant, dismiss_toast_action};
+
+#[derive(Default)]
+struct ToastHoverPauseState {
+    hovered: bool,
+}
+
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
+fn toast_icon_glyph(variant: ToastVariant) -> Option<&'static str> {
+    match variant {
+        ToastVariant::Success => Some("\u{2713}"),
+        ToastVariant::Info => Some("i"),
+        ToastVariant::Warning => Some("!"),
+        ToastVariant::Error | ToastVariant::Destructive => Some("\u{00D7}"),
+        ToastVariant::Loading => None,
+        ToastVariant::Default => None,
+    }
+}
 
 pub fn render<H: UiHost>(
     ui: &mut UiTree<H>,
@@ -89,7 +110,7 @@ pub fn render<H: UiHost>(
         let restore_focus = ui.focus();
 
         let mut should_focus_initial = false;
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        app.with_global_mut(WindowOverlays::default, |overlays, app| {
             let mut created = false;
             let entry = overlays.modals.entry(key).or_insert_with(|| {
                 created = true;
@@ -108,6 +129,31 @@ pub fn render<H: UiHost>(
 
             // For modal overlays, `present` is the authority for whether the barrier is active.
             OverlayLayer::modal(true, open_now).apply(ui, entry.layer);
+
+            // Radix-style focus restore for close transitions:
+            // when a modal overlay closes but remains mounted (`present=true`) for an exit
+            // transition, restore focus deterministically if focus is currently inside the modal
+            // layer (or has been cleared by the hide pass).
+            //
+            // This mirrors the non-modal close-edge restore logic below, but is safe for modals as
+            // well: underlay focus cannot change while the barrier is installed.
+            let focus_now = ui.focus();
+            let closing = entry.open && !open_now;
+            if closing {
+                let focus_in_layer =
+                    focus_now.is_some_and(|n| ui.node_layer(n) == Some(entry.layer));
+                if focus_now.is_none() || focus_in_layer {
+                    if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+                        ui,
+                        app,
+                        window,
+                        entry.trigger,
+                        entry.restore_focus,
+                    ) {
+                        ui.set_focus(Some(node));
+                    }
+                }
+            }
 
             let opening = open_now && (!entry.open || created);
             if opening {
@@ -190,6 +236,7 @@ pub fn render<H: UiHost>(
                     root_name: req.root_name.clone(),
                     trigger: req.trigger,
                     initial_focus: req.initial_focus,
+                    consume_outside_pointer_events: req.consume_outside_pointer_events,
                     open: false,
                     restore_focus: None,
                     last_focus: focus_now,
@@ -198,6 +245,7 @@ pub fn render<H: UiHost>(
             entry.root_name = req.root_name.clone();
             entry.trigger = req.trigger;
             entry.initial_focus = req.initial_focus;
+            entry.consume_outside_pointer_events = req.consume_outside_pointer_events;
 
             if open_now
                 && let Some(layer_root) = ui.layer_root(entry.layer)
@@ -219,11 +267,44 @@ pub fn render<H: UiHost>(
                 Vec::new()
             };
             ui.set_layer_pointer_down_outside_branches(entry.layer, dismissable_branches);
+            ui.set_layer_consume_pointer_down_outside_events(
+                entry.layer,
+                req.consume_outside_pointer_events && open_now,
+            );
 
             // Non-modal overlays are click-through during close transitions:
             // when `present=true` but `open=false`, they must not participate in hit-testing or
             // the outside-press observer pass.
             OverlayLayer::non_modal_dismissible(true, open_now).apply(ui, entry.layer);
+
+            // Radix-aligned focus restore: when a non-modal overlay closes but remains mounted for
+            // a close transition (`present=true`), restore focus deterministically if focus is
+            // currently inside the overlay layer (or has been cleared by the layer hide).
+            //
+            // This mirrors the existing "restore on unmount" policy below, but triggers on the
+            // open -> closed edge so recipes can animate out without deferring focus restoration.
+            let closing = entry.open && !open_now;
+            if closing
+                && (req.consume_outside_pointer_events
+                    || focus_scope_prim::should_restore_focus_for_non_modal_overlay(
+                        ui,
+                        entry.layer,
+                    ))
+            {
+                let focus_in_layer =
+                    focus_now.is_some_and(|n| ui.node_layer(n) == Some(entry.layer));
+                if focus_now.is_none() || focus_in_layer {
+                    if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
+                        ui,
+                        app,
+                        window,
+                        Some(req.trigger),
+                        entry.restore_focus,
+                    ) {
+                        ui.set_focus(Some(node));
+                    }
+                }
+            }
 
             let opening = open_now && (!entry.open || created);
             if opening {
@@ -242,14 +323,19 @@ pub fn render<H: UiHost>(
         }
     }
 
-    let to_hide_popovers: Vec<(UiLayerId, GlobalElementId, Option<NodeId>)> =
-        app.with_global_mut(WindowOverlays::default, |overlays, _app| {
-            let mut out: Vec<(UiLayerId, GlobalElementId, Option<NodeId>)> = Vec::new();
+    let to_hide_popovers: Vec<(UiLayerId, GlobalElementId, bool, Option<NodeId>)> = app
+        .with_global_mut(WindowOverlays::default, |overlays, _app| {
+            let mut out: Vec<(UiLayerId, GlobalElementId, bool, Option<NodeId>)> = Vec::new();
             for ((w, id), active) in overlays.popovers.iter() {
                 if *w != window || seen_popovers.contains(id) {
                     continue;
                 }
-                out.push((active.layer, active.trigger, active.restore_focus));
+                out.push((
+                    active.layer,
+                    active.trigger,
+                    active.consume_outside_pointer_events,
+                    active.restore_focus,
+                ));
             }
             out
         });
@@ -268,10 +354,16 @@ pub fn render<H: UiHost>(
                 .collect()
         });
 
-    for (layer, trigger, restore_focus) in to_hide_popovers {
-        if focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer) {
+    for (layer, trigger, consume_outside_pointer_events, restore_focus) in to_hide_popovers {
+        // Radix-aligned outcome for menu-like overlays (ADR 0069):
+        // when the overlay consumes outside pointer-down events (non-click-through), it's safe to
+        // always restore focus to the trigger on unmount (like modals).
+        if consume_outside_pointer_events
+            || focus_scope_prim::should_restore_focus_for_non_modal_overlay(ui, layer)
+        {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
             ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+            ui.set_layer_consume_pointer_down_outside_events(layer, false);
             if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
                 ui,
                 app,
@@ -284,6 +376,7 @@ pub fn render<H: UiHost>(
         } else {
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
             ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
+            ui.set_layer_consume_pointer_down_outside_events(layer, false);
         }
     }
 
@@ -417,6 +510,10 @@ pub fn render<H: UiHost>(
         let store = req.store;
         let store_for_render = store.clone();
         let position = req.position;
+        let margin_override = req.margin;
+        let gap_override = req.gap;
+        let toast_min_width_override = req.toast_min_width;
+        let toast_max_width_override = req.toast_max_width;
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
             app,
@@ -431,9 +528,47 @@ pub fn render<H: UiHost>(
                 cx.timer_on_timer_for(
                     cx.root_id(),
                     Arc::new(move |host, _cx, token| {
-                        host.update_weak_model(&hook_store, |st| st.remove_toast_by_token(token))
-                            .flatten()
-                            .is_some()
+                        let remove_token = host.next_timer_token();
+                        let outcome = host
+                            .update_weak_model(&hook_store, |st| st.on_timer(token, remove_token));
+
+                        let Some(outcome) = outcome else {
+                            return false;
+                        };
+
+                        match outcome {
+                            ToastTimerOutcome::Noop => false,
+                            ToastTimerOutcome::RescheduleAuto {
+                                window,
+                                token,
+                                after,
+                            } => {
+                                host.push_effect(fret_runtime::Effect::SetTimer {
+                                    window: Some(window),
+                                    token,
+                                    after,
+                                    repeat: None,
+                                });
+                                true
+                            }
+                            ToastTimerOutcome::BeganClose {
+                                window,
+                                remove_token,
+                            } => {
+                                host.push_effect(fret_runtime::Effect::SetTimer {
+                                    window: Some(window),
+                                    token: remove_token,
+                                    after: super::toast::TOAST_CLOSE_DURATION,
+                                    repeat: None,
+                                });
+                                host.request_redraw(window);
+                                true
+                            }
+                            ToastTimerOutcome::Removed { window } => {
+                                host.request_redraw(window);
+                                true
+                            }
+                        }
                     }),
                 );
 
@@ -449,9 +584,19 @@ pub fn render<H: UiHost>(
                     return Vec::new();
                 }
 
+                // Match common toast UX: top stacks show the newest item at the top edge, while
+                // bottom stacks show the newest item at the bottom edge.
+                let mut toasts = toasts;
+                if matches!(
+                    position,
+                    ToastPosition::TopLeft | ToastPosition::TopCenter | ToastPosition::TopRight
+                ) {
+                    toasts.reverse();
+                }
+
                 let theme = fret_ui::Theme::global(&*cx.app).clone();
-                let margin = theme.metrics.padding_md;
-                let gap = theme.metrics.padding_sm;
+                let margin = margin_override.unwrap_or(theme.metrics.padding_md);
+                let gap = gap_override.unwrap_or(theme.metrics.padding_sm);
                 let toast_padding = theme.metrics.padding_sm;
                 let radius = theme.metrics.radius_md;
                 let store_for_toasts = store_for_render.clone();
@@ -465,6 +610,11 @@ pub fn render<H: UiHost>(
                         wrapper_layout.inset.top = Some(margin);
                         wrapper_layout.inset.left = Some(margin);
                     }
+                    ToastPosition::TopCenter => {
+                        wrapper_layout.inset.top = Some(margin);
+                        wrapper_layout.inset.left = Some(Px(0.0));
+                        wrapper_layout.inset.right = Some(Px(0.0));
+                    }
                     ToastPosition::TopRight => {
                         wrapper_layout.inset.top = Some(margin);
                         wrapper_layout.inset.right = Some(margin);
@@ -473,11 +623,37 @@ pub fn render<H: UiHost>(
                         wrapper_layout.inset.bottom = Some(margin);
                         wrapper_layout.inset.left = Some(margin);
                     }
+                    ToastPosition::BottomCenter => {
+                        wrapper_layout.inset.bottom = Some(margin);
+                        wrapper_layout.inset.left = Some(Px(0.0));
+                        wrapper_layout.inset.right = Some(Px(0.0));
+                    }
                     ToastPosition::BottomRight => {
                         wrapper_layout.inset.bottom = Some(margin);
                         wrapper_layout.inset.right = Some(margin);
                     }
                 }
+
+                let justify = match position {
+                    ToastPosition::TopLeft | ToastPosition::TopCenter | ToastPosition::TopRight => {
+                        fret_ui::element::MainAlign::Start
+                    }
+                    ToastPosition::BottomLeft
+                    | ToastPosition::BottomCenter
+                    | ToastPosition::BottomRight => fret_ui::element::MainAlign::End,
+                };
+
+                let align = match position {
+                    ToastPosition::TopLeft | ToastPosition::BottomLeft => {
+                        fret_ui::element::CrossAlign::Start
+                    }
+                    ToastPosition::TopCenter | ToastPosition::BottomCenter => {
+                        fret_ui::element::CrossAlign::Center
+                    }
+                    ToastPosition::TopRight | ToastPosition::BottomRight => {
+                        fret_ui::element::CrossAlign::End
+                    }
+                };
 
                 vec![cx.flex(
                     fret_ui::element::FlexProps {
@@ -485,8 +661,8 @@ pub fn render<H: UiHost>(
                         direction: fret_core::Axis::Vertical,
                         gap,
                         padding: fret_core::Edges::all(fret_core::Px(0.0)),
-                        justify: fret_ui::element::MainAlign::End,
-                        align: fret_ui::element::CrossAlign::End,
+                        justify,
+                        align,
                         wrap: false,
                     },
                     move |cx| {
@@ -494,14 +670,56 @@ pub fn render<H: UiHost>(
                         for toast in toasts {
                             let store = store_for_toasts.clone();
                             let toast_id = toast.id;
+                            let open = toast.open;
+                            let position = position;
+                            let drag_x = toast.drag_x;
+                            let drag_active = toast.dragging;
 
-                            let bg = match toast.variant {
-                                ToastVariant::Default => theme.colors.panel_background,
-                                ToastVariant::Destructive => theme.colors.menu_background,
+                            let bg_default = theme
+                                .color_by_key("popover")
+                                .unwrap_or(theme.colors.panel_background);
+                            let fg_default = theme
+                                .color_by_key("popover-foreground")
+                                .unwrap_or(theme.colors.text_primary);
+                            let (bg, fg) = match toast.variant {
+                                ToastVariant::Default => (bg_default, fg_default),
+                                ToastVariant::Destructive | ToastVariant::Error => (
+                                    theme.color_by_key("destructive").unwrap_or(bg_default),
+                                    theme
+                                        .color_by_key("destructive-foreground")
+                                        .unwrap_or(fg_default),
+                                ),
+                                ToastVariant::Success => (
+                                    theme.color_by_key("success").unwrap_or(bg_default),
+                                    theme
+                                        .color_by_key("success-foreground")
+                                        .unwrap_or(fg_default),
+                                ),
+                                ToastVariant::Info => (
+                                    theme.color_by_key("info").unwrap_or(bg_default),
+                                    theme.color_by_key("info-foreground").unwrap_or(fg_default),
+                                ),
+                                ToastVariant::Warning => (
+                                    theme.color_by_key("warning").unwrap_or(bg_default),
+                                    theme
+                                        .color_by_key("warning-foreground")
+                                        .unwrap_or(fg_default),
+                                ),
+                                ToastVariant::Loading => (bg_default, fg_default),
                             };
-                            let border_color = theme.colors.panel_border;
-                            let fg = theme.colors.text_primary;
-                            let fg_muted = theme.colors.text_muted;
+                            let border_color = theme
+                                .color_by_key("border")
+                                .unwrap_or(theme.colors.panel_border);
+                            let fg_muted = theme
+                                .color_by_key("muted-foreground")
+                                .unwrap_or(theme.colors.text_muted);
+
+                            let button_bg = theme
+                                .color_by_key("muted")
+                                .unwrap_or(theme.colors.hover_background);
+                            let button_radius = Px(6.0);
+                            let button_pad_x = Px(8.0);
+                            let button_pad_y = Px(4.0);
 
                             let close = toast.dismissible.then(|| {
                                 let close_store = store.clone();
@@ -513,7 +731,7 @@ pub fn render<H: UiHost>(
                                         focus_ring: None,
                                         a11y: Default::default(),
                                     },
-                                    move |cx, _st| {
+                                    move |cx, st| {
                                         cx.pressable_add_on_activate(Arc::new(
                                             move |host, cx, _reason| {
                                                 let _ = dismiss_toast_action(
@@ -524,7 +742,44 @@ pub fn render<H: UiHost>(
                                                 );
                                             },
                                         ));
-                                        vec![cx.text("×")]
+
+                                        let bg = if st.pressed {
+                                            Some(alpha_mul(button_bg, 0.8))
+                                        } else if st.hovered {
+                                            Some(alpha_mul(button_bg, 0.6))
+                                        } else {
+                                            None
+                                        };
+
+                                        vec![cx.container(
+                                            fret_ui::element::ContainerProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                padding: fret_core::Edges {
+                                                    top: button_pad_y,
+                                                    right: button_pad_x,
+                                                    bottom: button_pad_y,
+                                                    left: button_pad_x,
+                                                },
+                                                background: bg,
+                                                shadow: None,
+                                                border: fret_core::Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: fret_core::Corners::all(
+                                                    button_radius,
+                                                ),
+                                            },
+                                            move |cx| {
+                                                vec![cx.text_props(fret_ui::element::TextProps {
+                                                    layout: fret_ui::element::LayoutStyle::default(
+                                                    ),
+                                                    text: "\u{00D7}".into(),
+                                                    style: None,
+                                                    color: Some(fg),
+                                                    wrap: fret_core::TextWrap::None,
+                                                    overflow: fret_core::TextOverflow::Clip,
+                                                })]
+                                            },
+                                        )]
                                     },
                                 )
                             });
@@ -541,7 +796,7 @@ pub fn render<H: UiHost>(
                                         focus_ring: None,
                                         a11y: Default::default(),
                                     },
-                                    move |cx, _st| {
+                                    move |cx, st| {
                                         cx.pressable_add_on_activate(Arc::new(
                                             move |host, cx, _reason| {
                                                 host.dispatch_command(Some(cx.window), cmd.clone());
@@ -557,11 +812,137 @@ pub fn render<H: UiHost>(
                                                 );
                                             },
                                         ));
-                                        vec![cx.text(label.as_ref())]
+
+                                        let bg = if st.pressed {
+                                            Some(alpha_mul(button_bg, 0.8))
+                                        } else if st.hovered {
+                                            Some(alpha_mul(button_bg, 0.6))
+                                        } else {
+                                            None
+                                        };
+
+                                        vec![cx.container(
+                                            fret_ui::element::ContainerProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                padding: fret_core::Edges {
+                                                    top: button_pad_y,
+                                                    right: button_pad_x,
+                                                    bottom: button_pad_y,
+                                                    left: button_pad_x,
+                                                },
+                                                background: bg,
+                                                shadow: None,
+                                                border: fret_core::Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: fret_core::Corners::all(
+                                                    button_radius,
+                                                ),
+                                            },
+                                            move |cx| {
+                                                vec![cx.text_props(fret_ui::element::TextProps {
+                                                    layout: fret_ui::element::LayoutStyle::default(
+                                                    ),
+                                                    text: label.clone(),
+                                                    style: None,
+                                                    color: Some(fg),
+                                                    wrap: fret_core::TextWrap::None,
+                                                    overflow: fret_core::TextOverflow::Clip,
+                                                })]
+                                            },
+                                        )]
                                     },
                                 )
                             });
 
+                            let cancel = toast.cancel.clone().map(|cancel| {
+                                let cancel_store = store.clone();
+                                let cmd = cancel.command;
+                                let label = cancel.label;
+                                cx.pressable(
+                                    fret_ui::element::PressableProps {
+                                        layout: fret_ui::element::LayoutStyle::default(),
+                                        enabled: true,
+                                        focusable: false,
+                                        focus_ring: None,
+                                        a11y: Default::default(),
+                                    },
+                                    move |cx, st| {
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, cx, _reason| {
+                                                host.dispatch_command(Some(cx.window), cmd.clone());
+                                            },
+                                        ));
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, cx, _reason| {
+                                                let _ = dismiss_toast_action(
+                                                    host,
+                                                    cancel_store.clone(),
+                                                    cx.window,
+                                                    toast_id,
+                                                );
+                                            },
+                                        ));
+
+                                        let bg = if st.pressed {
+                                            Some(alpha_mul(button_bg, 0.8))
+                                        } else if st.hovered {
+                                            Some(alpha_mul(button_bg, 0.6))
+                                        } else {
+                                            None
+                                        };
+
+                                        vec![cx.container(
+                                            fret_ui::element::ContainerProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                padding: fret_core::Edges {
+                                                    top: button_pad_y,
+                                                    right: button_pad_x,
+                                                    bottom: button_pad_y,
+                                                    left: button_pad_x,
+                                                },
+                                                background: bg,
+                                                shadow: None,
+                                                border: fret_core::Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: fret_core::Corners::all(
+                                                    button_radius,
+                                                ),
+                                            },
+                                            move |cx| {
+                                                vec![cx.text_props(fret_ui::element::TextProps {
+                                                    layout: fret_ui::element::LayoutStyle::default(
+                                                    ),
+                                                    text: label.clone(),
+                                                    style: None,
+                                                    color: Some(fg),
+                                                    wrap: fret_core::TextWrap::None,
+                                                    overflow: fret_core::TextOverflow::Clip,
+                                                })]
+                                            },
+                                        )]
+                                    },
+                                )
+                            });
+
+                            let icon = match toast.variant {
+                                ToastVariant::Loading => {
+                                    let mut spinner = fret_ui::element::SpinnerProps::default();
+                                    spinner.color = Some(fg);
+                                    Some(cx.spinner_props(spinner))
+                                }
+                                v => toast_icon_glyph(v).map(|glyph| {
+                                    cx.text_props(fret_ui::element::TextProps {
+                                        layout: fret_ui::element::LayoutStyle::default(),
+                                        text: glyph.into(),
+                                        style: None,
+                                        color: Some(fg),
+                                        wrap: fret_core::TextWrap::None,
+                                        overflow: fret_core::TextOverflow::Clip,
+                                    })
+                                }),
+                            };
+
+                            let icon = icon.clone();
                             let header_row = cx.flex(
                                 fret_ui::element::FlexProps {
                                     layout: fret_ui::element::LayoutStyle::default(),
@@ -572,8 +953,30 @@ pub fn render<H: UiHost>(
                                     align: fret_ui::element::CrossAlign::Center,
                                     wrap: false,
                                 },
-                                |cx| {
+                                move |cx| {
                                     let mut row: Vec<AnyElement> = Vec::new();
+                                    if let Some(icon) = icon.clone() {
+                                        row.push(cx.container(
+                                            fret_ui::element::ContainerProps {
+                                                layout: {
+                                                    let mut layout =
+                                                        fret_ui::element::LayoutStyle::default();
+                                                    layout.size.width =
+                                                        fret_ui::element::Length::Px(Px(16.0));
+                                                    layout.size.height =
+                                                        fret_ui::element::Length::Px(Px(16.0));
+                                                    layout
+                                                },
+                                                padding: fret_core::Edges::all(Px(0.0)),
+                                                background: None,
+                                                shadow: None,
+                                                border: fret_core::Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: fret_core::Corners::all(Px(0.0)),
+                                            },
+                                            move |_cx| vec![icon.clone()],
+                                        ));
+                                    }
                                     row.push(cx.text_props(fret_ui::element::TextProps {
                                         layout: fret_ui::element::LayoutStyle::default(),
                                         text: toast.title.clone(),
@@ -582,11 +985,43 @@ pub fn render<H: UiHost>(
                                         wrap: fret_core::TextWrap::None,
                                         overflow: fret_core::TextOverflow::Clip,
                                     }));
-                                    if let Some(action) = action {
-                                        row.push(action);
-                                    }
-                                    if let Some(close) = close {
-                                        row.push(close);
+                                    row.push(cx.spacer(fret_ui::element::SpacerProps {
+                                        min: fret_core::Px(0.0),
+                                        ..Default::default()
+                                    }));
+
+                                    let trailing_cancel = cancel.clone();
+                                    let trailing_action = action.clone();
+                                    let trailing_close = close.clone();
+                                    if trailing_cancel.is_some()
+                                        || trailing_action.is_some()
+                                        || trailing_close.is_some()
+                                    {
+                                        row.push(cx.flex(
+                                            fret_ui::element::FlexProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: theme.metrics.padding_sm,
+                                                padding: fret_core::Edges::all(Px(0.0)),
+                                                justify: fret_ui::element::MainAlign::End,
+                                                align: fret_ui::element::CrossAlign::Center,
+                                                wrap: false,
+                                                ..Default::default()
+                                            },
+                                            move |_cx| {
+                                                let mut out = Vec::new();
+                                                if let Some(el) = trailing_cancel.clone() {
+                                                    out.push(el);
+                                                }
+                                                if let Some(el) = trailing_action.clone() {
+                                                    out.push(el);
+                                                }
+                                                if let Some(el) = trailing_close.clone() {
+                                                    out.push(el);
+                                                }
+                                                out
+                                            },
+                                        ));
                                     }
                                     row
                                 },
@@ -604,18 +1039,206 @@ pub fn render<H: UiHost>(
                                 }));
                             }
 
-                            out.push(cx.container(
-                                fret_ui::element::ContainerProps {
-                                    layout: fret_ui::element::LayoutStyle::default(),
-                                    padding: fret_core::Edges::all(toast_padding),
-                                    background: Some(bg),
-                                    shadow: None,
-                                    border: fret_core::Edges::all(fret_core::Px(1.0)),
-                                    border_color: Some(border_color),
-                                    corner_radii: fret_core::Corners::all(radius),
-                                },
-                                move |_cx| toast_children,
-                            ));
+                            out.push(cx.keyed(toast_id, move |cx| {
+                                let presence =
+                                    crate::OverlayController::fade_presence_with_durations(
+                                        cx, open, 12, 12,
+                                    );
+                                let opacity = presence.opacity;
+                                let slide_px = Px(16.0 * (1.0 - opacity));
+                                let dx = match position {
+                                    ToastPosition::TopLeft | ToastPosition::BottomLeft => {
+                                        Px(-slide_px.0)
+                                    }
+                                    ToastPosition::TopRight | ToastPosition::BottomRight => {
+                                        slide_px
+                                    }
+                                    ToastPosition::TopCenter | ToastPosition::BottomCenter => {
+                                        Px(0.0)
+                                    }
+                                };
+                                let dy = match position {
+                                    ToastPosition::TopLeft
+                                    | ToastPosition::TopCenter
+                                    | ToastPosition::TopRight => Px(-slide_px.0),
+                                    ToastPosition::BottomLeft
+                                    | ToastPosition::BottomCenter
+                                    | ToastPosition::BottomRight => slide_px,
+                                };
+                                let slide =
+                                    Transform2D::translation(Point::new(Px(dx.0 + drag_x.0), dy));
+
+                                let mut toast_layout = fret_ui::element::LayoutStyle::default();
+                                toast_layout.size.min_width =
+                                    Some(toast_min_width_override.unwrap_or(Px(280.0)));
+                                toast_layout.size.max_width =
+                                    Some(toast_max_width_override.unwrap_or(Px(420.0)));
+
+                                let toast_el = cx.container(
+                                    fret_ui::element::ContainerProps {
+                                        layout: toast_layout,
+                                        padding: fret_core::Edges::all(toast_padding),
+                                        background: Some(bg),
+                                        shadow: None,
+                                        border: fret_core::Edges::all(fret_core::Px(1.0)),
+                                        border_color: Some(border_color),
+                                        corner_radii: fret_core::Corners::all(radius),
+                                    },
+                                    move |_cx| toast_children,
+                                );
+
+                                let store_for_hooks = store.clone();
+                                let pause_store = store.clone();
+                                let toast_hover = cx.hover_region(
+                                    fret_ui::element::HoverRegionProps::default(),
+                                    move |cx, hovered| {
+                                        let hovered = hovered || drag_active;
+                                        let changed =
+                                            cx.with_state(ToastHoverPauseState::default, |st| {
+                                                let changed = st.hovered != hovered;
+                                                st.hovered = hovered;
+                                                changed
+                                            });
+
+                                        if changed {
+                                            if hovered {
+                                                if let Ok(Some(token)) =
+                                                    cx.app.models_mut().update(&pause_store, |st| {
+                                                        st.pause_auto_close(cx.window, toast_id)
+                                                    })
+                                                {
+                                                    cx.app.push_effect(
+                                                        fret_runtime::Effect::CancelTimer { token },
+                                                    );
+                                                    cx.app.request_redraw(cx.window);
+                                                }
+                                            } else {
+                                                let token = cx.app.next_timer_token();
+                                                if let Ok(Some(after)) =
+                                                    cx.app.models_mut().update(&pause_store, |st| {
+                                                        st.resume_auto_close(
+                                                            cx.window, toast_id, token,
+                                                        )
+                                                    })
+                                                {
+                                                    cx.app.push_effect(
+                                                        fret_runtime::Effect::SetTimer {
+                                                            window: Some(cx.window),
+                                                            token,
+                                                            after,
+                                                            repeat: None,
+                                                        },
+                                                    );
+                                                    cx.app.request_redraw(cx.window);
+                                                }
+                                            }
+                                        }
+
+                                        vec![cx.pointer_region(
+                                            fret_ui::element::PointerRegionProps::default(),
+                                            move |cx| {
+                                                let store = store_for_hooks.clone();
+                                                cx.pointer_region_on_pointer_down(Arc::new(
+                                                    move |host, acx, down| {
+                                                        let _ = host.models_mut().update(
+                                                            &store,
+                                                            |st| {
+                                                                st.begin_drag(
+                                                                    acx.window,
+                                                                    toast_id,
+                                                                    down.position,
+                                                                )
+                                                            },
+                                                        );
+                                                        false
+                                                    },
+                                                ));
+
+                                                let store = store_for_hooks.clone();
+                                                cx.pointer_region_on_pointer_move(Arc::new(
+                                                    move |host, acx, mv| {
+                                                        let update = host
+                                                            .models_mut()
+                                                            .update(&store, |st| {
+                                                                st.drag_move(
+                                                                    acx.window,
+                                                                    toast_id,
+                                                                    mv.position,
+                                                                )
+                                                            })
+                                                            .ok()
+                                                            .flatten();
+
+                                                        let Some(update) = update else {
+                                                            return false;
+                                                        };
+
+                                                        if update.capture_pointer {
+                                                            host.capture_pointer();
+                                                        }
+
+                                                        if update.dragging {
+                                                            host.request_redraw(acx.window);
+                                                            return true;
+                                                        }
+                                                        false
+                                                    },
+                                                ));
+
+                                                let store = store_for_hooks.clone();
+                                                cx.pointer_region_on_pointer_up(Arc::new(
+                                                    move |host, acx, _up| {
+                                                        let end = host
+                                                            .models_mut()
+                                                            .update(&store, |st| {
+                                                                st.end_drag(acx.window, toast_id)
+                                                            })
+                                                            .ok()
+                                                            .flatten();
+
+                                                        let Some(end) = end else {
+                                                            return false;
+                                                        };
+
+                                                        if end.dragging {
+                                                            host.release_pointer_capture();
+                                                            if end.dx.0.abs() >= 80.0 {
+                                                                let _ = dismiss_toast_action(
+                                                                    host,
+                                                                    store.clone(),
+                                                                    acx.window,
+                                                                    toast_id,
+                                                                );
+                                                            }
+                                                            host.request_redraw(acx.window);
+                                                            return true;
+                                                        }
+                                                        false
+                                                    },
+                                                ));
+
+                                                vec![toast_el.clone()]
+                                            },
+                                        )]
+                                    },
+                                );
+
+                                cx.opacity_props(
+                                    fret_ui::element::OpacityProps {
+                                        layout: fret_ui::element::LayoutStyle::default(),
+                                        opacity,
+                                    },
+                                    move |cx| {
+                                        vec![cx.visual_transform_props(
+                                            fret_ui::element::VisualTransformProps {
+                                                layout: fret_ui::element::LayoutStyle::default(),
+                                                transform: slide,
+                                            },
+                                            move |_cx| vec![toast_hover],
+                                        )]
+                                    },
+                                )
+                            }));
                         }
                         out
                     },

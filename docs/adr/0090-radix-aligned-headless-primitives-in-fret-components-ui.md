@@ -148,6 +148,7 @@ Radix-named facades (thin entry points, subject to evolution):
 ## Follow-ups
 
 - Add a Radix alignment mapping document to keep the cross-crate mapping navigable.
+  - Implemented: `docs/radix-primitives-alignment.md`
 - Expand headless coverage to close the highest-risk gaps called out in `docs/ui-closure-map.md`:
   - active-descendant semantics reuse patterns (ADR 0073),
   - menu submenu focus transfer and safe-hover intent heuristics,

@@ -1,14 +1,16 @@
 use std::sync::Arc;
 
 use fret_core::geometry::Edges;
-use fret_core::{FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Axis, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{
-    AnyElement, CrossAlign, GridProps, MainAlign, Overflow, PressableProps, TextProps,
+    AnyElement, CrossAlign, FlexProps, GridProps, MainAlign, Overflow, PressableProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
+
+use crate::layout as shadcn_layout;
 
 fn table_text_style(theme: &Theme) -> TextStyle {
     let px = theme
@@ -102,7 +104,7 @@ impl Table {
         props.layout.overflow = Overflow::Visible;
 
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -125,7 +127,7 @@ impl TableHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -148,7 +150,7 @@ impl TableBody {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -183,7 +185,7 @@ impl TableFooter {
         };
 
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_flow(cx, props, children)
     }
 }
 
@@ -326,18 +328,39 @@ impl TableHead {
         let fg = foreground(&theme);
 
         let chrome = ChromeRefinement::default().px(px).py(py);
-        let props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+        let props = decl_style::container_props(
+            &theme,
+            chrome,
+            LayoutRefinement::default()
+                .w_full()
+                .min_h(row_min_h(&theme)),
+        );
 
         let text = self.text;
         cx.container(props, move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: Default::default(),
-                text,
-                style: Some(style),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            })]
+            let layout =
+                decl_style::layout_style(&theme, LayoutRefinement::default().w_full().h_full());
+            vec![cx.flex(
+                FlexProps {
+                    layout,
+                    direction: Axis::Horizontal,
+                    gap: fret_core::Px(0.0),
+                    padding: Edges::all(fret_core::Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    vec![cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: text.clone(),
+                        style: Some(style.clone()),
+                        color: Some(fg),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    })]
+                },
+            )]
         })
     }
 }
@@ -375,9 +398,24 @@ impl TableCell {
         let py = Space::N2;
 
         let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
-        let props = decl_style::container_props(&theme, chrome, self.layout);
+        let props = decl_style::container_props(&theme, chrome, self.layout.h_full().w_full());
         let child = self.child;
-        cx.container(props, move |_cx| vec![child])
+        cx.container(props, move |cx| {
+            let layout =
+                decl_style::layout_style(&theme, LayoutRefinement::default().w_full().h_full());
+            vec![cx.flex(
+                FlexProps {
+                    layout,
+                    direction: Axis::Horizontal,
+                    gap: fret_core::Px(0.0),
+                    padding: Edges::all(fret_core::Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |_cx| vec![child.clone()],
+            )]
+        })
     }
 }
 

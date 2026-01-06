@@ -35,7 +35,7 @@ pub use overlay_controller::{
     OverlayController, OverlayKind, OverlayPresence, OverlayRequest, ToastLayerSpec,
 };
 pub use window_overlays::{
-    ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore, ToastVariant,
+    DEFAULT_MAX_TOASTS, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore, ToastVariant,
 };
 
 pub use tree::{

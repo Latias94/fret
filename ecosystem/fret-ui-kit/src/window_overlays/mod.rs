@@ -32,6 +32,6 @@ pub use requests::{
     DismissiblePopoverRequest, HoverOverlayRequest, ModalRequest, ToastLayerRequest, TooltipRequest,
 };
 pub use toast::{
-    ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore, ToastVariant,
-    dismiss_toast_action, toast_action, toast_store,
+    DEFAULT_MAX_TOASTS, ToastAction, ToastId, ToastPosition, ToastRequest, ToastStore,
+    ToastVariant, dismiss_toast_action, toast_action, toast_store,
 };

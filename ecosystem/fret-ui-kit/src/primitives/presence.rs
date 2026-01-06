@@ -27,6 +27,16 @@ pub fn fade_presence<H: UiHost>(
     crate::declarative::presence::fade_presence(cx, open, fade_ticks)
 }
 
+/// Drive a fade presence transition with separate open/close durations.
+pub fn fade_presence_with_durations<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+) -> PresenceOutput {
+    crate::declarative::presence::fade_presence_with_durations(cx, open, open_ticks, close_ticks)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -50,7 +60,8 @@ mod tests {
         app.set_tick_id(TickId(1));
         app.set_frame_id(FrameId(1));
 
-        // First time entering `opening`: request an animation frame + a redraw.
+        // First call enters the opening phase: request animation frames + redraw.
+
         let out0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
             fade_presence(cx, true, 3)
         });
@@ -64,7 +75,8 @@ mod tests {
         );
         assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
 
-        // While animating: keep requesting redraws, but do not request another RAF lease.
+        // While animating: keep requesting redraw, but do not reacquire a new RAF lease.
+
         app.set_tick_id(TickId(2));
         app.set_frame_id(FrameId(2));
         let out1 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
@@ -80,7 +92,8 @@ mod tests {
         );
         assert!(effects1.iter().any(|e| *e == Effect::Redraw(window)));
 
-        // Once stable `open`: no longer animating, so no proactive redraw requests.
+        // Stable open: no longer animating, so no more redraw requests.
+
         app.set_tick_id(TickId(3));
         app.set_frame_id(FrameId(3));
         let out2 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {

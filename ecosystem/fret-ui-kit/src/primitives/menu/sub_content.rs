@@ -60,7 +60,7 @@ pub fn wire_item<H: UiHost>(
     models: &sub::MenuSubmenuModels,
 ) {
     sub::focus_first_available_on_open(cx, models, item_id, disabled);
-    cx.key_on_key_down_for(
+    cx.key_add_on_key_down_for(
         item_id,
         sub::submenu_item_arrow_left_handler(models.clone()),
     );

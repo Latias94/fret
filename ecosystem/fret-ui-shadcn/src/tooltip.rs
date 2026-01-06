@@ -1,3 +1,4 @@
+use crate::layout as shadcn_layout;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
@@ -8,17 +9,102 @@ use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::tooltip_provider;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence,
     OverlayRequest, Radius, Space,
 };
 use std::sync::Arc;
 
-use fret_core::{Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap, Transform2D};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost};
-use fret_ui::element::{AnyElement, HoverRegionProps, LayoutStyle, Overflow, TextProps};
+use fret_ui::element::{
+    AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Length, OpacityProps, Overflow,
+    SemanticsProps, SizeStyle, SpinnerProps, SvgIconProps, TextProps, VisualTransformProps,
+};
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
+
+use crate::overlay_motion;
+
+fn apply_tooltip_described_by(
+    mut trigger: AnyElement,
+    tooltip_element: fret_ui::elements::GlobalElementId,
+) -> AnyElement {
+    match &mut trigger.kind {
+        ElementKind::Pressable(props) => {
+            props.a11y.described_by_element = Some(tooltip_element.0);
+        }
+        ElementKind::Semantics(props) => {
+            props.described_by_element = Some(tooltip_element.0);
+        }
+        _ => {}
+    }
+    trigger
+}
+
+fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> AnyElement {
+    match &mut element.kind {
+        ElementKind::Text(props) => {
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+        }
+        ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
+            let is_default = *color
+                == fret_core::Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                };
+            if is_default {
+                *color = fg;
+            }
+        }
+        ElementKind::Spinner(SpinnerProps { color, .. }) => {
+            color.get_or_insert(fg);
+        }
+        _ => {}
+    }
+
+    element.children = element
+        .children
+        .into_iter()
+        .map(|child| apply_tooltip_inherited_fg(child, fg))
+        .collect();
+    element
+}
+
+fn tooltip_text_fg(theme: &Theme) -> fret_core::Color {
+    theme
+        .color_by_key("background")
+        .unwrap_or(theme.colors.surface_background)
+}
+
+fn tooltip_text_style(theme: &Theme) -> TextStyle {
+    // new-york-v4 uses `text-xs` for tooltips (base is `text-sm`).
+    let base_px = theme
+        .metric_by_key("font.size")
+        .unwrap_or(theme.metrics.font_size);
+    let base_line_height = theme
+        .metric_by_key("font.line_height")
+        .unwrap_or(theme.metrics.font_line_height);
+
+    let px = theme
+        .metric_by_key("component.tooltip.text_px")
+        .unwrap_or(Px((base_px.0 - 2.0).max(10.0)));
+    let line_height = theme
+        .metric_by_key("component.tooltip.line_height")
+        .unwrap_or(Px((base_line_height.0 - 4.0).max(12.0)));
+
+    TextStyle {
+        font: fret_core::FontId::default(),
+        size: px,
+        weight: fret_core::FontWeight::NORMAL,
+        line_height: Some(line_height),
+        letter_spacing_em: None,
+    }
+}
 
 fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
     // shadcn/ui v4 (2025-09-22): tooltip uses `bg-foreground text-background`.
@@ -27,10 +113,10 @@ fn tooltip_content_chrome(theme: &Theme) -> ChromeRefinement {
         .unwrap_or(theme.colors.text_primary);
 
     ChromeRefinement::default()
-        .rounded(Radius::Sm)
+        .rounded(Radius::Md)
         .bg(ColorRef::Color(bg))
         .px(Space::N3)
-        .py(Space::N2)
+        .py(Space::N1p5)
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -254,7 +340,7 @@ impl Tooltip {
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
 
-        let trigger = self.trigger;
+        let trigger = apply_tooltip_described_by(self.trigger, self.content.id);
         let content = self.content;
         let trigger_id = trigger.id;
         let content_id = content.id;
@@ -360,8 +446,13 @@ impl Tooltip {
                             .with_arrow(arrow_options, arrow_protrusion),
                         );
 
-                        let wrapper_insets =
+                        let mut wrapper_insets =
                             popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                        let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
+                        wrapper_insets.top.0 += slide_insets.top.0;
+                        wrapper_insets.right.0 += slide_insets.right.0;
+                        wrapper_insets.bottom.0 += slide_insets.bottom.0;
+                        wrapper_insets.left.0 += slide_insets.left.0;
                         let wrapper_bounds = Rect::new(
                             Point::new(
                                 layout.rect.origin.x - wrapper_insets.left,
@@ -396,13 +487,27 @@ impl Tooltip {
                 tooltip_provider::note_closed(cx, now);
             }
 
+            let opening = update.open;
+            let motion = OverlayController::transition_with_durations_and_easing(
+                cx,
+                opening,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::shadcn_ease,
+            );
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: update.open,
+            };
+
             let out = vec![trigger];
-            if !update.open {
+            if !overlay_presence.present {
                 return out;
             }
 
             let tooltip_id = cx.root_id();
             let overlay_root_name = OverlayController::tooltip_root_name(tooltip_id);
+            let opacity = motion.progress;
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
@@ -445,7 +550,12 @@ impl Tooltip {
                 );
 
                 let placed = layout.rect;
-                let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                let mut wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
+                let slide_insets = overlay_motion::shadcn_slide_insets(layout.side);
+                wrapper_insets.top.0 += slide_insets.top.0;
+                wrapper_insets.right.0 += slide_insets.right.0;
+                wrapper_insets.bottom.0 += slide_insets.bottom.0;
+                wrapper_insets.left.0 += slide_insets.left.0;
 
                 let wrapper = popper_content::popper_wrapper_at_with_panel(
                     cx,
@@ -454,7 +564,9 @@ impl Tooltip {
                     Overflow::Visible,
                     move |_cx| vec![content],
                     move |cx, content| {
-                        let arrow_el = popper_arrow::diamond_arrow_element(
+                        // new-york-v4: `size-2.5 rotate-45 rounded-[2px] translate-y-[calc(-50%_-_2px)]`
+                        // (i.e. a slightly outset, lightly rounded diamond).
+                        let arrow_el = popper_arrow::diamond_arrow_element_refined(
                             cx,
                             &layout,
                             wrapper_insets,
@@ -464,6 +576,8 @@ impl Tooltip {
                                 border: None,
                                 border_width: Px(0.0),
                             },
+                            Px(2.0),
+                            Px(2.0),
                         );
 
                         if let Some(arrow_el) = arrow_el {
@@ -474,14 +588,48 @@ impl Tooltip {
                     },
                 );
 
-                vec![wrapper]
+                let origin = popper::popper_content_transform_origin(
+                    &layout,
+                    anchor,
+                    arrow.then_some(arrow_size),
+                );
+
+                let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                let slide = if opening {
+                    overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
+                } else {
+                    Transform2D::IDENTITY
+                };
+                let transform = slide * zoom;
+
+                let overlay_layout = LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                vec![cx.opacity_props(
+                    OpacityProps {
+                        layout: overlay_layout.clone(),
+                        opacity,
+                    },
+                    move |cx| {
+                        vec![cx.visual_transform_props(
+                            VisualTransformProps {
+                                layout: overlay_layout,
+                                transform,
+                            },
+                            move |_cx| vec![wrapper],
+                        )]
+                    },
+                )]
             });
 
-            let mut request = OverlayRequest::tooltip(
-                tooltip_id,
-                OverlayPresence::instant(true),
-                overlay_children,
-            );
+            let mut request =
+                OverlayRequest::tooltip(tooltip_id, overlay_presence, overlay_children);
             request.root_name = Some(overlay_root_name);
             if !disable_hoverable_content {
                 let last_pointer = last_pointer.clone();
@@ -563,25 +711,16 @@ impl TooltipContent {
         let theme = Theme::global(&*cx.app).clone();
         let text = text.into();
 
-        let text_style = TextStyle {
-            font: fret_core::FontId::default(),
-            size: theme.metrics.font_size,
-            weight: fret_core::FontWeight::NORMAL,
-            line_height: Some(theme.metrics.font_line_height),
-            letter_spacing_em: None,
-        };
-
-        let fg = theme
-            .color_by_key("background")
-            .unwrap_or(theme.colors.surface_background);
+        let text_style = tooltip_text_style(&theme);
+        let fg = tooltip_text_fg(&theme);
 
         cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text,
             style: Some(text_style),
             color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Ellipsis,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
         })
     }
 
@@ -600,12 +739,21 @@ impl TooltipContent {
 
         let base_layout = LayoutRefinement::default().flex_shrink_0();
         let chrome = tooltip_content_chrome(&theme).merge(self.chrome);
-        let mut props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
-
-        let radius = MetricRef::radius(Radius::Md).resolve(&theme);
-        props.shadow = Some(decl_style::shadow_sm(&theme, radius));
-        let children = self.children;
-        cx.container(props, move |_cx| children)
+        let props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
+        let fg = tooltip_text_fg(&theme);
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| apply_tooltip_inherited_fg(child, fg))
+            .collect();
+        let container = shadcn_layout::container_flow(cx, props, children);
+        cx.semantics(
+            SemanticsProps {
+                role: fret_core::SemanticsRole::Tooltip,
+                ..Default::default()
+            },
+            move |_cx| vec![container],
+        )
     }
 }
 
@@ -672,6 +820,58 @@ mod tests {
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn tooltip_content_applies_default_fg_to_descendant_text() {
+        use fret_core::Color;
+        use fret_ui::element::ElementKind;
+        use fret_ui::elements::GlobalElementId;
+
+        let fg = Color {
+            r: 0.1,
+            g: 0.2,
+            b: 0.3,
+            a: 0.4,
+        };
+
+        let text_no_color = AnyElement::new(
+            GlobalElementId(1),
+            ElementKind::Text(TextProps::new("tip")),
+            Vec::new(),
+        );
+        let mut text_with_color = TextProps::new("fixed");
+        text_with_color.color = Some(Color {
+            r: 0.9,
+            g: 0.8,
+            b: 0.7,
+            a: 1.0,
+        });
+        let text_with_color = AnyElement::new(
+            GlobalElementId(2),
+            ElementKind::Text(text_with_color),
+            Vec::new(),
+        );
+
+        let root = AnyElement::new(
+            GlobalElementId(3),
+            ElementKind::Container(ContainerProps::default()),
+            vec![text_no_color, text_with_color],
+        );
+
+        let out = apply_tooltip_inherited_fg(root, fg);
+        let colors: Vec<Option<Color>> = out
+            .children
+            .iter()
+            .map(|child| match &child.kind {
+                ElementKind::Text(t) => t.color,
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(colors.len(), 2);
+        assert_eq!(colors[0], Some(fg));
+        assert_ne!(colors[1], Some(fg));
     }
 
     fn render_tooltip_frame(
@@ -773,6 +973,7 @@ mod tests {
             trigger_id.clone(),
             content_id.clone(),
         );
+        ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let content_element = content_id.get().expect("content element id");
@@ -780,6 +981,29 @@ mod tests {
         assert!(
             content_node.is_some(),
             "expected tooltip content to be mounted when focused"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let content_node = content_node.expect("content node");
+
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.label.as_deref() == Some("trigger"))
+            .expect("trigger semantics node");
+        let tooltip_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_node)
+            .expect("tooltip semantics node");
+
+        assert_eq!(tooltip_node.role, SemanticsRole::Tooltip);
+        assert!(
+            trigger_node
+                .described_by
+                .iter()
+                .any(|id| *id == tooltip_node.id),
+            "trigger should be described by the tooltip content"
         );
     }
 
@@ -994,13 +1218,40 @@ mod tests {
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
+        // Closing begins after the close delay, but we keep the tooltip mounted during the fade-out
+        // transition (Radix Presence-style behavior).
+        assert!(
+            fret_ui::elements::node_for_element(&mut app, window, content_element).is_some(),
+            "expected tooltip to remain mounted during fade-out"
+        );
+        assert!(
+            ui.debug_layers_in_paint_order()
+                .iter()
+                .find(|layer| layer.root == tooltip_layer_root)
+                .is_some_and(|layer| layer.visible),
+            "expected tooltip layer to remain visible during fade-out"
+        );
+
+        // Frame 9: close delay (2) + fade ticks (4) elapsed -> hidden.
+        app.set_frame_id(FrameId(9));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            trigger_id.clone(),
+            content_id.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
         let tooltip_layer = ui
             .debug_layers_in_paint_order()
             .into_iter()
             .find(|layer| layer.root == tooltip_layer_root);
         assert!(
             tooltip_layer.is_none_or(|layer| !layer.visible),
-            "expected tooltip layer to be hidden after close delay elapses"
+            "expected tooltip layer to be hidden after close delay + fade-out elapses"
         );
     }
 
@@ -1579,18 +1830,22 @@ mod tests {
             }),
         );
 
-        // Frame 3: tooltip should be closed.
-        app.set_frame_id(FrameId(3));
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            trigger_id.clone(),
-            content_id.clone(),
-        );
-        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        // Frame 3: close begins immediately (close_delay=0), but Presence keeps the layer mounted
+        // while fading out. Assert that it becomes hidden by the end of the fade-out.
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_100 + 1;
+        for frame in 3..=(2 + settle_frames) {
+            app.set_frame_id(FrameId(frame));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                trigger_id.clone(),
+                content_id.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
 
         let tooltip_layer = ui
             .debug_layers_in_paint_order()
@@ -1598,7 +1853,7 @@ mod tests {
             .find(|layer| layer.root == tooltip_layer_root);
         assert!(
             tooltip_layer.is_none_or(|layer| !layer.visible),
-            "expected tooltip to close when hoverable content is disabled"
+            "expected tooltip to become hidden after hoverable content is disabled"
         );
     }
 

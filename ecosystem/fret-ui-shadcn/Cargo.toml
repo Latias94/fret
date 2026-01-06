@@ -14,6 +14,8 @@ fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../fret-ui-kit", features = ["icons"] }
 fret-icons = { path = "../fret-icons" }
+serde.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }

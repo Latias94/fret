@@ -2,15 +2,21 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{AppWindowId, TimerToken};
+use fret_core::{AppWindowId, Point, Px, TimerToken};
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::UiHost;
+
+pub(super) const TOAST_CLOSE_DURATION: Duration = Duration::from_millis(200);
+pub(super) const TOAST_AUTO_CLOSE_TICK: Duration = Duration::from_millis(100);
+pub const DEFAULT_MAX_TOASTS: usize = 3;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ToastPosition {
     TopLeft,
+    TopCenter,
     TopRight,
     BottomLeft,
+    BottomCenter,
     #[default]
     BottomRight,
 }
@@ -20,6 +26,11 @@ pub enum ToastVariant {
     #[default]
     Default,
     Destructive,
+    Success,
+    Info,
+    Warning,
+    Error,
+    Loading,
 }
 
 #[derive(Debug, Clone)]
@@ -30,28 +41,37 @@ pub struct ToastAction {
 
 #[derive(Debug, Clone)]
 pub struct ToastRequest {
+    pub id: Option<ToastId>,
     pub title: Arc<str>,
     pub description: Option<Arc<str>>,
     pub duration: Option<Duration>,
     pub variant: ToastVariant,
     pub action: Option<ToastAction>,
+    pub cancel: Option<ToastAction>,
     pub dismissible: bool,
 }
 
 impl ToastRequest {
     pub fn new(title: impl Into<Arc<str>>) -> Self {
         Self {
+            id: None,
             title: title.into(),
             description: None,
             duration: Some(Duration::from_secs(3)),
             variant: ToastVariant::default(),
             action: None,
+            cancel: None,
             dismissible: true,
         }
     }
 
     pub fn description(mut self, description: impl Into<Arc<str>>) -> Self {
         self.description = Some(description.into());
+        self
+    }
+
+    pub fn id(mut self, id: ToastId) -> Self {
+        self.id = Some(id);
         self
     }
 
@@ -70,6 +90,11 @@ impl ToastRequest {
         self
     }
 
+    pub fn cancel(mut self, cancel: ToastAction) -> Self {
+        self.cancel = Some(cancel);
+        self
+    }
+
     pub fn dismissible(mut self, dismissible: bool) -> Self {
         self.dismissible = dismissible;
         self
@@ -79,25 +104,73 @@ impl ToastRequest {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ToastId(pub u64);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ToastTimerKind {
+    AutoClose,
+    RemoveAfterClose,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ToastTimerRef {
+    window: AppWindowId,
+    toast: ToastId,
+    kind: ToastTimerKind,
+}
+
 #[derive(Debug, Clone)]
 pub(super) struct ToastEntry {
     pub(super) id: ToastId,
     pub(super) title: Arc<str>,
     pub(super) description: Option<Arc<str>>,
+    pub(super) duration: Option<Duration>,
+    pub(super) auto_close_remaining: Option<Duration>,
     pub(super) variant: ToastVariant,
     pub(super) action: Option<ToastAction>,
+    pub(super) cancel: Option<ToastAction>,
     pub(super) dismissible: bool,
-    pub(super) token: Option<TimerToken>,
+    pub(super) open: bool,
+    pub(super) auto_close_token: Option<TimerToken>,
+    pub(super) remove_token: Option<TimerToken>,
+    pub(super) drag_start: Option<Point>,
+    pub(super) drag_x: Px,
+    pub(super) dragging: bool,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct ToastUpsertOutcome {
+    pub(super) id: ToastId,
+    pub(super) cancel_auto: Option<TimerToken>,
+    pub(super) schedule_auto: Option<(TimerToken, Duration)>,
+    pub(super) evicted: Vec<ToastId>,
 }
 
 #[derive(Debug, Default)]
 pub struct ToastStore {
     next_id: u64,
     by_window: HashMap<AppWindowId, Vec<ToastEntry>>,
-    by_token: HashMap<TimerToken, (AppWindowId, ToastId)>,
+    by_token: HashMap<TimerToken, ToastTimerRef>,
+    max_toasts_by_window: HashMap<AppWindowId, usize>,
 }
 
 impl ToastStore {
+    pub fn set_window_max_toasts(
+        &mut self,
+        window: AppWindowId,
+        max_toasts: Option<usize>,
+    ) -> bool {
+        let max_toasts = max_toasts.unwrap_or(0);
+        let prev = self.max_toasts_by_window.get(&window).copied().unwrap_or(0);
+        if prev == max_toasts {
+            return false;
+        }
+        if max_toasts == 0 {
+            self.max_toasts_by_window.remove(&window);
+        } else {
+            self.max_toasts_by_window.insert(window, max_toasts);
+        }
+        true
+    }
+
     pub(super) fn toasts_for_window(&self, window: AppWindowId) -> &[ToastEntry] {
         self.by_window
             .get(&window)
@@ -105,53 +178,446 @@ impl ToastStore {
             .unwrap_or(&[])
     }
 
+    fn max_toasts_for_window(&self, window: AppWindowId) -> Option<usize> {
+        self.max_toasts_by_window.get(&window).copied()
+    }
+
     fn add_toast(
         &mut self,
         window: AppWindowId,
         request: ToastRequest,
-        token: Option<TimerToken>,
+        auto_close_token: Option<TimerToken>,
     ) -> ToastId {
+        let wants_timer = request.duration.filter(|d| d.as_secs_f32() > 0.0);
         if self.next_id == 0 {
             self.next_id = 1;
         }
         let id = ToastId(self.next_id);
         self.next_id = self.next_id.saturating_add(1);
 
-        if let Some(token) = token {
-            self.by_token.insert(token, (window, id));
+        if let Some(token) = auto_close_token {
+            self.by_token.insert(
+                token,
+                ToastTimerRef {
+                    window,
+                    toast: id,
+                    kind: ToastTimerKind::AutoClose,
+                },
+            );
         }
 
         self.by_window.entry(window).or_default().push(ToastEntry {
             id,
             title: request.title,
             description: request.description,
+            duration: request.duration,
+            auto_close_remaining: wants_timer,
             variant: request.variant,
             action: request.action,
+            cancel: request.cancel,
             dismissible: request.dismissible,
-            token,
+            open: true,
+            auto_close_token,
+            remove_token: None,
+            drag_start: None,
+            drag_x: Px(0.0),
+            dragging: false,
         });
 
         id
+    }
+
+    pub(super) fn upsert_toast(
+        &mut self,
+        window: AppWindowId,
+        request: ToastRequest,
+        auto_close_token: Option<TimerToken>,
+    ) -> ToastUpsertOutcome {
+        let wants_timer = request.duration.filter(|d| d.as_secs_f32() > 0.0);
+
+        if let Some(id) = request.id {
+            if let Some(toasts) = self.by_window.get_mut(&window) {
+                if let Some(toast) = toasts
+                    .iter_mut()
+                    .find(|t| t.id == id && t.open && t.remove_token.is_none())
+                {
+                    let cancel_auto = toast.auto_close_token.take();
+                    if let Some(token) = cancel_auto {
+                        self.by_token.remove(&token);
+                    }
+
+                    toast.title = request.title;
+                    toast.description = request.description;
+                    toast.duration = request.duration;
+                    toast.auto_close_remaining = wants_timer;
+                    toast.variant = request.variant;
+                    toast.action = request.action;
+                    toast.cancel = request.cancel;
+                    toast.dismissible = request.dismissible;
+                    toast.drag_start = None;
+                    toast.drag_x = Px(0.0);
+                    toast.dragging = false;
+
+                    let schedule_auto = match (wants_timer, auto_close_token) {
+                        (Some(after), Some(token)) => {
+                            toast.auto_close_token = Some(token);
+                            self.by_token.insert(
+                                token,
+                                ToastTimerRef {
+                                    window,
+                                    toast: id,
+                                    kind: ToastTimerKind::AutoClose,
+                                },
+                            );
+                            Some((token, auto_close_next_after(after)))
+                        }
+                        _ => None,
+                    };
+
+                    return ToastUpsertOutcome {
+                        id,
+                        cancel_auto,
+                        schedule_auto,
+                        evicted: Vec::new(),
+                    };
+                }
+            }
+        }
+
+        let id = self.add_toast(window, request, auto_close_token);
+        let schedule_auto = match (wants_timer, auto_close_token) {
+            (Some(after), Some(token)) => Some((token, auto_close_next_after(after))),
+            _ => None,
+        };
+        let evicted = self.evict_excess_toasts(window, id);
+
+        ToastUpsertOutcome {
+            id,
+            cancel_auto: None,
+            schedule_auto,
+            evicted,
+        }
+    }
+
+    fn evict_excess_toasts(&self, window: AppWindowId, keep: ToastId) -> Vec<ToastId> {
+        let Some(max) = self.max_toasts_for_window(window) else {
+            return Vec::new();
+        };
+        if max == 0 {
+            return Vec::new();
+        }
+
+        let Some(toasts) = self.by_window.get(&window) else {
+            return Vec::new();
+        };
+
+        let active: Vec<&ToastEntry> = toasts
+            .iter()
+            .filter(|t| t.open && t.remove_token.is_none())
+            .collect();
+
+        let mut need = active.len().saturating_sub(max);
+        if need == 0 {
+            return Vec::new();
+        }
+
+        let mut evicted = Vec::new();
+
+        // Prefer evicting auto-closing toasts first; keep pinned toasts around when possible.
+        for toast in &active {
+            if need == 0 {
+                break;
+            }
+            if toast.id == keep || toast.auto_close_remaining.is_none() {
+                continue;
+            }
+            evicted.push(toast.id);
+            need = need.saturating_sub(1);
+        }
+
+        for toast in &active {
+            if need == 0 {
+                break;
+            }
+            if toast.id == keep || toast.auto_close_remaining.is_some() {
+                continue;
+            }
+            evicted.push(toast.id);
+            need = need.saturating_sub(1);
+        }
+        evicted
     }
 
     fn remove_toast(&mut self, window: AppWindowId, id: ToastId) -> Option<ToastEntry> {
         let toasts = self.by_window.get_mut(&window)?;
         let idx = toasts.iter().position(|t| t.id == id)?;
         let entry = toasts.remove(idx);
-        if let Some(token) = entry.token {
+        if let Some(token) = entry.auto_close_token {
+            self.by_token.remove(&token);
+        }
+        if let Some(token) = entry.remove_token {
             self.by_token.remove(&token);
         }
         Some(entry)
     }
 
-    pub(super) fn remove_toast_by_token(
+    pub(super) fn begin_close(
+        &mut self,
+        window: AppWindowId,
+        id: ToastId,
+        remove_token: TimerToken,
+    ) -> Option<ToastClosePlan> {
+        let toasts = self.by_window.get_mut(&window)?;
+        let toast = toasts.iter_mut().find(|t| t.id == id)?;
+        if toast.remove_token.is_some() {
+            return Some(ToastClosePlan {
+                cancel_auto: None,
+                schedule_remove: None,
+            });
+        }
+
+        toast.open = false;
+        toast.auto_close_remaining = None;
+        toast.drag_start = None;
+        toast.drag_x = Px(0.0);
+        toast.dragging = false;
+        let cancel_auto = toast.auto_close_token.take();
+        if let Some(token) = cancel_auto {
+            self.by_token.remove(&token);
+        }
+
+        toast.remove_token = Some(remove_token);
+        self.by_token.insert(
+            remove_token,
+            ToastTimerRef {
+                window,
+                toast: id,
+                kind: ToastTimerKind::RemoveAfterClose,
+            },
+        );
+
+        Some(ToastClosePlan {
+            cancel_auto,
+            schedule_remove: Some(remove_token),
+        })
+    }
+
+    pub(super) fn pause_auto_close(
+        &mut self,
+        window: AppWindowId,
+        id: ToastId,
+    ) -> Option<TimerToken> {
+        let toasts = self.by_window.get_mut(&window)?;
+        let toast = toasts.iter_mut().find(|t| t.id == id)?;
+        let token = toast.auto_close_token.take()?;
+        self.by_token.remove(&token);
+        Some(token)
+    }
+
+    pub(super) fn resume_auto_close(
+        &mut self,
+        window: AppWindowId,
+        id: ToastId,
+        token: TimerToken,
+    ) -> Option<Duration> {
+        let toasts = self.by_window.get_mut(&window)?;
+        let toast = toasts.iter_mut().find(|t| t.id == id)?;
+        if !toast.open || toast.auto_close_token.is_some() || toast.remove_token.is_some() {
+            return None;
+        }
+        let remaining = toast
+            .auto_close_remaining
+            .filter(|d| d.as_secs_f32() > 0.0)?;
+        toast.auto_close_token = Some(token);
+        self.by_token.insert(
+            token,
+            ToastTimerRef {
+                window,
+                toast: id,
+                kind: ToastTimerKind::AutoClose,
+            },
+        );
+        Some(auto_close_next_after(remaining))
+    }
+
+    pub(super) fn begin_drag(&mut self, window: AppWindowId, id: ToastId, start: Point) -> bool {
+        let Some(toasts) = self.by_window.get_mut(&window) else {
+            return false;
+        };
+        let Some(toast) = toasts.iter_mut().find(|t| t.id == id) else {
+            return false;
+        };
+        if !toast.open || toast.remove_token.is_some() || !toast.dismissible {
+            return false;
+        }
+        toast.drag_start = Some(start);
+        toast.drag_x = Px(0.0);
+        toast.dragging = false;
+        true
+    }
+
+    pub(super) fn drag_move(
+        &mut self,
+        window: AppWindowId,
+        id: ToastId,
+        position: Point,
+    ) -> Option<ToastDragMove> {
+        let toasts = self.by_window.get_mut(&window)?;
+        let toast = toasts.iter_mut().find(|t| t.id == id)?;
+        let start = toast.drag_start?;
+        if !toast.open || toast.remove_token.is_some() {
+            return None;
+        }
+
+        let dx = Px(position.x.0 - start.x.0);
+        let dx = Px(dx.0.clamp(-240.0, 240.0));
+        let was_dragging = toast.dragging;
+        if !toast.dragging && dx.0.abs() >= 4.0 {
+            toast.dragging = true;
+        }
+        toast.drag_x = dx;
+
+        Some(ToastDragMove {
+            dragging: toast.dragging,
+            capture_pointer: toast.dragging && !was_dragging,
+        })
+    }
+
+    pub(super) fn end_drag(&mut self, window: AppWindowId, id: ToastId) -> Option<ToastDragEnd> {
+        let toasts = self.by_window.get_mut(&window)?;
+        let toast = toasts.iter_mut().find(|t| t.id == id)?;
+        if toast.drag_start.is_none() {
+            return None;
+        }
+
+        let result = ToastDragEnd {
+            dx: toast.drag_x,
+            dragging: toast.dragging,
+        };
+        toast.drag_start = None;
+        toast.drag_x = Px(0.0);
+        toast.dragging = false;
+        Some(result)
+    }
+
+    pub(super) fn on_timer(
         &mut self,
         token: TimerToken,
-    ) -> Option<(AppWindowId, ToastEntry)> {
-        let (window, id) = self.by_token.remove(&token)?;
-        let entry = self.remove_toast(window, id)?;
-        Some((window, entry))
+        remove_token: TimerToken,
+    ) -> ToastTimerOutcome {
+        let Some(timer) = self.by_token.get(&token).copied() else {
+            return ToastTimerOutcome::Noop;
+        };
+
+        match timer.kind {
+            ToastTimerKind::AutoClose => {
+                self.on_auto_close_tick(token, timer.window, timer.toast, remove_token)
+            }
+            ToastTimerKind::RemoveAfterClose => {
+                self.by_token.remove(&token);
+                let removed = self.remove_toast(timer.window, timer.toast).is_some();
+                if removed {
+                    ToastTimerOutcome::Removed {
+                        window: timer.window,
+                    }
+                } else {
+                    ToastTimerOutcome::Noop
+                }
+            }
+        }
     }
+
+    fn on_auto_close_tick(
+        &mut self,
+        token: TimerToken,
+        window: AppWindowId,
+        toast_id: ToastId,
+        remove_token: TimerToken,
+    ) -> ToastTimerOutcome {
+        let Some(toasts) = self.by_window.get_mut(&window) else {
+            self.by_token.remove(&token);
+            return ToastTimerOutcome::Noop;
+        };
+        let Some(toast) = toasts.iter_mut().find(|t| t.id == toast_id) else {
+            self.by_token.remove(&token);
+            return ToastTimerOutcome::Noop;
+        };
+
+        if !toast.open || toast.remove_token.is_some() || toast.auto_close_token != Some(token) {
+            self.by_token.remove(&token);
+            return ToastTimerOutcome::Noop;
+        }
+
+        let Some(mut remaining) = toast.auto_close_remaining else {
+            toast.auto_close_token = None;
+            self.by_token.remove(&token);
+            return ToastTimerOutcome::Noop;
+        };
+
+        let step = remaining.min(TOAST_AUTO_CLOSE_TICK);
+        remaining = remaining.saturating_sub(step);
+        toast.auto_close_remaining = (!remaining.is_zero()).then_some(remaining);
+
+        if !remaining.is_zero() {
+            ToastTimerOutcome::RescheduleAuto {
+                window,
+                token,
+                after: auto_close_next_after(remaining),
+            }
+        } else {
+            let plan = self.begin_close(window, toast_id, remove_token);
+            let Some(plan) = plan else {
+                return ToastTimerOutcome::Noop;
+            };
+            if plan.schedule_remove.is_some() {
+                ToastTimerOutcome::BeganClose {
+                    window,
+                    remove_token,
+                }
+            } else {
+                ToastTimerOutcome::Noop
+            }
+        }
+    }
+}
+
+fn auto_close_next_after(remaining: Duration) -> Duration {
+    remaining.min(TOAST_AUTO_CLOSE_TICK)
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ToastClosePlan {
+    pub(super) cancel_auto: Option<TimerToken>,
+    pub(super) schedule_remove: Option<TimerToken>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ToastDragMove {
+    pub(super) dragging: bool,
+    pub(super) capture_pointer: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ToastDragEnd {
+    pub(super) dx: Px,
+    pub(super) dragging: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) enum ToastTimerOutcome {
+    Noop,
+    RescheduleAuto {
+        window: AppWindowId,
+        token: TimerToken,
+        after: Duration,
+    },
+    BeganClose {
+        window: AppWindowId,
+        remove_token: TimerToken,
+    },
+    Removed {
+        window: AppWindowId,
+    },
 }
 
 #[derive(Default)]
@@ -173,33 +639,59 @@ pub fn toast_action(
     window: AppWindowId,
     request: ToastRequest,
 ) -> ToastId {
-    let token = request
-        .duration
-        .filter(|d| d.as_secs_f32() > 0.0)
-        .map(|after| {
-            let token = host.next_timer_token();
-            host.push_effect(Effect::SetTimer {
-                window: Some(window),
-                token,
-                after,
-                repeat: None,
-            });
-            token
-        });
+    let wants_timer = request.duration.filter(|d| d.as_secs_f32() > 0.0);
+    let token = wants_timer.map(|_| host.next_timer_token());
 
-    let result = host
+    let outcome = host
         .models_mut()
-        .update(&store, |st| st.add_toast(window, request, token));
+        .update(&store, |st| st.upsert_toast(window, request, token))
+        .ok();
 
-    let Ok(id) = result else {
-        if let Some(token) = token {
-            host.push_effect(Effect::CancelTimer { token });
-        }
+    let Some(outcome) = outcome else {
         return ToastId(0);
     };
 
+    if let Some(token) = outcome.cancel_auto {
+        host.push_effect(Effect::CancelTimer { token });
+    }
+
+    if let Some((token, after)) = outcome.schedule_auto {
+        host.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token,
+            after,
+            repeat: None,
+        });
+    }
+
+    for id in outcome.evicted {
+        let remove_token = host.next_timer_token();
+        let plan = host
+            .models_mut()
+            .update(&store, |st| st.begin_close(window, id, remove_token))
+            .ok()
+            .flatten();
+
+        let Some(plan) = plan else {
+            continue;
+        };
+
+        if let Some(token) = plan.cancel_auto {
+            host.push_effect(Effect::CancelTimer { token });
+        }
+
+        if plan.schedule_remove.is_some() {
+            host.push_effect(Effect::SetTimer {
+                window: Some(window),
+                token: remove_token,
+                after: TOAST_CLOSE_DURATION,
+                repeat: None,
+            });
+        }
+    }
+
     host.request_redraw(window);
-    id
+    outcome.id
 }
 
 pub fn dismiss_toast_action(
@@ -208,16 +700,229 @@ pub fn dismiss_toast_action(
     window: AppWindowId,
     id: ToastId,
 ) -> bool {
-    let removed = host
+    let remove_token = host.next_timer_token();
+    let plan = host
         .models_mut()
-        .update(&store, |st| st.remove_toast(window, id))
+        .update(&store, |st| st.begin_close(window, id, remove_token))
         .ok();
-    let Some(entry) = removed.flatten() else {
+    let Some(plan) = plan.flatten() else {
         return false;
     };
 
-    if let Some(token) = entry.token {
+    if let Some(token) = plan.cancel_auto {
         host.push_effect(Effect::CancelTimer { token });
     }
+
+    if plan.schedule_remove.is_some() {
+        host.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token: remove_token,
+            after: TOAST_CLOSE_DURATION,
+            repeat: None,
+        });
+    }
+
+    host.request_redraw(window);
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn toast_pause_resume_and_removal_flow() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let request = ToastRequest::new("Hello").duration(Some(Duration::from_millis(250)));
+        let id = store.add_toast(window, request, Some(TimerToken(1)));
+
+        let paused = store.pause_auto_close(window, id);
+        assert_eq!(paused, Some(TimerToken(1)));
+
+        let resumed = store.resume_auto_close(window, id, TimerToken(2));
+        assert_eq!(resumed, Some(Duration::from_millis(100)));
+
+        let outcome = store.on_timer(TimerToken(2), TimerToken(3));
+        match outcome {
+            ToastTimerOutcome::RescheduleAuto {
+                window: w, after, ..
+            } => {
+                assert_eq!(w, window);
+                assert_eq!(after, Duration::from_millis(100));
+            }
+            _ => panic!("expected RescheduleAuto"),
+        }
+
+        let paused = store.pause_auto_close(window, id);
+        assert_eq!(paused, Some(TimerToken(2)));
+
+        let resumed = store.resume_auto_close(window, id, TimerToken(4));
+        assert_eq!(resumed, Some(Duration::from_millis(100)));
+
+        let outcome = store.on_timer(TimerToken(4), TimerToken(5));
+        match outcome {
+            ToastTimerOutcome::RescheduleAuto {
+                window: w, after, ..
+            } => {
+                assert_eq!(w, window);
+                assert_eq!(after, Duration::from_millis(50));
+            }
+            _ => panic!("expected RescheduleAuto"),
+        }
+
+        let outcome = store.on_timer(TimerToken(4), TimerToken(6));
+        match outcome {
+            ToastTimerOutcome::BeganClose { window: w, .. } => assert_eq!(w, window),
+            _ => panic!("expected BeganClose"),
+        }
+
+        let outcome = store.on_timer(TimerToken(6), TimerToken(7));
+        match outcome {
+            ToastTimerOutcome::Removed { window: w } => assert_eq!(w, window),
+            _ => panic!("expected Removed"),
+        }
+
+        assert!(store.toasts_for_window(window).is_empty());
+    }
+
+    #[test]
+    fn toast_drag_sets_and_resets_offset() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let request = ToastRequest::new("Drag").duration(None);
+        let id = store.add_toast(window, request, None);
+
+        assert!(store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+
+        let moved = store.drag_move(window, id, Point::new(Px(30.0), Px(10.0)));
+        assert!(moved.is_some());
+        assert!(store.toasts_for_window(window)[0].drag_x.0 > 0.0);
+
+        let end = store.end_drag(window, id);
+        assert!(end.is_some());
+        assert_eq!(store.toasts_for_window(window)[0].drag_x, Px(0.0));
+        assert_eq!(store.toasts_for_window(window)[0].drag_start, None);
+    }
+
+    #[test]
+    fn toast_upsert_updates_existing_entry_and_resets_timer() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let out0 = store.upsert_toast(
+            window,
+            ToastRequest::new("Loading")
+                .variant(ToastVariant::Loading)
+                .duration(None),
+            None,
+        );
+        let id = out0.id;
+
+        let out1 = store.upsert_toast(
+            window,
+            ToastRequest::new("Done")
+                .id(id)
+                .variant(ToastVariant::Success)
+                .duration(Some(Duration::from_secs(2)))
+                .action(ToastAction {
+                    label: Arc::from("Undo"),
+                    command: CommandId::from("toast.undo"),
+                })
+                .cancel(ToastAction {
+                    label: Arc::from("Cancel"),
+                    command: CommandId::from("toast.cancel"),
+                }),
+            Some(TimerToken(10)),
+        );
+        assert_eq!(out1.id, id);
+        assert_eq!(out1.cancel_auto, None);
+        assert_eq!(
+            out1.schedule_auto,
+            Some((TimerToken(10), TOAST_AUTO_CLOSE_TICK))
+        );
+
+        let toast = store.toasts_for_window(window)[0].clone();
+        assert_eq!(toast.id, id);
+        assert_eq!(toast.title.as_ref(), "Done");
+        assert_eq!(toast.variant, ToastVariant::Success);
+        assert_eq!(toast.auto_close_token, Some(TimerToken(10)));
+        assert_eq!(
+            toast.action.as_ref().map(|a| a.label.as_ref()),
+            Some("Undo")
+        );
+        assert_eq!(
+            toast.cancel.as_ref().map(|a| a.label.as_ref()),
+            Some("Cancel")
+        );
+    }
+
+    #[test]
+    fn toast_upsert_noops_swipe_for_non_dismissible_toasts() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+
+        let id = store.add_toast(
+            window,
+            ToastRequest::new("Pinned")
+                .duration(None)
+                .dismissible(false),
+            None,
+        );
+
+        assert!(!store.begin_drag(window, id, Point::new(Px(10.0), Px(10.0))));
+    }
+
+    #[test]
+    fn toast_max_toasts_evicts_oldest_open_toasts() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+        store.set_window_max_toasts(window, Some(2));
+
+        let out0 = store.upsert_toast(window, ToastRequest::new("A").duration(None), None);
+        let out1 = store.upsert_toast(window, ToastRequest::new("B").duration(None), None);
+        let out2 = store.upsert_toast(window, ToastRequest::new("C").duration(None), None);
+
+        assert_eq!(out0.evicted, Vec::new());
+        assert_eq!(out1.evicted, Vec::new());
+        assert_eq!(out2.evicted, vec![out0.id]);
+    }
+
+    #[test]
+    fn toast_max_toasts_prefers_evicting_auto_closing_toasts_over_pinned() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+        store.set_window_max_toasts(window, Some(2));
+
+        let pinned = store.upsert_toast(window, ToastRequest::new("Pinned").duration(None), None);
+        let auto0 = store.upsert_toast(
+            window,
+            ToastRequest::new("Auto0").duration(Some(Duration::from_secs(3))),
+            None,
+        );
+        let auto1 = store.upsert_toast(
+            window,
+            ToastRequest::new("Auto1").duration(Some(Duration::from_secs(3))),
+            None,
+        );
+
+        assert_eq!(pinned.evicted, Vec::new());
+        assert_eq!(auto0.evicted, Vec::new());
+        assert_eq!(auto1.evicted, vec![auto0.id]);
+    }
+
+    #[test]
+    fn toast_max_toasts_evicts_pinned_when_all_are_pinned() {
+        let window = AppWindowId::default();
+        let mut store = ToastStore::default();
+        store.set_window_max_toasts(window, Some(1));
+
+        let a = store.upsert_toast(window, ToastRequest::new("A").duration(None), None);
+        let b = store.upsert_toast(window, ToastRequest::new("B").duration(None), None);
+
+        assert_eq!(a.evicted, Vec::new());
+        assert_eq!(b.evicted, vec![a.id]);
+    }
 }

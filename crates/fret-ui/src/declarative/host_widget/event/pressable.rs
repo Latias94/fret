@@ -20,7 +20,9 @@ pub(super) fn handle_pressable<H: UiHost>(
                 if *button != MouseButton::Left {
                     return;
                 }
-                cx.request_focus(cx.node);
+                if props.focusable {
+                    cx.request_focus(cx.node);
+                }
                 cx.capture_pointer(cx.node);
                 crate::elements::set_pressed_pressable(&mut *cx.app, window, Some(this.element));
                 cx.invalidate_self(Invalidation::Paint);
@@ -33,6 +35,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                 if *button != MouseButton::Left {
                     return;
                 }
+                let pressed =
+                    crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);
                 cx.release_pointer_capture();
                 crate::elements::set_pressed_pressable(&mut *cx.app, window, None);
 
@@ -41,7 +45,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                 // when overlay policies update hover state in an observer pass.
                 let hovered = cx.bounds.contains(*position);
 
-                if hovered {
+                if pressed && hovered {
                     let hook = crate::elements::with_element_state(
                         &mut *cx.app,
                         window,

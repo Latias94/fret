@@ -5,6 +5,7 @@ use fret_core::{
 };
 use fret_runtime::{CommandId, Effect, InputContext, Model, ModelId};
 use std::any::{Any, TypeId};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Invalidation {
@@ -214,6 +215,7 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub node: NodeId,
     pub window: Option<AppWindowId>,
+    pub element_id_map: Option<&'a HashMap<u64, NodeId>>,
     pub bounds: Rect,
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,
@@ -228,9 +230,16 @@ pub struct SemanticsCx<'a, H: UiHost> {
     pub(crate) active_descendant: &'a mut Option<NodeId>,
     pub(crate) pos_in_set: &'a mut Option<u32>,
     pub(crate) set_size: &'a mut Option<u32>,
+    pub(crate) labelled_by: &'a mut Vec<NodeId>,
+    pub(crate) described_by: &'a mut Vec<NodeId>,
+    pub(crate) controls: &'a mut Vec<NodeId>,
 }
 
 impl<'a, H: UiHost> SemanticsCx<'a, H> {
+    pub fn resolve_declarative_element(&self, element: u64) -> Option<NodeId> {
+        self.element_id_map.and_then(|m| m.get(&element).copied())
+    }
+
     pub fn set_role(&mut self, role: SemanticsRole) {
         *self.role = role;
     }
@@ -307,6 +316,39 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         *self.pos_in_set = pos_in_set;
         *self.set_size = set_size;
     }
+
+    pub fn push_labelled_by(&mut self, node: NodeId) {
+        if self.labelled_by.iter().any(|id| *id == node) {
+            return;
+        }
+        self.labelled_by.push(node);
+    }
+
+    pub fn clear_labelled_by(&mut self) {
+        self.labelled_by.clear();
+    }
+
+    pub fn push_described_by(&mut self, node: NodeId) {
+        if self.described_by.iter().any(|id| *id == node) {
+            return;
+        }
+        self.described_by.push(node);
+    }
+
+    pub fn clear_described_by(&mut self) {
+        self.described_by.clear();
+    }
+
+    pub fn push_controlled(&mut self, node: NodeId) {
+        if self.controls.iter().any(|id| *id == node) {
+            return;
+        }
+        self.controls.push(node);
+    }
+
+    pub fn clear_controls(&mut self) {
+        self.controls.clear();
+    }
 }
 
 pub trait Widget<H: UiHost> {
@@ -365,6 +407,32 @@ pub trait Widget<H: UiHost> {
     ///
     /// Default: `true`.
     fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {
+        true
+    }
+    /// Whether this node should be included in the semantics snapshot.
+    ///
+    /// This is a mechanism-only gate used to model `present=false` (display-none) subtrees that
+    /// should not be exposed to assistive tech, while still keeping element state alive (e.g.
+    /// Radix-style `forceMount`).
+    ///
+    /// Default: `true`.
+    fn semantics_present(&self) -> bool {
+        true
+    }
+    /// Whether semantics snapshot traversal should recurse into this node's children.
+    ///
+    /// Default: `true`.
+    fn semantics_children(&self) -> bool {
+        true
+    }
+    /// Whether focus traversal should recurse into this node's children.
+    ///
+    /// This is a mechanism-only gate used by `UiTree` to model "inert" subtrees during
+    /// transitions (e.g. `present=true` but `interactive=false`), without requiring every focusable
+    /// widget to thread an "interactive" flag into its own `is_focusable()` logic.
+    ///
+    /// Default: `true`.
+    fn focus_traversal_children(&self) -> bool {
         true
     }
     fn is_focusable(&self) -> bool {

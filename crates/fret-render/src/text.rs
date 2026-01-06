@@ -825,10 +825,11 @@ impl TextSystem {
         for (i, l) in layout.lines.iter().enumerate() {
             let base_offset = line_starts[i];
 
+            let min_height_px = (l.max_ascent + l.max_descent).max(font_size_px).max(0.0);
             let line_height_px = l
                 .line_height_opt
-                .unwrap_or_else(|| (l.max_ascent + l.max_descent).max(0.0))
-                .max((l.max_ascent + l.max_descent).max(0.0))
+                .unwrap_or(min_height_px)
+                .max(min_height_px)
                 .max(0.0);
 
             let y_top_px = layout.line_tops_px[i];
@@ -932,7 +933,10 @@ impl TextSystem {
                     }
                 };
 
-                let line_baseline_px = y_top_px + l.max_ascent.max(0.0);
+                let ascent_px = l.max_ascent.max(0.0);
+                let descent_px = l.max_descent.max(0.0);
+                let padding_top_px = ((line_height_px - ascent_px - descent_px) * 0.5).max(0.0);
+                let line_baseline_px = y_top_px + padding_top_px + ascent_px;
                 let line_offset_px = line_baseline_px - first_ascent_px;
                 let x0_px = g.x + image.placement.left as f32;
                 let y0_px = (line_offset_px + g.y) - image.placement.top as f32;
@@ -1275,14 +1279,24 @@ fn layout_text(
 
             let ascent_px = ll.max_ascent.max(0.0);
             let descent_px = ll.max_descent.max(0.0);
-            let min_height_px = (ascent_px + descent_px).max(0.0);
+            // `cosmic_text` should usually report ascent/descent, but on some platforms/font stacks
+            // we can end up with zero metrics while still producing glyphs (single-line looks fine,
+            // multi-line collapses/overlaps). Use the configured font size as a conservative floor
+            // so wrapped text always advances vertically.
+            let min_height_px = (ascent_px + descent_px).max(font_size_px).max(0.0);
             let height_px = ll
                 .line_height_opt
                 .unwrap_or(min_height_px)
                 .max(min_height_px)
                 .max(0.0);
 
-            first_ascent_px.get_or_insert(ascent_px);
+            // Center the baseline within the line box when line-height exceeds the font's
+            // ascent+descent. This avoids visible "text floats up" artifacts when swapping fonts
+            // (e.g. Nerd Fonts with unusual metrics) while keeping behavior unchanged when the
+            // line box is tight.
+            let padding_top_px = ((height_px - ascent_px - descent_px) * 0.5).max(0.0);
+            let baseline_offset_px = padding_top_px + ascent_px;
+            first_ascent_px.get_or_insert(baseline_offset_px);
             max_w_px = max_w_px.max(ll.w);
 
             line_tops_px.push(total_h_px);

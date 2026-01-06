@@ -7,6 +7,7 @@
 //! Note: This crate is now declarative-only. Retained-widget authoring is intentionally not part of
 //! the public component surface (see ADR 0066 / declarative-only migration).
 
+mod a11y_modal;
 pub mod accordion;
 pub mod alert;
 pub mod alert_dialog;
@@ -23,6 +24,8 @@ pub mod combobox;
 pub mod command;
 pub mod context_menu;
 #[cfg(feature = "datagrid")]
+pub mod data_grid;
+#[cfg(feature = "datagrid")]
 pub mod data_table;
 pub mod dialog;
 pub mod drawer;
@@ -37,7 +40,9 @@ pub mod input_otp;
 pub mod item;
 pub mod kbd;
 pub mod label;
+mod layout;
 pub mod menubar;
+mod overlay_motion;
 pub mod pagination;
 pub mod popover;
 mod popper_arrow;
@@ -47,6 +52,7 @@ pub mod resizable;
 pub mod scroll_area;
 pub mod select;
 pub mod separator;
+pub mod shadcn_themes;
 pub mod sheet;
 pub mod sidebar;
 pub mod skeleton;
@@ -83,10 +89,16 @@ pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible};
 pub use combobox::{Combobox, ComboboxItem, combobox};
 pub use command::{
-    Command, CommandDialog, CommandInput, CommandItem, CommandList, CommandPalette,
-    CommandShortcut, command,
+    Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
+    CommandList, CommandPalette, CommandSeparator, CommandShortcut, command,
 };
-pub use context_menu::{ContextMenu, ContextMenuEntry, ContextMenuItem};
+pub use context_menu::{
+    ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuGroup, ContextMenuItem,
+    ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
+    ContextMenuShortcut,
+};
+#[cfg(feature = "datagrid")]
+pub use data_grid::{DataGrid, DataGridRowState};
 #[cfg(feature = "datagrid")]
 pub use data_table::{DataTable, DataTableRowState};
 pub use dialog::{
@@ -97,7 +109,9 @@ pub use drawer::{
     drawer,
 };
 pub use dropdown_menu::{
-    DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide,
+    DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry,
+    DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
+    DropdownMenuRadioItem, DropdownMenuRadioItemSpec, DropdownMenuShortcut, DropdownMenuSide,
 };
 pub use empty::Empty;
 pub use field::{
@@ -117,7 +131,11 @@ pub use item::{
 };
 pub use kbd::Kbd;
 pub use label::Label;
-pub use menubar::{Menubar, MenubarEntry, MenubarItem, MenubarMenu, MenubarMenuEntries, menubar};
+pub use menubar::{
+    Menubar, MenubarCheckboxItem, MenubarEntry, MenubarGroup, MenubarItem, MenubarLabel,
+    MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem, MenubarRadioItemSpec,
+    MenubarShortcut, menubar,
+};
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
     PaginationLinkSize, PaginationNext, PaginationPrevious,
@@ -132,7 +150,10 @@ pub use resizable::{
     ResizableEntry, ResizableHandle, ResizablePanel, ResizablePanelGroup, resizable_panel_group,
 };
 pub use scroll_area::{ScrollArea, scroll_area};
-pub use select::{Select, SelectItem, select};
+pub use select::{
+    Select, SelectAlign, SelectEntry, SelectGroup, SelectItem, SelectLabel, SelectSeparator,
+    SelectSide, select,
+};
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
     Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide, SheetTitle,
@@ -144,7 +165,8 @@ pub use sidebar::{
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};
 pub use sonner::{
-    Sonner, ToastAction, ToastId, ToastPosition, ToastRequest, ToastVariant, Toaster,
+    Sonner, ToastAction, ToastId, ToastMessageOptions, ToastPosition, ToastPromise, ToastRequest,
+    ToastVariant, Toaster,
 };
 pub use spinner::Spinner;
 pub use switch::{Switch, switch};

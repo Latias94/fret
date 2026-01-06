@@ -16,6 +16,7 @@ documentation and the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Depends on overlay policy/infra:
   - `ecosystem/fret-ui-kit/src/window_overlays/*` (dismissible overlays, focus rules)
   - `ecosystem/fret-ui-kit/src/overlay_controller.rs` (overlay requests + presence)
+  - `ecosystem/fret-ui-kit/src/primitives/popover.rs` (Radix-aligned a11y + request facade)
   - `crates/fret-ui/src/overlay_placement/solver.rs` (anchored placement + flip/clamp)
 
 ## What upstream exports (new-york)
@@ -39,6 +40,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   wiring via `Popover::anchor_element(...)`.
   (`Popover::into_element_with_anchor(...)` passes the resolved anchor rect to the content closure,
   which covers common sizing recipes like "content width follows trigger".)
+- Pass: Anchor overrides are treated as dismissable branches, so interacting with the anchor does
+  not trigger outside-press dismissal.
 
 ### Placement & collision
 
@@ -62,10 +65,13 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 ### Visual parity (new-york)
 
 - Pass: Default `PopoverContent` sizing matches `w-72` (`288px`) and padding matches `p-4`.
-- Pass: Default border/background uses theme keys (`popover`, `border`) and shadow matches the
-  design-system "md" shadow.
-- Partial: Upstream content has open/close + side-based slide/zoom animations; Fret currently uses a
-  simple fade presence.
+- Pass: Default border/background uses popover tokens (`popover` / `popover.background`, `border`)
+  and shadow matches the design-system "md" shadow.
+- Pass: Popover title text defaults to `popover.foreground` / `popover-foreground` (best-effort),
+  matching `text-popover-foreground` semantics.
+- Pass: Upstream content has open/close + side-based slide/zoom animations; Fret matches the same
+  motion taxonomy (fade + zoom + side-based slide) on both enter and exit, including a
+  geometry-driven transform origin aligned to the anchor/arrow.
 
 ## Validation
 
@@ -74,4 +80,4 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ## Follow-ups (recommended)
 
-- Add side-based slide/zoom transitions (optional) to better match upstream motion.
+- Fine-tune duration/easing values if strict motion parity is required for demos.

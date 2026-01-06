@@ -1,0 +1,49 @@
+# Radix Primitives Audit — Select
+
+This audit compares Fret's Radix-aligned select substrate against the upstream Radix
+`@radix-ui/react-select` primitive implementation pinned in `repo-ref/primitives`.
+
+## Upstream references (source of truth)
+
+- Implementation: `repo-ref/primitives/packages/react/select/src/select.tsx`
+- Public exports: `repo-ref/primitives/packages/react/select/src/index.ts`
+
+Key upstream concepts:
+
+- `Select` root owns shared state: `open`, `onOpenChange`, `value`, `onValueChange`, ids, and refs.
+- Trigger open keys (`OPEN_KEYS`): `Space`, `Enter`, `ArrowUp`, `ArrowDown`.
+- Trigger typeahead while closed updates selection without opening.
+- Content composes:
+  - `Popper.Content` for placement,
+  - `FocusScope` + `DismissableLayer` for focus + dismissal,
+  - outside interaction blocking + aria hiding while open (`disableOutsidePointerEvents`,
+    `hideOthers`, `RemoveScroll`).
+
+## Fret mapping
+
+Fret models Radix Select outcomes by composing:
+
+- Placement: `ecosystem/fret-ui-kit/src/primitives/popper.rs` (+ `popper_content.rs`).
+- Dismissal + focus restore/initial focus: modal overlays via `OverlayController`
+  (`ecosystem/fret-ui-kit/src/window_overlays/*`).
+- Trigger semantics: `SemanticsRole::ComboBox` and `expanded/controls` relationships.
+- Radix-named facade: `ecosystem/fret-ui-kit/src/primitives/select.rs`.
+
+## Current parity notes
+
+- Pass: Select can be rendered in a modal overlay layer to block underlay interaction, matching the
+  Radix "disable outside pointer events" outcome.
+- Pass: Trigger can stamp Radix-like `expanded` + `controls` relationships via
+  `apply_select_trigger_a11y(...)`.
+- Pass: Trigger open keys + closed-state typeahead policy is exposed via the Radix-named facade.
+- Pass: Content open-state key policy (Escape/Home/End/Arrow keys/Enter/Space + typeahead) is
+  implemented in `ecosystem/fret-ui-kit/src/primitives/select.rs` and consumed by the shadcn select.
+- Partial: Pointer modality details (mouse `pointerdown` vs touch/pen click open) are not yet mapped
+  1:1 to the upstream trigger behavior.
+- Partial: Item-aligned positioning (Radix `SelectItemAlignedPosition`) is not yet implemented.
+
+## Follow-ups (recommended)
+
+- Consider modeling `pointerType` + `triggerPointerDownPosRef` heuristics if we want fully matching
+  open-on-mouse-down vs open-on-touch-click behavior.
+- Consider mirroring Radix close-on-window-blur/resize behavior in the overlay controller layer.

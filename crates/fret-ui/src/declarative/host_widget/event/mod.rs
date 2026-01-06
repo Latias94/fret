@@ -10,6 +10,38 @@ mod roving_flex;
 mod scroll;
 mod scrollbar;
 mod text;
+mod wheel_region;
+
+pub(super) fn invalidate_scroll_handle_bindings<H: UiHost>(
+    cx: &mut EventCx<'_, H>,
+    window: AppWindowId,
+    handle_key: usize,
+) {
+    let bound = crate::declarative::frame::bound_elements_for_scroll_handle(
+        &mut *cx.app,
+        window,
+        handle_key,
+    );
+    if bound.is_empty() {
+        return;
+    }
+
+    let mut unique = std::collections::HashSet::with_capacity(bound.len());
+    for element in bound {
+        if !unique.insert(element) {
+            continue;
+        }
+        let Some(node) = crate::declarative::mount::node_for_element_in_window_frame(
+            &mut *cx.app,
+            window,
+            element,
+        ) else {
+            continue;
+        };
+        cx.invalidate(node, Invalidation::Layout);
+        cx.invalidate(node, Invalidation::Paint);
+    }
+}
 
 impl ElementHostWidget {
     pub(super) fn event_impl<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
@@ -63,6 +95,11 @@ impl ElementHostWidget {
             }
             ElementInstance::Scrollbar(props) => {
                 if scrollbar::handle_scrollbar(self, cx, window, props, event) {
+                    return;
+                }
+            }
+            ElementInstance::WheelRegion(props) => {
+                if wheel_region::handle_wheel_region(self, cx, window, props, event) {
                     return;
                 }
             }

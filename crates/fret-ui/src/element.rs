@@ -30,6 +30,13 @@ pub enum ElementKind {
     Container(ContainerProps),
     Semantics(SemanticsProps),
     FocusScope(FocusScopeProps),
+    /// A transparent wrapper that gates subtree presence and interactivity.
+    ///
+    /// This is a mechanism-oriented primitive intended to support Radix-style authoring outcomes
+    /// like `forceMount` while still being able to make a subtree non-interactive (click/keyboard)
+    /// or fully absent from layout/paint, without deleting the subtree (so per-element state can be
+    /// preserved).
+    InteractivityGate(InteractivityGateProps),
     Opacity(OpacityProps),
     VisualTransform(VisualTransformProps),
     Pressable(PressableProps),
@@ -50,6 +57,11 @@ pub enum ElementKind {
     SvgIcon(SvgIconProps),
     Spinner(SpinnerProps),
     HoverRegion(HoverRegionProps),
+    /// An event-only wheel listener that updates an imperative scroll handle.
+    ///
+    /// Unlike `Scroll`, this element does not translate its children; it only mutates the provided
+    /// `ScrollHandle` and invalidates an optional target.
+    WheelRegion(WheelRegionProps),
     Scroll(ScrollProps),
     Scrollbar(ScrollbarProps),
 }
@@ -256,6 +268,24 @@ pub struct SemanticsProps {
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
     pub active_descendant: Option<NodeId>,
+    /// Declarative-only: element ID of a node which labels this node.
+    ///
+    /// This is an authoring convenience for relationships like `aria-labelledby` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub labelled_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which describes this node.
+    ///
+    /// This is an authoring convenience for relationships like `aria-describedby` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub described_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which this node controls.
+    ///
+    /// This is an authoring convenience for relationships like `aria-controls` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub controls_element: Option<u64>,
 }
 
 impl Default for SemanticsProps {
@@ -270,6 +300,9 @@ impl Default for SemanticsProps {
             expanded: None,
             checked: None,
             active_descendant: None,
+            labelled_by_element: None,
+            described_by_element: None,
+            controls_element: None,
         }
     }
 }
@@ -283,6 +316,30 @@ impl Default for SemanticsProps {
 pub struct FocusScopeProps {
     pub layout: LayoutStyle,
     pub trap_focus: bool,
+}
+
+/// Gate subtree presence (layout/paint) and interactivity (hit-testing + focus traversal).
+///
+/// When `present == false`, the subtree remains mounted but is treated like `display: none`:
+/// it does not participate in layout, paint, hit-testing, or focus traversal.
+///
+/// When `present == true` and `interactive == false`, the subtree is still laid out/painted but is
+/// inert for pointer and focus traversal (useful for close animations).
+#[derive(Debug, Clone, Copy)]
+pub struct InteractivityGateProps {
+    pub layout: LayoutStyle,
+    pub present: bool,
+    pub interactive: bool,
+}
+
+impl Default for InteractivityGateProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            present: true,
+            interactive: true,
+        }
+    }
 }
 
 /// A paint-only opacity group wrapper (ADR 0019).
@@ -416,6 +473,25 @@ pub struct PressableA11y {
     pub selected: bool,
     pub expanded: Option<bool>,
     pub checked: Option<bool>,
+    pub active_descendant: Option<NodeId>,
+    /// Declarative-only: element ID of a node which labels this node.
+    ///
+    /// This is an authoring convenience for relationships like `aria-labelledby` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub labelled_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which describes this node.
+    ///
+    /// This is an authoring convenience for relationships like `aria-describedby` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub described_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which this node controls.
+    ///
+    /// This is an authoring convenience for relationships like `aria-controls` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub controls_element: Option<u64>,
     pub pos_in_set: Option<u32>,
     pub set_size: Option<u32>,
 }
@@ -552,8 +628,10 @@ pub struct TextInputProps {
     pub layout: LayoutStyle,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
+    pub a11y_role: Option<SemanticsRole>,
     pub placeholder: Option<std::sync::Arc<str>>,
     pub active_descendant: Option<NodeId>,
+    pub expanded: Option<bool>,
     pub chrome: TextInputStyle,
     pub text_style: TextStyle,
     pub submit_command: Option<CommandId>,
@@ -566,8 +644,10 @@ impl TextInputProps {
             layout: LayoutStyle::default(),
             model,
             a11y_label: None,
+            a11y_role: None,
             placeholder: None,
             active_descendant: None,
+            expanded: None,
             chrome: TextInputStyle::default(),
             text_style: TextStyle::default(),
             submit_command: None,
@@ -582,10 +662,12 @@ impl std::fmt::Debug for TextInputProps {
             .field("layout", &self.layout)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
+            .field("a11y_role", &self.a11y_role)
             .field(
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)
             .field("text_style", &self.text_style)
             .field("submit_command", &self.submit_command)
@@ -748,6 +830,27 @@ pub struct HoverRegionProps {
     pub layout: LayoutStyle,
 }
 
+/// A wheel listener region that mutates a scroll handle without affecting layout.
+#[derive(Debug, Clone)]
+pub struct WheelRegionProps {
+    pub layout: LayoutStyle,
+    pub axis: ScrollAxis,
+    /// Declarative element id to invalidate when the scroll offset changes.
+    pub scroll_target: Option<GlobalElementId>,
+    pub scroll_handle: crate::scroll::ScrollHandle,
+}
+
+impl Default for WheelRegionProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            axis: ScrollAxis::Y,
+            scroll_target: None,
+            scroll_handle: crate::scroll::ScrollHandle::default(),
+        }
+    }
+}
+
 impl TextProps {
     pub fn new(text: impl Into<std::sync::Arc<str>>) -> Self {
         Self {
@@ -814,6 +917,7 @@ impl Default for GridProps {
 #[derive(Debug, Clone)]
 pub struct VirtualListProps {
     pub layout: LayoutStyle,
+    pub axis: fret_core::Axis,
     pub len: usize,
     pub items_revision: u64,
     pub estimate_row_height: Px,
@@ -826,6 +930,7 @@ pub struct VirtualListProps {
 
 #[derive(Debug, Clone, Copy)]
 pub struct VirtualListOptions {
+    pub axis: fret_core::Axis,
     pub items_revision: u64,
     pub estimate_row_height: Px,
     pub overscan: usize,
@@ -836,6 +941,7 @@ pub struct VirtualListOptions {
 impl VirtualListOptions {
     pub fn new(estimate_row_height: Px, overscan: usize) -> Self {
         Self {
+            axis: fret_core::Axis::Vertical,
             items_revision: 0,
             estimate_row_height,
             overscan,
@@ -848,7 +954,9 @@ impl VirtualListOptions {
 /// Cross-frame element-local state for a virtual list (stored in the element state store).
 #[derive(Debug, Default, Clone)]
 pub struct VirtualListState {
+    pub offset_x: Px,
     pub offset_y: Px,
+    pub viewport_w: Px,
     pub viewport_h: Px,
     pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
     pub(crate) items_revision: u64,
@@ -926,6 +1034,18 @@ impl Default for ScrollbarStyle {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollbarAxis {
+    Vertical,
+    Horizontal,
+}
+
+impl Default for ScrollbarAxis {
+    fn default() -> Self {
+        Self::Vertical
+    }
+}
+
 /// A mechanism-only scrollbar primitive.
 ///
 /// Component libraries decide when to show/hide scrollbars and resolve theme tokens into this
@@ -934,6 +1054,7 @@ impl Default for ScrollbarStyle {
 #[derive(Debug, Clone, Default)]
 pub struct ScrollbarProps {
     pub layout: LayoutStyle,
+    pub axis: ScrollbarAxis,
     /// Declarative element id for the associated scroll container, if any.
     ///
     /// When provided, the scrollbar will invalidate the target node's layout/paint when the
@@ -947,8 +1068,8 @@ pub struct ScrollbarProps {
 #[derive(Debug, Default, Clone)]
 pub struct ScrollbarState {
     pub dragging_thumb: bool,
-    pub drag_start_pointer_y: Px,
-    pub drag_start_offset_y: Px,
+    pub drag_start_pointer: Px,
+    pub drag_start_offset: Px,
     pub hovered: bool,
 }
 

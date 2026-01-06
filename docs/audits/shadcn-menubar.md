@@ -29,7 +29,9 @@ Key upstream behaviors/surfaces:
 
 - Pass: Click-to-open per menu trigger.
 - Pass: Hover switches the open menu when a menu is already active.
-- Pass: Outside press + Escape dismiss via popover policy.
+- Pass: Outside press + Escape dismiss via menu policy (non-click-through).
+- Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
+  on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
 ### Placement & sizing
 
@@ -43,13 +45,20 @@ Key upstream behaviors/surfaces:
 
 ### Visual parity
 
-- Partial: Token usage aligns with shadcn-ish defaults (border/background/radius), but many Radix
-  surfaces are not implemented yet.
+- Partial: Token usage aligns with shadcn-ish defaults (border/background/radius), but some
+  higher-fidelity slots are still text-based or consumer-provided (see missing surfaces).
+- Pass: `inset` is supported for items/labels (left padding parity with upstream `data-inset`).
+- Pass: Destructive item variants are supported via `MenubarItemVariant::Destructive`.
+- Pass: Submenu triggers render a right chevron (`ids::ui::CHEVRON_RIGHT`) to match upstream affordance.
+- Pass: Root and submenu panels animate with shadcn’s overlay motion taxonomy (fade + zoom, plus slide-in on enter).
+- Pass: Leading icons are aligned within a fixed 16×16 slot; when any row provides a leading icon,
+  the menu reserves the slot across the panel for consistent label alignment.
 
 ## Missing surfaces (significant)
 
-- Label/group/shortcut surfaces in menu content.
-- Checkbox/radio items and submenus.
+Still missing (relative to upstream shadcn/ui v4):
+
+_None tracked at this time._
 
 ## Validation
 

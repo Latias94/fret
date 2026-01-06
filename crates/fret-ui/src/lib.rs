@@ -29,6 +29,8 @@ mod text_edit;
 pub(crate) mod text_input;
 mod text_input_style;
 pub mod theme;
+pub mod theme_keys;
+pub(crate) mod theme_registry;
 pub mod tree;
 pub mod virtual_list;
 #[allow(dead_code)]
@@ -51,6 +53,7 @@ pub use svg_source::SvgSource;
 pub use text_area::TextAreaStyle;
 pub use text_input_style::TextInputStyle;
 pub use theme::{Theme, ThemeConfig, ThemeSnapshot};
+pub use theme_keys::{ThemeColorKey, ThemeMetricKey};
 pub use tree::{
     PaintCachePolicy, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiLayerId, UiTree,
 };

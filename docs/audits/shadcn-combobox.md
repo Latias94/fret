@@ -30,9 +30,9 @@ examples in `repo-ref/ui`.
 
 - Pass: Overlay placement and dismissal are delegated to `Popover` (portal-like per-window overlay
   roots + outside-press dismissal).
-- Partial: Content width tracks trigger width (via `Popover::into_element_with_anchor(...)`), which
-  is convenient but slightly different from the upstream demo where width is explicitly set on both
-  trigger and content (`w-[200px]`).
+- Pass: By default, content width tracks the trigger width (via `Popover::into_element_with_anchor(...)`);
+  recipes can opt into a fixed width via `Combobox::width(Px(...))` to match upstream demos
+  (`w-[200px]`).
 
 ### Keyboard & focus
 
@@ -40,23 +40,24 @@ examples in `repo-ref/ui`.
   navigation inside the command list.
 - Pass: `CommandPalette` now supports input placeholder (backed by the `TextInput` placeholder
   surface in `fret-ui`), so recipes can match `CommandInput placeholder="..."` ergonomics.
+- Pass: When used by `Combobox`, the command input is exposed as a `ComboBox` semantics role (so the
+  focused editable surface reports combobox semantics instead of only `TextField`).
 - Pass: `Combobox` exposes `search_placeholder(...)` and forwards it to
   `CommandPalette::placeholder(...)`.
 
 ### Visual parity (shadcn)
 
-- Partial: Popover content padding is aligned to the demo (`p-0`) by rendering the list inside
-  `PopoverContent` with `p-0`.
-- Partial: The trigger is styled via input chrome tokens; upstream uses `Button` `variant="outline"`
-  with `role="combobox"`.
+- Pass: Popover content padding matches the demo (`p-0`).
+- Pass: Trigger styling matches the upstream intent (`Button` `variant="outline"` + `role="combobox"`)
+  using outline-button-like tokens while preserving `SemanticsRole::ComboBox` + `expanded` semantics.
 
 ### Filtering semantics
 
 - Partial: Filtering/ranking is implemented in `CommandPalette` via the shared cmdk-style scoring
   helper (`fret-ui-kit::headless::cmdk_score`). `CommandItem.value` participates as an alias.
-- TODO: Keywords/extra aliases are not yet first-class on `CommandItem`, so parity with cmdk’s full
-  value/keywords taxonomy is not complete yet.
+- Pass: `CommandItem.keywords([...])` is supported, aligning with cmdk’s `keywords` taxonomy.
 - Pass: Highlight selection tracks `CommandItem.value` (stable across list reorder/filtering).
+- Pass: Default rows can render cmdk-style match highlighting via `cmdk_score::command_match_ranges`.
 
 ## Validation
 
@@ -64,7 +65,4 @@ examples in `repo-ref/ui`.
 
 ## Follow-ups (recommended)
 
-- Consider exposing a `CommandItem` “indicator/checked” surface (and `CommandShortcut`) to better
-  match upstream `cmdk` DOM patterns.
-- Add a `CommandItem` keywords/aliases surface so scoring can match cmdk’s full taxonomy without
-  recipes having to stuff extra strings into `label/value`.
+_None tracked at this time._

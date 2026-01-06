@@ -39,6 +39,21 @@ impl ElementHostWidget {
                 if props.active_descendant.is_some() {
                     cx.set_active_descendant(props.active_descendant);
                 }
+                if let Some(element) = props.labelled_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_labelled_by(node);
+                }
+                if let Some(element) = props.described_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_described_by(node);
+                }
+                if let Some(element) = props.controls_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_controlled(node);
+                }
             }
             ElementInstance::TextInput(props) => {
                 let model = props.model.clone();
@@ -50,6 +65,7 @@ impl ElementHostWidget {
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
+                input.set_a11y_role(props.a11y_role.unwrap_or(SemanticsRole::TextField));
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
@@ -57,6 +73,9 @@ impl ElementHostWidget {
                 input.set_cancel_command(props.cancel_command);
                 if let Some(label) = props.a11y_label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
+                }
+                if let Some(expanded) = props.expanded {
+                    cx.set_expanded(expanded);
                 }
                 cx.set_active_descendant(props.active_descendant);
                 input.semantics(cx);
@@ -107,6 +126,7 @@ impl ElementHostWidget {
                 if let Some(label) = props.a11y.label.as_ref() {
                     cx.set_label(label.as_ref().to_string());
                 }
+                cx.set_active_descendant(props.a11y.active_descendant);
                 if props.a11y.selected {
                     cx.set_selected(true);
                 }
@@ -115,6 +135,21 @@ impl ElementHostWidget {
                 }
                 if props.a11y.checked.is_some() {
                     cx.set_checked(props.a11y.checked);
+                }
+                if let Some(element) = props.a11y.labelled_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_labelled_by(node);
+                }
+                if let Some(element) = props.a11y.described_by_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_described_by(node);
+                }
+                if let Some(element) = props.a11y.controls_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_controlled(node);
                 }
                 cx.set_disabled(!props.enabled);
                 cx.set_focusable(props.enabled);
@@ -127,6 +162,7 @@ impl ElementHostWidget {
             ElementInstance::Flex(_)
             | ElementInstance::DismissibleLayer(_)
             | ElementInstance::FocusScope(_)
+            | ElementInstance::InteractivityGate(_)
             | ElementInstance::RovingFlex(_)
             | ElementInstance::Grid(_) => {
                 // Flex/Grid are layout containers; they do not imply semantics beyond their children.

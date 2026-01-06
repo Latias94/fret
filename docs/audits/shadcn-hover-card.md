@@ -11,6 +11,7 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/hover_card.rs`
+- Radix facade: `ecosystem/fret-ui-kit/src/primitives/hover_card.rs`
 - Hover intent state machine: `ecosystem/fret-ui-kit/src/headless/hover_intent.rs`
 - Placement helpers: `ecosystem/fret-ui-kit/src/overlay.rs`
 - Per-window hover overlay policy: `ecosystem/fret-ui-kit/src/window_overlays/mod.rs`
@@ -35,6 +36,14 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Pass: Anchored placement uses deterministic flip/clamp behavior via
   `overlay_placement::anchored_panel_bounds_sized(...)`.
 - Pass: Optional arrow is supported via `HoverCard::arrow(true)` (default is `false`).
+
+### Visual parity (new-york)
+
+- Pass: Default content sizing matches `w-64` (`256px`) and padding matches `p-4`.
+- Pass: Default background/border follow popover tokens (`popover` / `popover.background`, `border`).
+- Pass: Upstream includes open/close animations (fade + zoom + side-based slide) keyed off
+  `data-state` and `data-side`. Fret matches the same motion taxonomy on both enter and exit, using a
+  geometry-driven transform origin aligned to the anchor/arrow.
 
 ## Validation
 

@@ -6,8 +6,9 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, PressableProps, SemanticsProps, SizeStyle, TextProps,
+    PositionStyle, PressableProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
+use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -16,6 +17,9 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence,
     OverlayRequest, Space,
 };
+
+use crate::layout as shadcn_layout;
+use crate::overlay_motion;
 
 fn default_overlay_color() -> Color {
     Color {
@@ -108,13 +112,22 @@ impl Sheet {
             let id = trigger.id;
             let overlay_root_name = OverlayController::modal_root_name(id);
 
-            let presence = OverlayController::fade_presence(cx, is_open, 4);
-            let overlay_presence = OverlayPresence::from_fade(is_open, presence);
+            let motion = OverlayController::transition_with_durations_and_easing(
+                cx,
+                is_open,
+                overlay_motion::SHADCN_MOTION_TICKS_500,
+                overlay_motion::SHADCN_MOTION_TICKS_300,
+                overlay_motion::shadcn_ease,
+            );
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: is_open,
+            };
 
             if overlay_presence.present {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
-                let side = self.side;
+                let sheet_side = self.side;
 
                 let default_size = theme
                     .metric_by_key("component.sheet.size")
@@ -122,7 +135,7 @@ impl Sheet {
                     .unwrap_or(Px(350.0));
                 let size = self.size_override.unwrap_or(default_size);
 
-                let opacity = presence.opacity;
+                let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let barrier_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
@@ -196,7 +209,7 @@ impl Sheet {
                     let sheet_w = Px(size.0.min(max_w.0).max(0.0));
                     let sheet_h = Px(size.0.min(max_h.0).max(0.0));
 
-                    let (inset, size) = match side {
+                    let (inset, size) = match sheet_side {
                         SheetSide::Right => (
                             InsetStyle {
                                 top: Some(Px(0.0)),
@@ -251,6 +264,22 @@ impl Sheet {
                         ),
                     };
 
+                    let motion_side = match sheet_side {
+                        SheetSide::Left => Side::Left,
+                        SheetSide::Right => Side::Right,
+                        SheetSide::Top => Side::Top,
+                        SheetSide::Bottom => Side::Bottom,
+                    };
+                    let motion_distance = match sheet_side {
+                        SheetSide::Left | SheetSide::Right => sheet_w,
+                        SheetSide::Top | SheetSide::Bottom => sheet_h,
+                    };
+                    let slide = overlay_motion::shadcn_modal_slide_transform(
+                        motion_side,
+                        motion_distance,
+                        opacity,
+                    );
+
                     let wrapper = cx.container(
                         ContainerProps {
                             layout: LayoutStyle {
@@ -275,10 +304,21 @@ impl Sheet {
                     };
                     vec![cx.opacity_props(
                         OpacityProps {
-                            layout: opacity_layout,
+                            layout: opacity_layout.clone(),
                             opacity,
                         },
-                        |_cx| vec![barrier, wrapper],
+                        move |cx| {
+                            vec![
+                                barrier,
+                                cx.visual_transform_props(
+                                    VisualTransformProps {
+                                        layout: opacity_layout,
+                                        transform: slide,
+                                    },
+                                    move |_cx| vec![wrapper],
+                                ),
+                            ]
+                        },
                     )]
                 });
 
@@ -353,12 +393,14 @@ impl SheetContent {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
-        let container = cx.container(
+        let container = shadcn_layout::container_vstack_gap(
+            cx,
             ContainerProps {
                 shadow: Some(shadow),
                 ..props
             },
-            move |_cx| children,
+            Space::N4,
+            children,
         );
 
         cx.semantics(
@@ -389,7 +431,7 @@ impl SheetHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
     }
 }
 
@@ -411,7 +453,15 @@ impl SheetFooter {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        cx.container(props, move |_cx| children)
+        shadcn_layout::container_hstack(
+            cx,
+            props,
+            fret_ui_kit::declarative::stack::HStackProps::default()
+                .gap(Space::N2)
+                .justify_end()
+                .items_center(),
+            children,
+        )
     }
 }
 
@@ -936,7 +986,8 @@ mod tests {
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
 
-        for _ in 0..4 {
+        let settle_frames = crate::overlay_motion::SHADCN_MOTION_TICKS_300 as usize + 1;
+        for _ in 0..settle_frames {
             let _ = render_sheet_frame(
                 &mut ui,
                 &mut app,

@@ -9,7 +9,7 @@ fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-app-kit = { path = "../../ecosystem/fret-app-kit" }
 fret-ui-docking = { path = "../../ecosystem/fret-ui-docking" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
-fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["table"] }
 fret-ui-plot = { path = "../../ecosystem/fret-ui-plot" }
 fret-ui-plot3d = { path = "../../ecosystem/fret-ui-plot3d" }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
@@ -20,6 +20,7 @@ fret-render = { path = "../../crates/fret-render" }
 fret-app = { path = "../../crates/fret-app" }
 fret-ui-app = { path = "../../crates/fret-ui-app" }
 fret-ui = { path = "../../crates/fret-ui" }
+fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-rust"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 winit.workspace = true

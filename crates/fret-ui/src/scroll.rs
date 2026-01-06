@@ -27,6 +27,10 @@ pub struct ScrollHandle {
 }
 
 impl ScrollHandle {
+    pub(crate) fn binding_key(&self) -> usize {
+        Rc::as_ptr(&self.state) as usize
+    }
+
     pub fn offset(&self) -> Point {
         self.state.borrow().offset
     }

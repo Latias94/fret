@@ -1,8 +1,9 @@
-use fret_core::Px;
+use fret_core::{Color, Px};
 use fret_ui::element::{
-    AnyElement, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle, ScrollProps,
-    ScrollbarProps, ScrollbarStyle, SizeStyle, StackProps,
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
+    ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps, ScrollbarStyle, SizeStyle, StackProps,
 };
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::LayoutRefinement;
@@ -41,8 +42,7 @@ pub fn overflow_scroll<H: UiHost>(
     };
 
     cx.stack_props(StackProps { layout }, move |cx| {
-        let handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
-
+        let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
         let mut scroll_layout = LayoutStyle::default();
         scroll_layout.size.width = Length::Fill;
         scroll_layout.size.height = Length::Fill;
@@ -77,6 +77,7 @@ pub fn overflow_scroll<H: UiHost>(
 
             children.push(cx.scrollbar(ScrollbarProps {
                 layout: scrollbar_layout,
+                axis: ScrollbarAxis::Vertical,
                 scroll_target: Some(scroll_id),
                 scroll_handle: handle,
                 style: ScrollbarStyle {
@@ -85,6 +86,234 @@ pub fn overflow_scroll<H: UiHost>(
                     thumb_idle_alpha: 0.65,
                 },
             }));
+        }
+
+        children
+    })
+}
+
+pub fn overflow_scroll_with_handle<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutRefinement,
+    show_scrollbar: bool,
+    handle: ScrollHandle,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    let (layout, scrollbar_w, thumb, thumb_hover) = {
+        let theme = Theme::global(&*cx.app);
+        let layout = style::layout_style(theme, layout);
+
+        let scrollbar_w = theme
+            .metric_by_key("metric.scrollbar.width")
+            .unwrap_or(theme.metrics.scrollbar_width);
+
+        let thumb = theme
+            .color_by_key("scrollbar.thumb.background")
+            .unwrap_or(theme.colors.scrollbar_thumb);
+        let thumb_hover = theme
+            .color_by_key("scrollbar.thumb.hover.background")
+            .unwrap_or(
+                theme
+                    .color_by_key("scrollbar.thumb.background")
+                    .unwrap_or(theme.colors.scrollbar_thumb_hover),
+            );
+
+        (layout, scrollbar_w, thumb, thumb_hover)
+    };
+
+    cx.stack_props(StackProps { layout }, move |cx| {
+        let mut scroll_layout = LayoutStyle::default();
+        scroll_layout.size.width = Length::Fill;
+        scroll_layout.size.height = Length::Fill;
+        scroll_layout.overflow = Overflow::Clip;
+
+        let scroll = cx.scroll(
+            ScrollProps {
+                layout: scroll_layout,
+                scroll_handle: Some(handle.clone()),
+                ..Default::default()
+            },
+            f,
+        );
+
+        let scroll_id = scroll.id;
+        let mut children = vec![scroll];
+        if show_scrollbar {
+            let scrollbar_layout = LayoutStyle {
+                position: PositionStyle::Absolute,
+                inset: InsetStyle {
+                    top: Some(Px(0.0)),
+                    right: Some(Px(0.0)),
+                    bottom: Some(Px(0.0)),
+                    left: None,
+                },
+                size: SizeStyle {
+                    width: Length::Px(scrollbar_w),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+
+            children.push(cx.scrollbar(ScrollbarProps {
+                layout: scrollbar_layout,
+                axis: ScrollbarAxis::Vertical,
+                scroll_target: Some(scroll_id),
+                scroll_handle: handle,
+                style: ScrollbarStyle {
+                    thumb,
+                    thumb_hover,
+                    thumb_idle_alpha: 0.65,
+                },
+            }));
+        }
+
+        children
+    })
+}
+
+pub fn overflow_scroll_with_handle_xy<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutRefinement,
+    show_scrollbar_x: bool,
+    show_scrollbar_y: bool,
+    handle: ScrollHandle,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    let (layout, scrollbar_w, thumb, thumb_hover, corner_bg) = {
+        let theme = Theme::global(&*cx.app);
+        let layout = style::layout_style(theme, layout);
+
+        let scrollbar_w = theme
+            .metric_by_key("metric.scrollbar.width")
+            .unwrap_or(theme.metrics.scrollbar_width);
+
+        let thumb = theme
+            .color_by_key("scrollbar.thumb.background")
+            .unwrap_or(theme.colors.scrollbar_thumb);
+        let thumb_hover = theme
+            .color_by_key("scrollbar.thumb.hover.background")
+            .unwrap_or(
+                theme
+                    .color_by_key("scrollbar.thumb.background")
+                    .unwrap_or(theme.colors.scrollbar_thumb_hover),
+            );
+
+        let corner_bg = theme
+            .color_by_key("scrollbar.corner.background")
+            .or_else(|| theme.color_by_key("scrollbar.track.background"))
+            .unwrap_or(Color::TRANSPARENT);
+
+        (layout, scrollbar_w, thumb, thumb_hover, corner_bg)
+    };
+
+    cx.stack_props(StackProps { layout }, move |cx| {
+        let mut scroll_layout = LayoutStyle::default();
+        scroll_layout.size.width = Length::Fill;
+        scroll_layout.size.height = Length::Fill;
+        scroll_layout.overflow = Overflow::Clip;
+
+        let scroll = cx.scroll(
+            ScrollProps {
+                layout: scroll_layout,
+                axis: ScrollAxis::Both,
+                scroll_handle: Some(handle.clone()),
+            },
+            f,
+        );
+
+        let scroll_id = scroll.id;
+        let mut children = vec![scroll];
+
+        if show_scrollbar_y {
+            let scrollbar_layout = LayoutStyle {
+                position: PositionStyle::Absolute,
+                inset: InsetStyle {
+                    top: Some(Px(0.0)),
+                    right: Some(Px(0.0)),
+                    bottom: Some(if show_scrollbar_x {
+                        scrollbar_w
+                    } else {
+                        Px(0.0)
+                    }),
+                    left: None,
+                },
+                size: SizeStyle {
+                    width: Length::Px(scrollbar_w),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+
+            children.push(cx.scrollbar(ScrollbarProps {
+                layout: scrollbar_layout,
+                axis: ScrollbarAxis::Vertical,
+                scroll_target: Some(scroll_id),
+                scroll_handle: handle.clone(),
+                style: ScrollbarStyle {
+                    thumb,
+                    thumb_hover,
+                    thumb_idle_alpha: 0.65,
+                },
+            }));
+        }
+
+        if show_scrollbar_x {
+            let scrollbar_layout = LayoutStyle {
+                position: PositionStyle::Absolute,
+                inset: InsetStyle {
+                    top: None,
+                    right: Some(if show_scrollbar_y {
+                        scrollbar_w
+                    } else {
+                        Px(0.0)
+                    }),
+                    bottom: Some(Px(0.0)),
+                    left: Some(Px(0.0)),
+                },
+                size: SizeStyle {
+                    height: Length::Px(scrollbar_w),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+
+            children.push(cx.scrollbar(ScrollbarProps {
+                layout: scrollbar_layout,
+                axis: ScrollbarAxis::Horizontal,
+                scroll_target: Some(scroll_id),
+                scroll_handle: handle.clone(),
+                style: ScrollbarStyle {
+                    thumb,
+                    thumb_hover,
+                    thumb_idle_alpha: 0.65,
+                },
+            }));
+        }
+
+        if show_scrollbar_x && show_scrollbar_y {
+            let corner_layout = LayoutStyle {
+                position: PositionStyle::Absolute,
+                inset: InsetStyle {
+                    right: Some(Px(0.0)),
+                    bottom: Some(Px(0.0)),
+                    ..Default::default()
+                },
+                size: SizeStyle {
+                    width: Length::Px(scrollbar_w),
+                    height: Length::Px(scrollbar_w),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+
+            children.push(cx.container(
+                ContainerProps {
+                    layout: corner_layout,
+                    background: Some(corner_bg),
+                    ..Default::default()
+                },
+                |_cx| vec![],
+            ));
         }
 
         children

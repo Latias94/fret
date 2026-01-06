@@ -1,3 +1,4 @@
+use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::action::OnDismissiblePointerMove;
 use fret_ui::element::AnyElement;
@@ -13,6 +14,7 @@ pub struct DismissiblePopoverRequest {
     /// Extra subtrees that should be treated as "inside" for outside-press + focus-outside
     /// dismissal policy (Radix DismissableLayer branches).
     pub dismissable_branches: Vec<GlobalElementId>,
+    pub consume_outside_pointer_events: bool,
     pub open: Model<bool>,
     pub present: bool,
     pub initial_focus: Option<GlobalElementId>,
@@ -27,6 +29,10 @@ impl std::fmt::Debug for DismissiblePopoverRequest {
             .field("root_name", &self.root_name)
             .field("trigger", &self.trigger)
             .field("dismissable_branches_len", &self.dismissable_branches.len())
+            .field(
+                "consume_outside_pointer_events",
+                &self.consume_outside_pointer_events,
+            )
             .field("open", &"<model>")
             .field("present", &self.present)
             .field("initial_focus", &self.initial_focus)
@@ -105,6 +111,10 @@ pub struct ToastLayerRequest {
     pub root_name: String,
     pub store: Model<ToastStore>,
     pub position: ToastPosition,
+    pub margin: Option<Px>,
+    pub gap: Option<Px>,
+    pub toast_min_width: Option<Px>,
+    pub toast_max_width: Option<Px>,
 }
 
 impl std::fmt::Debug for ToastLayerRequest {
@@ -114,6 +124,10 @@ impl std::fmt::Debug for ToastLayerRequest {
             .field("root_name", &self.root_name)
             .field("store", &"<model>")
             .field("position", &self.position)
+            .field("margin", &self.margin)
+            .field("gap", &self.gap)
+            .field("toast_min_width", &self.toast_min_width)
+            .field("toast_max_width", &self.toast_max_width)
             .finish()
     }
 }
@@ -125,6 +139,10 @@ impl ToastLayerRequest {
             root_name: toast_layer_root_name(id),
             store,
             position: ToastPosition::default(),
+            margin: None,
+            gap: None,
+            toast_min_width: None,
+            toast_max_width: None,
         }
     }
 
@@ -135,6 +153,26 @@ impl ToastLayerRequest {
 
     pub fn root_name(mut self, root_name: impl Into<String>) -> Self {
         self.root_name = root_name.into();
+        self
+    }
+
+    pub fn margin(mut self, margin: Px) -> Self {
+        self.margin = Some(margin);
+        self
+    }
+
+    pub fn gap(mut self, gap: Px) -> Self {
+        self.gap = Some(gap);
+        self
+    }
+
+    pub fn toast_min_width(mut self, width: Px) -> Self {
+        self.toast_min_width = Some(width);
+        self
+    }
+
+    pub fn toast_max_width(mut self, width: Px) -> Self {
+        self.toast_max_width = Some(width);
         self
     }
 }

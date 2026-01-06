@@ -3,12 +3,14 @@
 //! This primitive is a thin, stable wrapper around `fret-ui`'s deterministic placement solver
 //! (`fret_ui::overlay_placement`). It is intentionally pure and testable.
 
-use fret_core::{Edges, Px, Rect, Size};
+use fret_core::{Edges, Point, Px, Rect, Size};
 use fret_ui::overlay_placement::{
-    AnchoredPanelLayout, AnchoredPanelOptions, Side, anchored_panel_layout_sized_ex,
+    AnchoredPanelLayout, AnchoredPanelOptions, anchored_panel_layout_sized_ex,
 };
 
-pub use fret_ui::overlay_placement::{Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset};
+pub use fret_ui::overlay_placement::{
+    Align, ArrowLayout, ArrowOptions, LayoutDirection, Offset, Side,
+};
 
 /// Build `AnchoredPanelOptions` for popper-like floating content.
 ///
@@ -109,6 +111,66 @@ pub fn popper_layout_sized(
     options: AnchoredPanelOptions,
 ) -> AnchoredPanelLayout {
     anchored_panel_layout_sized_ex(outer, anchor, desired, side_offset, side, align, options)
+}
+
+fn opposite_side(side: Side) -> Side {
+    match side {
+        Side::Top => Side::Bottom,
+        Side::Bottom => Side::Top,
+        Side::Left => Side::Right,
+        Side::Right => Side::Left,
+    }
+}
+
+/// Computes a Radix-style transform origin for popper content animations.
+///
+/// Radix exposes this via a CSS variable (e.g. `--radix-tooltip-content-transform-origin`). We
+/// approximate the same concept in a pure, geometry-driven way so component wrappers can scale
+/// and/or slide from the edge that faces the anchor.
+///
+/// Returns a point in the same coordinate space as `layout.rect` (i.e. window/overlay coordinates).
+pub fn popper_content_transform_origin(
+    layout: &AnchoredPanelLayout,
+    anchor: Rect,
+    arrow_size: Option<Px>,
+) -> Point {
+    let rect = layout.rect;
+    let anchor_center = Point::new(
+        Px(anchor.origin.x.0 + anchor.size.width.0 * 0.5),
+        Px(anchor.origin.y.0 + anchor.size.height.0 * 0.5),
+    );
+
+    let face = layout
+        .arrow
+        .map(|a| a.side)
+        .unwrap_or_else(|| opposite_side(layout.side));
+
+    let (mut x, mut y) = match face {
+        Side::Top => (Px(rect.size.width.0 * 0.5), Px(0.0)),
+        Side::Bottom => (Px(rect.size.width.0 * 0.5), rect.size.height),
+        Side::Left => (Px(0.0), Px(rect.size.height.0 * 0.5)),
+        Side::Right => (rect.size.width, Px(rect.size.height.0 * 0.5)),
+    };
+
+    if let (Some(arrow), Some(arrow_size)) = (layout.arrow, arrow_size) {
+        let cross_x = Px((arrow.offset.0 + arrow_size.0 * 0.5).clamp(0.0, rect.size.width.0));
+        let cross_y = Px((arrow.offset.0 + arrow_size.0 * 0.5).clamp(0.0, rect.size.height.0));
+        match face {
+            Side::Top | Side::Bottom => x = cross_x,
+            Side::Left | Side::Right => y = cross_y,
+        }
+    } else {
+        match face {
+            Side::Top | Side::Bottom => {
+                x = Px((anchor_center.x.0 - rect.origin.x.0).clamp(0.0, rect.size.width.0));
+            }
+            Side::Left | Side::Right => {
+                y = Px((anchor_center.y.0 - rect.origin.y.0).clamp(0.0, rect.size.height.0));
+            }
+        }
+    }
+
+    Point::new(Px(rect.origin.x.0 + x.0), Px(rect.origin.y.0 + y.0))
 }
 
 /// Default arrow protrusion used by shadcn/Radix-style diamonds.
@@ -243,5 +305,79 @@ mod tests {
 
         let arrow = layout.arrow.expect("arrow layout");
         assert_eq!(arrow.side, Side::Top);
+    }
+
+    #[test]
+    fn transform_origin_tracks_arrow_on_anchor_edge() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(200.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(50.0), Px(60.0)),
+            Size::new(Px(40.0), Px(10.0)),
+        );
+        let desired = Size::new(Px(120.0), Px(80.0));
+        let arrow_size = Px(12.0);
+
+        let layout = popper_layout_sized(
+            outer,
+            anchor,
+            desired,
+            Px(8.0),
+            Side::Bottom,
+            Align::Center,
+            AnchoredPanelOptions {
+                direction: LayoutDirection::Ltr,
+                offset: Offset::default(),
+                arrow: Some(ArrowOptions {
+                    size: Size::new(arrow_size, arrow_size),
+                    padding: Edges::all(Px(8.0)),
+                }),
+            },
+        );
+
+        let origin = popper_content_transform_origin(&layout, anchor, Some(arrow_size));
+        let arrow = layout.arrow.expect("expected arrow layout");
+        assert_eq!(origin.y, layout.rect.origin.y);
+        assert_eq!(
+            origin.x,
+            Px(layout.rect.origin.x.0 + arrow.offset.0 + arrow_size.0 * 0.5)
+        );
+    }
+
+    #[test]
+    fn transform_origin_tracks_anchor_center_without_arrow() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(200.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(50.0), Px(60.0)),
+            Size::new(Px(40.0), Px(10.0)),
+        );
+        let desired = Size::new(Px(120.0), Px(80.0));
+
+        let layout = popper_layout_sized(
+            outer,
+            anchor,
+            desired,
+            Px(8.0),
+            Side::Bottom,
+            Align::Center,
+            AnchoredPanelOptions {
+                direction: LayoutDirection::Ltr,
+                offset: Offset::default(),
+                arrow: None,
+            },
+        );
+
+        let origin = popper_content_transform_origin(&layout, anchor, None);
+        assert_eq!(origin.y, layout.rect.origin.y);
+
+        let anchor_center_x = anchor.origin.x.0 + anchor.size.width.0 * 0.5;
+        let x_in_panel =
+            (anchor_center_x - layout.rect.origin.x.0).clamp(0.0, layout.rect.size.width.0);
+        assert_eq!(origin.x, Px(layout.rect.origin.x.0 + x_in_panel));
     }
 }

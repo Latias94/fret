@@ -24,27 +24,46 @@ impl ElementHostWidget {
                 state.metrics.clone()
             },
         );
-        let content_h = metrics.total_height();
+        let content_extent = metrics.total_height();
 
+        let axis = props.axis;
         let desired_w = match props.layout.size.width {
             Length::Px(px) => Px(px.0.max(0.0)),
-            Length::Fill | Length::Auto => cx.available.width,
+            Length::Fill => cx.available.width,
+            Length::Auto => match axis {
+                fret_core::Axis::Vertical => cx.available.width,
+                fret_core::Axis::Horizontal => {
+                    Px(content_extent.0.min(cx.available.width.0.max(0.0)))
+                }
+            },
         };
         let desired_h = match props.layout.size.height {
             Length::Px(px) => Px(px.0.max(0.0)),
             Length::Fill => cx.available.height,
-            Length::Auto => Px(content_h.0.min(cx.available.height.0.max(0.0))),
+            Length::Auto => match axis {
+                fret_core::Axis::Vertical => {
+                    Px(content_extent.0.min(cx.available.height.0.max(0.0)))
+                }
+                fret_core::Axis::Horizontal => cx.available.height,
+            },
         };
 
         let size =
             clamp_to_constraints(Size::new(desired_w, desired_h), props.layout, cx.available);
-        let viewport_h = Px(size.height.0.max(0.0));
+        let viewport = match axis {
+            fret_core::Axis::Vertical => Px(size.height.0.max(0.0)),
+            fret_core::Axis::Horizontal => Px(size.width.0.max(0.0)),
+        };
         let mut needs_redraw = false;
 
         props.scroll_handle.set_items_count(props.len);
 
         let prev_offset = props.scroll_handle.offset();
-        let mut offset_y = metrics.clamp_offset(prev_offset.y, viewport_h);
+        let prev_offset_axis = match axis {
+            fret_core::Axis::Vertical => prev_offset.y,
+            fret_core::Axis::Horizontal => prev_offset.x,
+        };
+        let mut offset = metrics.clamp_offset(prev_offset_axis, viewport);
 
         // Avoid consuming deferred scroll requests during "probe" layout passes that use an
         // effectively-unbounded available height (e.g. Stack/Pressable measuring with
@@ -53,36 +72,47 @@ impl ElementHostWidget {
         let is_probe_layout = cx.available.height.0 >= 1.0e8;
 
         if !is_probe_layout
-            && viewport_h.0 > 0.0
+            && viewport.0 > 0.0
             && props.len > 0
             && let Some((index, strategy)) = props.scroll_handle.deferred_scroll_to_item()
         {
-            offset_y = metrics.scroll_offset_for_item(index, viewport_h, offset_y, strategy);
+            offset = metrics.scroll_offset_for_item(index, viewport, offset, strategy);
             props.scroll_handle.clear_deferred_scroll_to_item();
         }
 
-        offset_y = metrics.clamp_offset(offset_y, viewport_h);
+        offset = metrics.clamp_offset(offset, viewport);
 
-        if (prev_offset.y.0 - offset_y.0).abs() > 0.01 {
+        if (prev_offset_axis.0 - offset.0).abs() > 0.01 {
             needs_redraw = true;
         }
-        props
-            .scroll_handle
-            .set_offset(fret_core::Point::new(prev_offset.x, offset_y));
+        match axis {
+            fret_core::Axis::Vertical => {
+                props
+                    .scroll_handle
+                    .set_offset(fret_core::Point::new(prev_offset.x, offset));
+            }
+            fret_core::Axis::Horizontal => {
+                props
+                    .scroll_handle
+                    .set_offset(fret_core::Point::new(offset, prev_offset.y));
+            }
+        }
 
         props
             .scroll_handle
             .set_viewport_size(Size::new(size.width, size.height));
-        props
-            .scroll_handle
-            .set_content_size(Size::new(size.width, content_h));
+        let content_size = match axis {
+            fret_core::Axis::Vertical => Size::new(size.width, content_extent),
+            fret_core::Axis::Horizontal => Size::new(content_extent, size.height),
+        };
+        props.scroll_handle.set_content_size(content_size);
 
         let anchor = metrics
-            .visible_range(offset_y, viewport_h, 0)
+            .visible_range(offset, viewport, 0)
             .map(|r| r.start_index);
         let anchor_offset_in_viewport = anchor.map(|anchor| {
             let start = metrics.offset_for_index(anchor);
-            Px((offset_y.0 - start.0).max(0.0))
+            Px((offset.0 - start.0).max(0.0))
         });
 
         let mut measured_updates: Vec<(fret_core::NodeId, usize, Px)> =
@@ -90,19 +120,34 @@ impl ElementHostWidget {
 
         for (&child, item) in cx.children.iter().zip(props.visible_items.iter()) {
             let idx = item.index;
-            let y = cx.bounds.origin.y.0 + metrics.offset_for_index(idx).0 - offset_y.0;
-            let origin = fret_core::Point::new(cx.bounds.origin.x, Px(y));
+            let start = metrics.offset_for_index(idx);
+            let origin = match axis {
+                fret_core::Axis::Vertical => {
+                    let y = cx.bounds.origin.y.0 + start.0 - offset.0;
+                    fret_core::Point::new(cx.bounds.origin.x, Px(y))
+                }
+                fret_core::Axis::Horizontal => {
+                    let x = cx.bounds.origin.x.0 + start.0 - offset.0;
+                    fret_core::Point::new(Px(x), cx.bounds.origin.y)
+                }
+            };
 
-            let measure_bounds = Rect::new(origin, Size::new(size.width, Px(1.0e9)));
+            let measure_bounds = match axis {
+                fret_core::Axis::Vertical => Rect::new(origin, Size::new(size.width, Px(1.0e9))),
+                fret_core::Axis::Horizontal => Rect::new(origin, Size::new(Px(1.0e9), size.height)),
+            };
             let measured = cx.layout_in(child, measure_bounds);
-            let measured_h = Px(measured.height.0.max(0.0));
+            let measured_extent = match axis {
+                fret_core::Axis::Vertical => Px(measured.height.0.max(0.0)),
+                fret_core::Axis::Horizontal => Px(measured.width.0.max(0.0)),
+            };
 
-            measured_updates.push((child, idx, measured_h));
+            measured_updates.push((child, idx, measured_extent));
         }
 
         let mut any_measured_change = false;
-        for (_, idx, measured_h) in &measured_updates {
-            if metrics.set_measured_height(*idx, *measured_h) {
+        for (_, idx, measured_extent) in &measured_updates {
+            if metrics.set_measured_height(*idx, *measured_extent) {
                 any_measured_change = true;
             }
         }
@@ -115,40 +160,84 @@ impl ElementHostWidget {
                     (anchor, anchor_offset_in_viewport)
             {
                 let desired = Px(metrics.offset_for_index(anchor).0 + anchor_offset_in_viewport.0);
-                offset_y = metrics.clamp_offset(desired, viewport_h);
+                offset = metrics.clamp_offset(desired, viewport);
 
                 let prev = props.scroll_handle.offset();
-                if (prev.y.0 - offset_y.0).abs() > 0.01 {
+                let prev_axis = match axis {
+                    fret_core::Axis::Vertical => prev.y,
+                    fret_core::Axis::Horizontal => prev.x,
+                };
+                if (prev_axis.0 - offset.0).abs() > 0.01 {
                     needs_redraw = true;
                 }
-                props
-                    .scroll_handle
-                    .set_offset(fret_core::Point::new(prev.x, offset_y));
+                match axis {
+                    fret_core::Axis::Vertical => {
+                        props
+                            .scroll_handle
+                            .set_offset(fret_core::Point::new(prev.x, offset));
+                    }
+                    fret_core::Axis::Horizontal => {
+                        props
+                            .scroll_handle
+                            .set_offset(fret_core::Point::new(offset, prev.y));
+                    }
+                }
             }
         }
 
-        let content_h = metrics.total_height();
+        let content_extent = metrics.total_height();
         props
             .scroll_handle
-            .set_viewport_size(Size::new(size.width, viewport_h));
-        props
-            .scroll_handle
-            .set_content_size(Size::new(size.width, content_h));
+            .set_viewport_size(Size::new(size.width, size.height));
+        let content_size = match axis {
+            fret_core::Axis::Vertical => Size::new(size.width, content_extent),
+            fret_core::Axis::Horizontal => Size::new(content_extent, size.height),
+        };
+        props.scroll_handle.set_content_size(content_size);
 
         let prev_offset = props.scroll_handle.offset();
-        let clamped = metrics.clamp_offset(prev_offset.y, viewport_h);
-        if (clamped.0 - prev_offset.y.0).abs() > 0.01 {
+        let prev_axis = match axis {
+            fret_core::Axis::Vertical => prev_offset.y,
+            fret_core::Axis::Horizontal => prev_offset.x,
+        };
+        let clamped = metrics.clamp_offset(prev_axis, viewport);
+        if (clamped.0 - prev_axis.0).abs() > 0.01 {
             needs_redraw = true;
         }
-        props
-            .scroll_handle
-            .set_offset(fret_core::Point::new(prev_offset.x, clamped));
-        offset_y = clamped;
+        match axis {
+            fret_core::Axis::Vertical => {
+                props
+                    .scroll_handle
+                    .set_offset(fret_core::Point::new(prev_offset.x, clamped));
+            }
+            fret_core::Axis::Horizontal => {
+                props
+                    .scroll_handle
+                    .set_offset(fret_core::Point::new(clamped, prev_offset.y));
+            }
+        }
+        offset = clamped;
 
-        for (child, idx, measured_h) in &measured_updates {
-            let y = cx.bounds.origin.y.0 + metrics.offset_for_index(*idx).0 - offset_y.0;
-            let origin = fret_core::Point::new(cx.bounds.origin.x, Px(y));
-            let child_bounds = Rect::new(origin, Size::new(size.width, *measured_h));
+        for (child, idx, measured_extent) in &measured_updates {
+            let start = metrics.offset_for_index(*idx);
+            let origin = match axis {
+                fret_core::Axis::Vertical => {
+                    let y = cx.bounds.origin.y.0 + start.0 - offset.0;
+                    fret_core::Point::new(cx.bounds.origin.x, Px(y))
+                }
+                fret_core::Axis::Horizontal => {
+                    let x = cx.bounds.origin.x.0 + start.0 - offset.0;
+                    fret_core::Point::new(Px(x), cx.bounds.origin.y)
+                }
+            };
+            let child_bounds = match axis {
+                fret_core::Axis::Vertical => {
+                    Rect::new(origin, Size::new(size.width, *measured_extent))
+                }
+                fret_core::Axis::Horizontal => {
+                    Rect::new(origin, Size::new(*measured_extent, size.height))
+                }
+            };
             let _ = cx.layout_in(*child, child_bounds);
         }
 
@@ -158,10 +247,21 @@ impl ElementHostWidget {
             self.element,
             crate::element::VirtualListState::default,
             |state| {
-                state.offset_y = offset_y;
-                if state.viewport_h != viewport_h {
-                    state.viewport_h = viewport_h;
-                    needs_redraw = true;
+                match axis {
+                    fret_core::Axis::Vertical => {
+                        state.offset_y = offset;
+                        if state.viewport_h != viewport {
+                            state.viewport_h = viewport;
+                            needs_redraw = true;
+                        }
+                    }
+                    fret_core::Axis::Horizontal => {
+                        state.offset_x = offset;
+                        if state.viewport_w != viewport {
+                            state.viewport_w = viewport;
+                            needs_redraw = true;
+                        }
+                    }
                 }
                 state.items_revision = props.items_revision;
                 state.metrics = metrics;

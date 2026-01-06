@@ -41,33 +41,39 @@ Key upstream behaviors/surfaces:
 
 ### Dismissal & focus
 
-- Pass: Non-modal dismissible popover via `window_overlays` (outside press + Escape).
+- Pass: Non-modal dismissible menu via `window_overlays` (outside press + Escape; non-click-through).
 - Pass: On open, focus moves to the first focusable descendant in the menu (via overlay policy),
   enabling keyboard navigation.
 - Pass: Selecting an item dispatches the command (if any) and closes the menu.
+- Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
+  on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
 ### Keyboard navigation & typeahead
 
 - Pass: Uses `RovingFlex` + APG navigation + prefix typeahead.
-- Gap: No explicit “focus transfer back to trigger” policy on close beyond the default popover
-  policy (restore only when focus is missing or still inside the closing layer).
+- Pass: Restores focus back to the trigger on close (Radix-style menu default).
 
 ### Visual parity (shadcn)
 
-- Partial: Token usage roughly aligns with popover/menu defaults, but the full Radix-style
-  taxonomy (checkbox/radio/submenus/shortcuts/insets) is not implemented.
+- Partial: Token usage roughly aligns with popover/menu defaults; remaining parity gaps are mostly
+  around any missing fine-grained layout details.
 
 ## Missing surfaces (significant)
 
-Not implemented yet in Fret shadcn surface:
+Still missing (relative to upstream shadcn/ui v4):
 
-- Labels/groups/shortcuts (ContextMenu variants).
-- Checkbox/radio items.
-- Submenus and safe-hover corridor.
-- Icons and inset variants.
+- A shared convention for leading icons (consumer-provided today).
+
+## Implemented surfaces (notable)
+
+- Pass: Submenus (single-level) with Radix-style pointer grace intent (safe-hover corridor) via
+  `fret-ui-kit::primitives::menu::sub` + `menu::root::submenu_pointer_move_handler`.
+- Pass: Chevron-right submenu affordance icon parity.
+- Pass: Destructive item variant styling via `ContextMenuItemVariant::Destructive`.
 
 ## Validation
 
 - Contract test: `context_menu_items_have_collection_position_metadata_excluding_separators`
 - Interaction test: `context_menu_opens_on_shift_f10`
+ - Interaction test: `context_menu_submenu_opens_on_arrow_right_without_pointer_move`
 

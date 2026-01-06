@@ -41,6 +41,8 @@ Key upstream behaviors/surfaces:
 - Pass: On open, focus moves to the first focusable descendant (driven by overlay policy), enabling
   keyboard navigation inside the menu.
 - Note: “modal=true vs modal=false” is not modeled; current menu is always non-modal.
+- Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
+  on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
 ### Keyboard navigation & typeahead
 
@@ -50,15 +52,18 @@ Key upstream behaviors/surfaces:
 ### Visual parity (shadcn)
 
 - Partial: Menu background/foreground now align with popover tokens (`bg-popover text-popover-foreground`).
-- Partial: Hover/pressed/focused highlight uses `accent` tokens; deeper parity (inset variants,
-  checkmark spacing, icon alignment) is still pending.
+- Pass: Hover/pressed/focused highlight uses `accent` tokens (Radix `data-[highlighted]`-style outcome).
+- Pass: Destructive item variants keep destructive foreground + use a `destructive/10`-style highlight background.
+- Pass: `inset` is supported for items/labels (left padding parity with upstream `data-inset`).
+- Pass: Leading icons are aligned within a fixed 16×16 slot; when any row provides a leading icon,
+  the menu reserves the slot across the panel for consistent label alignment.
+- Pass: Checkbox/radio indicators render the `ids::ui::CHECK` icon in a fixed 16×16 slot.
 
 ### Missing surfaces (significant)
 
-Not implemented yet in Fret shadcn surface:
+Still missing (relative to upstream shadcn/ui v4):
 
-- Checkbox/radio surfaces: `DropdownMenuCheckboxItem` / `DropdownMenuRadioGroup` / `DropdownMenuRadioItem`
-- Styling knobs: inset/padding variants, icons, and "active item" highlight parity (needs focused state)
+- A first-class API for “leading icon + shortcut” ergonomics (icons are supported, but composition is still consumer-driven).
 
 ### Submenus
 
@@ -91,8 +96,7 @@ Notes on API mapping:
 
 ## Follow-ups (recommended)
 
-- Add missing shadcn surfaces gradually, starting with: `Label`, `Group`, `Shortcut`, destructive
-  variant, then checkbox/radio items.
+- Add icon/indicator slot conventions for menu rows (leading icon, checkmark/radio indicator, trailing shortcut).
 - Decide whether dropdown menus need a “modal” option (or whether non-modal is the canonical Fret
   behavior).
 - Consider adding a component-facing focus state for `Pressable` (mechanism-only) so menus can

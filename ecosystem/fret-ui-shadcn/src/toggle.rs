@@ -1,17 +1,15 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Edges, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, MainAlign, PressableA11y, PressableProps, TextProps,
-};
+use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size as ComponentSize, Space,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -39,6 +37,11 @@ impl ToggleSize {
     }
 }
 
+fn alpha_mul(mut c: Color, mul: f32) -> Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
+}
+
 fn toggle_bg_hover(theme: &Theme) -> Color {
     theme
         .color_by_key("muted")
@@ -50,6 +53,12 @@ fn toggle_fg_muted(theme: &Theme) -> Color {
         .color_by_key("muted.foreground")
         .or_else(|| theme.color_by_key("muted-foreground"))
         .unwrap_or(theme.colors.text_muted)
+}
+
+fn toggle_ring_color(theme: &Theme) -> Color {
+    theme
+        .color_by_key("ring")
+        .unwrap_or(theme.colors.focus_ring)
 }
 
 fn toggle_bg_on(theme: &Theme) -> Color {
@@ -68,6 +77,24 @@ fn toggle_border(theme: &Theme) -> Color {
         .color_by_key("input")
         .or_else(|| theme.color_by_key("border"))
         .unwrap_or(theme.colors.panel_border)
+}
+
+fn toggle_h(theme: &Theme, size: ToggleSize) -> Px {
+    let (key, fallback) = match size {
+        ToggleSize::Default => ("component.toggle.h", Px(36.0)),
+        ToggleSize::Sm => ("component.toggle.h_sm", Px(32.0)),
+        ToggleSize::Lg => ("component.toggle.h_lg", Px(40.0)),
+    };
+    theme.metric_by_key(key).unwrap_or(fallback)
+}
+
+fn toggle_pad_x(theme: &Theme, size: ToggleSize) -> Px {
+    let (key, fallback) = match size {
+        ToggleSize::Default => ("component.toggle.px", Px(8.0)),
+        ToggleSize::Sm => ("component.toggle.px_sm", Px(6.0)),
+        ToggleSize::Lg => ("component.toggle.px_lg", Px(10.0)),
+    };
+    theme.metric_by_key(key).unwrap_or(fallback)
 }
 
 fn toggle_text_style(theme: &Theme) -> TextStyle {
@@ -187,20 +214,23 @@ impl Toggle {
         let a11y_label = self.a11y_label.clone();
         let on_click = self.on_click;
         let variant = self.variant;
-        let size = self.size.component_size();
+        let size_token = self.size;
         let chrome = self.chrome;
         let layout = self.layout;
 
         let theme = Theme::global(&*cx.app).clone();
 
-        let radius = size.control_radius(&theme);
-        let ring = decl_style::focus_ring(&theme, radius);
+        let radius = MetricRef::radius(Radius::Md).resolve(&theme);
+        let ring_border = toggle_ring_color(&theme);
+        let mut ring = decl_style::focus_ring(&theme, radius);
+        ring.color = alpha_mul(ring_border, 0.5);
         let text_style = toggle_text_style(&theme);
 
-        let min_h = size.button_h(&theme);
-        let min_w = size.button_h(&theme);
-        let pad_x = size.button_px(&theme);
-        let pad_y = size.button_py(&theme);
+        let h = toggle_h(&theme, size_token);
+        let min_h = h;
+        let min_w = h;
+        let pad_x = toggle_pad_x(&theme, size_token);
+        let pad_y = Px(0.0);
 
         let pressable_layout = decl_style::layout_style(
             &theme,
@@ -223,6 +253,8 @@ impl Toggle {
         let base_chrome = match variant {
             ToggleVariant::Default => ChromeRefinement {
                 radius: Some(MetricRef::Px(radius)),
+                border_width: Some(MetricRef::Px(Px(1.0))),
+                border_color: Some(ColorRef::Color(Color::TRANSPARENT)),
                 ..Default::default()
             },
             ToggleVariant::Outline => ChromeRefinement {
@@ -242,12 +274,17 @@ impl Toggle {
             let hovered = state.hovered && !state.pressed;
             let pressed = state.pressed;
 
+            let (hover_bg, hover_fg) = match variant {
+                ToggleVariant::Default => (bg_hover, fg_muted),
+                ToggleVariant::Outline => (bg_on, fg_on),
+            };
+
             let mut fg = if disabled {
                 fg_disabled
             } else if on {
                 fg_on
             } else if hovered {
-                fg_muted
+                hover_fg
             } else {
                 fg_default
             };
@@ -255,14 +292,14 @@ impl Toggle {
             let mut bg = if on && !disabled {
                 Some(bg_on)
             } else if hovered && !disabled {
-                Some(bg_hover)
+                Some(hover_bg)
             } else {
                 None
             };
 
             if pressed && !disabled {
-                fg = toggle_fg_muted(&theme);
-                bg = Some(bg_hover);
+                fg = hover_fg;
+                bg = Some(hover_bg);
             }
 
             let mut chrome_props = decl_style::container_props(
@@ -276,8 +313,14 @@ impl Toggle {
                 bottom: pad_y,
                 left: pad_x,
             };
+            if matches!(variant, ToggleVariant::Outline) {
+                chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
+            }
             if bg.is_some() {
                 chrome_props.background = bg;
+            }
+            if state.focused && !disabled {
+                chrome_props.border_color = Some(ring_border);
             }
             chrome_props.layout.size = pressable_layout.size;
 
@@ -286,12 +329,7 @@ impl Toggle {
                 enabled: !disabled,
                 focusable: true,
                 focus_ring: Some(ring),
-                a11y: PressableA11y {
-                    role: Some(SemanticsRole::Button),
-                    label: a11y_label,
-                    selected: on,
-                    ..Default::default()
-                },
+                a11y: fret_ui_kit::primitives::toggle::toggle_a11y(a11y_label, on),
                 ..Default::default()
             };
 
