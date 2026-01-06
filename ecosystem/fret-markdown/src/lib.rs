@@ -1839,7 +1839,6 @@ fn render_inline_token<H: UiHost>(
             return cx.pressable(props, |cx, _state| {
                 let href = href.clone();
                 let link_text = link_text.clone();
-                let link_text_for_activate = link_text.clone();
                 let on_link_activate = on_link_activate.clone();
                 cx.pressable_on_activate(Arc::new(move |host, cx, reason| {
                     on_link_activate(
@@ -1848,7 +1847,7 @@ fn render_inline_token<H: UiHost>(
                         reason,
                         LinkInfo {
                             href: href.clone(),
-                            text: link_text_for_activate.clone(),
+                            text: link_text.clone(),
                         },
                     );
                 }));
