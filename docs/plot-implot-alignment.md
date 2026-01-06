@@ -42,6 +42,8 @@ This contract is documented in ADR 0099.
 - [x] Line hover uses nearest segment distance (not just sampled points)
 - [~] Keyboard shortcuts matrix (documented; partially aligned with ImPlot defaults)
 
+See also `docs/plot-axis-interactions.md` for axis-region routing, fit behavior, and lock shortcuts.
+
 ### Keyboard shortcuts & mouse gestures
 
 This table describes the default mapping used by `fret-ui-plot` today, with a side-by-side reference

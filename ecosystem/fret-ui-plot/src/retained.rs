@@ -3091,6 +3091,7 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     plot_output_model: Option<Model<PlotOutput>>,
     legend_hover: Option<SeriesId>,
     cursor_px: Option<Point>,
+    last_pointer_pos: Option<Point>,
     last_scale_factor: f32,
     x_axis_thickness: Px,
     y_axis_thickness: Px,
@@ -3857,6 +3858,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             plot_output_model: None,
             legend_hover: None,
             cursor_px: None,
+            last_pointer_pos: None,
             last_scale_factor: 1.0,
             x_axis_thickness: axis_gap,
             y_axis_thickness: axis_gap,
@@ -5278,7 +5280,110 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     && !modifiers.alt
                     && !modifiers.alt_gr
                     && !modifiers.meta;
-                if plain && *key == KeyCode::KeyR {
+                let lock_mods_ok = !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
+                if lock_mods_ok && *key == KeyCode::KeyL {
+                    let Some(pos) = self.last_pointer_pos else {
+                        return;
+                    };
+
+                    let (
+                        y_axis_gap,
+                        y_axis_right_gap,
+                        y_axis_right2_gap,
+                        y_axis_right3_gap,
+                        x_axis_gap,
+                    ) = self.axis_gaps();
+                    let layout = PlotLayout::from_bounds(
+                        cx.bounds,
+                        self.style.padding,
+                        y_axis_gap,
+                        y_axis_right_gap,
+                        y_axis_right2_gap,
+                        y_axis_right3_gap,
+                        x_axis_gap,
+                    );
+                    let Some(region) = layout.hit_test_region(pos) else {
+                        return;
+                    };
+
+                    let toggle_pan = modifiers.shift && !modifiers.ctrl;
+                    let toggle_zoom = modifiers.ctrl && !modifiers.shift;
+                    let toggle_both = !toggle_pan && !toggle_zoom;
+
+                    match region {
+                        PlotRegion::XAxis => {
+                            if toggle_both || toggle_pan {
+                                self.lock_x.pan = !self.lock_x.pan;
+                            }
+                            if toggle_both || toggle_zoom {
+                                self.lock_x.zoom = !self.lock_x.zoom;
+                            }
+                        }
+                        PlotRegion::YAxis(axis) => {
+                            let lock = match axis {
+                                YAxis::Left => &mut self.lock_y,
+                                YAxis::Right => &mut self.lock_y2,
+                                YAxis::Right2 => &mut self.lock_y3,
+                                YAxis::Right3 => &mut self.lock_y4,
+                            };
+                            if toggle_both || toggle_pan {
+                                lock.pan = !lock.pan;
+                            }
+                            if toggle_both || toggle_zoom {
+                                lock.zoom = !lock.zoom;
+                            }
+                        }
+                        PlotRegion::Plot => {
+                            if toggle_both || toggle_pan {
+                                self.lock_x.pan = !self.lock_x.pan;
+                                self.lock_y.pan = !self.lock_y.pan;
+                                if self.show_y2_axis {
+                                    self.lock_y2.pan = !self.lock_y2.pan;
+                                }
+                                if self.show_y3_axis {
+                                    self.lock_y3.pan = !self.lock_y3.pan;
+                                }
+                                if self.show_y4_axis {
+                                    self.lock_y4.pan = !self.lock_y4.pan;
+                                }
+                            }
+                            if toggle_both || toggle_zoom {
+                                self.lock_x.zoom = !self.lock_x.zoom;
+                                self.lock_y.zoom = !self.lock_y.zoom;
+                                if self.show_y2_axis {
+                                    self.lock_y2.zoom = !self.lock_y2.zoom;
+                                }
+                                if self.show_y3_axis {
+                                    self.lock_y3.zoom = !self.lock_y3.zoom;
+                                }
+                                if self.show_y4_axis {
+                                    self.lock_y4.zoom = !self.lock_y4.zoom;
+                                }
+                            }
+                        }
+                    }
+
+                    self.hover = None;
+                    self.cursor_px = None;
+                    self.pan_button = None;
+                    self.pan_target = None;
+                    self.pan_start_pos = None;
+                    self.pan_last_pos = None;
+                    self.box_zoom_start = None;
+                    self.box_zoom_current = None;
+                    self.box_zoom_button = None;
+                    self.box_zoom_required_mods = None;
+                    self.query_drag_button = None;
+                    self.query_drag_start = None;
+                    self.query_drag_current = None;
+
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                } else if plain && *key == KeyCode::KeyR {
                     let _ = self.update_plot_state(cx.app, |s| {
                         s.view_is_auto = true;
                         s.view_bounds = None;
@@ -5396,6 +5501,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 modifiers,
                 ..
             }) => {
+                self.last_pointer_pos = Some(*position);
                 let (
                     y_axis_gap,
                     y_axis_right_gap,
@@ -5413,6 +5519,54 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     x_axis_gap,
                 );
                 if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+                    return;
+                }
+
+                // Axis lock UI: Ctrl+Click on an axis region toggles pan+zoom lock.
+                if modifiers.ctrl
+                    && *button == MouseButton::Left
+                    && let Some(region) = layout.hit_test_region(*position)
+                    && region != PlotRegion::Plot
+                {
+                    match region {
+                        PlotRegion::XAxis => {
+                            self.lock_x.pan = !self.lock_x.pan;
+                            self.lock_x.zoom = !self.lock_x.zoom;
+                        }
+                        PlotRegion::YAxis(axis) => {
+                            let lock = match axis {
+                                YAxis::Left => &mut self.lock_y,
+                                YAxis::Right => &mut self.lock_y2,
+                                YAxis::Right2 => &mut self.lock_y3,
+                                YAxis::Right3 => &mut self.lock_y4,
+                            };
+                            lock.pan = !lock.pan;
+                            lock.zoom = !lock.zoom;
+                        }
+                        PlotRegion::Plot => {}
+                    }
+
+                    self.hover = None;
+                    self.cursor_px = None;
+                    self.legend_hover = None;
+                    self.pan_button = None;
+                    self.pan_target = None;
+                    self.pan_start_pos = None;
+                    self.pan_last_pos = None;
+                    self.box_zoom_start = None;
+                    self.box_zoom_current = None;
+                    self.box_zoom_button = None;
+                    self.box_zoom_required_mods = None;
+                    self.query_drag_button = None;
+                    self.query_drag_start = None;
+                    self.query_drag_current = None;
+
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
                     return;
                 }
 
@@ -5623,6 +5777,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 modifiers,
                 click_count,
             }) => {
+                self.last_pointer_pos = Some(*position);
                 if self.pan_button == Some(*button)
                     || self.box_zoom_button == Some(*button)
                     || self.query_drag_button == Some(*button)
@@ -6256,6 +6411,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 delta,
                 modifiers,
             }) => {
+                self.last_pointer_pos = Some(*position);
                 let (
                     y_axis_gap,
                     y_axis_right_gap,
@@ -6558,6 +6714,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 cx.stop_propagation();
             }
             Event::Pointer(PointerEvent::Move { position, .. }) => {
+                self.last_pointer_pos = Some(*position);
                 let (
                     y_axis_gap,
                     y_axis_right_gap,
