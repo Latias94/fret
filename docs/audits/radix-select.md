@@ -38,12 +38,10 @@ Fret models Radix Select outcomes by composing:
 - Pass: Trigger open keys + closed-state typeahead policy is exposed via the Radix-named facade.
 - Pass: Content open-state key policy (Escape/Home/End/Arrow keys/Enter/Space + typeahead) is
   implemented in `ecosystem/fret-ui-kit/src/primitives/select.rs` and consumed by the shadcn select.
-- Partial: Pointer modality details (mouse `pointerdown` vs touch/pen click open) are not yet mapped
-  1:1 to the upstream trigger behavior.
+- Pass: Pointer modality details are mapped: mouse opens on `pointerdown`, touch/pen open on
+  click-like pointer up (movement threshold) to avoid scroll-to-open.
 - Partial: Item-aligned positioning (Radix `SelectItemAlignedPosition`) is not yet implemented.
 
 ## Follow-ups (recommended)
 
-- Consider modeling `pointerType` + `triggerPointerDownPosRef` heuristics if we want fully matching
-  open-on-mouse-down vs open-on-touch-click behavior.
 - Consider mirroring Radix close-on-window-blur/resize behavior in the overlay controller layer.
