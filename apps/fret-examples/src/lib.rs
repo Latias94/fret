@@ -14,6 +14,8 @@ pub mod ime_smoke_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod markdown_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod node_graph_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod sonner_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_demo;

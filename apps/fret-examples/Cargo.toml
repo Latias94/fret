@@ -23,6 +23,8 @@ fret-app = { path = "../../crates/fret-app" }
 fret-ui-app = { path = "../../crates/fret-ui-app" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-rust"] }
+fret-node = { path = "../../ecosystem/fret-node" }
+serde_json.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 winit.workspace = true
