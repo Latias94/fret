@@ -86,7 +86,9 @@ pub use button_group::{
 };
 pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
 pub use checkbox::{Checkbox, checkbox};
-pub use collapsible::{Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible};
+pub use collapsible::{
+    Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
+};
 pub use combobox::{Combobox, ComboboxItem, combobox};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,

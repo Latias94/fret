@@ -27,6 +27,9 @@ Fret does not use React context or CSS variables. Collapsible outcomes are compo
 
 ## Current parity notes
 
+- Pass: Root supports controlled/uncontrolled `open` state (`open` + `defaultOpen`) via
+  `ecosystem/fret-ui-kit/src/primitives/controllable_state.rs` (see `CollapsibleRoot` in
+  `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`).
 - Pass: Trigger exposes an "expanded" a11y outcome (mapped to `PressableA11y.expanded`).
 - Note: Fret does not currently model `aria-controls` wiring (content id references).
 - Pass: Dimension-driven collapse animations are modeled via a cached height clip driven by a

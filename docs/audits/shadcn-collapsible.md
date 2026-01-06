@@ -20,8 +20,8 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 ### Composition surface
 
 - Pass: Provides `Collapsible`, `CollapsibleTrigger`, and `CollapsibleContent` wrappers.
-- Pass: Uses a controlled open state (`Model<bool>`).
-- Note: Upstream supports uncontrolled `defaultOpen`; Fret currently does not model it.
+- Pass: Supports a controlled open state (`Model<bool>`).
+- Pass: Supports uncontrolled `defaultOpen` (internal open model).
 
 ### A11y behavior
 

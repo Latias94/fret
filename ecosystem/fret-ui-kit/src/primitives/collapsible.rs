@@ -9,9 +9,61 @@
 use std::sync::Arc;
 
 use fret_core::{Px, SemanticsRole, Size};
+use fret_runtime::Model;
 use fret_ui::element::{PressableA11y, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
+
+use crate::declarative::ModelWatchExt;
+
+/// A Radix-shaped `Collapsible` root configuration surface.
+///
+/// Upstream supports a controlled/uncontrolled `open` state (`open` + `defaultOpen`). In Fret this
+/// maps to either:
+/// - a caller-provided `Model<bool>` (controlled), or
+/// - an internal `Model<bool>` stored in element state (uncontrolled).
+#[derive(Debug, Clone, Default)]
+pub struct CollapsibleRoot {
+    open: Option<Model<bool>>,
+    default_open: bool,
+}
+
+impl CollapsibleRoot {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the controlled `open` model (`Some`) or selects uncontrolled mode (`None`).
+    pub fn open(mut self, open: Option<Model<bool>>) -> Self {
+        self.open = open;
+        self
+    }
+
+    /// Sets the uncontrolled initial open value (Radix `defaultOpen`).
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
+    }
+
+    /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+    pub fn use_open_model<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> crate::primitives::controllable_state::ControllableModel<bool> {
+        crate::primitives::controllable_state::use_controllable_model(cx, self.open.clone(), || {
+            self.default_open
+        })
+    }
+
+    /// Reads the current open value from the derived open model.
+    pub fn is_open<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
+        let open_model = self.use_open_model(cx).model();
+        cx.watch_model(&open_model)
+            .layout()
+            .copied()
+            .unwrap_or(false)
+    }
+}
 
 /// Semantics wrapper props for a collapsible root container.
 pub fn collapsible_root_semantics(disabled: bool, open: bool) -> SemanticsProps {
