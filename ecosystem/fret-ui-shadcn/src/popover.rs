@@ -15,6 +15,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
+use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -232,7 +233,11 @@ impl Popover {
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
             let anchor_id = self.anchor_override.unwrap_or(trigger_id);
-            let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+            let overlay_root_name = if self.modal {
+                radix_popover::popover_modal_root_name(trigger_id)
+            } else {
+                radix_popover::popover_root_name(trigger_id)
+            };
 
             let motion = OverlayController::transition_with_durations_and_easing(
                 cx,
@@ -273,9 +278,21 @@ impl Popover {
                 let opacity = motion.progress;
                 let opening = is_open;
                 let dialog_id_for_trigger = dialog_id_for_trigger.clone();
+                let modal = self.modal;
+                let open_for_barrier = self.open.clone();
+                let barrier_options =
+                    radix_dialog::DialogOptions::default().dismiss_on_overlay_press(true);
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                     let Some(anchor) = anchor else {
+                        if modal {
+                            return vec![radix_dialog::modal_barrier(
+                                cx,
+                                open_for_barrier.clone(),
+                                barrier_options.dismiss_on_overlay_press,
+                                Vec::new(),
+                            )];
+                        }
                         return Vec::new();
                     };
                     let anchor_raw = anchor;
@@ -385,21 +402,34 @@ impl Popover {
                         },
                         ..Default::default()
                     };
-                    vec![cx.opacity_props(
+                    let overlay_content = cx.opacity_props(
                         OpacityProps {
                             layout: opacity_layout.clone(),
                             opacity,
                         },
                         move |cx| {
-                            vec![cx.visual_transform_props(
+                            let wrapper = cx.visual_transform_props(
                                 VisualTransformProps {
                                     layout: opacity_layout,
                                     transform,
                                 },
                                 move |_cx| vec![wrapper],
-                            )]
+                            );
+                            vec![wrapper]
                         },
-                    )]
+                    );
+
+                    if modal {
+                        radix_dialog::modal_dialog_layer_children(
+                            cx,
+                            open_for_barrier.clone(),
+                            barrier_options,
+                            Vec::new(),
+                            overlay_content,
+                        )
+                    } else {
+                        vec![overlay_content]
+                    }
                 });
 
                 let initial_focus = if let Some(id) = self.initial_focus {
@@ -1759,5 +1789,153 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open_model), Some(true));
+    }
+
+    #[test]
+    fn modal_popover_outside_click_closes_without_activating_underlay() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let underlay_activated = app.models_mut().insert(false);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            |cx| {
+                let underlay_activated = underlay_activated.clone();
+                let underlay = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout.inset.top = Some(Px(300.0));
+                            layout.inset.left = Some(Px(400.0));
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st| {
+                        cx.pressable_set_bool(&underlay_activated, true);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let trigger = cx.pressable(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |cx, _st| {
+                        cx.pressable_toggle_bool(&open);
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                let popover = Popover::new(open.clone())
+                    .modal(true)
+                    .auto_focus(true)
+                    .into_element(
+                        cx,
+                        |_cx| trigger,
+                        |cx| {
+                            PopoverContent::new(vec![
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            ])
+                            .into_element(cx)
+                        },
+                    );
+
+                vec![underlay, popover]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let barrier_root = snap
+            .barrier_root
+            .expect("expected modal popover to install a modal barrier layer");
+        assert!(
+            snap.roots
+                .iter()
+                .any(|r| r.root == barrier_root && r.blocks_underlay_input),
+            "expected barrier root to correspond to a blocks-underlay-input layer"
+        );
+        let base = snap
+            .roots
+            .iter()
+            .find(|r| r.root == root)
+            .expect("base layer root should appear in semantics snapshot");
+        let barrier = snap
+            .roots
+            .iter()
+            .find(|r| r.root == barrier_root)
+            .expect("barrier root should appear in semantics snapshot");
+        assert!(
+            base.z_index < barrier.z_index,
+            "expected modal barrier layer to be above the base layer: base_z={} barrier_z={}",
+            base.z_index,
+            barrier.z_index
+        );
+
+        // Click "outside" the popover, on the underlay. The modal barrier should catch the click:
+        // the popover closes, and the underlay does not activate.
+        let underlay_point = Point::new(Px(410.0), Px(310.0));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: underlay_point,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+        assert_eq!(
+            app.models().get_copied(&underlay_activated),
+            Some(false),
+            "underlay should not activate while modal popover is open"
+        );
     }
 }
