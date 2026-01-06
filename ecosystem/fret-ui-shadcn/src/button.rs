@@ -306,14 +306,21 @@ impl Button {
 
                 let hovered = st.hovered && !disabled;
                 let pressed = st.pressed && !disabled;
+                let focused = st.focused && !disabled;
 
-                let (bg, border_color, fg) = if pressed {
+                let (bg, mut border_color, fg) = if pressed {
                     (bg_active, border_color, fg)
                 } else if hovered {
                     (bg_hover, border_color, fg)
                 } else {
                     (bg, border_color, fg)
                 };
+
+                if focused && variant == ButtonVariant::Outline && !user_border_override {
+                    border_color = theme
+                        .color_by_key("ring")
+                        .unwrap_or(theme.colors.focus_ring);
+                }
 
                 let padding = if variant == ButtonVariant::Link || is_icon {
                     ChromeRefinement::default()
@@ -615,5 +622,101 @@ mod tests {
             assert_eq!(props.padding.left, expected_px);
             assert_eq!(props.padding.right, expected_px);
         }
+    }
+
+    #[test]
+    fn outline_button_border_uses_ring_color_when_focused() {
+        use std::cell::{Cell, RefCell};
+        use std::rc::Rc;
+
+        use fret_runtime::FrameId;
+        use fret_ui::elements::GlobalElementId;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let theme = Theme::global(&app).clone();
+        let ring = theme
+            .color_by_key("ring")
+            .unwrap_or(theme.colors.focus_ring);
+
+        let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let rendered_out: Rc<RefCell<Option<AnyElement>>> = Rc::new(RefCell::new(None));
+
+        // First frame: render once to obtain the element id and map to a node.
+        app.set_frame_id(FrameId(1));
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "outline-button-focus-border",
+            {
+                let id_out = id_out.clone();
+                |cx| {
+                    let el = Button::new("Outline")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx);
+                    id_out.set(Some(el.id));
+                    vec![el]
+                }
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let id = id_out.get().expect("button element id");
+        let node =
+            elements::node_for_element(&mut app, window, id).expect("button node id resolved");
+        ui.set_focus(Some(node));
+
+        // Second frame: re-render with focus applied and capture the element tree.
+        app.set_frame_id(FrameId(2));
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "outline-button-focus-border",
+            {
+                let rendered_out = rendered_out.clone();
+                |cx| {
+                    let el = Button::new("Outline")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx);
+                    rendered_out.borrow_mut().replace(el.clone());
+                    vec![el]
+                }
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let el = rendered_out
+            .borrow_mut()
+            .take()
+            .expect("rendered element captured");
+        let ElementKind::Pressable(_pressable) = &el.kind else {
+            panic!("expected button root element to be Pressable");
+        };
+
+        let chrome = el
+            .children
+            .first()
+            .expect("expected pressable to contain chrome container");
+        let ElementKind::Container(props) = &chrome.kind else {
+            panic!("expected chrome container element");
+        };
+        assert_eq!(props.border_color, Some(ring));
     }
 }
