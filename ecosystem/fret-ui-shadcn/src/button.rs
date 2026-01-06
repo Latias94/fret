@@ -653,6 +653,7 @@ mod tests {
 
         // First frame: render once to obtain the element id and map to a node.
         app.set_frame_id(FrameId(1));
+        let id_out_for_render = id_out.clone();
         let root = fret_ui::declarative::render_root(
             &mut ui,
             &mut app,
@@ -660,15 +661,12 @@ mod tests {
             window,
             bounds,
             "outline-button-focus-border",
-            {
-                let id_out = id_out.clone();
-                move |cx| {
-                    let el = Button::new("Outline")
-                        .variant(ButtonVariant::Outline)
-                        .into_element(cx);
-                    id_out.set(Some(el.id));
-                    vec![el]
-                }
+            move |cx| {
+                let el = Button::new("Outline")
+                    .variant(ButtonVariant::Outline)
+                    .into_element(cx);
+                id_out_for_render.set(Some(el.id));
+                vec![el]
             },
         );
         ui.set_root(root);
@@ -681,6 +679,7 @@ mod tests {
 
         // Second frame: re-render with focus applied and capture the element tree.
         app.set_frame_id(FrameId(2));
+        let rendered_out_for_render = rendered_out.clone();
         let root = fret_ui::declarative::render_root(
             &mut ui,
             &mut app,
@@ -688,15 +687,12 @@ mod tests {
             window,
             bounds,
             "outline-button-focus-border",
-            {
-                let rendered_out = rendered_out.clone();
-                move |cx| {
-                    let el = Button::new("Outline")
-                        .variant(ButtonVariant::Outline)
-                        .into_element(cx);
-                    rendered_out.borrow_mut().replace(el.clone());
-                    vec![el]
-                }
+            move |cx| {
+                let el = Button::new("Outline")
+                    .variant(ButtonVariant::Outline)
+                    .into_element(cx);
+                rendered_out_for_render.borrow_mut().replace(el.clone());
+                vec![el]
             },
         );
         ui.set_root(root);
