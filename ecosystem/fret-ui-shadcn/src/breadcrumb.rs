@@ -49,19 +49,14 @@ impl Breadcrumb {
         let text_px = theme
             .metric_by_key("component.breadcrumb.text_px")
             .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or(theme.metrics.font_size);
+            .unwrap_or_else(|| theme.metric_required("font.size"));
         let line_height = theme
             .metric_by_key("component.breadcrumb.line_height")
             .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or(theme.metrics.font_line_height);
+            .unwrap_or_else(|| theme.metric_required("font.line_height"));
 
-        let fg = theme
-            .color_by_key("foreground")
-            .unwrap_or(theme.colors.text_primary);
-        let muted = theme
-            .color_by_key("muted.foreground")
-            .or_else(|| theme.color_by_key("muted-foreground"))
-            .unwrap_or(theme.colors.text_muted);
+        let fg = theme.color_required("foreground");
+        let muted = theme.color_required("muted-foreground");
 
         let style = TextStyle {
             font: FontId::default(),
