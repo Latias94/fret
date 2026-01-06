@@ -548,9 +548,89 @@ impl<'a, TData> Table<'a, TData> {
         Some(super::resolved_column_size(&self.state.column_sizing, col))
     }
 
+    pub fn column_sizing(&self) -> &super::ColumnSizingState {
+        &self.state.column_sizing
+    }
+
+    pub fn column_sizing_info(&self) -> &super::ColumnSizingInfoState {
+        &self.state.column_sizing_info
+    }
+
     pub fn column_can_resize(&self, id: &str) -> Option<bool> {
         let col = self.column(id)?;
         Some(super::column_can_resize(self.options, col))
+    }
+
+    pub fn is_column_resizing(&self, id: &str) -> Option<bool> {
+        let col = self.column(id)?;
+        Some(
+            self.state
+                .column_sizing_info
+                .is_resizing_column
+                .as_ref()
+                .is_some_and(|active| active.as_ref() == col.id.as_ref()),
+        )
+    }
+
+    /// TanStack-aligned: remove an override size entry (falls back to column defaults).
+    pub fn reset_column_size(&self, id: &str) -> Option<super::ColumnSizingState> {
+        let col = self.column(id)?;
+        let mut next = self.state.column_sizing.clone();
+        next.remove(&col.id);
+        Some(next)
+    }
+
+    pub fn started_column_resize(
+        &self,
+        id: &str,
+        pointer_x: f32,
+    ) -> Option<super::ColumnSizingInfoState> {
+        let col = self.column(id)?;
+        if !super::column_can_resize(self.options, col) {
+            return Some(self.state.column_sizing_info.clone());
+        }
+
+        let start = super::resolved_column_size(&self.state.column_sizing, col);
+        let mut next = self.state.column_sizing_info.clone();
+        super::begin_column_resize(
+            &mut next,
+            col.id.clone(),
+            pointer_x,
+            vec![(col.id.clone(), start)],
+        );
+        Some(next)
+    }
+
+    pub fn dragged_column_resize(
+        &self,
+        pointer_x: f32,
+    ) -> (super::ColumnSizingState, super::ColumnSizingInfoState) {
+        let mut sizing = self.state.column_sizing.clone();
+        let mut info = self.state.column_sizing_info.clone();
+        super::drag_column_resize(
+            self.options.column_resize_mode,
+            self.options.column_resize_direction,
+            &mut sizing,
+            &mut info,
+            pointer_x,
+        );
+        (sizing, info)
+    }
+
+    pub fn ended_column_resize(
+        &self,
+        pointer_x: Option<f32>,
+    ) -> (super::ColumnSizingState, super::ColumnSizingInfoState) {
+        let mut sizing = self.state.column_sizing.clone();
+        let mut info = self.state.column_sizing_info.clone();
+        super::end_column_resize(
+            self.options.column_resize_mode,
+            self.options.column_resize_direction,
+            &mut sizing,
+            &mut info,
+            pointer_x,
+        );
+        (sizing, info)
     }
 
     pub fn total_size(&self) -> f32 {

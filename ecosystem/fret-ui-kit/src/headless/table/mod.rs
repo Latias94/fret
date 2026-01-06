@@ -28,8 +28,11 @@ pub use column_pinning::{
     ColumnPinPosition, ColumnPinningState, is_column_pinned, pin_column, pinned_column,
     split_pinned_columns,
 };
+pub use column_sizing::{
+    ColumnResizeDirection, ColumnResizeMode, begin_column_resize, column_can_resize,
+    drag_column_resize, end_column_resize, resolved_column_size,
+};
 pub use column_sizing::{ColumnSizingRegion, ColumnSizingState, column_size};
-pub use column_sizing::{column_can_resize, resolved_column_size, start_column_resize};
 pub use column_sizing_info::ColumnSizingInfoState;
 pub use column_visibility::{ColumnVisibilityState, is_column_visible, visible_columns};
 pub use column_visibility::{set_column_visible, toggle_column_visible, toggled_column_visible};

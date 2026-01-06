@@ -1,3 +1,5 @@
+use super::{ColumnResizeDirection, ColumnResizeMode};
+
 /// Headless table options (TanStack-aligned semantics, Rust-native API).
 #[derive(Debug, Clone, Copy)]
 pub struct TableOptions {
@@ -32,6 +34,11 @@ pub struct TableOptions {
     pub enable_column_pinning: bool,
     /// Whether to allow column resizing at the table level (TanStack `enableColumnResizing`).
     pub enable_column_resizing: bool,
+    /// Determines when `column_sizing` updates during a resize interaction (TanStack
+    /// `columnResizeMode`).
+    pub column_resize_mode: ColumnResizeMode,
+    /// Column resize direction for RTL layouts (TanStack `columnResizeDirection`).
+    pub column_resize_direction: ColumnResizeDirection,
 }
 
 impl Default for TableOptions {
@@ -47,6 +54,8 @@ impl Default for TableOptions {
             enable_column_ordering: true,
             enable_column_pinning: true,
             enable_column_resizing: true,
+            column_resize_mode: ColumnResizeMode::OnEnd,
+            column_resize_direction: ColumnResizeDirection::Ltr,
         }
     }
 }

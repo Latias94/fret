@@ -17,8 +17,10 @@ use crate::declarative::stack;
 use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::headless::table::{
-    ColumnDef, ColumnId, FlatRowOrderCache, FlatRowOrderDeps, Row, RowKey, SortSpec, TableState,
-    column_size, is_column_visible, is_row_selected, order_columns, split_pinned_columns,
+    ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, FlatRowOrderCache,
+    FlatRowOrderDeps, Row, RowKey, SortSpec, TableState, begin_column_resize, column_size,
+    drag_column_resize, end_column_resize, is_column_visible, is_row_selected, order_columns,
+    split_pinned_columns,
 };
 
 fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
@@ -90,6 +92,8 @@ pub struct TableViewProps {
     pub default_column_width: Px,
     pub min_column_width: Px,
     pub enable_column_resizing: bool,
+    pub column_resize_mode: ColumnResizeMode,
+    pub column_resize_direction: ColumnResizeDirection,
     pub enable_row_selection: bool,
     pub single_row_selection: bool,
 }
@@ -103,6 +107,8 @@ impl Default for TableViewProps {
             default_column_width: Px(160.0),
             min_column_width: Px(40.0),
             enable_column_resizing: true,
+            column_resize_mode: ColumnResizeMode::OnChange,
+            column_resize_direction: ColumnResizeDirection::Ltr,
             enable_row_selection: true,
             single_row_selection: true,
         }
@@ -349,6 +355,8 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                     let state_model = state.clone();
                                                                                     let min_w = props.min_column_width;
                                                                                     let default_w = props.default_column_width;
+                                                                                    let resize_mode = props.column_resize_mode;
+                                                                                    let resize_direction = props.column_resize_direction;
 
                                                                                     pieces.push(cx.pointer_region(
                                                                                         PointerRegionProps {
@@ -386,11 +394,15 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             .column_sizing
                                                                                                             .get(&col_id_down)
                                                                                                             .copied()
-                                                                                                            .unwrap_or(default_w.0);
+                                                                                                            .unwrap_or(default_w.0)
+                                                                                                            .max(min_w.0);
                                                                                                         st.column_sizing.insert(col_id_down.clone(), start);
-                                                                                                        st.column_sizing_info.is_resizing_column = Some(col_id_down.clone());
-                                                                                                        st.column_sizing_info.start_pointer_x = down.position.x.0;
-                                                                                                        st.column_sizing_info.start_size = start;
+                                                                                                        begin_column_resize(
+                                                                                                            &mut st.column_sizing_info,
+                                                                                                            col_id_down.clone(),
+                                                                                                            down.position.x.0,
+                                                                                                            vec![(col_id_down.clone(), start)],
+                                                                                                        );
                                                                                                     });
                                                                                                     true
                                                                                                 }),
@@ -404,9 +416,18 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                     let _ = host.models_mut().update(&state_model_move, |st| {
                                                                                                         let Some(active) = &st.column_sizing_info.is_resizing_column else { return; };
                                                                                                         if active.as_ref() != col_id_move.as_ref() { return; }
-                                                                                                        let dx = mv.position.x.0 - st.column_sizing_info.start_pointer_x;
-                                                                                                        let next = (st.column_sizing_info.start_size + dx).max(min_w.0);
-                                                                                                        st.column_sizing.insert(col_id_move.clone(), next);
+                                                                                                        drag_column_resize(
+                                                                                                            resize_mode,
+                                                                                                            resize_direction,
+                                                                                                            &mut st.column_sizing,
+                                                                                                            &mut st.column_sizing_info,
+                                                                                                            mv.position.x.0,
+                                                                                                        );
+                                                                                                        if let Some(next) = st.column_sizing.get(&col_id_move).copied() {
+                                                                                                            if next < min_w.0 {
+                                                                                                                st.column_sizing.insert(col_id_move.clone(), min_w.0);
+                                                                                                            }
+                                                                                                        }
                                                                                                     });
                                                                                                     true
                                                                                                 }),
@@ -418,13 +439,25 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                     }
                                                                                                     host.release_pointer_capture();
                                                                                                     let _ = host.models_mut().update(&state_model_up, |st| {
-                                                                                                        if st
+                                                                                                        if !st
                                                                                                             .column_sizing_info
                                                                                                             .is_resizing_column
                                                                                                             .as_ref()
                                                                                                             .is_some_and(|a| a.as_ref() == col_id_up.as_ref())
                                                                                                         {
-                                                                                                            st.column_sizing_info.is_resizing_column = None;
+                                                                                                            return;
+                                                                                                        }
+                                                                                                        end_column_resize(
+                                                                                                            resize_mode,
+                                                                                                            resize_direction,
+                                                                                                            &mut st.column_sizing,
+                                                                                                            &mut st.column_sizing_info,
+                                                                                                            Some(up.position.x.0),
+                                                                                                        );
+                                                                                                        if let Some(next) = st.column_sizing.get(&col_id_up).copied() {
+                                                                                                            if next < min_w.0 {
+                                                                                                                st.column_sizing.insert(col_id_up.clone(), min_w.0);
+                                                                                                            }
                                                                                                         }
                                                                                                     });
                                                                                                     true
