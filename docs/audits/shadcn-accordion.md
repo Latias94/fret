@@ -34,7 +34,7 @@ examples in `repo-ref/ui`.
   implementation.
 - Partial: Content open/close animations use a presence-driven cached-height clip (best-effort; no
   CSS variables yet).
-  - Shared helper: `ecosystem/fret-ui-kit/src/declarative/collapsible_motion.rs`
+  - Shared helper: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs` (delegates to `declarative/collapsible_motion.rs`)
 
 ### Visual defaults (shadcn parity)
 

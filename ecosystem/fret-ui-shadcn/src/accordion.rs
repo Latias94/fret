@@ -13,11 +13,11 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::collapsible_motion;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition;
+use fret_ui_kit::primitives::collapsible as radix_collapsible;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::overlay_motion;
@@ -610,11 +610,9 @@ impl Accordion {
                                             );
                                         let state_id = cx.root_id();
                                         let last_height =
-                                            collapsible_motion::last_measured_height_for(
-                                                cx, state_id,
-                                            );
+                                            radix_collapsible::last_measured_height_for(cx, state_id);
                                         let (should_render, wrapper) =
-                                            collapsible_motion::collapsible_height_wrapper_refinement(
+                                            radix_collapsible::collapsible_height_wrapper_refinement(
                                                 is_open,
                                                 false,
                                                 true,
@@ -638,14 +636,13 @@ impl Accordion {
                                                 });
                                             let wrapper_id = wrapper_el.id;
 
-                                            let _ = collapsible_motion::
-                                                update_measured_height_if_open_for(
-                                                    cx,
-                                                    state_id,
-                                                    wrapper_id,
-                                                    is_open,
-                                                    motion.animating,
-                                                );
+                                            let _ = radix_collapsible::update_measured_height_if_open_for(
+                                                cx,
+                                                state_id,
+                                                wrapper_id,
+                                                is_open,
+                                                motion.animating,
+                                            );
 
                                             children.push(wrapper_el);
                                         }
