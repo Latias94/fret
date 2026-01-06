@@ -13,8 +13,8 @@ use fret_ui::element::{
     PressableProps, SvgIconProps, TextProps,
 };
 use fret_ui::{Invalidation, Theme, UiTree};
-use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::scroll as decl_scroll;
+use fret_ui_kit::{LayoutRefinement, MetricRef};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::mpsc;
@@ -329,11 +329,25 @@ $$
                     });
 
                 let Some(state) = state else {
-                    return cx.spinner();
+                    return cx.container(
+                        ContainerProps {
+                            layout: size,
+                            ..Default::default()
+                        },
+                        |cx| vec![cx.spinner()],
+                    );
                 };
 
                 match state {
-                    RemoteImageState::Loading => return cx.spinner(),
+                    RemoteImageState::Loading => {
+                        return cx.container(
+                            ContainerProps {
+                                layout: size,
+                                ..Default::default()
+                            },
+                            |cx| vec![cx.spinner()],
+                        );
+                    }
                     RemoteImageState::Error(msg) => {
                         return render_image_placeholder(
                             cx,
@@ -352,7 +366,15 @@ $$
                         props.color = theme.color_required("foreground");
                         return cx.svg_icon_props(props);
                     }
-                    RemoteImageState::ReadySvg { svg: None, .. } => return cx.spinner(),
+                    RemoteImageState::ReadySvg { svg: None, .. } => {
+                        return cx.container(
+                            ContainerProps {
+                                layout: size,
+                                ..Default::default()
+                            },
+                            |cx| vec![cx.spinner()],
+                        );
+                    }
                     RemoteImageState::ReadyRaster {
                         width,
                         height,
@@ -374,7 +396,13 @@ $$
                             props.layout = size;
                             return cx.image_props(props);
                         }
-                        return cx.spinner();
+                        return cx.container(
+                            ContainerProps {
+                                layout: size,
+                                ..Default::default()
+                            },
+                            |cx| vec![cx.spinner()],
+                        );
                     }
                 }
             }
@@ -470,7 +498,8 @@ $$
                                             cx,
                                             LayoutRefinement::default()
                                                 .w_full()
-                                                .h_full(),
+                                                .flex_1()
+                                                .min_h(MetricRef::Px(Px(0.0))),
                                             true,
                                             |cx| {
                                                 cx.container(
@@ -504,6 +533,10 @@ $$
                 },
             );
         ui.set_root(root);
+        if cache_changed {
+            ui.invalidate(root, Invalidation::Layout);
+            ui.invalidate(root, Invalidation::Paint);
+        }
     }
 }
 

@@ -1394,15 +1394,32 @@ fn render_math_block<H: UiHost>(
     components: &MarkdownComponents<H>,
     latex: Arc<str>,
 ) -> AnyElement {
+    let latex = Arc::<str>::from(latex.trim().to_string());
+
     if let Some(render) = &components.math_block {
         return render(cx, MathBlockInfo { latex });
     }
 
-    #[cfg(feature = "mathjax-svg")]
-    {
-        return render_math_block_mathjax_svg(cx, theme, markdown_theme, latex);
-    }
+    render_math_block_builtin(cx, theme, markdown_theme, latex)
+}
 
+#[cfg(feature = "mathjax-svg")]
+fn render_math_block_builtin<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    latex: Arc<str>,
+) -> AnyElement {
+    render_math_block_mathjax_svg(cx, theme, markdown_theme, latex)
+}
+
+#[cfg(not(feature = "mathjax-svg"))]
+fn render_math_block_builtin<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    latex: Arc<str>,
+) -> AnyElement {
     let mut scroll_props = ScrollProps::default();
     scroll_props.axis = ScrollAxis::X;
 
@@ -1462,22 +1479,34 @@ fn render_math_block_mathjax_svg<H: UiHost>(
                 icon.layout.aspect_ratio = ready.aspect_ratio;
                 vec![cx.svg_icon_props(icon)]
             }
-            MathJaxSvgEntry::Loading | MathJaxSvgEntry::Error(_) => {
-                vec![cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: latex.clone(),
-                    style: Some(TextStyle {
-                        font: FontId::monospace(),
-                        size: theme.metric_required("metric.font.mono_size"),
-                        weight: FontWeight::NORMAL,
-                        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
-                        letter_spacing_em: None,
-                    }),
-                    color: Some(markdown_theme.math_block_fg),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                })]
-            }
+            MathJaxSvgEntry::Loading => vec![cx.text_props(TextProps {
+                layout: Default::default(),
+                text: latex.clone(),
+                style: Some(TextStyle {
+                    font: FontId::monospace(),
+                    size: theme.metric_required("metric.font.mono_size"),
+                    weight: FontWeight::NORMAL,
+                    line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                    letter_spacing_em: None,
+                }),
+                color: Some(markdown_theme.math_block_fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })],
+            MathJaxSvgEntry::Error(err) => vec![cx.text_props(TextProps {
+                layout: Default::default(),
+                text: Arc::<str>::from(format!("{latex} (mathjax error: {err})")),
+                style: Some(TextStyle {
+                    font: FontId::monospace(),
+                    size: theme.metric_required("metric.font.mono_size"),
+                    weight: FontWeight::NORMAL,
+                    line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                    letter_spacing_em: None,
+                }),
+                color: Some(markdown_theme.math_block_fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })],
         })]
     })
 }
@@ -2532,11 +2561,30 @@ fn render_inline_math_default<H: UiHost>(
     markdown_theme: MarkdownTheme,
     info: InlineMathInfo,
 ) -> AnyElement {
-    #[cfg(feature = "mathjax-svg")]
-    {
-        return render_inline_math_mathjax_svg(cx, theme, markdown_theme, info);
-    }
+    let info = InlineMathInfo {
+        latex: Arc::<str>::from(info.latex.trim().to_string()),
+    };
 
+    render_inline_math_builtin(cx, theme, markdown_theme, info)
+}
+
+#[cfg(feature = "mathjax-svg")]
+fn render_inline_math_builtin<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    info: InlineMathInfo,
+) -> AnyElement {
+    render_inline_math_mathjax_svg(cx, theme, markdown_theme, info)
+}
+
+#[cfg(not(feature = "mathjax-svg"))]
+fn render_inline_math_builtin<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    info: InlineMathInfo,
+) -> AnyElement {
     let mut props = ContainerProps::default();
     props.padding = Edges {
         top: markdown_theme.inline_math_padding_y,
@@ -2582,9 +2630,15 @@ fn render_inline_math_mathjax_svg<H: UiHost>(
             ready.svg_bytes,
             ready.aspect_ratio,
         ),
-        MathJaxSvgEntry::Loading | MathJaxSvgEntry::Error(_) => {
-            render_inline_math_source(cx, theme, markdown_theme, info)
-        }
+        MathJaxSvgEntry::Loading => render_inline_math_source(cx, theme, markdown_theme, info),
+        MathJaxSvgEntry::Error(err) => render_inline_math_source(
+            cx,
+            theme,
+            markdown_theme,
+            InlineMathInfo {
+                latex: Arc::<str>::from(format!("{} (mathjax error: {err})", info.latex)),
+            },
+        ),
     }
 }
 
@@ -2638,7 +2692,7 @@ fn render_inline_math_source<H: UiHost>(
     cx.container(props, |cx| {
         vec![cx.text_props(TextProps {
             layout: Default::default(),
-            text: info.latex,
+            text: Arc::<str>::from(info.latex.trim().to_string()),
             style: Some(TextStyle {
                 font: FontId::monospace(),
                 size: theme.metric_required("metric.font.mono_size"),
@@ -2659,6 +2713,11 @@ fn mathjax_svg_entry<H: UiHost>(
     mode: MathJaxMode,
     latex: &str,
 ) -> MathJaxSvgEntry {
+    let latex = latex.trim();
+    if latex.is_empty() {
+        return MathJaxSvgEntry::Error(Arc::<str>::from("empty latex"));
+    }
+
     let key = MathJaxKey {
         mode,
         latex: latex.to_string(),
