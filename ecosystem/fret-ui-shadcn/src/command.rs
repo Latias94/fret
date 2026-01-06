@@ -203,23 +203,41 @@ pub(crate) fn item_text_style(theme: &Theme) -> TextStyle {
     }
 }
 
+fn heading_text_style(theme: &Theme) -> TextStyle {
+    let size = theme
+        .metric_by_key("component.command.heading.text_px")
+        .or_else(|| theme.metric_by_key("component.text.sm_px"))
+        .unwrap_or_else(|| Px((theme.metrics.font_size.0 - 2.0).max(10.0)));
+    let line_height = theme
+        .metric_by_key("component.command.heading.line_height")
+        .or_else(|| theme.metric_by_key("component.text.sm_line_height"))
+        .unwrap_or_else(|| Px((theme.metrics.font_line_height.0 - 4.0).max(size.0)));
+
+    TextStyle {
+        font: FontId::default(),
+        size,
+        weight: FontWeight::MEDIUM,
+        line_height: Some(line_height),
+        letter_spacing_em: None,
+    }
+}
+
 pub(crate) fn shortcut_text_style(theme: &Theme) -> TextStyle {
     let px = theme
         .metric_by_key("component.command.shortcut.text_px")
         .or_else(|| theme.metric_by_key("component.text.sm_px"))
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or(theme.metrics.font_size);
+        .unwrap_or_else(|| Px((theme.metrics.font_size.0 - 2.0).max(10.0)));
     let line_height = theme
         .metric_by_key("component.command.shortcut.line_height")
         .or_else(|| theme.metric_by_key("component.text.sm_line_height"))
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or(theme.metrics.font_line_height);
+        .unwrap_or_else(|| Px((theme.metrics.font_line_height.0 - 4.0).max(px.0)));
     TextStyle {
         font: FontId::default(),
         size: px,
         weight: FontWeight::NORMAL,
         line_height: Some(line_height),
-        letter_spacing_em: None,
+        // new-york-v4: `tracking-widest`.
+        letter_spacing_em: Some(0.10),
     }
 }
 
@@ -251,6 +269,8 @@ impl CommandShortcut {
             layout: {
                 let mut layout = LayoutStyle::default();
                 layout.flex.shrink = 0.0;
+                // new-york-v4: `ml-auto`.
+                layout.margin.left = fret_ui::element::MarginEdge::Auto;
                 layout
             },
             text: self.text,
@@ -588,16 +608,48 @@ impl CommandEmpty {
         let theme = Theme::global(&*cx.app).clone();
         let fg = theme.colors.text_muted;
         let text_style = item_text_style(&theme);
-        cx.container(ContainerProps::default(), move |cx| {
-            vec![cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: self.text,
-                style: Some(text_style),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            })]
-        })
+        cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
+                // new-york-v4: `py-6 text-center text-sm`.
+                padding: Edges {
+                    top: Px(24.0),
+                    right: Px(0.0),
+                    bottom: Px(24.0),
+                    left: Px(0.0),
+                },
+                ..Default::default()
+            },
+            move |cx| {
+                vec![cx.row(
+                    RowProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout
+                        },
+                        gap: Px(0.0),
+                        padding: Edges::all(Px(0.0)),
+                        justify: MainAlign::Center,
+                        align: CrossAlign::Center,
+                    },
+                    move |cx| {
+                        vec![cx.text_props(TextProps {
+                            layout: LayoutStyle::default(),
+                            text: self.text,
+                            style: Some(text_style),
+                            color: Some(fg),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                        })]
+                    },
+                )]
+            },
+        )
     }
 }
 
@@ -734,7 +786,8 @@ impl CommandList {
             let row_h = MetricRef::space(Space::N8).resolve(&theme);
             let row_gap = MetricRef::space(Space::N2).resolve(&theme);
             let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-            let pad_y = MetricRef::space(Space::N1).resolve(&theme);
+            // new-york-v4: `py-1.5` for `CommandItem`.
+            let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
             let bg_hover = item_bg_hover(&theme);
@@ -1268,7 +1321,8 @@ impl CommandPalette {
             let row_h = MetricRef::space(Space::N8).resolve(&theme);
             let row_gap = MetricRef::space(Space::N2).resolve(&theme);
             let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-            let pad_y = MetricRef::space(Space::N1).resolve(&theme);
+            // new-york-v4: `py-1.5` for `CommandItem`.
+            let pad_y = MetricRef::space(Space::N1p5).resolve(&theme);
             let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
 
             let bg_hover = item_bg_hover(&theme);
@@ -1306,8 +1360,7 @@ impl CommandPalette {
                         let fg = theme
                             .color_by_key("muted-foreground")
                             .unwrap_or(theme.colors.text_muted);
-                        let mut style = shortcut_text_style(&theme);
-                        style.weight = FontWeight::MEDIUM;
+                        let style = heading_text_style(&theme);
                         cx.container(
                             ContainerProps {
                                 layout: {
@@ -1316,9 +1369,10 @@ impl CommandPalette {
                                     layout
                                 },
                                 padding: Edges {
-                                    top: Px(8.0),
+                                    // new-york-v4: `px-2 py-1.5`.
+                                    top: Px(6.0),
                                     right: pad_x,
-                                    bottom: Px(4.0),
+                                    bottom: Px(6.0),
                                     left: pad_x,
                                 },
                                 ..Default::default()
@@ -1343,6 +1397,10 @@ impl CommandPalette {
                                     let mut layout = LayoutStyle::default();
                                     layout.size.width = Length::Fill;
                                     layout.size.height = Length::Px(Px(1.0));
+                                    // new-york-v4: `-mx-1 h-px`.
+                                    layout.margin.left = fret_ui::element::MarginEdge::Px(Px(-4.0));
+                                    layout.margin.right =
+                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
                                     layout
                                 },
                                 background: Some(border),
