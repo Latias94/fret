@@ -870,6 +870,22 @@ fn scatter_marker_commands(samples: &[SamplePoint], radius: Px) -> Vec<fret_core
     out
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MouseReadoutMode {
+    /// Show mouse coordinates as a tooltip near the cursor.
+    Tooltip,
+    /// Show mouse coordinates as a small overlay inside the plot (ImPlot-style).
+    Overlay,
+    /// Do not show mouse coordinate readout.
+    Disabled,
+}
+
+impl Default for MouseReadoutMode {
+    fn default() -> Self {
+        Self::Overlay
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct LinePlotStyle {
     pub background: Option<Color>,
@@ -884,6 +900,7 @@ pub struct LinePlotStyle {
     pub tooltip_background: Option<Color>,
     pub tooltip_border: Option<Color>,
     pub tooltip_text_color: Option<Color>,
+    pub mouse_readout: MouseReadoutMode,
     pub hover_threshold: Px,
     /// Minimum number of major tick labels per axis.
     ///
@@ -916,6 +933,7 @@ impl Default for LinePlotStyle {
             tooltip_background: None,
             tooltip_border: None,
             tooltip_text_color: None,
+            mouse_readout: MouseReadoutMode::default(),
             hover_threshold: Px(10.0),
             tick_count: 5,
             stroke_color: Color {
@@ -1821,6 +1839,7 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     legend_key: Option<u64>,
     legend_entries: Vec<LegendEntry>,
     tooltip_text: Option<PreparedText>,
+    mouse_readout_text: Option<PreparedText>,
 }
 
 impl PlotCanvas<LinePlotLayer> {
@@ -2152,6 +2171,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             legend_key: None,
             legend_entries: Vec::new(),
             tooltip_text: None,
+            mouse_readout_text: None,
         }
     }
 
@@ -4669,8 +4689,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
         // Tooltip (P0: drawn in the same scene; can be moved to overlays later).
         //
-        // Behavior: show cursor coordinates when the cursor is inside the plot. If a series is
-        // hovered, show a richer tooltip for that series.
+        // Behavior:
+        // - Selection tooltips are always shown while dragging (query/box-zoom).
+        // - Series tooltips are shown only when hovering near a series.
+        // - Mouse coordinate readout is controlled via `LinePlotStyle.mouse_readout`.
         let x_span = (view_bounds.x_max - view_bounds.x_min).abs();
         let y_span = (view_bounds.y_max - view_bounds.y_min).abs();
 
@@ -4728,6 +4750,73 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             (data.x.is_finite() && data.y.is_finite()).then_some(data)
         });
 
+        if self.style.mouse_readout == MouseReadoutMode::Overlay {
+            if let Some(cursor_data) = cursor_data {
+                let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
+                let y_text = self.tooltip_y_labels.format(cursor_data.y, y_span);
+                let text = format!("x={x_text}  y={y_text}");
+
+                let font_size = cx
+                    .theme()
+                    .metric_by_key("font.size")
+                    .unwrap_or(cx.theme().metrics.font_size);
+                let style = TextStyle {
+                    font: FontId::default(),
+                    size: Px((font_size.0 * 0.90).max(10.0)),
+                    weight: FontWeight::NORMAL,
+                    line_height: None,
+                    letter_spacing_em: None,
+                };
+                let constraints = TextConstraints {
+                    max_width: None,
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: cx.scale_factor,
+                };
+
+                let mut key = 0u64;
+                key = Self::hash_u64(key, theme.revision);
+                key = Self::hash_u64(key, font_stack_key);
+                key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
+                for b in text.as_bytes() {
+                    key = Self::hash_u64(key, u64::from(*b));
+                }
+                key = Self::hash_u64(key, Self::text_style_key(&style));
+
+                let needs = self
+                    .mouse_readout_text
+                    .as_ref()
+                    .is_none_or(|t| t.key != key);
+                if needs {
+                    if let Some(prev) = self.mouse_readout_text.take() {
+                        cx.services.text().release(prev.blob);
+                    }
+                    let prepared = self.prepare_text(cx.services, &text, &style, constraints);
+                    self.mouse_readout_text = Some(PreparedText {
+                        blob: prepared.blob,
+                        metrics: prepared.metrics,
+                        key,
+                    });
+                }
+
+                if let Some(tt) = self.mouse_readout_text {
+                    let pad = Px(6.0);
+                    let x = Px(layout.plot.origin.x.0 + pad.0);
+                    let top = (layout.plot.origin.y.0 + layout.plot.size.height.0)
+                        - pad.0
+                        - tt.metrics.size.height.0;
+                    let top = top.max(layout.plot.origin.y.0 + pad.0);
+                    let origin = Point::new(x, Px(top + tt.metrics.baseline.0));
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(12),
+                        origin,
+                        text: tt.blob,
+                        color: label_color,
+                    });
+                }
+            }
+        }
+
         let tooltip = selection_tooltip.or_else(|| {
             self.hover
                 .map(|hover| {
@@ -4781,6 +4870,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     (hover.plot_px, text)
                 })
                 .or_else(|| {
+                    if self.style.mouse_readout != MouseReadoutMode::Tooltip {
+                        return None;
+                    }
+
                     let cursor_px = cursor_px?;
                     let cursor_data = cursor_data?;
 
@@ -4986,6 +5079,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         self.clear_axis_label_cache(services);
         self.clear_legend_cache(services);
         if let Some(t) = self.tooltip_text.take() {
+            services.text().release(t.blob);
+        }
+        if let Some(t) = self.mouse_readout_text.take() {
             services.text().release(t.blob);
         }
     }
