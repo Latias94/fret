@@ -3105,45 +3105,112 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
         self.ensure_required_axes_enabled(cx.app);
 
-        let theme = cx.theme().snapshot();
         let font_stack_key = cx
             .app
             .global::<TextFontStackKey>()
             .map(|k| k.0)
             .unwrap_or(0);
-        let background = self
-            .style
-            .background
-            .unwrap_or(theme.colors.panel_background);
-        let border = self.style.border.unwrap_or(theme.colors.panel_border);
+        let (
+            theme_revision,
+            theme_font_size,
+            background,
+            border,
+            axis_color,
+            grid_color,
+            label_color,
+            crosshair_color,
+            selection_border,
+            selection_fill,
+            tooltip_background,
+            tooltip_border,
+            tooltip_text_color,
+        ) = {
+            let theme = cx.theme();
 
-        let axis_color = self.style.axis_color.unwrap_or(theme.colors.panel_border);
-        let grid_color = self.style.grid_color.unwrap_or(Color {
-            a: 0.35,
-            ..theme.colors.panel_border
-        });
-        let label_color = self.style.label_color.unwrap_or(theme.colors.text_muted);
-        let crosshair_color = self.style.crosshair_color.unwrap_or(Color {
-            a: 0.65,
-            ..theme.colors.accent
-        });
-        let selection_border = crosshair_color;
-        let selection_fill = Color {
-            a: (crosshair_color.a * 0.18).clamp(0.06, 0.22),
-            ..crosshair_color
+            let background = self.style.background.unwrap_or_else(|| {
+                crate::theme_tokens::color(theme, "fret.plot.background", "plot.background")
+                    .unwrap_or(theme.colors.panel_background)
+            });
+            let border = self.style.border.unwrap_or_else(|| {
+                crate::theme_tokens::color(theme, "fret.plot.border", "plot.border")
+                    .unwrap_or(theme.colors.panel_border)
+            });
+
+            let axis_color = self.style.axis_color.unwrap_or_else(|| {
+                crate::theme_tokens::color(theme, "fret.plot.axis", "plot.axis")
+                    .unwrap_or(theme.colors.panel_border)
+            });
+            let grid_color = self.style.grid_color.unwrap_or_else(|| {
+                crate::theme_tokens::color(theme, "fret.plot.grid", "plot.grid").unwrap_or(Color {
+                    a: 0.35,
+                    ..theme.colors.panel_border
+                })
+            });
+            let label_color = self.style.label_color.unwrap_or_else(|| {
+                crate::theme_tokens::color(theme, "fret.plot.label", "plot.label")
+                    .unwrap_or(theme.colors.text_muted)
+            });
+            let crosshair_color = self.style.crosshair_color.unwrap_or_else(|| {
+                crate::theme_tokens::color(theme, "fret.plot.crosshair", "plot.crosshair")
+                    .unwrap_or(Color {
+                        a: 0.65,
+                        ..theme.colors.accent
+                    })
+            });
+
+            let selection_border = crate::theme_tokens::color(
+                theme,
+                "fret.plot.selection.stroke",
+                "plot.selection.stroke",
+            )
+            .unwrap_or(crosshair_color);
+            let selection_fill = crate::theme_tokens::color(
+                theme,
+                "fret.plot.selection.fill",
+                "plot.selection.fill",
+            )
+            .unwrap_or(Color {
+                a: (selection_border.a * 0.18).clamp(0.06, 0.22),
+                ..selection_border
+            });
+
+            let tooltip_background = self.style.tooltip_background.unwrap_or_else(|| {
+                crate::theme_tokens::color(
+                    theme,
+                    "fret.plot.tooltip.background",
+                    "plot.tooltip.background",
+                )
+                .unwrap_or(theme.colors.menu_background)
+            });
+            let tooltip_border = self.style.tooltip_border.unwrap_or_else(|| {
+                crate::theme_tokens::color(theme, "fret.plot.tooltip.border", "plot.tooltip.border")
+                    .unwrap_or(theme.colors.menu_border)
+            });
+            let tooltip_text_color = self.style.tooltip_text_color.unwrap_or_else(|| {
+                crate::theme_tokens::color(theme, "fret.plot.tooltip.text", "plot.tooltip.text")
+                    .unwrap_or(theme.colors.text_primary)
+            });
+
+            let theme_font_size = theme
+                .metric_by_key("font.size")
+                .unwrap_or(theme.metrics.font_size);
+
+            (
+                theme.revision(),
+                theme_font_size,
+                background,
+                border,
+                axis_color,
+                grid_color,
+                label_color,
+                crosshair_color,
+                selection_border,
+                selection_fill,
+                tooltip_background,
+                tooltip_border,
+                tooltip_text_color,
+            )
         };
-        let tooltip_background = self
-            .style
-            .tooltip_background
-            .unwrap_or(theme.colors.menu_background);
-        let tooltip_border = self
-            .style
-            .tooltip_border
-            .unwrap_or(theme.colors.menu_border);
-        let tooltip_text_color = self
-            .style
-            .tooltip_text_color
-            .unwrap_or(theme.colors.text_primary);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
@@ -3193,7 +3260,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 view_bounds_y2,
                 view_bounds_y3,
                 view_bounds_y4,
-                theme.revision,
+                theme_revision,
                 font_stack_key,
             );
             if !changed {
@@ -3251,7 +3318,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             view_bounds_y3,
             view_bounds_y4,
         );
-        self.rebuild_legend_if_needed(cx, theme.revision, font_stack_key);
+        self.rebuild_legend_if_needed(cx, theme_revision, font_stack_key);
 
         // Grid + series + hover are clipped to the plot area.
         cx.scene.push(SceneOp::PushClipRect { rect: layout.plot });
@@ -4021,7 +4088,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 };
 
                 let mut key = 0u64;
-                key = Self::hash_u64(key, theme.revision);
+                key = Self::hash_u64(key, theme_revision);
                 key = Self::hash_u64(key, font_stack_key);
                 key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
                 for b in token.as_bytes() {
@@ -4307,7 +4374,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             };
 
             let mut key = 0u64;
-            key = Self::hash_u64(key, theme.revision);
+            key = Self::hash_u64(key, theme_revision);
             key = Self::hash_u64(key, font_stack_key);
             key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
             for b in text.as_bytes() {
@@ -4391,7 +4458,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 };
 
                 let mut key = 0u64;
-                key = Self::hash_u64(key, theme.revision);
+                key = Self::hash_u64(key, theme_revision);
                 key = Self::hash_u64(key, font_stack_key);
                 key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
                 for b in text.as_bytes() {
@@ -4686,10 +4753,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         });
 
         if let Some((anchor_local, text)) = tooltip {
-            let font_size = cx
-                .theme()
-                .metric_by_key("font.size")
-                .unwrap_or(cx.theme().metrics.font_size);
+            let font_size = theme_font_size;
             let style = TextStyle {
                 font: FontId::default(),
                 size: Px((font_size.0 * 0.90).max(10.0)),
@@ -4705,7 +4769,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             };
 
             let mut key = 0u64;
-            key = Self::hash_u64(key, theme.revision);
+            key = Self::hash_u64(key, theme_revision);
             key = Self::hash_u64(key, font_stack_key);
             key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
             for b in text.as_bytes() {

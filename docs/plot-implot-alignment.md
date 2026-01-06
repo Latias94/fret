@@ -113,6 +113,7 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 ## Styling
 
 - [x] Theme-derived defaults
+- [x] Token-driven plot color resolution (`docs/plot-theme-tokens.md`)
 - [~] Per-series style overrides beyond color (stroke width; scatter marker radius/shape; error bars marker shape)
 - [ ] Dashes / joins / caps (likely requires renderer/path contract follow-up)
 
