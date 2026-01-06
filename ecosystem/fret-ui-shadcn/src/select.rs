@@ -1742,7 +1742,14 @@ fn select_impl<H: UiHost>(
                                 overflow: TextOverflow::Ellipsis,
                                 color: Some(if selected.is_some() { fg } else { fg_muted }),
                             }),
-                            decl_icon::icon_with(cx, ids::ui::CHEVRON_DOWN, Some(Px(16.0)), None),
+                                                        cx.opacity(0.5, |cx| {
+                                vec![decl_icon::icon_with(
+                                    cx,
+                                    ids::ui::CHEVRON_DOWN,
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(fg_muted)),
+                                )]
+                            }),
                         ]
                     },
                 )]

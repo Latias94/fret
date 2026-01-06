@@ -550,7 +550,7 @@ fn checkable_menu_row_children<H: UiHost>(
                 text: label.clone(),
                 style: Some(text_style.clone()),
                 wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
+                overflow: TextOverflow::Clip,
                 color: Some(if disabled { text_disabled } else { row_fg }),
             }));
 
@@ -1072,7 +1072,7 @@ impl DropdownMenu {
                                                                         letter_spacing_em: None,
                                                                     }),
                                                                     wrap: TextWrap::None,
-                                                                    overflow: TextOverflow::Ellipsis,
+                                                                    overflow: TextOverflow::Clip,
                                                                     color: Some(fg),
                                                                 })]
                                                             },
@@ -1478,7 +1478,7 @@ impl DropdownMenu {
                                                                             text: label.clone(),
                                                                             style: Some(text_style.clone()),
                                                                             wrap: TextWrap::None,
-                                                                            overflow: TextOverflow::Ellipsis,
+                                                                            overflow: TextOverflow::Clip,
                                                                             color: Some(if disabled { text_disabled } else { row_fg }),
                                                                         }));
 
@@ -1688,7 +1688,7 @@ impl DropdownMenu {
                                                                         letter_spacing_em: None,
                                                                     }),
                                                                     wrap: TextWrap::None,
-                                                                    overflow: TextOverflow::Ellipsis,
+                                                                    overflow: TextOverflow::Clip,
                                                                     color: Some(label_fg),
                                                                 }));
                                                             }
@@ -2033,7 +2033,7 @@ impl DropdownMenu {
                                                                                         text: label.clone(),
                                                                                         style: Some(text_style.clone()),
                                                                                         wrap: TextWrap::None,
-                                                                                        overflow: TextOverflow::Ellipsis,
+                                                                                        overflow: TextOverflow::Clip,
                                                                                         color: Some(if disabled { text_disabled } else { row_fg }),
                                                                                     }));
 
