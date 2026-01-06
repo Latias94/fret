@@ -234,13 +234,16 @@ impl Popover {
             let anchor_id = self.anchor_override.unwrap_or(trigger_id);
             let overlay_root_name = OverlayController::popover_root_name(trigger_id);
 
-            let presence = OverlayController::fade_presence_with_durations(
+            let motion = OverlayController::transition_with_durations(
                 cx,
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
             );
-            let overlay_presence = OverlayPresence::from_fade(is_open, presence);
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: is_open,
+            };
             let dialog_id_for_trigger: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
 
@@ -266,7 +269,7 @@ impl Popover {
                         .unwrap_or(theme.metrics.radius_md)
                 });
 
-                let opacity = presence.opacity;
+                let opacity = motion.progress;
                 let opening = is_open;
                 let dialog_id_for_trigger = dialog_id_for_trigger.clone();
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
@@ -342,7 +345,8 @@ impl Popover {
                         .color_by_key("border")
                         .unwrap_or(theme.colors.panel_border);
 
-                    let wrapper_layout = popper_content::popper_wrapper_layout(placed, wrapper_insets);
+                    let wrapper_layout =
+                        popper_content::popper_wrapper_layout(placed, wrapper_insets);
 
                     let wrapper = cx.container(
                         ContainerProps {

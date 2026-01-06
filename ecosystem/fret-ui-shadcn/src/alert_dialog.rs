@@ -4,12 +4,11 @@ use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle,
     TextWrap,
 };
-use fret_runtime::{Model, ModelId};
+use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
     PositionStyle, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
 };
-use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -96,13 +95,16 @@ impl AlertDialog {
             let prev_content_element =
                 cx.with_state(AlertDialogA11yState::default, |st| st.content_element);
 
-            let presence = OverlayController::fade_presence_with_durations(
+            let motion = OverlayController::transition_with_durations(
                 cx,
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
             );
-            let overlay_presence = OverlayPresence::from_fade(is_open, presence);
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: is_open,
+            };
 
             let content_element_for_trigger: std::cell::Cell<
                 Option<fret_ui::elements::GlobalElementId>,
@@ -115,7 +117,7 @@ impl AlertDialog {
 
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
-                let opacity = presence.opacity;
+                let opacity = motion.progress;
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let barrier_layout = LayoutStyle {

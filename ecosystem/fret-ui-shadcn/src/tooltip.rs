@@ -488,13 +488,16 @@ impl Tooltip {
             }
 
             let opening = update.open;
-            let presence = OverlayController::fade_presence_with_durations(
+            let motion = OverlayController::transition_with_durations(
                 cx,
                 opening,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
             );
-            let overlay_presence = OverlayPresence::from_fade(update.open, presence);
+            let overlay_presence = OverlayPresence {
+                present: motion.present,
+                interactive: update.open,
+            };
 
             let out = vec![trigger];
             if !overlay_presence.present {
@@ -503,7 +506,7 @@ impl Tooltip {
 
             let tooltip_id = cx.root_id();
             let overlay_root_name = OverlayController::tooltip_root_name(tooltip_id);
-            let opacity = presence.opacity;
+            let opacity = motion.progress;
 
             let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                 let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
