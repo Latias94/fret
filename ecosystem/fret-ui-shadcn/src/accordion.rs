@@ -17,8 +17,10 @@ use fret_ui_kit::declarative::collapsible_motion;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::presence;
+use fret_ui_kit::declarative::transition;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+
+use crate::overlay_motion;
 
 fn border_color(theme: &Theme) -> Color {
     theme
@@ -600,9 +602,14 @@ impl Accordion {
                                         let mut children = Vec::new();
                                         children.push(trigger);
 
-                                        let presence_out = presence::fade_presence_with_durations(
-                                            cx, is_open, 8, 8,
-                                        );
+                                        let motion =
+                                            transition::drive_transition_with_durations_and_easing(
+                                                cx,
+                                                is_open,
+                                                8,
+                                                8,
+                                                overlay_motion::shadcn_ease,
+                                            );
                                         let state_id = cx.root_id();
                                         let last_height =
                                             collapsible_motion::last_measured_height_for(
@@ -613,7 +620,7 @@ impl Accordion {
                                                 is_open,
                                                 false,
                                                 true,
-                                                presence_out,
+                                                motion,
                                                 last_height,
                                             );
 
@@ -639,7 +646,7 @@ impl Accordion {
                                                     state_id,
                                                     wrapper_id,
                                                     is_open,
-                                                    presence_out.animating,
+                                                    motion.animating,
                                                 );
 
                                             children.push(wrapper_el);

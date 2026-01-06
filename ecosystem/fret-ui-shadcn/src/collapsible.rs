@@ -9,7 +9,9 @@ use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::collapsible_motion;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::primitives::presence;
+use fret_ui_kit::declarative::transition;
+
+use crate::overlay_motion;
 
 #[derive(Clone)]
 pub struct Collapsible {
@@ -77,10 +79,15 @@ impl Collapsible {
             let force_mount_content = self.force_mount_content;
             let disabled = self.disabled;
 
-            // Radix/shadcn-like behavior uses `Presence` to keep content mounted during close
-            // animations. We approximate the height transition by mapping the eased `opacity`
-            // output to a 0..1 progress value.
-            let presence_out = presence::fade_presence_with_durations(cx, is_open, 8, 8);
+            // Radix/shadcn-like behavior keeps content mounted during close animations. We
+            // approximate the height transition by mapping transition progress to a clipped height.
+            let motion = transition::drive_transition_with_durations_and_easing(
+                cx,
+                is_open,
+                8,
+                8,
+                overlay_motion::shadcn_ease,
+            );
 
             let last_height = collapsible_motion::last_measured_height_for(cx, state_id);
             let (should_render_content, wrapper) =
@@ -88,7 +95,7 @@ impl Collapsible {
                     is_open,
                     force_mount_content,
                     true,
-                    presence_out,
+                    motion,
                     last_height,
                 );
             let content = should_render_content.then(|| content(cx));
@@ -128,7 +135,7 @@ impl Collapsible {
                             state_id,
                             wrapper_id,
                             is_open,
-                            presence_out.animating,
+                            motion.animating,
                         );
 
                         children.push(wrapper_el);
