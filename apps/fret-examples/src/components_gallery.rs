@@ -13,6 +13,7 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
+use fret_markdown as markdown;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
@@ -232,6 +233,9 @@ impl ComponentsGalleryDriver {
                 ));
                 let text_smoke_title: Arc<str> =
                     Arc::from("Text smoke (verify emoji renders in color)");
+                let markdown_sample: Arc<str> = Arc::from(
+                    "## Markdown (MVP)\n\nFenced code blocks render with monospace text. When enabled, tree-sitter highlighting is applied.\n\n```rust\nfn main() {\n    let answer = 42;\n    println!(\"{answer}\");\n}\n```\n",
+                );
                 let text_smoke_lines: [Arc<str>; 5] = [
                     Arc::from("ASCII: The quick brown fox 0123456789"),
                     Arc::from("IME provisional (fullwidth): ＡＢＣＤＥＦＧ １２３４５"),
@@ -275,6 +279,8 @@ impl ComponentsGalleryDriver {
                                 vec![
                                     cx.text(title),
                                     cx.text(subtitle),
+                                    markdown::Markdown::new(markdown_sample.clone())
+                                        .into_element(cx),
                                     cx.flex(
                                         FlexProps {
                                             layout: LayoutStyle::default(),
