@@ -67,7 +67,15 @@ fn cmdk_highlighted_label<H: UiHost>(
 ) -> AnyElement {
     if query.is_empty() {
         return cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.min_width = Some(Px(0.0));
+                layout.flex.grow = 1.0;
+                layout.flex.shrink = 1.0;
+                layout.flex.basis = Length::Px(Px(0.0));
+                layout
+            },
             text: label,
             style: Some(text_style),
             color: Some(fg),
@@ -84,7 +92,15 @@ fn cmdk_highlighted_label<H: UiHost>(
     let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
     if ranges.is_empty() {
         return cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.min_width = Some(Px(0.0));
+                layout.flex.grow = 1.0;
+                layout.flex.shrink = 1.0;
+                layout.flex.basis = Length::Px(Px(0.0));
+                layout
+            },
             text: label,
             style: Some(text_style),
             color: Some(fg),
@@ -151,7 +167,15 @@ fn cmdk_highlighted_label<H: UiHost>(
 
     cx.row(
         RowProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.min_width = Some(Px(0.0));
+                layout.flex.grow = 1.0;
+                layout.flex.shrink = 1.0;
+                layout.flex.basis = Length::Px(Px(0.0));
+                layout
+            },
             gap: Px(0.0),
             padding: Edges::all(Px(0.0)),
             justify: MainAlign::Start,
@@ -224,7 +248,11 @@ impl CommandShortcut {
             .color_by_key("muted-foreground")
             .unwrap_or(theme.colors.text_muted);
         cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.flex.shrink = 0.0;
+                layout
+            },
             text: self.text,
             style: Some(shortcut_text_style(&theme)),
             color: Some(fg),
@@ -1446,7 +1474,15 @@ impl CommandPalette {
 
                                                 let left = cx.row(
                                                     RowProps {
-                                                        layout: LayoutStyle::default(),
+                                                        layout: {
+                                                            let mut layout = LayoutStyle::default();
+                                                            layout.size.width = Length::Fill;
+                                                            layout.size.min_width = Some(Px(0.0));
+                                                            layout.flex.grow = 1.0;
+                                                            layout.flex.shrink = 1.0;
+                                                            layout.flex.basis = Length::Px(Px(0.0));
+                                                            layout
+                                                        },
                                                         gap: row_gap,
                                                         padding: Edges::all(Px(0.0)),
                                                         justify: MainAlign::Start,
