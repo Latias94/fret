@@ -1877,10 +1877,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 let radius_md = theme.metric_required("metric.radius.md");
                 let radius_sm = theme.metric_required("metric.radius.sm");
 
-                let border_color = Color {
-                    a: 0.85,
-                    ..border
-                };
+                let border_color = Color { a: 0.85, ..border };
                 cx.scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(0),
                     rect: chrome.outer,

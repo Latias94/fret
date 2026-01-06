@@ -71,6 +71,12 @@ Decorations are drawn as separate scene ops associated with text runs (not as in
 `fret-markdown` will resolve styling through `Theme::color_by_key` / `Theme::metric_by_key` first,
 then fall back to existing typed theme surfaces (`theme.colors`, `theme.metrics`).
 
+We standardize the following lookup order:
+
+1. `fret.markdown.*` (canonical, Fret-owned namespace)
+2. `markdown.*` (compatibility keys for third-party theme reuse)
+3. Typed fallbacks (`theme.colors.*` / `theme.metrics.*`)
+
 We standardize the following optional tokens (names are canonical keys):
 
 Colors:
