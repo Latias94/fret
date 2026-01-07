@@ -44,6 +44,7 @@ struct InteractionState {
     wire_drag: Option<WireDrag>,
     edge_drag: Option<EdgeDrag>,
     hover_edge: Option<EdgeId>,
+    hover_port: Option<PortId>,
     context_menu: Option<ContextMenuState>,
     toast: Option<ToastState>,
 }
@@ -1520,6 +1521,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.pending_node_drag = None;
                         self.interaction.node_drag = None;
                         self.interaction.edge_drag = None;
+                        self.interaction.hover_port = None;
                         let yank = (modifiers.ctrl || modifiers.meta).then(|| {
                             let this = &*self;
                             this.graph
@@ -1550,6 +1552,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.node_drag = None;
                         self.interaction.wire_drag = None;
                         self.interaction.edge_drag = None;
+                        self.interaction.hover_port = None;
                         let offset = Point::new(
                             Px(position.x.0 - rect.origin.x.0),
                             Px(position.y.0 - rect.origin.y.0),
@@ -1576,6 +1579,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.pending_node_drag = None;
                         self.interaction.node_drag = None;
                         self.interaction.wire_drag = None;
+                        self.interaction.hover_port = None;
                         let multi = modifiers.ctrl || modifiers.meta;
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
@@ -1604,6 +1608,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.pending_node_drag = None;
                         self.interaction.node_drag = None;
                         self.interaction.wire_drag = None;
+                        self.interaction.hover_port = None;
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
                             s.selected_edges.clear();
@@ -1691,7 +1696,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if let Some(w) = &mut self.interaction.wire_drag {
+                if let Some(mut w) = self.interaction.wire_drag.take() {
                     let auto_pan_delta = (snapshot.interaction.auto_pan.on_connect)
                         .then(|| Self::auto_pan_delta(&snapshot, *position, cx.bounds))
                         .unwrap_or_default();
@@ -1705,6 +1710,26 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             s.pan.y += auto_pan_delta.y;
                         });
                     }
+
+                    let from_port = match &w.kind {
+                        WireDragKind::New { from } => *from,
+                        WireDragKind::Reconnect { fixed, .. } => *fixed,
+                    };
+                    let pos = w.pos;
+                    let new_hover = {
+                        let this = &*self;
+                        this.graph
+                            .read_ref(cx.app, |graph| {
+                                this.pick_target_port(graph, &snapshot, from_port, pos, zoom)
+                            })
+                            .ok()
+                            .flatten()
+                    };
+                    if self.interaction.hover_port != new_hover {
+                        self.interaction.hover_port = new_hover;
+                    }
+
+                    self.interaction.wire_drag = Some(w);
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
                     return;
@@ -1816,13 +1841,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             let this = &*self;
                             this.graph
                                 .read_ref(cx.app, |graph| {
-                                    this.pick_target_port(
-                                        graph, &snapshot, from_port, *position, zoom,
-                                    )
+                                    this.pick_target_port(graph, &snapshot, from_port, w.pos, zoom)
                                 })
                                 .ok()
                                 .flatten()
                         };
+                        self.interaction.hover_port = None;
 
                         match w.kind {
                             WireDragKind::New { from } => {
@@ -2043,11 +2067,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         struct RenderData {
             edges: Vec<(EdgeId, Point, Point, Color, bool, bool)>,
             nodes: Vec<(GraphNodeId, Rect, bool)>,
-            pins: Vec<(Rect, Color)>,
+            pins: Vec<(PortId, Rect, Color)>,
             port_centers: HashMap<PortId, Point>,
         }
 
         let hovered_edge = self.interaction.hover_edge;
+        let hovered_port = self.interaction.hover_port;
 
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
@@ -2084,7 +2109,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                     Point::new(Px(center.x.0 - pin_r), Px(center.y.0 - pin_r)),
                                     Size::new(Px(2.0 * pin_r), Px(2.0 * pin_r)),
                                 );
-                                out.pins.push((rect, color));
+                                out.pins.push((*port, rect, color));
                             }
                         }
                     }
@@ -2161,7 +2186,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 WireDragKind::Reconnect { fixed, .. } => render.port_centers.get(fixed).copied(),
             };
             if let Some(from) = from {
-                let to = w.pos;
+                let to = hovered_port
+                    .and_then(|port| render.port_centers.get(&port).copied())
+                    .unwrap_or(w.pos);
                 let color = self.style.wire_color_preview;
                 if let Some(path) = Self::prepare_wire_path(
                     cx.services,
@@ -2199,7 +2226,27 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             });
         }
 
-        for (rect, color) in render.pins {
+        for (port_id, rect, color) in render.pins {
+            if hovered_port == Some(port_id) {
+                let pad = 2.0 / zoom;
+                let hover_rect = Rect::new(
+                    Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
+                    Size::new(
+                        Px(rect.size.width.0 + 2.0 * pad),
+                        Px(rect.size.height.0 + 2.0 * pad),
+                    ),
+                );
+                let r = Px(0.5 * hover_rect.size.width.0);
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(4),
+                    rect: hover_rect,
+                    background: Color::TRANSPARENT,
+                    border: Edges::all(Px(2.0 / zoom)),
+                    border_color: color,
+                    corner_radii: Corners::all(r),
+                });
+            }
+
             let r = Px(0.5 * rect.size.width.0);
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(4),
