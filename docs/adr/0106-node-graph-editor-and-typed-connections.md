@@ -427,6 +427,11 @@ Port geometry contract (handles vs measurement):
 - The UI is allowed to cache per-node “handle bounds” or anchor maps in editor view state to avoid
   per-frame recomputation (ReactFlow’s `internals.handleBounds` pattern), but these caches must be
   treated as derived data and never as graph semantics.
+- `fret-node` provides an explicit derived-geometry output (`CanvasGeometry`) for the canvas:
+  - per-node rects in canvas space (`node_rect`),
+  - per-port handle bounds and centers (`handle_bounds` / `port_center`).
+  This output is UI-only, depends on style + zoom + node layout, and must never be serialized into the
+  graph asset (it may be cached in editor view state as derived internals).
 
 Derived geometry and internals (locked):
 
