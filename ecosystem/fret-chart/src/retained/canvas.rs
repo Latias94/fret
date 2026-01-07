@@ -30,9 +30,11 @@ impl TextMeasurer for NullTextMeasurer {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct CachedPath {
-    path: fret_core::PathId,
+    stroke: fret_core::PathId,
+    fill: Option<fret_core::PathId>,
+    order: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -441,8 +443,8 @@ impl ChartCanvas {
         let x_window = self.current_window_x(x_axis);
         let y_window = self.current_window_y(y_axis);
 
-        let axis_order = DrawOrder(self.style.draw_order.0.saturating_add(2));
-        let label_order = DrawOrder(self.style.draw_order.0.saturating_add(3));
+        let axis_order = DrawOrder(self.style.draw_order.0.saturating_add(9_500));
+        let label_order = DrawOrder(self.style.draw_order.0.saturating_add(9_501));
 
         let line_w = self.style.axis_line_width.0.max(1.0);
         let tick_len = self.style.axis_tick_length.0.max(0.0);
@@ -588,12 +590,17 @@ impl ChartCanvas {
         self.last_scale_factor_bits = scale_factor_bits;
 
         for cached in self.cached_paths.values() {
-            cx.services.path().release(cached.path);
+            if let Some(fill) = cached.fill {
+                cx.services.path().release(fill);
+            }
+            cx.services.path().release(cached.stroke);
         }
         self.cached_paths.clear();
 
+        let model = self.engine.model();
         let marks = &self.engine.output().marks;
         let origin = self.last_layout.plot.origin;
+        let baseline_y_local = self.last_layout.plot.size.height.0;
 
         for node in &marks.nodes {
             if node.kind != MarkKind::Polyline {
@@ -603,6 +610,11 @@ impl ChartCanvas {
             let MarkPayloadRef::Polyline(poly) = &node.payload else {
                 continue;
             };
+
+            let is_area = node
+                .source_series
+                .and_then(|id| model.series.get(&id))
+                .is_some_and(|s| s.kind == delinea::SeriesKind::Area);
 
             let start = poly.points.start;
             let end = poly.points.end;
@@ -631,7 +643,7 @@ impl ChartCanvas {
                 .map(|(_, s)| s.width)
                 .unwrap_or(self.style.stroke_width);
 
-            let (path, _metrics) = cx.services.path().prepare(
+            let (stroke, _metrics) = cx.services.path().prepare(
                 &commands,
                 PathStyle::Stroke(StrokeStyle {
                     width: stroke_width,
@@ -641,8 +653,50 @@ impl ChartCanvas {
                 },
             );
 
+            let fill = if is_area {
+                let mut fill_commands: Vec<PathCommand> = Vec::with_capacity(commands.len() + 4);
+                fill_commands.extend_from_slice(&commands);
+
+                if let (Some(first), Some(last)) = (
+                    marks.arena.points.get(start),
+                    marks.arena.points.get(end.saturating_sub(1)),
+                ) {
+                    let last_x_local = last.x.0 - origin.x.0;
+                    let first_x_local = first.x.0 - origin.x.0;
+                    fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
+                        Px(last_x_local),
+                        Px(baseline_y_local),
+                    )));
+                    fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
+                        Px(first_x_local),
+                        Px(baseline_y_local),
+                    )));
+                    fill_commands.push(PathCommand::Close);
+
+                    let (fill, _metrics) = cx.services.path().prepare(
+                        &fill_commands,
+                        PathStyle::Fill(fret_core::FillStyle::default()),
+                        PathConstraints {
+                            scale_factor: cx.scale_factor,
+                        },
+                    );
+                    Some(fill)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             let mark_id = node.id;
-            self.cached_paths.insert(mark_id, CachedPath { path });
+            self.cached_paths.insert(
+                mark_id,
+                CachedPath {
+                    stroke,
+                    fill,
+                    order: node.order.0,
+                },
+            );
         }
     }
 }
@@ -1237,10 +1291,23 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         });
 
         for cached in self.cached_paths.values() {
+            let base_order = self
+                .style
+                .draw_order
+                .0
+                .saturating_add(cached.order.saturating_mul(4));
+            if let Some(fill) = cached.fill {
+                cx.scene.push(SceneOp::Path {
+                    order: DrawOrder(base_order),
+                    origin: self.last_layout.plot.origin,
+                    path: fill,
+                    color: self.style.area_fill_color,
+                });
+            }
             cx.scene.push(SceneOp::Path {
-                order: self.style.draw_order,
+                order: DrawOrder(base_order.saturating_add(1)),
                 origin: self.last_layout.plot.origin,
-                path: cached.path,
+                path: cached.stroke,
                 color: self.style.stroke_color,
             });
         }
@@ -1255,8 +1322,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             && hover_hit.is_some_and(|hit| hit.dist2_px <= hover_radius_px * hover_radius_px);
 
         if hover_active && let (Some(pos), Some(hit)) = (pointer_pos, hover_hit) {
-            let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(2));
-            let point_order = DrawOrder(self.style.draw_order.0.saturating_add(3));
+            let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(9_000));
+            let point_order = DrawOrder(self.style.draw_order.0.saturating_add(9_001));
 
             let plot = self.last_layout.plot;
             let crosshair_w = self.style.crosshair_width.0.max(1.0);
@@ -1312,7 +1379,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 rect_from_points_clamped(self.last_layout.plot, drag.start_pos, drag.current_pos);
             if rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0 {
                 cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(self.style.draw_order.0.saturating_add(1)),
+                    order: DrawOrder(self.style.draw_order.0.saturating_add(8_800)),
                     rect,
                     background: self.style.selection_fill,
                     border: Edges::all(self.style.selection_stroke_width),
@@ -1381,7 +1448,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     tip_y = y0;
                 }
 
-                let tooltip_order = DrawOrder(self.style.draw_order.0.saturating_add(20));
+                let tooltip_order = DrawOrder(self.style.draw_order.0.saturating_add(9_100));
                 cx.scene.push(SceneOp::Quad {
                     order: tooltip_order,
                     rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
@@ -1407,7 +1474,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         for cached in self.cached_paths.values() {
-            services.path().release(cached.path);
+            if let Some(fill) = cached.fill {
+                services.path().release(fill);
+            }
+            services.path().release(cached.stroke);
         }
         self.cached_paths.clear();
 

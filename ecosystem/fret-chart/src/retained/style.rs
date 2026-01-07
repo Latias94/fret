@@ -5,6 +5,7 @@ pub struct ChartStyle {
     pub background: Option<Color>,
     pub stroke_color: Color,
     pub stroke_width: Px,
+    pub area_fill_color: Color,
     pub selection_fill: Color,
     pub selection_stroke: Color,
     pub selection_stroke_width: Px,
@@ -43,6 +44,12 @@ impl Default for ChartStyle {
                 a: 0.9,
             },
             stroke_width: Px(1.0),
+            area_fill_color: Color {
+                r: 0.2,
+                g: 0.6,
+                b: 1.0,
+                a: 0.18,
+            },
             selection_fill: Color {
                 r: 0.2,
                 g: 0.6,
