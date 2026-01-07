@@ -19,6 +19,16 @@ use fret_ui::{ElementContext, UiHost};
 use crate::declarative::ModelWatchExt;
 use crate::declarative::action_hooks::ActionHooksExt as _;
 
+/// Returns a selected-value model that behaves like Radix `useControllableState` (`value` /
+/// `defaultValue`).
+pub fn tabs_use_value_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled: Option<Model<Option<Arc<str>>>>,
+    default_value: impl FnOnce() -> Option<Arc<str>>,
+) -> crate::primitives::controllable_state::ControllableModel<Option<Arc<str>>> {
+    crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
+}
+
 /// Matches Radix Tabs `orientation` outcome: horizontal (default) vs vertical layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TabsOrientation {
@@ -212,12 +222,7 @@ impl TabsRoot {
         controlled: Option<Model<Option<Arc<str>>>>,
         default_value: impl FnOnce() -> Option<Arc<str>>,
     ) -> Self {
-        let model = crate::primitives::controllable_state::use_controllable_model(
-            cx,
-            controlled,
-            default_value,
-        )
-        .model();
+        let model = tabs_use_value_model(cx, controlled, default_value).model();
         Self::new(model)
     }
 
@@ -498,6 +503,39 @@ impl TabsContent {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::cell::Cell;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn tabs_use_value_model_prefers_controlled_and_does_not_call_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(Some(Arc::from("a")));
+        let called = Cell::new(0);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let out = tabs_use_value_model(cx, Some(controlled.clone()), || {
+                called.set(called.get() + 1);
+                None
+            });
+            assert!(out.is_controlled());
+            assert_eq!(out.model(), controlled);
+        });
+
+        assert_eq!(called.get(), 0);
+    }
 
     #[test]
     fn tabs_trigger_pointer_down_selects_on_left_mouse_down() {
