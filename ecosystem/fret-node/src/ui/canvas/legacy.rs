@@ -36,6 +36,7 @@ use crate::ui::presenter::{
     NodeGraphContextMenuItem, NodeGraphPresenter,
 };
 use crate::ui::style::NodeGraphStyle;
+use crate::ui::{FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore};
 
 use super::conversion;
 use super::geometry::{CanvasGeometry, node_ports};
@@ -190,6 +191,9 @@ pub struct NodeGraphCanvas {
     style: NodeGraphStyle,
     close_command: Option<CommandId>,
 
+    auto_measured: Arc<MeasuredGeometryStore>,
+    auto_measured_key: Option<(u64, u32)>,
+
     cached_pan: CanvasPoint,
     cached_zoom: f32,
     history: GraphHistory,
@@ -299,12 +303,18 @@ impl NodeGraphCanvas {
     }
 
     pub fn new(graph: Model<Graph>, view_state: Model<NodeGraphViewState>) -> Self {
+        let auto_measured = Arc::new(MeasuredGeometryStore::new());
         Self {
             graph,
             view_state,
-            presenter: Box::new(DefaultNodeGraphPresenter::default()),
+            presenter: Box::new(FallbackMeasuredNodeGraphPresenter::new(
+                DefaultNodeGraphPresenter::default(),
+                auto_measured.clone(),
+            )),
             style: NodeGraphStyle::default(),
             close_command: None,
+            auto_measured,
+            auto_measured_key: None,
             cached_pan: CanvasPoint::default(),
             cached_zoom: 1.0,
             history: GraphHistory::default(),
@@ -316,7 +326,10 @@ impl NodeGraphCanvas {
     }
 
     pub fn with_presenter(mut self, presenter: impl NodeGraphPresenter + 'static) -> Self {
-        self.presenter = Box::new(presenter);
+        self.presenter = Box::new(FallbackMeasuredNodeGraphPresenter::new(
+            presenter,
+            self.auto_measured.clone(),
+        ));
         self
     }
 
@@ -382,6 +395,150 @@ impl NodeGraphCanvas {
         snapshot.pan = self.cached_pan;
 
         snapshot
+    }
+
+    fn update_auto_measured_node_sizes<H: UiHost>(&mut self, cx: &mut LayoutCx<'_, H>) {
+        let graph_rev = self.graph.revision(cx.app).unwrap_or(0);
+        let scale_bits = cx.scale_factor.to_bits();
+        let key = (graph_rev, scale_bits);
+        if self.auto_measured_key == Some(key) {
+            return;
+        }
+        self.auto_measured_key = Some(key);
+
+        #[derive(Debug)]
+        struct NodeMeasureInput {
+            node: GraphNodeId,
+            title: Arc<str>,
+            inputs: Vec<Arc<str>>,
+            outputs: Vec<Arc<str>>,
+        }
+
+        let presenter: &dyn NodeGraphPresenter = &*self.presenter;
+        let Some(nodes) = self
+            .graph
+            .read_ref(cx.app, |graph| {
+                let mut out: Vec<NodeMeasureInput> = Vec::new();
+                out.reserve(graph.nodes.len());
+
+                for node_id in graph.nodes.keys().copied() {
+                    let title = presenter.node_title(graph, node_id);
+                    let (inputs, outputs) = node_ports(graph, node_id);
+                    let inputs = inputs
+                        .into_iter()
+                        .map(|p| presenter.port_label(graph, p))
+                        .collect();
+                    let outputs = outputs
+                        .into_iter()
+                        .map(|p| presenter.port_label(graph, p))
+                        .collect();
+                    out.push(NodeMeasureInput {
+                        node: node_id,
+                        title,
+                        inputs,
+                        outputs,
+                    });
+                }
+
+                out
+            })
+            .ok()
+        else {
+            return;
+        };
+
+        let text_style = self.style.context_menu_text_style.clone();
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+
+        let node_pad = self.style.node_padding;
+        let pin_gap = 8.0;
+        let pin_r = self.style.pin_radius;
+        let label_overhead = 2.0 * node_pad + 2.0 * (pin_r + pin_gap);
+
+        let mut measured: Vec<(GraphNodeId, (f32, f32))> = Vec::with_capacity(nodes.len());
+        for node in &nodes {
+            let title_w = if node.title.is_empty() {
+                0.0
+            } else {
+                cx.services
+                    .text()
+                    .measure(node.title.as_ref(), &text_style, constraints)
+                    .size
+                    .width
+                    .0
+            };
+            let max_in = node
+                .inputs
+                .iter()
+                .filter(|s| !s.is_empty())
+                .map(|s| {
+                    cx.services
+                        .text()
+                        .measure(s.as_ref(), &text_style, constraints)
+                        .size
+                        .width
+                        .0
+                })
+                .fold(0.0, f32::max);
+            let max_out = node
+                .outputs
+                .iter()
+                .filter(|s| !s.is_empty())
+                .map(|s| {
+                    cx.services
+                        .text()
+                        .measure(s.as_ref(), &text_style, constraints)
+                        .size
+                        .width
+                        .0
+                })
+                .fold(0.0, f32::max);
+
+            let w_by_title = title_w + 2.0 * node_pad;
+            let w_by_labels = max_in.max(max_out) + label_overhead;
+            let w = self.style.node_width.max(w_by_title).max(w_by_labels);
+
+            let rows = node.inputs.len().max(node.outputs.len()) as f32;
+            let base = self.style.node_header_height + 2.0 * node_pad;
+            let h = base + rows * self.style.pin_row_height;
+
+            measured.push((node.node, (w, h)));
+        }
+
+        let keep: std::collections::BTreeSet<GraphNodeId> =
+            measured.iter().map(|(n, _)| *n).collect();
+
+        let _ = self
+            .auto_measured
+            .update_if_changed(|node_sizes, _anchors| {
+                let mut changed = false;
+
+                node_sizes.retain(|id, _| {
+                    let ok = keep.contains(id);
+                    if !ok {
+                        changed = true;
+                    }
+                    ok
+                });
+
+                for (node, size) in &measured {
+                    let needs = match node_sizes.get(node) {
+                        Some(old) => (old.0 - size.0).abs() > 0.1 || (old.1 - size.1).abs() > 0.1,
+                        None => true,
+                    };
+                    if needs {
+                        node_sizes.insert(*node, *size);
+                        changed = true;
+                    }
+                }
+
+                changed
+            });
     }
 
     fn update_view_state<H: UiHost>(
@@ -2488,6 +2645,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         cx.observe_model(&self.graph, Invalidation::Layout);
         cx.observe_model(&self.view_state, Invalidation::Layout);
         self.sync_view_state(cx.app);
+        self.update_auto_measured_node_sizes(cx);
         cx.available
     }
 
@@ -4017,8 +4175,15 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             edges: Vec<(EdgeId, Point, Point, Color, bool, bool)>,
             nodes: Vec<(GraphNodeId, Rect, bool, Arc<str>)>,
             pins: Vec<(PortId, Rect, Color)>,
-            port_labels: HashMap<PortId, (Arc<str>, PortDirection)>,
+            port_labels: HashMap<PortId, PortLabelRender>,
             port_centers: HashMap<PortId, Point>,
+        }
+
+        #[derive(Debug, Clone)]
+        struct PortLabelRender {
+            label: Arc<str>,
+            dir: PortDirection,
+            max_width: Px,
         }
 
         let hovered_edge = self.interaction.hover_edge;
@@ -4049,6 +4214,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     let mut out = RenderData::default();
 
                     let geom = geom.as_ref();
+                    let node_pad = this.style.node_padding;
+                    let pin_gap = 8.0;
+                    let pin_r = this.style.pin_radius;
+                    let label_overhead = 2.0 * node_pad + 2.0 * (pin_r + pin_gap);
 
                     for node in geom.order.iter().copied() {
                         let Some(node_geom) = geom.nodes.get(&node) else {
@@ -4061,8 +4230,27 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                     for (&port_id, handle) in &geom.ports {
                         out.port_centers.insert(port_id, handle.center);
-                        out.port_labels
-                            .insert(port_id, (presenter.port_label(graph, port_id), handle.dir));
+                        let max_w = graph
+                            .ports
+                            .get(&port_id)
+                            .and_then(|p| geom.nodes.get(&p.node))
+                            .map(|node| {
+                                let screen_w = node.rect.size.width.0 * zoom;
+                                let screen_max = (screen_w - label_overhead).max(0.0);
+                                Px(screen_max / zoom)
+                            })
+                            .unwrap_or_else(|| {
+                                let screen_max = (this.style.node_width - label_overhead).max(0.0);
+                                Px(screen_max / zoom)
+                            });
+                        out.port_labels.insert(
+                            port_id,
+                            PortLabelRender {
+                                label: presenter.port_label(graph, port_id),
+                                dir: handle.dir,
+                                max_width: max_w,
+                            },
+                        );
                         let color = presenter.port_color(graph, port_id, &this.style);
                         out.pins.push((port_id, handle.bounds, color));
                     }
@@ -4264,30 +4452,25 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         let pin_r = self.style.pin_radius / zoom;
         let pin_gap = 8.0 / zoom;
-        let label_max_w = (self.style.node_width
-            - 2.0 * self.style.node_padding
-            - 2.0 * (self.style.pin_radius + 8.0))
-            .max(0.0)
-            / zoom;
-        let port_constraints = TextConstraints {
-            max_width: Some(Px(label_max_w)),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            scale_factor: cx.scale_factor * zoom,
-        };
 
-        for (port_id, (label, dir)) in &render.port_labels {
+        for (port_id, info) in &render.port_labels {
             let Some(center) = render.port_centers.get(port_id).copied() else {
                 continue;
+            };
+            let port_constraints = TextConstraints {
+                max_width: Some(info.max_width),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor * zoom,
             };
             let (blob, metrics) =
                 cx.services
                     .text()
-                    .prepare(label.as_ref(), &node_text_style, port_constraints);
+                    .prepare(info.label.as_ref(), &node_text_style, port_constraints);
             self.text_blobs.push(blob);
 
             let y = Px(center.y.0 - 0.5 * metrics.size.height.0 + metrics.baseline.0);
-            let x = match dir {
+            let x = match info.dir {
                 PortDirection::In => Px(center.x.0 + pin_r + pin_gap),
                 PortDirection::Out => Px(center.x.0 - pin_r - pin_gap - metrics.size.width.0),
             };

@@ -12,7 +12,9 @@ pub mod style;
 
 pub use canvas::NodeGraphCanvas;
 pub use commands::register_node_graph_commands;
-pub use measured::{MeasuredGeometryStore, MeasuredNodeGraphPresenter};
+pub use measured::{
+    FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
+};
 pub use presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
     NodeGraphContextMenuItem, NodeGraphPresenter, RegistryNodeGraphPresenter,
