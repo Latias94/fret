@@ -6,6 +6,7 @@ edition.workspace = true
 [features]
 alloc-profile = ["fret-examples/alloc-profile"]
 mathjax-svg = ["fret-examples/mathjax-svg"]
+hotpatch = ["fret-examples/hotpatch"]
 
 [dependencies]
 anyhow.workspace = true

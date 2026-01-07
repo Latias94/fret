@@ -94,6 +94,11 @@ Proposed API shape (names subject to bikeshedding):
 
 `FnDriver<S>` is runner-level only; it does not change `fret-ui` authoring model (ADR 0039).
 
+Implementation note:
+
+- Prefer `FnDriver` as the primary authoring surface for hotpatch-enabled apps.
+- Keep the trait-based driver only as a compatibility layer until in-tree apps migrate.
+
 Rationale:
 
 - Subsecond-style hotpatching is fundamentally about detouring function pointers.
@@ -131,8 +136,10 @@ We define a runner-level procedure:
    - discard/recreate `UiTree` (or an equivalent “hard reset” operation that guarantees all registered action hooks are dropped),
    - discard/recreate overlay controllers, outside-press observers, and any other long-lived policy surfaces that store callbacks.
 4) Window state handling (critical for safety):
-   - Default: create a new window state via `create_window_state` and replace the old state.
-   - Default drop policy: **do not drop** the old window state (leak) to avoid running potentially incompatible drop code.
+   - Default: **do not rebuild window state**. Instead, call a dev-only hot reload hook to reset retained UI runtime
+     state in place (e.g. discard/recreate `UiTree`, clear cached node IDs, close overlays) while preserving app models.
+   - Default drop policy: **do not drop** the old UI runtime state (leak) to avoid running potentially incompatible drop
+     code after a patch.
    - Allow an opt-in “drop old state” mode for advanced users who accept the risk and enforce ABI stability themselves.
 
 Notes:
@@ -149,6 +156,12 @@ Hot reload introduces a dev-only contract:
 
 - Action hook registrations are **runtime caches**. On hot reload, all existing registrations must be discarded.
 - The next frame’s render will re-register hooks from the patched code.
+
+This explicitly answers the common question “should we remove action hooks to support hot reload?”:
+
+- No. Action hooks are the mechanism that keeps `crates/fret-ui` policy-free (ADR 0074).
+- Hot reload safety comes from discarding the old hook registry (and other retained callback surfaces) at a runner-level
+  reset boundary, not from removing the mechanism.
 
 Future optimization (not required for this ADR):
 
@@ -229,4 +242,3 @@ We keep the trait-based driver for compatibility, but recommend the function-poi
 - Resource handles + flush point: `docs/adr/0004-resource-handles.md`
 - Crate layering: `docs/adr/0093-crate-structure-core-backends-apps.md`
 - Subsecond reference: `repo-ref/dioxus/packages/subsecond`
-

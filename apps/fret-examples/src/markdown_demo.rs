@@ -607,6 +607,16 @@ impl WinitAppDriver for MarkdownDemoDriver {
         MarkdownDemoDriver::build_ui(app, window)
     }
 
+    fn hot_reload_window(
+        &mut self,
+        app: &mut App,
+        _services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        state: &mut Self::WindowState,
+    ) {
+        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    }
+
     fn handle_model_changes(
         &mut self,
         context: WinitWindowContext<'_, Self::WindowState>,

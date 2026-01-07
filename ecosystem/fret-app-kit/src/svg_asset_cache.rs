@@ -1,1 +1,1 @@
-pub use fret_asset_cache::svg_asset_cache::*;
+pub use fret_ui_assets::svg_asset_cache::*;

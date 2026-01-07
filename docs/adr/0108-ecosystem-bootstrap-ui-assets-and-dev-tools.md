@@ -36,6 +36,7 @@ Separately, we want a developer tool entry point:
 - Provide a “golden path” startup layer as an ecosystem crate that composes existing primitives, without adding new core contracts.
 - Rename or reframe “asset cache” to clearly mean “UI render assets”, not “editor asset pipeline”.
 - Define how dev tools (CLI) fit into the layering story.
+- Keep web (wasm) developer experience ergonomic without pushing toolchain concerns into library crates.
 
 ## Non-goals
 
@@ -49,8 +50,18 @@ Separately, we want a developer tool entry point:
 - Backend crates must not depend on ecosystem policy crates.
 - The `fret` facade must not pull in backends or ecosystem defaults by default (ADR 0093).
 - Resource ownership stays in the renderer with handle-based IDs (ADR 0004).
+- `fret-ui-app` is an allowed “core-to-core integration convenience” crate, but must remain backend-agnostic.
 
 ## Decision
+
+### 0) Terminology: “UI render assets” vs “editor project assets”
+
+To avoid scope drift, we standardize terms:
+
+- **UI render assets**: bytes/resources used to render UI (icons, images, SVGs, glyph atlases), registered via
+  effect-driven flush points and referenced by stable IDs (ADR 0004).
+- **Editor project assets**: engine/editor assets with GUID identity, import pipelines, dependency graphs, and derived
+  artifacts (ADR 0026; out-of-scope for the framework kernel).
 
 ### 1) Introduce an ecosystem “golden path” startup crate: `fret-bootstrap`
 
@@ -98,6 +109,13 @@ Migration path:
 
 It should avoid being the primary home of “UI render assets” caching logic, which belongs in `fret-ui-assets`.
 
+In particular:
+
+- `fret-app-kit` may *re-export* `fret-ui-assets` temporarily for migration convenience, but should not be the “canonical”
+  API surface for asset caches long-term.
+- Components and design-system crates should depend on `fret-ui-assets` directly (or higher-level helpers), not via
+  `fret-app-kit`.
+
 ### 4) Introduce a dev-tools layer as a separate distribution: `fretboard` (CLI)
 
 We define a developer tool entry point as a separate crate/binary:
@@ -111,11 +129,16 @@ We define a developer tool entry point as a separate crate/binary:
   - The CLI is not a runtime contract; framework crates must not depend on it.
   - The CLI does not define new UI behaviors; it orchestrates build/run workflows.
 
+Implementation status (in this workspace):
+
+- `apps/fretboard` provides a minimal `fretboard` CLI suitable for local development.
+
 ### 5) Layering rules (hard)
 
 - `crates/*` must not depend on `ecosystem/*`.
 - `ecosystem/*` may depend on `crates/*` but should avoid backend crates (unless the ecosystem crate is explicitly a runner-oriented helper like `fret-bootstrap`).
 - `fretboard` (CLI) may depend on `fret-bootstrap` but not vice versa.
+- `fretboard` is allowed to shell out to platform-specific toolchains (e.g. `trunk`) because it is tooling, not a library.
 
 ## Suggested API Surfaces (Non-binding)
 
@@ -133,6 +156,14 @@ This ADR does not lock exact APIs, but recommends a minimal set of patterns to k
   - unified `UiAssets::handle_event(app, window, event)` (drives `ImageAssetCache`, etc.),
   - unified `UiAssets::on_gpu_ready(app, services)` for optional preloads,
   - `stats()` for overlays.
+
+### Web (wasm32) workflow expectation
+
+- Default workflow: devserver rebuild + reload (not Subsecond) (ADR 0107).
+- Recommended (tooling-layer) integration:
+  - `fretboard dev web` runs a chosen `apps/*` wasm target via `trunk serve` (or equivalent),
+  - `fretboard` is responsible for flags, feature selection, and environment variable plumbing,
+  - library crates do not depend on `trunk` or other external toolchain components.
 
 ## Alternatives Considered
 
@@ -176,6 +207,7 @@ breaking stable contracts.
 2) Introduce `fret-ui-assets` as a re-export wrapper around `fret-asset-cache` (or rename directly if early enough).
 3) Refactor `fret-app-kit` to keep “app semantics” and move/alias render-asset conveniences into `fret-ui-assets`.
 4) Add `fretboard` CLI once the bootstrap patterns stabilize.
+5) (Optional) Add a starter template command (`fretboard init`) only after the crate boundaries prove stable.
 
 ## References
 
@@ -184,4 +216,3 @@ breaking stable contracts.
 - Resource handles & ownership: `docs/adr/0004-resource-handles.md`
 - Workspace boundaries / components repo direction: `docs/adr/0037-workspace-boundaries-and-components-repository.md`
 - Dev hotpatch integration (this repo): `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
-

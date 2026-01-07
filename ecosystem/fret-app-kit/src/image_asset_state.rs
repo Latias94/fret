@@ -1,6 +1,6 @@
-use fret_asset_cache::image_asset_cache::{ImageAssetCache, ImageAssetKey};
 use fret_core::{AppWindowId, ImageColorSpace, ImageId};
 use fret_runtime::{EffectSink, GlobalsHost, TimeHost};
+use fret_ui_assets::image_asset_cache::{ImageAssetCache, ImageAssetKey};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ImageLoadingStatus {
@@ -44,7 +44,7 @@ pub fn use_rgba8_image_state<H: GlobalsHost + TimeHost + EffectSink>(
     rgba: &[u8],
     color_space: ImageColorSpace,
 ) -> (ImageAssetKey, Option<ImageId>, ImageLoadingStatus) {
-    use fret_asset_cache::image_asset_cache::ImageAssetCacheHostExt as _;
+    use fret_ui_assets::image_asset_cache::ImageAssetCacheHostExt as _;
 
     host.with_image_asset_cache(|cache, host| {
         let (key, image) = cache.use_rgba8(host, window, width, height, rgba, color_space);

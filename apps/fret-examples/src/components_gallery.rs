@@ -2,13 +2,12 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_app_kit::tree::AppTreeRowRenderer;
+#[cfg(not(target_arch = "wasm32"))]
+use fret_bootstrap::BootstrapBuilder;
 use fret_core::{
     AppWindowId, Corners, Edges, Event, FileDialogFilter, FileDialogOptions, FileDialogToken,
     FontId, KeyCode, Px, Rect, SemanticsRole, TextStyle, UiServices,
 };
-use fret_icons::IconRegistry;
-#[cfg(not(target_arch = "wasm32"))]
-use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
@@ -1380,6 +1379,43 @@ impl WinitAppDriver for ComponentsGalleryDriver {
         Self::build_ui(app, window)
     }
 
+    fn hot_reload_window(
+        &mut self,
+        app: &mut App,
+        _services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        state: &mut Self::WindowState,
+    ) {
+        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+        state.root = None;
+        state.pending_font_dialog = None;
+        state.awaiting_font_dialog = false;
+
+        let _ = app.models_mut().update(&state.select_open, |v| *v = false);
+        let _ = app
+            .models_mut()
+            .update(&state.theme_preset_open, |v| *v = false);
+        let _ = app
+            .models_mut()
+            .update(&state.dropdown_open, |v| *v = false);
+        let _ = app
+            .models_mut()
+            .update(&state.context_menu_open, |v| *v = false);
+        let _ = app.models_mut().update(&state.popover_open, |v| *v = false);
+        let _ = app.models_mut().update(&state.dialog_open, |v| *v = false);
+        let _ = app
+            .models_mut()
+            .update(&state.alert_dialog_open, |v| *v = false);
+        let _ = app.models_mut().update(&state.sheet_open, |v| *v = false);
+        let _ = app.models_mut().update(&state.cmdk_open, |v| *v = false);
+        let _ = app
+            .models_mut()
+            .update(&state.ui_font_override_open, |v| *v = false);
+        let _ = app
+            .models_mut()
+            .update(&state.emoji_font_override_open, |v| *v = false);
+    }
+
     fn handle_model_changes(
         &mut self,
         context: WinitWindowContext<'_, Self::WindowState>,
@@ -1823,9 +1859,6 @@ impl WinitAppDriver for ComponentsGalleryDriver {
 pub fn build_app() -> App {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    app.with_global_mut(IconRegistry::default, |icons, _app| {
-        fret_icons_lucide::register_icons(icons);
-    });
     shadcn::shadcn_themes::apply_shadcn_new_york_v4(
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
@@ -1857,18 +1890,17 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let mut app = build_app();
-    let mut config = build_runner_config();
+    let app = build_app();
+    let config = build_runner_config();
 
-    if let Some(settings) = fret_app::SettingsFileV1::load_json_if_exists(".fret/settings.json")
+    let builder = BootstrapBuilder::new(app, ComponentsGalleryDriver)
+        .configure(move |c| {
+            *c = config;
+        })
+        .with_default_settings_json()
         .context("load .fret/settings.json")?
-    {
-        app.set_global(settings.docking_interaction_settings());
-        config.text_font_families.ui_sans = settings.fonts.ui_sans;
-        config.text_font_families.ui_serif = settings.fonts.ui_serif;
-        config.text_font_families.ui_mono = settings.fonts.ui_mono;
-    }
+        .register_icon_pack(fret_icons_lucide::register_icons)
+        .preload_icon_svgs_on_gpu_ready();
 
-    let driver = ComponentsGalleryDriver;
-    run_app(config, app, driver).map_err(anyhow::Error::from)
+    builder.run().map_err(anyhow::Error::from)
 }

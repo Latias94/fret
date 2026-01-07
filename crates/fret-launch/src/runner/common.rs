@@ -219,12 +219,250 @@ pub struct WinitGlobalContext<'a> {
     pub services: &'a mut dyn UiServices,
 }
 
+pub struct WinitHotReloadContext<'a, S> {
+    pub app: &'a mut App,
+    pub services: &'a mut dyn UiServices,
+    pub window: fret_core::AppWindowId,
+    pub state: &'a mut S,
+}
+
+/// A function-pointer based `WinitAppDriver`.
+///
+/// This is intended as an ergonomic and hotpatch-friendly alternative to implementing
+/// the `WinitAppDriver` trait directly.
+pub struct FnDriver<D, S> {
+    driver_state: D,
+    create_window_state: fn(&mut D, &mut App, fret_core::AppWindowId) -> S,
+    handle_event: for<'d, 'cx, 'e> fn(&'d mut D, WinitEventContext<'cx, S>, &'e Event),
+    render: for<'d, 'cx> fn(&'d mut D, WinitRenderContext<'cx, S>),
+    hooks: FnDriverHooks<D, S>,
+}
+
+impl<D, S> FnDriver<D, S> {
+    pub fn new(
+        driver_state: D,
+        create_window_state: fn(&mut D, &mut App, fret_core::AppWindowId) -> S,
+        handle_event: for<'d, 'cx, 'e> fn(&'d mut D, WinitEventContext<'cx, S>, &'e Event),
+        render: for<'d, 'cx> fn(&'d mut D, WinitRenderContext<'cx, S>),
+    ) -> Self {
+        Self {
+            driver_state,
+            create_window_state,
+            handle_event,
+            render,
+            hooks: FnDriverHooks::default(),
+        }
+    }
+
+    pub fn with_init(mut self, init: fn(&mut D, &mut App, fret_core::AppWindowId)) -> Self {
+        self.hooks.init = Some(init);
+        self
+    }
+
+    pub fn with_gpu_ready(
+        mut self,
+        gpu_ready: fn(&mut D, &mut App, &WgpuContext, &mut Renderer),
+    ) -> Self {
+        self.hooks.gpu_ready = Some(gpu_ready);
+        self
+    }
+
+    pub fn with_hooks(mut self, f: impl FnOnce(&mut FnDriverHooks<D, S>)) -> Self {
+        f(&mut self.hooks);
+        self
+    }
+
+    pub fn hooks(&self) -> &FnDriverHooks<D, S> {
+        &self.hooks
+    }
+
+    pub fn hooks_mut(&mut self) -> &mut FnDriverHooks<D, S> {
+        &mut self.hooks
+    }
+
+    pub fn driver_state(&self) -> &D {
+        &self.driver_state
+    }
+
+    pub fn driver_state_mut(&mut self) -> &mut D {
+        &mut self.driver_state
+    }
+}
+
+pub struct FnDriverHooks<D, S> {
+    pub init: Option<fn(&mut D, &mut App, fret_core::AppWindowId)>,
+    pub gpu_ready: Option<fn(&mut D, &mut App, &WgpuContext, &mut Renderer)>,
+    pub hot_reload_global: Option<for<'d, 'cx> fn(&'d mut D, WinitGlobalContext<'cx>)>,
+    pub hot_reload_window: Option<for<'d, 'cx> fn(&'d mut D, WinitHotReloadContext<'cx, S>)>,
+    pub gpu_frame_prepare: Option<
+        for<'d> fn(
+            &'d mut D,
+            &mut App,
+            fret_core::AppWindowId,
+            &mut S,
+            &WgpuContext,
+            &mut Renderer,
+            f32,
+        ),
+    >,
+    pub record_engine_frame: Option<
+        for<'d> fn(
+            &'d mut D,
+            &mut App,
+            fret_core::AppWindowId,
+            &mut S,
+            &WgpuContext,
+            &mut Renderer,
+            f32,
+            TickId,
+            FrameId,
+        ) -> EngineFrameUpdate,
+    >,
+    pub viewport_input: Option<fn(&mut D, &mut App, ViewportInputEvent)>,
+    pub dock_op: Option<fn(&mut D, &mut App, fret_core::DockOp)>,
+    pub handle_command:
+        Option<for<'d, 'cx> fn(&'d mut D, WinitCommandContext<'cx, S>, fret_app::CommandId)>,
+    pub handle_global_command:
+        Option<for<'d, 'cx> fn(&'d mut D, WinitGlobalContext<'cx>, fret_app::CommandId)>,
+    pub handle_model_changes:
+        Option<for<'d, 'cx> fn(&'d mut D, WinitWindowContext<'cx, S>, &'cx [fret_app::ModelId])>,
+    pub handle_global_changes:
+        Option<for<'d, 'cx> fn(&'d mut D, WinitWindowContext<'cx, S>, &'cx [std::any::TypeId])>,
+    pub window_create_spec:
+        Option<fn(&mut D, &mut App, &fret_app::CreateWindowRequest) -> Option<WindowCreateSpec>>,
+    pub window_created:
+        Option<fn(&mut D, &mut App, &fret_app::CreateWindowRequest, fret_core::AppWindowId)>,
+    pub before_close_window: Option<fn(&mut D, &mut App, fret_core::AppWindowId) -> bool>,
+    pub accessibility_snapshot: Option<
+        fn(
+            &mut D,
+            &mut App,
+            fret_core::AppWindowId,
+            &mut S,
+        ) -> Option<Arc<fret_core::SemanticsSnapshot>>,
+    >,
+    pub accessibility_focus:
+        Option<fn(&mut D, &mut App, fret_core::AppWindowId, &mut S, fret_core::NodeId)>,
+    pub accessibility_invoke: Option<
+        fn(
+            &mut D,
+            &mut App,
+            &mut dyn UiServices,
+            fret_core::AppWindowId,
+            &mut S,
+            fret_core::NodeId,
+        ),
+    >,
+    pub accessibility_set_value_text: Option<
+        fn(
+            &mut D,
+            &mut App,
+            &mut dyn UiServices,
+            fret_core::AppWindowId,
+            &mut S,
+            fret_core::NodeId,
+            &str,
+        ),
+    >,
+    pub accessibility_set_value_numeric: Option<
+        fn(
+            &mut D,
+            &mut App,
+            &mut dyn UiServices,
+            fret_core::AppWindowId,
+            &mut S,
+            fret_core::NodeId,
+            f64,
+        ),
+    >,
+    pub accessibility_set_text_selection: Option<
+        fn(
+            &mut D,
+            &mut App,
+            &mut dyn UiServices,
+            fret_core::AppWindowId,
+            &mut S,
+            fret_core::NodeId,
+            u32,
+            u32,
+        ),
+    >,
+    pub accessibility_replace_selected_text: Option<
+        fn(
+            &mut D,
+            &mut App,
+            &mut dyn UiServices,
+            fret_core::AppWindowId,
+            &mut S,
+            fret_core::NodeId,
+            &str,
+        ),
+    >,
+}
+
+impl<D, S> Default for FnDriverHooks<D, S> {
+    fn default() -> Self {
+        Self {
+            init: None,
+            gpu_ready: None,
+            hot_reload_global: None,
+            hot_reload_window: None,
+            gpu_frame_prepare: None,
+            record_engine_frame: None,
+            viewport_input: None,
+            dock_op: None,
+            handle_command: None,
+            handle_global_command: None,
+            handle_model_changes: None,
+            handle_global_changes: None,
+            window_create_spec: None,
+            window_created: None,
+            before_close_window: None,
+            accessibility_snapshot: None,
+            accessibility_focus: None,
+            accessibility_invoke: None,
+            accessibility_set_value_text: None,
+            accessibility_set_value_numeric: None,
+            accessibility_set_text_selection: None,
+            accessibility_replace_selected_text: None,
+        }
+    }
+}
+
+/// Trait-based runner driver integration.
+///
+/// Prefer `FnDriver` when you want a stable, function-pointer based “hot anchor” surface for dev
+/// hotpatch workflows (see ADR 0107). This trait remains supported for compatibility and for
+/// drivers that benefit from trait-based struct organization.
+///
+/// TODO: Once `FnDriver` covers all required hooks and in-tree call sites have migrated, remove
+/// `WinitAppDriver` from the public surface to make `FnDriver` the single supported entrypoint.
 pub trait WinitAppDriver {
     type WindowState;
 
     fn init(&mut self, _app: &mut App, _main_window: fret_core::AppWindowId) {}
 
     fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, _renderer: &mut Renderer) {}
+
+    /// Dev-only hot reload hook.
+    ///
+    /// Runner callers should guarantee a "hard reset" boundary that does not require preserving
+    /// any previously-registered callbacks. This is intentionally a best-effort hook that allows
+    /// app code to reset retained UI runtime state without rebuilding app models.
+    fn hot_reload_global(&mut self, _app: &mut App, _services: &mut dyn UiServices) {}
+
+    /// Dev-only hot reload hook.
+    ///
+    /// Default behavior is a no-op to keep production behavior unchanged. App code can implement
+    /// this to reset per-window retained UI runtime state (e.g. `UiTree`) while preserving models.
+    fn hot_reload_window(
+        &mut self,
+        _app: &mut App,
+        _services: &mut dyn UiServices,
+        _window: fret_core::AppWindowId,
+        _state: &mut Self::WindowState,
+    ) {
+    }
 
     #[allow(clippy::too_many_arguments)]
     fn gpu_frame_prepare(
@@ -414,5 +652,320 @@ pub trait WinitAppDriver {
         _target: fret_core::NodeId,
         _value: &str,
     ) {
+    }
+}
+
+impl<D, S> WinitAppDriver for FnDriver<D, S> {
+    type WindowState = S;
+
+    fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
+        if let Some(init) = self.hooks.init {
+            init(&mut self.driver_state, app, main_window);
+        }
+    }
+
+    fn gpu_ready(&mut self, app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
+        if let Some(gpu_ready) = self.hooks.gpu_ready {
+            gpu_ready(&mut self.driver_state, app, context, renderer);
+        }
+    }
+
+    fn hot_reload_global(&mut self, app: &mut App, services: &mut dyn UiServices) {
+        if let Some(f) = self.hooks.hot_reload_global {
+            f(&mut self.driver_state, WinitGlobalContext { app, services });
+        }
+    }
+
+    fn hot_reload_window(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+    ) {
+        if let Some(f) = self.hooks.hot_reload_window {
+            f(
+                &mut self.driver_state,
+                WinitHotReloadContext {
+                    app,
+                    services,
+                    window,
+                    state,
+                },
+            );
+        }
+    }
+
+    fn gpu_frame_prepare(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+    ) {
+        if let Some(f) = self.hooks.gpu_frame_prepare {
+            f(
+                &mut self.driver_state,
+                app,
+                window,
+                state,
+                context,
+                renderer,
+                scale_factor,
+            );
+        }
+    }
+
+    fn record_engine_frame(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        context: &WgpuContext,
+        renderer: &mut Renderer,
+        scale_factor: f32,
+        tick_id: TickId,
+        frame_id: FrameId,
+    ) -> EngineFrameUpdate {
+        if let Some(f) = self.hooks.record_engine_frame {
+            return f(
+                &mut self.driver_state,
+                app,
+                window,
+                state,
+                context,
+                renderer,
+                scale_factor,
+                tick_id,
+                frame_id,
+            );
+        }
+        EngineFrameUpdate::default()
+    }
+
+    fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
+        if let Some(f) = self.hooks.viewport_input {
+            f(&mut self.driver_state, app, event);
+        }
+    }
+
+    fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
+        if let Some(f) = self.hooks.dock_op {
+            f(&mut self.driver_state, app, op);
+        }
+    }
+
+    fn handle_command(
+        &mut self,
+        context: WinitCommandContext<'_, Self::WindowState>,
+        command: fret_app::CommandId,
+    ) {
+        if let Some(f) = self.hooks.handle_command {
+            f(&mut self.driver_state, context, command);
+        }
+    }
+
+    fn handle_global_command(
+        &mut self,
+        context: WinitGlobalContext<'_>,
+        command: fret_app::CommandId,
+    ) {
+        if let Some(f) = self.hooks.handle_global_command {
+            f(&mut self.driver_state, context, command);
+        }
+    }
+
+    fn handle_model_changes(
+        &mut self,
+        context: WinitWindowContext<'_, Self::WindowState>,
+        changed: &[fret_app::ModelId],
+    ) {
+        if let Some(f) = self.hooks.handle_model_changes {
+            f(&mut self.driver_state, context, changed);
+        }
+    }
+
+    fn handle_global_changes(
+        &mut self,
+        context: WinitWindowContext<'_, Self::WindowState>,
+        changed: &[std::any::TypeId],
+    ) {
+        if let Some(f) = self.hooks.handle_global_changes {
+            f(&mut self.driver_state, context, changed);
+        }
+    }
+
+    fn create_window_state(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+    ) -> Self::WindowState {
+        (self.create_window_state)(&mut self.driver_state, app, window)
+    }
+
+    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
+        (self.handle_event)(&mut self.driver_state, context, event)
+    }
+
+    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
+        (self.render)(&mut self.driver_state, context)
+    }
+
+    fn window_create_spec(
+        &mut self,
+        app: &mut App,
+        request: &fret_app::CreateWindowRequest,
+    ) -> Option<WindowCreateSpec> {
+        if let Some(f) = self.hooks.window_create_spec {
+            return f(&mut self.driver_state, app, request);
+        }
+        None
+    }
+
+    fn window_created(
+        &mut self,
+        app: &mut App,
+        request: &fret_app::CreateWindowRequest,
+        new_window: fret_core::AppWindowId,
+    ) {
+        if let Some(f) = self.hooks.window_created {
+            f(&mut self.driver_state, app, request, new_window);
+        }
+    }
+
+    fn before_close_window(&mut self, app: &mut App, window: fret_core::AppWindowId) -> bool {
+        if let Some(f) = self.hooks.before_close_window {
+            return f(&mut self.driver_state, app, window);
+        }
+        true
+    }
+
+    fn accessibility_snapshot(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+    ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
+        if let Some(f) = self.hooks.accessibility_snapshot {
+            return f(&mut self.driver_state, app, window, state);
+        }
+        None
+    }
+
+    fn accessibility_focus(
+        &mut self,
+        app: &mut App,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+    ) {
+        if let Some(f) = self.hooks.accessibility_focus {
+            f(&mut self.driver_state, app, window, state, target);
+        }
+    }
+
+    fn accessibility_invoke(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+    ) {
+        if let Some(f) = self.hooks.accessibility_invoke {
+            f(&mut self.driver_state, app, services, window, state, target);
+        }
+    }
+
+    fn accessibility_set_value_text(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        value: &str,
+    ) {
+        if let Some(f) = self.hooks.accessibility_set_value_text {
+            f(
+                &mut self.driver_state,
+                app,
+                services,
+                window,
+                state,
+                target,
+                value,
+            );
+        }
+    }
+
+    fn accessibility_set_value_numeric(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        value: f64,
+    ) {
+        if let Some(f) = self.hooks.accessibility_set_value_numeric {
+            f(
+                &mut self.driver_state,
+                app,
+                services,
+                window,
+                state,
+                target,
+                value,
+            );
+        }
+    }
+
+    fn accessibility_set_text_selection(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        anchor: u32,
+        focus: u32,
+    ) {
+        if let Some(f) = self.hooks.accessibility_set_text_selection {
+            f(
+                &mut self.driver_state,
+                app,
+                services,
+                window,
+                state,
+                target,
+                anchor,
+                focus,
+            );
+        }
+    }
+
+    fn accessibility_replace_selected_text(
+        &mut self,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: fret_core::AppWindowId,
+        state: &mut Self::WindowState,
+        target: fret_core::NodeId,
+        value: &str,
+    ) {
+        if let Some(f) = self.hooks.accessibility_replace_selected_text {
+            f(
+                &mut self.driver_state,
+                app,
+                services,
+                window,
+                state,
+                target,
+                value,
+            );
+        }
     }
 }

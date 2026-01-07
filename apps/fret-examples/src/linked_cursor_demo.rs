@@ -183,6 +183,19 @@ impl WinitAppDriver for LinkedCursorDemoDriver {
         Self::build_ui(app, window)
     }
 
+    fn hot_reload_window(
+        &mut self,
+        app: &mut App,
+        _services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        state: &mut Self::WindowState,
+    ) {
+        crate::hotpatch::reset_ui_tree(app, window, &mut state.top_ui);
+        crate::hotpatch::reset_ui_tree(app, window, &mut state.bottom_ui);
+        state.top_root = None;
+        state.bottom_root = None;
+    }
+
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
         let WinitEventContext {
             app,

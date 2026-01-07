@@ -1,6 +1,8 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub mod alloc_profile;
 
+pub(crate) mod hotpatch;
+
 pub mod area_demo;
 pub mod bars_demo;
 pub mod candlestick_demo;

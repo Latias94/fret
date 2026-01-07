@@ -1,0 +1,7 @@
+[package]
+name = "fret-ui-assets"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-asset-cache = { path = "../fret-asset-cache" }

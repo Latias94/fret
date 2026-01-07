@@ -1,1 +1,1 @@
-pub use fret_asset_cache::image_upload::*;
+pub use fret_ui_assets::image_upload::*;

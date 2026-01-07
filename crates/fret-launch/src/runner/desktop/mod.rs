@@ -10,6 +10,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[cfg(feature = "hotpatch-subsecond")]
+use std::{path::PathBuf, time::SystemTime};
+
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
     Event, ExternalDragEvent, ExternalDragKind, InternalDragEvent, InternalDragKind, Point, Px,
@@ -59,6 +62,48 @@ pub enum RunnerUserEvent {
         window: fret_core::AppWindowId,
         completion: PlatformCompletion,
     },
+}
+
+#[cfg(feature = "hotpatch-subsecond")]
+#[derive(Debug)]
+struct HotpatchTrigger {
+    path: PathBuf,
+    poll_interval: Duration,
+    next_poll_at: Instant,
+    last_marker: Option<String>,
+}
+
+#[cfg(feature = "hotpatch-subsecond")]
+fn hotpatch_trigger_from_env(now: Instant) -> Option<HotpatchTrigger> {
+    if std::env::var_os("FRET_HOTPATCH").is_none_or(|v| v.is_empty()) {
+        return None;
+    }
+
+    let path = std::env::var_os("FRET_HOTPATCH_TRIGGER_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(".fret/hotpatch.touch"));
+
+    let poll_interval = std::env::var("FRET_HOTPATCH_POLL_MS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .map(Duration::from_millis)
+        .unwrap_or_else(|| Duration::from_millis(200));
+
+    let last_marker = std::fs::read_to_string(&path)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .or_else(|| {
+            let mtime: SystemTime = std::fs::metadata(&path).ok()?.modified().ok()?;
+            Some(format!("{:?}", mtime))
+        });
+
+    Some(HotpatchTrigger {
+        path,
+        poll_interval,
+        next_poll_at: now + poll_interval,
+        last_marker,
+    })
 }
 
 pub fn run_app<D: WinitAppDriver + 'static>(
@@ -859,6 +904,9 @@ pub struct WinitRunner<D: WinitAppDriver> {
     internal_drag_hover_pos: Option<Point>,
 
     external_drop: NativeExternalDrop,
+
+    #[cfg(feature = "hotpatch-subsecond")]
+    hotpatch: Option<HotpatchTrigger>,
 }
 
 #[derive(Debug, Clone)]
@@ -1111,6 +1159,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
         tracing::info!(caps = ?caps, "platform capabilities");
 
+        #[cfg(feature = "hotpatch-subsecond")]
+        let now = Instant::now();
         Self {
             config,
             app,
@@ -1138,6 +1188,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             internal_drag_hover_window: None,
             internal_drag_hover_pos: None,
             external_drop: NativeExternalDrop::default(),
+            #[cfg(feature = "hotpatch-subsecond")]
+            hotpatch: hotpatch_trigger_from_env(now),
         }
     }
 
@@ -1304,6 +1356,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     fn deliver_window_event_now(&mut self, window: fret_core::AppWindowId, event: &Event) {
+        if self.maybe_handle_hotpatch_event(window, event) {
+            return;
+        }
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
@@ -1318,6 +1373,125 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             },
             event,
         );
+    }
+
+    fn maybe_handle_hotpatch_event(
+        &mut self,
+        _window: fret_core::AppWindowId,
+        _event: &Event,
+    ) -> bool {
+        #[cfg(feature = "hotpatch-subsecond")]
+        {
+            if self.hotpatch.is_none() {
+                return false;
+            }
+
+            let Event::KeyDown {
+                key,
+                modifiers,
+                repeat,
+            } = _event
+            else {
+                return false;
+            };
+            if *repeat {
+                return false;
+            }
+
+            let is_reload_chord = *key == fret_core::KeyCode::KeyR
+                && modifiers.ctrl
+                && modifiers.shift
+                && !modifiers.alt
+                && !modifiers.alt_gr
+                && !modifiers.meta;
+            if !is_reload_chord {
+                return false;
+            }
+
+            self.hot_reload_all_windows();
+            return true;
+        }
+
+        #[cfg(not(feature = "hotpatch-subsecond"))]
+        {
+            false
+        }
+    }
+
+    #[cfg(feature = "hotpatch-subsecond")]
+    fn hot_reload_all_windows(&mut self) {
+        tracing::info!("hotpatch: hot reload requested (Ctrl+Shift+R)");
+
+        // Cancel any in-flight drag to avoid leaving the runner in an inconsistent state.
+        self.app.cancel_drag();
+
+        {
+            let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+            self.driver.hot_reload_global(&mut self.app, services);
+        }
+
+        // Collect first: we need to re-enter `self` mutably when mutating window states.
+        let windows: Vec<fret_core::AppWindowId> = self.windows.keys().collect();
+
+        for window in windows {
+            let Some(state) = self.windows.get_mut(window) else {
+                continue;
+            };
+
+            let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
+            self.driver
+                .hot_reload_window(&mut self.app, services, window, &mut state.user);
+
+            state.last_accessibility_snapshot = None;
+            state.window.request_redraw();
+        }
+    }
+
+    fn poll_hotpatch_trigger(&mut self, now: Instant) -> bool {
+        #[cfg(feature = "hotpatch-subsecond")]
+        {
+            let Some(trigger) = self.hotpatch.as_mut() else {
+                return false;
+            };
+            if now < trigger.next_poll_at {
+                return false;
+            }
+            trigger.next_poll_at = now + trigger.poll_interval;
+
+            let marker = std::fs::read_to_string(&trigger.path)
+                .ok()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .or_else(|| {
+                    let mtime = std::fs::metadata(&trigger.path)
+                        .ok()
+                        .and_then(|m| m.modified().ok())?;
+                    Some(format!("{:?}", mtime))
+                });
+
+            let Some(marker) = marker else {
+                return false;
+            };
+
+            if trigger
+                .last_marker
+                .as_ref()
+                .is_some_and(|prev| prev == &marker)
+            {
+                return false;
+            }
+            trigger.last_marker = Some(marker);
+
+            tracing::info!(path = %trigger.path.display(), "hotpatch: trigger changed");
+            self.hot_reload_all_windows();
+            true
+        }
+
+        #[cfg(not(feature = "hotpatch-subsecond"))]
+        {
+            let _ = now;
+            false
+        }
     }
 
     fn deliver_platform_completion_now(
@@ -1793,7 +1967,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let now = Instant::now();
             let effects = self.app.flush_effects();
 
-            let mut did_work = !effects.is_empty();
+            let mut did_work = self.poll_hotpatch_trigger(now);
+            did_work |= !effects.is_empty();
             let mut window_state_dirty: HashSet<fret_core::AppWindowId> = HashSet::new();
 
             for effect in effects {

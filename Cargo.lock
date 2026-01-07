@@ -1113,11 +1113,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "fret-app",
- "fret-asset-cache",
  "fret-core",
  "fret-runtime",
  "fret-ui",
  "fret-ui-app",
+ "fret-ui-assets",
  "fret-ui-kit",
  "slotmap",
  "tracing",
@@ -1133,10 +1133,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-bootstrap"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-icons",
+ "fret-launch",
+ "fret-render",
+ "fret-ui-kit",
+ "thiserror 2.0.17",
+]
+
+[[package]]
 name = "fret-code-view"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-runtime",
  "fret-syntax",
  "fret-ui",
  "fret-ui-kit",
@@ -1179,6 +1193,7 @@ dependencies = [
  "anyhow",
  "fret-app",
  "fret-app-kit",
+ "fret-bootstrap",
  "fret-core",
  "fret-icons",
  "fret-icons-lucide",
@@ -1448,6 +1463,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-ui-assets"
+version = "0.1.0"
+dependencies = [
+ "fret-asset-cache",
+]
+
+[[package]]
 name = "fret-ui-docking"
 version = "0.1.0"
 dependencies = [
@@ -1483,6 +1505,10 @@ dependencies = [
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "fretboard"
+version = "0.1.0"
 
 [[package]]
 name = "fslock"
