@@ -34,6 +34,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Component code: `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`
 - Key building blocks:
   - Radix-aligned timer/gating substrate: `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`
+    - Radix-shaped parts: `NavigationMenuRoot` / `NavigationMenuTrigger` (wiring) +
+      trigger id registry helpers (anchoring).
   - Overlay roots: `ecosystem/fret-ui-kit/src/overlay_controller.rs`
   - Popper placement solver: `ecosystem/fret-ui-kit/src/primitives/popper.rs`
   - Presence/motion helpers: `ecosystem/fret-ui-kit/src/primitives/presence.rs`,
@@ -45,9 +47,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - Pass: Fret provides a shadcn-friendly `NavigationMenu` builder with `NavigationMenuItem`
   (value + label + content + optional trigger children).
-- Partial: Upstream exports a fully composable component family; Fret currently models some pieces
-  as "spec" structs (`NavigationMenuTrigger`, `NavigationMenuContent`) rather than independent
-  elements.
+- Partial: Upstream exports a fully composable component family; Fret now shares the Radix-aligned
+  trigger wiring in `fret-ui-kit::primitives::navigation_menu`, but the shadcn surface still models
+  some pieces as "spec" structs rather than independent elements.
 - Missing: `viewport=false` behavior. Fret currently always uses a shared viewport overlay.
 
 ### Open/close & hover behavior (Radix parity)
@@ -59,7 +61,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 ### Motion parity (new-york)
 
 - Partial: Viewport overlay uses fade + zoom (shadcn taxonomy) with shadcn-aligned easing.
-- Missing: `data-motion` directional slide animations when switching between values.
+- Pass: Directional content switching matches shadcn's `data-motion` semantics via
+  `navigation_menu_content_transition(...)`.
 
 ### Indicator parity (new-york)
 
@@ -77,4 +80,3 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Add a headless "motion direction" helper so content transitions can match `data-motion`
   (`from-start`/`from-end`/`to-start`/`to-end`) without relying on DOM/CSS.
 - Consider adding a `viewport` toggle to the shadcn wrapper if we want strict API parity.
-

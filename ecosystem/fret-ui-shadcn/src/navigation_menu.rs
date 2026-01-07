@@ -1,8 +1,8 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, KeyCode, Point, Px, SemanticsRole, TextStyle,
-    TextWrap, Transform2D,
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle, TextWrap,
+    Transform2D,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -356,17 +356,11 @@ impl NavigationMenu {
 
         cx.container(root_props, move |cx| {
             let root_id = cx.root_id();
-            let root_state: Arc<Mutex<radix_navigation_menu::NavigationMenuRootState>> = cx
-                .with_state_for(
-                    root_id,
-                    || Arc::new(Mutex::new(radix_navigation_menu::NavigationMenuRootState::default())),
-                    |s| s.clone(),
-                );
-
-            #[derive(Default)]
-            struct TriggerIdRegistry {
-                ids: std::collections::HashMap<Arc<str>, fret_ui::elements::GlobalElementId>,
-            }
+            let nav_ctx = radix_navigation_menu::NavigationMenuRoot::new(value_model.clone())
+                .config(cfg)
+                .disabled(menu_disabled)
+                .context(cx, root_id);
+            let root_state = nav_ctx.root_state.clone();
 
             #[derive(Default)]
             struct OpenModelState {
@@ -379,7 +373,8 @@ impl NavigationMenu {
                 last_present_selected: Option<Arc<str>>,
             }
 
-            let open_model = cx.with_state_for(root_id, OpenModelState::default, |st| st.model.clone());
+            let open_model =
+                cx.with_state_for(root_id, OpenModelState::default, |st| st.model.clone());
             let open_model = if let Some(model) = open_model {
                 model
             } else {
@@ -390,7 +385,8 @@ impl NavigationMenu {
                 model
             };
 
-            let selected: Option<Arc<str>> = cx.watch_model(&value_model).layout().cloned().flatten();
+            let selected: Option<Arc<str>> =
+                cx.watch_model(&value_model).layout().cloned().flatten();
             let selected_changed = cx.with_state_for(root_id, SelectionSyncState::default, |st| {
                 let changed = selected != st.last_selected;
                 if changed {
@@ -404,10 +400,17 @@ impl NavigationMenu {
 
             if selected_changed {
                 let selected = selected.clone();
-                let _ = cx.app.models_mut().update(&open_model, |v| *v = selected.is_some());
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&open_model, |v| *v = selected.is_some());
             }
 
-            let open: bool = cx.watch_model(&open_model).layout().copied().unwrap_or(false);
+            let open: bool = cx
+                .watch_model(&open_model)
+                .layout()
+                .copied()
+                .unwrap_or(false);
             let open_for_motion = open && selected.is_some();
             let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
@@ -453,18 +456,6 @@ impl NavigationMenu {
                 &values,
             );
 
-            let value_model_for_timer = value_model.clone();
-            let root_state_for_timer = root_state.clone();
-            cx.timer_on_timer_for(
-                root_id,
-                Arc::new(move |host, action_cx, token| {
-                    let mut st = root_state_for_timer
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner());
-                    st.on_timer(host, action_cx, token, &value_model_for_timer, cfg)
-                }),
-            );
-
             let list_props = FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
@@ -477,12 +468,9 @@ impl NavigationMenu {
             };
 
             let items_for_children = items.clone();
-            let value_for_list = value_model.clone();
             let value_for_viewport = value_model.clone();
-            let root_state_for_list = root_state.clone();
-            let selected_for_list = selected_local.clone();
             let trigger_text_style_for_list = trigger_text_style.clone();
-            let root_id_for_registry = root_id;
+            let nav_ctx_for_list = nav_ctx.clone();
 
             let list = cx.flex(list_props, move |cx| {
                 items_for_children
@@ -492,29 +480,10 @@ impl NavigationMenu {
                         let item_value = item.value.clone();
                         let label = item.label.clone();
                         let disabled = menu_disabled || item.disabled;
-                        let is_open = selected_for_list
-                            .as_deref()
-                            .is_some_and(|v| v == item_value.as_ref());
-
-                        let value_for_item = value_for_list.clone();
-                        let root_state_for_item = root_state_for_list.clone();
                         let trigger_text_style_for_item = trigger_text_style_for_list.clone();
+                        let nav_ctx_for_item = nav_ctx_for_list.clone();
 
                         cx.keyed(item_value.clone(), |cx| {
-                            let trigger_state: Arc<Mutex<radix_navigation_menu::NavigationMenuTriggerState>> =
-                                cx.with_state_for(
-                                    cx.root_id(),
-                                    || {
-                                        Arc::new(Mutex::new(
-                                            radix_navigation_menu::NavigationMenuTriggerState::default(),
-                                        ))
-                                    },
-                                    |s| s.clone(),
-                                );
-
-                            let value_for_trigger = value_for_item.clone();
-                            let root_state_for_trigger = root_state_for_item.clone();
-                            let root_state_for_hover = root_state_for_trigger.clone();
                             let trigger_text_style = trigger_text_style_for_item.clone();
 
                             let mut pressable = PressableProps::default();
@@ -523,7 +492,6 @@ impl NavigationMenu {
                             pressable.a11y = PressableA11y {
                                 role: Some(SemanticsRole::Button),
                                 label: Some(label.clone()),
-                                expanded: Some(is_open),
                                 ..Default::default()
                             };
 
@@ -532,191 +500,60 @@ impl NavigationMenu {
                                 enabled: true,
                             };
 
-                            cx.pointer_region(pointer_props, move |cx| {
-                                if !disabled {
-                                    let trigger_state_for_pointer_move = trigger_state.clone();
-                                    let root_state_for_pointer_move = root_state_for_trigger.clone();
-                                    let value_for_pointer_move = value_for_trigger.clone();
-                                    let item_value_for_pointer_move = item_value.clone();
-                                    cx.pointer_region_on_pointer_move(Arc::new(
-                                        move |host, action_cx, mv| {
-                                            let mut trigger = trigger_state_for_pointer_move
-                                                .lock()
-                                                .unwrap_or_else(|e| e.into_inner());
-                                            match radix_navigation_menu::navigation_menu_trigger_pointer_move_action(
-                                                mv.pointer_type,
-                                                disabled,
-                                                *trigger,
-                                            ) {
-                                                radix_navigation_menu::NavigationMenuTriggerPointerMoveAction::Ignore => {
-                                                    return false;
-                                                }
-                                                radix_navigation_menu::NavigationMenuTriggerPointerMoveAction::Open => {
-                                                    let mut root = root_state_for_pointer_move
-                                                        .lock()
-                                                        .unwrap_or_else(|e| e.into_inner());
-                                                    root.on_trigger_enter(
-                                                        host,
-                                                        action_cx,
-                                                        &value_for_pointer_move,
-                                                        item_value_for_pointer_move.clone(),
-                                                        cfg,
-                                                    );
-                                                    trigger.has_pointer_move_opened = true;
-                                                    trigger.was_click_close = false;
-                                                    trigger.was_escape_close = false;
-                                                    false
-                                                }
-                                            }
-                                        },
-                                    ));
-                                }
+                            let trigger_children = item.trigger.clone();
+                            let item_label = item.label.clone();
+                            radix_navigation_menu::NavigationMenuTrigger::new(item_value.clone())
+                                .label(label.clone())
+                                .disabled(disabled)
+                                .into_element(
+                                    cx,
+                                    &nav_ctx_for_item,
+                                    pressable,
+                                    pointer_props,
+                                    move |cx, st, is_open| {
+                                        let hovered = st.hovered && !st.pressed;
+                                        let pressed = st.pressed;
+                                        let fg = if disabled {
+                                            trigger_fg_muted
+                                        } else {
+                                            trigger_fg
+                                        };
+                                        let bg = (hovered || pressed || is_open)
+                                            .then_some(trigger_bg_hover);
 
-                                let item_value_for_registry = item_value.clone();
-                                vec![cx.pressable_with_id(pressable, move |cx, st, trigger_id| {
-                                    cx.with_state_for(root_id_for_registry, TriggerIdRegistry::default, |st| {
-                                        st.ids.insert(item_value_for_registry.clone(), trigger_id);
-                                    });
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Auto;
 
-                                    if !disabled {
-                                        let element = trigger_id;
-                                        let root_state_for_escape = root_state_for_trigger.clone();
-                                        let value_for_escape = value_for_trigger.clone();
-                                        let trigger_state_for_escape = trigger_state.clone();
-                                        cx.key_on_key_down_for(
-                                            element,
-                                            Arc::new(move |host, action_cx, it| {
-                                                if it.repeat || it.key != KeyCode::Escape {
-                                                    return false;
-                                                }
-
-                                                let is_open = host
-                                                    .models_mut()
-                                                    .read(&value_for_escape, |v| v.is_some())
-                                                    .ok()
-                                                    .unwrap_or(false);
-                                                if !is_open {
-                                                    return false;
-                                                }
-
-                                                let mut root = root_state_for_escape
-                                                    .lock()
-                                                    .unwrap_or_else(|e| e.into_inner());
-                                                root.on_item_dismiss(host, action_cx, &value_for_escape, cfg);
-
-                                                let mut trigger = trigger_state_for_escape
-                                                    .lock()
-                                                    .unwrap_or_else(|e| e.into_inner());
-                                                trigger.was_escape_close = true;
-                                                trigger.was_click_close = false;
-                                                trigger.has_pointer_move_opened = false;
-
-                                                true
-                                            }),
-                                        );
-                                    }
-
-                                    let root_state_for_activate = root_state_for_trigger.clone();
-                                    let value_for_activate = value_for_trigger.clone();
-                                    let trigger_state_for_activate = trigger_state.clone();
-                                    let item_value_for_activate = item_value.clone();
-                                    if !disabled {
-                                        cx.pressable_add_on_activate(Arc::new(
-                                            move |host, action_cx, _reason| {
-                                                let mut root = root_state_for_activate
-                                                    .lock()
-                                                    .unwrap_or_else(|e| e.into_inner());
-                                                root.on_item_select(
-                                                    host,
-                                                    action_cx,
-                                                    &value_for_activate,
-                                                    item_value_for_activate.clone(),
-                                                    cfg,
-                                                );
-
-                                                let now_open = host
-                                                    .models_mut()
-                                                    .read(&value_for_activate, |v| v.clone())
-                                                    .ok()
-                                                    .flatten()
-                                                    .is_some_and(|v| {
-                                                        v.as_ref() == item_value_for_activate.as_ref()
-                                                    });
-
-                                                let mut trigger = trigger_state_for_activate
-                                                    .lock()
-                                                    .unwrap_or_else(|e| e.into_inner());
-                                                trigger.was_click_close = !now_open;
-                                                if now_open {
-                                                    trigger.was_escape_close = false;
-                                                }
-                                                trigger.has_pointer_move_opened = false;
+                                        let wrapper = ContainerProps {
+                                            layout,
+                                            padding: Edges {
+                                                top: trigger_pad_y,
+                                                right: trigger_pad_x,
+                                                bottom: trigger_pad_y,
+                                                left: trigger_pad_x,
                                             },
-                                        ));
-                                    }
+                                            background: bg,
+                                            shadow: None,
+                                            border: Edges::all(Px(0.0)),
+                                            border_color: None,
+                                            corner_radii: Corners::all(trigger_radius),
+                                        };
 
-                                    if !disabled {
-                                        let trigger_state_for_hover = trigger_state.clone();
-                                        cx.pressable_on_hover_change(Arc::new(
-                                            move |host, action_cx, hovered| {
-                                                if hovered {
-                                                    return;
-                                                }
-                                                let mut trigger = trigger_state_for_hover
-                                                    .lock()
-                                                    .unwrap_or_else(|e| e.into_inner());
-                                                let mut root = root_state_for_hover
-                                                    .lock()
-                                                    .unwrap_or_else(|e| e.into_inner());
-                                                root.on_trigger_leave(
-                                                    host,
-                                                    action_cx,
-                                                    &value_for_trigger,
-                                                    cfg,
-                                                );
-                                                *trigger =
-                                                    radix_navigation_menu::NavigationMenuTriggerState::default();
-                                            },
-                                        ));
-                                    }
+                                        let content_children =
+                                            trigger_children.clone().unwrap_or_else(|| {
+                                                vec![cx.text_props(TextProps {
+                                                    layout: LayoutStyle::default(),
+                                                    text: item_label.clone(),
+                                                    style: Some(trigger_text_style.clone()),
+                                                    color: Some(fg),
+                                                    wrap: TextWrap::None,
+                                                    overflow: fret_core::TextOverflow::Clip,
+                                                })]
+                                            });
 
-                                    let hovered = st.hovered && !st.pressed;
-                                    let pressed = st.pressed;
-                                    let fg = if disabled { trigger_fg_muted } else { trigger_fg };
-                                    let bg = (hovered || pressed || is_open).then_some(trigger_bg_hover);
-
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Auto;
-
-                                    let wrapper = ContainerProps {
-                                        layout,
-                                        padding: Edges {
-                                            top: trigger_pad_y,
-                                            right: trigger_pad_x,
-                                            bottom: trigger_pad_y,
-                                            left: trigger_pad_x,
-                                        },
-                                        background: bg,
-                                        shadow: None,
-                                        border: Edges::all(Px(0.0)),
-                                        border_color: None,
-                                        corner_radii: Corners::all(trigger_radius),
-                                    };
-
-                                    let content_children = item.trigger.clone().unwrap_or_else(|| {
-                                        vec![cx.text_props(TextProps {
-                                            layout: LayoutStyle::default(),
-                                            text: item.label.clone(),
-                                            style: Some(trigger_text_style.clone()),
-                                            color: Some(fg),
-                                            wrap: TextWrap::None,
-                                            overflow: fret_core::TextOverflow::Clip,
-                                        })]
-                                    });
-
-                                    vec![cx.container(wrapper, move |_cx| content_children)]
-                                })]
-                            })
+                                        vec![cx.container(wrapper, move |_cx| content_children)]
+                                    },
+                                )
                         })
                     })
                     .collect()
@@ -757,11 +594,10 @@ impl NavigationMenu {
                     let opacity = motion.opacity;
                     let scale = motion.scale;
                     let anchor_id = selected_local.as_deref().and_then(|v| {
-                        cx.with_state_for(root_id, TriggerIdRegistry::default, |st| {
-                            st.ids.get(v).copied()
-                        })
+                        radix_navigation_menu::navigation_menu_trigger_id(cx, root_id, v)
                     });
-                    let anchor = anchor_id.and_then(|id| overlay::anchor_bounds_for_element(cx, id));
+                    let anchor =
+                        anchor_id.and_then(|id| overlay::anchor_bounds_for_element(cx, id));
                     let Some(anchor) = anchor else {
                         return Vec::new();
                     };
@@ -804,13 +640,19 @@ impl NavigationMenu {
                                     if hovered {
                                         root.on_content_enter(host);
                                     } else {
-                                        root.on_content_leave(host, action_cx, &value_for_hover, cfg);
+                                        root.on_content_leave(
+                                            host,
+                                            action_cx,
+                                            &value_for_hover,
+                                            cfg,
+                                        );
                                     }
                                 },
                             ));
 
                             vec![cx.container(viewport_props, move |cx| {
-                                let Some((t, forward, from_children)) = content_switch.clone() else {
+                                let Some((t, forward, from_children)) = content_switch.clone()
+                                else {
                                     return viewport_children.clone();
                                 };
 
@@ -857,10 +699,9 @@ impl NavigationMenu {
                                                 let layer = cx.visual_transform_props(
                                                     VisualTransformProps {
                                                         layout: layer_layout,
-                                                        transform: Transform2D::translation(Point::new(
-                                                            Px(from_dx),
-                                                            Px(0.0),
-                                                        )),
+                                                        transform: Transform2D::translation(
+                                                            Point::new(Px(from_dx), Px(0.0)),
+                                                        ),
                                                     },
                                                     move |_cx| from_children.clone(),
                                                 );
@@ -877,10 +718,9 @@ impl NavigationMenu {
                                                 let layer = cx.visual_transform_props(
                                                     VisualTransformProps {
                                                         layout: layer_layout,
-                                                        transform: Transform2D::translation(Point::new(
-                                                            Px(to_dx),
-                                                            Px(0.0),
-                                                        )),
+                                                        transform: Transform2D::translation(
+                                                            Point::new(Px(to_dx), Px(0.0)),
+                                                        ),
                                                     },
                                                     move |_cx| to_children.clone(),
                                                 );
@@ -931,12 +771,18 @@ impl NavigationMenu {
                     let anchor_center_x = anchor.origin.x.0 + anchor.size.width.0 * 0.5;
                     let anchor_center_y = anchor.origin.y.0 + anchor.size.height.0 * 0.5;
                     let (indicator_x, indicator_y) = match layout.side {
-                        Side::Bottom => (anchor_center_x - indicator_half, placed.origin.y.0 - indicator_half),
+                        Side::Bottom => (
+                            anchor_center_x - indicator_half,
+                            placed.origin.y.0 - indicator_half,
+                        ),
                         Side::Top => (
                             anchor_center_x - indicator_half,
                             placed.origin.y.0 + placed.size.height.0 - indicator_half,
                         ),
-                        Side::Right => (placed.origin.x.0 - indicator_half, anchor_center_y - indicator_half),
+                        Side::Right => (
+                            placed.origin.x.0 - indicator_half,
+                            anchor_center_y - indicator_half,
+                        ),
                         Side::Left => (
                             placed.origin.x.0 + placed.size.width.0 - indicator_half,
                             anchor_center_y - indicator_half,
@@ -961,10 +807,8 @@ impl NavigationMenu {
                                 ..Default::default()
                             };
 
-                            let center = Point::new(
-                                Px(indicator_size.0 * 0.5),
-                                Px(indicator_size.0 * 0.5),
-                            );
+                            let center =
+                                Point::new(Px(indicator_size.0 * 0.5), Px(indicator_size.0 * 0.5));
                             let rotate = Transform2D::rotation_about_degrees(45.0, center);
 
                             vec![cx.visual_transform_props(

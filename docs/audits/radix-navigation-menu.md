@@ -32,7 +32,10 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
   - `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`
     - `NavigationMenuRootState` (delay/skipDelay/closeDelay state machine + timer wiring)
     - `NavigationMenuTriggerState` (per-trigger gate: pointer-move reopen suppression after Escape)
+    - `NavigationMenuRoot` / `NavigationMenuContext` (Radix-shaped composition surface)
+    - `NavigationMenuTrigger` / `NavigationMenuContent` / `NavigationMenuLink` (Radix-named parts)
     - `navigation_menu_use_value_model(...)` (controlled/uncontrolled model helper)
+    - `navigation_menu_register_trigger_id(...)` / `navigation_menu_trigger_id(...)` (indicator/viewport anchoring)
 - shadcn recipe layer:
   - `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` (styling + overlay composition)
 
@@ -43,14 +46,14 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
 - Pass: Value model supports controlled/uncontrolled selection (Radix `useControllableState`).
 - Partial: Viewport/indicator are modeled as recipe-layer overlay elements rather than a reusable
   Radix-named primitives facade surface.
-- Missing: `data-motion`-style directional animations when switching between values.
+- Pass: `data-motion` direction semantics are exposed via `NavigationMenuContentMotion` and
+  `navigation_menu_content_transition(...)`.
 - Missing: Viewport-measured width/height exposure as stable variables (Radix CSS vars).
 
 ## Follow-ups (recommended)
 
 - Consider downshifting the "viewport content registry" into `fret-ui-kit::primitives::navigation_menu`
   so non-shadcn consumers can reuse it (similar to how `menu` is shared and facaded).
-- Add a headless "motion direction" helper that maps `(prev_value, next_value)` to a motion enum
-  (Radix `from-start`/`from-end`/`to-start`/`to-end`) so both DOM-like and overlay-like recipes can
-  share the same semantics.
-
+- Consider exposing a "viewport size contract" surface (Radix CSS vars
+  `--radix-navigation-menu-viewport-{width,height}`) so recipes can converge on a shared sizing
+  policy without relying on DOM/CSS.

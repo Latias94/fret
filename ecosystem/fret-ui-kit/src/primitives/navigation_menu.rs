@@ -6,15 +6,19 @@
 //! Upstream reference:
 //! - `repo-ref/primitives/packages/react/navigation-menu/src/navigation-menu.tsx`
 
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use fret_core::PointerType;
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::elements::ContinuousFrames;
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::declarative::model_watch::ModelWatchExt;
 use crate::headless::transition::TransitionTimeline;
 
 /// Radix `delayDuration` default (milliseconds).
@@ -66,6 +70,448 @@ pub fn navigation_menu_use_value_model<H: UiHost>(
     default_value: impl FnOnce() -> Option<Arc<str>>,
 ) -> crate::primitives::controllable_state::ControllableModel<Option<Arc<str>>> {
     crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
+}
+
+#[derive(Default)]
+struct TriggerIdRegistry {
+    ids: HashMap<Arc<str>, GlobalElementId>,
+}
+
+/// Registers a rendered trigger element id for the given value.
+///
+/// Recipes can use this to position an indicator or viewport relative to the active trigger.
+pub fn navigation_menu_register_trigger_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    value: Arc<str>,
+    trigger_id: GlobalElementId,
+) {
+    cx.with_state_for(root_id, TriggerIdRegistry::default, |st| {
+        st.ids.insert(value, trigger_id);
+    });
+}
+
+/// Returns the last registered trigger element id for a value.
+pub fn navigation_menu_trigger_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    value: &str,
+) -> Option<GlobalElementId> {
+    cx.with_state_for(root_id, TriggerIdRegistry::default, |st| {
+        st.ids.get(value).copied()
+    })
+}
+
+/// A composable, Radix-shaped navigation-menu configuration surface.
+///
+/// This mirrors Radix's exported part names (`Root`, `List`, `Item`, `Trigger`, `Content`, `Link`,
+/// `Indicator`, `Viewport`) but models outcomes rather than DOM APIs.
+#[derive(Debug, Clone)]
+pub struct NavigationMenuRoot {
+    model: Model<Option<Arc<str>>>,
+    config: NavigationMenuConfig,
+    disabled: bool,
+}
+
+impl NavigationMenuRoot {
+    pub fn new(model: Model<Option<Arc<str>>>) -> Self {
+        Self {
+            model,
+            config: NavigationMenuConfig::default(),
+            disabled: false,
+        }
+    }
+
+    /// Creates a root with a controlled/uncontrolled selection model (Radix `value` /
+    /// `defaultValue`).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        controlled: Option<Model<Option<Arc<str>>>>,
+        default_value: impl FnOnce() -> Option<Arc<str>>,
+    ) -> Self {
+        let model = navigation_menu_use_value_model(cx, controlled, default_value).model();
+        Self::new(model)
+    }
+
+    pub fn model(&self) -> Model<Option<Arc<str>>> {
+        self.model.clone()
+    }
+
+    pub fn config(mut self, config: NavigationMenuConfig) -> Self {
+        self.config = config;
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn context<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        root_id: GlobalElementId,
+    ) -> NavigationMenuContext {
+        let root_state: Arc<Mutex<NavigationMenuRootState>> = cx.with_state_for(
+            root_id,
+            || Arc::new(Mutex::new(NavigationMenuRootState::default())),
+            |s| s.clone(),
+        );
+
+        let value_model_for_timer = self.model.clone();
+        let root_state_for_timer = root_state.clone();
+        let cfg = self.config;
+        cx.timer_on_timer_for(
+            root_id,
+            Arc::new(move |host, action_cx, token| {
+                let mut st = root_state_for_timer
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner());
+                st.on_timer(host, action_cx, token, &value_model_for_timer, cfg)
+            }),
+        );
+
+        NavigationMenuContext {
+            root_id,
+            model: self.model.clone(),
+            config: self.config,
+            disabled: self.disabled,
+            root_state,
+        }
+    }
+
+    pub fn trigger(&self, value: impl Into<Arc<str>>) -> NavigationMenuTrigger {
+        NavigationMenuTrigger::new(value)
+    }
+
+    pub fn content(&self, value: impl Into<Arc<str>>) -> NavigationMenuContent {
+        NavigationMenuContent::new(value)
+    }
+
+    pub fn link(&self) -> NavigationMenuLink {
+        NavigationMenuLink::new()
+    }
+}
+
+#[derive(Clone)]
+pub struct NavigationMenuContext {
+    pub root_id: GlobalElementId,
+    pub model: Model<Option<Arc<str>>>,
+    pub config: NavigationMenuConfig,
+    pub disabled: bool,
+    pub root_state: Arc<Mutex<NavigationMenuRootState>>,
+}
+
+impl NavigationMenuContext {
+    pub fn selected<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Option<Arc<str>> {
+        cx.watch_model(&self.model).layout().cloned().flatten()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NavigationMenuTrigger {
+    value: Arc<str>,
+    label: Option<Arc<str>>,
+    disabled: bool,
+}
+
+impl NavigationMenuTrigger {
+    pub fn new(value: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            label: None,
+            disabled: false,
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    /// Renders a trigger subtree wiring Radix-like hover and open/close behavior.
+    ///
+    /// This helper is skin-free: pass `PressableProps` and render children in `f`.
+    #[track_caller]
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        ctx: &NavigationMenuContext,
+        mut pressable: fret_ui::element::PressableProps,
+        pointer_region: fret_ui::element::PointerRegionProps,
+        f: impl FnOnce(
+            &mut ElementContext<'_, H>,
+            fret_ui::element::PressableState,
+            bool,
+        ) -> Vec<fret_ui::element::AnyElement>,
+    ) -> fret_ui::element::AnyElement {
+        use fret_core::KeyCode;
+
+        let value_model = ctx.model.clone();
+        let item_value = self.value.clone();
+        let disabled = ctx.disabled || self.disabled;
+        let cfg = ctx.config;
+        let root_id = ctx.root_id;
+        let root_state = ctx.root_state.clone();
+
+        let is_open = cx
+            .watch_model(&value_model)
+            .layout()
+            .cloned()
+            .flatten()
+            .as_deref()
+            .is_some_and(|v| v == item_value.as_ref());
+
+        let trigger_state: Arc<Mutex<NavigationMenuTriggerState>> = cx.with_state_for(
+            cx.root_id(),
+            || Arc::new(Mutex::new(NavigationMenuTriggerState::default())),
+            |s| s.clone(),
+        );
+
+        pressable.enabled = !disabled;
+        pressable.focusable = !disabled;
+
+        if pressable.a11y.role.is_none() {
+            pressable.a11y.role = Some(fret_core::SemanticsRole::Button);
+        }
+        if pressable.a11y.label.is_none() {
+            pressable.a11y.label = self.label.clone();
+        }
+        pressable.a11y.expanded = Some(is_open);
+
+        cx.pointer_region(pointer_region, move |cx| {
+            if !disabled {
+                let trigger_state_for_pointer_move = trigger_state.clone();
+                let root_state_for_pointer_move = root_state.clone();
+                let value_for_pointer_move = value_model.clone();
+                let item_value_for_pointer_move = item_value.clone();
+                cx.pointer_region_on_pointer_move(Arc::new(move |host, action_cx, mv| {
+                    let mut trigger = trigger_state_for_pointer_move
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    match navigation_menu_trigger_pointer_move_action(
+                        mv.pointer_type,
+                        disabled,
+                        *trigger,
+                    ) {
+                        NavigationMenuTriggerPointerMoveAction::Ignore => false,
+                        NavigationMenuTriggerPointerMoveAction::Open => {
+                            let mut root = root_state_for_pointer_move
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            root.on_trigger_enter(
+                                host,
+                                action_cx,
+                                &value_for_pointer_move,
+                                item_value_for_pointer_move.clone(),
+                                cfg,
+                            );
+                            trigger.has_pointer_move_opened = true;
+                            trigger.was_click_close = false;
+                            trigger.was_escape_close = false;
+                            false
+                        }
+                    }
+                }));
+            }
+
+            let item_value_for_registry = item_value.clone();
+            vec![cx.pressable_with_id(pressable, move |cx, st, trigger_id| {
+                navigation_menu_register_trigger_id(
+                    cx,
+                    root_id,
+                    item_value_for_registry.clone(),
+                    trigger_id,
+                );
+
+                if !disabled {
+                    let element = trigger_id;
+                    let root_state_for_escape = root_state.clone();
+                    let value_for_escape = value_model.clone();
+                    let trigger_state_for_escape = trigger_state.clone();
+                    cx.key_on_key_down_for(
+                        element,
+                        Arc::new(move |host, action_cx, it| {
+                            if it.repeat || it.key != KeyCode::Escape {
+                                return false;
+                            }
+
+                            let is_open = host
+                                .models_mut()
+                                .read(&value_for_escape, |v| v.is_some())
+                                .ok()
+                                .unwrap_or(false);
+                            if !is_open {
+                                return false;
+                            }
+
+                            let mut root = root_state_for_escape
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            root.on_item_dismiss(host, action_cx, &value_for_escape, cfg);
+
+                            let mut trigger = trigger_state_for_escape
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            trigger.was_escape_close = true;
+                            trigger.was_click_close = false;
+                            trigger.has_pointer_move_opened = false;
+
+                            true
+                        }),
+                    );
+
+                    let root_state_for_activate = root_state.clone();
+                    let value_for_activate = value_model.clone();
+                    let trigger_state_for_activate = trigger_state.clone();
+                    let item_value_for_activate = item_value.clone();
+                    cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                        let mut root = root_state_for_activate
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        root.on_item_select(
+                            host,
+                            action_cx,
+                            &value_for_activate,
+                            item_value_for_activate.clone(),
+                            cfg,
+                        );
+
+                        let now_open = host
+                            .models_mut()
+                            .read(&value_for_activate, |v| v.clone())
+                            .ok()
+                            .flatten()
+                            .is_some_and(|v| v.as_ref() == item_value_for_activate.as_ref());
+
+                        let mut trigger = trigger_state_for_activate
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        trigger.was_click_close = !now_open;
+                        if now_open {
+                            trigger.was_escape_close = false;
+                        }
+                        trigger.has_pointer_move_opened = false;
+                    }));
+
+                    let trigger_state_for_hover = trigger_state.clone();
+                    let root_state_for_hover = root_state.clone();
+                    let value_for_trigger = value_model.clone();
+                    cx.pressable_on_hover_change(Arc::new(move |host, action_cx, hovered| {
+                        if hovered {
+                            return;
+                        }
+                        let mut trigger = trigger_state_for_hover
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        let mut root = root_state_for_hover
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        root.on_trigger_leave(host, action_cx, &value_for_trigger, cfg);
+                        *trigger = NavigationMenuTriggerState::default();
+                    }));
+                }
+
+                f(cx, st, is_open)
+            })]
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NavigationMenuContent {
+    value: Arc<str>,
+    force_mount: bool,
+}
+
+impl NavigationMenuContent {
+    pub fn new(value: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            force_mount: false,
+        }
+    }
+
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        ctx: &NavigationMenuContext,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<fret_ui::element::AnyElement>,
+    ) -> Option<fret_ui::element::AnyElement> {
+        let selected = ctx.selected(cx);
+        let active = selected.as_deref() == Some(self.value.as_ref());
+        if !active && !self.force_mount {
+            return None;
+        }
+        if self.force_mount {
+            Some(cx.interactivity_gate(active, active, |cx| f(cx)))
+        } else {
+            Some(cx.interactivity_gate(true, true, |cx| f(cx)))
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NavigationMenuLink {
+    dismiss_on_select: bool,
+}
+
+impl NavigationMenuLink {
+    pub fn new() -> Self {
+        Self {
+            dismiss_on_select: true,
+        }
+    }
+
+    pub fn dismiss_on_select(mut self, dismiss_on_select: bool) -> Self {
+        self.dismiss_on_select = dismiss_on_select;
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        ctx: &NavigationMenuContext,
+        mut pressable: fret_ui::element::PressableProps,
+        f: impl FnOnce(
+            &mut ElementContext<'_, H>,
+            fret_ui::element::PressableState,
+        ) -> Vec<fret_ui::element::AnyElement>,
+    ) -> fret_ui::element::AnyElement {
+        let disabled = ctx.disabled;
+        pressable.enabled = pressable.enabled && !disabled;
+        pressable.focusable = pressable.focusable && !disabled;
+
+        let root_state = ctx.root_state.clone();
+        let value_model = ctx.model.clone();
+        let cfg = ctx.config;
+        let dismiss = self.dismiss_on_select;
+        cx.pressable(pressable, move |cx, st| {
+            if dismiss && !disabled {
+                let root_state_for_dismiss = root_state.clone();
+                let value_for_dismiss = value_model.clone();
+                cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                    let mut root = root_state_for_dismiss
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    root.on_item_dismiss(host, action_cx, &value_for_dismiss, cfg);
+                }));
+            }
+            f(cx, st)
+        })
+    }
 }
 
 fn cancel_timer(host: &mut dyn UiActionHost, token: &mut Option<TimerToken>) {
