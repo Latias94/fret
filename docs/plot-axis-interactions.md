@@ -25,8 +25,8 @@ Wheel zoom is routed based on region:
 
 Axis-only modifiers when the wheel is over the plot region:
 
-- `Shift`: zoom X only
-- `Ctrl`: zoom Y only
+- `Shift`: zoom X only (default; configurable via `PlotInputMap::wheel_zoom_x_only_mod`)
+- `Ctrl`: zoom Y only (default; configurable via `PlotInputMap::wheel_zoom_y_only_mod`)
 
 Note: ImPlot defaults do not include axis-only modifiers for the wheel, but we keep them because
 they are common in editor UIs and work well with axis locks.

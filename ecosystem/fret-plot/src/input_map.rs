@@ -168,6 +168,8 @@ pub struct PlotInputMap {
     pub box_zoom_expand_y: Option<ModifierKey>,
     pub query_drag: Option<PointerChord>,
     pub wheel_zoom_mod: Option<ModifierKey>,
+    pub wheel_zoom_x_only_mod: Option<ModifierKey>,
+    pub wheel_zoom_y_only_mod: Option<ModifierKey>,
     pub axis_lock_click: Option<PointerChord>,
     pub axis_lock_toggle: Option<KeyChord>,
     pub axis_pan_lock_toggle: Option<KeyChord>,
@@ -200,6 +202,8 @@ impl Default for PlotInputMap {
                 },
             )),
             wheel_zoom_mod: None,
+            wheel_zoom_x_only_mod: Some(ModifierKey::Shift),
+            wheel_zoom_y_only_mod: Some(ModifierKey::Ctrl),
             axis_lock_click: Some(PointerChord::new_allow_extra(
                 MouseButton::Left,
                 ModifiersMask {
@@ -261,5 +265,12 @@ mod tests {
         assert!(chord.matches(KeyCode::KeyL, mods));
         assert!(!chord.matches(KeyCode::KeyR, mods));
         assert!(!chord.matches(KeyCode::KeyL, Modifiers::default()));
+    }
+
+    #[test]
+    fn default_wheel_axis_only_modifiers_match_docs() {
+        let map = PlotInputMap::default();
+        assert_eq!(map.wheel_zoom_x_only_mod, Some(ModifierKey::Shift));
+        assert_eq!(map.wheel_zoom_y_only_mod, Some(ModifierKey::Ctrl));
     }
 }
