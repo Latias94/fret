@@ -436,6 +436,33 @@ impl Select {
         }
     }
 
+    /// Creates a Select with controlled/uncontrolled `value` + `open` models (Radix `value` /
+    /// `defaultValue` and `open` / `defaultOpen`).
+    ///
+    /// Notes:
+    /// - When a controlled model is `None`, an internal model is created and stored in element state
+    ///   at the call site.
+    /// - Call this from a stable subtree (key the parent node if you need state to survive
+    ///   reordering).
+    pub fn new_controllable<H: UiHost, T: Into<Arc<str>>>(
+        cx: &mut ElementContext<'_, H>,
+        value: Option<Model<Option<Arc<str>>>>,
+        default_value: Option<T>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let default_value: Option<Arc<str>> = default_value.map(Into::into);
+        let model =
+            radix_select::select_use_value_model(cx, value, || default_value.clone()).model();
+
+        let open = radix_select::SelectRoot::new()
+            .open(open)
+            .default_open(default_open)
+            .open_model(cx);
+
+        Self::new(model, open)
+    }
+
     pub fn item(mut self, item: SelectItem) -> Self {
         self.entries.push(SelectEntry::Item(item));
         self
@@ -1894,6 +1921,50 @@ mod tests {
     use fret_core::{TextStyle, UiServices};
     use fret_runtime::{Effect, FrameId};
     use fret_ui::tree::UiTree;
+
+    #[test]
+    fn select_new_controllable_uses_controlled_models_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+
+        let controlled_value = app.models_mut().insert(Some(Arc::from("alpha")));
+        let controlled_open = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let select = Select::new_controllable(
+                cx,
+                Some(controlled_value.clone()),
+                Some("beta"),
+                Some(controlled_open.clone()),
+                false,
+            );
+            assert_eq!(select.model, controlled_value);
+            assert_eq!(select.open, controlled_open);
+        });
+    }
+
+    #[test]
+    fn select_new_controllable_applies_default_value_and_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let select = Select::new_controllable(cx, None, Some("alpha"), None, true);
+            let value = cx.watch_model(&select.model).cloned().unwrap_or_default();
+            let open = cx.watch_model(&select.open).copied().unwrap_or(false);
+
+            assert_eq!(value.as_deref(), Some("alpha"));
+            assert!(open);
+        });
+    }
 
     #[derive(Default)]
     struct FakeServices;
