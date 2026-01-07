@@ -42,6 +42,7 @@ pub mod keyboard;
 pub mod label;
 pub mod menu;
 pub mod menubar;
+pub mod navigation_menu;
 pub mod open_state;
 pub mod popover;
 pub mod popper;
