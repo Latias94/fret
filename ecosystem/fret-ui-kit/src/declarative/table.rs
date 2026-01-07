@@ -758,7 +758,13 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                     let cell_props = ContainerProps {
                                                                         padding: Edges::all(Px(0.0)),
                                                                         border: Edges {
-                                                                            right: Px(1.0),
+                                                                            right: if props.enable_column_resizing
+                                                                                && col.enable_resizing
+                                                                            {
+                                                                                Px(0.0)
+                                                                            } else {
+                                                                                Px(1.0)
+                                                                            },
                                                                             ..Default::default()
                                                                         },
                                                                         border_color: Some(border),
@@ -838,7 +844,11 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                         let mut cell =
                                                                                             render_header_cell(cx, col, sort_state);
                                                                                         if let Some(desc) = sort_state {
-                                                                                            cell.push(cx.text(if desc { "↓" } else { "↑" }));
+                                                                                            cell.push(cx.text(if desc {
+                                                                                                " ▼"
+                                                                                            } else {
+                                                                                                " ▲"
+                                                                                            }));
                                                                                         }
                                                                                         vec![cx.container(
                                                                                             ContainerProps {
@@ -1033,7 +1043,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             background: Some(grip_color),
                                                                                                             layout: LayoutStyle {
                                                                                                                 size: fret_ui::element::SizeStyle {
-                                                                                                                    width: Length::Px(Px(2.0)),
+                                                                                                                    width: Length::Px(Px(1.0)),
                                                                                                                     height: Length::Fill,
                                                                                                                     ..Default::default()
                                                                                                                 },
