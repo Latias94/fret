@@ -309,23 +309,7 @@ impl NodeGraphCanvas {
         window: Option<AppWindowId>,
         ops: Vec<GraphOp>,
     ) -> bool {
-        if ops.is_empty() {
-            return true;
-        }
-
-        let tx = GraphTransaction { label: None, ops };
-        match self.apply_transaction_result(host, &tx) {
-            Ok(committed) => {
-                self.history.record(committed);
-                true
-            }
-            Err(diags) => {
-                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diags) {
-                    self.show_toast(host, window, sev, msg);
-                }
-                false
-            }
-        }
+        self.commit_ops(host, window, None, ops)
     }
 
     fn apply_transaction_result<H: UiHost>(
@@ -384,6 +368,44 @@ impl NodeGraphCanvas {
         });
 
         Ok(committed)
+    }
+
+    fn commit_ops<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        label: Option<&str>,
+        ops: Vec<GraphOp>,
+    ) -> bool {
+        if ops.is_empty() {
+            return true;
+        }
+
+        let tx = GraphTransaction {
+            label: label.map(|s| s.to_string()),
+            ops,
+        };
+        self.commit_transaction(host, window, &tx)
+    }
+
+    fn commit_transaction<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        tx: &GraphTransaction,
+    ) -> bool {
+        match self.apply_transaction_result(host, tx) {
+            Ok(committed) => {
+                self.history.record(committed);
+                true
+            }
+            Err(diags) => {
+                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diags) {
+                    self.show_toast(host, window, sev, msg);
+                }
+                false
+            }
+        }
     }
 
     fn undo_last<H: UiHost>(&mut self, host: &mut H, window: Option<AppWindowId>) -> bool {
