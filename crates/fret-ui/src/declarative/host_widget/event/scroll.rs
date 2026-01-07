@@ -9,7 +9,7 @@ pub(super) fn handle_virtual_list<H: UiHost>(
     event: &Event,
 ) -> bool {
     let Event::Pointer(pe) = event else {
-        return true;
+        return false;
     };
     match pe {
         fret_core::PointerEvent::Wheel {
@@ -81,6 +81,7 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 cx.stop_propagation();
+                return true;
             }
         }
         fret_core::PointerEvent::Down { button, .. } => {
@@ -90,7 +91,7 @@ pub(super) fn handle_virtual_list<H: UiHost>(
         }
         _ => {}
     }
-    true
+    false
 }
 
 pub(super) fn handle_scroll<H: UiHost>(
@@ -101,7 +102,7 @@ pub(super) fn handle_scroll<H: UiHost>(
     event: &Event,
 ) -> bool {
     let Event::Pointer(pe) = event else {
-        return true;
+        return false;
     };
     if let fret_core::PointerEvent::Wheel {
         delta, modifiers, ..
@@ -153,7 +154,8 @@ pub(super) fn handle_scroll<H: UiHost>(
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
             cx.stop_propagation();
+            return true;
         }
     }
-    true
+    false
 }
