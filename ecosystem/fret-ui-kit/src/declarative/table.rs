@@ -164,13 +164,19 @@ impl DisplayRow {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct GroupedDisplayDeps {
+struct GroupedBaseDeps {
     items_revision: u64,
     data_len: usize,
     columns_fingerprint: u64,
     grouping: Vec<ColumnId>,
     column_filters: crate::headless::table::ColumnFiltersState,
     global_filter: crate::headless::table::GlobalFilterState,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct GroupedDisplayDeps {
+    base: GroupedBaseDeps,
+    sorting: crate::headless::table::SortingState,
     expanding: ExpandingState,
     page_index: usize,
     page_size: usize,
@@ -178,6 +184,13 @@ struct GroupedDisplayDeps {
 
 #[derive(Debug, Default)]
 struct GroupedDisplayCache {
+    base_deps: Option<GroupedBaseDeps>,
+    grouped: crate::headless::table::GroupedRowModel,
+    row_index_by_key: std::collections::HashMap<RowKey, usize>,
+    group_labels: std::collections::HashMap<RowKey, Arc<str>>,
+    group_aggs_u64: std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+    group_aggs_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
+
     deps: Option<GroupedDisplayDeps>,
     page_rows: Vec<DisplayRow>,
 }
@@ -204,6 +217,8 @@ fn columns_fingerprint<TData>(columns: &[ColumnDef<TData>]) -> u64 {
         h ^= c.facet_key_fn.is_some() as u64;
         h = h.wrapping_mul(0x00000100000001B3);
         h ^= c.facet_str_fn.is_some() as u64;
+        h = h.wrapping_mul(0x00000100000001B3);
+        h ^= c.value_u64_fn.is_some() as u64;
         h = h.wrapping_mul(0x00000100000001B3);
         h ^= match c.aggregation {
             Aggregation::None => 0,
@@ -325,12 +340,15 @@ pub fn table_virtualized<H: UiHost, TData>(
             .collect()
     } else {
         let deps = GroupedDisplayDeps {
-            items_revision,
-            data_len: data.len(),
-            columns_fingerprint: columns_fingerprint(columns),
-            grouping: grouping.to_vec(),
-            column_filters: state_value.column_filters.clone(),
-            global_filter: state_value.global_filter.clone(),
+            base: GroupedBaseDeps {
+                items_revision,
+                data_len: data.len(),
+                columns_fingerprint: columns_fingerprint(columns),
+                grouping: grouping.to_vec(),
+                column_filters: state_value.column_filters.clone(),
+                global_filter: state_value.global_filter.clone(),
+            },
+            sorting: state_value.sorting.clone(),
             expanding: state_value.expanding.clone(),
             page_index: state_value.pagination.page_index,
             page_size,
@@ -339,6 +357,128 @@ pub fn table_virtualized<H: UiHost, TData>(
         cx.with_state(GroupedDisplayCache::default, |cache| {
             if cache.deps.as_ref() == Some(&deps) {
                 return cache.page_rows.clone();
+            }
+
+            if cache.base_deps.as_ref() == Some(&deps.base) {
+                let grouped = &cache.grouped;
+                let row_index_by_key = &cache.row_index_by_key;
+                let group_labels = &cache.group_labels;
+                let group_aggs_text = &cache.group_aggs_text;
+
+                let mut visible: Vec<DisplayRow> = Vec::new();
+                let mut roots: Vec<crate::headless::table::GroupedRowIndex> =
+                    grouped.root_rows().to_vec();
+                if let Some(spec) = deps.sorting.first() {
+                    if let Some(col) = columns
+                        .iter()
+                        .find(|c| c.id.as_ref() == spec.column.as_ref())
+                    {
+                        fn representative_leaf_key(kind: &GroupedRowKind) -> Option<RowKey> {
+                            match kind {
+                                GroupedRowKind::Group {
+                                    first_leaf_row_key, ..
+                                } => Some(*first_leaf_row_key),
+                                GroupedRowKind::Leaf { row_key } => Some(*row_key),
+                            }
+                        }
+
+                        roots.sort_by(|&a, &b| {
+                            let ra = grouped.row(a);
+                            let rb = grouped.row(b);
+                            let (Some(ra), Some(rb)) = (ra, rb) else {
+                                return std::cmp::Ordering::Equal;
+                            };
+
+                            let mut ord: Option<std::cmp::Ordering> = None;
+
+                            if let (
+                                GroupedRowKind::Group {
+                                    grouping_column: ca,
+                                    grouping_value: va,
+                                    ..
+                                },
+                                GroupedRowKind::Group {
+                                    grouping_column: cb,
+                                    grouping_value: vb,
+                                    ..
+                                },
+                            ) = (&ra.kind, &rb.kind)
+                                && ca.as_ref() == col.id.as_ref()
+                                && cb.as_ref() == col.id.as_ref()
+                            {
+                                ord = Some(va.cmp(vb));
+                            }
+
+                            if ord.is_none() {
+                                let extract_u64 = col
+                                    .value_u64_fn
+                                    .as_ref()
+                                    .or_else(|| col.facet_key_fn.as_ref());
+                                if let Some(extract_u64) = extract_u64 {
+                                    let key_a = representative_leaf_key(&ra.kind);
+                                    let key_b = representative_leaf_key(&rb.kind);
+                                    let idx_a =
+                                        key_a.and_then(|k| row_index_by_key.get(&k).copied());
+                                    let idx_b =
+                                        key_b.and_then(|k| row_index_by_key.get(&k).copied());
+                                    if let (Some(idx_a), Some(idx_b)) = (idx_a, idx_b) {
+                                        let va = extract_u64(&data[idx_a]);
+                                        let vb = extract_u64(&data[idx_b]);
+                                        ord = Some(va.cmp(&vb));
+                                    }
+                                }
+                            }
+
+                            if ord.is_none() && col.sort_cmp.is_some() {
+                                let key_a = representative_leaf_key(&ra.kind);
+                                let key_b = representative_leaf_key(&rb.kind);
+                                let idx_a = key_a.and_then(|k| row_index_by_key.get(&k).copied());
+                                let idx_b = key_b.and_then(|k| row_index_by_key.get(&k).copied());
+                                if let (Some(idx_a), Some(idx_b)) = (idx_a, idx_b) {
+                                    if let Some(cmp) = col.sort_cmp.as_ref() {
+                                        ord = Some(cmp(&data[idx_a], &data[idx_b]));
+                                    }
+                                }
+                            }
+
+                            let mut ord = ord.unwrap_or_else(|| ra.key.cmp(&rb.key));
+                            if spec.desc {
+                                ord = ord.reverse();
+                            }
+                            ord
+                        });
+                    }
+                }
+
+                for root in roots {
+                    push_visible(
+                        grouped,
+                        root,
+                        row_index_by_key,
+                        group_labels,
+                        group_aggs_text,
+                        deps.sorting.as_slice(),
+                        columns,
+                        data,
+                        &deps.expanding,
+                        &mut visible,
+                    );
+                }
+
+                let page_start = deps.page_index.saturating_mul(deps.page_size);
+                let page_end = page_start.saturating_add(deps.page_size);
+                let page_rows: Vec<DisplayRow> = if deps.page_size == 0 {
+                    Vec::new()
+                } else {
+                    visible
+                        .get(page_start..page_end)
+                        .unwrap_or_default()
+                        .to_vec()
+                };
+
+                cache.deps = Some(deps.clone());
+                cache.page_rows = page_rows.clone();
+                return page_rows;
             }
 
             let mut row_index_by_key: std::collections::HashMap<RowKey, usize> =
@@ -373,6 +513,34 @@ pub fn table_virtualized<H: UiHost, TData>(
                 .build();
 
             let grouped = table.grouped_row_model().clone();
+
+            let mut group_labels: std::collections::HashMap<RowKey, Arc<str>> = Default::default();
+            let mut group_aggs_text: std::collections::HashMap<
+                RowKey,
+                Arc<[(ColumnId, Arc<str>)]>,
+            > = Default::default();
+            for &node in grouped.flat_rows() {
+                let Some(row) = grouped.row(node) else {
+                    continue;
+                };
+                if matches!(row.kind, GroupedRowKind::Group { .. }) {
+                    group_labels.insert(
+                        row.key,
+                        group_label_for_key(&row.kind, data, &row_index_by_key, &col_by_id),
+                    );
+                    group_aggs_text.insert(
+                        row.key,
+                        group_aggregations(
+                            &grouped,
+                            node,
+                            &row.kind,
+                            data,
+                            &row_index_by_key,
+                            &agg_columns,
+                        ),
+                    );
+                }
+            }
 
             fn for_each_leaf(
                 model: &crate::headless::table::GroupedRowModel,
@@ -417,70 +585,86 @@ pub fn table_virtualized<H: UiHost, TData>(
                     let value = match col.aggregation {
                         Aggregation::None => None,
                         Aggregation::Count => Some(*leaf_row_count as u64),
-                        Aggregation::SumU64 => col.facet_key_fn.as_ref().map_or(None, |facet| {
-                            let mut sum = 0u64;
-                            let mut ok = true;
-                            for_each_leaf(model, group_index, &mut |leaf_key| {
-                                let Some(&i) = row_index_by_key.get(&leaf_key) else {
-                                    return;
-                                };
-                                let v = facet(&data[i]);
-                                sum = match sum.checked_add(v) {
-                                    Some(next) => next,
-                                    None => {
-                                        ok = false;
-                                        sum
-                                    }
-                                };
-                            });
-                            ok.then_some(sum)
-                        }),
-                        Aggregation::MinU64 => col.facet_key_fn.as_ref().map_or(None, |facet| {
-                            let mut min: Option<u64> = None;
-                            for_each_leaf(model, group_index, &mut |leaf_key| {
-                                let Some(&i) = row_index_by_key.get(&leaf_key) else {
-                                    return;
-                                };
-                                let v = facet(&data[i]);
-                                min = Some(min.map(|m| m.min(v)).unwrap_or(v));
-                            });
-                            min
-                        }),
-                        Aggregation::MaxU64 => col.facet_key_fn.as_ref().map_or(None, |facet| {
-                            let mut max: Option<u64> = None;
-                            for_each_leaf(model, group_index, &mut |leaf_key| {
-                                let Some(&i) = row_index_by_key.get(&leaf_key) else {
-                                    return;
-                                };
-                                let v = facet(&data[i]);
-                                max = Some(max.map(|m| m.max(v)).unwrap_or(v));
-                            });
-                            max
-                        }),
-                        Aggregation::MeanU64 => col.facet_key_fn.as_ref().map_or(None, |facet| {
-                            let mut sum = 0u64;
-                            let mut count = 0u64;
-                            let mut ok = true;
-                            for_each_leaf(model, group_index, &mut |leaf_key| {
-                                let Some(&i) = row_index_by_key.get(&leaf_key) else {
-                                    return;
-                                };
-                                let v = facet(&data[i]);
-                                count = count.saturating_add(1);
-                                sum = match sum.checked_add(v) {
-                                    Some(next) => next,
-                                    None => {
-                                        ok = false;
-                                        sum
-                                    }
-                                };
-                            });
-                            if !ok || count == 0 {
-                                None
-                            } else {
-                                Some(sum / count)
-                            }
-                        }),
+                        Aggregation::SumU64 => col
+                            .value_u64_fn
+                            .as_ref()
+                            .or_else(|| col.facet_key_fn.as_ref())
+                            .map_or(None, |facet| {
+                                let mut sum = 0u64;
+                                let mut ok = true;
+                                for_each_leaf(model, group_index, &mut |leaf_key| {
+                                    let Some(&i) = row_index_by_key.get(&leaf_key) else {
+                                        return;
+                                    };
+                                    let v = facet(&data[i]);
+                                    sum = match sum.checked_add(v) {
+                                        Some(next) => next,
+                                        None => {
+                                            ok = false;
+                                            sum
+                                        }
+                                    };
+                                });
+                                ok.then_some(sum)
+                            }),
+                        Aggregation::MinU64 => col
+                            .value_u64_fn
+                            .as_ref()
+                            .or_else(|| col.facet_key_fn.as_ref())
+                            .map_or(None, |facet| {
+                                let mut min: Option<u64> = None;
+                                for_each_leaf(model, group_index, &mut |leaf_key| {
+                                    let Some(&i) = row_index_by_key.get(&leaf_key) else {
+                                        return;
+                                    };
+                                    let v = facet(&data[i]);
+                                    min = Some(min.map(|m| m.min(v)).unwrap_or(v));
+                                });
+                                min
+                            }),
+                        Aggregation::MaxU64 => col
+                            .value_u64_fn
+                            .as_ref()
+                            .or_else(|| col.facet_key_fn.as_ref())
+                            .map_or(None, |facet| {
+                                let mut max: Option<u64> = None;
+                                for_each_leaf(model, group_index, &mut |leaf_key| {
+                                    let Some(&i) = row_index_by_key.get(&leaf_key) else {
+                                        return;
+                                    };
+                                    let v = facet(&data[i]);
+                                    max = Some(max.map(|m| m.max(v)).unwrap_or(v));
+                                });
+                                max
+                            }),
+                        Aggregation::MeanU64 => col
+                            .value_u64_fn
+                            .as_ref()
+                            .or_else(|| col.facet_key_fn.as_ref())
+                            .map_or(None, |facet| {
+                                let mut sum = 0u64;
+                                let mut count = 0u64;
+                                let mut ok = true;
+                                for_each_leaf(model, group_index, &mut |leaf_key| {
+                                    let Some(&i) = row_index_by_key.get(&leaf_key) else {
+                                        return;
+                                    };
+                                    let v = facet(&data[i]);
+                                    count = count.saturating_add(1);
+                                    sum = match sum.checked_add(v) {
+                                        Some(next) => next,
+                                        None => {
+                                            ok = false;
+                                            sum
+                                        }
+                                    };
+                                });
+                                if !ok || count == 0 {
+                                    None
+                                } else {
+                                    Some(sum / count)
+                                }
+                            }),
                     };
 
                     let Some(value) = value else {
@@ -523,10 +707,12 @@ pub fn table_virtualized<H: UiHost, TData>(
             fn push_visible<'a, TData>(
                 model: &'a crate::headless::table::GroupedRowModel,
                 index: crate::headless::table::GroupedRowIndex,
-                data: &[TData],
                 row_index_by_key: &std::collections::HashMap<RowKey, usize>,
-                col_by_id: &std::collections::HashMap<&str, &ColumnDef<TData>>,
-                agg_columns: &[&ColumnDef<TData>],
+                group_labels: &std::collections::HashMap<RowKey, Arc<str>>,
+                group_aggs_text: &std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
+                sorting: &[SortSpec],
+                columns: &[ColumnDef<TData>],
+                data: &[TData],
                 expanded: &ExpandingState,
                 out: &mut Vec<DisplayRow>,
             ) {
@@ -540,37 +726,135 @@ pub fn table_virtualized<H: UiHost, TData>(
                     } => {
                         let expanded_here = is_row_expanded(row.key, expanded);
                         let grouping_column = grouping_column.clone();
-                        let aggregations = group_aggregations(
-                            model,
-                            index,
-                            &row.kind,
-                            data,
-                            row_index_by_key,
-                            agg_columns,
-                        );
+                        let aggregations = group_aggs_text
+                            .get(&row.key)
+                            .cloned()
+                            .unwrap_or_else(|| Arc::from([]));
                         out.push(DisplayRow::Group {
                             grouping_column,
                             row_key: row.key,
                             depth: row.depth,
-                            label: group_label_for_key(
-                                &row.kind,
-                                data,
-                                row_index_by_key,
-                                col_by_id,
-                            ),
+                            label: group_labels
+                                .get(&row.key)
+                                .cloned()
+                                .unwrap_or_else(|| Arc::from("")),
                             expanded: expanded_here,
                             aggregations,
                         });
 
                         if expanded_here {
-                            for &child in &row.sub_rows {
+                            let mut children: Option<Vec<crate::headless::table::GroupedRowIndex>> =
+                                None;
+
+                            if let Some(spec) = sorting.first() {
+                                if let Some(col) = columns
+                                    .iter()
+                                    .find(|c| c.id.as_ref() == spec.column.as_ref())
+                                {
+                                    let mut owned = row.sub_rows.clone();
+
+                                    fn representative_leaf_key(
+                                        kind: &GroupedRowKind,
+                                    ) -> Option<RowKey> {
+                                        match kind {
+                                            GroupedRowKind::Group {
+                                                first_leaf_row_key, ..
+                                            } => Some(*first_leaf_row_key),
+                                            GroupedRowKind::Leaf { row_key } => Some(*row_key),
+                                        }
+                                    }
+
+                                    owned.sort_by(|&a, &b| {
+                                        let ra = model.row(a);
+                                        let rb = model.row(b);
+                                        let (Some(ra), Some(rb)) = (ra, rb) else {
+                                            return std::cmp::Ordering::Equal;
+                                        };
+
+                                        let mut ord: Option<std::cmp::Ordering> = None;
+
+                                        if let (
+                                            GroupedRowKind::Group {
+                                                grouping_column: ca,
+                                                grouping_value: va,
+                                                ..
+                                            },
+                                            GroupedRowKind::Group {
+                                                grouping_column: cb,
+                                                grouping_value: vb,
+                                                ..
+                                            },
+                                        ) = (&ra.kind, &rb.kind)
+                                            && ca.as_ref() == col.id.as_ref()
+                                            && cb.as_ref() == col.id.as_ref()
+                                        {
+                                            ord = Some(va.cmp(vb));
+                                        }
+
+                                        if ord.is_none() {
+                                            let extract_u64 = col
+                                                .value_u64_fn
+                                                .as_ref()
+                                                .or_else(|| col.facet_key_fn.as_ref());
+                                            if let Some(extract_u64) = extract_u64 {
+                                                let key_a = representative_leaf_key(&ra.kind);
+                                                let key_b = representative_leaf_key(&rb.kind);
+                                                let idx_a = key_a.and_then(|k| {
+                                                    row_index_by_key.get(&k).copied()
+                                                });
+                                                let idx_b = key_b.and_then(|k| {
+                                                    row_index_by_key.get(&k).copied()
+                                                });
+                                                if let (Some(idx_a), Some(idx_b)) = (idx_a, idx_b) {
+                                                    let va = extract_u64(&data[idx_a]);
+                                                    let vb = extract_u64(&data[idx_b]);
+                                                    ord = Some(va.cmp(&vb));
+                                                }
+                                            }
+                                        }
+
+                                        if ord.is_none() && col.sort_cmp.is_some() {
+                                            let key_a = representative_leaf_key(&ra.kind);
+                                            let key_b = representative_leaf_key(&rb.kind);
+                                            let idx_a = key_a
+                                                .and_then(|k| row_index_by_key.get(&k).copied());
+                                            let idx_b = key_b
+                                                .and_then(|k| row_index_by_key.get(&k).copied());
+                                            if let (Some(idx_a), Some(idx_b)) = (idx_a, idx_b) {
+                                                if let Some(cmp) = col.sort_cmp.as_ref() {
+                                                    ord = Some(cmp(&data[idx_a], &data[idx_b]));
+                                                }
+                                            }
+                                        }
+
+                                        let mut ord = ord.unwrap_or_else(|| ra.key.cmp(&rb.key));
+                                        if spec.desc {
+                                            ord = ord.reverse();
+                                        }
+                                        ord
+                                    });
+                                    children = Some(owned);
+                                }
+                            }
+
+                            let child_iter: Box<
+                                dyn Iterator<Item = crate::headless::table::GroupedRowIndex>,
+                            > = if let Some(children) = children {
+                                Box::new(children.into_iter())
+                            } else {
+                                Box::new(row.sub_rows.iter().copied())
+                            };
+
+                            for child in child_iter {
                                 push_visible(
                                     model,
                                     child,
-                                    data,
                                     row_index_by_key,
-                                    col_by_id,
-                                    agg_columns,
+                                    group_labels,
+                                    group_aggs_text,
+                                    sorting,
+                                    columns,
+                                    data,
                                     expanded,
                                     out,
                                 );
@@ -591,14 +875,98 @@ pub fn table_virtualized<H: UiHost, TData>(
             }
 
             let mut visible: Vec<DisplayRow> = Vec::new();
-            for &root in grouped.root_rows() {
+            let mut roots: Vec<crate::headless::table::GroupedRowIndex> =
+                grouped.root_rows().to_vec();
+            if let Some(spec) = deps.sorting.first() {
+                if let Some(col) = columns
+                    .iter()
+                    .find(|c| c.id.as_ref() == spec.column.as_ref())
+                {
+                    fn representative_leaf_key(kind: &GroupedRowKind) -> Option<RowKey> {
+                        match kind {
+                            GroupedRowKind::Group {
+                                first_leaf_row_key, ..
+                            } => Some(*first_leaf_row_key),
+                            GroupedRowKind::Leaf { row_key } => Some(*row_key),
+                        }
+                    }
+
+                    roots.sort_by(|&a, &b| {
+                        let ra = grouped.row(a);
+                        let rb = grouped.row(b);
+                        let (Some(ra), Some(rb)) = (ra, rb) else {
+                            return std::cmp::Ordering::Equal;
+                        };
+
+                        let mut ord: Option<std::cmp::Ordering> = None;
+
+                        if let (
+                            GroupedRowKind::Group {
+                                grouping_column: ca,
+                                grouping_value: va,
+                                ..
+                            },
+                            GroupedRowKind::Group {
+                                grouping_column: cb,
+                                grouping_value: vb,
+                                ..
+                            },
+                        ) = (&ra.kind, &rb.kind)
+                            && ca.as_ref() == col.id.as_ref()
+                            && cb.as_ref() == col.id.as_ref()
+                        {
+                            ord = Some(va.cmp(vb));
+                        }
+
+                        if ord.is_none() {
+                            let extract_u64 = col
+                                .value_u64_fn
+                                .as_ref()
+                                .or_else(|| col.facet_key_fn.as_ref());
+                            if let Some(extract_u64) = extract_u64 {
+                                let key_a = representative_leaf_key(&ra.kind);
+                                let key_b = representative_leaf_key(&rb.kind);
+                                let idx_a = key_a.and_then(|k| row_index_by_key.get(&k).copied());
+                                let idx_b = key_b.and_then(|k| row_index_by_key.get(&k).copied());
+                                if let (Some(idx_a), Some(idx_b)) = (idx_a, idx_b) {
+                                    let va = extract_u64(&data[idx_a]);
+                                    let vb = extract_u64(&data[idx_b]);
+                                    ord = Some(va.cmp(&vb));
+                                }
+                            }
+                        }
+
+                        if ord.is_none() && col.sort_cmp.is_some() {
+                            let key_a = representative_leaf_key(&ra.kind);
+                            let key_b = representative_leaf_key(&rb.kind);
+                            let idx_a = key_a.and_then(|k| row_index_by_key.get(&k).copied());
+                            let idx_b = key_b.and_then(|k| row_index_by_key.get(&k).copied());
+                            if let (Some(idx_a), Some(idx_b)) = (idx_a, idx_b) {
+                                if let Some(cmp) = col.sort_cmp.as_ref() {
+                                    ord = Some(cmp(&data[idx_a], &data[idx_b]));
+                                }
+                            }
+                        }
+
+                        let mut ord = ord.unwrap_or_else(|| ra.key.cmp(&rb.key));
+                        if spec.desc {
+                            ord = ord.reverse();
+                        }
+                        ord
+                    });
+                }
+            }
+
+            for root in roots {
                 push_visible(
                     &grouped,
                     root,
-                    data,
                     &row_index_by_key,
-                    &col_by_id,
-                    &agg_columns,
+                    &group_labels,
+                    &group_aggs_text,
+                    deps.sorting.as_slice(),
+                    columns,
+                    data,
                     &state_value.expanding,
                     &mut visible,
                 );
@@ -615,7 +983,13 @@ pub fn table_virtualized<H: UiHost, TData>(
                     .to_vec()
             };
 
-            cache.deps = Some(deps);
+            cache.base_deps = Some(deps.base.clone());
+            cache.grouped = grouped;
+            cache.row_index_by_key = row_index_by_key;
+            cache.group_labels = group_labels;
+            cache.group_aggs_u64 = Default::default();
+            cache.group_aggs_text = group_aggs_text;
+            cache.deps = Some(deps.clone());
             cache.page_rows = page_rows.clone();
             page_rows
         })
