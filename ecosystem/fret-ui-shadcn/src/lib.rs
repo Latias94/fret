@@ -42,6 +42,7 @@ pub mod kbd;
 pub mod label;
 mod layout;
 pub mod menubar;
+pub mod navigation_menu;
 mod overlay_motion;
 pub mod pagination;
 pub mod popover;
@@ -141,6 +142,9 @@ pub use menubar::{
     Menubar, MenubarCheckboxItem, MenubarEntry, MenubarGroup, MenubarItem, MenubarLabel,
     MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem, MenubarRadioItemSpec,
     MenubarShortcut, menubar,
+};
+pub use navigation_menu::{
+    NavigationMenu, NavigationMenuItem, navigation_menu, navigation_menu_uncontrolled,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
