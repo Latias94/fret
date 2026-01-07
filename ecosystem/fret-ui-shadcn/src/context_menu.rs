@@ -25,6 +25,7 @@ use fret_ui_kit::primitives::context_menu as radix_context_menu;
 use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radius, Space};
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
@@ -45,6 +46,12 @@ pub enum ContextMenuEntry {
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn shadcn_zoom_transform(origin: Point, scale: f32) -> Transform2D {
+    Transform2D::translation(origin)
+        * Transform2D::scale_uniform(scale)
+        * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -1241,18 +1248,21 @@ impl ContextMenu {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
             let is_open = cx.watch_model(&self.open).copied().unwrap_or(false);
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
+                0.95,
+                1.0,
                 overlay_motion::shadcn_ease,
             );
             let overlay_presence = OverlayPresence {
                 present: motion.present,
                 interactive: is_open,
             };
-            let opacity = motion.progress;
+            let opacity = motion.opacity;
+            let scale = motion.scale;
             let opening = is_open;
             let arrow = self.arrow;
             let arrow_size = self.arrow_size_override.unwrap_or_else(|| {
@@ -1396,7 +1406,7 @@ impl ContextMenu {
                         anchor_rect,
                         arrow.then_some(arrow_size),
                     );
-                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                    let zoom = shadcn_zoom_transform(origin, scale);
                     let slide = if opening {
                         overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
                     } else {
@@ -1975,13 +1985,17 @@ impl ContextMenu {
                         .ok()
                         .flatten();
                     let submenu_is_open = submenu_open_value.is_some();
-                    let submenu_motion = OverlayController::transition_with_durations_and_easing(
+                    let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                         cx,
                         submenu_is_open,
                         overlay_motion::SHADCN_MOTION_TICKS_100,
                         overlay_motion::SHADCN_MOTION_TICKS_100,
+                        0.95,
+                        1.0,
                         overlay_motion::shadcn_ease,
                     );
+                    let submenu_opacity = submenu_motion.opacity;
+                    let submenu_scale = submenu_motion.scale;
 
                     let open_submenu = menu::sub::with_open_submenu(
                         cx,
@@ -2038,13 +2052,10 @@ impl ContextMenu {
                                 geometry.floating,
                                 side,
                             );
-                            let zoom = overlay_motion::shadcn_zoom_transform(
-                                origin,
-                                submenu_motion.progress,
-                            );
+                            let zoom = shadcn_zoom_transform(origin, submenu_scale);
                             let slide = overlay_motion::shadcn_enter_slide_transform(
                                 side,
-                                submenu_motion.progress,
+                                submenu_opacity,
                                 true,
                             );
                             let transform = slide * zoom;
@@ -2057,7 +2068,7 @@ impl ContextMenu {
                                 },
                                 ..Default::default()
                             };
-                            let opacity = submenu_motion.progress;
+                            let opacity = submenu_opacity;
                             let submenu_panel = cx.interactivity_gate(
                                 submenu_motion.present,
                                 submenu_is_open,

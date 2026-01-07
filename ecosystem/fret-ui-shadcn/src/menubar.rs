@@ -24,6 +24,7 @@ use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
+use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::{ColorRef, MetricRef, OverlayController, OverlayPresence, Radius, Space};
 
@@ -32,6 +33,15 @@ use crate::overlay_motion;
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn shadcn_zoom_transform(origin: fret_core::Point, scale: f32) -> fret_core::Transform2D {
+    fret_core::Transform2D::translation(origin)
+        * fret_core::Transform2D::scale_uniform(scale)
+        * fret_core::Transform2D::translation(fret_core::Point::new(
+            fret_core::Px(-origin.x.0),
+            fret_core::Px(-origin.y.0),
+        ))
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -962,18 +972,21 @@ impl MenubarMenuEntries {
                 ));
 
                 let is_open = cx.watch_model(&open).copied().unwrap_or(false);
-                let motion = OverlayController::transition_with_durations_and_easing(
+                let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                     cx,
                     is_open,
                     overlay_motion::SHADCN_MOTION_TICKS_100,
                     overlay_motion::SHADCN_MOTION_TICKS_100,
+                    0.95,
+                    1.0,
                     overlay_motion::shadcn_ease,
                 );
                 let overlay_presence = OverlayPresence {
                     present: motion.present,
                     interactive: is_open,
                 };
-                let opacity = motion.progress;
+                let opacity = motion.opacity;
+                let scale = motion.scale;
                 let overlay_root_name = OverlayController::popover_root_name(trigger_id);
                 let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
                 let submenu = cx.with_root_name(&overlay_root_name, |cx| {
@@ -1039,7 +1052,7 @@ impl MenubarMenuEntries {
                             placed,
                             Side::Bottom,
                         );
-                        let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                        let zoom = shadcn_zoom_transform(origin, scale);
                         let slide = overlay_motion::shadcn_enter_slide_transform(
                             Side::Bottom,
                             opacity,
@@ -1828,13 +1841,18 @@ impl MenubarMenuEntries {
                             .ok()
                             .flatten();
                         let submenu_is_open = submenu_open_value.is_some();
-                        let submenu_motion = OverlayController::transition_with_durations_and_easing(
-                            cx,
-                            submenu_is_open,
-                            overlay_motion::SHADCN_MOTION_TICKS_100,
-                            overlay_motion::SHADCN_MOTION_TICKS_100,
-                            overlay_motion::shadcn_ease,
-                        );
+                        let submenu_motion =
+                            radix_presence::scale_fade_presence_with_durations_and_easing(
+                                cx,
+                                submenu_is_open,
+                                overlay_motion::SHADCN_MOTION_TICKS_100,
+                                overlay_motion::SHADCN_MOTION_TICKS_100,
+                                0.95,
+                                1.0,
+                                overlay_motion::shadcn_ease,
+                            );
+                        let submenu_opacity = submenu_motion.opacity;
+                        let submenu_scale = submenu_motion.scale;
                         let open_submenu = menu::sub::with_open_submenu(
                             cx,
                             &submenu_for_panel,
@@ -2463,13 +2481,10 @@ impl MenubarMenuEntries {
                                         geometry.floating,
                                         side,
                                     );
-                                    let zoom = overlay_motion::shadcn_zoom_transform(
-                                        origin,
-                                        submenu_motion.progress,
-                                    );
+                                    let zoom = shadcn_zoom_transform(origin, submenu_scale);
                                     let slide = overlay_motion::shadcn_enter_slide_transform(
                                         side,
-                                        submenu_motion.progress,
+                                        submenu_opacity,
                                         true,
                                     );
                                     let transform = slide * zoom;
@@ -2482,7 +2497,7 @@ impl MenubarMenuEntries {
                                         },
                                         ..Default::default()
                                     };
-                                    let opacity = submenu_motion.progress;
+                                    let opacity = submenu_opacity;
                                     let submenu_panel_content = submenu_panel;
                                     let submenu_panel = cx.interactivity_gate(
                                         submenu_motion.present,
