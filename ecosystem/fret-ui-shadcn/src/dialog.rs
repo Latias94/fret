@@ -73,6 +73,22 @@ impl Dialog {
         }
     }
 
+    /// Creates a dialog with a controlled/uncontrolled open model (Radix `open` / `defaultOpen`).
+    ///
+    /// Note: If `open` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+    ) -> Self {
+        let open = radix_dialog::DialogRoot::new()
+            .open(open)
+            .default_open(default_open)
+            .open_model(cx);
+        Self::new(open)
+    }
+
     pub fn overlay_closable(mut self, overlay_closable: bool) -> Self {
         self.overlay_closable = overlay_closable;
         self
@@ -621,6 +637,39 @@ mod tests {
     use fret_runtime::Effect;
     use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
+
+    #[test]
+    fn dialog_new_controllable_uses_controlled_model_when_provided() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let controlled = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let dialog = Dialog::new_controllable(cx, Some(controlled.clone()), false);
+            assert_eq!(dialog.open, controlled);
+        });
+    }
+
+    #[test]
+    fn dialog_new_controllable_applies_default_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let dialog = Dialog::new_controllable(cx, None, true);
+            let open = cx.watch_model(&dialog.open).copied().unwrap_or(false);
+            assert!(open);
+        });
+    }
 
     #[derive(Default)]
     struct FakeServices;
