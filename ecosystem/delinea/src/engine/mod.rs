@@ -3,18 +3,19 @@ use fret_core::Rect;
 use crate::action::Action;
 use crate::data::DatasetStore;
 use crate::engine::lod::LodScratch;
+use crate::engine::model::{ChartModel, ModelError};
 use crate::engine::stages::MarksStage;
 use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
 use crate::marks::MarkTree;
 use crate::scheduler::{StepResult, WorkBudget};
-use crate::spec::ChartSpec;
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
 use fret_core::Point;
 
 pub mod hit_test;
 pub mod lod;
+pub mod model;
 pub mod stages;
 pub mod window;
 
@@ -67,7 +68,7 @@ impl std::error::Error for EngineError {}
 
 pub struct ChartEngine {
     id: ChartId,
-    spec: ChartSpec,
+    model: ChartModel,
     datasets: DatasetStore,
     state: ChartState,
     output: ChartOutput,
@@ -77,30 +78,31 @@ pub struct ChartEngine {
 }
 
 impl ChartEngine {
-    pub fn new(spec: ChartSpec) -> Self {
+    pub fn new(spec: crate::spec::ChartSpec) -> Result<Self, ModelError> {
         let id = spec.id;
-        Self {
+        let model = ChartModel::from_spec(spec)?;
+        Ok(Self {
             id,
-            spec,
+            model,
             datasets: DatasetStore::default(),
             state: ChartState::default(),
             output: ChartOutput::default(),
             stats: EngineStats::default(),
             marks_stage: MarksStage::default(),
             lod_scratch: LodScratch::default(),
-        }
+        })
     }
 
     pub fn id(&self) -> ChartId {
         self.id
     }
 
-    pub fn spec(&self) -> &ChartSpec {
-        &self.spec
+    pub fn model(&self) -> &ChartModel {
+        &self.model
     }
 
-    pub fn spec_mut(&mut self) -> &mut ChartSpec {
-        &mut self.spec
+    pub fn model_mut(&mut self) -> &mut ChartModel {
+        &mut self.model
     }
 
     pub fn datasets_mut(&mut self) -> &mut DatasetStore {
@@ -132,6 +134,7 @@ impl ChartEngine {
             Action::SetDataWindowX { window } => {
                 self.state.data_window_x = window;
                 self.state.revision.bump();
+                self.marks_stage.mark_dirty();
             }
             Action::SetLinkGroup { group } => {
                 self.state.link.group = group;
@@ -143,12 +146,24 @@ impl ChartEngine {
         }
     }
 
+    pub fn apply_patch(
+        &mut self,
+        patch: crate::engine::model::ChartPatch,
+        mode: crate::engine::model::PatchMode,
+    ) -> Result<crate::engine::model::PatchReport, ModelError> {
+        let report = self.model.apply_patch(patch, mode)?;
+        if report.viewport_changed || report.structure_changed {
+            self.marks_stage.mark_dirty();
+        }
+        Ok(report)
+    }
+
     pub fn step(
         &mut self,
         _measurer: &mut dyn TextMeasurer,
         mut budget: WorkBudget,
     ) -> Result<StepResult, EngineError> {
-        self.output.viewport = self.spec.viewport;
+        self.output.viewport = self.model.viewport;
         if self.output.viewport.is_none() {
             return Err(EngineError::MissingViewport);
         }
@@ -156,7 +171,7 @@ impl ChartEngine {
         self.output.link_events.clear();
         self.output.hover = None;
 
-        self.marks_stage.sync_inputs(&self.spec, &self.datasets);
+        self.marks_stage.sync_inputs(&self.model, &self.datasets);
         if self.marks_stage.is_dirty() {
             self.output.marks.clear();
             self.marks_stage.reset();
@@ -169,7 +184,7 @@ impl ChartEngine {
 
         let viewport = self.output.viewport.unwrap();
         let done = self.marks_stage.step(
-            &self.spec,
+            &self.model,
             &self.datasets,
             &self.state,
             viewport,
@@ -183,7 +198,7 @@ impl ChartEngine {
 
         if let Some(hover_px) = self.state.hover_px {
             self.output.hover =
-                hit_test::hover_hit_test(&self.spec, &self.datasets, &self.output.marks, hover_px);
+                hit_test::hover_hit_test(&self.model, &self.datasets, &self.output.marks, hover_px);
         }
 
         self.output.revision.bump();

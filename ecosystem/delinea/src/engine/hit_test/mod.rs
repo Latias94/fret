@@ -2,11 +2,12 @@ use fret_core::Point;
 
 use crate::data::DatasetStore;
 use crate::engine::HoverHit;
+use crate::engine::model::ChartModel;
 use crate::marks::{MarkKind, MarkPayloadRef, MarkTree};
-use crate::spec::{ChartSpec, SeriesKind};
+use crate::spec::SeriesKind;
 
 pub fn hover_hit_test(
-    spec: &ChartSpec,
+    model: &ChartModel,
     datasets: &DatasetStore,
     marks: &MarkTree,
     hover_px: Point,
@@ -21,18 +22,27 @@ pub fn hover_hit_test(
             continue;
         };
 
-        let series = spec
-            .series
-            .iter()
-            .find(|s| s.id == series_id && s.kind == SeriesKind::Line)?;
+        let Some(series) = model.series.get(&series_id) else {
+            continue;
+        };
+        if series.kind != SeriesKind::Line || !series.visible {
+            continue;
+        }
 
         let table = datasets
             .datasets
             .iter()
-            .find_map(|(id, t)| (*id == series.dataset).then_some(t))?;
+            .find_map(|(id, t)| (*id == series.dataset).then_some(t));
+        let Some(table) = table else {
+            continue;
+        };
 
-        let x = table.column_f64(series.x_col)?;
-        let y = table.column_f64(series.y_col)?;
+        let Some(x) = table.column_f64(series.x_col) else {
+            continue;
+        };
+        let Some(y) = table.column_f64(series.y_col) else {
+            continue;
+        };
 
         let MarkPayloadRef::Polyline(poly) = &node.payload else {
             continue;

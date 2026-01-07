@@ -6,10 +6,10 @@ use crate::engine::lod::{
     BoundsAccum, BoundsCursor, DataBounds, LodScratch, MinMaxPerPixelCursor, compute_bounds,
     compute_bounds_step, finalize_bounds, minmax_per_pixel_finalize, minmax_per_pixel_step,
 };
+use crate::engine::model::ChartModel;
 use crate::marks::{MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkTree};
 use crate::paint::StrokeStyleV2;
 use crate::scheduler::WorkBudget;
-use crate::spec::{ChartSpec, SeriesKind};
 use crate::stats::EngineStats;
 
 #[derive(Debug, Default, Clone)]
@@ -21,6 +21,7 @@ pub struct MarksStage {
     finalized: bool,
     dirty: bool,
     last_series_count: usize,
+    last_model_marks_rev: crate::ids::Revision,
     last_data_rev: crate::ids::Revision,
     bounds: Option<DataBounds>,
 }
@@ -34,12 +35,17 @@ impl MarksStage {
         self.dirty = true;
     }
 
-    pub fn sync_inputs(&mut self, spec: &ChartSpec, datasets: &DatasetStore) {
-        let series_count = spec.series.len();
+    pub fn sync_inputs(&mut self, model: &ChartModel, datasets: &DatasetStore) {
+        let series_count = model.series_order.len();
         if series_count != self.last_series_count {
             self.dirty = true;
         }
         self.last_series_count = series_count;
+
+        if model.revs.marks != self.last_model_marks_rev {
+            self.dirty = true;
+        }
+        self.last_model_marks_rev = model.revs.marks;
 
         let data_rev = datasets
             .datasets
@@ -65,7 +71,7 @@ impl MarksStage {
 
     pub fn step(
         &mut self,
-        spec: &ChartSpec,
+        model: &ChartModel,
         datasets: &DatasetStore,
         state: &ChartState,
         viewport: Rect,
@@ -74,9 +80,17 @@ impl MarksStage {
         marks: &mut MarkTree,
         stats: &mut EngineStats,
     ) -> bool {
-        while self.series_index < spec.series.len() {
-            let series = &spec.series[self.series_index];
-            if series.kind != SeriesKind::Line {
+        while self.series_index < model.series_order.len() {
+            let series_id = model.series_order[self.series_index];
+            let Some(series) = model.series.get(&series_id) else {
+                self.series_index += 1;
+                continue;
+            };
+            if series.kind != crate::spec::SeriesKind::Line {
+                self.series_index += 1;
+                continue;
+            }
+            if !series.visible {
                 self.series_index += 1;
                 continue;
             }
