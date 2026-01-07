@@ -479,7 +479,6 @@ impl SelectTriggerPointerState {
 pub struct SelectContentKeyState {
     active_row: Option<usize>,
     typeahead: TimedTypeaheadState,
-    pending_scroll_active_descendant: bool,
 }
 
 impl SelectContentKeyState {
@@ -491,30 +490,8 @@ impl SelectContentKeyState {
         self.active_row = row;
     }
 
-    pub fn set_active_row_from_keyboard(&mut self, row: Option<usize>) {
-        if self.active_row != row {
-            self.active_row = row;
-            self.pending_scroll_active_descendant = true;
-        } else {
-            self.active_row = row;
-        }
-    }
-
-    pub fn request_scroll_active_descendant(&mut self) {
-        self.pending_scroll_active_descendant = true;
-    }
-
-    pub fn clear_pending_scroll_active_descendant(&mut self) {
-        self.pending_scroll_active_descendant = false;
-    }
-
-    pub fn take_pending_scroll_active_descendant(&mut self) -> bool {
-        std::mem::take(&mut self.pending_scroll_active_descendant)
-    }
-
     pub fn reset_on_open(&mut self, initial_active_row: Option<usize>) {
         self.active_row = initial_active_row;
-        self.pending_scroll_active_descendant = false;
         self.typeahead.query.clear();
         self.typeahead.clear_token = None;
     }
@@ -564,12 +541,12 @@ impl SelectContentKeyState {
                 true
             }
             KeyCode::Home => {
-                self.set_active_row_from_keyboard(roving_focus::first_enabled(disabled_by_row));
+                self.active_row = roving_focus::first_enabled(disabled_by_row);
                 host.request_redraw(window);
                 true
             }
             KeyCode::End => {
-                self.set_active_row_from_keyboard(roving_focus::last_enabled(disabled_by_row));
+                self.active_row = roving_focus::last_enabled(disabled_by_row);
                 host.request_redraw(window);
                 true
             }
@@ -578,10 +555,9 @@ impl SelectContentKeyState {
                     return true;
                 };
                 let forward = key == KeyCode::ArrowDown;
-                self.set_active_row_from_keyboard(
+                self.active_row =
                     roving_focus::next_enabled(disabled_by_row, current, forward, loop_navigation)
-                        .or(Some(current)),
-                );
+                        .or(Some(current));
                 host.request_redraw(window);
                 true
             }
@@ -619,7 +595,7 @@ impl SelectContentKeyState {
                     true,
                 );
                 if next != self.active_row {
-                    self.set_active_row_from_keyboard(next);
+                    self.active_row = next;
                     host.request_redraw(window);
                 }
                 true
