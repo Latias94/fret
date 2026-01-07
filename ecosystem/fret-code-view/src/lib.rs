@@ -20,8 +20,80 @@ use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, Justify, LayoutRefinement, MetricRef, Radius, Space,
+    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CodeBlockWrap {
+    /// Do not wrap; use horizontal scrolling for long lines.
+    ScrollX,
+    /// Wrap at word boundaries (best-effort, depends on the text system).
+    Word,
+}
+
+impl Default for CodeBlockWrap {
+    fn default() -> Self {
+        Self::ScrollX
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CodeBlockCopyButtonPlacement {
+    Overlay,
+    Header,
+}
+
+impl Default for CodeBlockCopyButtonPlacement {
+    fn default() -> Self {
+        Self::Overlay
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CodeBlockHeaderBackground {
+    None,
+    Secondary,
+}
+
+impl Default for CodeBlockHeaderBackground {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CodeBlockHeaderSlots {
+    pub show_language: bool,
+    pub left: Vec<AnyElement>,
+    pub right: Vec<AnyElement>,
+}
+
+impl Default for CodeBlockHeaderSlots {
+    fn default() -> Self {
+        Self {
+            show_language: true,
+            left: Vec::new(),
+            right: Vec::new(),
+        }
+    }
+}
+
+impl CodeBlockHeaderSlots {
+    pub fn show_language(mut self, show: bool) -> Self {
+        self.show_language = show;
+        self
+    }
+
+    pub fn push_left(mut self, el: AnyElement) -> Self {
+        self.left.push(el);
+        self
+    }
+
+    pub fn push_right(mut self, el: AnyElement) -> Self {
+        self.right.push(el);
+        self
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct CodeBlock {
@@ -29,9 +101,13 @@ pub struct CodeBlock {
     language: Option<Arc<str>>,
     show_line_numbers: bool,
     show_header: bool,
+    header_divider: bool,
+    header_background: CodeBlockHeaderBackground,
     show_copy_button: bool,
     copy_button_on_hover: bool,
+    copy_button_placement: CodeBlockCopyButtonPlacement,
     border: bool,
+    wrap: CodeBlockWrap,
 }
 
 impl CodeBlock {
@@ -41,9 +117,13 @@ impl CodeBlock {
             language: None,
             show_line_numbers: false,
             show_header: false,
+            header_divider: false,
+            header_background: CodeBlockHeaderBackground::None,
             show_copy_button: false,
             copy_button_on_hover: true,
+            copy_button_placement: CodeBlockCopyButtonPlacement::Overlay,
             border: true,
+            wrap: CodeBlockWrap::ScrollX,
         }
     }
 
@@ -62,6 +142,16 @@ impl CodeBlock {
         self
     }
 
+    pub fn header_divider(mut self, show: bool) -> Self {
+        self.header_divider = show;
+        self
+    }
+
+    pub fn header_background(mut self, bg: CodeBlockHeaderBackground) -> Self {
+        self.header_background = bg;
+        self
+    }
+
     pub fn show_copy_button(mut self, show: bool) -> Self {
         self.show_copy_button = show;
         self
@@ -72,8 +162,18 @@ impl CodeBlock {
         self
     }
 
+    pub fn copy_button_placement(mut self, placement: CodeBlockCopyButtonPlacement) -> Self {
+        self.copy_button_placement = placement;
+        self
+    }
+
     pub fn border(mut self, border: bool) -> Self {
         self.border = border;
+        self
+    }
+
+    pub fn wrap(mut self, wrap: CodeBlockWrap) -> Self {
+        self.wrap = wrap;
         self
     }
 
@@ -85,9 +185,13 @@ impl CodeBlock {
             self.show_line_numbers,
             CodeBlockUiOptions {
                 show_header: self.show_header,
+                header_divider: self.header_divider,
+                header_background: self.header_background,
                 show_copy_button: self.show_copy_button,
                 copy_button_on_hover: self.copy_button_on_hover,
+                copy_button_placement: self.copy_button_placement,
                 border: self.border,
+                wrap: self.wrap,
             },
         )
     }
@@ -111,18 +215,26 @@ pub fn code_block<H: UiHost>(
 #[derive(Debug, Clone, Copy)]
 pub struct CodeBlockUiOptions {
     pub show_header: bool,
+    pub header_divider: bool,
+    pub header_background: CodeBlockHeaderBackground,
     pub show_copy_button: bool,
     pub copy_button_on_hover: bool,
+    pub copy_button_placement: CodeBlockCopyButtonPlacement,
     pub border: bool,
+    pub wrap: CodeBlockWrap,
 }
 
 impl Default for CodeBlockUiOptions {
     fn default() -> Self {
         Self {
             show_header: false,
+            header_divider: false,
+            header_background: CodeBlockHeaderBackground::None,
             show_copy_button: false,
             copy_button_on_hover: true,
+            copy_button_placement: CodeBlockCopyButtonPlacement::Overlay,
             border: true,
+            wrap: CodeBlockWrap::ScrollX,
         }
     }
 }
@@ -134,12 +246,30 @@ pub fn code_block_with<H: UiHost>(
     show_line_numbers: bool,
     options: CodeBlockUiOptions,
 ) -> AnyElement {
+    code_block_with_header_slots(
+        cx,
+        code,
+        language,
+        show_line_numbers,
+        options,
+        CodeBlockHeaderSlots::default(),
+    )
+}
+
+pub fn code_block_with_header_slots<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+    options: CodeBlockUiOptions,
+    mut header: CodeBlockHeaderSlots,
+) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
     let bg = theme.color_required("card");
     let border = theme.color_required("border");
 
     let chrome = {
-        let mut chrome = ChromeRefinement::default().p(Space::N2).rounded(Radius::Md);
+        let mut chrome = ChromeRefinement::default().rounded(Radius::Md);
         if options.border {
             chrome = chrome
                 .border_1()
@@ -160,54 +290,49 @@ pub fn code_block_with<H: UiHost>(
         st.prepared.clone()
     });
 
-    let header_visible = options.show_header || language.is_some();
     let code = Arc::<str>::from(code.to_string());
 
     cx.container(props, |cx| {
         vec![cx.hover_region(HoverRegionProps::default(), |cx, hovered| {
+            let show_copy = options.show_copy_button && (!options.copy_button_on_hover || hovered);
+
+            let header_visible = options.show_header
+                || language.is_some()
+                || !header.left.is_empty()
+                || !header.right.is_empty();
+
+            if !header_visible {
+                header.show_language = false;
+            }
+
+            if show_copy && options.copy_button_placement == CodeBlockCopyButtonPlacement::Header {
+                header.right.push(render_copy_button(cx, &theme, code.clone()));
+            }
+
             let content = stack::vstack(
                 cx,
                 stack::VStackProps::default()
-                    .gap(Space::N2)
+                    .gap(Space::N0)
                     .layout(LayoutRefinement::default().w_full()),
                 |cx| {
                     let mut out = Vec::new();
                     if header_visible {
-                        out.push(render_code_block_header(cx, &theme, language));
+                        out.push(render_code_block_header(
+                            cx,
+                            &theme,
+                            language,
+                            &header,
+                            options.header_divider,
+                            options.header_background,
+                        ));
                     }
-                    out.push(decl_scroll::overflow_scroll_x_vstack(
-                        cx,
-                        LayoutRefinement::default().w_full(),
-                        false,
-                        stack::VStackProps::default().gap(Space::N0),
-                        |cx| {
-                            prepared
-                                .lines
-                                .iter()
-                                .enumerate()
-                                .map(|(i, line)| {
-                                    if prepared.show_line_numbers {
-                                        render_code_line_with_number(
-                                            cx,
-                                            &theme,
-                                            i + 1,
-                                            prepared.line_number_width,
-                                            line,
-                                        )
-                                    } else {
-                                        render_code_line(cx, &theme, line)
-                                    }
-                                })
-                                .collect::<Vec<_>>()
-                        },
-                    ));
+                    out.push(render_code_block_body(cx, &theme, &prepared, options.wrap));
                     out
                 },
             );
 
             let mut out = vec![content];
-            let show_copy = options.show_copy_button && (!options.copy_button_on_hover || hovered);
-            if show_copy {
+            if show_copy && options.copy_button_placement == CodeBlockCopyButtonPlacement::Overlay {
                 out.push(render_copy_button_overlay(cx, &theme, code.clone()));
             }
             out
@@ -219,40 +344,135 @@ fn render_code_block_header<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     language: Option<&str>,
+    header: &CodeBlockHeaderSlots,
+    divider: bool,
+    background: CodeBlockHeaderBackground,
 ) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N2)
-            .justify(Justify::Between)
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            let mut left = Vec::new();
-            if let Some(lang) = language {
-                left.push(cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: Arc::<str>::from(lang.to_string()),
-                    style: Some(TextStyle {
-                        font: FontId::monospace(),
-                        size: theme.metric_required("metric.font.mono_size"),
-                        weight: FontWeight::SEMIBOLD,
-                        slant: Default::default(),
-                        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
-                        letter_spacing_em: None,
-                    }),
-                    color: Some(theme.color_required("muted-foreground")),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                }));
-            }
+    let pad_x = MetricRef::space(Space::N2).resolve(theme);
+    let pad_y = MetricRef::space(Space::N1).resolve(theme);
 
-            vec![stack::hstack(
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Fill;
+    props.padding = Edges::symmetric(pad_x, pad_y);
+    match background {
+        CodeBlockHeaderBackground::None => {}
+        CodeBlockHeaderBackground::Secondary => {
+            props.background = Some(theme.color_required("secondary"));
+        }
+    }
+    if divider {
+        props.border = Edges {
+            top: Px(0.0),
+            right: Px(0.0),
+            bottom: Px(1.0),
+            left: Px(0.0),
+        };
+        props.border_color = Some(theme.color_required("border"));
+    }
+
+    cx.container(props, |cx| {
+        vec![stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N2)
+                .justify(Justify::Between)
+                .items(Items::Center)
+                .layout(LayoutRefinement::default().w_full()),
+            |cx| {
+                let mut left = Vec::new();
+                if header.show_language {
+                    if let Some(lang) = language {
+                        left.push(cx.text_props(TextProps {
+                            layout: Default::default(),
+                            text: Arc::<str>::from(lang.to_string()),
+                            style: Some(TextStyle {
+                                font: FontId::monospace(),
+                                size: theme.metric_required("metric.font.mono_size"),
+                                weight: FontWeight::SEMIBOLD,
+                                slant: Default::default(),
+                                line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                                letter_spacing_em: None,
+                            }),
+                            color: Some(theme.color_required("muted-foreground")),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                        }));
+                    }
+                }
+                left.extend(header.left.iter().cloned());
+
+                let mut right = Vec::new();
+                right.extend(header.right.iter().cloned());
+
+                vec![
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N1),
+                        |_| left,
+                    ),
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N1).justify_end(),
+                        |_| right,
+                    ),
+                ]
+            },
+        )]
+    })
+}
+
+fn render_code_block_body<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    prepared: &PreparedCodeBlock,
+    wrap: CodeBlockWrap,
+) -> AnyElement {
+    let pad = MetricRef::space(Space::N2).resolve(theme);
+
+    let mut props = ContainerProps::default();
+    props.layout.size.width = Length::Fill;
+    props.padding = Edges::all(pad);
+
+    cx.container(props, |cx| {
+        let render_lines = |cx: &mut ElementContext<'_, H>| {
+            prepared
+                .lines
+                .iter()
+                .enumerate()
+                .map(|(i, line)| {
+                    if prepared.show_line_numbers {
+                        render_code_line_with_number(
+                            cx,
+                            theme,
+                            i + 1,
+                            prepared.line_number_width,
+                            line,
+                            wrap,
+                        )
+                    } else {
+                        render_code_line(cx, theme, line, wrap)
+                    }
+                })
+                .collect::<Vec<_>>()
+        };
+
+        match wrap {
+            CodeBlockWrap::ScrollX => vec![decl_scroll::overflow_scroll_x_vstack(
                 cx,
-                stack::HStackProps::default().gap(Space::N1),
-                |_| left,
-            )]
-        },
-    )
+                LayoutRefinement::default().w_full(),
+                false,
+                stack::VStackProps::default().gap(Space::N0),
+                render_lines,
+            )],
+            CodeBlockWrap::Word => vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N0)
+                    .layout(LayoutRefinement::default().w_full()),
+                render_lines,
+            )],
+        }
+    })
 }
 
 #[derive(Debug, Default)]
@@ -410,6 +630,7 @@ fn render_code_line_with_number<H: UiHost>(
     line_no: usize,
     width: usize,
     line: &PreparedLine,
+    wrap: CodeBlockWrap,
 ) -> AnyElement {
     let number_style = TextStyle {
         font: FontId::monospace(),
@@ -432,7 +653,7 @@ fn render_code_line_with_number<H: UiHost>(
             overflow: TextOverflow::Clip,
         });
 
-        vec![number_el, render_code_line(cx, theme, line)]
+        vec![number_el, render_code_line(cx, theme, line, wrap)]
     })
 }
 
@@ -440,6 +661,7 @@ fn render_code_line<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     line: &PreparedLine,
+    wrap: CodeBlockWrap,
 ) -> AnyElement {
     let text_style = TextStyle {
         font: FontId::monospace(),
@@ -469,13 +691,17 @@ fn render_code_line<H: UiHost>(
     }
 
     let rich = RichText::new(Arc::<str>::from(text), runs);
+    let (wrap, overflow) = match wrap {
+        CodeBlockWrap::ScrollX => (TextWrap::None, TextOverflow::Clip),
+        CodeBlockWrap::Word => (TextWrap::Word, TextOverflow::Clip),
+    };
     cx.selectable_text_props(SelectableTextProps {
         layout: Default::default(),
         rich,
         style: Some(text_style),
         color: Some(fg),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
+        wrap,
+        overflow,
     })
 }
 

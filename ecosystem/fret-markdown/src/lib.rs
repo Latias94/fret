@@ -505,7 +505,7 @@ pub struct MarkdownComponents<H: UiHost> {
     ///
     /// Notes:
     /// - `fret-markdown` does not fetch images. The host is responsible for loading and caching.
-    /// - See `ecosystem/fret-app-kit` helpers for integrating `ImageAssetCache` / `SvgAssetCache`.
+    /// - See `ecosystem/fret-ui-assets` for integrating `ImageAssetCache` / `SvgAssetCache`.
     pub image: Option<Arc<ImageRenderer<H>>>,
     /// Render an inline math span (`$...$`).
     pub inline_math: Option<Arc<InlineMathRenderer<H>>>,
@@ -595,22 +595,27 @@ fn render_code_block<H: UiHost>(
     info: CodeBlockInfo,
     components: &MarkdownComponents<H>,
 ) -> AnyElement {
-    let mut block = fret_code_view::CodeBlock::new(info.code.clone())
-        .show_copy_button(true)
-        .copy_button_on_hover(true);
-    if let Some(lang) = info.language.clone() {
-        block = block.language(lang);
+    let mut options = fret_code_view::CodeBlockUiOptions::default();
+    options.show_header = true;
+    options.header_divider = true;
+    options.header_background = fret_code_view::CodeBlockHeaderBackground::Secondary;
+    options.show_copy_button = true;
+    options.copy_button_on_hover = true;
+    options.copy_button_placement = fret_code_view::CodeBlockCopyButtonPlacement::Header;
+
+    let mut header = fret_code_view::CodeBlockHeaderSlots::default();
+    if let Some(render_actions) = &components.code_block_actions {
+        header = header.push_right(render_actions(cx, info.clone()));
     }
-    let code_view = block.show_line_numbers(false).into_element(cx);
 
-    let Some(render_actions) = &components.code_block_actions else {
-        return code_view;
-    };
-
-    let actions = render_actions(cx, info);
-    stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |_cx| {
-        vec![actions, code_view]
-    })
+    fret_code_view::code_block_with_header_slots(
+        cx,
+        &info.code,
+        info.language.as_deref(),
+        false,
+        options,
+        header,
+    )
 }
 
 fn render_thematic_break<H: UiHost>(
