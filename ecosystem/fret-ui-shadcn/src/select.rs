@@ -50,8 +50,16 @@ fn select_scroll_with_buttons<H: UiHost>(
     item_step: Px,
     initial_scroll_to_y: Option<Px>,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
+    auto_scroll_active_element: bool,
+    scroll_handle_override: Option<fret_ui::scroll::ScrollHandle>,
     content: impl FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> Vec<AnyElement>,
 ) -> AnyElement {
+    #[derive(Debug, Default)]
+    struct ScrollAffordanceState {
+        pin_bottom: bool,
+        last_offset_y: Px,
+    }
+
     cx.flex(
         FlexProps {
             layout: {
@@ -68,7 +76,9 @@ fn select_scroll_with_buttons<H: UiHost>(
             wrap: false,
         },
         move |cx| {
-            let handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            let handle = scroll_handle_override
+                .clone()
+                .unwrap_or_else(|| cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone()));
             if let Some(y) = initial_scroll_to_y {
                 let prev = handle.offset();
                 handle.scroll_to_offset(Point::new(prev.x, y));
@@ -79,21 +89,44 @@ fn select_scroll_with_buttons<H: UiHost>(
                 .unwrap_or(Px(24.0));
 
             let max = handle.max_offset();
-            let offset = handle.offset();
-            // Guard against fractional max offsets (layout rounding) causing scroll affordances to
-            // appear when content visually fits.
-            let scroll_epsilon = Px(0.5);
-            let has_scroll = max.y.0 > scroll_epsilon.0;
             // Avoid flicker near the bounds when offsets are fractional (e.g. wheel deltas,
-            // scaling/zoom, and layout rounding). Radix relies on integer scroll metrics; we
-            // approximate the same UX with a small epsilon hysteresis.
-            let show_up = has_scroll && offset.y.0 > scroll_epsilon.0;
-            let show_down = has_scroll && (max.y.0 - offset.y.0) > scroll_epsilon.0;
+            // scaling/zoom, and layout rounding). When we reach the bottom, keep us pinned there
+            // even if the measured max offset updates in a later frame.
+            let (show_up, show_down) = cx.with_state(ScrollAffordanceState::default, |st| {
+                let off_epsilon = Px(0.5);
+                let has_scroll = max.y.0 > off_epsilon.0;
+
+                let mut offset = handle.offset();
+                if !has_scroll {
+                    st.pin_bottom = false;
+                    st.last_offset_y = offset.y;
+                    return (false, false);
+                }
+                if st.pin_bottom && offset.y.0 + off_epsilon.0 < st.last_offset_y.0 {
+                    st.pin_bottom = false;
+                }
+
+                let mut remaining_down = Px((max.y.0 - offset.y.0).max(0.0));
+                if remaining_down.0 <= off_epsilon.0 {
+                    st.pin_bottom = true;
+                }
+
+                if st.pin_bottom && remaining_down.0 > off_epsilon.0 {
+                    handle.scroll_to_offset(Point::new(offset.x, max.y));
+                    offset = handle.offset();
+                    remaining_down = Px((max.y.0 - offset.y.0).max(0.0));
+                }
+
+                let show_up = has_scroll && offset.y.0 > off_epsilon.0;
+                let show_down = has_scroll && remaining_down.0 > off_epsilon.0;
+                st.last_offset_y = offset.y;
+                (show_up, show_down)
+            });
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
-                                 icon: fret_icons::IconId,
-                                 label: &'static str,
-                                 dir: f32| {
+                                  icon: fret_icons::IconId,
+                                  label: &'static str,
+                                  dir: f32| {
                 let handle = handle.clone();
                 let theme = theme.clone();
                 cx.pressable(
@@ -102,6 +135,14 @@ fn select_scroll_with_buttons<H: UiHost>(
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Px(scroll_button_h);
+                            layout.position = PositionStyle::Absolute;
+                            layout.inset.left = Some(Px(0.0));
+                            layout.inset.right = Some(Px(0.0));
+                            if dir < 0.0 {
+                                layout.inset.top = Some(Px(0.0));
+                            } else {
+                                layout.inset.bottom = Some(Px(0.0));
+                            }
                             layout
                         },
                         enabled: true,
@@ -239,7 +280,12 @@ fn select_scroll_with_buttons<H: UiHost>(
                     );
                     viewport_id_out.set(Some(scroll.id));
 
-                    if let Some(active_element) = active_element.get() {
+                    // Radix Select only auto-scrolls the active descendant for keyboard-driven
+                    // navigation. Pointer hover changes can update the highlighted row, but must
+                    // not scroll the list (it creates jitter and can re-enable scroll affordances
+                    // at the bounds).
+                    if auto_scroll_active_element && let Some(active_element) = active_element.get()
+                    {
                         let _ = active_desc::scroll_active_element_into_view_y(
                             cx,
                             &handle_for_stack,
@@ -248,19 +294,19 @@ fn select_scroll_with_buttons<H: UiHost>(
                         );
                     }
 
-                    vec![scroll]
+                    let mut out = Vec::new();
+                    out.push(scroll);
+                    if show_up {
+                        out.push(scroll_button(cx, ids::ui::CHEVRON_UP, "Scroll up", -1.0));
+                    }
+                    if show_down {
+                        out.push(scroll_button(cx, ids::ui::CHEVRON_DOWN, "Scroll down", 1.0));
+                    }
+                    out
                 },
             );
 
-            let mut out = Vec::new();
-            if show_up {
-                out.push(scroll_button(cx, ids::ui::CHEVRON_UP, "Scroll up", -1.0));
-            }
-            out.push(stack);
-            if show_down {
-                out.push(scroll_button(cx, ids::ui::CHEVRON_DOWN, "Scroll down", 1.0));
-            }
-            out
+            vec![stack]
         },
     )
 }
@@ -414,6 +460,7 @@ pub struct Select {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    scroll_handle: Option<fret_ui::scroll::ScrollHandle>,
 }
 
 impl Select {
@@ -435,6 +482,7 @@ impl Select {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
+            scroll_handle: None,
         }
     }
 
@@ -527,25 +575,50 @@ impl Select {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Select {
+            model,
+            open,
+            entries,
+            placeholder,
+            disabled,
+            a11y_label,
+            layout,
+            align,
+            side,
+            align_offset,
+            side_offset_override,
+            position,
+            loop_navigation,
+            arrow,
+            arrow_size_override,
+            arrow_padding_override,
+            scroll_handle,
+        } = self;
         select_impl(
             cx,
-            self.model,
-            self.open,
-            &self.entries,
-            self.placeholder,
-            self.disabled,
-            self.a11y_label,
-            self.layout,
-            self.align,
-            self.side,
-            self.align_offset,
-            self.side_offset_override,
-            self.position,
-            self.loop_navigation,
-            self.arrow,
-            self.arrow_size_override,
-            self.arrow_padding_override,
+            model,
+            open,
+            &entries,
+            placeholder,
+            disabled,
+            a11y_label,
+            layout,
+            align,
+            side,
+            align_offset,
+            side_offset_override,
+            position,
+            loop_navigation,
+            arrow,
+            arrow_size_override,
+            arrow_padding_override,
+            scroll_handle,
         )
+    }
+
+    pub fn scroll_handle(mut self, handle: fret_ui::scroll::ScrollHandle) -> Self {
+        self.scroll_handle = Some(handle);
+        self
     }
 }
 
@@ -578,6 +651,7 @@ pub fn select<H: UiHost>(
         false,
         None,
         None,
+        None,
     )
 }
 
@@ -599,6 +673,7 @@ fn select_impl<H: UiHost>(
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    scroll_handle_override: Option<fret_ui::scroll::ScrollHandle>,
 ) -> AnyElement {
     cx.scope(|cx| {
         fn find_item_label(entries: &[SelectEntry], value: &str) -> Option<Arc<str>> {
@@ -1142,13 +1217,19 @@ fn select_impl<H: UiHost>(
                                     state.was_open = true;
                                     state.content.reset_on_open(initial_active_row);
                                     state.trigger.reset_typeahead_buffer();
-                            } else if state.content.active_row().is_none() {
-                                state.content.set_active_row(initial_active_row);
+
+                                    if fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window))
+                                    {
+                                        state.content.request_scroll_active_descendant();
+                                    }
+                                } else if state.content.active_row().is_none() {
+                                    state.content.set_active_row(initial_active_row);
+                                }
+                            } else {
+                                state.was_open = false;
+                                state.content.set_active_row(None);
+                                state.content.clear_pending_scroll_active_descendant();
                             }
-                        } else {
-                            state.was_open = false;
-                            state.content.set_active_row(None);
-                        }
 
                         state.content.active_row()
                     };
@@ -1156,11 +1237,14 @@ fn select_impl<H: UiHost>(
                         let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
                         let arrow_bg = theme_for_overlay.colors.panel_background;
                         let arrow_border = border;
-                        let initial_scroll_to_y = {
+                        let (initial_scroll_to_y, auto_scroll_active_element) = {
                             let mut state = trigger_state_for_overlay
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
-                            state.pending_item_aligned_scroll_to_y.take()
+                            (
+                                state.pending_item_aligned_scroll_to_y.take(),
+                                state.content.take_pending_scroll_active_descendant(),
+                            )
                         };
 
                         let trigger_state_for_overlay_in_content = trigger_state_for_overlay.clone();
@@ -1200,6 +1284,8 @@ fn select_impl<H: UiHost>(
                                         item_h,
                                         initial_scroll_to_y,
                                         viewport_id_out,
+                                        auto_scroll_active_element,
+                                        scroll_handle_override.clone(),
                                         move |cx, active_element| {
                                             let disabled_for_key: Arc<[bool]> =
                                                 Arc::from(disabled.clone().into_boxed_slice());
@@ -1406,6 +1492,9 @@ fn select_impl<H: UiHost>(
                                                                                                     state.content.set_active_row(
                                                                                                         Some(row_idx_for_hover),
                                                                                                     );
+                                                                                                    state
+                                                                                                        .content
+                                                                                                        .clear_pending_scroll_active_descendant();
                                                                                                     host.request_redraw(
                                                                                                         action_cx.window,
                                                                                                     );
@@ -1962,6 +2051,87 @@ mod tests {
         fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_with_scroll_handle(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        open: Model<bool>,
+        items: Vec<SelectItem>,
+        scroll_handle: fret_ui::scroll::ScrollHandle,
+    ) -> fret_core::NodeId {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(app, window);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "select", |cx| {
+                vec![
+                    Select::new(model, open)
+                        .items(items)
+                        .scroll_handle(scroll_handle)
+                        .into_element(cx),
+                ]
+            });
+        ui.set_root(root);
+        fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_frame_with_scroll_handle_settled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        open: Model<bool>,
+        items: &Vec<SelectItem>,
+        scroll_handle: &fret_ui::scroll::ScrollHandle,
+    ) -> fret_core::NodeId {
+        let mut root = render_frame_with_scroll_handle(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+            scroll_handle.clone(),
+        );
+
+        // In the real runtime, `Effect::Redraw` schedules another frame; tests need to
+        // explicitly simulate that.
+        for _ in 0..3 {
+            let effects = app.flush_effects();
+            let needs_redraw = effects
+                .iter()
+                .any(|e| matches!(e, Effect::Redraw(w) if *w == window));
+            if !needs_redraw {
+                break;
+            }
+
+            root = render_frame_with_scroll_handle(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+                scroll_handle.clone(),
+            );
+        }
+
         root
     }
 
@@ -2629,6 +2799,18 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
+            items.clone(),
+            true,
+        );
+        // Allow popper placement + scroll metrics to settle for hit-testing.
+        let _ = render_frame_with_arrow(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
             items,
             true,
         );
@@ -2727,6 +2909,19 @@ mod tests {
             open.clone(),
             items.clone(),
         );
+        // A couple more frames to apply any redraw requested by scroll metric updates.
+        for _ in 0..2 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+        }
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         let scroll_down = snap
@@ -2873,10 +3068,29 @@ mod tests {
             .find(|n| n.role == SemanticsRole::ListBox)
             .expect("list node");
         let list_bounds = ui.debug_node_bounds(list.id).expect("list bounds");
-        let wheel_pos = Point::new(
-            Px(list_bounds.origin.x.0 + list_bounds.size.width.0 * 0.5),
-            Px(list_bounds.origin.y.0 + list_bounds.size.height.0 * 0.5),
-        );
+        let wheel_pos = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(bounds.origin.x.0 + bounds.size.width.0 * fx),
+                    Px(bounds.origin.y.0 + bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&list.id)
+                {
+                    return p;
+                }
+            }
+            panic!(
+                "expected to find a hit-testable wheel position inside list; window={bounds:?} list={list_bounds:?}"
+            );
+        })();
 
         // Simulate repeated wheel scrolling (large delta) and ensure we clamp to the bottom.
         for _ in 0..40 {
@@ -2933,6 +3147,205 @@ mod tests {
         assert!(
             last_bottom > list_top + 0.01 && last_top < list_bottom - 0.01,
             "expected last item to remain visible after wheel scrolling; list={list_bounds:?} last={last_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn select_pointer_move_does_not_scroll_list() {
+        use fret_core::MouseButtons;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..60)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+        let scroll_handle = fret_ui::scroll::ScrollHandle::default();
+
+        let _ = render_frame_with_scroll_handle_settled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            &items,
+            &scroll_handle,
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame_with_scroll_handle_settled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            &items,
+            &scroll_handle,
+        );
+
+        // Third frame: allow the scroll handle to observe content overflow.
+        let _ = render_frame_with_scroll_handle_settled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            &items,
+            &scroll_handle,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("list node");
+        let list_bounds = ui.debug_node_bounds(list.id).expect("list bounds");
+
+        let list_center = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(bounds.origin.x.0 + bounds.size.width.0 * fx),
+                    Px(bounds.origin.y.0 + bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&list.id)
+                {
+                    return p;
+                }
+            }
+            panic!(
+                "expected to find a hit-testable point in list; window={bounds:?} list={list_bounds:?}"
+            );
+        })();
+
+        // Scroll down some distance with the wheel (large delta).
+        for _ in 0..40 {
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                    position: list_center,
+                    delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
+                    modifiers: Modifiers::default(),
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+        }
+
+        let _ = render_frame_with_scroll_handle_settled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            &items,
+            &scroll_handle,
+        );
+
+        let offset_before_move = scroll_handle.offset();
+
+        let move_pos = {
+            let snap = ui.semantics_snapshot().expect("semantics for move");
+            let list = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::ListBox)
+                .expect("list node");
+            let list_bounds = ui.debug_node_bounds(list.id).expect("list bounds");
+
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            let mut out = None;
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(bounds.origin.x.0 + bounds.size.width.0 * fx),
+                    Px(bounds.origin.y.0 + bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&list.id)
+                {
+                    out = Some(p);
+                    break;
+                }
+            }
+            out.unwrap_or_else(|| {
+                panic!(
+                    "expected to find a hit-testable point in list; window={bounds:?} list={list_bounds:?}"
+                )
+            })
+        };
+
+        assert!(
+            !fret_ui::input_modality::is_keyboard(&mut app, Some(window)),
+            "expected pointer modality after pointer scrolling"
+        );
+
+        // A small pointer move should not trigger any scroll-into-view adjustment (which would
+        // leave room to scroll further down and re-enable the affordance).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                position: move_pos,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert!(
+            !fret_ui::input_modality::is_keyboard(&mut app, Some(window)),
+            "expected pointer modality after pointer move"
+        );
+
+        let _ = render_frame_with_scroll_handle_settled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            &items,
+            &scroll_handle,
+        );
+        let offset_after_move = scroll_handle.offset();
+        assert!(
+            (offset_after_move.y.0 - offset_before_move.y.0).abs() <= 0.01,
+            "expected pointer move to not scroll; before={offset_before_move:?} after={offset_after_move:?}"
         );
     }
 }
