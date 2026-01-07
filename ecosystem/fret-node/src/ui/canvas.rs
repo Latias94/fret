@@ -993,11 +993,91 @@ impl NodeGraphCanvas {
         });
     }
 
-    fn yank_edges_from_port(
-        &self,
-        graph: &Graph,
-        port: PortId,
-    ) -> Vec<(EdgeId, EdgeEndpoint, PortId)> {
+    fn paint_wire_drag_hint<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        snapshot: &ViewSnapshot,
+        wire_drag: &WireDrag,
+        zoom: f32,
+    ) {
+        let text = match &wire_drag.kind {
+            WireDragKind::New { bundle, .. } if bundle.len() > 1 => {
+                Arc::<str>::from(format!("Bundle: {}", bundle.len()))
+            }
+            WireDragKind::ReconnectMany { edges } if edges.len() > 1 => {
+                Arc::<str>::from(format!("Yank: {}", edges.len()))
+            }
+            _ => return,
+        };
+
+        let mut text_style = self.style.context_menu_text_style.clone();
+        text_style.size = Px(text_style.size.0 / zoom);
+        if let Some(lh) = text_style.line_height.as_mut() {
+            lh.0 /= zoom;
+        }
+
+        let pad = 8.0 / zoom;
+        let max_w = 220.0 / zoom;
+        let constraints = TextConstraints {
+            max_width: Some(Px(max_w - 2.0 * pad)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor * zoom,
+        };
+
+        let (blob, metrics) = cx
+            .services
+            .text()
+            .prepare(text.as_ref(), &text_style, constraints);
+        self.text_blobs.push(blob);
+
+        let box_w = (metrics.size.width.0 + 2.0 * pad).clamp(72.0 / zoom, max_w);
+        let box_h = metrics.size.height.0 + 2.0 * pad;
+
+        let offset_x = 14.0 / zoom;
+        let offset_y = 12.0 / zoom;
+        let rect = Rect::new(
+            Point::new(
+                Px(wire_drag.pos.x.0 + offset_x),
+                Px(wire_drag.pos.y.0 + offset_y),
+            ),
+            Size::new(Px(box_w), Px(box_h)),
+        );
+
+        let border_color = if snapshot.interaction.connection_mode == NodeGraphConnectionMode::Loose
+            && self.interaction.hover_port.is_some()
+            && !self.interaction.hover_port_valid
+        {
+            Color {
+                r: 0.90,
+                g: 0.35,
+                b: 0.35,
+                a: 1.0,
+            }
+        } else {
+            self.style.context_menu_border
+        };
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(69),
+            rect,
+            background: self.style.context_menu_background,
+            border: Edges::all(Px(1.0 / zoom)),
+            border_color,
+            corner_radii: Corners::all(Px(6.0 / zoom)),
+        });
+
+        let text_x = Px(rect.origin.x.0 + pad);
+        let text_y = Px(rect.origin.y.0 + pad + metrics.baseline.0);
+        cx.scene.push(SceneOp::Text {
+            order: DrawOrder(70),
+            origin: Point::new(text_x, text_y),
+            text: blob,
+            color: self.style.context_menu_text,
+        });
+    }
+
+    fn yank_edges_from_port(graph: &Graph, port: PortId) -> Vec<(EdgeId, EdgeEndpoint, PortId)> {
         let Some(p) = graph.ports.get(&port) else {
             return Vec::new();
         };
@@ -1020,6 +1100,24 @@ impl NodeGraphCanvas {
             }
         }
         out
+    }
+
+    fn should_add_bundle_port(
+        graph: &Graph,
+        from: PortId,
+        bundle: &[PortId],
+        candidate: PortId,
+    ) -> bool {
+        if candidate == from || bundle.contains(&candidate) {
+            return false;
+        }
+        let Some(from_port) = graph.ports.get(&from) else {
+            return false;
+        };
+        let Some(candidate_port) = graph.ports.get(&candidate) else {
+            return false;
+        };
+        candidate_port.dir == from_port.dir
     }
 
     fn pick_reconnect_endpoint(
@@ -1211,6 +1309,35 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             Event::KeyDown { key, .. } => {
                 if *key == fret_core::KeyCode::Escape {
                     if self.interaction.context_menu.take().is_some() {
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+
+                    let mut canceled = false;
+                    if self.interaction.wire_drag.take().is_some() {
+                        canceled = true;
+                    }
+                    if self.interaction.edge_drag.take().is_some() {
+                        canceled = true;
+                    }
+                    if self.interaction.node_drag.take().is_some() {
+                        canceled = true;
+                    }
+                    if self.interaction.pending_node_drag.take().is_some() {
+                        canceled = true;
+                    }
+                    if self.interaction.panning {
+                        self.interaction.panning = false;
+                        canceled = true;
+                    }
+                    self.interaction.hover_port = None;
+                    self.interaction.hover_port_valid = false;
+                    self.interaction.hover_edge = None;
+
+                    if canceled {
+                        cx.release_pointer_capture();
                         cx.stop_propagation();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
@@ -1545,7 +1672,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         let yank = (modifiers.ctrl || modifiers.meta).then(|| {
                             let this = &*self;
                             this.graph
-                                .read_ref(cx.app, |graph| this.yank_edges_from_port(graph, port))
+                                .read_ref(cx.app, |graph| Self::yank_edges_from_port(graph, port))
                                 .ok()
                                 .unwrap_or_default()
                         });
@@ -1762,15 +1889,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                     let this = &*self;
                                     this.graph
                                         .read_ref(cx.app, |graph| {
-                                            let Some(from_port) = graph.ports.get(from) else {
-                                                return false;
-                                            };
-                                            let Some(candidate_port) = graph.ports.get(&candidate)
-                                            else {
-                                                return false;
-                                            };
-                                            candidate_port.dir == from_port.dir
-                                                && !bundle.contains(&candidate)
+                                            Self::should_add_bundle_port(
+                                                graph, *from, bundle, candidate,
+                                            )
                                         })
                                         .ok()
                                         .unwrap_or(false)
@@ -2527,6 +2648,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             });
         }
 
+        if let Some(wire_drag) = self.interaction.wire_drag.clone() {
+            self.paint_wire_drag_hint(cx, &snapshot, &wire_drag, zoom);
+        }
+
         if let Some(menu) = self.interaction.context_menu.clone() {
             self.paint_context_menu(cx, &menu, zoom);
         }
@@ -2646,4 +2771,190 @@ fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {
     let dx = p.x.0 - cx;
     let dy = p.y.0 - cy;
     dx * dx + dy * dy
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::Value;
+
+    use crate::core::{
+        CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
+        PortCapacity, PortDirection, PortId, PortKey, PortKind,
+    };
+    use crate::rules::EdgeEndpoint;
+
+    use super::NodeGraphCanvas;
+
+    #[test]
+    fn yank_edges_from_port_returns_all_incident_edges() {
+        let mut graph = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+
+        let n1 = NodeId::new();
+        let p_out = PortId::new();
+        graph.nodes.insert(
+            n1,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                collapsed: false,
+                ports: vec![p_out],
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            p_out,
+            Port {
+                node: n1,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+
+        let n2 = NodeId::new();
+        let p_in1 = PortId::new();
+        let p_in2 = PortId::new();
+        graph.nodes.insert(
+            n2,
+            Node {
+                kind: kind.clone(),
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                collapsed: false,
+                ports: vec![p_in1, p_in2],
+                data: Value::Null,
+            },
+        );
+        for (id, key) in [(p_in1, "in1"), (p_in2, "in2")] {
+            graph.ports.insert(
+                id,
+                Port {
+                    node: n2,
+                    key: PortKey::new(key),
+                    dir: PortDirection::In,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Single,
+                    ty: None,
+                    data: Value::Null,
+                },
+            );
+        }
+
+        let e1 = EdgeId::new();
+        let e2 = EdgeId::new();
+        graph.edges.insert(
+            e1,
+            Edge {
+                kind: EdgeKind::Data,
+                from: p_out,
+                to: p_in1,
+            },
+        );
+        graph.edges.insert(
+            e2,
+            Edge {
+                kind: EdgeKind::Data,
+                from: p_out,
+                to: p_in2,
+            },
+        );
+
+        let from_edges = NodeGraphCanvas::yank_edges_from_port(&graph, p_out);
+        assert_eq!(from_edges.len(), 2);
+        assert!(from_edges.contains(&(e1, EdgeEndpoint::From, p_in1)));
+        assert!(from_edges.contains(&(e2, EdgeEndpoint::From, p_in2)));
+
+        let to_edges = NodeGraphCanvas::yank_edges_from_port(&graph, p_in1);
+        assert_eq!(to_edges, vec![(e1, EdgeEndpoint::To, p_out)]);
+    }
+
+    #[test]
+    fn should_add_bundle_port_requires_same_side_and_dedupes() {
+        let mut graph = Graph::new(GraphId::new());
+        let kind = NodeKindKey::new("test.node");
+        let n1 = NodeId::new();
+
+        let p_out1 = PortId::new();
+        let p_out2 = PortId::new();
+        let p_in = PortId::new();
+
+        graph.nodes.insert(
+            n1,
+            Node {
+                kind,
+                kind_version: 1,
+                pos: CanvasPoint { x: 0.0, y: 0.0 },
+                collapsed: false,
+                ports: vec![p_out1, p_out2, p_in],
+                data: Value::Null,
+            },
+        );
+
+        graph.ports.insert(
+            p_out1,
+            Port {
+                node: n1,
+                key: PortKey::new("out1"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            p_out2,
+            Port {
+                node: n1,
+                key: PortKey::new("out2"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            p_in,
+            Port {
+                node: n1,
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+
+        assert!(NodeGraphCanvas::should_add_bundle_port(
+            &graph,
+            p_out1,
+            &[p_out1],
+            p_out2
+        ));
+        assert!(!NodeGraphCanvas::should_add_bundle_port(
+            &graph,
+            p_out1,
+            &[p_out2],
+            p_out2
+        ));
+        assert!(!NodeGraphCanvas::should_add_bundle_port(
+            &graph,
+            p_out1,
+            &[],
+            p_out1
+        ));
+        assert!(!NodeGraphCanvas::should_add_bundle_port(
+            &graph,
+            p_out1,
+            &[],
+            p_in
+        ));
+    }
 }
