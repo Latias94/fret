@@ -665,11 +665,17 @@ impl NodeGraphCanvas {
                     return;
                 }
 
-                let ops = {
+                enum Outcome {
+                    Apply(Vec<GraphOp>),
+                    Reject(DiagnosticSeverity, Arc<str>),
+                    Ignore,
+                }
+
+                let outcome = {
                     let presenter = &mut *self.presenter;
                     self.graph
                         .read_ref(cx.app, |graph| {
-                            presenter.plan_split_edge(
+                            let plan = presenter.plan_split_edge(
                                 graph,
                                 *edge_id,
                                 &kind,
@@ -677,22 +683,32 @@ impl NodeGraphCanvas {
                                     x: invoked_at.x.0,
                                     y: invoked_at.y.0,
                                 },
-                            )
+                            );
+                            match plan.decision {
+                                ConnectDecision::Accept => Outcome::Apply(plan.ops),
+                                ConnectDecision::Reject => {
+                                    Self::toast_from_diagnostics(&plan.diagnostics)
+                                        .map(|(sev, msg)| Outcome::Reject(sev, msg))
+                                        .unwrap_or_else(|| {
+                                            Outcome::Reject(
+                                                DiagnosticSeverity::Error,
+                                                Arc::<str>::from(format!(
+                                                    "node insertion was rejected: {}",
+                                                    kind.0
+                                                )),
+                                            )
+                                        })
+                                }
+                            }
                         })
                         .ok()
-                        .flatten()
-                        .unwrap_or_default()
+                        .unwrap_or(Outcome::Ignore)
                 };
 
-                if !ops.is_empty() {
-                    self.apply_ops(cx.app, ops);
-                } else {
-                    self.show_toast(
-                        cx.app,
-                        cx.window,
-                        DiagnosticSeverity::Error,
-                        Arc::<str>::from(format!("node insertion was rejected: {}", kind.0)),
-                    );
+                match outcome {
+                    Outcome::Apply(ops) => self.apply_ops(cx.app, ops),
+                    Outcome::Reject(sev, msg) => self.show_toast(cx.app, cx.window, sev, msg),
+                    Outcome::Ignore => {}
                 }
             }
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::Custom(action_id)) => {

@@ -76,16 +76,16 @@ pub trait NodeGraphPresenter {
 
     /// Plans splitting an edge by inserting a node.
     ///
-    /// Returning `Some(ops)` applies them as a single transaction.
+    /// Returning a rejected plan will surface diagnostics to the user.
     fn plan_split_edge(
         &mut self,
         graph: &Graph,
         edge: EdgeId,
         node_kind: &NodeKindKey,
         at: CanvasPoint,
-    ) -> Option<Vec<GraphOp>> {
+    ) -> ConnectPlan {
         let _ = (graph, edge, node_kind, at);
-        None
+        ConnectPlan::reject("split-edge insertion is not supported")
     }
 
     /// Fills the right-click context menu for an edge.
