@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand, PathConstraints, PathStyle,
-    Point, Px, Rect, SceneOp, Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow,
-    TextWrap, Transform2D,
+    AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand,
+    PathConstraints, PathStyle, Point, Px, Rect, SceneOp, Size, StrokeStyle, TextBlobId,
+    TextConstraints, TextOverflow, TextWrap, Transform2D,
 };
-use fret_runtime::Model;
+use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::{UiHost, retained_bridge::*};
 use serde_json::Value;
 
@@ -16,7 +17,7 @@ use crate::core::{
 };
 use crate::io::NodeGraphViewState;
 use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction, apply_transaction};
-use crate::rules::EdgeEndpoint;
+use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
 use super::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
@@ -42,6 +43,7 @@ struct InteractionState {
     edge_drag: Option<EdgeDrag>,
     hover_edge: Option<EdgeId>,
     context_menu: Option<ContextMenuState>,
+    toast: Option<ToastState>,
 }
 
 #[derive(Debug, Clone)]
@@ -91,6 +93,13 @@ struct ContextMenuState {
     typeahead: String,
 }
 
+#[derive(Debug, Clone)]
+struct ToastState {
+    timer: TimerToken,
+    severity: DiagnosticSeverity,
+    message: Arc<str>,
+}
+
 /// Retained node-graph canvas widget (MVP).
 ///
 /// This draws nodes and wires and supports:
@@ -114,6 +123,40 @@ pub struct NodeGraphCanvas {
 
 impl NodeGraphCanvas {
     const REROUTE_KIND: &'static str = "fret.reroute";
+
+    fn show_toast<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        severity: DiagnosticSeverity,
+        message: impl Into<Arc<str>>,
+    ) {
+        if let Some(prev) = self.interaction.toast.take() {
+            host.push_effect(Effect::CancelTimer { token: prev.timer });
+        }
+
+        let timer = host.next_timer_token();
+        host.push_effect(Effect::SetTimer {
+            window,
+            token: timer,
+            after: Duration::from_millis(2400),
+            repeat: None,
+        });
+
+        self.interaction.toast = Some(ToastState {
+            timer,
+            severity,
+            message: message.into(),
+        });
+    }
+
+    fn toast_from_diagnostics(diags: &[Diagnostic]) -> Option<(DiagnosticSeverity, Arc<str>)> {
+        let first = diags.first()?;
+        if first.message.is_empty() {
+            return None;
+        }
+        Some((first.severity, Arc::<str>::from(first.message.clone())))
+    }
 
     pub fn new(graph: Model<Graph>, view_state: Model<NodeGraphViewState>) -> Self {
         Self {
@@ -543,6 +586,12 @@ impl NodeGraphCanvas {
                 };
 
                 let Some((ops, node_id)) = planned else {
+                    self.show_toast(
+                        cx.app,
+                        cx.window,
+                        DiagnosticSeverity::Error,
+                        Arc::<str>::from("failed to insert reroute"),
+                    );
                     return;
                 };
 
@@ -596,6 +645,12 @@ impl NodeGraphCanvas {
                     };
 
                     let Some((ops, node_id)) = planned else {
+                        self.show_toast(
+                            cx.app,
+                            cx.window,
+                            DiagnosticSeverity::Error,
+                            Arc::<str>::from("failed to insert reroute"),
+                        );
                         return;
                     };
 
@@ -631,6 +686,13 @@ impl NodeGraphCanvas {
 
                 if !ops.is_empty() {
                     self.apply_ops(cx.app, ops);
+                } else {
+                    self.show_toast(
+                        cx.app,
+                        cx.window,
+                        DiagnosticSeverity::Error,
+                        Arc::<str>::from(format!("node insertion was rejected: {}", kind.0)),
+                    );
                 }
             }
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::Custom(action_id)) => {
@@ -733,6 +795,85 @@ impl NodeGraphCanvas {
                 color,
             });
         }
+    }
+
+    fn paint_toast<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        toast: &ToastState,
+        zoom: f32,
+        viewport_origin_x: f32,
+        viewport_origin_y: f32,
+        viewport_h: f32,
+    ) {
+        let margin = 12.0 / zoom;
+        let pad = 10.0 / zoom;
+        let max_w = 420.0 / zoom;
+
+        let mut text_style = self.style.context_menu_text_style.clone();
+        text_style.size = Px(text_style.size.0 / zoom);
+        if let Some(lh) = text_style.line_height.as_mut() {
+            lh.0 /= zoom;
+        }
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(max_w - 2.0 * pad)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor * zoom,
+        };
+
+        let (blob, metrics) =
+            cx.services
+                .text()
+                .prepare(toast.message.as_ref(), &text_style, constraints);
+        self.text_blobs.push(blob);
+
+        let box_w = (metrics.size.width.0 + 2.0 * pad).clamp(120.0 / zoom, max_w);
+        let box_h = metrics.size.height.0 + 2.0 * pad;
+
+        let x = viewport_origin_x + margin;
+        let y = viewport_origin_y + viewport_h - box_h - margin;
+        let rect = Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(box_w), Px(box_h)));
+
+        let border_color = match toast.severity {
+            DiagnosticSeverity::Info => Color {
+                r: 0.20,
+                g: 0.55,
+                b: 0.95,
+                a: 1.0,
+            },
+            DiagnosticSeverity::Warning => Color {
+                r: 0.95,
+                g: 0.75,
+                b: 0.20,
+                a: 1.0,
+            },
+            DiagnosticSeverity::Error => Color {
+                r: 0.90,
+                g: 0.35,
+                b: 0.35,
+                a: 1.0,
+            },
+        };
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(70),
+            rect,
+            background: self.style.context_menu_background,
+            border: Edges::all(Px(1.0 / zoom)),
+            border_color,
+            corner_radii: Corners::all(Px(6.0 / zoom)),
+        });
+
+        let text_x = Px(rect.origin.x.0 + pad);
+        let text_y = Px(rect.origin.y.0 + pad + metrics.baseline.0);
+        cx.scene.push(SceneOp::Text {
+            order: DrawOrder(71),
+            origin: Point::new(text_x, text_y),
+            text: blob,
+            color: self.style.context_menu_text,
+        });
     }
 
     fn yank_edge_from_port(
@@ -924,6 +1065,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let zoom = snapshot.zoom;
 
         match event {
+            Event::Timer { token } => {
+                if self
+                    .interaction
+                    .toast
+                    .as_ref()
+                    .is_some_and(|t| t.timer == *token)
+                {
+                    self.interaction.toast = None;
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+            }
             Event::KeyDown { key, .. } => {
                 if *key == fret_core::KeyCode::Escape {
                     if self.interaction.context_menu.take().is_some() {
@@ -1157,7 +1310,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
                                 presenter.fill_edge_context_menu(graph, edge, style, &mut items);
                                 items.push(NodeGraphContextMenuItem {
-                                    label: Arc::<str>::from("Insert Node…"),
+                                    label: Arc::<str>::from("Insert Node..."),
                                     enabled: true,
                                     action: NodeGraphContextMenuAction::OpenInsertNodePicker,
                                 });
@@ -1490,21 +1643,41 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 if let Some(target) = target
                                     && target != from
                                 {
-                                    let plan_ops = {
+                                    enum Outcome {
+                                        Apply(Vec<GraphOp>),
+                                        Reject(DiagnosticSeverity, Arc<str>),
+                                        Ignore,
+                                    }
+
+                                    let outcome = {
                                         let presenter = &mut *self.presenter;
                                         self.graph
                                             .read_ref(cx.app, |graph| {
                                                 let plan =
                                                     presenter.plan_connect(graph, from, target);
-                                                (plan.decision
-                                                    == crate::rules::ConnectDecision::Accept)
-                                                    .then_some(plan.ops)
+                                                match plan.decision {
+                                                    ConnectDecision::Accept => {
+                                                        Outcome::Apply(plan.ops)
+                                                    }
+                                                    ConnectDecision::Reject => {
+                                                        Self::toast_from_diagnostics(
+                                                            &plan.diagnostics,
+                                                        )
+                                                        .map(|(sev, msg)| Outcome::Reject(sev, msg))
+                                                        .unwrap_or(Outcome::Ignore)
+                                                    }
+                                                }
                                             })
                                             .ok()
-                                            .flatten()
+                                            .unwrap_or(Outcome::Ignore)
                                     };
-                                    if let Some(ops) = plan_ops {
-                                        self.apply_ops(cx.app, ops);
+
+                                    match outcome {
+                                        Outcome::Apply(ops) => self.apply_ops(cx.app, ops),
+                                        Outcome::Reject(sev, msg) => {
+                                            self.show_toast(cx.app, cx.window, sev, msg);
+                                        }
+                                        Outcome::Ignore => {}
                                     }
                                 }
                             }
@@ -1514,22 +1687,41 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 fixed: _,
                             } => {
                                 if let Some(target) = target {
-                                    let plan_ops = {
+                                    enum Outcome {
+                                        Apply(Vec<GraphOp>),
+                                        Reject(DiagnosticSeverity, Arc<str>),
+                                        Ignore,
+                                    }
+
+                                    let outcome = {
                                         let presenter = &mut *self.presenter;
                                         self.graph
                                             .read_ref(cx.app, |graph| {
                                                 let plan = presenter.plan_reconnect_edge(
                                                     graph, edge, endpoint, target,
                                                 );
-                                                (plan.decision
-                                                    == crate::rules::ConnectDecision::Accept)
-                                                    .then_some(plan.ops)
+                                                match plan.decision {
+                                                    ConnectDecision::Accept => {
+                                                        Outcome::Apply(plan.ops)
+                                                    }
+                                                    ConnectDecision::Reject => {
+                                                        Self::toast_from_diagnostics(
+                                                            &plan.diagnostics,
+                                                        )
+                                                        .map(|(sev, msg)| Outcome::Reject(sev, msg))
+                                                        .unwrap_or(Outcome::Ignore)
+                                                    }
+                                                }
                                             })
                                             .ok()
-                                            .flatten()
+                                            .unwrap_or(Outcome::Ignore)
                                     };
-                                    if let Some(ops) = plan_ops {
-                                        self.apply_ops(cx.app, ops);
+                                    match outcome {
+                                        Outcome::Apply(ops) => self.apply_ops(cx.app, ops),
+                                        Outcome::Reject(sev, msg) => {
+                                            self.show_toast(cx.app, cx.window, sev, msg);
+                                        }
+                                        Outcome::Ignore => {}
                                     }
                                 }
                             }
@@ -1837,6 +2029,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         if let Some(menu) = self.interaction.context_menu.clone() {
             self.paint_context_menu(cx, &menu, zoom);
+        }
+
+        if let Some(toast) = self.interaction.toast.clone() {
+            self.paint_toast(
+                cx,
+                &toast,
+                zoom,
+                viewport_origin_x,
+                viewport_origin_y,
+                viewport_h,
+            );
         }
 
         cx.scene.push(SceneOp::PopClip);
