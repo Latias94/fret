@@ -13,7 +13,7 @@ use fret_core::{
 use fret_runtime::Effect;
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, Overflow, PositionStyle,
-    PressableProps, SelectableTextProps, TextProps,
+    PressableProps, ScrollAxis, ScrollProps, SelectableTextProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::scroll as decl_scroll;
@@ -344,7 +344,12 @@ pub fn code_block_with_header_slots<H: UiHost>(
 
             let mut out = vec![content];
             if show_copy && options.copy_button_placement == CodeBlockCopyButtonPlacement::Overlay {
-                out.push(render_copy_button_overlay(cx, &theme, feedback.clone(), code.clone()));
+                out.push(render_copy_button_overlay(
+                    cx,
+                    &theme,
+                    feedback.clone(),
+                    code.clone(),
+                ));
             }
             out
         })]
@@ -409,7 +414,9 @@ fn render_code_block_header<H: UiHost>(
                                 size: theme.metric_required("metric.font.mono_size"),
                                 weight: FontWeight::SEMIBOLD,
                                 slant: Default::default(),
-                                line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                                line_height: Some(
+                                    theme.metric_required("metric.font.mono_line_height"),
+                                ),
                                 letter_spacing_em: None,
                             }),
                             color: Some(theme.color_required("muted-foreground")),
@@ -430,11 +437,7 @@ fn render_code_block_header<H: UiHost>(
                 }
 
                 vec![
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N1),
-                        |_| left,
-                    ),
+                    stack::hstack(cx, stack::HStackProps::default().gap(Space::N1), |_| left),
                     stack::hstack(
                         cx,
                         stack::HStackProps::default().gap(Space::N1).justify_end(),
@@ -460,18 +463,22 @@ fn render_code_block_body<H: UiHost>(
     props.padding = Edges::all(pad);
 
     cx.container(props, |cx| {
-        vec![decl_scroll::overflow_scroll_x_vstack(
-            cx,
-            LayoutRefinement::default().w_full(),
-            false,
-            stack::VStackProps::default().gap(Space::N0),
-            |cx| {
-                prepared
-                    .lines
-                    .iter()
-                    .enumerate()
-                    .map(|(i, line)| {
-                        if prepared.show_line_numbers {
+        if !prepared.show_line_numbers {
+            return vec![render_code_block_text(cx, theme, prepared, wrap)];
+        }
+
+        match wrap {
+            CodeBlockWrap::ScrollX => vec![decl_scroll::overflow_scroll_x_vstack(
+                cx,
+                LayoutRefinement::default().w_full(),
+                false,
+                stack::VStackProps::default().gap(Space::N0),
+                |cx| {
+                    prepared
+                        .lines
+                        .iter()
+                        .enumerate()
+                        .map(|(i, line)| {
                             render_code_line_with_number(
                                 cx,
                                 theme,
@@ -480,14 +487,136 @@ fn render_code_block_body<H: UiHost>(
                                 line,
                                 wrap,
                             )
-                        } else {
-                            render_code_line(cx, theme, line, wrap)
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            },
-        )]
+                        })
+                        .collect::<Vec<_>>()
+                },
+            )],
+            CodeBlockWrap::Word => {
+                let mut scroll_layout = LayoutStyle::default();
+                scroll_layout.size.width = Length::Fill;
+                scroll_layout.size.height = Length::Auto;
+                scroll_layout.overflow = Overflow::Clip;
+
+                vec![cx.scroll(
+                    ScrollProps {
+                        layout: scroll_layout,
+                        axis: ScrollAxis::X,
+                        probe_unbounded: false,
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![stack::vstack(
+                            cx,
+                            stack::VStackProps::default()
+                                .gap(Space::N0)
+                                .layout(LayoutRefinement::default().w_full()),
+                            |cx| {
+                                prepared
+                                    .lines
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(i, line)| {
+                                        render_code_line_with_number(
+                                            cx,
+                                            theme,
+                                            i + 1,
+                                            prepared.line_number_width,
+                                            line,
+                                            wrap,
+                                        )
+                                    })
+                                    .collect::<Vec<_>>()
+                            },
+                        )]
+                    },
+                )]
+            }
+        }
     })
+}
+
+fn render_code_block_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    prepared: &PreparedCodeBlock,
+    wrap: CodeBlockWrap,
+) -> AnyElement {
+    let mut text = String::new();
+    let mut runs: Vec<TextRun> = Vec::new();
+    for (line_i, line) in prepared.lines.iter().enumerate() {
+        for seg in &line.segments {
+            if seg.text.is_empty() {
+                continue;
+            }
+            let color = seg.highlight.and_then(|h| syntax_color(theme, h));
+            text.push_str(seg.text.as_ref());
+            runs.push(TextRun {
+                len: seg.text.len(),
+                color,
+                weight: None,
+                slant: None,
+            });
+        }
+        if line_i + 1 < prepared.lines.len() {
+            text.push('\n');
+            runs.push(TextRun {
+                len: 1,
+                color: None,
+                weight: None,
+                slant: None,
+            });
+        }
+    }
+
+    let rich = RichText::new(Arc::<str>::from(text), runs);
+
+    let text_style = TextStyle {
+        font: FontId::monospace(),
+        size: theme.metric_required("metric.font.mono_size"),
+        weight: FontWeight::NORMAL,
+        slant: Default::default(),
+        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        letter_spacing_em: None,
+    };
+    let fg = theme.color_required("foreground");
+
+    let (wrap, overflow) = match wrap {
+        CodeBlockWrap::ScrollX => (TextWrap::None, TextOverflow::Clip),
+        CodeBlockWrap::Word => (TextWrap::Word, TextOverflow::Clip),
+    };
+
+    let mut scroll_layout = LayoutStyle::default();
+    scroll_layout.size.width = Length::Fill;
+    scroll_layout.size.height = Length::Auto;
+    scroll_layout.overflow = Overflow::Clip;
+
+    let text_layout = {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = match wrap {
+            TextWrap::None => Length::Auto,
+            TextWrap::Word => Length::Fill,
+        };
+        layout
+    };
+
+    cx.scroll(
+        ScrollProps {
+            layout: scroll_layout,
+            axis: ScrollAxis::X,
+            probe_unbounded: matches!(wrap, TextWrap::None),
+            ..Default::default()
+        },
+        |cx| {
+            vec![cx.selectable_text_props(SelectableTextProps {
+                layout: text_layout,
+                rich,
+                style: Some(text_style),
+                color: Some(fg),
+                wrap,
+                overflow,
+            })]
+        },
+    )
 }
 
 #[derive(Debug, Default)]
@@ -519,7 +648,9 @@ fn render_copy_button_overlay<H: UiHost>(
     props.layout.inset.right = Some(inset);
     props.layout.size.width = Length::Auto;
 
-    cx.container(props, |cx| vec![render_copy_button(cx, theme, feedback, code)])
+    cx.container(props, |cx| {
+        vec![render_copy_button(cx, theme, feedback, code)]
+    })
 }
 
 fn render_copy_button<H: UiHost>(
