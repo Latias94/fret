@@ -7,7 +7,7 @@ use fret_core::{
     PathConstraints, PathStyle, Point, Px, Rect, SceneOp, Size, StrokeStyle, TextBlobId,
     TextConstraints, TextOverflow, TextWrap, Transform2D,
 };
-use fret_runtime::{Effect, Model, TimerToken};
+use fret_runtime::{CommandId, Effect, Model, TimerToken};
 use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::REROUTE_KIND;
@@ -136,6 +136,7 @@ pub struct NodeGraphCanvas {
     view_state: Model<NodeGraphViewState>,
     presenter: Box<dyn NodeGraphPresenter>,
     style: NodeGraphStyle,
+    close_command: Option<CommandId>,
 
     cached_pan: CanvasPoint,
     cached_zoom: f32,
@@ -190,6 +191,7 @@ impl NodeGraphCanvas {
             view_state,
             presenter: Box::new(DefaultNodeGraphPresenter::default()),
             style: NodeGraphStyle::default(),
+            close_command: None,
             cached_pan: CanvasPoint::default(),
             cached_zoom: 1.0,
             wire_paths: Vec::new(),
@@ -206,6 +208,32 @@ impl NodeGraphCanvas {
     pub fn with_style(mut self, style: NodeGraphStyle) -> Self {
         self.style = style;
         self
+    }
+
+    /// Adds a screen-space close button overlay that dispatches a command when clicked.
+    ///
+    /// This is intended for demos and tool windows; production apps typically wire close actions
+    /// via docking/tab chrome instead.
+    pub fn with_close_command(mut self, command: CommandId) -> Self {
+        self.close_command = Some(command);
+        self
+    }
+
+    fn close_button_rect(pan: CanvasPoint, zoom: f32) -> Rect {
+        let margin = 12.0 / zoom;
+        let w = 64.0 / zoom;
+        let h = 24.0 / zoom;
+        Rect::new(
+            Point::new(Px(-pan.x + margin), Px(-pan.y + margin)),
+            Size::new(Px(w), Px(h)),
+        )
+    }
+
+    fn rect_contains(rect: Rect, pos: Point) -> bool {
+        pos.x.0 >= rect.origin.x.0
+            && pos.y.0 >= rect.origin.y.0
+            && pos.x.0 <= rect.origin.x.0 + rect.size.width.0
+            && pos.y.0 <= rect.origin.y.0 + rect.size.height.0
     }
 
     fn sync_view_state<H: UiHost>(&mut self, host: &mut H) -> ViewSnapshot {
@@ -1596,6 +1624,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }) => {
                 self.interaction.last_pos = Some(*position);
 
+                if *button == MouseButton::Left {
+                    if let Some(command) = self.close_command.clone() {
+                        let rect = Self::close_button_rect(snapshot.pan, zoom);
+                        if Self::rect_contains(rect, *position) {
+                            cx.dispatch_command(command);
+                            cx.stop_propagation();
+                            return;
+                        }
+                    }
+                }
+
                 if let Some(menu) = self.interaction.context_menu.as_mut() {
                     match button {
                         MouseButton::Left => {
@@ -1886,6 +1925,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 };
                 let delta = Point::new(Px(position.x.0 - last.x.0), Px(position.y.0 - last.y.0));
                 self.interaction.last_pos = Some(*position);
+
+                if self.close_command.is_some()
+                    && self.interaction.node_drag.is_none()
+                    && self.interaction.wire_drag.is_none()
+                    && self.interaction.edge_drag.is_none()
+                    && !self.interaction.panning
+                {
+                    let rect = Self::close_button_rect(snapshot.pan, zoom);
+                    if Self::rect_contains(rect, *position) {
+                        cx.set_cursor_icon(fret_core::CursorIcon::Pointer);
+                    }
+                }
 
                 if self.interaction.panning {
                     self.update_view_state(cx.app, |s| {
@@ -2656,8 +2707,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         #[derive(Debug, Default)]
         struct RenderData {
             edges: Vec<(EdgeId, Point, Point, Color, bool, bool)>,
-            nodes: Vec<(GraphNodeId, Rect, bool)>,
+            nodes: Vec<(GraphNodeId, Rect, bool, Arc<str>)>,
             pins: Vec<(PortId, Rect, Color)>,
+            port_labels: HashMap<PortId, (Arc<str>, PortDirection)>,
             port_centers: HashMap<PortId, Point>,
         }
 
@@ -2692,12 +2744,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             continue;
                         };
                         let is_selected = selected.contains(node);
-                        out.nodes.push((*node, rect, is_selected));
+                        let title = presenter.node_title(graph, *node);
+                        out.nodes.push((*node, rect, is_selected, title));
 
                         let (inputs, outputs) = this.node_ports(graph, *node);
                         for port in inputs.iter().chain(outputs.iter()) {
                             if let Some(center) = this.port_center(graph, *node, *port, zoom) {
                                 out.port_centers.insert(*port, center);
+                                if let Some(p) = graph.ports.get(port) {
+                                    out.port_labels
+                                        .insert(*port, (presenter.port_label(graph, *port), p.dir));
+                                }
                                 let color = presenter.port_color(graph, *port, &this.style);
                                 let pin_r = this.style.pin_radius / zoom;
                                 let rect = Rect::new(
@@ -2852,9 +2909,19 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }
         }
 
+        let mut node_text_style = self.style.context_menu_text_style.clone();
+        node_text_style.size = Px(node_text_style.size.0 / zoom);
+        if let Some(lh) = node_text_style.line_height.as_mut() {
+            lh.0 /= zoom;
+        }
+
         let corner = Px(8.0 / zoom);
-        for (_node, rect, is_selected) in render.nodes {
-            let border_color = if is_selected {
+        let title_pad = self.style.node_padding / zoom;
+        let title_h = self.style.node_header_height / zoom;
+
+        for (_node, rect, is_selected, title) in &render.nodes {
+            let rect = *rect;
+            let border_color = if *is_selected {
                 self.style.node_border_selected
             } else {
                 self.style.node_border
@@ -2866,6 +2933,69 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 border: Edges::all(Px(1.0 / zoom)),
                 border_color,
                 corner_radii: Corners::all(corner),
+            });
+
+            if !title.is_empty() {
+                let max_w = (rect.size.width.0 - 2.0 * title_pad).max(0.0);
+                let constraints = TextConstraints {
+                    max_width: Some(Px(max_w)),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: cx.scale_factor * zoom,
+                };
+                let (blob, metrics) =
+                    cx.services
+                        .text()
+                        .prepare(title.as_ref(), &node_text_style, constraints);
+                self.text_blobs.push(blob);
+
+                let text_x = Px(rect.origin.x.0 + title_pad);
+                let inner_y = rect.origin.y.0 + (title_h - metrics.size.height.0) * 0.5;
+                let text_y = Px(inner_y + metrics.baseline.0);
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(4),
+                    origin: Point::new(text_x, text_y),
+                    text: blob,
+                    color: self.style.context_menu_text,
+                });
+            }
+        }
+
+        let pin_r = self.style.pin_radius / zoom;
+        let pin_gap = 8.0 / zoom;
+        let label_max_w = (self.style.node_width
+            - 2.0 * self.style.node_padding
+            - 2.0 * (self.style.pin_radius + 8.0))
+            .max(0.0)
+            / zoom;
+        let port_constraints = TextConstraints {
+            max_width: Some(Px(label_max_w)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor * zoom,
+        };
+
+        for (port_id, (label, dir)) in &render.port_labels {
+            let Some(center) = render.port_centers.get(port_id).copied() else {
+                continue;
+            };
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare(label.as_ref(), &node_text_style, port_constraints);
+            self.text_blobs.push(blob);
+
+            let y = Px(center.y.0 - 0.5 * metrics.size.height.0 + metrics.baseline.0);
+            let x = match dir {
+                PortDirection::In => Px(center.x.0 + pin_r + pin_gap),
+                PortDirection::Out => Px(center.x.0 - pin_r - pin_gap - metrics.size.width.0),
+            };
+
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(4),
+                origin: Point::new(x, y),
+                text: blob,
+                color: self.style.context_menu_text,
             });
         }
 
@@ -2940,6 +3070,57 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
                 corner_radii: Corners::all(r),
+            });
+        }
+
+        if self.close_command.is_some() {
+            let rect = Self::close_button_rect(snapshot.pan, zoom);
+            let hovered = self
+                .interaction
+                .last_pos
+                .is_some_and(|p| Self::rect_contains(rect, p));
+
+            let background = if hovered {
+                self.style.context_menu_hover_background
+            } else {
+                self.style.context_menu_background
+            };
+
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(60),
+                rect,
+                background,
+                border: Edges::all(Px(1.0 / zoom)),
+                border_color: self.style.context_menu_border,
+                corner_radii: Corners::all(Px(6.0 / zoom)),
+            });
+
+            let mut text_style = self.style.context_menu_text_style.clone();
+            text_style.size = Px(text_style.size.0 / zoom);
+            if let Some(lh) = text_style.line_height.as_mut() {
+                lh.0 /= zoom;
+            }
+            let pad = 10.0 / zoom;
+            let constraints = TextConstraints {
+                max_width: Some(Px((rect.size.width.0 - 2.0 * pad).max(0.0))),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor * zoom,
+            };
+            let (blob, metrics) = cx
+                .services
+                .text()
+                .prepare("Close", &text_style, constraints);
+            self.text_blobs.push(blob);
+
+            let text_x = Px(rect.origin.x.0 + pad);
+            let inner_y = rect.origin.y.0 + (rect.size.height.0 - metrics.size.height.0) * 0.5;
+            let text_y = Px(inner_y + metrics.baseline.0);
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(61),
+                origin: Point::new(text_x, text_y),
+                text: blob,
+                color: self.style.context_menu_text,
             });
         }
 
