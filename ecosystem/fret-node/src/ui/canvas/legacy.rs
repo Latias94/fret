@@ -36,7 +36,10 @@ use crate::ui::presenter::{
     NodeGraphContextMenuItem, NodeGraphPresenter,
 };
 use crate::ui::style::NodeGraphStyle;
-use crate::ui::{FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore};
+use crate::ui::{
+    FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, NodeGraphCanvasTransform,
+    NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
+};
 
 use super::conversion;
 use super::geometry::{CanvasGeometry, node_ports};
@@ -162,6 +165,18 @@ struct GeometryCacheKey {
     presenter_rev: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct InternalsCacheKey {
+    graph_rev: u64,
+    zoom_bits: u32,
+    draw_order_hash: u64,
+    presenter_rev: u64,
+    pan_x_bits: u32,
+    pan_y_bits: u32,
+    bounds_x_bits: u32,
+    bounds_y_bits: u32,
+}
+
 #[derive(Debug, Clone, Default)]
 struct GeometryCache {
     key: Option<GeometryCacheKey>,
@@ -193,6 +208,9 @@ pub struct NodeGraphCanvas {
 
     auto_measured: Arc<MeasuredGeometryStore>,
     auto_measured_key: Option<(u64, u32)>,
+
+    internals: Option<Arc<NodeGraphInternalsStore>>,
+    internals_key: Option<InternalsCacheKey>,
 
     cached_pan: CanvasPoint,
     cached_zoom: f32,
@@ -315,6 +333,8 @@ impl NodeGraphCanvas {
             close_command: None,
             auto_measured,
             auto_measured_key: None,
+            internals: None,
+            internals_key: None,
             cached_pan: CanvasPoint::default(),
             cached_zoom: 1.0,
             history: GraphHistory::default(),
@@ -330,6 +350,11 @@ impl NodeGraphCanvas {
             presenter,
             self.auto_measured.clone(),
         ));
+        self
+    }
+
+    pub fn with_internals_store(mut self, store: Arc<NodeGraphInternalsStore>) -> Self {
+        self.internals = Some(store);
         self
     }
 
@@ -539,6 +564,60 @@ impl NodeGraphCanvas {
 
                 changed
             });
+    }
+
+    fn update_internals_store<H: UiHost>(
+        &mut self,
+        host: &H,
+        snapshot: &ViewSnapshot,
+        bounds: Rect,
+        geom: &CanvasGeometry,
+    ) {
+        let Some(store) = self.internals.as_ref() else {
+            return;
+        };
+
+        let graph_rev = self.graph.revision(host).unwrap_or(0);
+        let presenter_rev = self.presenter.geometry_revision();
+        let key = InternalsCacheKey {
+            graph_rev,
+            zoom_bits: snapshot.zoom.to_bits(),
+            draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
+            presenter_rev,
+            pan_x_bits: snapshot.pan.x.to_bits(),
+            pan_y_bits: snapshot.pan.y.to_bits(),
+            bounds_x_bits: bounds.origin.x.0.to_bits(),
+            bounds_y_bits: bounds.origin.y.0.to_bits(),
+        };
+
+        if self.internals_key == Some(key) {
+            return;
+        }
+        self.internals_key = Some(key);
+
+        let transform = NodeGraphCanvasTransform {
+            bounds_origin: bounds.origin,
+            pan: snapshot.pan,
+            zoom: snapshot.zoom,
+        };
+
+        let mut next = NodeGraphInternalsSnapshot {
+            transform,
+            ..NodeGraphInternalsSnapshot::default()
+        };
+
+        for (&node, node_geom) in &geom.nodes {
+            next.nodes_window
+                .insert(node, transform.canvas_rect_to_window(node_geom.rect));
+        }
+        for (&port, handle) in &geom.ports {
+            next.ports_window
+                .insert(port, transform.canvas_rect_to_window(handle.bounds));
+            next.port_centers_window
+                .insert(port, transform.canvas_point_to_window(handle.center));
+        }
+
+        store.update(next);
     }
 
     fn update_view_state<H: UiHost>(
@@ -4203,6 +4282,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         };
 
         let geom = self.canvas_geometry(&*cx.app, &snapshot);
+        self.update_internals_store(&*cx.app, &snapshot, cx.bounds, &geom);
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
             let selected_edges: HashSet<EdgeId> = snapshot.selected_edges.iter().copied().collect();
