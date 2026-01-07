@@ -594,7 +594,14 @@ fn render_code_block<H: UiHost>(
     info: CodeBlockInfo,
     components: &MarkdownComponents<H>,
 ) -> AnyElement {
-    let code_view = fret_code_view::code_block(cx, &info.code, info.language.as_deref(), false);
+    let mut block = fret_code_view::CodeBlock::new(info.code.clone())
+        .show_header(true)
+        .show_copy_button(true)
+        .copy_button_on_hover(true);
+    if let Some(lang) = info.language.clone() {
+        block = block.language(lang);
+    }
+    let code_view = block.show_line_numbers(false).into_element(cx);
 
     let Some(render_actions) = &components.code_block_actions else {
         return code_view;
