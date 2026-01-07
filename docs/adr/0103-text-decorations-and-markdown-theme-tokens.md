@@ -101,7 +101,7 @@ Math (optional; only used when the `mathjax-svg` feature is enabled):
 - `markdown.math.inline.height` (fallback: `metric.font.line_height`)
 - `markdown.math.block.fg` (fallback: `foreground`)
 - `markdown.math.block.bg` (fallback: `card`)
-- `markdown.math.block.height` (fallback: `metric.font.line_height`)
+- `markdown.math.block.height` (fallback: `max(metric.font.line_height * 3.25, metric.font.size * 4.0)`)
 
 Metrics:
 
