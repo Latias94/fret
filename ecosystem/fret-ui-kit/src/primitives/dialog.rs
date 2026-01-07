@@ -295,8 +295,60 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::{LayoutStyle, PressableProps};
+    use fret_core::AppWindowId;
+    use fret_core::Event;
+    use fret_core::{PathCommand, SvgId, SvgService};
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_core::{Point, Px, Rect, Size};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_ui::UiTree;
+    use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps};
+    use fret_ui::elements::GlobalElementId;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
 
     fn bounds() -> Rect {
         Rect::new(
@@ -395,5 +447,204 @@ mod tests {
             Vec::new(),
         );
         assert_eq!(req.initial_focus, Some(initial_focus));
+    }
+
+    #[test]
+    fn modal_dialog_installs_barrier_root_for_semantics_snapshot() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let b = bounds();
+
+        OverlayController::begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "base",
+            |_cx| Vec::new(),
+        );
+        ui.set_root(base);
+
+        let open = app.models_mut().insert(true);
+        let modal_id = GlobalElementId(0xabc);
+
+        let overlay_children =
+            fret_ui::elements::with_element_cx(&mut app, window, b, "modal", |cx| {
+                let content = cx.container(ContainerProps::default(), |_cx| Vec::new());
+                modal_dialog_layer_children(
+                    cx,
+                    open.clone(),
+                    DialogOptions::default(),
+                    Vec::new(),
+                    content,
+                )
+            });
+
+        let req = modal_dialog_request(
+            modal_id,
+            modal_id,
+            open,
+            OverlayPresence::instant(true),
+            overlay_children,
+        );
+        OverlayController::request_for_window(&mut app, window, req);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, b);
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let barrier_root = snap.barrier_root.expect("barrier_root");
+        assert!(
+            snap.roots
+                .iter()
+                .any(|r| r.root == barrier_root && r.blocks_underlay_input),
+            "expected barrier root to block underlay input"
+        );
+    }
+
+    #[test]
+    fn modal_barrier_can_dismiss_on_press() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let b = bounds();
+
+        OverlayController::begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "base",
+            |_cx| Vec::new(),
+        );
+        ui.set_root(base);
+
+        let open = app.models_mut().insert(true);
+        let modal_id = GlobalElementId(0xabc);
+
+        let overlay_children =
+            fret_ui::elements::with_element_cx(&mut app, window, b, "modal", |cx| {
+                vec![modal_barrier(cx, open.clone(), true, Vec::new())]
+            });
+
+        let req = modal_dialog_request(
+            modal_id,
+            modal_id,
+            open.clone(),
+            OverlayPresence::instant(true),
+            overlay_children,
+        );
+        OverlayController::request_for_window(&mut app, window, req);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, b);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: Default::default(),
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(10.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: Default::default(),
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn modal_dialog_focuses_first_focusable_descendant_by_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let b = bounds();
+
+        OverlayController::begin_frame(&mut app, window);
+        let base = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            b,
+            "base",
+            |_cx| Vec::new(),
+        );
+        ui.set_root(base);
+
+        let open = app.models_mut().insert(true);
+        let modal_id = GlobalElementId(0xabc);
+
+        let mut focusable_element: Option<GlobalElementId> = None;
+        let overlay_children =
+            fret_ui::elements::with_element_cx(&mut app, window, b, "modal", |cx| {
+                let content = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(80.0));
+                            layout.size.height = Length::Px(Px(32.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    |_cx, _st, id| {
+                        focusable_element = Some(id);
+                        Vec::new()
+                    },
+                );
+
+                modal_dialog_layer_children(
+                    cx,
+                    open.clone(),
+                    DialogOptions::default(),
+                    Vec::new(),
+                    content,
+                )
+            });
+        let focusable_element = focusable_element.expect("focusable element id");
+
+        let req = modal_dialog_request(
+            modal_id,
+            modal_id,
+            open,
+            OverlayPresence::instant(true),
+            overlay_children,
+        );
+        OverlayController::request_for_window(&mut app, window, req);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, b);
+        ui.layout_all(&mut app, &mut services, b, 1.0);
+
+        let focused = ui.focus();
+        let expected = fret_ui::elements::node_for_element(&mut app, window, focusable_element);
+        assert_eq!(focused, expected);
     }
 }
