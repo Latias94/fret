@@ -13,7 +13,7 @@ use fret_node::io::NodeGraphViewState;
 use fret_node::ops::GraphOp;
 use fret_node::rules::{
     ConnectDecision, ConnectPlan, DiagnosticSeverity, DiagnosticTarget, InsertNodeTemplate,
-    PortTemplate, plan_connect_by_inserting_node,
+    PortTemplate,
 };
 use fret_node::types::TypeDesc;
 use fret_node::ui::{InsertNodeCandidate, NodeGraphCanvas, NodeGraphPresenter};
@@ -201,41 +201,6 @@ fn convert_template(kind: &NodeKindKey, from_ty: TypeDesc, to_ty: TypeDesc) -> I
 #[derive(Debug, Default, Clone)]
 struct DemoTypedPresenter;
 
-impl DemoTypedPresenter {
-    fn plan_new_connection_with_convert(
-        &self,
-        graph: &Graph,
-        from: PortId,
-        to: PortId,
-        node_kind: &NodeKindKey,
-        from_ty: TypeDesc,
-        to_ty: TypeDesc,
-    ) -> ConnectPlan {
-        let at = match (graph.ports.get(&from), graph.ports.get(&to)) {
-            (Some(from_port), Some(to_port)) => {
-                let from_node = graph.nodes.get(&from_port.node);
-                let to_node = graph.nodes.get(&to_port.node);
-                match (from_node, to_node) {
-                    (Some(a), Some(b)) => CanvasPoint {
-                        x: 0.5 * (a.pos.x + b.pos.x) + 120.0,
-                        y: 0.5 * (a.pos.y + b.pos.y),
-                    },
-                    _ => CanvasPoint { x: 240.0, y: 120.0 },
-                }
-            }
-            _ => CanvasPoint { x: 240.0, y: 120.0 },
-        };
-
-        let template = convert_template(node_kind, from_ty, to_ty);
-        let spec = match template.instantiate(at) {
-            Ok(spec) => spec,
-            Err(err) => return ConnectPlan::reject(err),
-        };
-
-        plan_connect_by_inserting_node(graph, from, to, EdgeId::new(), EdgeId::new(), spec)
-    }
-}
-
 impl NodeGraphPresenter for DemoTypedPresenter {
     fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str> {
         graph
@@ -326,9 +291,21 @@ impl NodeGraphPresenter for DemoTypedPresenter {
             if let Some(kind) = convert_kind(from_ty, to_ty)
                 && convert_spec(&kind).is_some()
             {
-                let (from_ty, to_ty, _) = convert_spec(&kind).expect("checked");
-                return self
-                    .plan_new_connection_with_convert(graph, from, to, &kind, from_ty, to_ty);
+                return ConnectPlan {
+                    decision: ConnectDecision::Reject,
+                    diagnostics: vec![fret_node::rules::Diagnostic {
+                        key: "demo.convertible".to_string(),
+                        severity: DiagnosticSeverity::Warning,
+                        target: DiagnosticTarget::Graph,
+                        message: format!(
+                            "type mismatch: {} -> {} (conversion available)",
+                            type_name(from_ty),
+                            type_name(to_ty)
+                        ),
+                        fixes: Vec::new(),
+                    }],
+                    ops: Vec::new(),
+                };
             }
 
             if from_ty != to_ty {

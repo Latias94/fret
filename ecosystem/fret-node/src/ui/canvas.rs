@@ -98,6 +98,11 @@ struct EdgeDrag {
 enum ContextMenuTarget {
     Edge(EdgeId),
     EdgeInsertNodePicker(EdgeId),
+    ConnectionConvertPicker {
+        from: PortId,
+        to: PortId,
+        at: CanvasPoint,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -800,6 +805,81 @@ impl NodeGraphCanvas {
                         let node_id = select_node
                             .then(|| Self::first_added_node_id(&ops))
                             .flatten();
+                        self.apply_ops(cx.app, ops);
+                        if let Some(node_id) = node_id {
+                            self.update_view_state(cx.app, |s| {
+                                s.selected_edges.clear();
+                                s.selected_nodes.clear();
+                                s.selected_nodes.push(node_id);
+                                s.draw_order.retain(|id| *id != node_id);
+                                s.draw_order.push(node_id);
+                            });
+                        }
+                    }
+                    Outcome::Reject(sev, msg) => self.show_toast(cx.app, cx.window, sev, msg),
+                    Outcome::Ignore => {}
+                }
+            }
+            (
+                ContextMenuTarget::ConnectionConvertPicker { from, to, at },
+                NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
+            ) => {
+                enum Outcome {
+                    Apply(Vec<GraphOp>),
+                    Reject(DiagnosticSeverity, Arc<str>),
+                    Ignore,
+                }
+
+                let Some(candidate) = self
+                    .interaction
+                    .context_menu
+                    .as_ref()
+                    .and_then(|m| m.candidates.get(candidate_ix).cloned())
+                else {
+                    return;
+                };
+
+                let outcome = {
+                    self.graph
+                        .read_ref(cx.app, |graph| {
+                            let template = match &candidate.template {
+                                Some(t) => t,
+                                None => return Outcome::Ignore,
+                            };
+                            let spec = match template.instantiate(*at) {
+                                Ok(spec) => spec,
+                                Err(err) => {
+                                    return Outcome::Reject(
+                                        DiagnosticSeverity::Error,
+                                        Arc::<str>::from(err),
+                                    );
+                                }
+                            };
+
+                            let plan = plan_connect_by_inserting_node(
+                                graph,
+                                *from,
+                                *to,
+                                EdgeId::new(),
+                                EdgeId::new(),
+                                spec,
+                            );
+                            match plan.decision {
+                                ConnectDecision::Accept => Outcome::Apply(plan.ops),
+                                ConnectDecision::Reject => {
+                                    Self::toast_from_diagnostics(&plan.diagnostics)
+                                        .map(|(sev, msg)| Outcome::Reject(sev, msg))
+                                        .unwrap_or(Outcome::Ignore)
+                                }
+                            }
+                        })
+                        .ok()
+                        .unwrap_or(Outcome::Ignore)
+                };
+
+                match outcome {
+                    Outcome::Apply(ops) => {
+                        let node_id = Self::first_added_node_id(&ops);
                         self.apply_ops(cx.app, ops);
                         if let Some(node_id) = node_id {
                             self.update_view_state(cx.app, |s| {
@@ -2159,6 +2239,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                         Apply(Vec<GraphOp>),
                                         Reject(DiagnosticSeverity, Arc<str>),
                                         Ignore,
+                                        OpenConversionPicker(Vec<InsertNodeCandidate>),
                                     }
 
                                     let (outcome, toast) = {
@@ -2176,6 +2257,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                     x: w.pos.x.0,
                                                     y: w.pos.y.0,
                                                 };
+                                                let mut picker: Option<Vec<InsertNodeCandidate>> = None;
                                                 let mut ops_all: Vec<GraphOp> = Vec::new();
                                                 let mut toast: Option<(
                                                     DiagnosticSeverity,
@@ -2203,6 +2285,26 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                                     .list_conversions(
                                                                         &scratch, src, target,
                                                                     );
+                                                                if conversions.len() > 1 {
+                                                                    let mut out: Vec<InsertNodeCandidate> =
+                                                                        Vec::new();
+                                                                    for t in conversions {
+                                                                        out.push(InsertNodeCandidate {
+                                                                            kind: t.kind.clone(),
+                                                                            label: Arc::<str>::from(
+                                                                                format!(
+                                                                                    "Convert: {}",
+                                                                                    t.kind.0
+                                                                                ),
+                                                                            ),
+                                                                            enabled: true,
+                                                                            template: Some(t),
+                                                                            payload: serde_json::Value::Null,
+                                                                        });
+                                                                    }
+                                                                    picker = Some(out);
+                                                                    break;
+                                                                }
                                                                 if conversions.len() == 1 {
                                                                     if let Ok(spec) = conversions[0]
                                                                         .instantiate(convert_at)
@@ -2247,7 +2349,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                     }
                                                 }
 
-                                                let outcome = if ops_all.is_empty() {
+                                                let outcome = if let Some(picker) = picker {
+                                                    Outcome::OpenConversionPicker(picker)
+                                                } else if ops_all.is_empty() {
                                                     if let Some((sev, msg)) = toast.clone() {
                                                         Outcome::Reject(sev, msg)
                                                     } else {
@@ -2268,6 +2372,45 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                             if let Some((sev, msg)) = toast {
                                                 self.show_toast(cx.app, cx.window, sev, msg);
                                             }
+                                        }
+                                        Outcome::OpenConversionPicker(candidates) => {
+                                            let mut items: Vec<NodeGraphContextMenuItem> =
+                                                Vec::new();
+                                            for (ix, c) in candidates.iter().enumerate() {
+                                                items.push(NodeGraphContextMenuItem {
+                                                    label: c.label.clone(),
+                                                    enabled: c.enabled,
+                                                    action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
+                                                });
+                                            }
+
+                                            let origin = self.clamp_context_menu_origin(
+                                                *position,
+                                                items.len(),
+                                                cx.bounds,
+                                                &snapshot,
+                                            );
+                                            let active_item =
+                                                items.iter().position(|it| it.enabled).unwrap_or(0);
+                                            self.interaction.context_menu =
+                                                Some(ContextMenuState {
+                                                    origin,
+                                                    invoked_at: *position,
+                                                    target:
+                                                        ContextMenuTarget::ConnectionConvertPicker {
+                                                            from,
+                                                            to: target,
+                                                            at: CanvasPoint {
+                                                                x: w.pos.x.0,
+                                                                y: w.pos.y.0,
+                                                            },
+                                                        },
+                                                    items,
+                                                    candidates,
+                                                    hovered_item: None,
+                                                    active_item,
+                                                    typeahead: String::new(),
+                                                });
                                         }
                                         Outcome::Reject(sev, msg) => {
                                             self.show_toast(cx.app, cx.window, sev, msg);
