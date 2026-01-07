@@ -8,6 +8,9 @@ Fret targets editor-grade, cross-platform UIs, but it should also be viable for 
 In both cases, "plot / chart / implot-like" components are a common requirement (time series, scatter,
 histograms, crosshair + tooltip, pan/zoom, selection).
 
+This ADR focuses on an ImPlot-like retained plot surface (`fret-plot`). For ECharts-style, dataset-driven
+application charts, see ADR 0111 (`delinea` headless chart engine + `fret-chart` UI bridge).
+
 Fret already has the renderer substrate required for a plot layer:
 
 - `SceneOp::Path` + `PathService`: UI/components produce `PathCommand`s; the renderer tessellates via `lyon`
