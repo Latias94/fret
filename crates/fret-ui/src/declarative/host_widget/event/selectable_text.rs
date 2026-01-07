@@ -122,6 +122,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             position,
             button,
             modifiers,
+            click_count,
             ..
         }) => {
             if *button != fret_core::MouseButton::Left {
@@ -139,7 +140,83 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             let hit = this
                 .text_cache
                 .blob
-                .and_then(|blob| Some(cx.services.hit_test_point(blob, local)));
+                .map(|blob| cx.services.hit_test_point(blob, local));
+
+            fn char_at(text: &str, idx: usize) -> Option<char> {
+                if idx >= text.len() {
+                    return None;
+                }
+                let next = crate::text_edit::utf8::next_char_boundary(text, idx);
+                text.get(idx..next).and_then(|s| s.chars().next())
+            }
+
+            fn select_word(text: &str, idx: usize) -> (usize, usize) {
+                if text.is_empty() {
+                    return (0, 0);
+                }
+                let mut idx = crate::text_edit::utf8::clamp_to_char_boundary(text, idx);
+                if idx >= text.len() {
+                    idx = crate::text_edit::utf8::prev_char_boundary(text, idx);
+                }
+
+                // Hit-testing can return a caret stop at the end of the word. If the current char
+                // is whitespace but the previous is a word char, prefer selecting the previous word.
+                if char_at(text, idx).is_some_and(|c| c.is_whitespace()) && idx > 0 {
+                    let prev = crate::text_edit::utf8::prev_char_boundary(text, idx);
+                    if char_at(text, prev).is_some_and(|c| crate::text_edit::utf8::is_word_char(c))
+                    {
+                        idx = prev;
+                    }
+                }
+
+                let Some(ch) = char_at(text, idx) else {
+                    return (0, 0);
+                };
+
+                if crate::text_edit::utf8::is_word_char(ch) {
+                    (
+                        crate::text_edit::utf8::move_word_left(text, idx),
+                        crate::text_edit::utf8::move_word_right(text, idx),
+                    )
+                } else if ch.is_whitespace() {
+                    let mut start = idx;
+                    while start > 0 {
+                        let prev = crate::text_edit::utf8::prev_char_boundary(text, start);
+                        if char_at(text, prev).is_some_and(|c| c.is_whitespace()) {
+                            start = prev;
+                        } else {
+                            break;
+                        }
+                    }
+                    let mut end = crate::text_edit::utf8::next_char_boundary(text, idx);
+                    while end < text.len() {
+                        if char_at(text, end).is_some_and(|c| c.is_whitespace()) {
+                            end = crate::text_edit::utf8::next_char_boundary(text, end);
+                        } else {
+                            break;
+                        }
+                    }
+                    (start, end)
+                } else {
+                    (idx, crate::text_edit::utf8::next_char_boundary(text, idx))
+                }
+            }
+
+            fn select_line(text: &str, idx: usize) -> (usize, usize) {
+                if text.is_empty() {
+                    return (0, 0);
+                }
+                let idx = crate::text_edit::utf8::clamp_to_char_boundary(text, idx).min(text.len());
+                let start = text[..idx]
+                    .rfind('\n')
+                    .map(|i| (i + 1).min(text.len()))
+                    .unwrap_or(0);
+                let end = text[idx..]
+                    .find('\n')
+                    .map(|i| (idx + i).min(text.len()))
+                    .unwrap_or(text.len());
+                (start, end)
+            }
 
             crate::elements::with_element_state(
                 &mut *cx.app,
@@ -149,19 +226,30 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 |state| {
                     state.dragging = true;
                     state.last_pointer_pos = Some(*position);
-                    if let Some(hit) = hit {
-                        state.caret = hit.index;
-                        state.affinity = hit.affinity;
-                        if !modifiers.shift {
-                            state.selection_anchor = state.caret;
+
+                    let hit = hit.unwrap_or(fret_core::HitTestResult {
+                        index: 0,
+                        affinity: fret_core::CaretAffinity::Downstream,
+                    });
+
+                    let idx = hit.index.min(props.rich.text.len());
+                    let (anchor, caret) = match *click_count {
+                        2 => select_word(&props.rich.text, idx),
+                        3 => select_line(&props.rich.text, idx),
+                        _ => {
+                            let caret = idx;
+                            let anchor = if modifiers.shift {
+                                state.selection_anchor
+                            } else {
+                                caret
+                            };
+                            (anchor, caret)
                         }
-                    } else {
-                        state.caret = 0;
-                        state.affinity = fret_core::CaretAffinity::Downstream;
-                        if !modifiers.shift {
-                            state.selection_anchor = 0;
-                        }
-                    }
+                    };
+
+                    state.selection_anchor = anchor;
+                    state.caret = caret;
+                    state.affinity = hit.affinity;
                 },
             );
 
