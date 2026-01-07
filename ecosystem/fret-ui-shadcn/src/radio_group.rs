@@ -114,7 +114,8 @@ impl RadioGroupItem {
 
 #[derive(Clone)]
 pub struct RadioGroup {
-    model: Model<Option<Arc<str>>>,
+    model: Option<Model<Option<Arc<str>>>>,
+    default_value: Option<Arc<str>>,
     items: Vec<RadioGroupItem>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
@@ -125,7 +126,21 @@ pub struct RadioGroup {
 impl RadioGroup {
     pub fn new(model: Model<Option<Arc<str>>>) -> Self {
         Self {
-            model,
+            model: Some(model),
+            default_value: None,
+            items: Vec::new(),
+            disabled: false,
+            a11y_label: None,
+            orientation: RadioGroupOrientation::default(),
+            loop_navigation: true,
+        }
+    }
+
+    /// Creates an uncontrolled radio group with an optional initial value (Radix `defaultValue`).
+    pub fn uncontrolled<T: Into<Arc<str>>>(default_value: Option<T>) -> Self {
+        Self {
+            model: None,
+            default_value: default_value.map(Into::into),
             items: Vec::new(),
             disabled: false,
             a11y_label: None,
@@ -146,6 +161,14 @@ impl RadioGroup {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Sets the uncontrolled initial selection value (Radix `defaultValue`).
+    ///
+    /// Note: If a controlled `model` is provided, this value is ignored.
+    pub fn default_value<T: Into<Arc<str>>>(mut self, default_value: Option<T>) -> Self {
+        self.default_value = default_value.map(Into::into);
         self
     }
 
@@ -178,7 +201,12 @@ impl RadioGroup {
             let group_disabled = self.disabled;
             let group_label = self.a11y_label.clone();
             let items = self.items.clone();
-            let model = self.model;
+            let model = radio_group_prim::radio_group_use_model(
+                cx,
+                self.model.clone(),
+                || self.default_value.clone(),
+            )
+            .model();
             let orientation = self.orientation;
             let loop_navigation = self.loop_navigation;
 
@@ -406,6 +434,18 @@ pub fn radio_group<H: UiHost>(
     group.into_element(cx)
 }
 
+pub fn radio_group_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+    cx: &mut ElementContext<'_, H>,
+    default_value: Option<T>,
+    items: Vec<RadioGroupItem>,
+) -> AnyElement {
+    let mut group = RadioGroup::uncontrolled(default_value);
+    for item in items {
+        group = group.item(item);
+    }
+    group.into_element(cx)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -567,6 +607,120 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    fn render_uncontrolled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_value: Option<Arc<str>>,
+        orientation: RadioGroupOrientation,
+        loop_navigation: bool,
+    ) -> fret_core::NodeId {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![
+                    RadioGroup::uncontrolled(default_value.clone())
+                        .a11y_label("Options")
+                        .orientation(orientation)
+                        .loop_navigation(loop_navigation)
+                        .item(RadioGroupItem::new("alpha", "Alpha"))
+                        .item(RadioGroupItem::new("beta", "Beta"))
+                        .item(RadioGroupItem::new("gamma", "Gamma"))
+                        .into_element(cx),
+                ]
+            });
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    #[test]
+    fn radio_group_uncontrolled_applies_default_value_once_and_does_not_reset() {
+        fn checked(ui: &UiTree<App>, label: &str) -> Option<bool> {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some(label))
+                .and_then(|n| n.flags.checked)
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = render_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("alpha")),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+        assert_eq!(checked(&ui, "Alpha"), Some(true));
+        assert_eq!(checked(&ui, "Beta"), Some(false));
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("alpha")),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+        assert_eq!(checked(&ui, "Alpha"), Some(false));
+        assert_eq!(checked(&ui, "Beta"), Some(true));
+
+        // The internal model should not be reset by repeatedly passing the same default value.
+        let _ = render_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("alpha")),
+            RadioGroupOrientation::Horizontal,
+            true,
+        );
+        assert_eq!(checked(&ui, "Alpha"), Some(false));
+        assert_eq!(checked(&ui, "Beta"), Some(true));
     }
 
     #[test]
