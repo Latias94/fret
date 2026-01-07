@@ -221,6 +221,119 @@ fn declarative_pointer_region_can_capture_and_receive_move_up() {
 }
 
 #[test]
+fn selectable_text_drag_autoscrolls_scroll_container() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "selectable-text-autoscroll",
+        |cx| {
+            let scroll_handle = scroll_handle.clone();
+
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(scroll_handle.clone()),
+                },
+                |cx| {
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            let mut out: Vec<AnyElement> = Vec::new();
+                            out.push(cx.selectable_text(fret_core::RichText::new(
+                                "hello selectable text",
+                                Arc::<[fret_core::TextRun]>::from([]),
+                            )));
+                            for _ in 0..50 {
+                                out.push(cx.text("filler"));
+                            }
+                            out
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let selectable_node = ui.children(column_node)[0];
+
+    let scroll_bounds = ui.debug_node_bounds(scroll_node).expect("scroll bounds");
+    let selectable_bounds = ui
+        .debug_node_bounds(selectable_node)
+        .expect("selectable bounds");
+
+    let inside = Point::new(
+        Px(selectable_bounds.origin.x.0 + 5.0),
+        Px(selectable_bounds.origin.y.0 + 5.0),
+    );
+    let below = Point::new(
+        Px(scroll_bounds.origin.x.0 + 5.0),
+        Px(scroll_bounds.origin.y.0 + scroll_bounds.size.height.0 + 10.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: below,
+            buttons: MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(
+        scroll_handle.offset().y.0 > 0.01,
+        "expected selectable drag to auto-scroll, got offset={:?}",
+        scroll_handle.offset()
+    );
+}
+
+#[test]
 fn declarative_pointer_region_hook_can_request_focus_for_other_element() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

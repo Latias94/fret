@@ -148,6 +148,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 crate::element::SelectableTextState::default,
                 |state| {
                     state.dragging = true;
+                    state.last_pointer_pos = Some(*position);
                     if let Some(hit) = hit {
                         state.caret = hit.index;
                         state.affinity = hit.affinity;
@@ -170,6 +171,15 @@ pub(super) fn handle_selectable_text<H: UiHost>(
         }
         Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
             cx.set_cursor_icon(fret_core::CursorIcon::Text);
+            crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::element::SelectableTextState::default,
+                |state| {
+                    state.last_pointer_pos = Some(*position);
+                },
+            );
             if cx.captured != Some(cx.node) {
                 return;
             }
@@ -226,6 +236,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 crate::element::SelectableTextState::default,
                 |state| {
                     state.dragging = false;
+                    state.last_pointer_pos = None;
                 },
             );
             cx.invalidate_self(Invalidation::Paint);

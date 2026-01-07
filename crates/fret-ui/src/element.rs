@@ -696,6 +696,7 @@ pub struct SelectableTextState {
     pub caret: usize,
     pub affinity: CaretAffinity,
     pub dragging: bool,
+    pub last_pointer_pos: Option<fret_core::Point>,
 }
 
 impl Default for SelectableTextState {
@@ -705,6 +706,7 @@ impl Default for SelectableTextState {
             caret: 0,
             affinity: CaretAffinity::Downstream,
             dragging: false,
+            last_pointer_pos: None,
         }
     }
 }

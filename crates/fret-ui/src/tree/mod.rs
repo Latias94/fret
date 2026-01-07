@@ -727,6 +727,10 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or_default()
     }
 
+    pub fn node_parent(&self, node: NodeId) -> Option<NodeId> {
+        self.nodes.get(node).and_then(|n| n.parent)
+    }
+
     pub fn first_focusable_descendant(&self, root: NodeId) -> Option<NodeId> {
         let mut stack = vec![root];
         while let Some(id) = stack.pop() {

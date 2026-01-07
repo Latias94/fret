@@ -421,6 +421,32 @@ impl ElementHostWidget {
                 };
 
                 let focused = cx.focus == Some(cx.node);
+                let (dragging, last_pointer_pos) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| (state.dragging, state.last_pointer_pos),
+                );
+                if focused && dragging {
+                    if let Some(pointer_pos) = last_pointer_pos {
+                        let local = fret_core::Point::new(
+                            fret_core::Px(pointer_pos.x.0 - cx.bounds.origin.x.0),
+                            fret_core::Px(pointer_pos.y.0 - cx.bounds.origin.y.0),
+                        );
+                        let hit = cx.services.hit_test_point(blob, local);
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::SelectableTextState::default,
+                            |state| {
+                                state.caret = hit.index;
+                                state.affinity = hit.affinity;
+                            },
+                        );
+                    }
+                }
                 if focused {
                     let (anchor, caret) = crate::elements::with_element_state(
                         &mut *cx.app,
@@ -465,6 +491,119 @@ impl ElementHostWidget {
                     text: blob,
                     color,
                 });
+
+                if dragging
+                    && let Some(pointer_pos) = last_pointer_pos
+                    && let Some(window) = cx.window
+                {
+                    const EDGE_MARGIN: Px = Px(24.0);
+                    const MAX_STEP: Px = Px(16.0);
+
+                    let mut node = cx.node;
+                    while let Some(parent) = cx.tree.node_parent(node) {
+                        node = parent;
+                        let Some(record) = crate::declarative::frame::element_record_for_node(
+                            cx.app, window, node,
+                        ) else {
+                            continue;
+                        };
+
+                        let (handle, handle_key, scroll_y) = match record.instance {
+                            ElementInstance::Scroll(props) => {
+                                if !props.axis.scroll_y() {
+                                    continue;
+                                }
+                                let handle = if let Some(handle) = props.scroll_handle.as_ref() {
+                                    handle.clone()
+                                } else {
+                                    crate::elements::with_element_state(
+                                        &mut *cx.app,
+                                        window,
+                                        record.element,
+                                        crate::element::ScrollState::default,
+                                        |state| state.scroll_handle.clone(),
+                                    )
+                                };
+                                let key = props.scroll_handle.as_ref().map(|h| h.binding_key());
+                                (handle, key, true)
+                            }
+                            ElementInstance::VirtualList(props) => {
+                                if props.axis != fret_core::Axis::Vertical {
+                                    continue;
+                                }
+                                (
+                                    props.scroll_handle.base_handle().clone(),
+                                    Some(props.scroll_handle.base_handle().binding_key()),
+                                    true,
+                                )
+                            }
+                            _ => continue,
+                        };
+
+                        if !scroll_y {
+                            continue;
+                        }
+
+                        let Some(scroll_bounds) = cx.tree.node_bounds(node) else {
+                            break;
+                        };
+                        let top = scroll_bounds.origin.y;
+                        let bottom =
+                            fret_core::Px(scroll_bounds.origin.y.0 + scroll_bounds.size.height.0);
+
+                        let mut step = Px(0.0);
+                        if pointer_pos.y.0 < top.0 + EDGE_MARGIN.0 {
+                            let t = ((top.0 + EDGE_MARGIN.0 - pointer_pos.y.0) / EDGE_MARGIN.0)
+                                .clamp(0.0, 1.0);
+                            step = Px(-MAX_STEP.0 * t);
+                        } else if pointer_pos.y.0 > bottom.0 - EDGE_MARGIN.0 {
+                            let t = ((pointer_pos.y.0 - (bottom.0 - EDGE_MARGIN.0))
+                                / EDGE_MARGIN.0)
+                                .clamp(0.0, 1.0);
+                            step = Px(MAX_STEP.0 * t);
+                        }
+
+                        if step.0.abs() < 0.01 {
+                            break;
+                        }
+
+                        let prev = handle.offset();
+                        handle.set_offset(fret_core::Point::new(prev.x, Px(prev.y.0 + step.0)));
+                        let next = handle.offset();
+                        let did_scroll = (next.y.0 - prev.y.0).abs() > 0.01;
+
+                        if did_scroll {
+                            if let Some(handle_key) = handle_key {
+                                let bound =
+                                    crate::declarative::frame::bound_elements_for_scroll_handle(
+                                        cx.app, window, handle_key,
+                                    );
+                                let mut unique =
+                                    std::collections::HashSet::with_capacity(bound.len());
+                                for element in bound {
+                                    if !unique.insert(element) {
+                                        continue;
+                                    }
+                                    let Some(node) =
+                                        crate::declarative::mount::node_for_element_in_window_frame(
+                                            cx.app, window, element,
+                                        )
+                                    else {
+                                        continue;
+                                    };
+                                    cx.tree.invalidate(node, Invalidation::Layout);
+                                    cx.tree.invalidate(node, Invalidation::Paint);
+                                }
+                            }
+
+                            cx.tree.invalidate(node, Invalidation::HitTest);
+                            cx.app.request_redraw(window);
+                            cx.app.push_effect(Effect::RequestAnimationFrame(window));
+                        }
+
+                        break;
+                    }
+                }
             }
             ElementInstance::TextInput(props) => {
                 let model = props.model.clone();
