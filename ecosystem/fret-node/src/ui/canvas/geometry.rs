@@ -9,6 +9,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{Graph, NodeId, PortDirection, PortId};
+use crate::ui::presenter::{NodeGraphPresenter, PortAnchorHint};
 use crate::ui::style::NodeGraphStyle;
 
 /// Geometry for a single node.
@@ -34,11 +35,12 @@ pub(crate) struct CanvasGeometry {
 }
 
 impl CanvasGeometry {
-    pub(crate) fn build(
+    pub(crate) fn build_with_presenter(
         graph: &Graph,
         draw_order: &[NodeId],
         style: &NodeGraphStyle,
         zoom: f32,
+        presenter: &mut dyn NodeGraphPresenter,
     ) -> Self {
         let mut out = Self::default();
         if !zoom.is_finite() || zoom <= 0.0 {
@@ -52,34 +54,69 @@ impl CanvasGeometry {
             };
 
             let (inputs, outputs) = node_ports(graph, node_id);
-            let rect = node_rect(
-                node.pos.x,
-                node.pos.y,
-                inputs.len(),
-                outputs.len(),
-                style,
-                zoom,
+            let (w_px, h_px) = presenter
+                .node_size_hint_px(graph, node_id, style)
+                .unwrap_or_else(|| node_size_default_px(inputs.len(), outputs.len(), style));
+
+            let w = w_px / zoom;
+            let h = h_px / zoom;
+            let rect = Rect::new(
+                Point::new(Px(node.pos.x), Px(node.pos.y)),
+                Size::new(Px(w), Px(h)),
             );
 
             out.nodes.insert(node_id, NodeGeometry { rect });
 
-            for (dir, ports) in [(PortDirection::In, &inputs), (PortDirection::Out, &outputs)] {
-                for (row, port_id) in ports.iter().copied().enumerate() {
+            for port_id in node.ports.iter().copied() {
+                let Some(p) = graph.ports.get(&port_id) else {
+                    continue;
+                };
+                let hint: Option<PortAnchorHint> =
+                    presenter.port_anchor_hint(graph, node_id, port_id, style);
+                let (dir, center, bounds) = if let Some(hint) = hint {
+                    let center = Point::new(
+                        Px(rect.origin.x.0 + hint.center.x.0 / zoom),
+                        Px(rect.origin.y.0 + hint.center.y.0 / zoom),
+                    );
+                    let bounds = Rect::new(
+                        Point::new(
+                            Px(rect.origin.x.0 + hint.bounds.origin.x.0 / zoom),
+                            Px(rect.origin.y.0 + hint.bounds.origin.y.0 / zoom),
+                        ),
+                        Size::new(
+                            Px(hint.bounds.size.width.0 / zoom),
+                            Px(hint.bounds.size.height.0 / zoom),
+                        ),
+                    );
+                    (p.dir, center, bounds)
+                } else {
+                    let (row, dir) = match p.dir {
+                        PortDirection::In => (
+                            inputs.iter().position(|id| *id == port_id).unwrap_or(0),
+                            PortDirection::In,
+                        ),
+                        PortDirection::Out => (
+                            outputs.iter().position(|id| *id == port_id).unwrap_or(0),
+                            PortDirection::Out,
+                        ),
+                    };
                     let center = port_center(rect, dir, row, style, zoom);
                     let pin_r = style.pin_radius / zoom;
                     let bounds = Rect::new(
                         Point::new(Px(center.x.0 - pin_r), Px(center.y.0 - pin_r)),
                         Size::new(Px(2.0 * pin_r), Px(2.0 * pin_r)),
                     );
-                    out.ports.insert(
-                        port_id,
-                        PortHandleGeometry {
-                            dir,
-                            center,
-                            bounds,
-                        },
-                    );
-                }
+                    (dir, center, bounds)
+                };
+
+                out.ports.insert(
+                    port_id,
+                    PortHandleGeometry {
+                        dir,
+                        center,
+                        bounds,
+                    },
+                );
             }
         }
 
@@ -130,22 +167,15 @@ pub(crate) fn node_ports(graph: &Graph, node: NodeId) -> (Vec<PortId>, Vec<PortI
     (inputs, outputs)
 }
 
-pub(crate) fn node_rect(
-    x: f32,
-    y: f32,
+fn node_size_default_px(
     input_count: usize,
     output_count: usize,
     style: &NodeGraphStyle,
-    zoom: f32,
-) -> Rect {
+) -> (f32, f32) {
     let rows = input_count.max(output_count) as f32;
     let base = style.node_header_height + 2.0 * style.node_padding;
     let pin_area = rows * style.pin_row_height;
-
-    let w = style.node_width / zoom;
-    let h = (base + pin_area) / zoom;
-
-    Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+    (style.node_width, base + pin_area)
 }
 
 pub(crate) fn port_center(

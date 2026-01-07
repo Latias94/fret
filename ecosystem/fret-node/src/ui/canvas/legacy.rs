@@ -158,6 +158,7 @@ struct GeometryCacheKey {
     graph_rev: u64,
     zoom_bits: u32,
     draw_order_hash: u64,
+    presenter_rev: u64,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -250,20 +251,29 @@ impl NodeGraphCanvas {
         snapshot: &ViewSnapshot,
     ) -> Arc<CanvasGeometry> {
         let graph_rev = self.graph.revision(host).unwrap_or(0);
+        let presenter_rev = self.presenter.geometry_revision();
         let key = GeometryCacheKey {
             graph_rev,
             zoom_bits: snapshot.zoom.to_bits(),
             draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
+            presenter_rev,
         };
 
         if self.geometry.key != Some(key) {
             let style = self.style.clone();
             let draw_order = snapshot.draw_order.clone();
             let zoom = snapshot.zoom;
-            let (geom, index) = self
-                .graph
+            let graph = self.graph.clone();
+            let presenter = &mut *self.presenter;
+            let (geom, index) = graph
                 .read_ref(host, |graph| {
-                    let geom = CanvasGeometry::build(graph, &draw_order, &style, zoom);
+                    let geom = CanvasGeometry::build_with_presenter(
+                        graph,
+                        &draw_order,
+                        &style,
+                        zoom,
+                        presenter,
+                    );
                     let max_hit_pad_canvas = 96.0 / zoom.max(1.0e-6);
                     let index = CanvasSpatialIndex::build(graph, &geom, zoom, max_hit_pad_canvas);
                     (geom, index)

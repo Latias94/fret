@@ -18,6 +18,7 @@ use crate::{profile::DataflowProfile, profile::GraphProfile};
 use fret_runtime::CommandId;
 
 use super::style::NodeGraphStyle;
+use fret_core::{Point, Rect};
 
 /// Context menu actions surfaced by the canvas widget.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -48,11 +49,33 @@ pub struct InsertNodeCandidate {
     pub payload: Value,
 }
 
+/// A presenter-provided port anchor hint, in node-local screen-space (logical px).
+///
+/// The canvas transform scales graph space by `zoom`. The node graph uses "semantic zoom" where
+/// most UI elements remain readable at extreme zoom levels by keeping their screen-space sizes
+/// stable. As a result:
+/// - anchor inputs are expressed in screen-space pixels (logical px),
+/// - the canvas converts them into graph/canvas space by dividing by `zoom` and offsetting by the
+///   node's graph-space origin.
+#[derive(Debug, Clone, Copy)]
+pub struct PortAnchorHint {
+    pub center: Point,
+    pub bounds: Rect,
+}
+
 /// Viewer/presenter surface for the node graph UI.
 ///
 /// This is the primary extensibility point: domain code can define titles, styles, and connection
 /// behavior without forking the editor widget.
 pub trait NodeGraphPresenter {
+    /// Revision that invalidates derived geometry caches.
+    ///
+    /// Implementations that provide dynamic geometry hints (e.g. measured sizes from a UI subtree)
+    /// should bump this when the underlying measurements change.
+    fn geometry_revision(&self) -> u64 {
+        0
+    }
+
     fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str>;
     fn port_label(&self, graph: &Graph, port: PortId) -> Arc<str>;
 
@@ -74,6 +97,31 @@ pub trait NodeGraphPresenter {
             crate::core::EdgeKind::Data => style.wire_color_data,
             crate::core::EdgeKind::Exec => style.wire_color_exec,
         }
+    }
+
+    /// Optional per-node size hint in screen-space pixels (logical px).
+    ///
+    /// When absent, the canvas derives size from `NodeGraphStyle` and port counts.
+    fn node_size_hint_px(
+        &mut self,
+        _graph: &Graph,
+        _node: NodeId,
+        _style: &NodeGraphStyle,
+    ) -> Option<(f32, f32)> {
+        None
+    }
+
+    /// Optional per-port anchor hint in node-local screen-space (logical px).
+    ///
+    /// When absent, the canvas derives anchor positions from `NodeGraphStyle` and port ordering.
+    fn port_anchor_hint(
+        &mut self,
+        _graph: &Graph,
+        _node: NodeId,
+        _port: PortId,
+        _style: &NodeGraphStyle,
+    ) -> Option<PortAnchorHint> {
+        None
     }
 
     /// Lists nodes that can be inserted into the graph from a palette (background insert).
