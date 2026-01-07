@@ -12,7 +12,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, ImageProps, LayoutStyle, Length, MainAlign,
     PressableProps, SvgIconProps, TextProps,
 };
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::{Invalidation, Theme, ThemeConfig, UiTree};
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::{LayoutRefinement, MetricRef};
 use std::collections::HashMap;
@@ -190,7 +190,9 @@ fn download_remote_image(_url: &str) -> Result<RemoteImageState, Arc<str>> {
 struct MarkdownDemoDriver;
 
 impl MarkdownDemoDriver {
-    fn build_ui(_app: &mut App, window: AppWindowId) -> MarkdownDemoWindowState {
+    fn build_ui(app: &mut App, window: AppWindowId) -> MarkdownDemoWindowState {
+        apply_markdown_demo_theme_tokens(app);
+
         let mut ui = UiTree::new();
         ui.set_window(window);
 
@@ -704,6 +706,34 @@ impl WinitAppDriver for MarkdownDemoDriver {
         _new_window: AppWindowId,
     ) {
     }
+}
+
+fn apply_markdown_demo_theme_tokens(app: &mut App) {
+    Theme::with_global_mut(app, |theme| {
+        // Demo-only: inject explicit markdown math tokens so theme tuning is discoverable.
+        let font_size = theme.metric_required("metric.font.size").0;
+        let line_height = theme.metric_required("metric.font.line_height").0;
+        let block_height = (line_height * 3.25).max(font_size * 4.0);
+
+        let mut cfg = ThemeConfig {
+            name: theme.name.clone(),
+            author: theme.author.clone(),
+            url: theme.url.clone(),
+            colors: HashMap::new(),
+            metrics: HashMap::new(),
+        };
+
+        cfg.metrics
+            .insert("fret.markdown.math.inline.height".to_string(), line_height);
+        cfg.metrics.insert(
+            "fret.markdown.math.block.padding".to_string(),
+            theme.metric_required("metric.padding.md").0,
+        );
+        cfg.metrics
+            .insert("fret.markdown.math.block.height".to_string(), block_height);
+
+        theme.apply_config(&cfg);
+    });
 }
 
 pub fn run() -> anyhow::Result<()> {
