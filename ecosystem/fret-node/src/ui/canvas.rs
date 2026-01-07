@@ -2422,6 +2422,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let hovered_edge = self.interaction.hover_edge;
         let hovered_port = self.interaction.hover_port;
         let hovered_port_valid = self.interaction.hover_port_valid;
+        let wire_drag = self.interaction.wire_drag.clone();
+        let marked_ports: HashSet<PortId> = match wire_drag.as_ref().map(|w| &w.kind) {
+            Some(WireDragKind::New { bundle, .. }) if bundle.len() > 1 => {
+                bundle.iter().copied().collect()
+            }
+            Some(WireDragKind::ReconnectMany { edges }) if edges.len() > 1 => edges
+                .iter()
+                .map(|(_edge, _endpoint, fixed)| *fixed)
+                .collect(),
+            _ => HashSet::new(),
+        };
 
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
@@ -2607,6 +2618,31 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         }
 
         for (port_id, rect, color) in render.pins {
+            if marked_ports.contains(&port_id) {
+                let pad = 5.0 / zoom;
+                let marker_rect = Rect::new(
+                    Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
+                    Size::new(
+                        Px(rect.size.width.0 + 2.0 * pad),
+                        Px(rect.size.height.0 + 2.0 * pad),
+                    ),
+                );
+                let r = Px(0.5 * marker_rect.size.width.0);
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(4),
+                    rect: marker_rect,
+                    background: Color::TRANSPARENT,
+                    border: Edges::all(Px(1.0 / zoom)),
+                    border_color: Color {
+                        r: color.r,
+                        g: color.g,
+                        b: color.b,
+                        a: 0.55,
+                    },
+                    corner_radii: Corners::all(r),
+                });
+            }
+
             if hovered_port == Some(port_id) {
                 let border_color = if hovered_port_valid {
                     color
@@ -2648,7 +2684,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             });
         }
 
-        if let Some(wire_drag) = self.interaction.wire_drag.clone() {
+        if let Some(wire_drag) = wire_drag {
             self.paint_wire_drag_hint(cx, &snapshot, &wire_drag, zoom);
         }
 
