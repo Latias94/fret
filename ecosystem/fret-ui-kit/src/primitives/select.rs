@@ -53,6 +53,21 @@ pub fn select_use_open_model<H: UiHost>(
     crate::primitives::open_state::open_use_model(cx, controlled_open, default_open)
 }
 
+/// Returns a `Model<Option<Arc<str>>>` that behaves like Radix `useControllableState` for `value`.
+///
+/// Radix models Select values as strings. Fret uses `Arc<str>` for stable, cheap-to-clone keys.
+pub fn select_use_value_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_value: Option<Model<Option<Arc<str>>>>,
+    default_value: impl FnOnce() -> Option<Arc<str>>,
+) -> crate::primitives::controllable_state::ControllableModel<Option<Arc<str>>> {
+    crate::primitives::controllable_state::use_controllable_model(
+        cx,
+        controlled_value,
+        default_value,
+    )
+}
+
 /// A Radix-shaped `Select` root configuration surface (open state only).
 ///
 /// Upstream Select owns both `open` and `value` state. Fret's select primitive facade focuses on
@@ -639,6 +654,8 @@ pub fn request_select<H: UiHost>(cx: &mut ElementContext<'_, H>, request: Overla
 mod tests {
     use super::*;
 
+    use std::cell::Cell;
+
     use fret_app::App;
     use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, Size};
     use fret_ui::action::{UiActionHostAdapter, UiFocusActionHost, UiPointerActionHost};
@@ -666,6 +683,27 @@ mod tests {
                 .default_open(false);
             assert_eq!(root.open_model(cx), controlled);
         });
+    }
+
+    #[test]
+    fn select_use_value_model_prefers_controlled_and_does_not_call_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(Some(Arc::from("a")));
+        let called = Cell::new(0);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let out = select_use_value_model(cx, Some(controlled.clone()), || {
+                called.set(called.get() + 1);
+                None
+            });
+            assert!(out.is_controlled());
+            assert_eq!(out.model(), controlled);
+        });
+
+        assert_eq!(called.get(), 0);
     }
 
     struct PointerHost<'a> {
