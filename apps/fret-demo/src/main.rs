@@ -7,7 +7,7 @@ fn main() -> anyhow::Result<()> {
 
     if demo == "--list" || demo == "-l" {
         eprintln!(
-            "Available demos:\n  components_gallery\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo"
+            "Available demos:\n  components_gallery\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo"
         );
         return Ok(());
     }
@@ -24,6 +24,7 @@ fn main() -> anyhow::Result<()> {
         "error_bars_demo" => fret_examples::error_bars_demo::run(),
         "heatmap_demo" => fret_examples::heatmap_demo::run(),
         "histogram_demo" => fret_examples::histogram_demo::run(),
+        "histogram2d_demo" => fret_examples::histogram2d_demo::run(),
         "shaded_demo" => fret_examples::shaded_demo::run(),
         "stairs_demo" => fret_examples::stairs_demo::run(),
         "stems_demo" => fret_examples::stems_demo::run(),

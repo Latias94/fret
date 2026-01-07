@@ -20,6 +20,7 @@ enum Demo {
     ErrorBarsDemo,
     HeatmapDemo,
     HistogramDemo,
+    Histogram2DDemo,
     ShadedDemo,
     StairsDemo,
     StemsDemo,
@@ -68,6 +69,9 @@ fn select_demo() -> Demo {
     }
     if hash.contains("histogram_demo") || search.contains("demo=histogram_demo") {
         return Demo::HistogramDemo;
+    }
+    if hash.contains("histogram2d_demo") || search.contains("demo=histogram2d_demo") {
+        return Demo::Histogram2DDemo;
     }
     if hash.contains("shaded_demo") || search.contains("demo=shaded_demo") {
         return Demo::ShadedDemo;
@@ -176,6 +180,13 @@ pub fn start() -> Result<(), JsValue> {
             let mut config = fret_examples::histogram_demo::build_runner_config();
             config.main_window_title = "fret-demo histogram_demo (web)".to_string();
             let driver = fret_examples::histogram_demo::build_driver();
+            fret_launch::run_app_with_handle(config, app, driver)
+        }
+        Demo::Histogram2DDemo => {
+            let app = fret_examples::histogram2d_demo::build_app();
+            let mut config = fret_examples::histogram2d_demo::build_runner_config();
+            config.main_window_title = "fret-demo histogram2d_demo (web)".to_string();
+            let driver = fret_examples::histogram2d_demo::build_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::ShadedDemo => {

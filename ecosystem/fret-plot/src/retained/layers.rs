@@ -1050,7 +1050,7 @@ struct HeatmapMipKey {
 }
 
 #[derive(Debug, Clone)]
-struct HeatmapMipLevel {
+struct GridMipLevel {
     cols: usize,
     rows: usize,
     values: Vec<f32>,
@@ -1061,7 +1061,7 @@ pub struct HeatmapPlotLayer {
     cache_key: Option<HeatmapCacheKey>,
     cached_quads: Vec<PlotQuad>,
     mip_key: Option<HeatmapMipKey>,
-    mips: Vec<HeatmapMipLevel>,
+    mips: Vec<GridMipLevel>,
 }
 
 fn ceil_div_usize(a: usize, b: usize) -> usize {
@@ -1071,7 +1071,7 @@ fn ceil_div_usize(a: usize, b: usize) -> usize {
     a / b + usize::from(a % b != 0)
 }
 
-fn select_heatmap_mip_level(
+fn select_grid_mip_level(
     visible_cols: usize,
     visible_rows: usize,
     viewport_w: f32,
@@ -1100,6 +1100,96 @@ fn select_heatmap_mip_level(
     }
 }
 
+fn downsample_grid_avg(
+    prev_cols: usize,
+    prev_rows: usize,
+    prev: &[f32],
+) -> (usize, usize, Vec<f32>) {
+    let next_cols = ceil_div_usize(prev_cols, 2).max(1);
+    let next_rows = ceil_div_usize(prev_rows, 2).max(1);
+    let mut next: Vec<f32> = vec![f32::NAN; next_cols.saturating_mul(next_rows)];
+
+    for r in 0..next_rows {
+        for c in 0..next_cols {
+            let mut sum = 0.0f64;
+            let mut count = 0u32;
+            for dr in 0..2 {
+                for dc in 0..2 {
+                    let rr = r * 2 + dr;
+                    let cc = c * 2 + dc;
+                    if rr >= prev_rows || cc >= prev_cols {
+                        continue;
+                    }
+                    let idx = rr * prev_cols + cc;
+                    let Some(v) = prev.get(idx).copied() else {
+                        continue;
+                    };
+                    if !v.is_finite() {
+                        continue;
+                    }
+                    sum += v as f64;
+                    count += 1;
+                }
+            }
+
+            if count > 0 {
+                let avg = (sum / f64::from(count)) as f32;
+                let idx = r * next_cols + c;
+                if let Some(slot) = next.get_mut(idx) {
+                    *slot = avg;
+                }
+            }
+        }
+    }
+
+    (next_cols, next_rows, next)
+}
+
+fn build_grid_mips(cols: usize, rows: usize, base: &[f32]) -> Vec<GridMipLevel> {
+    let mut mips: Vec<GridMipLevel> = Vec::new();
+
+    let mut prev_cols = cols;
+    let mut prev_rows = rows;
+    while prev_cols > 1 || prev_rows > 1 {
+        let (next_cols, next_rows, next) = {
+            let prev_values: &[f32] = if mips.is_empty() {
+                base
+            } else {
+                &mips.last().expect("non-empty").values
+            };
+            downsample_grid_avg(prev_cols, prev_rows, prev_values)
+        };
+
+        mips.push(GridMipLevel {
+            cols: next_cols,
+            rows: next_rows,
+            values: next,
+        });
+
+        prev_cols = next_cols;
+        prev_rows = next_rows;
+    }
+
+    mips
+}
+
+fn grid_mip_level_values<'a>(
+    level: usize,
+    base_cols: usize,
+    base_rows: usize,
+    base_values: &'a [f32],
+    mips: &'a [GridMipLevel],
+) -> (usize, usize, &'a [f32]) {
+    if level == 0 {
+        return (base_cols, base_rows, base_values);
+    }
+
+    let mip = mips
+        .get(level.saturating_sub(1))
+        .expect("level > 0 implies mip exists");
+    (mip.cols, mip.rows, &mip.values)
+}
+
 impl HeatmapPlotLayer {
     fn rebuild_mips_if_needed(&mut self, model_revision: u64, model: &HeatmapPlotModel) {
         let mip_key = HeatmapMipKey {
@@ -1114,77 +1204,7 @@ impl HeatmapPlotLayer {
         }
 
         self.mip_key = Some(mip_key);
-        self.mips.clear();
-
-        let mut prev_cols = model.cols;
-        let mut prev_rows = model.rows;
-        let mut prev: &[f32] = &model.values;
-
-        while prev_cols > 1 || prev_rows > 1 {
-            let next_cols = ceil_div_usize(prev_cols, 2).max(1);
-            let next_rows = ceil_div_usize(prev_rows, 2).max(1);
-            let mut next: Vec<f32> = vec![f32::NAN; next_cols.saturating_mul(next_rows)];
-
-            for r in 0..next_rows {
-                for c in 0..next_cols {
-                    let mut sum = 0.0f64;
-                    let mut count = 0u32;
-                    for dr in 0..2 {
-                        for dc in 0..2 {
-                            let rr = r * 2 + dr;
-                            let cc = c * 2 + dc;
-                            if rr >= prev_rows || cc >= prev_cols {
-                                continue;
-                            }
-                            let idx = rr * prev_cols + cc;
-                            let Some(v) = prev.get(idx).copied() else {
-                                continue;
-                            };
-                            if !v.is_finite() {
-                                continue;
-                            }
-                            sum += v as f64;
-                            count += 1;
-                        }
-                    }
-
-                    if count > 0 {
-                        let avg = (sum / f64::from(count)) as f32;
-                        let idx = r * next_cols + c;
-                        if let Some(slot) = next.get_mut(idx) {
-                            *slot = avg;
-                        }
-                    }
-                }
-            }
-
-            self.mips.push(HeatmapMipLevel {
-                cols: next_cols,
-                rows: next_rows,
-                values: next,
-            });
-
-            let last = self.mips.last().expect("just pushed");
-            prev_cols = last.cols;
-            prev_rows = last.rows;
-            prev = &last.values;
-        }
-    }
-
-    fn mip_level_values<'a>(
-        &'a self,
-        level: usize,
-        model: &'a HeatmapPlotModel,
-    ) -> (usize, usize, &'a [f32]) {
-        if level == 0 {
-            return (model.cols, model.rows, &model.values);
-        }
-
-        let mip = self
-            .mips
-            .get(level.saturating_sub(1))
-            .expect("level > 0 implies mip exists");
-        (mip.cols, mip.rows, &mip.values)
+        self.mips = build_grid_mips(model.cols, model.rows, &model.values);
     }
 }
 
@@ -1224,7 +1244,7 @@ mod heatmap_lod_tests {
         let max_quads = 50_000usize;
         let max_level = 16usize;
 
-        let level = select_heatmap_mip_level(
+        let level = select_grid_mip_level(
             visible_cols,
             visible_rows,
             800.0,
@@ -1243,7 +1263,7 @@ mod heatmap_lod_tests {
 
     #[test]
     fn select_mip_level_uses_level0_for_small_grids() {
-        let level = select_heatmap_mip_level(64, 64, 1024.0, 768.0, 50_000, 8);
+        let level = select_grid_mip_level(64, 64, 1024.0, 768.0, 50_000, 8);
         assert_eq!(level, 0);
     }
 }
@@ -1344,6 +1364,43 @@ pub type HeatmapPlotCanvas = PlotCanvas<HeatmapPlotLayer>;
 impl PlotCanvas<HeatmapPlotLayer> {
     pub fn new(model: Model<HeatmapPlotModel>) -> Self {
         Self::with_layer(model, HeatmapPlotLayer::default()).heatmap_colorbar(true)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Histogram2DCacheKey {
+    model_revision: u64,
+    view_key: u64,
+    cols: usize,
+    rows: usize,
+    viewport_w_bits: u32,
+    viewport_h_bits: u32,
+    value_min_bits: u32,
+    value_max_bits: u32,
+    colormap_key: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Histogram2DMipKey {
+    model_revision: u64,
+    cols: usize,
+    rows: usize,
+    values_ptr: usize,
+}
+
+#[derive(Debug, Default)]
+pub struct Histogram2DPlotLayer {
+    cache_key: Option<Histogram2DCacheKey>,
+    cached_quads: Vec<PlotQuad>,
+    mip_key: Option<Histogram2DMipKey>,
+    mips: Vec<GridMipLevel>,
+}
+
+pub type Histogram2DPlotCanvas = PlotCanvas<Histogram2DPlotLayer>;
+
+impl PlotCanvas<Histogram2DPlotLayer> {
+    pub fn new(model: Model<Histogram2DPlotModel>) -> Self {
+        Self::with_layer(model, Histogram2DPlotLayer::default()).heatmap_colorbar(true)
     }
 }
 
@@ -4514,7 +4571,7 @@ impl PlotLayer for HeatmapPlotLayer {
 
         const MAX_HEATMAP_QUADS: usize = 50_000;
         let max_level = self.mips.len();
-        let level = select_heatmap_mip_level(
+        let level = select_grid_mip_level(
             visible_cols,
             visible_rows,
             plot.size.width.0,
@@ -4524,7 +4581,8 @@ impl PlotLayer for HeatmapPlotLayer {
         );
 
         let scale = 1usize << level.min(usize::BITS as usize - 1);
-        let (grid_cols, grid_rows, values) = self.mip_level_values(level, model);
+        let (grid_cols, grid_rows, values) =
+            grid_mip_level_values(level, model.cols, model.rows, &model.values, &self.mips);
 
         let level_col0 = (col0 / scale).min(grid_cols);
         let level_col1 = ceil_div_usize(col1, scale).min(grid_cols);
@@ -4665,6 +4723,314 @@ impl PlotLayer for HeatmapPlotLayer {
 
         Some(PlotHover {
             series_id: SeriesId::from_label("heatmap"),
+            index: row.saturating_mul(model.cols).saturating_add(col),
+            data: DataPoint { x: cx, y: cy },
+            plot_px,
+            value: Some(f64::from(v)),
+        })
+    }
+
+    fn cleanup_resources(&mut self, _services: &mut dyn UiServices) {
+        self.cache_key = None;
+        self.cached_quads.clear();
+        self.mip_key = None;
+        self.mips.clear();
+    }
+}
+
+impl Histogram2DPlotLayer {
+    fn rebuild_mips_if_needed(&mut self, model_revision: u64, model: &Histogram2DPlotModel) {
+        let mip_key = Histogram2DMipKey {
+            model_revision,
+            cols: model.cols,
+            rows: model.rows,
+            values_ptr: model.values.as_ptr() as usize,
+        };
+
+        if self.mip_key == Some(mip_key) {
+            return;
+        }
+
+        self.mip_key = Some(mip_key);
+        self.mips = build_grid_mips(model.cols, model.rows, &model.values);
+    }
+}
+
+impl PlotLayer for Histogram2DPlotLayer {
+    type Model = Histogram2DPlotModel;
+
+    fn data_bounds(model: &Self::Model) -> DataRect {
+        model.data_bounds
+    }
+
+    fn series_meta(_model: &Self::Model) -> Vec<SeriesMeta> {
+        Vec::new()
+    }
+
+    fn series_label(_model: &Self::Model, _series_id: SeriesId) -> Option<String> {
+        Some("histogram2d".to_string())
+    }
+
+    fn heatmap_value_range(model: &Self::Model) -> Option<(f32, f32)> {
+        Some((model.value_min, model.value_max))
+    }
+
+    fn paint_paths<H: UiHost>(
+        &mut self,
+        _cx: &mut PaintCx<'_, H>,
+        _model: &Self::Model,
+        _args: PlotPaintArgs<'_>,
+    ) -> Vec<(SeriesId, PathId, Color)> {
+        Vec::new()
+    }
+
+    fn paint_quads<H: UiHost>(
+        &mut self,
+        _cx: &mut PaintCx<'_, H>,
+        model: &Self::Model,
+        args: PlotPaintArgs<'_>,
+    ) -> Vec<PlotQuad> {
+        let PlotPaintArgs {
+            model_revision,
+            plot,
+            view_bounds,
+            x_scale,
+            y_scale,
+            style,
+            ..
+        } = args;
+
+        if model.cols == 0 || model.rows == 0 {
+            self.cache_key = None;
+            self.cached_quads.clear();
+            return Vec::new();
+        }
+
+        let view_key = data_rect_key_scaled(view_bounds, x_scale, y_scale);
+        let cache_key = Histogram2DCacheKey {
+            model_revision,
+            view_key,
+            cols: model.cols,
+            rows: model.rows,
+            viewport_w_bits: plot.size.width.0.to_bits(),
+            viewport_h_bits: plot.size.height.0.to_bits(),
+            value_min_bits: model.value_min.to_bits(),
+            value_max_bits: model.value_max.to_bits(),
+            colormap_key: style.heatmap_colormap.key(),
+        };
+
+        if self.cache_key == Some(cache_key) {
+            return self.cached_quads.clone();
+        }
+
+        self.rebuild_mips_if_needed(model_revision, model);
+
+        let heatmap_colormap = style.heatmap_colormap;
+        let heatmap_color = |t: f32| crate::plot::colormap::sample(heatmap_colormap, t);
+
+        let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
+        let transform = PlotTransform {
+            viewport: local_viewport,
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+
+        let dx = (model.data_bounds.x_max - model.data_bounds.x_min) / (model.cols as f64);
+        let dy = (model.data_bounds.y_max - model.data_bounds.y_min) / (model.rows as f64);
+        if !dx.is_finite() || !dy.is_finite() || dx <= 0.0 || dy <= 0.0 {
+            self.cache_key = Some(cache_key);
+            self.cached_quads.clear();
+            return Vec::new();
+        }
+
+        let clip_min_x = view_bounds.x_min.max(model.data_bounds.x_min);
+        let clip_max_x = view_bounds.x_max.min(model.data_bounds.x_max);
+        let clip_min_y = view_bounds.y_min.max(model.data_bounds.y_min);
+        let clip_max_y = view_bounds.y_max.min(model.data_bounds.y_max);
+
+        if clip_max_x <= clip_min_x || clip_max_y <= clip_min_y {
+            self.cache_key = Some(cache_key);
+            self.cached_quads.clear();
+            return Vec::new();
+        }
+
+        let col0 = (((clip_min_x - model.data_bounds.x_min) / dx).floor() as isize)
+            .clamp(0, model.cols.saturating_sub(1) as isize) as usize;
+        let col1 = (((clip_max_x - model.data_bounds.x_min) / dx).ceil() as isize)
+            .clamp(0, model.cols as isize) as usize;
+
+        let row0 = (((clip_min_y - model.data_bounds.y_min) / dy).floor() as isize)
+            .clamp(0, model.rows.saturating_sub(1) as isize) as usize;
+        let row1 = (((clip_max_y - model.data_bounds.y_min) / dy).ceil() as isize)
+            .clamp(0, model.rows as isize) as usize;
+
+        let denom = (model.value_max - model.value_min).max(1.0e-12);
+
+        let visible_cols = col1.saturating_sub(col0);
+        let visible_rows = row1.saturating_sub(row0);
+        if visible_cols == 0 || visible_rows == 0 {
+            self.cache_key = Some(cache_key);
+            self.cached_quads.clear();
+            return Vec::new();
+        }
+
+        const MAX_HISTOGRAM2D_QUADS: usize = 50_000;
+        const MAX_HISTOGRAM2D_MIP_LEVEL: usize = 16;
+
+        let level = select_grid_mip_level(
+            visible_cols,
+            visible_rows,
+            plot.size.width.0,
+            plot.size.height.0,
+            MAX_HISTOGRAM2D_QUADS,
+            MAX_HISTOGRAM2D_MIP_LEVEL.min(self.mips.len()),
+        );
+        let scale = 1usize << level.min(usize::BITS as usize - 1);
+
+        let col0_l = col0 / scale;
+        let col1_l = ceil_div_usize(col1, scale).max(col0_l.saturating_add(1));
+        let row0_l = row0 / scale;
+        let row1_l = ceil_div_usize(row1, scale).max(row0_l.saturating_add(1));
+
+        let (grid_cols, grid_rows, values) =
+            grid_mip_level_values(level, model.cols, model.rows, &model.values, &self.mips);
+        let col1_l = col1_l.min(grid_cols);
+        let row1_l = row1_l.min(grid_rows);
+
+        let mut quads: Vec<PlotQuad> = Vec::with_capacity(
+            col1_l
+                .saturating_sub(col0_l)
+                .saturating_mul(row1_l.saturating_sub(row0_l)),
+        );
+
+        for row_l in row0_l..row1_l {
+            let row_base0 = row_l.saturating_mul(scale);
+            let row_base1 = (row_l.saturating_add(1).saturating_mul(scale)).min(model.rows);
+
+            let y0 = model.data_bounds.y_min + (row_base0 as f64) * dy;
+            let y1 = model.data_bounds.y_min + (row_base1 as f64) * dy;
+            let (Some(py0), Some(py1)) = (transform.data_y_to_px(y0), transform.data_y_to_px(y1))
+            else {
+                continue;
+            };
+            let top = py0.0.min(py1.0);
+            let bottom = py0.0.max(py1.0);
+            if !top.is_finite() || !bottom.is_finite() || bottom <= top {
+                continue;
+            }
+
+            for col_l in col0_l..col1_l {
+                let idx = row_l.saturating_mul(grid_cols).saturating_add(col_l);
+                let Some(v) = values.get(idx).copied() else {
+                    continue;
+                };
+                if !v.is_finite() {
+                    continue;
+                }
+
+                let col_base0 = col_l.saturating_mul(scale);
+                let col_base1 = (col_l.saturating_add(1).saturating_mul(scale)).min(model.cols);
+
+                let x0 = model.data_bounds.x_min + (col_base0 as f64) * dx;
+                let x1 = model.data_bounds.x_min + (col_base1 as f64) * dx;
+                let (Some(px0), Some(px1)) =
+                    (transform.data_x_to_px(x0), transform.data_x_to_px(x1))
+                else {
+                    continue;
+                };
+                let left = px0.0.min(px1.0);
+                let right = px0.0.max(px1.0);
+                if !left.is_finite() || !right.is_finite() || right <= left {
+                    continue;
+                }
+
+                let t = ((v - model.value_min) / denom).clamp(0.0, 1.0);
+                let color = heatmap_color(t);
+
+                quads.push(PlotQuad {
+                    rect_local: Rect::new(
+                        Point::new(Px(left), Px(top)),
+                        Size::new(Px(right - left), Px(bottom - top)),
+                    ),
+                    background: color,
+                    order: DrawOrder(2),
+                });
+
+                if quads.len() >= MAX_HISTOGRAM2D_QUADS {
+                    break;
+                }
+            }
+
+            if quads.len() >= MAX_HISTOGRAM2D_QUADS {
+                break;
+            }
+        }
+
+        self.cache_key = Some(cache_key);
+        self.cached_quads = quads.clone();
+        quads
+    }
+
+    fn hit_test(&mut self, model: &Self::Model, args: PlotHitTestArgs<'_>) -> Option<PlotHover> {
+        let PlotHitTestArgs {
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            local,
+            ..
+        } = args;
+
+        if plot_size.width.0 <= 0.0
+            || plot_size.height.0 <= 0.0
+            || model.cols == 0
+            || model.rows == 0
+        {
+            return None;
+        }
+
+        let transform = PlotTransform {
+            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), plot_size),
+            data: view_bounds,
+            x_scale,
+            y_scale,
+        };
+        let data = transform.px_to_data(local);
+        if !data.x.is_finite() || !data.y.is_finite() {
+            return None;
+        }
+
+        let dx = (model.data_bounds.x_max - model.data_bounds.x_min) / (model.cols as f64);
+        let dy = (model.data_bounds.y_max - model.data_bounds.y_min) / (model.rows as f64);
+        if !dx.is_finite() || !dy.is_finite() || dx <= 0.0 || dy <= 0.0 {
+            return None;
+        }
+
+        let col_f = (data.x - model.data_bounds.x_min) / dx;
+        let row_f = (data.y - model.data_bounds.y_min) / dy;
+        if !col_f.is_finite() || !row_f.is_finite() {
+            return None;
+        }
+
+        let col = col_f.floor() as isize;
+        let row = row_f.floor() as isize;
+        if col < 0 || row < 0 || col >= model.cols as isize || row >= model.rows as isize {
+            return None;
+        }
+        let (col, row) = (col as usize, row as usize);
+
+        let v = model.value_at(col, row)?;
+        if !v.is_finite() {
+            return None;
+        }
+
+        let cx = model.data_bounds.x_min + (col as f64 + 0.5) * dx;
+        let cy = model.data_bounds.y_min + (row as f64 + 0.5) * dy;
+        let plot_px = transform.data_to_px(DataPoint { x: cx, y: cy });
+
+        Some(PlotHover {
+            series_id: SeriesId::from_label("histogram2d"),
             index: row.saturating_mul(model.cols).saturating_add(col),
             data: DataPoint { x: cx, y: cy },
             plot_px,
