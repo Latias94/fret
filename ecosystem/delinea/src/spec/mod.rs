@@ -28,7 +28,7 @@ pub struct GridSpec {
     pub id: GridId,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum AxisKind {
     X,
@@ -43,7 +43,7 @@ pub struct AxisSpec {
     pub grid: GridId,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SeriesKind {
     Line,
@@ -58,6 +58,10 @@ pub struct SeriesSpec {
     pub id: SeriesId,
     pub kind: SeriesKind,
     pub dataset: DatasetId,
+    /// Column index for x values (temporary, P0).
+    pub x_col: usize,
+    /// Column index for y values (temporary, P0).
+    pub y_col: usize,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
 }

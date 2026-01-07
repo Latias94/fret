@@ -2,6 +2,8 @@ use fret_core::Rect;
 
 use crate::action::Action;
 use crate::data::DatasetStore;
+use crate::engine::lod::LodScratch;
+use crate::engine::stages::MarksStage;
 use crate::ids::{ChartId, Revision};
 use crate::link::{LinkConfig, LinkEvent};
 use crate::marks::MarkTree;
@@ -9,6 +11,9 @@ use crate::scheduler::{StepResult, WorkBudget};
 use crate::spec::ChartSpec;
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
+
+pub mod lod;
+pub mod stages;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -52,6 +57,8 @@ pub struct ChartEngine {
     state: ChartState,
     output: ChartOutput,
     stats: EngineStats,
+    marks_stage: MarksStage,
+    lod_scratch: LodScratch,
 }
 
 impl ChartEngine {
@@ -64,6 +71,8 @@ impl ChartEngine {
             state: ChartState::default(),
             output: ChartOutput::default(),
             stats: EngineStats::default(),
+            marks_stage: MarksStage::default(),
+            lod_scratch: LodScratch::default(),
         }
     }
 
@@ -123,23 +132,29 @@ impl ChartEngine {
 
         self.output.link_events.clear();
 
-        let mut unfinished = false;
-
-        if budget.take_marks(1) > 0 {
-            self.stats.stage_data_runs += 1;
-            self.stats.stage_layout_runs += 1;
-            self.stats.stage_visual_runs += 1;
-            self.stats.stage_marks_runs += 1;
-
+        self.marks_stage.sync_inputs(&self.spec, &self.datasets);
+        if self.marks_stage.is_dirty() {
             self.output.marks.clear();
-            self.stats.marks_emitted += 1;
-        } else {
-            unfinished = true;
+            self.marks_stage.reset();
         }
 
-        if budget.is_exhausted() && unfinished {
-            return Ok(StepResult { unfinished: true });
-        }
+        self.stats.stage_data_runs += 1;
+        self.stats.stage_layout_runs += 1;
+        self.stats.stage_visual_runs += 1;
+        self.stats.stage_marks_runs += 1;
+
+        let viewport = self.output.viewport.unwrap();
+        let done = self.marks_stage.step(
+            &self.spec,
+            &self.datasets,
+            viewport,
+            &mut budget,
+            &mut self.lod_scratch,
+            &mut self.output.marks,
+            &mut self.stats,
+        );
+
+        let unfinished = !done;
 
         self.output.revision.bump();
         Ok(StepResult { unfinished })

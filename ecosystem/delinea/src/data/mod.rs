@@ -23,6 +23,13 @@ impl Column {
             Self::String(v) => v.len(),
         }
     }
+
+    pub fn as_f64_slice(&self) -> Option<&[f64]> {
+        match self {
+            Self::F64(v) => Some(v),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -49,6 +56,13 @@ impl DataTable {
         }
         self.columns.push(column);
         self.revision.bump();
+    }
+
+    pub fn column_f64(&self, index: usize) -> Option<&[f64]> {
+        self.columns
+            .get(index)?
+            .as_f64_slice()
+            .map(|v| &v[..self.row_count])
     }
 }
 
