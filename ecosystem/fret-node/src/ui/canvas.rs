@@ -20,6 +20,7 @@ struct ViewSnapshot {
     pan: CanvasPoint,
     zoom: f32,
     selected_nodes: Vec<GraphNodeId>,
+    selected_edges: Vec<EdgeId>,
     draw_order: Vec<GraphNodeId>,
 }
 
@@ -104,6 +105,7 @@ impl NodeGraphCanvas {
             pan: self.cached_pan,
             zoom: self.cached_zoom,
             selected_nodes: Vec::new(),
+            selected_edges: Vec::new(),
             draw_order: Vec::new(),
         };
 
@@ -111,6 +113,7 @@ impl NodeGraphCanvas {
             snapshot.pan = s.pan;
             snapshot.zoom = s.zoom;
             snapshot.selected_nodes = s.selected_nodes.clone();
+            snapshot.selected_edges = s.selected_edges.clone();
             snapshot.draw_order = s.draw_order.clone();
         });
 
@@ -169,6 +172,25 @@ impl NodeGraphCanvas {
             }
         }
 
+        out
+    }
+
+    fn build_port_centers(
+        &self,
+        graph: &Graph,
+        snapshot: &ViewSnapshot,
+        zoom: f32,
+    ) -> HashMap<PortId, Point> {
+        let mut out: HashMap<PortId, Point> = HashMap::new();
+        let node_order = self.node_order(graph, snapshot);
+        for node in &node_order {
+            let (inputs, outputs) = self.node_ports(graph, *node);
+            for port in inputs.iter().chain(outputs.iter()) {
+                if let Some(center) = self.port_center(graph, *node, *port, zoom) {
+                    out.insert(*port, center);
+                }
+            }
+        }
         out
     }
 
@@ -252,6 +274,39 @@ impl NodeGraphCanvas {
             }
         }
         None
+    }
+
+    fn hit_edge(
+        &self,
+        graph: &Graph,
+        snapshot: &ViewSnapshot,
+        pos: Point,
+        zoom: f32,
+    ) -> Option<EdgeId> {
+        let hit_w = (self.style.wire_interaction_width / zoom).max(self.style.wire_width / zoom);
+        let threshold2 = hit_w * hit_w;
+
+        let port_centers = self.build_port_centers(graph, snapshot, zoom);
+
+        let mut best: Option<(EdgeId, f32)> = None;
+        for (&edge_id, edge) in &graph.edges {
+            let Some(from) = port_centers.get(&edge.from).copied() else {
+                continue;
+            };
+            let Some(to) = port_centers.get(&edge.to).copied() else {
+                continue;
+            };
+
+            let d2 = wire_distance2(pos, from, to, zoom);
+            if d2 <= threshold2 {
+                match best {
+                    Some((_id, best_d2)) if best_d2 <= d2 => {}
+                    _ => best = Some((edge_id, d2)),
+                }
+            }
+        }
+
+        best.map(|(id, _)| id)
     }
 
     fn yank_edge_from_port(
@@ -399,6 +454,47 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let zoom = snapshot.zoom;
 
         match event {
+            Event::KeyDown { key, .. } => {
+                if !matches!(
+                    key,
+                    fret_core::KeyCode::Delete | fret_core::KeyCode::Backspace
+                ) {
+                    return;
+                }
+
+                let selected_edges = snapshot.selected_edges.clone();
+                if selected_edges.is_empty() {
+                    return;
+                }
+
+                let remove_ops = {
+                    let this = &*self;
+                    this.graph
+                        .read_ref(cx.app, |graph| {
+                            let mut ops: Vec<GraphOp> = Vec::new();
+                            for id in &selected_edges {
+                                let Some(edge) = graph.edges.get(id) else {
+                                    continue;
+                                };
+                                ops.push(GraphOp::RemoveEdge {
+                                    id: *id,
+                                    edge: edge.clone(),
+                                });
+                            }
+                            ops
+                        })
+                        .ok()
+                        .unwrap_or_default()
+                };
+
+                self.apply_ops(cx.app, remove_ops);
+                self.update_view_state(cx.app, |s| {
+                    s.selected_edges.clear();
+                });
+                cx.stop_propagation();
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+            }
             Event::Pointer(fret_core::PointerEvent::Down {
                 position,
                 button,
@@ -423,6 +519,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 enum Hit {
                     Port(PortId),
                     Node(GraphNodeId, Rect),
+                    Edge(EdgeId),
                     Background,
                 }
 
@@ -435,6 +532,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             }
                             let order = this.node_order(graph, &snapshot);
                             let Some(node) = this.hit_node(graph, *position, &order, zoom) else {
+                                if let Some(edge) = this.hit_edge(graph, &snapshot, *position, zoom)
+                                {
+                                    return Hit::Edge(edge);
+                                }
                                 return Hit::Background;
                             };
                             let Some(rect) = this.node_rect(graph, node, zoom) else {
@@ -485,6 +586,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
+                            s.selected_edges.clear();
                             s.selected_nodes.push(node);
                             s.draw_order.retain(|id| *id != node);
                             s.draw_order.push(node);
@@ -493,9 +595,29 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
                     }
+                    Hit::Edge(edge) => {
+                        let multi = modifiers.ctrl || modifiers.meta;
+                        self.update_view_state(cx.app, |s| {
+                            s.selected_nodes.clear();
+                            if multi {
+                                if let Some(ix) = s.selected_edges.iter().position(|id| *id == edge)
+                                {
+                                    s.selected_edges.remove(ix);
+                                } else {
+                                    s.selected_edges.push(edge);
+                                }
+                            } else {
+                                s.selected_edges.clear();
+                                s.selected_edges.push(edge);
+                            }
+                        });
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                    }
                     Hit::Background => {
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
+                            s.selected_edges.clear();
                         });
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
@@ -753,7 +875,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         #[derive(Debug, Default)]
         struct RenderData {
-            edges: Vec<(Point, Point, Color)>,
+            edges: Vec<(EdgeId, Point, Point, Color, bool)>,
             nodes: Vec<(GraphNodeId, Rect, bool)>,
             pins: Vec<(Rect, Color)>,
             port_centers: HashMap<PortId, Point>,
@@ -761,6 +883,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
+            let selected_edges: HashSet<EdgeId> = snapshot.selected_edges.iter().copied().collect();
             let skip_edge = self
                 .interaction
                 .wire_drag
@@ -809,7 +932,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             continue;
                         };
                         let color = presenter.edge_color(graph, edge_id, &this.style);
-                        out.edges.push((from, to, color));
+                        out.edges.push((
+                            edge_id,
+                            from,
+                            to,
+                            color,
+                            selected_edges.contains(&edge_id),
+                        ));
                     }
 
                     out
@@ -817,15 +946,15 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 .unwrap_or_default()
         };
 
-        for (from, to, color) in render.edges {
-            if let Some(path) = Self::prepare_wire_path(
-                cx.services,
-                from,
-                to,
-                zoom,
-                cx.scale_factor,
-                self.style.wire_width,
-            ) {
+        for (_edge_id, from, to, color, selected) in render.edges {
+            let width = if selected {
+                self.style.wire_width * 1.6
+            } else {
+                self.style.wire_width
+            };
+            if let Some(path) =
+                Self::prepare_wire_path(cx.services, from, to, zoom, cx.scale_factor, width)
+            {
                 self.wire_paths.push(path);
                 cx.scene.push(SceneOp::Path {
                     order: DrawOrder(2),
@@ -894,4 +1023,66 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         cx.scene.push(SceneOp::PopClip);
     }
+}
+
+fn wire_distance2(p: Point, from: Point, to: Point, zoom: f32) -> f32 {
+    let (c1, c2) = wire_ctrl_points(from, to, zoom);
+
+    let steps: usize = 24;
+    let mut best = f32::INFINITY;
+
+    let mut prev = from;
+    for i in 1..=steps {
+        let t = i as f32 / steps as f32;
+        let cur = cubic_bezier(from, c1, c2, to, t);
+        best = best.min(dist2_point_to_segment(p, prev, cur));
+        prev = cur;
+    }
+
+    best
+}
+
+fn wire_ctrl_points(from: Point, to: Point, zoom: f32) -> (Point, Point) {
+    let dx = to.x.0 - from.x.0;
+    let ctrl = (dx.abs() * 0.5).clamp(40.0 / zoom, 160.0 / zoom);
+    let dir = if dx >= 0.0 { 1.0 } else { -1.0 };
+    let c1 = Point::new(Px(from.x.0 + dir * ctrl), from.y);
+    let c2 = Point::new(Px(to.x.0 - dir * ctrl), to.y);
+    (c1, c2)
+}
+
+fn cubic_bezier(p0: Point, p1: Point, p2: Point, p3: Point, t: f32) -> Point {
+    let t = t.clamp(0.0, 1.0);
+    let mt = 1.0 - t;
+    let mt2 = mt * mt;
+    let t2 = t * t;
+
+    let w0 = mt2 * mt;
+    let w1 = 3.0 * mt2 * t;
+    let w2 = 3.0 * mt * t2;
+    let w3 = t2 * t;
+
+    Point::new(
+        Px(w0 * p0.x.0 + w1 * p1.x.0 + w2 * p2.x.0 + w3 * p3.x.0),
+        Px(w0 * p0.y.0 + w1 * p1.y.0 + w2 * p2.y.0 + w3 * p3.y.0),
+    )
+}
+
+fn dist2_point_to_segment(p: Point, a: Point, b: Point) -> f32 {
+    let apx = p.x.0 - a.x.0;
+    let apy = p.y.0 - a.y.0;
+    let abx = b.x.0 - a.x.0;
+    let aby = b.y.0 - a.y.0;
+
+    let ab2 = abx * abx + aby * aby;
+    if ab2 <= 1.0e-9 {
+        return apx * apx + apy * apy;
+    }
+
+    let t = ((apx * abx + apy * aby) / ab2).clamp(0.0, 1.0);
+    let cx = a.x.0 + t * abx;
+    let cy = a.y.0 + t * aby;
+    let dx = p.x.0 - cx;
+    let dy = p.y.0 - cy;
+    dx * dx + dy * dy
 }
