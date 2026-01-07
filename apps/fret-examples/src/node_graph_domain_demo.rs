@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use fret_app::App;
+use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
-    run_app,
+    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    WinitWindowContext, run_app,
 };
 use fret_node::Graph;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
@@ -393,6 +393,69 @@ impl NodeGraphPresenter for DemoTypedPresenter {
         };
         vec![convert_template(&kind, from_ty, to_ty)]
     }
+
+    fn conversion_label(
+        &mut self,
+        graph: &Graph,
+        from: PortId,
+        to: PortId,
+        template: &InsertNodeTemplate,
+    ) -> Arc<str> {
+        let from_ty = graph.ports.get(&from).and_then(|p| p.ty.as_ref());
+        let to_ty = graph.ports.get(&to).and_then(|p| p.ty.as_ref());
+        if let (Some(from_ty), Some(to_ty)) = (from_ty, to_ty) {
+            return Arc::<str>::from(format!("{} → {}", type_name(from_ty), type_name(to_ty)));
+        }
+
+        if let Some((_from_ty, _to_ty, label)) = convert_spec(&template.kind) {
+            return label;
+        }
+
+        Arc::<str>::from(format!("Convert: {}", template.kind.0))
+    }
+
+    fn conversion_insert_position(
+        &mut self,
+        graph: &Graph,
+        from: PortId,
+        to: PortId,
+        default_at: CanvasPoint,
+        _template: &InsertNodeTemplate,
+    ) -> CanvasPoint {
+        let Some(from_node) = graph.ports.get(&from).map(|p| p.node) else {
+            return default_at;
+        };
+        let Some(to_node) = graph.ports.get(&to).map(|p| p.node) else {
+            return default_at;
+        };
+        let Some(from_pos) = graph.nodes.get(&from_node).map(|n| n.pos) else {
+            return default_at;
+        };
+        let Some(to_pos) = graph.nodes.get(&to_node).map(|n| n.pos) else {
+            return default_at;
+        };
+
+        let mid = CanvasPoint {
+            x: (from_pos.x + to_pos.x) * 0.5,
+            y: (from_pos.y + to_pos.y) * 0.5,
+        };
+
+        let dx = to_pos.x - from_pos.x;
+        let dy = to_pos.y - from_pos.y;
+        let len = (dx * dx + dy * dy).sqrt();
+
+        let (nx, ny) = if len > 0.0001 {
+            (-dy / len, dx / len)
+        } else {
+            (0.0, 1.0)
+        };
+
+        let offset = 32.0;
+        CanvasPoint {
+            x: mid.x + nx * offset,
+            y: mid.y + ny * offset,
+        }
+    }
 }
 
 struct NodeGraphDomainDemoWindowState {
@@ -414,7 +477,9 @@ impl NodeGraphDomainDemoDriver {
         ui.set_window(window);
 
         let presenter = DemoTypedPresenter::default();
-        let canvas = NodeGraphCanvas::new(models.graph, models.view).with_presenter(presenter);
+        let canvas = NodeGraphCanvas::new(models.graph, models.view)
+            .with_presenter(presenter)
+            .with_close_command(CommandId::new("node_graph_domain_demo.close"));
         let root = ui.create_node_retained(canvas);
         ui.set_root(root);
 
@@ -452,10 +517,47 @@ impl WinitAppDriver for NodeGraphDomainDemoDriver {
     }
 
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        context
-            .state
-            .ui
-            .dispatch_event(context.app, context.services, event);
+        let WinitEventContext {
+            app,
+            services,
+            window,
+            state,
+        } = context;
+
+        if matches!(event, Event::WindowCloseRequested) {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+
+        if let Event::KeyDown { key, .. } = event {
+            if *key == fret_core::KeyCode::Escape {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                return;
+            }
+        }
+
+        state.ui.dispatch_event(app, services, event);
+    }
+
+    fn handle_command(
+        &mut self,
+        context: WinitCommandContext<'_, Self::WindowState>,
+        command: CommandId,
+    ) {
+        let WinitCommandContext {
+            app,
+            services,
+            window,
+            state,
+        } = context;
+
+        if state.ui.dispatch_command(app, services, &command) {
+            return;
+        }
+
+        if command.as_str() == "node_graph_domain_demo.close" {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {

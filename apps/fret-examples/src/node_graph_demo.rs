@@ -1,8 +1,9 @@
 use fret_app::App;
+use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
-    run_app,
+    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    WinitWindowContext, run_app,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
@@ -166,7 +167,8 @@ impl NodeGraphDemoDriver {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        let canvas = NodeGraphCanvas::new(models.graph, models.view);
+        let canvas = NodeGraphCanvas::new(models.graph, models.view)
+            .with_close_command(CommandId::new("node_graph_demo.close"));
         let root = ui.create_node_retained(canvas);
         ui.set_root(root);
 
@@ -204,10 +206,47 @@ impl WinitAppDriver for NodeGraphDemoDriver {
     }
 
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        context
-            .state
-            .ui
-            .dispatch_event(context.app, context.services, event);
+        let WinitEventContext {
+            app,
+            services,
+            window,
+            state,
+        } = context;
+
+        if matches!(event, Event::WindowCloseRequested) {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+
+        if let Event::KeyDown { key, .. } = event {
+            if *key == fret_core::KeyCode::Escape {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                return;
+            }
+        }
+
+        state.ui.dispatch_event(app, services, event);
+    }
+
+    fn handle_command(
+        &mut self,
+        context: WinitCommandContext<'_, Self::WindowState>,
+        command: fret_app::CommandId,
+    ) {
+        let WinitCommandContext {
+            app,
+            services,
+            window,
+            state,
+        } = context;
+
+        if state.ui.dispatch_command(app, services, &command) {
+            return;
+        }
+
+        if command.as_str() == "node_graph_demo.close" {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
