@@ -60,7 +60,7 @@ impl ChartDemoDriver {
             ],
             series: vec![SeriesSpec {
                 id: series_id,
-                kind: SeriesKind::Line,
+                kind: SeriesKind::Area,
                 dataset: dataset_id,
                 x_col: 0,
                 y_col: 1,
