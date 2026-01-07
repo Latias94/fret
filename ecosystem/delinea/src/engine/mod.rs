@@ -53,6 +53,8 @@ pub struct HoverHit {
     pub data_index: u32,
     pub point_px: Point,
     pub dist2_px: f32,
+    pub x_value: f64,
+    pub y_value: f64,
 }
 
 #[derive(Debug)]
