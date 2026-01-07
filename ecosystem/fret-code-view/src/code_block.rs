@@ -4,9 +4,11 @@ use fret_core::{
     Edges, FontId, FontWeight, Px, RichText, TextOverflow, TextRun, TextStyle, TextWrap,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, Overflow, PositionStyle,
-    ScrollAxis, ScrollProps, SelectableTextProps, TextProps,
+    AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
+    PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps, ScrollbarStyle,
+    SelectableTextProps, SizeStyle, StackProps, TextProps,
 };
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -103,6 +105,9 @@ pub struct CodeBlock {
     copy_button_placement: CodeBlockCopyButtonPlacement,
     border: bool,
     wrap: CodeBlockWrap,
+    max_height: Option<Px>,
+    show_scrollbar_x: bool,
+    scrollbar_x_on_hover: bool,
 }
 
 impl CodeBlock {
@@ -119,6 +124,9 @@ impl CodeBlock {
             copy_button_placement: CodeBlockCopyButtonPlacement::Overlay,
             border: true,
             wrap: CodeBlockWrap::ScrollX,
+            max_height: None,
+            show_scrollbar_x: false,
+            scrollbar_x_on_hover: true,
         }
     }
 
@@ -172,6 +180,21 @@ impl CodeBlock {
         self
     }
 
+    pub fn max_height(mut self, max_height: Px) -> Self {
+        self.max_height = Some(max_height);
+        self
+    }
+
+    pub fn show_scrollbar_x(mut self, show: bool) -> Self {
+        self.show_scrollbar_x = show;
+        self
+    }
+
+    pub fn scrollbar_x_on_hover(mut self, on_hover: bool) -> Self {
+        self.scrollbar_x_on_hover = on_hover;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         code_block_with(
             cx,
@@ -187,6 +210,9 @@ impl CodeBlock {
                 copy_button_placement: self.copy_button_placement,
                 border: self.border,
                 wrap: self.wrap,
+                max_height: self.max_height,
+                show_scrollbar_x: self.show_scrollbar_x,
+                scrollbar_x_on_hover: self.scrollbar_x_on_hover,
             },
         )
     }
@@ -217,6 +243,9 @@ pub struct CodeBlockUiOptions {
     pub copy_button_placement: CodeBlockCopyButtonPlacement,
     pub border: bool,
     pub wrap: CodeBlockWrap,
+    pub max_height: Option<Px>,
+    pub show_scrollbar_x: bool,
+    pub scrollbar_x_on_hover: bool,
 }
 
 impl Default for CodeBlockUiOptions {
@@ -230,6 +259,9 @@ impl Default for CodeBlockUiOptions {
             copy_button_placement: CodeBlockCopyButtonPlacement::Overlay,
             border: true,
             wrap: CodeBlockWrap::ScrollX,
+            max_height: None,
+            show_scrollbar_x: false,
+            scrollbar_x_on_hover: true,
         }
     }
 }
@@ -292,7 +324,8 @@ pub fn code_block_with_header_slots<H: UiHost>(
         vec![cx.hover_region(HoverRegionProps::default(), |cx, hovered| {
             let copied = feedback.is_copied();
             let copy_visible = !options.copy_button_on_hover || hovered || copied;
-            let show_copy = options.show_copy_button && copy_visible;
+            let scrollbar_x_visible =
+                options.show_scrollbar_x && (!options.scrollbar_x_on_hover || hovered);
 
             let header_visible = options.show_header
                 || language.is_some()
@@ -332,19 +365,26 @@ pub fn code_block_with_header_slots<H: UiHost>(
                             },
                         ));
                     }
-                    out.push(render_code_block_body(cx, &theme, &prepared, options.wrap));
+                    out.push(render_code_block_body(
+                        cx,
+                        &theme,
+                        &prepared,
+                        options.wrap,
+                        scrollbar_x_visible,
+                        options.max_height,
+                    ));
                     out
                 },
             );
 
             let mut out = vec![content];
-            if show_copy && options.copy_button_placement == CodeBlockCopyButtonPlacement::Overlay {
-                out.push(render_copy_button_overlay(
-                    cx,
-                    &theme,
-                    feedback.clone(),
-                    code.clone(),
-                ));
+            if options.show_copy_button
+                && options.copy_button_placement == CodeBlockCopyButtonPlacement::Overlay
+            {
+                let el = render_copy_button_overlay(cx, &theme, feedback.clone(), code.clone());
+                out.push(cx.opacity(if copy_visible { 1.0 } else { 0.0 }, |cx| {
+                    vec![cx.interactivity_gate(true, copy_visible, |_cx| vec![el])]
+                }));
             }
             out
         })]
@@ -449,6 +489,8 @@ fn render_code_block_body<H: UiHost>(
     theme: &Theme,
     prepared: &crate::prepare::PreparedCodeBlock,
     wrap: CodeBlockWrap,
+    scrollbar_x_visible: bool,
+    max_height: Option<Px>,
 ) -> AnyElement {
     let pad = MetricRef::space(Space::N2).resolve(theme);
 
@@ -458,13 +500,30 @@ fn render_code_block_body<H: UiHost>(
     props.padding = Edges::all(pad);
 
     cx.container(props, |cx| {
-        if !prepared.show_line_numbers {
-            return vec![render_code_block_text(cx, theme, prepared, wrap)];
-        }
+        let content = if !prepared.show_line_numbers {
+            render_code_block_text(cx, theme, prepared, wrap, scrollbar_x_visible)
+        } else {
+            render_code_block_with_line_numbers(cx, theme, prepared, wrap, scrollbar_x_visible)
+        };
 
-        vec![render_code_block_with_line_numbers(
-            cx, theme, prepared, wrap,
-        )]
+        if let Some(max_height) = max_height {
+            let mut scroll_layout = LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Auto;
+            scroll_layout.size.max_height = Some(max_height);
+            scroll_layout.overflow = Overflow::Clip;
+
+            vec![cx.scroll(
+                ScrollProps {
+                    layout: scroll_layout,
+                    axis: ScrollAxis::Y,
+                    ..Default::default()
+                },
+                |_cx| vec![content],
+            )]
+        } else {
+            vec![content]
+        }
     })
 }
 
@@ -473,6 +532,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
     theme: &Theme,
     prepared: &crate::prepare::PreparedCodeBlock,
     wrap: CodeBlockWrap,
+    scrollbar_x_visible: bool,
 ) -> AnyElement {
     let number_style = TextStyle {
         font: FontId::monospace(),
@@ -535,7 +595,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         |_cx| vec![line_numbers_text],
     );
 
-    let code = render_code_block_text(cx, theme, prepared, wrap);
+    let code = render_code_block_text(cx, theme, prepared, wrap, scrollbar_x_visible);
 
     stack::hstack(
         cx,
@@ -552,6 +612,7 @@ fn render_code_block_text<H: UiHost>(
     theme: &Theme,
     prepared: &crate::prepare::PreparedCodeBlock,
     wrap: CodeBlockWrap,
+    scrollbar_x_visible: bool,
 ) -> AnyElement {
     let mut text = String::new();
     let mut runs: Vec<TextRun> = Vec::new();
@@ -611,10 +672,12 @@ fn render_code_block_text<H: UiHost>(
         layout
     };
 
-    cx.scroll(
+    let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+    let scroll = cx.scroll(
         ScrollProps {
             layout: scroll_layout,
             axis: ScrollAxis::X,
+            scroll_handle: Some(handle.clone()),
             probe_unbounded: matches!(wrap, TextWrap::None),
             ..Default::default()
         },
@@ -627,6 +690,58 @@ fn render_code_block_text<H: UiHost>(
                 wrap,
                 overflow,
             })]
+        },
+    );
+
+    if !scrollbar_x_visible {
+        return scroll;
+    }
+
+    let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+    let thumb = theme.color_required("scrollbar.thumb.background");
+    let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+
+    let scroll_id = scroll.id;
+    cx.stack_props(
+        StackProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.height = Length::Auto;
+                layout.overflow = Overflow::Clip;
+                layout
+            },
+        },
+        move |cx| {
+            let scrollbar_layout = LayoutStyle {
+                position: PositionStyle::Absolute,
+                inset: InsetStyle {
+                    top: None,
+                    right: Some(Px(0.0)),
+                    bottom: Some(Px(0.0)),
+                    left: Some(Px(0.0)),
+                },
+                size: SizeStyle {
+                    height: Length::Px(scrollbar_w),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+
+            vec![
+                scroll,
+                cx.scrollbar(ScrollbarProps {
+                    layout: scrollbar_layout,
+                    axis: ScrollbarAxis::Horizontal,
+                    scroll_target: Some(scroll_id),
+                    scroll_handle: handle,
+                    style: ScrollbarStyle {
+                        thumb,
+                        thumb_hover,
+                        ..Default::default()
+                    },
+                }),
+            ]
         },
     )
 }

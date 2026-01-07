@@ -55,10 +55,10 @@ pub(crate) fn render_copy_button<H: UiHost>(
     feedback: CopyFeedbackRef,
     code: Arc<str>,
 ) -> AnyElement {
-    let copied = feedback.lock().copied;
-    let label = if copied { "Copied" } else { "Copy" };
-
     cx.pressable_with_id_props(move |cx, st, id| {
+        let copied = feedback.lock().copied;
+        let label = if copied { "Copied" } else { "Copy" };
+
         let mut props = PressableProps::default();
         props.a11y.role = Some(SemanticsRole::Button);
         props.a11y.label = Some(Arc::<str>::from(label));
