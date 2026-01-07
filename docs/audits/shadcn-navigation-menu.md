@@ -57,6 +57,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Hover opens with delayed open semantics (Radix `delayDuration`).
 - Pass: Close uses a delayed close timer (Radix `startCloseTimer`).
 - Pass: Pointer-move gating after Escape close prevents immediate reopen (Radix behavior).
+- Partial: Link select semantics (modified clicks should not dismiss) are available in
+  `fret-ui-kit::primitives::navigation_menu::NavigationMenuLink`, but the shadcn wrapper does not
+  currently expose `NavigationMenuLink`.
 
 ### Motion parity (new-york)
 

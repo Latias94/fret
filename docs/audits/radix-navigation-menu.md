@@ -22,6 +22,7 @@ Key upstream concepts:
   - Content can animate between values via `data-motion` (`from-start`/`from-end`/`to-start`/`to-end`).
   - Viewport size is exposed via CSS vars `--radix-navigation-menu-viewport-{width,height}`.
   - Indicator is a separate element that tracks the trigger row.
+  - Link selection dismisses content unless the click is modified (e.g. `metaKey`).
 
 ## Fret mapping
 

@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use fret_core::{Point, PointerType, Px, Rect, Size};
+use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::elements::ContinuousFrames;
@@ -708,17 +708,28 @@ impl NavigationMenuContent {
 #[derive(Debug, Clone)]
 pub struct NavigationMenuLink {
     dismiss_on_select: bool,
+    dismiss_on_ctrl_or_meta: bool,
 }
 
 impl NavigationMenuLink {
     pub fn new() -> Self {
         Self {
             dismiss_on_select: true,
+            dismiss_on_ctrl_or_meta: false,
         }
     }
 
     pub fn dismiss_on_select(mut self, dismiss_on_select: bool) -> Self {
         self.dismiss_on_select = dismiss_on_select;
+        self
+    }
+
+    /// When `false` (default), link activation with Ctrl/Meta pressed does not dismiss the root.
+    ///
+    /// This matches Radix's `NavigationMenuLink`: modified clicks are treated like "open in new tab"
+    /// and should not close the menu.
+    pub fn dismiss_on_ctrl_or_meta(mut self, dismiss_on_ctrl_or_meta: bool) -> Self {
+        self.dismiss_on_ctrl_or_meta = dismiss_on_ctrl_or_meta;
         self
     }
 
@@ -733,6 +744,11 @@ impl NavigationMenuLink {
             fret_ui::element::PressableState,
         ) -> Vec<fret_ui::element::AnyElement>,
     ) -> fret_ui::element::AnyElement {
+        #[derive(Default)]
+        struct LinkModifierState {
+            suppress_dismiss_for_next_activate: bool,
+        }
+
         let disabled = ctx.disabled;
         pressable.enabled = pressable.enabled && !disabled;
         pressable.focusable = pressable.focusable && !disabled;
@@ -741,11 +757,39 @@ impl NavigationMenuLink {
         let value_model = ctx.model.clone();
         let cfg = ctx.config;
         let dismiss = self.dismiss_on_select;
+        let dismiss_on_ctrl_or_meta = self.dismiss_on_ctrl_or_meta;
         cx.pressable(pressable, move |cx, st| {
             if dismiss && !disabled {
+                let modifier_state: Arc<Mutex<LinkModifierState>> = cx.with_state_for(
+                    cx.root_id(),
+                    || Arc::new(Mutex::new(LinkModifierState::default())),
+                    |s| s.clone(),
+                );
+                let modifier_state_for_pointer = modifier_state.clone();
+                cx.pressable_add_on_pointer_down(Arc::new(move |_host, _cx, down| {
+                    use fret_ui::action::PressablePointerDownResult as R;
+
+                    let suppress = navigation_menu_link_suppresses_dismiss(
+                        down.modifiers,
+                        dismiss_on_ctrl_or_meta,
+                    );
+                    let mut st = modifier_state_for_pointer
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
+                    st.suppress_dismiss_for_next_activate = suppress;
+                    R::Continue
+                }));
+
                 let root_state_for_dismiss = root_state.clone();
                 let value_for_dismiss = value_model.clone();
                 cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                    let mut st = modifier_state.lock().unwrap_or_else(|e| e.into_inner());
+                    let suppress = st.suppress_dismiss_for_next_activate;
+                    st.suppress_dismiss_for_next_activate = false;
+                    if suppress {
+                        return;
+                    }
+
                     let mut root = root_state_for_dismiss
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
@@ -755,6 +799,13 @@ impl NavigationMenuLink {
             f(cx, st)
         })
     }
+}
+
+fn navigation_menu_link_suppresses_dismiss(
+    modifiers: Modifiers,
+    dismiss_on_ctrl_or_meta: bool,
+) -> bool {
+    (modifiers.ctrl || modifiers.meta) && !dismiss_on_ctrl_or_meta
 }
 
 fn cancel_timer(host: &mut dyn UiActionHost, token: &mut Option<TimerToken>) {
@@ -1634,5 +1685,43 @@ mod tests {
         assert_eq!(out.origin.x, Px(60.0 - 7.0));
         assert_eq!(out.origin.y, Px(100.0 - 7.0));
         assert_eq!(out.size, Size::new(Px(14.0), Px(14.0)));
+    }
+
+    #[test]
+    fn navigation_menu_link_suppresses_dismiss_on_ctrl_or_meta_by_default() {
+        assert!(
+            navigation_menu_link_suppresses_dismiss(
+                Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                false
+            ),
+            "expected ctrl to suppress dismiss"
+        );
+        assert!(
+            navigation_menu_link_suppresses_dismiss(
+                Modifiers {
+                    meta: true,
+                    ..Default::default()
+                },
+                false
+            ),
+            "expected meta to suppress dismiss"
+        );
+        assert!(
+            !navigation_menu_link_suppresses_dismiss(Modifiers::default(), false),
+            "expected unmodified to not suppress dismiss"
+        );
+        assert!(
+            !navigation_menu_link_suppresses_dismiss(
+                Modifiers {
+                    meta: true,
+                    ..Default::default()
+                },
+                true
+            ),
+            "expected opt-in to allow dismiss on modified select"
+        );
     }
 }
