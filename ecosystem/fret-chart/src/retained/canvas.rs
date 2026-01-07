@@ -65,6 +65,11 @@ impl ChartCanvas {
         self.style = style;
     }
 
+    pub fn create_node<H: UiHost>(ui: &mut fret_ui::UiTree<H>, canvas: Self) -> fret_core::NodeId {
+        use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+        ui.create_node_retained(canvas)
+    }
+
     fn sync_viewport(&mut self, bounds: Rect) {
         if self.engine.model().viewport == Some(bounds) {
             return;

@@ -1209,9 +1209,11 @@ name = "fret-examples"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "delinea",
  "fret-app",
  "fret-app-kit",
  "fret-bootstrap",
+ "fret-chart",
  "fret-core",
  "fret-icons",
  "fret-icons-lucide",

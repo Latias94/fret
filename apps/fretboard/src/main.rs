@@ -283,6 +283,7 @@ fn hotpatch_poke() -> Result<(), String> {
 fn web_demos() -> &'static [&'static str] {
     &[
         "components_gallery",
+        "chart_demo",
         "plot_demo",
         "bars_demo",
         "grouped_bars_demo",
