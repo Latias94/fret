@@ -134,6 +134,7 @@ pub struct NodeGraphCanvas {
 impl NodeGraphCanvas {
     const REROUTE_INPUTS: usize = 1;
     const REROUTE_OUTPUTS: usize = 1;
+    const AUTO_PAN_TICK_HZ: f32 = 60.0;
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -265,6 +266,73 @@ impl NodeGraphCanvas {
         CanvasPoint {
             x: snap_axis(pos.x, grid.width),
             y: snap_axis(pos.y, grid.height),
+        }
+    }
+
+    fn auto_pan_delta(snapshot: &ViewSnapshot, pos: Point, bounds: Rect) -> CanvasPoint {
+        let zoom = snapshot.zoom;
+        if !zoom.is_finite() || zoom <= 0.0 {
+            return CanvasPoint::default();
+        }
+
+        let margin_screen = snapshot.interaction.auto_pan.margin;
+        let speed_screen_per_s = snapshot.interaction.auto_pan.speed;
+        if !margin_screen.is_finite() || margin_screen <= 0.0 {
+            return CanvasPoint::default();
+        }
+        if !speed_screen_per_s.is_finite() || speed_screen_per_s <= 0.0 {
+            return CanvasPoint::default();
+        }
+
+        let viewport_w = bounds.size.width.0;
+        let viewport_h = bounds.size.height.0;
+        if !viewport_w.is_finite()
+            || viewport_w <= 0.0
+            || !viewport_h.is_finite()
+            || viewport_h <= 0.0
+        {
+            return CanvasPoint::default();
+        }
+
+        let pan = snapshot.pan;
+        let pos_screen_x = (pos.x.0 + pan.x) * zoom;
+        let pos_screen_y = (pos.y.0 + pan.y) * zoom;
+
+        let dist_left = pos_screen_x;
+        let dist_right = viewport_w - pos_screen_x;
+        let dist_top = pos_screen_y;
+        let dist_bottom = viewport_h - pos_screen_y;
+
+        let step_screen = speed_screen_per_s / Self::AUTO_PAN_TICK_HZ;
+        let step_graph = step_screen / zoom;
+
+        let mut delta_x = 0.0;
+        let mut delta_y = 0.0;
+
+        if dist_left.is_finite() && dist_left < margin_screen {
+            let factor = ((margin_screen - dist_left) / margin_screen).clamp(0.0, 1.0);
+            delta_x += step_graph * factor;
+        }
+        if dist_right.is_finite() && dist_right < margin_screen {
+            let factor = ((margin_screen - dist_right) / margin_screen).clamp(0.0, 1.0);
+            delta_x -= step_graph * factor;
+        }
+        if dist_top.is_finite() && dist_top < margin_screen {
+            let factor = ((margin_screen - dist_top) / margin_screen).clamp(0.0, 1.0);
+            delta_y += step_graph * factor;
+        }
+        if dist_bottom.is_finite() && dist_bottom < margin_screen {
+            let factor = ((margin_screen - dist_bottom) / margin_screen).clamp(0.0, 1.0);
+            delta_y -= step_graph * factor;
+        }
+
+        if !delta_x.is_finite() || !delta_y.is_finite() {
+            return CanvasPoint::default();
+        }
+
+        CanvasPoint {
+            x: delta_x,
+            y: delta_y,
         }
     }
 
@@ -1584,9 +1652,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 if let Some(drag) = &self.interaction.node_drag {
+                    let auto_pan_delta = (snapshot.interaction.auto_pan.on_node_drag)
+                        .then(|| Self::auto_pan_delta(&snapshot, *position, cx.bounds))
+                        .unwrap_or_default();
                     let new_pos = Point::new(
-                        Px(position.x.0 - drag.grab_offset.x.0),
-                        Px(position.y.0 - drag.grab_offset.y.0),
+                        Px(position.x.0 - drag.grab_offset.x.0 - auto_pan_delta.x),
+                        Px(position.y.0 - drag.grab_offset.y.0 - auto_pan_delta.y),
                     );
                     let id = drag.node;
                     let snap_to_grid = snapshot.interaction.snap_to_grid;
@@ -1609,13 +1680,31 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         };
                         let _ = apply_transaction(g, &tx);
                     });
+                    if auto_pan_delta.x != 0.0 || auto_pan_delta.y != 0.0 {
+                        self.update_view_state(cx.app, |s| {
+                            s.pan.x += auto_pan_delta.x;
+                            s.pan.y += auto_pan_delta.y;
+                        });
+                    }
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
                     return;
                 }
 
                 if let Some(w) = &mut self.interaction.wire_drag {
-                    w.pos = *position;
+                    let auto_pan_delta = (snapshot.interaction.auto_pan.on_connect)
+                        .then(|| Self::auto_pan_delta(&snapshot, *position, cx.bounds))
+                        .unwrap_or_default();
+                    w.pos = Point::new(
+                        Px(position.x.0 - auto_pan_delta.x),
+                        Px(position.y.0 - auto_pan_delta.y),
+                    );
+                    if auto_pan_delta.x != 0.0 || auto_pan_delta.y != 0.0 {
+                        self.update_view_state(cx.app, |s| {
+                            s.pan.x += auto_pan_delta.x;
+                            s.pan.y += auto_pan_delta.y;
+                        });
+                    }
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
                     return;
