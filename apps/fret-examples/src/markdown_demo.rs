@@ -204,6 +204,7 @@ This is a focused demo for `fret-markdown` + `fret-code-view`.
 ## Text
 
 Paragraphs should wrap and respect the viewport width. Inline code looks like `let x = 1;`.
+Emphasis looks like *italic* and **bold**, and both ***together***.
 Strikethrough looks like ~~deleted~~.
 
 - Unordered list item A

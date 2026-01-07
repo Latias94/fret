@@ -3,14 +3,14 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextSlant, TextStyle,
-    TextWrap,
+    Axis, Edges, FontId, FontWeight, Px, RichText, SemanticsRole, TextOverflow, TextRun, TextSlant,
+    TextStyle, TextWrap,
 };
 use fret_runtime::Effect;
 use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PositionStyle, PressableProps, ScrollAxis, ScrollProps, TextProps,
+    PositionStyle, PressableProps, ScrollAxis, ScrollProps, StyledTextProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
@@ -1333,7 +1333,7 @@ fn render_heading_inline<H: UiHost>(
     };
 
     let pieces = inline_pieces_maybe_unwrapped(events);
-    render_inline_flow(cx, theme, markdown_theme, components, base, &pieces)
+    render_inline_flow_or_rich(cx, theme, markdown_theme, components, base, &pieces)
 }
 
 fn render_paragraph_inline<H: UiHost>(
@@ -1355,7 +1355,99 @@ fn render_paragraph_inline<H: UiHost>(
     };
 
     let pieces = inline_pieces_maybe_unwrapped(events);
-    render_inline_flow(cx, theme, markdown_theme, components, base, &pieces)
+    render_inline_flow_or_rich(cx, theme, markdown_theme, components, base, &pieces)
+}
+
+fn render_inline_flow_or_rich<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
+    base: InlineBaseStyle,
+    pieces: &[InlinePiece],
+) -> AnyElement {
+    if let Some(el) = render_rich_text_inline(cx, markdown_theme, components, &base, pieces) {
+        return el;
+    }
+    render_inline_flow(cx, theme, markdown_theme, components, base, pieces)
+}
+
+fn render_rich_text_inline<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    markdown_theme: MarkdownTheme,
+    components: &MarkdownComponents<H>,
+    base: &InlineBaseStyle,
+    pieces: &[InlinePiece],
+) -> Option<AnyElement> {
+    let allow_link_color_only = components.link.is_none() && components.on_link_activate.is_none();
+
+    if pieces.iter().any(|p| match &p.kind {
+        InlinePieceKind::Text(_) => p.style.code || p.style.strikethrough,
+        InlinePieceKind::Image(_) | InlinePieceKind::InlineMath(_) => true,
+    }) {
+        return None;
+    }
+
+    if !allow_link_color_only && pieces.iter().any(|p| p.style.link.is_some()) {
+        return None;
+    }
+
+    let mut text = String::new();
+    let mut runs: Vec<TextRun> = Vec::new();
+    for p in pieces {
+        let InlinePieceKind::Text(t) = &p.kind else {
+            continue;
+        };
+        if t.is_empty() {
+            continue;
+        }
+        text.push_str(t);
+
+        let run_weight = if p.style.strong {
+            Some(FontWeight::SEMIBOLD)
+        } else {
+            None
+        };
+        let run_slant = if p.style.emphasis {
+            Some(TextSlant::Italic)
+        } else {
+            None
+        };
+        let run_color = if p.style.link.is_some() {
+            Some(markdown_theme.link)
+        } else {
+            None
+        };
+
+        runs.push(TextRun {
+            len: t.len(),
+            color: run_color,
+            weight: run_weight,
+            slant: run_slant,
+        });
+    }
+
+    if text.is_empty() {
+        return None;
+    }
+
+    let rich = RichText::new(Arc::<str>::from(text), runs);
+
+    let mut props = StyledTextProps::new(rich);
+    props.layout.size.width = Length::Fill;
+    props.style = Some(TextStyle {
+        font: base.font.clone(),
+        size: base.size,
+        weight: base.weight,
+        slant: TextSlant::Normal,
+        line_height: base.line_height,
+        letter_spacing_em: None,
+    });
+    props.color = Some(base.color);
+    props.wrap = TextWrap::Word;
+    props.overflow = TextOverflow::Clip;
+
+    Some(cx.styled_text_props(props))
 }
 
 fn inline_pieces_maybe_unwrapped(events: &[pulldown_cmark::Event<'static>]) -> Vec<InlinePiece> {
@@ -2671,10 +2763,14 @@ fn render_inline_token<H: UiHost>(
 
     let weight = if style.strong {
         FontWeight::SEMIBOLD
-    } else if style.emphasis {
-        FontWeight::MEDIUM
     } else {
         base.weight
+    };
+
+    let slant = if style.emphasis {
+        TextSlant::Italic
+    } else {
+        TextSlant::Normal
     };
 
     let color = if style.link.is_some() {
@@ -2755,6 +2851,7 @@ fn render_inline_token<H: UiHost>(
                     font,
                     size,
                     weight,
+                    slant,
                     line_height,
                     color,
                     style.strikethrough,
@@ -2769,6 +2866,7 @@ fn render_inline_token<H: UiHost>(
         font,
         size,
         weight,
+        slant,
         line_height,
         color,
         style.strikethrough,
@@ -2781,6 +2879,7 @@ fn render_inline_text_token<H: UiHost>(
     font: FontId,
     size: Px,
     weight: FontWeight,
+    slant: TextSlant,
     line_height: Option<Px>,
     color: fret_core::Color,
     strikethrough: bool,
@@ -2794,7 +2893,7 @@ fn render_inline_text_token<H: UiHost>(
                 font,
                 size,
                 weight,
-                slant: TextSlant::Normal,
+                slant,
                 line_height,
                 letter_spacing_em: None,
             }),
@@ -2820,7 +2919,7 @@ fn render_inline_text_token<H: UiHost>(
                 font,
                 size,
                 weight,
-                slant: TextSlant::Normal,
+                slant,
                 line_height,
                 letter_spacing_em: None,
             }),
