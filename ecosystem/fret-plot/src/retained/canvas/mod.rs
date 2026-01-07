@@ -6244,9 +6244,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 if let Some(tt) = self.mouse_readout_text {
+                    let pad = Px(6.0);
                     let margin = Px(6.0);
-                    let w = Px(tt.metrics.size.width.0);
-                    let h = Px(tt.metrics.size.height.0);
+                    let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
+                    let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
                     let Some(rect) = overlay_rect_in_plot(
                         layout.plot,
                         Size::new(w, h),
@@ -6255,10 +6256,21 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     ) else {
                         return;
                     };
-                    let origin =
-                        Point::new(rect.origin.x, Px(rect.origin.y.0 + tt.metrics.baseline.0));
-                    cx.scene.push(SceneOp::Text {
+                    cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(12),
+                        rect,
+                        background: tooltip_background,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: tooltip_border,
+                        corner_radii: fret_core::Corners::all(Px(6.0)),
+                    });
+
+                    let origin = Point::new(
+                        Px(rect.origin.x.0 + pad.0),
+                        Px(rect.origin.y.0 + pad.0 + tt.metrics.baseline.0),
+                    );
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(13),
                         origin,
                         text: tt.blob,
                         color: label_color,

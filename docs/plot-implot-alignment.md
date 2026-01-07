@@ -32,7 +32,7 @@ This contract is documented in ADR 0099.
 - [x] Query selection (Alt + drag) stored in `PlotState.query`
 - [x] Query/zoom drag shows range readout tooltip
 - [x] Crosshair visible when cursor is inside plot
-- [x] Mouse position readout (overlay or tooltip) when cursor is inside plot
+- [x] Mouse position readout (overlay or tooltip) when cursor is inside plot (overlay uses a tooltip-styled background by default)
 - [x] Series value readout (cursor X -> per-series Y; sorted-by-x interpolation, else view-sampled/budgeted fallback)
 - [x] Tooltip/readout uses axis formatters (consistent units/time)
 - [x] Legend interaction: hide/solo/pin (basic)
