@@ -11,11 +11,12 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use fret_core::{PointerType, Size};
+use fret_core::{Point, PointerType, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::elements::GlobalElementId;
+use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::model_watch::ModelWatchExt;
@@ -246,6 +247,40 @@ pub fn navigation_menu_viewport_size_for_transition<H: UiHost>(
         progress,
         animating: transition.animating,
     }
+}
+
+/// Computes the indicator rect aligned to the currently active trigger and the placed viewport.
+///
+/// shadcn/ui renders the indicator as a rotated square (diamond) that sits between the trigger row
+/// and the viewport panel. Radix computes indicator offset/size via DOM measurement; in Fret we use
+/// geometry instead (anchor + placed viewport rects).
+pub fn navigation_menu_indicator_rect(
+    anchor: Rect,
+    viewport_rect: Rect,
+    side: Side,
+    indicator_size: Px,
+) -> Rect {
+    let half = indicator_size.0 * 0.5;
+    let anchor_center_x = anchor.origin.x.0 + anchor.size.width.0 * 0.5;
+    let anchor_center_y = anchor.origin.y.0 + anchor.size.height.0 * 0.5;
+
+    let (x, y) = match side {
+        Side::Bottom => (anchor_center_x - half, viewport_rect.origin.y.0 - half),
+        Side::Top => (
+            anchor_center_x - half,
+            viewport_rect.origin.y.0 + viewport_rect.size.height.0 - half,
+        ),
+        Side::Right => (viewport_rect.origin.x.0 - half, anchor_center_y - half),
+        Side::Left => (
+            viewport_rect.origin.x.0 + viewport_rect.size.width.0 - half,
+            anchor_center_y - half,
+        ),
+    };
+
+    Rect::new(
+        Point::new(Px(x), Px(y)),
+        Size::new(indicator_size, indicator_size),
+    )
 }
 
 /// A composable, Radix-shaped navigation-menu configuration surface.
@@ -1429,5 +1464,21 @@ mod tests {
             );
             assert_eq!(out.size, Size::new(Px(150.0), Px(100.0)));
         });
+    }
+
+    #[test]
+    fn indicator_rect_tracks_anchor_center_and_viewport_edge() {
+        let anchor = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(100.0), Px(40.0)),
+        );
+        let viewport = Rect::new(
+            Point::new(Px(0.0), Px(100.0)),
+            Size::new(Px(200.0), Px(80.0)),
+        );
+        let out = navigation_menu_indicator_rect(anchor, viewport, Side::Bottom, Px(14.0));
+        assert_eq!(out.origin.x, Px(60.0 - 7.0));
+        assert_eq!(out.origin.y, Px(100.0 - 7.0));
+        assert_eq!(out.size, Size::new(Px(14.0), Px(14.0)));
     }
 }

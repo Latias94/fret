@@ -70,6 +70,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Note: Exact positioning and shadow/token fidelity may still differ (Radix uses an indicator track
   ref + DOM layout measurement); Fret drives viewport sizing via a primitive contract and anchors
   using trigger element ids.
+  - Indicator placement logic is shared via `fret-ui-kit::primitives::navigation_menu::navigation_menu_indicator_rect(...)`.
 
 ## Validation
 

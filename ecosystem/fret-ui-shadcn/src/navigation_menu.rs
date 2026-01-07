@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle, TextWrap,
-    Transform2D,
-};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
+use fret_core::{TextWrap, Transform2D};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, OpacityProps,
@@ -784,31 +782,11 @@ impl NavigationMenu {
                     );
 
                     let indicator_size = nav_menu_indicator_size(&theme);
-                    let indicator_half = indicator_size.0 * 0.5;
-                    let anchor_center_x = anchor.origin.x.0 + anchor.size.width.0 * 0.5;
-                    let anchor_center_y = anchor.origin.y.0 + anchor.size.height.0 * 0.5;
-                    let (indicator_x, indicator_y) = match layout.side {
-                        Side::Bottom => (
-                            anchor_center_x - indicator_half,
-                            placed.origin.y.0 - indicator_half,
-                        ),
-                        Side::Top => (
-                            anchor_center_x - indicator_half,
-                            placed.origin.y.0 + placed.size.height.0 - indicator_half,
-                        ),
-                        Side::Right => (
-                            placed.origin.x.0 - indicator_half,
-                            anchor_center_y - indicator_half,
-                        ),
-                        Side::Left => (
-                            placed.origin.x.0 + placed.size.width.0 - indicator_half,
-                            anchor_center_y - indicator_half,
-                        ),
-                    };
-
-                    let indicator_rect = fret_core::Rect::new(
-                        Point::new(Px(indicator_x), Px(indicator_y)),
-                        fret_core::Size::new(indicator_size, indicator_size),
+                    let indicator_rect = radix_navigation_menu::navigation_menu_indicator_rect(
+                        anchor,
+                        placed,
+                        layout.side,
+                        indicator_size,
                     );
 
                     let indicator = popper_content::popper_wrapper_panel_at(
