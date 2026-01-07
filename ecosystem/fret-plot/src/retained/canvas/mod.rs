@@ -3118,12 +3118,21 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
                 match region {
                     PlotRegion::Plot => {
-                        if modifiers.shift {
+                        let x_only = self
+                            .input_map
+                            .wheel_zoom_x_only_mod
+                            .is_some_and(|m| m.is_pressed(*modifiers));
+                        let y_only = self
+                            .input_map
+                            .wheel_zoom_y_only_mod
+                            .is_some_and(|m| m.is_pressed(*modifiers));
+
+                        if x_only {
                             zoom_y1 = 1.0;
                             zoom_y2 = 1.0;
                             zoom_y3 = 1.0;
                             zoom_y4 = 1.0;
-                        } else if modifiers.ctrl {
+                        } else if y_only {
                             zoom_x = 1.0;
                         }
                     }
