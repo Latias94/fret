@@ -307,6 +307,17 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         if matches!(event, Event::Timer { .. }) {
+            if let Event::Timer { token } = event
+                && let Some(window) = self.window
+                && let Some(node) = crate::elements::timer_target_node(app, window, *token)
+            {
+                let stopped =
+                    self.dispatch_event_to_node_chain(app, services, &input_ctx, node, event);
+                if stopped {
+                    return;
+                }
+            }
+
             let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
             for layer_id in layers.into_iter().rev() {
                 let Some(layer) = self.layers.get(layer_id) else {
@@ -464,7 +475,57 @@ impl<H: UiHost> UiTree<H> {
                 );
 
                 if let Some(h) = hook {
-                    let mut host = crate::action::UiActionHostAdapter { app };
+                    struct PressableHoverHookHost<'a, H: crate::UiHost> {
+                        app: &'a mut H,
+                        window: AppWindowId,
+                        element: crate::elements::GlobalElementId,
+                    }
+
+                    impl<H: crate::UiHost> crate::action::UiActionHost for PressableHoverHookHost<'_, H> {
+                        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                            self.app.models_mut()
+                        }
+
+                        fn push_effect(&mut self, effect: Effect) {
+                            match effect {
+                                Effect::SetTimer {
+                                    window: Some(window),
+                                    token,
+                                    ..
+                                } if window == self.window => {
+                                    crate::elements::record_timer_target(
+                                        &mut *self.app,
+                                        window,
+                                        token,
+                                        self.element,
+                                    );
+                                }
+                                Effect::CancelTimer { token } => {
+                                    crate::elements::clear_timer_target(
+                                        &mut *self.app,
+                                        self.window,
+                                        token,
+                                    );
+                                }
+                                _ => {}
+                            }
+                            self.app.push_effect(effect);
+                        }
+
+                        fn request_redraw(&mut self, window: AppWindowId) {
+                            self.app.request_redraw(window);
+                        }
+
+                        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                            self.app.next_timer_token()
+                        }
+                    }
+
+                    let mut host = PressableHoverHookHost {
+                        app,
+                        window,
+                        element,
+                    };
                     h(
                         &mut host,
                         crate::action::ActionCx {
@@ -488,7 +549,57 @@ impl<H: UiHost> UiTree<H> {
                 );
 
                 if let Some(h) = hook {
-                    let mut host = crate::action::UiActionHostAdapter { app };
+                    struct PressableHoverHookHost<'a, H: crate::UiHost> {
+                        app: &'a mut H,
+                        window: AppWindowId,
+                        element: crate::elements::GlobalElementId,
+                    }
+
+                    impl<H: crate::UiHost> crate::action::UiActionHost for PressableHoverHookHost<'_, H> {
+                        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
+                            self.app.models_mut()
+                        }
+
+                        fn push_effect(&mut self, effect: Effect) {
+                            match effect {
+                                Effect::SetTimer {
+                                    window: Some(window),
+                                    token,
+                                    ..
+                                } if window == self.window => {
+                                    crate::elements::record_timer_target(
+                                        &mut *self.app,
+                                        window,
+                                        token,
+                                        self.element,
+                                    );
+                                }
+                                Effect::CancelTimer { token } => {
+                                    crate::elements::clear_timer_target(
+                                        &mut *self.app,
+                                        self.window,
+                                        token,
+                                    );
+                                }
+                                _ => {}
+                            }
+                            self.app.push_effect(effect);
+                        }
+
+                        fn request_redraw(&mut self, window: AppWindowId) {
+                            self.app.request_redraw(window);
+                        }
+
+                        fn next_timer_token(&mut self) -> fret_runtime::TimerToken {
+                            self.app.next_timer_token()
+                        }
+                    }
+
+                    let mut host = PressableHoverHookHost {
+                        app,
+                        window,
+                        element,
+                    };
                     h(
                         &mut host,
                         crate::action::ActionCx {
