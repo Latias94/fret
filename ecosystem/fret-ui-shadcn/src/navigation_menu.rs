@@ -1,12 +1,12 @@
 use std::sync::{Arc, Mutex};
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, KeyCode, Px, SemanticsRole, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PressableA11y,
-    PressableProps, TextProps,
+    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
+    PressableA11y, PressableProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -299,8 +299,6 @@ impl NavigationMenu {
 
                             let value_for_trigger = value_for_item.clone();
                             let root_state_for_trigger = root_state_for_item.clone();
-                            let trigger_state_for_hover = trigger_state.clone();
-                            let item_value_for_hover = item_value.clone();
                             let root_state_for_hover = root_state_for_trigger.clone();
                             let trigger_text_style = trigger_text_style_for_item.clone();
 
@@ -314,109 +312,190 @@ impl NavigationMenu {
                                 ..Default::default()
                             };
 
-                            cx.pressable(pressable, move |cx, st| {
-                                let root_state_for_activate = root_state_for_trigger.clone();
-                                let value_for_activate = value_for_trigger.clone();
-                                let trigger_state_for_activate = trigger_state.clone();
-                                let item_value_for_activate = item_value.clone();
-                                cx.pressable_add_on_activate(Arc::new(
-                                    move |host, action_cx, _reason| {
-                                        let mut root = root_state_for_activate
-                                            .lock()
-                                            .unwrap_or_else(|e| e.into_inner());
-                                        root.on_item_select(
-                                            host,
-                                            action_cx,
-                                            &value_for_activate,
-                                            item_value_for_activate.clone(),
-                                            cfg,
+                            let pointer_props = PointerRegionProps {
+                                layout: LayoutStyle::default(),
+                                enabled: true,
+                            };
+
+                            cx.pointer_region(pointer_props, move |cx| {
+                                if !disabled {
+                                    let trigger_state_for_pointer_move = trigger_state.clone();
+                                    let root_state_for_pointer_move = root_state_for_trigger.clone();
+                                    let value_for_pointer_move = value_for_trigger.clone();
+                                    let item_value_for_pointer_move = item_value.clone();
+                                    cx.pointer_region_on_pointer_move(Arc::new(
+                                        move |host, action_cx, mv| {
+                                            let mut trigger = trigger_state_for_pointer_move
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            match radix_navigation_menu::navigation_menu_trigger_pointer_move_action(
+                                                mv.pointer_type,
+                                                disabled,
+                                                *trigger,
+                                            ) {
+                                                radix_navigation_menu::NavigationMenuTriggerPointerMoveAction::Ignore => {
+                                                    return false;
+                                                }
+                                                radix_navigation_menu::NavigationMenuTriggerPointerMoveAction::Open => {
+                                                    let mut root = root_state_for_pointer_move
+                                                        .lock()
+                                                        .unwrap_or_else(|e| e.into_inner());
+                                                    root.on_trigger_enter(
+                                                        host,
+                                                        action_cx,
+                                                        &value_for_pointer_move,
+                                                        item_value_for_pointer_move.clone(),
+                                                        cfg,
+                                                    );
+                                                    trigger.has_pointer_move_opened = true;
+                                                    trigger.was_click_close = false;
+                                                    trigger.was_escape_close = false;
+                                                    false
+                                                }
+                                            }
+                                        },
+                                    ));
+                                }
+
+                                vec![cx.pressable(pressable, move |cx, st| {
+                                    if !disabled {
+                                        let element = cx.root_id();
+                                        let root_state_for_escape = root_state_for_trigger.clone();
+                                        let value_for_escape = value_for_trigger.clone();
+                                        let trigger_state_for_escape = trigger_state.clone();
+                                        cx.key_on_key_down_for(
+                                            element,
+                                            Arc::new(move |host, action_cx, it| {
+                                                if it.repeat || it.key != KeyCode::Escape {
+                                                    return false;
+                                                }
+
+                                                let is_open = host
+                                                    .models_mut()
+                                                    .read(&value_for_escape, |v| v.is_some())
+                                                    .ok()
+                                                    .unwrap_or(false);
+                                                if !is_open {
+                                                    return false;
+                                                }
+
+                                                let mut root = root_state_for_escape
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                root.on_item_dismiss(host, action_cx, &value_for_escape, cfg);
+
+                                                let mut trigger = trigger_state_for_escape
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                trigger.was_escape_close = true;
+                                                trigger.was_click_close = false;
+                                                trigger.has_pointer_move_opened = false;
+
+                                                true
+                                            }),
                                         );
+                                    }
 
-                                        let now_open = host
-                                            .models_mut()
-                                            .read(&value_for_activate, |v| v.clone())
-                                            .ok()
-                                            .flatten()
-                                            .is_some_and(|v| v.as_ref() == item_value_for_activate.as_ref());
+                                    let root_state_for_activate = root_state_for_trigger.clone();
+                                    let value_for_activate = value_for_trigger.clone();
+                                    let trigger_state_for_activate = trigger_state.clone();
+                                    let item_value_for_activate = item_value.clone();
+                                    if !disabled {
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, action_cx, _reason| {
+                                                let mut root = root_state_for_activate
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                root.on_item_select(
+                                                    host,
+                                                    action_cx,
+                                                    &value_for_activate,
+                                                    item_value_for_activate.clone(),
+                                                    cfg,
+                                                );
 
-                                        let mut trigger = trigger_state_for_activate
-                                            .lock()
-                                            .unwrap_or_else(|e| e.into_inner());
-                                        trigger.was_click_close = !now_open;
-                                        if now_open {
-                                            trigger.was_escape_close = false;
-                                        }
-                                        trigger.has_pointer_move_opened = false;
-                                    },
-                                ));
+                                                let now_open = host
+                                                    .models_mut()
+                                                    .read(&value_for_activate, |v| v.clone())
+                                                    .ok()
+                                                    .flatten()
+                                                    .is_some_and(|v| {
+                                                        v.as_ref() == item_value_for_activate.as_ref()
+                                                    });
 
-                                cx.pressable_on_hover_change(Arc::new(
-                                    move |host, action_cx, hovered| {
-                                        let mut trigger = trigger_state_for_hover
-                                            .lock()
-                                            .unwrap_or_else(|e| e.into_inner());
-                                        let mut root = root_state_for_hover
-                                            .lock()
-                                            .unwrap_or_else(|e| e.into_inner());
+                                                let mut trigger = trigger_state_for_activate
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                trigger.was_click_close = !now_open;
+                                                if now_open {
+                                                    trigger.was_escape_close = false;
+                                                }
+                                                trigger.has_pointer_move_opened = false;
+                                            },
+                                        ));
+                                    }
 
-                                        if hovered {
-                                            root.on_trigger_enter(
-                                                host,
-                                                action_cx,
-                                                &value_for_trigger,
-                                                item_value_for_hover.clone(),
-                                                cfg,
-                                            );
-                                            trigger.has_pointer_move_opened = true;
-                                            trigger.was_click_close = false;
-                                            trigger.was_escape_close = false;
-                                        } else {
-                                            root.on_trigger_leave(
-                                                host,
-                                                action_cx,
-                                                &value_for_trigger,
-                                                cfg,
-                                            );
-                                            *trigger = radix_navigation_menu::NavigationMenuTriggerState::default();
-                                        }
-                                    },
-                                ));
+                                    if !disabled {
+                                        let trigger_state_for_hover = trigger_state.clone();
+                                        cx.pressable_on_hover_change(Arc::new(
+                                            move |host, action_cx, hovered| {
+                                                if hovered {
+                                                    return;
+                                                }
+                                                let mut trigger = trigger_state_for_hover
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                let mut root = root_state_for_hover
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                root.on_trigger_leave(
+                                                    host,
+                                                    action_cx,
+                                                    &value_for_trigger,
+                                                    cfg,
+                                                );
+                                                *trigger =
+                                                    radix_navigation_menu::NavigationMenuTriggerState::default();
+                                            },
+                                        ));
+                                    }
 
-                                let hovered = st.hovered && !st.pressed;
-                                let pressed = st.pressed;
-                                let fg = if disabled { trigger_fg_muted } else { trigger_fg };
-                                let bg = (hovered || pressed || is_open).then_some(trigger_bg_hover);
+                                    let hovered = st.hovered && !st.pressed;
+                                    let pressed = st.pressed;
+                                    let fg = if disabled { trigger_fg_muted } else { trigger_fg };
+                                    let bg = (hovered || pressed || is_open).then_some(trigger_bg_hover);
 
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Auto;
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Auto;
 
-                                let wrapper = ContainerProps {
-                                    layout,
-                                    padding: Edges {
-                                        top: trigger_pad_y,
-                                        right: trigger_pad_x,
-                                        bottom: trigger_pad_y,
-                                        left: trigger_pad_x,
-                                    },
-                                    background: bg,
-                                    shadow: None,
-                                    border: Edges::all(Px(0.0)),
-                                    border_color: None,
-                                    corner_radii: Corners::all(trigger_radius),
-                                };
+                                    let wrapper = ContainerProps {
+                                        layout,
+                                        padding: Edges {
+                                            top: trigger_pad_y,
+                                            right: trigger_pad_x,
+                                            bottom: trigger_pad_y,
+                                            left: trigger_pad_x,
+                                        },
+                                        background: bg,
+                                        shadow: None,
+                                        border: Edges::all(Px(0.0)),
+                                        border_color: None,
+                                        corner_radii: Corners::all(trigger_radius),
+                                    };
 
-                                let content_children = item.trigger.clone().unwrap_or_else(|| {
-                                    vec![cx.text_props(TextProps {
-                                        layout: LayoutStyle::default(),
-                                        text: item.label.clone(),
-                                        style: Some(trigger_text_style.clone()),
-                                        color: Some(fg),
-                                        wrap: TextWrap::None,
-                                        overflow: fret_core::TextOverflow::Clip,
-                                    })]
-                                });
+                                    let content_children = item.trigger.clone().unwrap_or_else(|| {
+                                        vec![cx.text_props(TextProps {
+                                            layout: LayoutStyle::default(),
+                                            text: item.label.clone(),
+                                            style: Some(trigger_text_style.clone()),
+                                            color: Some(fg),
+                                            wrap: TextWrap::None,
+                                            overflow: fret_core::TextOverflow::Clip,
+                                        })]
+                                    });
 
-                                vec![cx.container(wrapper, move |_cx| content_children)]
+                                    vec![cx.container(wrapper, move |_cx| content_children)]
+                                })]
                             })
                         })
                     })
@@ -520,7 +599,8 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Modifiers, MouseButtons, Point, PointerEvent, PointerType, Px, Rect, Size,
+        AppWindowId, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent,
+        PointerType, Px, Rect, Size,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{SvgId, SvgService};
@@ -658,5 +738,117 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("alpha"));
+    }
+
+    #[test]
+    fn escape_close_sets_trigger_gate_and_does_not_reopen_on_pointer_move() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        bump_frame(&mut app);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-escape",
+            |cx| {
+                let items = vec![
+                    NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
+                    NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
+                ];
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha_btn = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha button semantics");
+        let pos = Point::new(
+            Px(alpha_btn.bounds.origin.x.0 + alpha_btn.bounds.size.width.0 * 0.5),
+            Px(alpha_btn.bounds.origin.y.0 + alpha_btn.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Up {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::Escape,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected, None);
+
+        app.flush_effects();
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Move {
+                position: pos,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let has_open_timer = effects.iter().any(|e| matches!(e,
+            fret_runtime::Effect::SetTimer { after, .. }
+                if *after == radix_navigation_menu::NavigationMenuConfig::default().delay_duration
+        ));
+        assert!(
+            !has_open_timer,
+            "expected no delayed-open timer after escape gating"
+        );
     }
 }
