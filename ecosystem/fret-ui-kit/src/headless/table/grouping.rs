@@ -109,6 +109,46 @@ pub fn order_columns_for_grouping<'c, TData>(
     grouped_cols
 }
 
+pub fn order_column_refs_for_grouping<'c, TData>(
+    leaf_columns: &'c [&'c ColumnDef<TData>],
+    grouping: &[ColumnId],
+    mode: GroupedColumnMode,
+) -> Vec<&'c ColumnDef<TData>> {
+    if leaf_columns.is_empty() {
+        return Vec::new();
+    }
+    if grouping.is_empty() || mode == GroupedColumnMode::None {
+        return leaf_columns.to_vec();
+    }
+
+    let is_grouped = |c: &&ColumnDef<TData>| grouping.iter().any(|id| id.as_ref() == c.id.as_ref());
+
+    let non_grouped: Vec<&ColumnDef<TData>> = leaf_columns
+        .iter()
+        .copied()
+        .filter(|c| !is_grouped(&c))
+        .collect();
+    if mode == GroupedColumnMode::Remove {
+        return non_grouped;
+    }
+
+    let by_id: HashMap<&str, &ColumnDef<TData>> = leaf_columns
+        .iter()
+        .copied()
+        .map(|c| (c.id.as_ref(), c))
+        .collect();
+
+    let mut grouped_cols: Vec<&ColumnDef<TData>> = Vec::new();
+    for id in grouping {
+        if let Some(col) = by_id.get(id.as_ref()).copied() {
+            grouped_cols.push(col);
+        }
+    }
+
+    grouped_cols.extend(non_grouped);
+    grouped_cols
+}
+
 pub fn column_can_group<TData>(options: TableOptions, column: &ColumnDef<TData>) -> bool {
     if !(options.enable_grouping && column.enable_grouping) {
         return false;
@@ -123,6 +163,8 @@ pub enum GroupedRowKind {
     Group {
         grouping_column: ColumnId,
         grouping_value: u64,
+        first_leaf_row_key: RowKey,
+        leaf_row_count: usize,
     },
     Leaf {
         row_key: RowKey,
@@ -318,6 +360,8 @@ pub fn group_row_model<'a, TData>(
         let mut out_children: Vec<GroupedRowIndex> = Vec::with_capacity(buckets.len());
 
         for (value, rows) in buckets {
+            let first_leaf_row_key = rows.first().copied().unwrap_or(RowKey(0));
+            let leaf_row_count = rows.len();
             let group_key = alloc_group_row_key(used_keys, parent_key, &column.id, value);
 
             let index = out.arena.len();
@@ -326,6 +370,8 @@ pub fn group_row_model<'a, TData>(
                 kind: GroupedRowKind::Group {
                     grouping_column: column.id.clone(),
                     grouping_value: value,
+                    first_leaf_row_key,
+                    leaf_row_count,
                 },
                 depth,
                 parent,
@@ -483,13 +529,19 @@ mod tests {
 
         // First group should be "Admin" (first seen), then "Member".
         let GroupedRowKind::Group {
-            grouping_value: v0, ..
+            grouping_value: v0,
+            first_leaf_row_key: first0,
+            leaf_row_count: count0,
+            ..
         } = &g0.kind
         else {
             panic!("expected group row");
         };
         let GroupedRowKind::Group {
-            grouping_value: v1, ..
+            grouping_value: v1,
+            first_leaf_row_key: first1,
+            leaf_row_count: count1,
+            ..
         } = &g1.kind
         else {
             panic!("expected group row");
@@ -497,5 +549,7 @@ mod tests {
 
         assert_eq!(*v0, fnv1a64_bytes("Admin".as_bytes()));
         assert_eq!(*v1, fnv1a64_bytes("Member".as_bytes()));
+        assert_eq!((*first0, *count0), (RowKey(0), 2));
+        assert_eq!((*first1, *count1), (RowKey(1), 1));
     }
 }

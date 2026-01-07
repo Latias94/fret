@@ -8,7 +8,6 @@ pub type FilterFn<TData> = Arc<dyn Fn(&TData, &str) -> bool>;
 pub type FacetKeyFn<TData> = Arc<dyn Fn(&TData) -> u64>;
 pub type FacetStrFn<TData> = Arc<dyn for<'r> Fn(&'r TData) -> &'r str>;
 
-#[derive(Clone)]
 pub struct ColumnDef<TData> {
     pub id: ColumnId,
     pub sort_cmp: Option<SortCmpFn<TData>>,
@@ -23,6 +22,26 @@ pub struct ColumnDef<TData> {
     pub size: f32,
     pub min_size: f32,
     pub max_size: f32,
+}
+
+impl<TData> Clone for ColumnDef<TData> {
+    fn clone(&self) -> Self {
+        Self {
+            id: self.id.clone(),
+            sort_cmp: self.sort_cmp.clone(),
+            filter_fn: self.filter_fn.clone(),
+            facet_key_fn: self.facet_key_fn.clone(),
+            facet_str_fn: self.facet_str_fn.clone(),
+            enable_hiding: self.enable_hiding,
+            enable_ordering: self.enable_ordering,
+            enable_pinning: self.enable_pinning,
+            enable_resizing: self.enable_resizing,
+            enable_grouping: self.enable_grouping,
+            size: self.size,
+            min_size: self.min_size,
+            max_size: self.max_size,
+        }
+    }
 }
 
 impl<TData> std::fmt::Debug for ColumnDef<TData> {
