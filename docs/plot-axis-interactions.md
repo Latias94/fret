@@ -39,6 +39,7 @@ constrained when the pointer is over the plot region.
 | InputMap field | Default | Effect |
 | --- | --- | --- |
 | `wheel_zoom_mod` | `None` | When set, wheel zoom only activates if the modifier is pressed. |
+| `wheel_zoom_log2_per_px` | `0.0025` | Controls wheel zoom speed (zoom factor is `2^(delta_y * speed)`). |
 | `wheel_zoom_x_only_mod` | `Some(Shift)` | Over plot region: zoom X only (Y zoom factor forced to 1.0). |
 | `wheel_zoom_y_only_mod` | `Some(Ctrl)` | Over plot region: zoom Y only (X zoom factor forced to 1.0). |
 

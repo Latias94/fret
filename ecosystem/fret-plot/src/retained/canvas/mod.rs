@@ -3109,7 +3109,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     return;
                 }
 
-                let zoom = clamp_zoom_factors(2.0_f32.powf(delta_y * 0.0025));
+                let speed = self.input_map.wheel_zoom_log2_per_px;
+                let speed = if speed.is_finite() { speed } else { 0.0025 };
+                let zoom = clamp_zoom_factors(2.0_f32.powf(delta_y * speed));
                 let mut zoom_x = zoom;
                 let mut zoom_y1 = zoom;
                 let mut zoom_y2 = zoom;

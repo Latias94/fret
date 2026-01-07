@@ -157,7 +157,7 @@ impl KeyChord {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlotInputMap {
     pub pan: PointerChord,
     pub fit: PointerChord,
@@ -168,6 +168,11 @@ pub struct PlotInputMap {
     pub box_zoom_expand_y: Option<ModifierKey>,
     pub query_drag: Option<PointerChord>,
     pub wheel_zoom_mod: Option<ModifierKey>,
+    /// Wheel zoom speed in log2 zoom units per wheel delta Y pixel.
+    ///
+    /// The wheel zoom factor is computed as `2^(delta_y * wheel_zoom_log2_per_px)` before it is
+    /// clamped by plot zoom constraints.
+    pub wheel_zoom_log2_per_px: f32,
     pub wheel_zoom_x_only_mod: Option<ModifierKey>,
     pub wheel_zoom_y_only_mod: Option<ModifierKey>,
     pub axis_lock_click: Option<PointerChord>,
@@ -202,6 +207,7 @@ impl Default for PlotInputMap {
                 },
             )),
             wheel_zoom_mod: None,
+            wheel_zoom_log2_per_px: 0.0025,
             wheel_zoom_x_only_mod: Some(ModifierKey::Shift),
             wheel_zoom_y_only_mod: Some(ModifierKey::Ctrl),
             axis_lock_click: Some(PointerChord::new_allow_extra(
@@ -278,5 +284,11 @@ mod tests {
     fn wheel_zoom_mod_is_none_by_default() {
         let map = PlotInputMap::default();
         assert_eq!(map.wheel_zoom_mod, None);
+    }
+
+    #[test]
+    fn default_wheel_zoom_speed_matches_previous_constant() {
+        let map = PlotInputMap::default();
+        assert!((map.wheel_zoom_log2_per_px - 0.0025).abs() < f32::EPSILON);
     }
 }
