@@ -1,0 +1,9 @@
+[package]
+name = "fret-chart"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
+delinea = { path = "../delinea" }

@@ -1155,6 +1155,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-chart"
+version = "0.1.0"
+dependencies = [
+ "delinea",
+ "fret-core",
+ "fret-ui",
+]
+
+[[package]]
 name = "fret-code-view"
 version = "0.1.0"
 dependencies = [
