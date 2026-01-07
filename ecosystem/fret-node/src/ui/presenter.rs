@@ -14,6 +14,7 @@ use crate::rules::{
     plan_reconnect_edge, plan_split_edge_by_inserting_node,
 };
 use crate::types::TypeDesc;
+use crate::{profile::DataflowProfile, profile::GraphProfile};
 
 use super::style::NodeGraphStyle;
 
@@ -219,7 +220,11 @@ pub trait NodeGraphPresenter {
     /// - accepts it with direct edge changes,
     /// - accepts it with additional ops (e.g. insert conversion nodes).
     fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
-        plan_connect(graph, a, b)
+        if let Some(profile) = self.profile_mut() {
+            profile.plan_connect(graph, a, b)
+        } else {
+            plan_connect(graph, a, b)
+        }
     }
 
     /// Reconnection decision point (preserve edge identity when possible).
@@ -231,6 +236,15 @@ pub trait NodeGraphPresenter {
         new_port: PortId,
     ) -> ConnectPlan {
         plan_reconnect_edge(graph, edge, endpoint, new_port)
+    }
+
+    /// Optional profile hook for typed graphs and edit pipelines.
+    ///
+    /// Returning a profile enables:
+    /// - typed `plan_connect` by default,
+    /// - profile-driven concretization/validation when applying transactions.
+    fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
+        None
     }
 
     /// Returns the (possibly domain-derived) type of a port.
@@ -305,7 +319,9 @@ pub trait NodeGraphPresenter {
 
 /// Default presenter used by the canvas widget when no domain presenter is provided.
 #[derive(Debug, Default, Clone)]
-pub struct DefaultNodeGraphPresenter;
+pub struct DefaultNodeGraphPresenter {
+    profile: DataflowProfile,
+}
 
 impl NodeGraphPresenter for DefaultNodeGraphPresenter {
     fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str> {
@@ -322,5 +338,9 @@ impl NodeGraphPresenter for DefaultNodeGraphPresenter {
             .get(&port)
             .map(|p| Arc::<str>::from(p.key.0.clone()))
             .unwrap_or_else(|| Arc::<str>::from("<missing port>"))
+    }
+
+    fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
+        Some(&mut self.profile)
     }
 }

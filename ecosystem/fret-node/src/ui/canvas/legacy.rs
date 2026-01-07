@@ -17,6 +17,7 @@ use crate::core::{
 };
 use crate::io::{NodeGraphConnectionMode, NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
+use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
 use crate::ui::presenter::{
@@ -279,19 +280,74 @@ impl NodeGraphCanvas {
         self.sync_view_state(host);
     }
 
-    fn apply_ops<H: UiHost>(&mut self, host: &mut H, ops: Vec<GraphOp>) {
+    fn apply_ops<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        ops: Vec<GraphOp>,
+    ) {
         if ops.is_empty() {
             return;
         }
         let tx = GraphTransaction { label: None, ops };
-        let _ = self
-            .graph
-            .update(host, |g, _cx| match apply_transaction(g, &tx) {
-                Ok(()) => {}
+
+        let Some(mut scratch) = self.graph.read_ref(host, |g| g.clone()).ok() else {
+            return;
+        };
+
+        let mut diagnostics: Option<Vec<Diagnostic>> = None;
+
+        let ok = if let Some(profile) = self.presenter.profile_mut() {
+            match apply_transaction_with_profile(&mut scratch, profile, &tx) {
+                Ok(_committed) => true,
                 Err(err) => {
-                    tracing::warn!("failed to apply node-graph ops: {err}");
+                    match &err {
+                        ApplyPipelineError::Rejected {
+                            diagnostics: diags, ..
+                        } => {
+                            diagnostics = Some(diags.clone());
+                        }
+                        _ => {
+                            diagnostics = Some(vec![Diagnostic {
+                                key: "tx.apply_failed".to_string(),
+                                severity: DiagnosticSeverity::Error,
+                                target: crate::rules::DiagnosticTarget::Graph,
+                                message: err.to_string(),
+                                fixes: Vec::new(),
+                            }]);
+                        }
+                    }
+                    false
                 }
-            });
+            }
+        } else {
+            match apply_transaction(&mut scratch, &tx) {
+                Ok(()) => true,
+                Err(err) => {
+                    diagnostics = Some(vec![Diagnostic {
+                        key: "tx.apply_failed".to_string(),
+                        severity: DiagnosticSeverity::Error,
+                        target: crate::rules::DiagnosticTarget::Graph,
+                        message: err.to_string(),
+                        fixes: Vec::new(),
+                    }]);
+                    false
+                }
+            }
+        };
+
+        if !ok {
+            if let Some(diags) = diagnostics {
+                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diags) {
+                    self.show_toast(host, window, sev, msg);
+                }
+            }
+            return;
+        }
+
+        let _ = self.graph.update(host, |g, _cx| {
+            *g = scratch;
+        });
     }
 
     fn snap_canvas_point(pos: CanvasPoint, grid: CanvasSize) -> CanvasPoint {
@@ -724,7 +780,7 @@ impl NodeGraphCanvas {
                 match outcome {
                     Some(Ok(ops)) => {
                         let node_id = Self::first_added_node_id(&ops);
-                        self.apply_ops(cx.app, ops);
+                        self.apply_ops(cx.app, cx.window, ops);
                         if let Some(node_id) = node_id {
                             self.update_view_state(cx.app, |s| {
                                 s.selected_edges.clear();
@@ -768,7 +824,7 @@ impl NodeGraphCanvas {
                         .unwrap_or_default()
                 };
 
-                self.apply_ops(cx.app, remove_ops);
+                self.apply_ops(cx.app, cx.window, remove_ops);
                 self.update_view_state(cx.app, |s| {
                     s.selected_edges.retain(|id| *id != *edge_id);
                 });
@@ -829,7 +885,7 @@ impl NodeGraphCanvas {
                         let node_id = select_node
                             .then(|| Self::first_added_node_id(&ops))
                             .flatten();
-                        self.apply_ops(cx.app, ops);
+                        self.apply_ops(cx.app, cx.window, ops);
                         if let Some(node_id) = node_id {
                             self.update_view_state(cx.app, |s| {
                                 s.selected_edges.clear();
@@ -889,7 +945,7 @@ impl NodeGraphCanvas {
                 match outcome {
                     Outcome::Apply(ops) => {
                         let node_id = Self::first_added_node_id(&ops);
-                        self.apply_ops(cx.app, ops);
+                        self.apply_ops(cx.app, cx.window, ops);
                         if let Some(node_id) = node_id {
                             self.update_view_state(cx.app, |s| {
                                 s.selected_edges.clear();
@@ -917,7 +973,7 @@ impl NodeGraphCanvas {
                 };
 
                 if !ops.is_empty() {
-                    self.apply_ops(cx.app, ops);
+                    self.apply_ops(cx.app, cx.window, ops);
                 }
             }
             _ => {}
@@ -1593,7 +1649,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         .unwrap_or_default()
                 };
 
-                self.apply_ops(cx.app, remove_ops);
+                self.apply_ops(cx.app, cx.window, remove_ops);
                 self.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
                 });
@@ -2403,7 +2459,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                                     match outcome {
                                         Outcome::Apply(ops) => {
-                                            self.apply_ops(cx.app, ops);
+                                            self.apply_ops(cx.app, cx.window, ops);
                                             if let Some((sev, msg)) = toast {
                                                 self.show_toast(cx.app, cx.window, sev, msg);
                                             }
@@ -2490,7 +2546,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                             .unwrap_or(Outcome::Ignore)
                                     };
                                     match outcome {
-                                        Outcome::Apply(ops) => self.apply_ops(cx.app, ops),
+                                        Outcome::Apply(ops) => {
+                                            self.apply_ops(cx.app, cx.window, ops)
+                                        }
                                         Outcome::Reject(sev, msg) => {
                                             self.show_toast(cx.app, cx.window, sev, msg);
                                         }
@@ -2539,7 +2597,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                         .unwrap_or_default();
 
                                     if !ops_all.is_empty() {
-                                        self.apply_ops(cx.app, ops_all);
+                                        self.apply_ops(cx.app, cx.window, ops_all);
                                     }
                                     if let Some((sev, msg)) = toast {
                                         self.show_toast(cx.app, cx.window, sev, msg);
