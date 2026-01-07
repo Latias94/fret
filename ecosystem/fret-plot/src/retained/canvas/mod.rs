@@ -4302,6 +4302,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 .or(self.hover.map(|h| h.series_id))
                 .or(self.legend_hover);
 
+            let mut emphasized_path: Option<(PathId, Color)> = None;
             for quad in self.rebuild_quads_if_needed(
                 cx,
                 layout.plot,
@@ -4332,17 +4333,28 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 hidden,
                 resolved_style,
             ) {
-                let color = if emphasized {
-                    if let Some(emphasized) = emphasized_series
-                        && emphasized != series_id
-                    {
-                        dim_color(color, dim_alpha)
-                    } else {
-                        color
-                    }
+                if emphasized
+                    && let Some(emphasized) = emphasized_series
+                    && emphasized == series_id
+                {
+                    emphasized_path = Some((path, color));
+                    continue;
+                }
+
+                let color = if emphasized && emphasized_series.is_some() {
+                    dim_color(color, dim_alpha)
                 } else {
                     color
                 };
+                cx.scene.push(SceneOp::Path {
+                    order: DrawOrder(2),
+                    origin: layout.plot.origin,
+                    path,
+                    color,
+                });
+            }
+
+            if let Some((path, color)) = emphasized_path {
                 cx.scene.push(SceneOp::Path {
                     order: DrawOrder(2),
                     origin: layout.plot.origin,
@@ -5380,13 +5392,43 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let hx = Px((layout.plot.origin.x.0 + hover.plot_px.x.0).round());
                 let hy = Px((layout.plot.origin.y.0 + hover.plot_px.y.0).round());
 
+                let hover_color = self
+                    .model
+                    .read(cx.app, |_app, m| {
+                        let meta = L::series_meta(m);
+                        let series_count = meta.len().max(1);
+                        let mut series_index = 0usize;
+                        let mut override_color = None;
+                        for (i, s) in meta.iter().enumerate() {
+                            if s.id == hover.series_id {
+                                series_index = i;
+                                override_color = s.stroke_color;
+                                break;
+                            }
+                        }
+                        resolve_series_color(series_index, self.style, series_count, override_color)
+                    })
+                    .unwrap_or(crosshair_color);
+
+                let outer_size = Px(10.0);
+                let outer_origin =
+                    Point::new(Px(hx.0 - outer_size.0 * 0.5), Px(hy.0 - outer_size.0 * 0.5));
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(4),
+                    rect: Rect::new(outer_origin, Size::new(outer_size, outer_size)),
+                    background: Color::TRANSPARENT,
+                    border: fret_core::Edges::all(Px(2.0)),
+                    border_color: hover_color,
+                    corner_radii: fret_core::Corners::all(Px(outer_size.0 * 0.5)),
+                });
+
                 let dot_size = Px(6.0);
                 let dot_origin =
                     Point::new(Px(hx.0 - dot_size.0 * 0.5), Px(hy.0 - dot_size.0 * 0.5));
                 cx.scene.push(SceneOp::Quad {
-                    order: DrawOrder(4),
+                    order: DrawOrder(5),
                     rect: Rect::new(dot_origin, Size::new(dot_size, dot_size)),
-                    background: crosshair_color,
+                    background: hover_color,
                     border: fret_core::Edges::all(Px(1.0)),
                     border_color: tooltip_border,
                     corner_radii: fret_core::Corners::all(Px(dot_size.0 * 0.5)),
