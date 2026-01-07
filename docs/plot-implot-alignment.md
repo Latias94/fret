@@ -33,6 +33,7 @@ This contract is documented in ADR 0099.
 - [x] Query/zoom drag shows range readout tooltip
 - [x] Crosshair visible when cursor is inside plot
 - [x] Mouse position readout (overlay or tooltip) when cursor is inside plot (overlay uses a tooltip-styled background by default)
+- [x] Hover affordance: hovered series is emphasized (others dim), and the nearest point shows a series-colored marker
 - [x] Series value readout (cursor X -> per-series Y; sorted-by-x interpolation, else view-sampled/budgeted fallback)
 - [x] Tooltip/readout uses axis formatters (consistent units/time)
 - [x] Legend interaction: hide/solo/pin (basic)
