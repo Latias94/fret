@@ -634,6 +634,31 @@ On-disk shape (locked, v1):
 - Backward compatibility: loaders may also accept a plain `state` root object when `graph_id` is
   supplied out-of-band by the caller (mirrors `DockLayoutFileV1`’s wrapper tolerance).
 
+View-state schema (locked, v1):
+
+- All fields are optional unless stated otherwise; missing fields must default to the behavior
+  described below.
+- Unknown fields must be ignored to allow forward-compatible additions.
+- `state.pan`: `{ "x": f32, "y": f32 }` (canvas units).
+- `state.zoom`: `f32` (default `1.0`).
+- `state.selected_nodes`: `Vec<NodeId>` (optional).
+- `state.selected_edges`: `Vec<EdgeId>` (optional).
+- `state.draw_order`: `Vec<NodeId>` (optional).
+- `state.interaction` (optional): editor interaction tuning and policy overrides (per-user/per-project):
+  - `connection_mode`: `"strict" | "loose"` (default `"strict"`).
+  - `connection_radius`: `f32` (screen px; only used for `"loose"`; default `16`).
+  - `reconnect_radius`: `f32` (screen px; default `10`).
+  - `edge_interaction_width`: `f32` (screen px; default `12`).
+  - `snap_to_grid`: `bool` (default `false`).
+  - `snap_grid`: `{ "width": f32, "height": f32 }` (canvas units; default `16x16`).
+  - `node_drag_threshold`: `f32` (screen px; default `1`).
+  - `auto_pan` (optional):
+    - `on_node_drag`: `bool` (default `true`).
+    - `on_connect`: `bool` (default `true`).
+    - `on_node_focus`: `bool` (default `false`).
+    - `speed`: `f32` (screen px/s; default `900`).
+    - `margin`: `f32` (screen px; default `24`).
+
 Graph asset on-disk shape (locked, v1):
 
 - Canonical format is JSON via `serde_json` (aligns with docking persistence patterns).
