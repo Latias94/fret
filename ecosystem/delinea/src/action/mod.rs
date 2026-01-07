@@ -12,13 +12,6 @@ pub enum Action {
     HoverAt {
         point: Point,
     },
-    Pan {
-        delta_px: Point,
-    },
-    Zoom {
-        center_px: Point,
-        log2_scale: f32,
-    },
     SetDataWindowX {
         axis: AxisId,
         window: Option<DataWindowX>,
