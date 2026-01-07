@@ -63,6 +63,16 @@ values dominating min/max selection.
 - An axis range update is a layout/marks invalidation (not a structural change).
   It bumps `ModelRevisions.layout` (and therefore `ModelRevisions.marks`).
 
+## Window math helpers (headless)
+
+The headless layer exposes helpers to compute pan/zoom in data space without binding to UI:
+
+- Pan: `DataWindow::pan_by_px(delta_px, viewport_span_px)`
+- Zoom: `DataWindow::zoom_by_px(center_px, log2_scale, viewport_span_px)`
+
+These helpers are intended to be used by UI adapters to produce
+`SetDataWindowX/Y` or `SetViewWindow2D` actions.
+
 ## UI integration (recommended, not required)
 
 The engine only defines semantics. A UI adapter (e.g. `fret-chart`) may map:
