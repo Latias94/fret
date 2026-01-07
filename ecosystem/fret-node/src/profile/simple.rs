@@ -124,6 +124,7 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
         return ops;
     };
 
+    let mut removed_ports: BTreeSet<PortId> = BTreeSet::new();
     let mut unmanaged: Vec<PortId> = Vec::new();
     let mut inputs: Vec<(usize, PortId)> = Vec::new();
     let mut output: Option<PortId> = None;
@@ -223,6 +224,7 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
                 break;
             };
             ops.push(remove_op);
+            removed_ports.insert(last);
             inputs.pop();
             continue;
         }
@@ -245,9 +247,11 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
     desired.extend(unmanaged.iter().copied());
 
     if desired != node.ports {
+        let mut from_ports = node.ports.clone();
+        from_ports.retain(|id| !removed_ports.contains(id));
         ops.push(crate::ops::GraphOp::SetNodePorts {
             id: node_id,
-            from: node.ports.clone(),
+            from: from_ports,
             to: desired,
         });
     }
