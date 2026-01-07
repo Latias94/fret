@@ -339,7 +339,12 @@ pub fn code_block_with_header_slots<H: UiHost>(
 
             let mut out = vec![content];
             if show_copy && options.copy_button_placement == CodeBlockCopyButtonPlacement::Overlay {
-                out.push(render_copy_button_overlay(cx, &theme, feedback.clone(), code.clone()));
+                out.push(render_copy_button_overlay(
+                    cx,
+                    &theme,
+                    feedback.clone(),
+                    code.clone(),
+                ));
             }
             out
         })]
@@ -404,7 +409,9 @@ fn render_code_block_header<H: UiHost>(
                                 size: theme.metric_required("metric.font.mono_size"),
                                 weight: FontWeight::SEMIBOLD,
                                 slant: Default::default(),
-                                line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                                line_height: Some(
+                                    theme.metric_required("metric.font.mono_line_height"),
+                                ),
                                 letter_spacing_em: None,
                             }),
                             color: Some(theme.color_required("muted-foreground")),
@@ -425,11 +432,7 @@ fn render_code_block_header<H: UiHost>(
                 }
 
                 vec![
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N1),
-                        |_| left,
-                    ),
+                    stack::hstack(cx, stack::HStackProps::default().gap(Space::N1), |_| left),
                     stack::hstack(
                         cx,
                         stack::HStackProps::default().gap(Space::N1).justify_end(),
@@ -459,7 +462,9 @@ fn render_code_block_body<H: UiHost>(
             return vec![render_code_block_text(cx, theme, prepared, wrap)];
         }
 
-        vec![render_code_block_with_line_numbers(cx, theme, prepared, wrap)]
+        vec![render_code_block_with_line_numbers(
+            cx, theme, prepared, wrap,
+        )]
     })
 }
 
@@ -494,7 +499,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         s
     });
 
-    let line_numbers = cx.text_props(TextProps {
+    let line_numbers_text = cx.text_props(TextProps {
         layout: {
             let mut layout = LayoutStyle::default();
             layout.size.width = Length::Auto;
@@ -507,15 +512,38 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         overflow: TextOverflow::Clip,
     });
 
+    let gutter = cx.container(
+        ContainerProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Auto;
+                layout.size.height = Length::Fill;
+                layout
+            },
+            padding: Edges::all(Px(0.0)),
+            background: None,
+            shadow: None,
+            border: Edges {
+                top: Px(0.0),
+                right: Px(1.0),
+                bottom: Px(0.0),
+                left: Px(0.0),
+            },
+            border_color: Some(theme.color_required("border")),
+            corner_radii: fret_core::Corners::all(Px(0.0)),
+        },
+        |_cx| vec![line_numbers_text],
+    );
+
     let code = render_code_block_text(cx, theme, prepared, wrap);
 
     stack::hstack(
         cx,
         stack::HStackProps::default()
             .gap(Space::N2)
-            .items_start()
+            .items_stretch()
             .layout(LayoutRefinement::default().w_full()),
-        |_cx| vec![line_numbers, code],
+        |_cx| vec![gutter, code],
     )
 }
 
