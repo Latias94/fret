@@ -23,6 +23,7 @@ pub const CMD_NODE_GRAPH_PASTE: &str = "node_graph.paste";
 pub const CMD_NODE_GRAPH_DUPLICATE: &str = "node_graph.duplicate";
 pub const CMD_NODE_GRAPH_SELECT_ALL: &str = "node_graph.select_all";
 pub const CMD_NODE_GRAPH_DELETE_SELECTION: &str = "node_graph.delete_selection";
+pub const CMD_NODE_GRAPH_FRAME_SELECTION: &str = "node_graph.frame_selection";
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
     DefaultKeybinding {
@@ -276,6 +277,15 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Delete Selection")
             .with_category("Node Graph")
             .with_keywords(["delete", "remove", "selection"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_FRAME_SELECTION),
+        CommandMeta::new("Frame Selection")
+            .with_category("Node Graph")
+            .with_keywords(["frame", "focus", "fit", "view"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
     );
