@@ -12,7 +12,7 @@ use fret_core::{
 };
 use fret_runtime::Effect;
 use fret_ui::element::{
-    AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, PositionStyle,
+    AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, Overflow, PositionStyle,
     PressableProps, SelectableTextProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -456,47 +456,37 @@ fn render_code_block_body<H: UiHost>(
 
     let mut props = ContainerProps::default();
     props.layout.size.width = Length::Fill;
+    props.layout.overflow = Overflow::Clip;
     props.padding = Edges::all(pad);
 
     cx.container(props, |cx| {
-        let render_lines = |cx: &mut ElementContext<'_, H>| {
-            prepared
-                .lines
-                .iter()
-                .enumerate()
-                .map(|(i, line)| {
-                    if prepared.show_line_numbers {
-                        render_code_line_with_number(
-                            cx,
-                            theme,
-                            i + 1,
-                            prepared.line_number_width,
-                            line,
-                            wrap,
-                        )
-                    } else {
-                        render_code_line(cx, theme, line, wrap)
-                    }
-                })
-                .collect::<Vec<_>>()
-        };
-
-        match wrap {
-            CodeBlockWrap::ScrollX => vec![decl_scroll::overflow_scroll_x_vstack(
-                cx,
-                LayoutRefinement::default().w_full(),
-                false,
-                stack::VStackProps::default().gap(Space::N0),
-                render_lines,
-            )],
-            CodeBlockWrap::Word => vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N0)
-                    .layout(LayoutRefinement::default().w_full()),
-                render_lines,
-            )],
-        }
+        vec![decl_scroll::overflow_scroll_x_vstack(
+            cx,
+            LayoutRefinement::default().w_full(),
+            false,
+            stack::VStackProps::default().gap(Space::N0),
+            |cx| {
+                prepared
+                    .lines
+                    .iter()
+                    .enumerate()
+                    .map(|(i, line)| {
+                        if prepared.show_line_numbers {
+                            render_code_line_with_number(
+                                cx,
+                                theme,
+                                i + 1,
+                                prepared.line_number_width,
+                                line,
+                                wrap,
+                            )
+                        } else {
+                            render_code_line(cx, theme, line, wrap)
+                        }
+                    })
+                    .collect::<Vec<_>>()
+            },
+        )]
     })
 }
 
