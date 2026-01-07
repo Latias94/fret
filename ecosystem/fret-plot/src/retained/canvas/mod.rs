@@ -124,6 +124,48 @@ fn log10_decade_exponent(v: f64) -> Option<i32> {
     ((e - rounded).abs() <= eps).then_some(rounded as i32)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WheelZoomMode {
+    PlotAll,
+    PlotXOnly,
+    PlotYOnly,
+    XAxis,
+    YAxis(YAxis),
+}
+
+fn wheel_zoom_mode(
+    input_map: PlotInputMap,
+    region: PlotRegion,
+    modifiers: fret_core::Modifiers,
+) -> Option<WheelZoomMode> {
+    if let Some(required) = input_map.wheel_zoom_mod
+        && !required.is_pressed(modifiers)
+    {
+        return None;
+    }
+
+    match region {
+        PlotRegion::Plot => {
+            let x_only = input_map
+                .wheel_zoom_x_only_mod
+                .is_some_and(|m| m.is_pressed(modifiers));
+            let y_only = input_map
+                .wheel_zoom_y_only_mod
+                .is_some_and(|m| m.is_pressed(modifiers));
+
+            if x_only {
+                return Some(WheelZoomMode::PlotXOnly);
+            }
+            if y_only {
+                return Some(WheelZoomMode::PlotYOnly);
+            }
+            Some(WheelZoomMode::PlotAll)
+        }
+        PlotRegion::XAxis => Some(WheelZoomMode::XAxis),
+        PlotRegion::YAxis(axis) => Some(WheelZoomMode::YAxis(axis)),
+    }
+}
+
 fn paint_plot_images(
     scene: &mut fret_core::Scene,
     images: &[PlotImage],
@@ -448,6 +490,66 @@ mod box_select_modifier_tests {
             );
         assert_eq!((s_req.x.0, s_req.y.0), (10.0, 10.0));
         assert_eq!((e_req.x.0, e_req.y.0), (20.0, 20.0));
+    }
+}
+
+#[cfg(test)]
+mod wheel_zoom_policy_tests {
+    use super::*;
+
+    #[test]
+    fn wheel_zoom_respects_wheel_zoom_mod_gate() {
+        let mut map = PlotInputMap::default();
+        map.wheel_zoom_mod = Some(ModifierKey::Shift);
+        map.wheel_zoom_x_only_mod = None;
+        map.wheel_zoom_y_only_mod = None;
+
+        let region = PlotRegion::Plot;
+        let mods = fret_core::Modifiers::default();
+        assert_eq!(wheel_zoom_mode(map, region, mods), None);
+
+        let mods = fret_core::Modifiers {
+            shift: true,
+            ..fret_core::Modifiers::default()
+        };
+        assert_eq!(
+            wheel_zoom_mode(map, region, mods),
+            Some(WheelZoomMode::PlotAll)
+        );
+    }
+
+    #[test]
+    fn wheel_zoom_plot_region_prefers_x_only_over_y_only() {
+        let map = PlotInputMap::default();
+        let region = PlotRegion::Plot;
+        let mods = fret_core::Modifiers {
+            shift: true,
+            ctrl: true,
+            ..fret_core::Modifiers::default()
+        };
+        assert_eq!(
+            wheel_zoom_mode(map, region, mods),
+            Some(WheelZoomMode::PlotXOnly)
+        );
+    }
+
+    #[test]
+    fn wheel_zoom_axis_region_routing_overrides_axis_only_modifiers() {
+        let map = PlotInputMap::default();
+        let mods = fret_core::Modifiers {
+            shift: true,
+            ctrl: true,
+            ..fret_core::Modifiers::default()
+        };
+
+        assert_eq!(
+            wheel_zoom_mode(map, PlotRegion::XAxis, mods),
+            Some(WheelZoomMode::XAxis)
+        );
+        assert_eq!(
+            wheel_zoom_mode(map, PlotRegion::YAxis(YAxis::Right2), mods),
+            Some(WheelZoomMode::YAxis(YAxis::Right2))
+        );
     }
 }
 
@@ -3098,12 +3200,6 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     return;
                 }
 
-                if let Some(required) = self.input_map.wheel_zoom_mod
-                    && !required.is_pressed(*modifiers)
-                {
-                    return;
-                }
-
                 let delta_y = delta.y.0;
                 if !delta_y.is_finite() {
                     return;
@@ -3118,33 +3214,28 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 let mut zoom_y3 = zoom;
                 let mut zoom_y4 = zoom;
 
-                match region {
-                    PlotRegion::Plot => {
-                        let x_only = self
-                            .input_map
-                            .wheel_zoom_x_only_mod
-                            .is_some_and(|m| m.is_pressed(*modifiers));
-                        let y_only = self
-                            .input_map
-                            .wheel_zoom_y_only_mod
-                            .is_some_and(|m| m.is_pressed(*modifiers));
+                let Some(mode) = wheel_zoom_mode(self.input_map, region, *modifiers) else {
+                    return;
+                };
 
-                        if x_only {
-                            zoom_y1 = 1.0;
-                            zoom_y2 = 1.0;
-                            zoom_y3 = 1.0;
-                            zoom_y4 = 1.0;
-                        } else if y_only {
-                            zoom_x = 1.0;
-                        }
-                    }
-                    PlotRegion::XAxis => {
+                match mode {
+                    WheelZoomMode::PlotAll => {}
+                    WheelZoomMode::PlotXOnly => {
                         zoom_y1 = 1.0;
                         zoom_y2 = 1.0;
                         zoom_y3 = 1.0;
                         zoom_y4 = 1.0;
                     }
-                    PlotRegion::YAxis(axis) => {
+                    WheelZoomMode::PlotYOnly => {
+                        zoom_x = 1.0;
+                    }
+                    WheelZoomMode::XAxis => {
+                        zoom_y1 = 1.0;
+                        zoom_y2 = 1.0;
+                        zoom_y3 = 1.0;
+                        zoom_y4 = 1.0;
+                    }
+                    WheelZoomMode::YAxis(axis) => {
                         zoom_x = 1.0;
                         zoom_y1 = 1.0;
                         zoom_y2 = 1.0;
