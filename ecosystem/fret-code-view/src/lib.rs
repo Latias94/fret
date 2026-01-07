@@ -1,5 +1,7 @@
 //! Code view component(s) for Fret.
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::sync::Arc;
 
@@ -67,10 +69,11 @@ pub fn code_block<H: UiHost>(
         LayoutRefinement::default().w_full(),
     );
 
-    let spans = match language.map(|s| s.trim()).filter(|s| !s.is_empty()) {
-        Some(language) => fret_syntax::highlight(code, language).unwrap_or_default(),
-        None => Vec::new(),
-    };
+    let language = language.map(str::trim).filter(|s| !s.is_empty());
+    let prepared = cx.with_state(CodeBlockPreparedState::default, |st| {
+        st.prepare(code, language, show_line_numbers);
+        st.prepared.clone()
+    });
 
     cx.container(props, |cx| {
         vec![decl_scroll::overflow_scroll_x_vstack(
@@ -79,27 +82,24 @@ pub fn code_block<H: UiHost>(
             false,
             stack::VStackProps::default().gap(Space::N0),
             |cx| {
-                let lines = split_lines(code);
-                let line_number_width = line_number_width(lines.len());
-
-                lines
-                    .into_iter()
+                prepared
+                    .lines
+                    .iter()
                     .enumerate()
                     .map(|(i, line)| {
-                        if show_line_numbers {
+                        if prepared.show_line_numbers {
                             render_code_line_with_number(
                                 cx,
                                 &theme,
                                 i + 1,
-                                line_number_width,
+                                prepared.line_number_width,
                                 line,
-                                &spans,
                             )
                         } else {
-                            render_code_line(cx, &theme, line, &spans)
+                            render_code_line(cx, &theme, line)
                         }
                     })
-                    .collect()
+                    .collect::<Vec<_>>()
             },
         )]
     })
@@ -110,8 +110,7 @@ fn render_code_line_with_number<H: UiHost>(
     theme: &Theme,
     line_no: usize,
     width: usize,
-    line: LineSlice<'_>,
-    spans: &[fret_syntax::HighlightSpan],
+    line: &PreparedLine,
 ) -> AnyElement {
     let number_style = TextStyle {
         font: FontId::monospace(),
@@ -133,15 +132,14 @@ fn render_code_line_with_number<H: UiHost>(
             overflow: TextOverflow::Clip,
         });
 
-        vec![number_el, render_code_line(cx, theme, line, spans)]
+        vec![number_el, render_code_line(cx, theme, line)]
     })
 }
 
 fn render_code_line<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
-    line: LineSlice<'_>,
-    spans: &[fret_syntax::HighlightSpan],
+    line: &PreparedLine,
 ) -> AnyElement {
     let text_style = TextStyle {
         font: FontId::monospace(),
@@ -151,17 +149,18 @@ fn render_code_line<H: UiHost>(
         letter_spacing_em: None,
     };
 
-    let segments = segments_for_range(line.range.clone(), spans, line.text);
-
     stack::hstack(cx, stack::HStackProps::default().gap(Space::N0), |cx| {
-        segments
-            .into_iter()
-            .map(|(text, highlight)| {
+        line.segments
+            .iter()
+            .map(|seg| {
                 let fg = theme.color_required("foreground");
-                let color = highlight.and_then(|h| syntax_color(theme, h)).unwrap_or(fg);
+                let color = seg
+                    .highlight
+                    .and_then(|h| syntax_color(theme, h))
+                    .unwrap_or(fg);
                 cx.text_props(TextProps {
                     layout: Default::default(),
-                    text: Arc::<str>::from(text),
+                    text: seg.text.clone(),
                     style: Some(text_style.clone()),
                     color: Some(color),
                     wrap: TextWrap::None,
@@ -197,6 +196,180 @@ fn syntax_color(theme: &Theme, highlight: &str) -> Option<Color> {
     }
 }
 
+#[derive(Default)]
+struct CodeBlockPreparedState {
+    key: CodeBlockKey,
+    prepared: Arc<PreparedCodeBlock>,
+}
+
+impl CodeBlockPreparedState {
+    fn prepare(&mut self, code: &str, language: Option<&str>, show_line_numbers: bool) {
+        let key = CodeBlockKey::new(code, language, show_line_numbers);
+        if self.key == key {
+            return;
+        }
+        self.key = key;
+        self.prepared = Arc::new(prepare_code_block(code, language, show_line_numbers));
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct CodeBlockKey {
+    code_hash: u64,
+    language_hash: u64,
+    show_line_numbers: bool,
+}
+
+impl Default for CodeBlockKey {
+    fn default() -> Self {
+        Self {
+            code_hash: 0,
+            language_hash: 0,
+            show_line_numbers: false,
+        }
+    }
+}
+
+impl CodeBlockKey {
+    fn new(code: &str, language: Option<&str>, show_line_numbers: bool) -> Self {
+        Self {
+            code_hash: hash_value(code),
+            language_hash: hash_value(language.unwrap_or("")),
+            show_line_numbers,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct PreparedCodeBlock {
+    show_line_numbers: bool,
+    line_number_width: usize,
+    lines: Vec<PreparedLine>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct PreparedLine {
+    segments: Vec<PreparedSegment>,
+}
+
+#[derive(Debug, Clone)]
+struct PreparedSegment {
+    text: Arc<str>,
+    highlight: Option<&'static str>,
+}
+
+fn prepare_code_block(
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+) -> PreparedCodeBlock {
+    let spans = match language {
+        Some(language) => fret_syntax::highlight(code, language).unwrap_or_default(),
+        None => Vec::new(),
+    };
+
+    let mut lines = split_lines(code);
+    let line_number_width = line_number_width(lines.len());
+
+    let mut prepared_lines = Vec::with_capacity(lines.len());
+    let mut span_i = 0usize;
+
+    for line in &mut lines {
+        let line_text = line.text;
+        let global_range = line.range.clone();
+
+        while span_i < spans.len() && spans[span_i].range.end <= global_range.start {
+            span_i += 1;
+        }
+
+        let mut segments: Vec<(String, Option<&'static str>)> = Vec::new();
+        let mut cursor = global_range.start;
+        let mut j = span_i;
+        while j < spans.len() {
+            let span = &spans[j];
+            if span.range.start >= global_range.end {
+                break;
+            }
+            let start = span.range.start.max(global_range.start);
+            let end = span.range.end.min(global_range.end);
+            if cursor < start {
+                let rel = cursor - global_range.start;
+                let rel_end = start - global_range.start;
+                segments.push((safe_slice(line_text, rel, rel_end), None));
+            }
+            let rel = start - global_range.start;
+            let rel_end = end - global_range.start;
+            segments.push((safe_slice(line_text, rel, rel_end), span.highlight));
+            cursor = end;
+            j += 1;
+        }
+        if cursor < global_range.end {
+            let rel = cursor - global_range.start;
+            let rel_end = global_range.end - global_range.start;
+            segments.push((safe_slice(line_text, rel, rel_end), None));
+        }
+
+        if segments.is_empty() {
+            segments.push((line_text.to_string(), None));
+        }
+
+        let segments = coalesce_segments(segments)
+            .into_iter()
+            .map(|(text, highlight)| PreparedSegment {
+                text: Arc::<str>::from(text),
+                highlight,
+            })
+            .collect();
+
+        prepared_lines.push(PreparedLine { segments });
+    }
+
+    PreparedCodeBlock {
+        show_line_numbers,
+        line_number_width,
+        lines: prepared_lines,
+    }
+}
+
+fn coalesce_segments(
+    segments: Vec<(String, Option<&'static str>)>,
+) -> Vec<(String, Option<&'static str>)> {
+    let mut out: Vec<(String, Option<&'static str>)> = Vec::with_capacity(segments.len());
+    for (text, highlight) in segments {
+        if text.is_empty() {
+            continue;
+        }
+        if let Some((last_text, last_highlight)) = out.last_mut() {
+            if *last_highlight == highlight {
+                last_text.push_str(&text);
+                continue;
+            }
+        }
+        out.push((text, highlight));
+    }
+    out
+}
+
+fn hash_value(value: &str) -> u64 {
+    let mut h = DefaultHasher::new();
+    value.hash(&mut h);
+    h.finish()
+}
+
+fn safe_slice(text: &str, start: usize, end: usize) -> String {
+    if start >= end {
+        return String::new();
+    }
+    if start >= text.len() {
+        return String::new();
+    }
+    let end = end.min(text.len());
+    match text.get(start..end) {
+        Some(s) => s.to_string(),
+        None => String::from_utf8_lossy(&text.as_bytes()[start..end]).into_owned(),
+    }
+}
+
 #[derive(Debug, Clone)]
 struct LineSlice<'a> {
     range: Range<usize>,
@@ -205,15 +378,22 @@ struct LineSlice<'a> {
 
 fn split_lines(text: &str) -> Vec<LineSlice<'_>> {
     let mut out = Vec::new();
+    let bytes = text.as_bytes();
     let mut start = 0usize;
-    for (i, b) in text.as_bytes().iter().enumerate() {
-        if *b == b'\n' {
+    let mut i = 0usize;
+    while i < bytes.len() {
+        if bytes[i] == b'\n' {
+            let mut end = i;
+            if end > start && bytes[end - 1] == b'\r' {
+                end -= 1;
+            }
             out.push(LineSlice {
-                range: start..i,
-                text: &text[start..i],
+                range: start..end,
+                text: &text[start..end],
             });
             start = i + 1;
         }
+        i += 1;
     }
     out.push(LineSlice {
         range: start..text.len(),
@@ -232,40 +412,37 @@ fn line_number_width(lines: usize) -> usize {
     digits
 }
 
-fn segments_for_range(
-    global_range: Range<usize>,
-    spans: &[fret_syntax::HighlightSpan],
-    line_text: &str,
-) -> Vec<(String, Option<&'static str>)> {
-    let mut segments = Vec::new();
-    let mut cursor = global_range.start;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    for span in spans {
-        if span.range.end <= global_range.start || span.range.start >= global_range.end {
-            continue;
-        }
-        let start = span.range.start.max(global_range.start);
-        let end = span.range.end.min(global_range.end);
-        if cursor < start {
-            let rel = cursor - global_range.start;
-            let rel_end = start - global_range.start;
-            segments.push((line_text[rel..rel_end].to_string(), None));
-        }
-        let rel = start - global_range.start;
-        let rel_end = end - global_range.start;
-        segments.push((line_text[rel..rel_end].to_string(), span.highlight));
-        cursor = end;
+    #[test]
+    fn coalesces_adjacent_segments() {
+        let segments = vec![
+            ("a".to_string(), None),
+            ("b".to_string(), None),
+            ("c".to_string(), Some("keyword")),
+            ("d".to_string(), Some("keyword")),
+            ("".to_string(), Some("keyword")),
+            ("e".to_string(), None),
+        ];
+        let out = coalesce_segments(segments);
+        assert_eq!(
+            out,
+            vec![
+                ("ab".to_string(), None),
+                ("cd".to_string(), Some("keyword")),
+                ("e".to_string(), None)
+            ]
+        );
     }
 
-    if cursor < global_range.end {
-        let rel = cursor - global_range.start;
-        let rel_end = global_range.end - global_range.start;
-        segments.push((line_text[rel..rel_end].to_string(), None));
+    #[test]
+    fn splits_crlf_lines_without_carriage_returns() {
+        let lines = split_lines("a\r\nb\r\n");
+        assert_eq!(lines.len(), 3);
+        assert_eq!(lines[0].text, "a");
+        assert_eq!(lines[1].text, "b");
+        assert_eq!(lines[2].text, "");
     }
-
-    if segments.is_empty() {
-        segments.push((line_text.to_string(), None));
-    }
-
-    segments
 }
