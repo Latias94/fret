@@ -4,7 +4,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::{EdgeId, Graph, GraphId, NodeId};
+use crate::core::{CanvasSize, EdgeId, Graph, GraphId, NodeId};
 
 /// Graph file format version (v1).
 pub const GRAPH_FILE_VERSION: u32 = 1;
@@ -150,9 +150,131 @@ pub struct NodeGraphViewState {
     /// Explicit draw order (optional).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub draw_order: Vec<NodeId>,
+
+    /// Optional interaction tuning (snap, connection mode, auto-pan, etc.).
+    #[serde(default, skip_serializing_if = "NodeGraphInteractionState::is_default")]
+    pub interaction: NodeGraphInteractionState,
 }
 
 fn default_zoom() -> f32 {
+    1.0
+}
+
+/// Connection mode for selecting target ports during connection gestures.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphConnectionMode {
+    Strict,
+    Loose,
+}
+
+impl Default for NodeGraphConnectionMode {
+    fn default() -> Self {
+        Self::Strict
+    }
+}
+
+/// Auto-pan tuning for drag/connect/focus workflows.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NodeGraphAutoPanTuning {
+    #[serde(default)]
+    pub on_node_drag: bool,
+    #[serde(default)]
+    pub on_connect: bool,
+    #[serde(default)]
+    pub on_node_focus: bool,
+
+    /// Speed in screen pixels per second (approximate).
+    #[serde(default = "default_auto_pan_speed")]
+    pub speed: f32,
+
+    /// Margin from viewport edge in screen pixels that triggers auto-pan.
+    #[serde(default = "default_auto_pan_margin")]
+    pub margin: f32,
+}
+
+fn default_auto_pan_speed() -> f32 {
+    900.0
+}
+
+fn default_auto_pan_margin() -> f32 {
+    24.0
+}
+
+impl Default for NodeGraphAutoPanTuning {
+    fn default() -> Self {
+        Self {
+            on_node_drag: true,
+            on_connect: true,
+            on_node_focus: false,
+            speed: default_auto_pan_speed(),
+            margin: default_auto_pan_margin(),
+        }
+    }
+}
+
+/// Optional interaction tuning persisted as part of editor view state.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct NodeGraphInteractionState {
+    /// Connection targeting strategy.
+    #[serde(default)]
+    pub connection_mode: NodeGraphConnectionMode,
+
+    /// Target search radius in screen pixels for loose connection mode.
+    #[serde(default = "default_connection_radius")]
+    pub connection_radius: f32,
+
+    /// Reconnect anchor hit radius in screen pixels.
+    #[serde(default = "default_reconnect_radius")]
+    pub reconnect_radius: f32,
+
+    /// Edge hit slop width in screen pixels (independent from wire stroke thickness).
+    #[serde(default = "default_edge_interaction_width")]
+    pub edge_interaction_width: f32,
+
+    /// Snap nodes to a grid during move/resize interactions.
+    #[serde(default)]
+    pub snap_to_grid: bool,
+
+    /// Snap grid size in canvas units.
+    #[serde(default = "default_snap_grid")]
+    pub snap_grid: CanvasSize,
+
+    /// Drag threshold in screen pixels before a node drag starts.
+    #[serde(default = "default_node_drag_threshold")]
+    pub node_drag_threshold: f32,
+
+    /// Auto-pan configuration.
+    #[serde(default)]
+    pub auto_pan: NodeGraphAutoPanTuning,
+}
+
+impl NodeGraphInteractionState {
+    fn is_default(this: &Self) -> bool {
+        this == &Self::default()
+    }
+}
+
+fn default_connection_radius() -> f32 {
+    16.0
+}
+
+fn default_reconnect_radius() -> f32 {
+    10.0
+}
+
+fn default_edge_interaction_width() -> f32 {
+    12.0
+}
+
+fn default_snap_grid() -> CanvasSize {
+    CanvasSize {
+        width: 16.0,
+        height: 16.0,
+    }
+}
+
+fn default_node_drag_threshold() -> f32 {
     1.0
 }
 
