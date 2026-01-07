@@ -866,6 +866,10 @@ pub trait PlotLayer {
         Vec::new()
     }
 
+    fn heatmap_value_range(_model: &Self::Model) -> Option<(f32, f32)> {
+        None
+    }
+
     fn paint_paths<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
@@ -1034,6 +1038,7 @@ struct HeatmapCacheKey {
     viewport_h_bits: u32,
     value_min_bits: u32,
     value_max_bits: u32,
+    colormap_key: u8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1338,7 +1343,7 @@ pub type HeatmapPlotCanvas = PlotCanvas<HeatmapPlotLayer>;
 
 impl PlotCanvas<HeatmapPlotLayer> {
     pub fn new(model: Model<HeatmapPlotModel>) -> Self {
-        Self::with_layer(model, HeatmapPlotLayer::default())
+        Self::with_layer(model, HeatmapPlotLayer::default()).heatmap_colorbar(true)
     }
 }
 
@@ -4403,6 +4408,10 @@ impl PlotLayer for HeatmapPlotLayer {
         Some("heatmap".to_string())
     }
 
+    fn heatmap_value_range(model: &Self::Model) -> Option<(f32, f32)> {
+        Some((model.value_min, model.value_max))
+    }
+
     fn paint_paths<H: UiHost>(
         &mut self,
         _cx: &mut PaintCx<'_, H>,
@@ -4424,6 +4433,7 @@ impl PlotLayer for HeatmapPlotLayer {
             view_bounds,
             x_scale,
             y_scale,
+            style,
             ..
         } = args;
 
@@ -4443,6 +4453,7 @@ impl PlotLayer for HeatmapPlotLayer {
             viewport_h_bits: plot.size.height.0.to_bits(),
             value_min_bits: model.value_min.to_bits(),
             value_max_bits: model.value_max.to_bits(),
+            colormap_key: style.heatmap_colormap.key(),
         };
 
         if self.cache_key == Some(cache_key) {
@@ -4451,28 +4462,8 @@ impl PlotLayer for HeatmapPlotLayer {
 
         self.rebuild_mips_if_needed(model_revision, model);
 
-        fn lerp(a: f32, b: f32, t: f32) -> f32 {
-            a + (b - a) * t
-        }
-
-        fn heatmap_color(t: f32) -> Color {
-            // Simple blue -> cyan -> green -> yellow -> red ramp (portable and predictable).
-            let t = t.clamp(0.0, 1.0);
-            let (r, g, b) = if t < 0.25 {
-                let u = t / 0.25;
-                (0.0, lerp(0.1, 1.0, u), 1.0)
-            } else if t < 0.50 {
-                let u = (t - 0.25) / 0.25;
-                (0.0, 1.0, lerp(1.0, 0.0, u))
-            } else if t < 0.75 {
-                let u = (t - 0.50) / 0.25;
-                (lerp(0.0, 1.0, u), 1.0, 0.0)
-            } else {
-                let u = (t - 0.75) / 0.25;
-                (1.0, lerp(1.0, 0.0, u), 0.0)
-            };
-            Color { r, g, b, a: 1.0 }
-        }
+        let heatmap_colormap = style.heatmap_colormap;
+        let heatmap_color = |t: f32| crate::plot::colormap::sample(heatmap_colormap, t);
 
         let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), plot.size);
         let transform = PlotTransform {

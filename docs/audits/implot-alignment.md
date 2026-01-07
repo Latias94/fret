@@ -52,7 +52,7 @@ token-driven theming and retained rendering/cache.
 | Drag tools (`DragPoint` / `DragLineX` / `DragLineY` / `DragRect`) | 🟡 | Implemented via `PlotOverlays` + `PlotOutputSnapshot::drag` (demo: `apps/fret-examples/src/drag_demo.rs`). Modifiers: `Shift` constrains inside-drags (point/rect) to X-only or Y-only; `Alt` snaps to nearest axis tick. |
 | Subplots (`BeginSubplots`) | ❌ | Likely a UI-kit/layout concern, not plot core; needs design. |
 | Aligned plots (`BeginAlignedPlots`) | ❌ | Could be implemented by sharing axis layout constraints across canvases. |
-| Colormaps | 🟡 | Heatmap uses a palette; no public “colormap registry + UI” yet. |
+| Colormaps | 🟡 | Heatmap supports `ColorMapId` + an in-plot colorbar; no public registry UI yet. |
 | SymLog axis scale | ❌ | `AxisScale` currently supports `Linear` and `Log10` only. |
 
 ## What We Should Add Next (Proposed Priorities)

@@ -43,6 +43,7 @@ use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
 use crate::plot::axis::{AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
+use crate::plot::colormap::ColorMapId;
 use crate::plot::view::{
     clamp_view_to_data_scaled, clamp_zoom_factors, data_rect_from_plot_points_scaled,
     expand_data_bounds_scaled, local_from_absolute, pan_view_by_px_scaled, sanitize_data_rect,
@@ -207,6 +208,23 @@ fn log10_tick_label_or_empty(v: f64) -> String {
     format!("10^{exp}")
 }
 
+fn format_colorbar_value(v: f32) -> String {
+    if !v.is_finite() {
+        return "NA".to_string();
+    }
+    let a = v.abs();
+    if a > 1.0e6 || (a > 0.0 && a < 1.0e-3) {
+        return format!("{v:.3e}");
+    }
+    if a >= 1000.0 {
+        return format!("{v:.0}");
+    }
+    if a >= 10.0 {
+        return format!("{v:.2}");
+    }
+    format!("{v:.3}")
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 struct AxisLock {
     pan: bool,
@@ -350,6 +368,9 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     linked_cursor_readout_text: Option<PreparedText>,
     overlays_text_key: Option<u64>,
     overlays_text: Vec<PreparedText>,
+
+    heatmap_colorbar_text_key: Option<u64>,
+    heatmap_colorbar_text: Vec<PreparedText>,
 }
 
 #[cfg(test)]
@@ -728,11 +749,39 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             linked_cursor_readout_text: None,
             overlays_text_key: None,
             overlays_text: Vec::new(),
+
+            heatmap_colorbar_text_key: None,
+            heatmap_colorbar_text: Vec::new(),
         }
     }
 
     pub fn style(mut self, style: LinePlotStyle) -> Self {
         self.style = style;
+        self
+    }
+
+    pub fn heatmap_colormap(mut self, colormap: ColorMapId) -> Self {
+        self.style.heatmap_colormap = colormap;
+        self
+    }
+
+    pub fn heatmap_colorbar(mut self, enabled: bool) -> Self {
+        self.style.heatmap_show_colorbar = enabled;
+        self
+    }
+
+    pub fn heatmap_colorbar_width(mut self, width: Px) -> Self {
+        self.style.heatmap_colorbar_width = width;
+        self
+    }
+
+    pub fn heatmap_colorbar_padding(mut self, padding: Px) -> Self {
+        self.style.heatmap_colorbar_padding = padding;
+        self
+    }
+
+    pub fn heatmap_colorbar_steps(mut self, steps: usize) -> Self {
+        self.style.heatmap_colorbar_steps = steps;
         self
     }
 
@@ -4034,6 +4083,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             resolved_axis_gap,
             resolved_stroke_width,
             resolved_hover_threshold,
+            resolved_heatmap_colorbar_width,
+            resolved_heatmap_colorbar_padding,
         ) = {
             let theme = cx.theme();
             let resolved_series_palette =
@@ -4089,6 +4140,30 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     .unwrap_or(default_style.hover_threshold)
                 } else {
                     self.style.hover_threshold
+                };
+
+            let resolved_heatmap_colorbar_width =
+                if self.style.heatmap_colorbar_width == default_style.heatmap_colorbar_width {
+                    crate::theme_tokens::metric(
+                        theme,
+                        "fret.plot.heatmap.colorbar.width",
+                        "plot.heatmap.colorbar.width",
+                    )
+                    .unwrap_or(default_style.heatmap_colorbar_width)
+                } else {
+                    self.style.heatmap_colorbar_width
+                };
+
+            let resolved_heatmap_colorbar_padding =
+                if self.style.heatmap_colorbar_padding == default_style.heatmap_colorbar_padding {
+                    crate::theme_tokens::metric(
+                        theme,
+                        "fret.plot.heatmap.colorbar.padding",
+                        "plot.heatmap.colorbar.padding",
+                    )
+                    .unwrap_or(default_style.heatmap_colorbar_padding)
+                } else {
+                    self.style.heatmap_colorbar_padding
                 };
 
             let background = self.style.background.unwrap_or_else(|| {
@@ -4180,6 +4255,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 resolved_axis_gap,
                 resolved_stroke_width,
                 resolved_hover_threshold,
+                resolved_heatmap_colorbar_width,
+                resolved_heatmap_colorbar_padding,
             )
         };
 
@@ -4191,6 +4268,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             axis_gap: resolved_axis_gap,
             stroke_width: resolved_stroke_width,
             hover_threshold: resolved_hover_threshold,
+            heatmap_colorbar_width: resolved_heatmap_colorbar_width,
+            heatmap_colorbar_padding: resolved_heatmap_colorbar_padding,
             ..self.style
         };
 
@@ -4496,6 +4575,175 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     path,
                     color,
                 });
+            }
+
+            // Heatmap colorbar (when the current plot layer supports it).
+            if resolved_style.heatmap_show_colorbar
+                && let Ok(model) = self.model.read(cx.app, |_app, m| m.clone())
+                && let Some((vmin, vmax)) = L::heatmap_value_range(&model)
+                && vmin.is_finite()
+                && vmax.is_finite()
+                && vmax > vmin
+            {
+                let padding = resolved_style.heatmap_colorbar_padding.0.max(0.0);
+                let bar_w = resolved_style.heatmap_colorbar_width.0.max(1.0);
+                let steps = resolved_style.heatmap_colorbar_steps.clamp(8, 512);
+
+                let plot_w = layout.plot.size.width.0;
+                let plot_h = layout.plot.size.height.0;
+                let bar_h = (plot_h - padding * 2.0).max(0.0);
+                if plot_w > 0.0 && plot_h > 0.0 && bar_h >= 24.0 {
+                    let text_style = TextStyle {
+                        font: FontId::default(),
+                        size: Px((theme_font_size.0 * 0.85).max(9.0)),
+                        weight: FontWeight::NORMAL,
+                        line_height: None,
+                        letter_spacing_em: None,
+                    };
+                    let text_constraints = TextConstraints {
+                        max_width: None,
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        scale_factor: cx.scale_factor,
+                    };
+
+                    let max_label = format_colorbar_value(vmax);
+                    let min_label = format_colorbar_value(vmin);
+
+                    let mut key = 0u64;
+                    key = Self::hash_u64(key, theme_revision);
+                    key = Self::hash_u64(key, font_stack_key);
+                    key = Self::hash_u64(key, u64::from(cx.scale_factor.to_bits()));
+                    key = Self::hash_u64(key, u64::from(vmin.to_bits()));
+                    key = Self::hash_u64(key, u64::from(vmax.to_bits()));
+                    key = Self::hash_u64(key, u64::from(resolved_style.heatmap_colormap.key()));
+                    key = Self::hash_u64(key, u64::from(steps as u32));
+                    key = Self::hash_u64(key, u64::from(bar_w.to_bits()));
+                    key = Self::hash_u64(key, Self::text_style_key(&text_style));
+
+                    let needs_text = self.heatmap_colorbar_text_key != Some(key);
+                    if needs_text {
+                        for t in self.heatmap_colorbar_text.drain(..) {
+                            cx.services.text().release(t.blob);
+                        }
+                        self.heatmap_colorbar_text_key = Some(key);
+
+                        for s in [&max_label, &min_label] {
+                            let (blob, metrics) =
+                                cx.services.text().prepare(s, &text_style, text_constraints);
+                            self.heatmap_colorbar_text
+                                .push(PreparedText { blob, metrics, key });
+                        }
+                    }
+
+                    let max_text = self.heatmap_colorbar_text.get(0).copied();
+                    let min_text = self.heatmap_colorbar_text.get(1).copied();
+
+                    let label_gap = 6.0_f32;
+                    let label_w = max_text
+                        .map(|t| t.metrics.size.width.0)
+                        .unwrap_or(0.0)
+                        .max(min_text.map(|t| t.metrics.size.width.0).unwrap_or(0.0));
+
+                    let panel_w = (bar_w + label_gap + label_w).max(bar_w);
+                    let panel_left = (plot_w - padding - panel_w).max(padding);
+                    let panel_top = padding;
+
+                    let bar_left = panel_left;
+                    let label_x = bar_left + bar_w + label_gap;
+                    let bar_top = panel_top;
+
+                    let panel_rect = Rect::new(
+                        Point::new(
+                            Px(layout.plot.origin.x.0 + panel_left),
+                            Px(layout.plot.origin.y.0 + panel_top),
+                        ),
+                        Size::new(Px(panel_w), Px(bar_h)),
+                    );
+                    let panel_radius = cx.theme().metric_required("metric.radius.sm");
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(3),
+                        rect: panel_rect,
+                        background: Color {
+                            a: 0.88,
+                            ..tooltip_background
+                        },
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: tooltip_border,
+                        corner_radii: fret_core::Corners::all(panel_radius),
+                    });
+
+                    let colormap = resolved_style.heatmap_colormap;
+                    for i in 0..steps {
+                        let t0 = (i as f32) / (steps as f32);
+                        let t1 = ((i + 1) as f32) / (steps as f32);
+                        let t = (t0 + t1) * 0.5;
+                        let color = crate::plot::colormap::sample(colormap, t);
+
+                        let y0 = bar_top + (1.0 - t1) * bar_h;
+                        let h = (t1 - t0) * bar_h;
+                        cx.scene.push(SceneOp::Quad {
+                            order: DrawOrder(4),
+                            rect: Rect::new(
+                                Point::new(
+                                    Px(layout.plot.origin.x.0 + bar_left),
+                                    Px(layout.plot.origin.y.0 + y0),
+                                ),
+                                Size::new(Px(bar_w), Px(h.max(1.0))),
+                            ),
+                            background: color,
+                            border: fret_core::Edges::all(Px(0.0)),
+                            border_color: Color::TRANSPARENT,
+                            corner_radii: fret_core::Corners::all(Px(0.0)),
+                        });
+                    }
+
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(5),
+                        rect: Rect::new(
+                            Point::new(
+                                Px(layout.plot.origin.x.0 + bar_left),
+                                Px(layout.plot.origin.y.0 + bar_top),
+                            ),
+                            Size::new(Px(bar_w), Px(bar_h)),
+                        ),
+                        background: Color::TRANSPARENT,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: tooltip_border,
+                        corner_radii: fret_core::Corners::all(Px(0.0)),
+                    });
+
+                    let text_color = tooltip_text_color;
+                    let text_margin = 2.0_f32;
+
+                    if let Some(t) = max_text {
+                        let origin = Point::new(
+                            Px(layout.plot.origin.x.0 + label_x),
+                            Px(layout.plot.origin.y.0
+                                + bar_top
+                                + text_margin
+                                + t.metrics.baseline.0),
+                        );
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(6),
+                            origin,
+                            text: t.blob,
+                            color: text_color,
+                        });
+                    }
+                    if let Some(t) = min_text {
+                        let baseline = layout.plot.origin.y.0 + bar_top + bar_h
+                            - text_margin
+                            - (t.metrics.size.height.0 - t.metrics.baseline.0);
+                        let origin = Point::new(Px(layout.plot.origin.x.0 + label_x), Px(baseline));
+                        cx.scene.push(SceneOp::Text {
+                            order: DrawOrder(6),
+                            origin,
+                            text: t.blob,
+                            color: text_color,
+                        });
+                    }
+                }
             }
 
             // Infinite reference lines (caller-owned overlays).
@@ -7077,5 +7325,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             services.text().release(t.blob);
         }
         self.overlays_text_key = None;
+
+        for t in self.heatmap_colorbar_text.drain(..) {
+            services.text().release(t.blob);
+        }
+        self.heatmap_colorbar_text_key = None;
     }
 }

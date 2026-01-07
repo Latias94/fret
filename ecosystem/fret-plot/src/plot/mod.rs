@@ -1,4 +1,5 @@
 pub mod axis;
+pub mod colormap;
 pub mod decimate;
 pub mod grid;
 pub(crate) mod histogram;
