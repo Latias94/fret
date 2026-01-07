@@ -55,6 +55,13 @@ fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
     (table_bg, border, header_bg, row_hover, row_active)
 }
 
+fn emphasize_border(border: Color, min_alpha: f32) -> Color {
+    Color {
+        a: border.a.max(min_alpha),
+        ..border
+    }
+}
+
 fn resolve_row_height(theme: &Theme, size: Size) -> Px {
     let base = theme
         .metric_by_key("component.table.row_height")
@@ -260,6 +267,8 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let theme = Theme::global(&*cx.app);
     let (table_bg, border, header_bg, row_hover, row_active) = resolve_table_colors(theme);
+    let resize_grip = emphasize_border(border, 0.35);
+    let resize_preview = emphasize_border(border, 0.75);
     let radius = theme.metric_required("metric.radius.md");
 
     let row_h = props
@@ -1142,14 +1151,56 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                 |cx: &mut ElementContext<'_, H>,
                                                  cols: &[&ColumnDef<TData>],
                                                  scroll_x: Option<ScrollHandle>| {
+                                                    let preview_left = if props.enable_column_resizing
+                                                        && props.column_resize_mode
+                                                            == ColumnResizeMode::OnEnd
+                                                    {
+                                                        if let Some(active) = state_value
+                                                            .column_sizing_info
+                                                            .is_resizing_column
+                                                            .as_ref()
+                                                        {
+                                                            let delta = state_value
+                                                                .column_sizing_info
+                                                                .delta_offset
+                                                                .unwrap_or(0.0);
+                                                            let mut x = 0.0_f32;
+                                                            let mut out = None;
+                                                            for col in cols {
+                                                                x += resolve_column_width(
+                                                                    col,
+                                                                    &state_value,
+                                                                    &props,
+                                                                )
+                                                                .0;
+                                                                if col.id.as_ref()
+                                                                    == active.as_ref()
+                                                                {
+                                                                    out = Some(x + delta);
+                                                                    break;
+                                                                }
+                                                            }
+                                                            out
+                                                        } else {
+                                                            None
+                                                        }
+                                                    } else {
+                                                        None
+                                                    };
+
                                                     let row = stack::hstack(
                                                         cx,
                                                         stack::HStackProps::default()
+                                                            .layout(
+                                                                LayoutRefinement::default()
+                                                                    .size_full()
+                                                                    .relative(),
+                                                            )
                                                             .gap_x(Space::N0)
                                                             .justify(Justify::Start)
                                                             .items(Items::Center),
                                                         |cx| {
-                                                            cols.iter()
+                                                            let mut out: Vec<AnyElement> = cols.iter()
                                                                 .map(|col| {
                                                                     let sort_state = sort_for_column(
                                                                         &state_value.sorting,
@@ -1278,33 +1329,13 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                     let max_w = col.max_size.max(min_w);
                                                                                     let resize_mode = props.column_resize_mode;
                                                                                     let resize_direction = props.column_resize_direction;
-                                                                                    let grip_color = border;
-                                                                                    let grip_right = if props.enable_column_resizing
-                                                                                        && props.column_resize_mode
-                                                                                            == ColumnResizeMode::OnEnd
-                                                                                        && state_value
-                                                                                            .column_sizing_info
-                                                                                            .is_resizing_column
-                                                                                            .as_ref()
-                                                                                            .is_some_and(|active| {
-                                                                                                active.as_ref()
-                                                                                                    == col_id.as_ref()
-                                                                                            })
-                                                                                    {
-                                                                                        -5.0
-                                                                                            + state_value
-                                                                                                .column_sizing_info
-                                                                                                .delta_offset
-                                                                                                .unwrap_or(0.0)
-                                                                                    } else {
-                                                                                        -5.0
-                                                                                    };
+                                                                                    let grip_color = resize_grip;
 
                                                                                     pieces.push(cx.pointer_region(
                                                                                         PointerRegionProps {
                                                                                             layout: LayoutStyle {
                                                                                                 size: fret_ui::element::SizeStyle {
-                                                                                                    width: Length::Px(Px(10.0)),
+                                                                                                    width: Length::Px(Px(12.0)),
                                                                                                     height: Length::Fill,
                                                                                                     ..Default::default()
                                                                                                 },
@@ -1312,7 +1343,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                     fret_ui::element::PositionStyle::Absolute,
                                                                                                 inset: fret_ui::element::InsetStyle {
                                                                                                     top: Some(Px(0.0)),
-                                                                                                    right: Some(Px(grip_right)),
+                                                                                                    right: Some(Px(0.0)),
                                                                                                     bottom: Some(Px(0.0)),
                                                                                                     left: None,
                                                                                                 },
@@ -1409,7 +1440,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                 cx,
                                                                                                 stack::HStackProps::default()
                                                                                                     .gap_x(Space::N0)
-                                                                                                    .justify(Justify::Center)
+                                                                                                    .justify(Justify::End)
                                                                                                     .items(Items::Stretch),
                                                                                                 |cx| {
                                                                                                     vec![cx.container(
@@ -1444,7 +1475,43 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                         out
                                                                     })
                                                                 })
-                                                                .collect()
+                                                                .collect();
+
+                                                            if let Some(preview_left) = preview_left {
+                                                                out.push(cx.container(
+                                                                    ContainerProps {
+                                                                        background: Some(
+                                                                            resize_preview,
+                                                                        ),
+                                                                        layout: LayoutStyle {
+                                                                            size:
+                                                                                fret_ui::element::SizeStyle {
+                                                                                    width: Length::Px(Px(
+                                                                                        2.0,
+                                                                                    )),
+                                                                                    height:
+                                                                                        Length::Fill,
+                                                                                    ..Default::default()
+                                                                                },
+                                                                            position:
+                                                                                fret_ui::element::PositionStyle::Absolute,
+                                                                            inset: fret_ui::element::InsetStyle {
+                                                                                top: Some(Px(0.0)),
+                                                                                left: Some(Px(
+                                                                                    preview_left - 1.0,
+                                                                                )),
+                                                                                bottom: Some(Px(0.0)),
+                                                                                right: None,
+                                                                            },
+                                                                            ..Default::default()
+                                                                        },
+                                                                        ..Default::default()
+                                                                    },
+                                                                    |_| Vec::new(),
+                                                                ));
+                                                            }
+
+                                                            out
                                                         },
                                                     );
 
