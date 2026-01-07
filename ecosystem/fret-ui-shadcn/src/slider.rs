@@ -644,6 +644,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -706,6 +707,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -713,12 +715,12 @@ mod tests {
         assert_eq!(values.len(), 2);
         assert!(
             (values[0] - 10.0).abs() < 0.01,
-            "expected first thumb≈10, got {}",
+            "expected first thumb鈮?0, got {}",
             values[0]
         );
         assert!(
             (values[1] - 100.0).abs() < 0.01,
-            "expected second thumb≈100, got {}",
+            "expected second thumb鈮?00, got {}",
             values[1]
         );
     }
@@ -773,6 +775,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 

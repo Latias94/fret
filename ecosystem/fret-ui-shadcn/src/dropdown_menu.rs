@@ -3159,6 +3159,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -3169,6 +3170,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
@@ -3277,6 +3279,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -3287,6 +3290,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_copied(&open), Some(false));
@@ -3359,6 +3363,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         let _ = app.models_mut().update(&open, |v| *v = true);

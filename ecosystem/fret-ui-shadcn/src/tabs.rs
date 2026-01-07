@@ -822,6 +822,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -877,6 +878,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers,
                 pointer_type: PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
@@ -937,6 +939,7 @@ mod tests {
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: PointerType::Mouse,
+                click_count: 1,
             }),
         );
 

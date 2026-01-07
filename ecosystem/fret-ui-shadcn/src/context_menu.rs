@@ -2424,6 +2424,7 @@ mod tests {
                 button: fret_core::MouseButton::Right,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -2434,6 +2435,7 @@ mod tests {
                 button: fret_core::MouseButton::Right,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
 
