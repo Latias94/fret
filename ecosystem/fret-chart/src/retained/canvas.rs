@@ -7,12 +7,13 @@ use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, ChartEngine, WorkBudget};
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand, PathConstraints, PathStyle,
-    Point, PointerEvent, Px, Rect, SceneOp, StrokeStyle,
+    Color, Corners, DrawOrder, Edges, Event, Modifiers, MouseButton, PathCommand, PathConstraints,
+    PathStyle, Point, PointerEvent, Px, Rect, SceneOp, Size, StrokeStyle,
 };
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
 
+use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
 use crate::retained::style::ChartStyle;
 
 #[derive(Debug, Default)]
@@ -42,14 +43,39 @@ struct PanDrag {
     start_y: DataWindow,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct BoxZoomDrag {
+    x_axis: delinea::AxisId,
+    y_axis: delinea::AxisId,
+    button: MouseButton,
+    required_mods: ModifiersMask,
+    start_pos: Point,
+    current_pos: Point,
+    start_x: DataWindow,
+    start_y: DataWindow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AxisRegion {
+    Plot,
+    XAxis,
+    YAxis,
+}
+
 pub struct ChartCanvas {
     engine: ChartEngine,
     style: ChartStyle,
+    input_map: ChartInputMap,
     last_bounds: Rect,
     last_marks_rev: delinea::ids::Revision,
     last_scale_factor_bits: u32,
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
     pan_drag: Option<PanDrag>,
+    box_zoom_drag: Option<BoxZoomDrag>,
+    lock_x_pan: bool,
+    lock_y_pan: bool,
+    lock_x_zoom: bool,
+    lock_y_zoom: bool,
 }
 
 impl ChartCanvas {
@@ -57,11 +83,17 @@ impl ChartCanvas {
         Ok(Self {
             engine: ChartEngine::new(spec)?,
             style: ChartStyle::default(),
+            input_map: ChartInputMap::default(),
             last_bounds: Rect::default(),
             last_marks_rev: delinea::ids::Revision::default(),
             last_scale_factor_bits: 0,
             cached_paths: BTreeMap::default(),
             pan_drag: None,
+            box_zoom_drag: None,
+            lock_x_pan: false,
+            lock_y_pan: false,
+            lock_x_zoom: false,
+            lock_y_zoom: false,
         })
     }
 
@@ -75,6 +107,10 @@ impl ChartCanvas {
 
     pub fn set_style(&mut self, style: ChartStyle) {
         self.style = style;
+    }
+
+    pub fn set_input_map(&mut self, map: ChartInputMap) {
+        self.input_map = map;
     }
 
     pub fn create_node<H: UiHost>(ui: &mut fret_ui::UiTree<H>, canvas: Self) -> fret_core::NodeId {
@@ -221,6 +257,83 @@ impl ChartCanvas {
         });
     }
 
+    fn axis_region(bounds: Rect, position: Point) -> AxisRegion {
+        // P0 heuristic: since we don't render axes yet, treat thin bands along the left/bottom
+        // edges as axis hit targets for lock toggles.
+        let axis_band = 24.0;
+        let local_x = position.x.0 - bounds.origin.x.0;
+        let local_y = position.y.0 - bounds.origin.y.0;
+
+        if local_x >= 0.0 && local_x <= axis_band {
+            return AxisRegion::YAxis;
+        }
+        if local_y >= bounds.size.height.0 - axis_band && local_y <= bounds.size.height.0 {
+            return AxisRegion::XAxis;
+        }
+        AxisRegion::Plot
+    }
+
+    fn is_button_held(button: MouseButton, buttons: fret_core::MouseButtons) -> bool {
+        match button {
+            MouseButton::Left => buttons.left,
+            MouseButton::Right => buttons.right,
+            MouseButton::Middle => buttons.middle,
+            _ => false,
+        }
+    }
+
+    fn apply_box_select_modifiers(
+        plot_size: Size,
+        start: Point,
+        end: Point,
+        modifiers: Modifiers,
+        expand_x: Option<ModifierKey>,
+        expand_y: Option<ModifierKey>,
+        required: ModifiersMask,
+    ) -> (Point, Point) {
+        let mut start = start;
+        let mut end = end;
+
+        // Matches ImPlot's default selection modifiers:
+        // - Alt: expand selection horizontally to plot edge.
+        // - Shift: expand selection vertically to plot edge.
+        //
+        // Note: when a modifier is required to start the drag gesture (e.g. Shift+LMB alternative),
+        // treat it as part of the gesture chord and do not implicitly apply edge expansion.
+        if expand_x.is_some_and(|k| k.is_pressed(modifiers) && !k.is_required_by(required)) {
+            start.x = Px(0.0);
+            end.x = plot_size.width;
+        }
+        if expand_y.is_some_and(|k| k.is_pressed(modifiers) && !k.is_required_by(required)) {
+            start.y = Px(0.0);
+            end.y = plot_size.height;
+        }
+
+        (start, end)
+    }
+
+    fn data_at_x_px(window: DataWindow, x_px: f32, viewport_width_px: f32) -> f64 {
+        let viewport_width_px = viewport_width_px as f64;
+        if !viewport_width_px.is_finite() || viewport_width_px <= 0.0 {
+            return window.min;
+        }
+        let t = ((x_px as f64) / viewport_width_px).clamp(0.0, 1.0);
+        window.min + t * window.span()
+    }
+
+    fn data_at_y_px_from_bottom(
+        window: DataWindow,
+        y_px_from_bottom: f32,
+        viewport_height_px: f32,
+    ) -> f64 {
+        let viewport_height_px = viewport_height_px as f64;
+        if !viewport_height_px.is_finite() || viewport_height_px <= 0.0 {
+            return window.min;
+        }
+        let t = ((y_px_from_bottom as f64) / viewport_height_px).clamp(0.0, 1.0);
+        window.min + t * window.span()
+    }
+
     fn rebuild_paths_if_needed<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let marks_rev = self.engine.output().marks.revision;
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -297,39 +410,65 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             Event::Pointer(PointerEvent::Move {
                 position, buttons, ..
             }) => {
-                if let Some(drag) = self.pan_drag
-                    && buttons.left
-                    && cx.captured == Some(cx.node)
-                {
-                    let bounds = cx.bounds;
-                    let width = bounds.size.width.0;
-                    let height = bounds.size.height.0;
-                    if width <= 0.0 || height <= 0.0 {
+                if cx.captured == Some(cx.node) {
+                    if let Some(mut drag) = self.box_zoom_drag
+                        && Self::is_button_held(drag.button, *buttons)
+                    {
+                        drag.current_pos = *position;
+                        self.box_zoom_drag = Some(drag);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
                         return;
                     }
 
-                    let dx = position.x.0 - drag.start_pos.x.0;
-                    let dy = position.y.0 - drag.start_pos.y.0;
+                    if let Some(drag) = self.pan_drag
+                        && buttons.left
+                    {
+                        let bounds = cx.bounds;
+                        let width = bounds.size.width.0;
+                        let height = bounds.size.height.0;
+                        if width <= 0.0 || height <= 0.0 {
+                            return;
+                        }
 
-                    let mut next_x = drag.start_x.pan_by_px(dx, width);
-                    let mut next_y = drag.start_y.pan_by_px(-dy, height);
+                        let dx = position.x.0 - drag.start_pos.x.0;
+                        let dy = position.y.0 - drag.start_pos.y.0;
 
-                    let (x_locked_min, x_locked_max) = self.axis_constraints(drag.x_axis);
-                    let (y_locked_min, y_locked_max) = self.axis_constraints(drag.y_axis);
-                    next_x = next_x.apply_constraints(x_locked_min, x_locked_max);
-                    next_y = next_y.apply_constraints(y_locked_min, y_locked_max);
+                        let mut next_x = if self.lock_x_pan {
+                            drag.start_x
+                        } else {
+                            drag.start_x.pan_by_px(dx, width)
+                        };
+                        let mut next_y = if self.lock_y_pan {
+                            drag.start_y
+                        } else {
+                            drag.start_y.pan_by_px(-dy, height)
+                        };
 
-                    self.apply_view_window_2d(drag.x_axis, drag.y_axis, Some(next_x), Some(next_y));
+                        let (x_locked_min, x_locked_max) = self.axis_constraints(drag.x_axis);
+                        let (y_locked_min, y_locked_max) = self.axis_constraints(drag.y_axis);
+                        next_x = next_x.apply_constraints(x_locked_min, x_locked_max);
+                        next_y = next_y.apply_constraints(y_locked_min, y_locked_max);
 
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
-                    cx.stop_propagation();
-                } else {
-                    self.engine
-                        .apply_action(Action::HoverAt { point: *position });
-                    cx.invalidate_self(Invalidation::Paint);
-                    cx.request_redraw();
+                        self.apply_view_window_2d(
+                            drag.x_axis,
+                            drag.y_axis,
+                            Some(next_x),
+                            Some(next_y),
+                        );
+
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
                 }
+
+                self.engine
+                    .apply_action(Action::HoverAt { point: *position });
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
             }
             Event::Pointer(PointerEvent::Down {
                 position,
@@ -337,18 +476,94 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 modifiers,
                 ..
             }) => {
-                if self.pan_drag.is_some() {
-                    return;
-                }
-                if *button != MouseButton::Left {
-                    return;
-                }
-                if modifiers.shift
-                    || modifiers.ctrl
-                    || modifiers.alt
-                    || modifiers.meta
-                    || modifiers.alt_gr
+                if let Some(cancel) = self.input_map.box_zoom_cancel
+                    && self.box_zoom_drag.is_some()
+                    && cancel.matches(*button, *modifiers)
                 {
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if self.input_map.axis_lock_toggle.matches(*button, *modifiers) {
+                    match Self::axis_region(cx.bounds, *position) {
+                        AxisRegion::XAxis => {
+                            self.lock_x_pan = !self.lock_x_pan;
+                            self.lock_x_zoom = !self.lock_x_zoom;
+                        }
+                        AxisRegion::YAxis => {
+                            self.lock_y_pan = !self.lock_y_pan;
+                            self.lock_y_zoom = !self.lock_y_zoom;
+                        }
+                        AxisRegion::Plot => {
+                            self.lock_x_pan = !self.lock_x_pan;
+                            self.lock_x_zoom = !self.lock_x_zoom;
+                            self.lock_y_pan = !self.lock_y_pan;
+                            self.lock_y_zoom = !self.lock_y_zoom;
+                        }
+                    }
+
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if self.pan_drag.is_some() || self.box_zoom_drag.is_some() {
+                    return;
+                }
+
+                let start_box_primary = self.input_map.box_zoom.matches(*button, *modifiers);
+                let start_box_alt = self
+                    .input_map
+                    .box_zoom_alt
+                    .is_some_and(|chord| chord.matches(*button, *modifiers));
+                if start_box_primary || start_box_alt {
+                    let Some((x_axis, y_axis)) = self.primary_axes() else {
+                        return;
+                    };
+
+                    if self.axis_is_fixed(x_axis).is_some() || self.axis_is_fixed(y_axis).is_some()
+                    {
+                        return;
+                    }
+
+                    let required_mods = if start_box_primary {
+                        self.input_map.box_zoom.modifiers
+                    } else {
+                        self.input_map
+                            .box_zoom_alt
+                            .unwrap_or(self.input_map.box_zoom)
+                            .modifiers
+                    };
+
+                    let start_x = self.current_window_x(x_axis);
+                    let start_y = self.current_window_y(y_axis);
+
+                    self.box_zoom_drag = Some(BoxZoomDrag {
+                        x_axis,
+                        y_axis,
+                        button: *button,
+                        required_mods,
+                        start_pos: *position,
+                        current_pos: *position,
+                        start_x,
+                        start_y,
+                    });
+
+                    cx.capture_pointer(cx.node);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if !self.input_map.pan.matches(*button, *modifiers) {
                     return;
                 }
 
@@ -356,6 +571,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     return;
                 };
                 if self.axis_is_fixed(x_axis).is_some() || self.axis_is_fixed(y_axis).is_some() {
+                    return;
+                }
+                if self.lock_x_pan && self.lock_y_pan {
                     return;
                 }
 
@@ -373,12 +591,105 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 cx.capture_pointer(cx.node);
                 cx.stop_propagation();
             }
-            Event::Pointer(PointerEvent::Up { button, .. }) => {
-                if *button != MouseButton::Left {
+            Event::Pointer(PointerEvent::Up {
+                button, modifiers, ..
+            }) => {
+                if let Some(drag) = self.box_zoom_drag
+                    && drag.button == *button
+                {
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+
+                    let bounds = cx.bounds;
+                    let width = bounds.size.width.0;
+                    let height = bounds.size.height.0;
+                    if width > 0.0 && height > 0.0 {
+                        let start_local = Point::new(
+                            Px(drag.start_pos.x.0 - bounds.origin.x.0),
+                            Px(drag.start_pos.y.0 - bounds.origin.y.0),
+                        );
+                        let end_local = Point::new(
+                            Px(drag.current_pos.x.0 - bounds.origin.x.0),
+                            Px(drag.current_pos.y.0 - bounds.origin.y.0),
+                        );
+
+                        let (start_local, end_local) = Self::apply_box_select_modifiers(
+                            bounds.size,
+                            start_local,
+                            end_local,
+                            *modifiers,
+                            self.input_map.box_zoom_expand_x,
+                            self.input_map.box_zoom_expand_y,
+                            drag.required_mods,
+                        );
+
+                        let w = (start_local.x.0 - end_local.x.0).abs();
+                        let h = (start_local.y.0 - end_local.y.0).abs();
+                        if w >= 4.0 && h >= 4.0 {
+                            let mut x = None;
+                            let mut y = None;
+
+                            if self.axis_is_fixed(drag.x_axis).is_none() {
+                                if self.lock_x_zoom {
+                                    x = Some(drag.start_x);
+                                } else {
+                                    let x0 = start_local.x.0.min(end_local.x.0).clamp(0.0, width);
+                                    let x1 = start_local.x.0.max(end_local.x.0).clamp(0.0, width);
+                                    let min = Self::data_at_x_px(drag.start_x, x0, width);
+                                    let max = Self::data_at_x_px(drag.start_x, x1, width);
+                                    let mut window = DataWindow { min, max };
+                                    window.clamp_non_degenerate();
+                                    let (locked_min, locked_max) =
+                                        self.axis_constraints(drag.x_axis);
+                                    x = Some(window.apply_constraints(locked_min, locked_max));
+                                }
+                            }
+
+                            if self.axis_is_fixed(drag.y_axis).is_none() {
+                                if self.lock_y_zoom {
+                                    y = Some(drag.start_y);
+                                } else {
+                                    let y0 = start_local.y.0.min(end_local.y.0).clamp(0.0, height);
+                                    let y1 = start_local.y.0.max(end_local.y.0).clamp(0.0, height);
+                                    let y0_from_bottom = height - y1;
+                                    let y1_from_bottom = height - y0;
+                                    let min = Self::data_at_y_px_from_bottom(
+                                        drag.start_y,
+                                        y0_from_bottom,
+                                        height,
+                                    );
+                                    let max = Self::data_at_y_px_from_bottom(
+                                        drag.start_y,
+                                        y1_from_bottom,
+                                        height,
+                                    );
+                                    let mut window = DataWindow { min, max };
+                                    window.clamp_non_degenerate();
+                                    let (locked_min, locked_max) =
+                                        self.axis_constraints(drag.y_axis);
+                                    y = Some(window.apply_constraints(locked_min, locked_max));
+                                }
+                            }
+
+                            if x.is_some() || y.is_some() {
+                                self.apply_view_window_2d(drag.x_axis, drag.y_axis, x, y);
+                            }
+                        }
+                    }
+
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
                     return;
                 }
-                if self.pan_drag.take().is_some() && cx.captured == Some(cx.node) {
-                    cx.release_pointer_capture();
+
+                if self.pan_drag.is_some() && *button == MouseButton::Left {
+                    self.pan_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -417,19 +728,31 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 let zoom_x = !modifiers.ctrl;
                 let zoom_y = !modifiers.shift;
 
-                let mut next_x = zoom_x.then(|| {
+                let next_x = zoom_x.then(|| {
+                    if self.lock_x_zoom {
+                        return None;
+                    }
                     let w = self.current_window_x(x_axis);
                     let (locked_min, locked_max) = self.axis_constraints(x_axis);
-                    w.zoom_by_px(center_x, log2_scale, width)
-                        .apply_constraints(locked_min, locked_max)
+                    Some(
+                        w.zoom_by_px(center_x, log2_scale, width)
+                            .apply_constraints(locked_min, locked_max),
+                    )
                 });
+                let mut next_x = next_x.flatten();
 
-                let mut next_y = zoom_y.then(|| {
+                let next_y = zoom_y.then(|| {
+                    if self.lock_y_zoom {
+                        return None;
+                    }
                     let w = self.current_window_y(y_axis);
                     let (locked_min, locked_max) = self.axis_constraints(y_axis);
-                    w.zoom_by_px(center_y_from_bottom, log2_scale, height)
-                        .apply_constraints(locked_min, locked_max)
+                    Some(
+                        w.zoom_by_px(center_y_from_bottom, log2_scale, height)
+                            .apply_constraints(locked_min, locked_max),
+                    )
                 });
+                let mut next_y = next_y.flatten();
 
                 if self.axis_is_fixed(x_axis).is_some() {
                     next_x = None;
@@ -495,6 +818,20 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
         }
 
+        if let Some(drag) = self.box_zoom_drag {
+            let rect = rect_from_points_clamped(self.last_bounds, drag.start_pos, drag.current_pos);
+            if rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0 {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(self.style.draw_order.0.saturating_add(1)),
+                    rect,
+                    background: self.style.selection_fill,
+                    border: Edges::all(self.style.selection_stroke_width),
+                    border_color: self.style.selection_stroke,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+        }
+
         cx.scene.push(SceneOp::PopClip);
     }
 
@@ -503,5 +840,66 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             services.path().release(cached.path);
         }
         self.cached_paths.clear();
+    }
+}
+
+fn rect_from_points_clamped(bounds: Rect, a: Point, b: Point) -> Rect {
+    let x0 =
+        a.x.0
+            .min(b.x.0)
+            .clamp(bounds.origin.x.0, bounds.origin.x.0 + bounds.size.width.0);
+    let x1 =
+        a.x.0
+            .max(b.x.0)
+            .clamp(bounds.origin.x.0, bounds.origin.x.0 + bounds.size.width.0);
+    let y0 =
+        a.y.0
+            .min(b.y.0)
+            .clamp(bounds.origin.y.0, bounds.origin.y.0 + bounds.size.height.0);
+    let y1 =
+        a.y.0
+            .max(b.y.0)
+            .clamp(bounds.origin.y.0, bounds.origin.y.0 + bounds.size.height.0);
+
+    Rect::new(
+        Point::new(Px(x0), Px(y0)),
+        Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn data_mapping_is_monotonic() {
+        let window = DataWindow {
+            min: 10.0,
+            max: 20.0,
+        };
+        let a = ChartCanvas::data_at_x_px(window, 0.0, 100.0);
+        let b = ChartCanvas::data_at_x_px(window, 50.0, 100.0);
+        let c = ChartCanvas::data_at_x_px(window, 100.0, 100.0);
+        assert!(a < b && b < c);
+        assert_eq!(a, 10.0);
+        assert_eq!(c, 20.0);
+
+        let d = ChartCanvas::data_at_y_px_from_bottom(window, 0.0, 100.0);
+        let e = ChartCanvas::data_at_y_px_from_bottom(window, 100.0, 100.0);
+        assert_eq!(d, 10.0);
+        assert_eq!(e, 20.0);
+    }
+
+    #[test]
+    fn rect_from_points_is_clamped_to_bounds() {
+        let bounds = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(100.0), Px(200.0)),
+        );
+        let a = Point::new(Px(0.0), Px(0.0));
+        let b = Point::new(Px(999.0), Px(999.0));
+        let rect = rect_from_points_clamped(bounds, a, b);
+        assert_eq!(rect.origin, bounds.origin);
+        assert_eq!(rect.size, bounds.size);
     }
 }
