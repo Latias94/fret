@@ -82,6 +82,7 @@ pub struct ChartCanvas {
     last_scale_factor_bits: u32,
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
     axis_text: Vec<TextBlobId>,
+    tooltip_text: Vec<TextBlobId>,
     pan_drag: Option<PanDrag>,
     box_zoom_drag: Option<BoxZoomDrag>,
     lock_x_pan: bool,
@@ -103,6 +104,7 @@ impl ChartCanvas {
             last_scale_factor_bits: 0,
             cached_paths: BTreeMap::default(),
             axis_text: Vec::default(),
+            tooltip_text: Vec::default(),
             pan_drag: None,
             box_zoom_drag: None,
             lock_x_pan: false,
@@ -414,6 +416,12 @@ impl ChartCanvas {
 
     fn clear_axis_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
         for blob in self.axis_text.drain(..) {
+            services.text().release(blob);
+        }
+    }
+
+    fn clear_tooltip_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
+        for blob in self.tooltip_text.drain(..) {
             services.text().release(blob);
         }
     }
@@ -1211,6 +1219,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             .map_err(|_e: EngineError| ());
 
         self.rebuild_paths_if_needed(cx);
+        self.clear_tooltip_text_cache(cx.services);
 
         if let Some(background) = self.style.background {
             cx.scene.push(SceneOp::Quad {
@@ -1236,6 +1245,68 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
         }
 
+        let pointer_pos = self.last_pointer_pos;
+        let hover_hit = self.engine.output().hover;
+
+        let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
+        let hover_radius_px = self.style.hover_point_size.0.max(4.0) * 3.0;
+        let hover_active = interaction_idle
+            && pointer_pos.is_some_and(|pos| self.last_layout.plot.contains(pos))
+            && hover_hit.is_some_and(|hit| hit.dist2_px <= hover_radius_px * hover_radius_px);
+
+        if hover_active && let (Some(pos), Some(hit)) = (pointer_pos, hover_hit) {
+            let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(2));
+            let point_order = DrawOrder(self.style.draw_order.0.saturating_add(3));
+
+            let plot = self.last_layout.plot;
+            let crosshair_w = self.style.crosshair_width.0.max(1.0);
+
+            let x = pos
+                .x
+                .0
+                .clamp(plot.origin.x.0, plot.origin.x.0 + plot.size.width.0);
+            let y = pos
+                .y
+                .0
+                .clamp(plot.origin.y.0, plot.origin.y.0 + plot.size.height.0);
+
+            cx.scene.push(SceneOp::Quad {
+                order: overlay_order,
+                rect: Rect::new(
+                    Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
+                    Size::new(Px(crosshair_w), plot.size.height),
+                ),
+                background: self.style.crosshair_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+            cx.scene.push(SceneOp::Quad {
+                order: overlay_order,
+                rect: Rect::new(
+                    Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
+                    Size::new(plot.size.width, Px(crosshair_w)),
+                ),
+                background: self.style.crosshair_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+
+            let r = self.style.hover_point_size.0.max(1.0);
+            cx.scene.push(SceneOp::Quad {
+                order: point_order,
+                rect: Rect::new(
+                    Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
+                    Size::new(Px(2.0 * r), Px(2.0 * r)),
+                ),
+                background: self.style.hover_point_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
+
         if let Some(drag) = self.box_zoom_drag {
             let rect =
                 rect_from_points_clamped(self.last_layout.plot, drag.start_pos, drag.current_pos);
@@ -1252,6 +1323,108 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         cx.scene.push(SceneOp::PopClip);
+
+        if hover_active
+            && let Some(hit) = hover_hit
+            && let Some((x_axis, y_axis)) = self.primary_axes()
+        {
+            let x_window = self.current_window_x(x_axis);
+            let y_window = self.current_window_y(y_axis);
+
+            let tooltip_values = (|| {
+                let series = self.engine.model().series.get(&hit.series)?;
+                let dataset_id = series.dataset;
+                let x_col = series.x_col;
+                let y_col = series.y_col;
+
+                let table = self
+                    .engine
+                    .datasets_mut()
+                    .datasets
+                    .iter()
+                    .find_map(|(id, t)| (*id == dataset_id).then_some(t))?;
+
+                let idx = hit.data_index as usize;
+                let x = table.column_f64(x_col)?;
+                let y = table.column_f64(y_col)?;
+                if idx >= x.len() || idx >= y.len() {
+                    return None;
+                }
+
+                Some((x[idx], y[idx]))
+            })();
+
+            if let Some((x_value, y_value)) = tooltip_values {
+                let x_label = format_tick_value(x_window, x_value);
+                let y_label = format_tick_value(y_window, y_value);
+                let label = format!("series: {}  x: {}  y: {}", hit.series.0, x_label, y_label);
+
+                let text_style = TextStyle {
+                    size: Px(12.0),
+                    weight: FontWeight::NORMAL,
+                    ..TextStyle::default()
+                };
+                let constraints = TextConstraints {
+                    max_width: None,
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: cx.scale_factor,
+                };
+                let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+
+                let pad = self.style.tooltip_padding;
+                let w = (metrics.size.width.0 + pad.left.0 + pad.right.0).max(1.0);
+                let h = (metrics.size.height.0 + pad.top.0 + pad.bottom.0).max(1.0);
+
+                let bounds = self.last_layout.bounds;
+                let x0 = bounds.origin.x.0;
+                let y0 = bounds.origin.y.0;
+                let x1 = x0 + bounds.size.width.0;
+                let y1 = y0 + bounds.size.height.0;
+
+                let offset = 10.0f32;
+                let mut tip_x = hit.point_px.x.0 + offset;
+                let mut tip_y = hit.point_px.y.0 - h - offset;
+
+                if tip_x + w > x1 {
+                    tip_x = hit.point_px.x.0 - w - offset;
+                }
+                if tip_y < y0 {
+                    tip_y = hit.point_px.y.0 + offset;
+                }
+
+                if w < bounds.size.width.0 {
+                    tip_x = tip_x.clamp(x0, x1 - w);
+                } else {
+                    tip_x = x0;
+                }
+                if h < bounds.size.height.0 {
+                    tip_y = tip_y.clamp(y0, y1 - h);
+                } else {
+                    tip_y = y0;
+                }
+
+                let tooltip_order = DrawOrder(self.style.draw_order.0.saturating_add(20));
+                cx.scene.push(SceneOp::Quad {
+                    order: tooltip_order,
+                    rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
+                    background: self.style.tooltip_background,
+                    border: Edges::all(self.style.tooltip_border_width),
+                    border_color: self.style.tooltip_border_color,
+                    corner_radii: Corners::all(self.style.tooltip_corner_radius),
+                });
+
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(tooltip_order.0.saturating_add(1)),
+                    origin: Point::new(Px(tip_x + pad.left.0), Px(tip_y + pad.top.0)),
+                    text: blob,
+                    color: self.style.tooltip_text_color,
+                });
+
+                self.tooltip_text.push(blob);
+            }
+        }
+
         self.draw_axes(cx);
     }
 
@@ -1262,6 +1435,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         self.cached_paths.clear();
 
         for blob in self.axis_text.drain(..) {
+            services.text().release(blob);
+        }
+        for blob in self.tooltip_text.drain(..) {
             services.text().release(blob);
         }
     }

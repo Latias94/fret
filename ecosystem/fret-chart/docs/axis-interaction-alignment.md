@@ -69,13 +69,23 @@ Axis targeting is based on the rendered layout:
 
 All UI input is mapped into headless actions:
 
-- Hover: `Action::HoverAt { point: window-local px }`
+- Hover: `Action::HoverAt { point: widget-local px }` (logical pixels)
 - Pan: `Action::SetDataWindowX/Y { axis, window: Some(DataWindow) }`
 - Zoom (wheel/box): same as above, with windows computed from pixel-space interaction
 - Reset: `Action::SetDataWindowX/Y { axis, window: None }`
 
+## Hover / crosshair / tooltip (P0)
+
+Current behavior is intentionally ImPlot-like:
+
+- Crosshair + tooltip are only shown when the pointer is inside the plot rect and close to a sampled data point.
+- Crosshair position uses the pointer location.
+- Hover marker uses the nearest sampled point (after LOD).
+- Tooltip currently shows `series id`, `x`, `y` and uses the same numeric formatting as axis ticks.
+
 ## Known limitations
 
-- No axis rendering yet (ticks/labels), so axis-region detection for lock toggles is temporary.
-- Box zoom currently uses the widget bounds as the plot area (no padding/margins).
+- Only a single primary X/Y axis is supported (no multi-axis / multi-grid yet).
+- Axis rendering is minimal (no grid lines, titles, legends, or rich formatting yet).
+- Crosshair is currently rendered as solid lines (no dash pattern yet).
 - Fit/reset requires focus (currently acquired by clicking the canvas).
