@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -151,6 +152,19 @@ struct PendingPaste {
     at: CanvasPoint,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct GeometryCacheKey {
+    graph_rev: u64,
+    zoom_bits: u32,
+    draw_order_hash: u64,
+}
+
+#[derive(Debug, Clone, Default)]
+struct GeometryCache {
+    key: Option<GeometryCacheKey>,
+    geom: Arc<CanvasGeometry>,
+}
+
 #[derive(Debug, Clone)]
 struct LastConversionContext {
     from: PortId,
@@ -176,6 +190,7 @@ pub struct NodeGraphCanvas {
     cached_pan: CanvasPoint,
     cached_zoom: f32,
     history: GraphHistory,
+    geometry: GeometryCache,
 
     wire_paths: Vec<fret_core::PathId>,
     text_blobs: Vec<TextBlobId>,
@@ -221,6 +236,42 @@ impl NodeGraphCanvas {
         Some((first.severity, Arc::<str>::from(first.message.clone())))
     }
 
+    fn draw_order_hash(ids: &[GraphNodeId]) -> u64 {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        ids.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    fn canvas_geometry<H: UiHost>(
+        &mut self,
+        host: &H,
+        snapshot: &ViewSnapshot,
+    ) -> Arc<CanvasGeometry> {
+        let graph_rev = self.graph.revision(host).unwrap_or(0);
+        let key = GeometryCacheKey {
+            graph_rev,
+            zoom_bits: snapshot.zoom.to_bits(),
+            draw_order_hash: Self::draw_order_hash(&snapshot.draw_order),
+        };
+
+        if self.geometry.key != Some(key) {
+            let style = self.style.clone();
+            let draw_order = snapshot.draw_order.clone();
+            let zoom = snapshot.zoom;
+            let geom = self
+                .graph
+                .read_ref(host, |graph| {
+                    CanvasGeometry::build(graph, &draw_order, &style, zoom)
+                })
+                .ok()
+                .unwrap_or_default();
+            self.geometry.key = Some(key);
+            self.geometry.geom = Arc::new(geom);
+        }
+
+        self.geometry.geom.clone()
+    }
+
     pub fn new(graph: Model<Graph>, view_state: Model<NodeGraphViewState>) -> Self {
         Self {
             graph,
@@ -231,6 +282,7 @@ impl NodeGraphCanvas {
             cached_pan: CanvasPoint::default(),
             cached_zoom: 1.0,
             history: GraphHistory::default(),
+            geometry: GeometryCache::default(),
             wire_paths: Vec::new(),
             text_blobs: Vec::new(),
             interaction: InteractionState::default(),
@@ -244,6 +296,7 @@ impl NodeGraphCanvas {
 
     pub fn with_style(mut self, style: NodeGraphStyle) -> Self {
         self.style = style;
+        self.geometry.key = None;
         self
     }
 
@@ -893,14 +946,7 @@ impl NodeGraphCanvas {
         Some(Point::new(Px(x), Px(y)))
     }
 
-    fn hit_port(
-        &self,
-        graph: &Graph,
-        snapshot: &ViewSnapshot,
-        pos: Point,
-        zoom: f32,
-    ) -> Option<PortId> {
-        let geom = CanvasGeometry::build(graph, &snapshot.draw_order, &self.style, zoom);
+    fn hit_port(&self, geom: &CanvasGeometry, pos: Point, zoom: f32) -> Option<PortId> {
         let port_id = geom.hit_port(pos)?;
 
         // Preserve the previous circular hit-testing semantics (geometry bounds are AABB).
@@ -920,6 +966,7 @@ impl NodeGraphCanvas {
         &self,
         graph: &Graph,
         snapshot: &ViewSnapshot,
+        geom: &CanvasGeometry,
         from: PortId,
         pos: Point,
         zoom: f32,
@@ -932,14 +979,14 @@ impl NodeGraphCanvas {
 
         match snapshot.interaction.connection_mode {
             NodeGraphConnectionMode::Strict => {
-                let candidate = self.hit_port(graph, snapshot, pos, zoom)?;
+                let candidate = self.hit_port(geom, pos, zoom)?;
                 let port = graph.ports.get(&candidate)?;
                 (candidate != from && port.dir == desired_dir).then_some(candidate)
             }
             NodeGraphConnectionMode::Loose => {
                 let radius_screen = snapshot.interaction.connection_radius;
                 if !radius_screen.is_finite() || radius_screen <= 0.0 {
-                    let candidate = self.hit_port(graph, snapshot, pos, zoom)?;
+                    let candidate = self.hit_port(geom, pos, zoom)?;
                     let port = graph.ports.get(&candidate)?;
                     return (candidate != from && port.dir == desired_dir).then_some(candidate);
                 }
@@ -947,7 +994,6 @@ impl NodeGraphCanvas {
                 let r2 = r * r;
 
                 let mut best: Option<(PortId, f32)> = None;
-                let geom = CanvasGeometry::build(graph, &snapshot.draw_order, &self.style, zoom);
                 for (&port_id, handle) in &geom.ports {
                     if port_id == from || handle.dir != desired_dir {
                         continue;
@@ -974,14 +1020,13 @@ impl NodeGraphCanvas {
         &self,
         graph: &Graph,
         snapshot: &ViewSnapshot,
+        geom: &CanvasGeometry,
         pos: Point,
         zoom: f32,
     ) -> Option<EdgeId> {
         let hit_w =
             (snapshot.interaction.edge_interaction_width / zoom).max(self.style.wire_width / zoom);
         let threshold2 = hit_w * hit_w;
-
-        let geom = CanvasGeometry::build(graph, &snapshot.draw_order, &self.style, zoom);
 
         let mut best: Option<(EdgeId, f32)> = None;
         for (&edge_id, edge) in &graph.edges {
@@ -2720,11 +2765,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 if *button == MouseButton::Right {
+                    let geom = self.canvas_geometry(&*cx.app, &snapshot);
                     let hit_edge = {
                         let this = &*self;
+                        let geom = geom.clone();
                         this.graph
                             .read_ref(cx.app, |graph| {
-                                this.hit_edge(graph, &snapshot, *position, zoom)
+                                this.hit_edge(graph, &snapshot, geom.as_ref(), *position, zoom)
                             })
                             .ok()
                             .flatten()
@@ -2871,15 +2918,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 let hit = {
+                    let geom = self.canvas_geometry(&*cx.app, &snapshot);
                     let this = &*self;
                     this.graph
                         .read_ref(cx.app, |graph| {
-                            if let Some(port) = this.hit_port(graph, &snapshot, *position, zoom) {
+                            if let Some(port) = this.hit_port(geom.as_ref(), *position, zoom) {
                                 return Hit::Port(port);
                             }
                             let order = this.node_order(graph, &snapshot);
                             let Some(node) = this.hit_node(graph, *position, &order, zoom) else {
-                                if let Some(edge) = this.hit_edge(graph, &snapshot, *position, zoom)
+                                if let Some(edge) =
+                                    this.hit_edge(graph, &snapshot, geom.as_ref(), *position, zoom)
                                 {
                                     return Hit::Edge(edge);
                                 }
@@ -3124,6 +3173,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 if let Some(mut w) = self.interaction.wire_drag.take() {
+                    let geom = self.canvas_geometry(&*cx.app, &snapshot);
                     let auto_pan_delta = (snapshot.interaction.auto_pan.on_connect)
                         .then(|| Self::auto_pan_delta(&snapshot, *position, cx.bounds))
                         .unwrap_or_default();
@@ -3144,9 +3194,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         if let WireDragKind::New { from, bundle } = &mut w.kind {
                             let candidate = {
                                 let this = &*self;
+                                let geom = geom.clone();
                                 this.graph
-                                    .read_ref(cx.app, |graph| {
-                                        this.hit_port(graph, &snapshot, pos, zoom)
+                                    .read_ref(cx.app, |_graph| {
+                                        this.hit_port(geom.as_ref(), pos, zoom)
                                     })
                                     .ok()
                                     .flatten()
@@ -3179,9 +3230,17 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                     let new_hover = if let Some(from_port) = from_port {
                         let this = &*self;
+                        let geom = geom.clone();
                         this.graph
                             .read_ref(cx.app, |graph| {
-                                this.pick_target_port(graph, &snapshot, from_port, pos, zoom)
+                                this.pick_target_port(
+                                    graph,
+                                    &snapshot,
+                                    geom.as_ref(),
+                                    from_port,
+                                    pos,
+                                    zoom,
+                                )
                             })
                             .ok()
                             .flatten()
@@ -3344,10 +3403,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 let new_hover = {
+                    let geom = self.canvas_geometry(&*cx.app, &snapshot);
                     let this = &*self;
                     this.graph
                         .read_ref(cx.app, |graph| {
-                            this.hit_edge(graph, &snapshot, *position, zoom)
+                            this.hit_edge(graph, &snapshot, geom.as_ref(), *position, zoom)
                         })
                         .ok()
                         .flatten()
@@ -3418,10 +3478,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
                         };
                         let target = from_port.and_then(|from_port| {
+                            let geom = self.canvas_geometry(&*cx.app, &snapshot);
                             let this = &*self;
                             this.graph
                                 .read_ref(cx.app, |graph| {
-                                    this.pick_target_port(graph, &snapshot, from_port, w.pos, zoom)
+                                    this.pick_target_port(
+                                        graph,
+                                        &snapshot,
+                                        geom.as_ref(),
+                                        from_port,
+                                        w.pos,
+                                        zoom,
+                                    )
                                 })
                                 .ok()
                                 .flatten()
@@ -3865,17 +3933,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             _ => HashSet::new(),
         };
 
+        let geom = self.canvas_geometry(&*cx.app, &snapshot);
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
             let selected_edges: HashSet<EdgeId> = snapshot.selected_edges.iter().copied().collect();
             let this = &*self;
+            let geom = geom.clone();
             let presenter: &dyn NodeGraphPresenter = &*this.presenter;
             this.graph
                 .read_ref(cx.app, |graph| {
                     let mut out = RenderData::default();
 
-                    let geom =
-                        CanvasGeometry::build(graph, &snapshot.draw_order, &this.style, zoom);
+                    let geom = geom.as_ref();
 
                     for node in geom.order.iter().copied() {
                         let Some(node_geom) = geom.nodes.get(&node) else {
