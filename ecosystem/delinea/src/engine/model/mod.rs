@@ -8,7 +8,7 @@ use fret_core::Rect;
 use thiserror::Error;
 
 use crate::ids::{AxisId, ChartId, DatasetId, GridId, Revision, SeriesId};
-use crate::spec::{AxisKind, SeriesKind};
+use crate::spec::{AxisKind, AxisRange, SeriesKind};
 
 pub use patch::*;
 
@@ -111,6 +111,11 @@ impl ChartModel {
                     id: axis.id,
                     kind: axis.kind,
                     grid: axis.grid,
+                    range: {
+                        let mut range = axis.range.unwrap_or_default();
+                        range.clamp_non_degenerate();
+                        range
+                    },
                 },
             );
         }
@@ -184,6 +189,7 @@ pub struct AxisModel {
     pub id: AxisId,
     pub kind: AxisKind,
     pub grid: GridId,
+    pub range: AxisRange,
 }
 
 #[derive(Debug, Clone)]

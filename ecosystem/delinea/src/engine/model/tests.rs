@@ -20,11 +20,13 @@ fn basic_spec() -> ChartSpec {
                 id: crate::ids::AxisId::new(1),
                 kind: AxisKind::X,
                 grid: crate::ids::GridId::new(1),
+                range: None,
             },
             AxisSpec {
                 id: crate::ids::AxisId::new(2),
                 kind: AxisKind::Y,
                 grid: crate::ids::GridId::new(1),
+                range: None,
             },
         ],
         series: vec![SeriesSpec {
@@ -73,6 +75,7 @@ fn merge_patch_updates_viewport_and_revs() {
         .unwrap();
 
     assert!(report.viewport_changed);
+    assert!(report.marks_changed);
     assert!(!report.structure_changed);
     assert_eq!(model.viewport, Some(viewport));
     assert_eq!(model.revs.spec, before.spec);
@@ -107,6 +110,7 @@ fn replace_merge_can_replace_series_only() {
         .unwrap();
 
     assert!(report.structure_changed);
+    assert!(report.marks_changed);
     assert_eq!(model.series_order, vec![crate::ids::SeriesId::new(2)]);
     assert!(model.series.contains_key(&crate::ids::SeriesId::new(2)));
     assert!(!model.series.contains_key(&crate::ids::SeriesId::new(1)));
@@ -127,6 +131,7 @@ fn replace_validates_references() {
                     id: crate::ids::AxisId::new(1),
                     kind: AxisKind::X,
                     grid: crate::ids::GridId::new(999),
+                    range: None,
                 })],
                 ..ChartPatch::default()
             },
@@ -135,4 +140,81 @@ fn replace_validates_references() {
         .unwrap_err();
 
     assert!(matches!(err, ModelError::MissingReference { kind: "grid" }));
+}
+
+#[test]
+fn merge_axis_range_updates_layout_without_structure() {
+    let spec = basic_spec();
+    let mut model = ChartModel::from_spec(spec).unwrap();
+    let before = model.revs;
+
+    let report = model
+        .apply_patch(
+            ChartPatch {
+                axes: vec![AxisOp::Upsert(AxisPatch {
+                    id: crate::ids::AxisId::new(1),
+                    kind: AxisKind::X,
+                    grid: crate::ids::GridId::new(1),
+                    range: Some(crate::spec::AxisRange::Fixed {
+                        min: 10.0,
+                        max: 20.0,
+                    }),
+                })],
+                ..ChartPatch::default()
+            },
+            PatchMode::Merge,
+        )
+        .unwrap();
+
+    assert!(!report.viewport_changed);
+    assert!(!report.structure_changed);
+    assert!(report.marks_changed);
+
+    let axis = model.axes.get(&crate::ids::AxisId::new(1)).unwrap();
+    assert_eq!(
+        axis.range,
+        crate::spec::AxisRange::Fixed {
+            min: 10.0,
+            max: 20.0
+        }
+    );
+    assert_eq!(model.revs.spec, before.spec);
+    assert!(model.revs.layout.0 > before.layout.0);
+    assert!(model.revs.marks.0 > before.marks.0);
+}
+
+#[test]
+fn merge_series_visibility_updates_visual_without_structure() {
+    let spec = basic_spec();
+    let mut model = ChartModel::from_spec(spec).unwrap();
+
+    let report = model
+        .apply_patch(
+            ChartPatch {
+                series: vec![SeriesOp::Upsert(SeriesPatch {
+                    id: crate::ids::SeriesId::new(1),
+                    kind: SeriesKind::Line,
+                    dataset: crate::ids::DatasetId::new(1),
+                    x_col: 0,
+                    y_col: 1,
+                    x_axis: crate::ids::AxisId::new(1),
+                    y_axis: crate::ids::AxisId::new(2),
+                    visible: Some(false),
+                })],
+                ..ChartPatch::default()
+            },
+            PatchMode::Merge,
+        )
+        .unwrap();
+
+    assert!(!report.structure_changed);
+    assert!(report.marks_changed);
+    assert_eq!(
+        model
+            .series
+            .get(&crate::ids::SeriesId::new(1))
+            .unwrap()
+            .visible,
+        false
+    );
 }

@@ -4,7 +4,7 @@ use fret_core::Rect;
 
 use crate::engine::model::{AxisModel, ChartModel, GridModel, ModelError, SeriesModel};
 use crate::ids::{AxisId, DatasetId, GridId, SeriesId};
-use crate::spec::{AxisKind, SeriesKind};
+use crate::spec::{AxisKind, AxisRange, SeriesKind};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -47,6 +47,7 @@ impl ChartPatch {
         if mode == PatchMode::Replace || self.replace_families.contains(&ReplaceFamily::Viewport) {
             if self.viewport.is_some() {
                 report.viewport_changed = true;
+                report.marks_changed = true;
             }
         }
 
@@ -55,6 +56,7 @@ impl ChartPatch {
                 if self.viewport.is_some() {
                     model.viewport = self.viewport.unwrap();
                     model.revs.bump_layout();
+                    report.marks_changed = true;
                 }
 
                 model.datasets.clear();
@@ -105,6 +107,7 @@ impl ChartPatch {
                 }
 
                 model.revs.bump_spec();
+                report.marks_changed = true;
                 return Ok(report);
             }
             PatchMode::ReplaceMerge => {
@@ -132,6 +135,7 @@ impl ChartPatch {
                     model.viewport = self.viewport.unwrap();
                     model.revs.bump_layout();
                     report.viewport_changed = true;
+                    report.marks_changed = true;
                 }
             }
             PatchMode::Merge => {}
@@ -141,6 +145,7 @@ impl ChartPatch {
             model.viewport = vp;
             model.revs.bump_layout();
             report.viewport_changed = true;
+            report.marks_changed = true;
         }
 
         for op in self.datasets {
@@ -179,8 +184,26 @@ impl ChartPatch {
                     if !model.grids.contains_key(&axis.grid) {
                         return Err(ModelError::MissingReference { kind: "grid" });
                     }
-                    model.axes.insert(axis.id, AxisModel::from(axis));
-                    report.structure_changed = true;
+                    let Some(existing) = model.axes.get_mut(&axis.id) else {
+                        model.axes.insert(axis.id, AxisModel::from(axis));
+                        report.structure_changed = true;
+                        continue;
+                    };
+
+                    if existing.kind != axis.kind || existing.grid != axis.grid {
+                        existing.kind = axis.kind;
+                        existing.grid = axis.grid;
+                        report.structure_changed = true;
+                    }
+
+                    if let Some(mut range) = axis.range {
+                        range.clamp_non_degenerate();
+                        if existing.range != range {
+                            existing.range = range;
+                            model.revs.bump_layout();
+                            report.marks_changed = true;
+                        }
+                    }
                 }
                 AxisOp::Remove { id } => {
                     if model.axes.remove(&id).is_some() {
@@ -207,13 +230,36 @@ impl ChartPatch {
                         });
                     }
 
-                    if model.series.contains_key(&series.id) {
-                        model.series.insert(series.id, SeriesModel::from(series));
-                    } else {
+                    let Some(existing) = model.series.get_mut(&series.id) else {
                         model.series_order.push(series.id);
                         model.series.insert(series.id, SeriesModel::from(series));
+                        report.structure_changed = true;
+                        continue;
+                    };
+
+                    if existing.kind != series.kind
+                        || existing.dataset != series.dataset
+                        || existing.x_col != series.x_col
+                        || existing.y_col != series.y_col
+                        || existing.x_axis != series.x_axis
+                        || existing.y_axis != series.y_axis
+                    {
+                        existing.kind = series.kind;
+                        existing.dataset = series.dataset;
+                        existing.x_col = series.x_col;
+                        existing.y_col = series.y_col;
+                        existing.x_axis = series.x_axis;
+                        existing.y_axis = series.y_axis;
+                        report.structure_changed = true;
                     }
-                    report.structure_changed = true;
+
+                    if let Some(visible) = series.visible {
+                        if existing.visible != visible {
+                            existing.visible = visible;
+                            model.revs.bump_visual();
+                            report.marks_changed = true;
+                        }
+                    }
                 }
                 SeriesOp::Remove { id } => {
                     if model.series.remove(&id).is_some() {
@@ -226,6 +272,7 @@ impl ChartPatch {
 
         if report.structure_changed {
             model.revs.bump_spec();
+            report.marks_changed = true;
         }
 
         Ok(report)
@@ -237,6 +284,7 @@ impl ChartPatch {
 pub struct PatchReport {
     pub viewport_changed: bool,
     pub structure_changed: bool,
+    pub marks_changed: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -266,14 +314,18 @@ pub struct AxisPatch {
     pub id: AxisId,
     pub kind: AxisKind,
     pub grid: GridId,
+    pub range: Option<AxisRange>,
 }
 
 impl From<AxisPatch> for AxisModel {
     fn from(p: AxisPatch) -> Self {
+        let mut range = p.range.unwrap_or_default();
+        range.clamp_non_degenerate();
         Self {
             id: p.id,
             kind: p.kind,
             grid: p.grid,
+            range,
         }
     }
 }

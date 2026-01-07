@@ -152,7 +152,7 @@ impl ChartEngine {
         mode: crate::engine::model::PatchMode,
     ) -> Result<crate::engine::model::PatchReport, ModelError> {
         let report = self.model.apply_patch(patch, mode)?;
-        if report.viewport_changed || report.structure_changed {
+        if report.viewport_changed || report.structure_changed || report.marks_changed {
             self.marks_stage.mark_dirty();
         }
         Ok(report)
