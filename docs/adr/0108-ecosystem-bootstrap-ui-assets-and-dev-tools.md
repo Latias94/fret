@@ -1,0 +1,187 @@
+# ADR 0108: Ecosystem Bootstrap, UI-Assets Convenience Layer, and Dev Tools
+
+Status: Proposed
+
+## Context
+
+ADR 0093 locks the core/backends/apps crate structure, keeping the portable framework kernel small and stable.
+ADR 0037 further states that policy-heavy component surfaces may eventually move to a separate repository.
+
+As the repository grows, we need to make “how do I build an app with Fret?” obvious:
+
+- which crates are stable contracts vs fast-moving defaults,
+- where “use_asset” style UI resource conveniences live,
+- how to provide a “golden path” startup experience without polluting kernel crates,
+- how dev workflows (native vs wasm, hotpatch vs reload) integrate cleanly.
+
+Today there is a mild cognition issue in the ecosystem area:
+
+- `ecosystem/fret-asset-cache` provides `use_asset`-style caching for render resources (Image/SVG) and budgeting/eviction.
+  The name can be misread as “editor asset pipeline”, which is explicitly out-of-scope for the framework kernel
+  (ADR 0027 / `docs/architecture.md`).
+- `ecosystem/fret-app-kit` mixes “app-level defaults” and “resource convenience” in a way that makes dependency selection
+  ambiguous for new users.
+- Demo apps often re-implement the same startup steps: settings load, theme selection, icon pack registration, optional
+  SVG preload, resource budget tuning, and dev toggles.
+
+Separately, we want a developer tool entry point:
+
+- a CLI (`fretboard`) that can run native/web demos with consistent flags and (optionally) enable hotpatch mode,
+  without making the framework crates depend on toolchain logic.
+
+## Goals
+
+- Make dependency selection obvious:
+  - kernel vs ecosystem vs tools.
+- Provide a “golden path” startup layer as an ecosystem crate that composes existing primitives, without adding new core contracts.
+- Rename or reframe “asset cache” to clearly mean “UI render assets”, not “editor asset pipeline”.
+- Define how dev tools (CLI) fit into the layering story.
+
+## Non-goals
+
+- Changing ADR 0093’s core/backends/apps boundaries.
+- Introducing an editor-grade asset database/import pipeline into framework crates (ADR 0026 remains out-of-scope for kernel).
+- Forcing a single bootstrap style; advanced apps may assemble crates manually.
+
+## Constraints (Alignment With Existing ADRs)
+
+- Kernel crates (`fret-core`, `fret-runtime`, `fret-app`, `fret-ui`) must remain independent of ecosystem defaults and dev tools.
+- Backend crates must not depend on ecosystem policy crates.
+- The `fret` facade must not pull in backends or ecosystem defaults by default (ADR 0093).
+- Resource ownership stays in the renderer with handle-based IDs (ADR 0004).
+
+## Decision
+
+### 1) Introduce an ecosystem “golden path” startup crate: `fret-bootstrap`
+
+We add `ecosystem/fret-bootstrap` as a composition layer that makes app/demo startup ergonomic, without changing core contracts.
+
+Responsibilities (opinionated but optional):
+
+- configure a default runner (`fret-launch` builder wiring),
+- load common settings files (e.g. `.fret/settings.json`) and apply to runner config,
+- register icon packs and apply theme presets,
+- configure UI render-asset caches (budgets, limits),
+- provide opt-in dev features:
+  - enable hotpatch mode (ADR 0107 integration),
+  - enable debug overlays / inspector hooks where applicable.
+
+Non-responsibilities:
+
+- `fret-bootstrap` must not become a new “runtime”. It only wraps/configures existing `fret-launch` and ecosystem helpers.
+- `fret-bootstrap` must not define new cross-crate contracts that belong in kernel crates; if needed, add a separate ADR.
+
+### 2) Define a dedicated “UI render assets” convenience layer (rename or alias)
+
+We explicitly classify `use_asset`-style caching as **UI render assets** (not editor project assets).
+
+We introduce a clearer naming surface:
+
+- Preferred crate name: `fret-ui-assets` (ecosystem).
+- It provides:
+  - `ImageAssetCache` + `SvgAssetCache` (and future render-asset caches),
+  - budgets, LRU/eviction rules, stats for debug overlays,
+  - unified “drive caches from runner events” helpers.
+
+Migration path:
+
+- Short term: keep `fret-asset-cache` as-is, but document it as “UI render assets”.
+- Medium term: add `fret-ui-assets` as a new crate that re-exports `fret-asset-cache` modules, then migrate call sites.
+- Long term: deprecate `fret-asset-cache` name if desired, keeping API paths stable where possible.
+
+### 3) Narrow `fret-app-kit` to “app defaults and app semantics”
+
+`ecosystem/fret-app-kit` should focus on app-level defaults and semantics adapters:
+
+- components-to-app bridges (e.g. status mapping, default model wiring),
+- default renderers/helpers that are opinionated at the application layer.
+
+It should avoid being the primary home of “UI render assets” caching logic, which belongs in `fret-ui-assets`.
+
+### 4) Introduce a dev-tools layer as a separate distribution: `fretboard` (CLI)
+
+We define a developer tool entry point as a separate crate/binary:
+
+- Name: `fretboard` (CLI), distributed on crates.io as a binary tool.
+- Responsibilities:
+  - `fretboard dev native`: run a chosen demo/app with consistent flags and environment,
+  - `fretboard dev web`: run the wasm harness via a devserver (e.g. `trunk serve`),
+  - `fretboard dev native --hotpatch`: enable hotpatch mode by selecting the appropriate features/args (ADR 0107).
+- Non-responsibilities:
+  - The CLI is not a runtime contract; framework crates must not depend on it.
+  - The CLI does not define new UI behaviors; it orchestrates build/run workflows.
+
+### 5) Layering rules (hard)
+
+- `crates/*` must not depend on `ecosystem/*`.
+- `ecosystem/*` may depend on `crates/*` but should avoid backend crates (unless the ecosystem crate is explicitly a runner-oriented helper like `fret-bootstrap`).
+- `fretboard` (CLI) may depend on `fret-bootstrap` but not vice versa.
+
+## Suggested API Surfaces (Non-binding)
+
+This ADR does not lock exact APIs, but recommends a minimal set of patterns to keep bootstrapping consistent:
+
+- `fret-bootstrap` provides:
+  - `BootstrapBuilder` wrapping `fret_launch::WinitAppBuilder`,
+  - `.with_settings_file(path)`,
+  - `.with_icon_packs(...)`,
+  - `.with_theme_preset(...)`,
+  - `.with_ui_assets_budget(...)`,
+  - `.enable_hotpatch(...)` (feature-gated).
+
+- `fret-ui-assets` provides:
+  - unified `UiAssets::handle_event(app, window, event)` (drives `ImageAssetCache`, etc.),
+  - unified `UiAssets::on_gpu_ready(app, services)` for optional preloads,
+  - `stats()` for overlays.
+
+## Alternatives Considered
+
+### A) Put bootstrap inside `crates/fret-launch`
+
+Rejected.
+
+`fret-launch` is glue and already a dependency for apps; baking opinionated defaults and UI-kit concerns into it would
+increase churn and make it harder to keep the glue stable and portable.
+
+### B) Keep `fret-asset-cache` name and do nothing
+
+Partially acceptable short-term, but rejected as the long-term direction.
+
+The name strongly suggests an editor/project asset pipeline, which is explicitly out-of-scope for the framework kernel.
+Clear naming improves cognition and reduces downstream architectural confusion.
+
+### C) Provide a single “everything crate” for user ergonomics
+
+Rejected.
+
+This tends to collapse layering boundaries, increases compile times, and makes it hard to evolve defaults without
+breaking stable contracts.
+
+## Consequences
+
+### Benefits
+
+- Users get a clear golden path without kernel pollution.
+- “Assets” are clarified as “UI render assets”, reducing scope confusion with editor project asset pipelines.
+- Dev workflows become a separate layer (CLI/tooling) that can evolve rapidly without impacting library contracts.
+
+### Costs
+
+- Additional crates and naming decisions increase up-front documentation work.
+- Migration from existing call sites may require re-exports and deprecations.
+
+## Migration Plan
+
+1) Add `ecosystem/fret-bootstrap` and update demos to use it (optional but recommended).
+2) Introduce `fret-ui-assets` as a re-export wrapper around `fret-asset-cache` (or rename directly if early enough).
+3) Refactor `fret-app-kit` to keep “app semantics” and move/alias render-asset conveniences into `fret-ui-assets`.
+4) Add `fretboard` CLI once the bootstrap patterns stabilize.
+
+## References
+
+- Crate structure: `docs/adr/0093-crate-structure-core-backends-apps.md`
+- Framework scope boundary: `docs/adr/0027-framework-scope-and-responsibilities.md`
+- Resource handles & ownership: `docs/adr/0004-resource-handles.md`
+- Workspace boundaries / components repo direction: `docs/adr/0037-workspace-boundaries-and-components-repository.md`
+- Dev hotpatch integration (this repo): `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
+

@@ -1259,6 +1259,7 @@ dependencies = [
  "mathjax_svg",
  "mdstream",
  "pulldown-cmark",
+ "tracing",
 ]
 
 [[package]]

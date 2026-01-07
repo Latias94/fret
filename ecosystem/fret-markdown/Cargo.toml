@@ -19,3 +19,4 @@ fret-code-view = { path = "../fret-code-view", default-features = false }
 pulldown-cmark.workspace = true
 mdstream = { workspace = true, features = ["pulldown"] }
 mathjax_svg = { workspace = true, optional = true }
+tracing.workspace = true

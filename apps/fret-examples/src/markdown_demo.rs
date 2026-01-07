@@ -707,6 +707,16 @@ impl WinitAppDriver for MarkdownDemoDriver {
 }
 
 pub fn run() -> anyhow::Result<()> {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive("fret=info".parse().unwrap())
+                .add_directive("fret_launch=info".parse().unwrap())
+                .add_directive("fret_markdown::mdstream=info".parse().unwrap())
+                .add_directive("fret_markdown::math=info".parse().unwrap()),
+        )
+        .try_init();
+
     WinitAppBuilder::new(App::new(), MarkdownDemoDriver::default())
         .configure(|config| {
             config.main_window_title = "markdown_demo".to_string();

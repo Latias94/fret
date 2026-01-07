@@ -792,6 +792,63 @@ fn markdown_mdstream_pulldown_with<H: UiHost>(
     let committed = doc.committed();
     let pending = doc.pending();
 
+    let log_once = cx.with_state(
+        || false,
+        |logged| {
+            if *logged {
+                false
+            } else {
+                *logged = true;
+                true
+            }
+        },
+    );
+    if log_once {
+        let mut lines: Vec<String> = Vec::new();
+        for block in committed.iter().take(32) {
+            let raw = block.display_or_raw();
+            let raw_one_line = raw
+                .lines()
+                .next()
+                .unwrap_or("")
+                .trim()
+                .chars()
+                .take(80)
+                .collect::<String>();
+            let has_dollars = raw.contains("$$");
+            let has_adapter_events = adapter.committed_events(block.id).is_some();
+            lines.push(format!(
+                "{:?} id={:?} adapter_events={} has_$$={} raw0={:?}",
+                block.kind, block.id, has_adapter_events, has_dollars, raw_one_line
+            ));
+        }
+        if let Some(p) = pending {
+            let raw = p.display_or_raw();
+            let raw_one_line = raw
+                .lines()
+                .next()
+                .unwrap_or("")
+                .trim()
+                .chars()
+                .take(80)
+                .collect::<String>();
+            let has_dollars = raw.contains("$$");
+            let has_adapter_events = adapter.parse_pending(p).iter().any(|_| true);
+            lines.push(format!(
+                "PENDING {:?} id={:?} adapter_events={} has_$$={} raw0={:?}",
+                p.kind, p.id, has_adapter_events, has_dollars, raw_one_line
+            ));
+        }
+
+        tracing::info!(
+            target: "fret_markdown::mdstream",
+            committed = committed.len(),
+            pending = pending.is_some(),
+            "mdstream blocks:\n{}",
+            lines.join("\n")
+        );
+    }
+
     stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -867,6 +924,25 @@ fn render_mdstream_block_with_events<H: UiHost>(
             }
         }
         mdstream::BlockKind::Paragraph => {
+            if is_display_math_block_text(block.display_or_raw()) {
+                let latex = parse_math_block_body(block.display_or_raw());
+                tracing::info!(
+                    target: "fret_markdown::math",
+                    block_id = ?block.id,
+                    latex_len = latex.len(),
+                    "render paragraph as display math (by raw)"
+                );
+                return render_math_block(cx, theme, markdown_theme, components, latex);
+            }
+            if let Some(latex) = display_math_only_events(events) {
+                tracing::info!(
+                    target: "fret_markdown::math",
+                    block_id = ?block.id,
+                    latex_len = latex.len(),
+                    "render paragraph as display math"
+                );
+                return render_math_block(cx, theme, markdown_theme, components, latex);
+            }
             let info = ParagraphInfo {
                 text: Arc::<str>::from(block.display_or_raw().trim_end().to_string()),
             };
@@ -926,7 +1002,42 @@ fn render_mdstream_block_with_events<H: UiHost>(
         mdstream::BlockKind::MathBlock => {
             // mdstream already classifies the block as MathBlock; don't rely on pulldown to
             // re-discover `Event::DisplayMath` because the adapter may have stripped delimiters.
-            let latex = parse_math_block_body(block.display_or_raw());
+            let mut latex = parse_math_block_body(block.display_or_raw());
+            let latex_from_events = latex_from_pulldown_math_events(events);
+            if latex.trim().is_empty() {
+                if let Some(from_events) = latex_from_events.clone() {
+                    latex = from_events;
+                }
+            }
+            let log_once = cx.with_state(
+                || false,
+                |logged| {
+                    if *logged {
+                        false
+                    } else {
+                        *logged = true;
+                        true
+                    }
+                },
+            );
+            if log_once {
+                let has_display_math_event = events.iter().any(|e| {
+                    matches!(
+                        e,
+                        pulldown_cmark::Event::DisplayMath(_)
+                            | pulldown_cmark::Event::InlineMath(_)
+                    )
+                });
+                tracing::info!(
+                    target: "fret_markdown::math",
+                    block_id = ?block.id,
+                    raw = %block.display_or_raw().replace('\n', "\\n"),
+                    latex_len = latex.len(),
+                    latex_from_events_len = latex_from_events.as_ref().map(|s| s.len()),
+                    has_math_event = has_display_math_event,
+                    "render mdstream math block"
+                );
+            }
             render_math_block(cx, theme, markdown_theme, components, latex)
         }
         mdstream::BlockKind::HtmlBlock
@@ -955,6 +1066,15 @@ fn raw_block_kind_from_mdstream(kind: mdstream::BlockKind) -> RawBlockKind {
     }
 }
 
+fn is_display_math_block_text(text: &str) -> bool {
+    let s = text.trim();
+    if s.is_empty() {
+        return false;
+    }
+
+    (s.starts_with("$$") && s.ends_with("$$")) || (s.starts_with("\\[") && s.ends_with("\\]"))
+}
+
 fn parse_math_block_body(text: &str) -> Arc<str> {
     let s = text.trim();
     if s.is_empty() {
@@ -972,6 +1092,64 @@ fn parse_math_block_body(text: &str) -> Arc<str> {
     }
 
     Arc::<str>::from(s.to_string())
+}
+
+fn latex_from_pulldown_math_events(events: &[pulldown_cmark::Event<'static>]) -> Option<Arc<str>> {
+    use pulldown_cmark::Event;
+
+    for e in events {
+        if let Event::DisplayMath(latex) = e {
+            return Some(Arc::<str>::from(latex.to_string()));
+        }
+    }
+
+    let mut buf = String::new();
+    for e in events {
+        match e {
+            Event::Text(t) | Event::Code(t) | Event::InlineMath(t) | Event::DisplayMath(t) => {
+                buf.push_str(t.as_ref())
+            }
+            Event::SoftBreak | Event::HardBreak => buf.push('\n'),
+            _ => {}
+        }
+    }
+
+    let trimmed = buf.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    Some(Arc::<str>::from(trimmed.to_string()))
+}
+
+fn display_math_only_events(events: &[pulldown_cmark::Event<'static>]) -> Option<Arc<str>> {
+    use pulldown_cmark::Event;
+
+    let mut display_latex: Option<Arc<str>> = None;
+    let mut has_other = false;
+
+    for e in events {
+        match e {
+            Event::DisplayMath(latex) => {
+                if display_latex.is_some() {
+                    return None;
+                }
+                display_latex = Some(Arc::<str>::from(latex.to_string()));
+            }
+            Event::Text(t) | Event::Code(t) | Event::InlineMath(t) => {
+                if !t.trim().is_empty() {
+                    has_other = true;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if has_other {
+        return None;
+    }
+
+    display_latex
 }
 
 fn render_heading_inline<H: UiHost>(
@@ -1000,7 +1178,7 @@ fn render_heading_inline<H: UiHost>(
         color: fg,
     };
 
-    let pieces = inline_pieces_from_events(events);
+    let pieces = inline_pieces_maybe_unwrapped(events);
     render_inline_flow(cx, theme, markdown_theme, components, base, &pieces)
 }
 
@@ -1022,8 +1200,23 @@ fn render_paragraph_inline<H: UiHost>(
         color: fg,
     };
 
-    let pieces = inline_pieces_from_events(events);
+    let pieces = inline_pieces_maybe_unwrapped(events);
     render_inline_flow(cx, theme, markdown_theme, components, base, &pieces)
+}
+
+fn inline_pieces_maybe_unwrapped(events: &[pulldown_cmark::Event<'static>]) -> Vec<InlinePiece> {
+    use pulldown_cmark::{Event, Tag};
+
+    let has_wrapper = events.iter().any(|e| match e {
+        Event::Start(Tag::Paragraph) | Event::Start(Tag::Heading { .. }) => true,
+        _ => false,
+    });
+
+    if has_wrapper {
+        inline_pieces_from_events(events)
+    } else {
+        inline_pieces_from_events_unwrapped(events)
+    }
 }
 
 fn render_pulldown_events_root<H: UiHost>(
@@ -1444,6 +1637,7 @@ fn render_math_block_builtin<H: UiHost>(
 ) -> AnyElement {
     let mut scroll_props = ScrollProps::default();
     scroll_props.axis = ScrollAxis::X;
+    scroll_props.layout.size.width = Length::Fill;
 
     let mut container = ContainerProps::default();
     container.layout.size.width = Length::Fill;
@@ -1452,8 +1646,8 @@ fn render_math_block_builtin<H: UiHost>(
     container.border = Edges::all(Px(0.0));
     container.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.md"));
 
-    cx.scroll(scroll_props, |cx| {
-        vec![cx.container(container, |cx| {
+    cx.container(container, |cx| {
+        vec![cx.scroll(scroll_props, |cx| {
             vec![cx.text_props(TextProps {
                 layout: Default::default(),
                 text: latex,
@@ -1483,6 +1677,7 @@ fn render_math_block_mathjax_svg<H: UiHost>(
 
     let mut scroll_props = ScrollProps::default();
     scroll_props.axis = ScrollAxis::X;
+    scroll_props.layout.size.width = Length::Fill;
 
     let mut container = ContainerProps::default();
     container.layout.size.width = Length::Fill;
@@ -1491,8 +1686,8 @@ fn render_math_block_mathjax_svg<H: UiHost>(
     container.border = Edges::all(Px(0.0));
     container.corner_radii = fret_core::Corners::all(theme.metric_required("metric.radius.md"));
 
-    cx.scroll(scroll_props, |cx| {
-        vec![cx.container(container, |cx| match entry {
+    cx.container(container, |cx| {
+        vec![cx.scroll(scroll_props, |cx| match entry {
             MathJaxSvgEntry::Ready(ready) => {
                 let mut icon = SvgIconProps::new(SvgSource::Bytes(ready.svg_bytes));
                 icon.fit = SvgFit::Contain;
@@ -2774,6 +2969,12 @@ fn mathjax_svg_entry<H: UiHost>(
     if let Some((map, key)) = spawn {
         std::thread::spawn(move || {
             let latex = key.latex.clone();
+            tracing::info!(
+                target: "fret_markdown::math",
+                mode = ?key.mode,
+                latex_len = latex.len(),
+                "mathjax svg: spawn convert"
+            );
             let result = match key.mode {
                 MathJaxMode::Inline => mathjax_svg::convert_to_svg_inline(&latex),
                 MathJaxMode::Display => mathjax_svg::convert_to_svg(&latex),
@@ -2782,6 +2983,23 @@ fn mathjax_svg_entry<H: UiHost>(
             let mut map_guard = map.lock().expect("mathjax svg cache lock");
             match result {
                 Ok(svg) => {
+                    let has_current_color =
+                        svg.contains("currentColor") || svg.contains("currentcolor");
+                    let svg = if has_current_color {
+                        svg.replace("currentColor", "#000000")
+                            .replace("currentcolor", "#000000")
+                    } else {
+                        svg
+                    };
+
+                    tracing::info!(
+                        target: "fret_markdown::math",
+                        mode = ?key.mode,
+                        latex_len = latex.len(),
+                        has_current_color,
+                        "mathjax svg: converted"
+                    );
+
                     let aspect_ratio = svg_viewbox_aspect_ratio(&svg);
                     map_guard.insert(
                         key,
@@ -2792,6 +3010,13 @@ fn mathjax_svg_entry<H: UiHost>(
                     );
                 }
                 Err(err) => {
+                    tracing::info!(
+                        target: "fret_markdown::math",
+                        mode = ?key.mode,
+                        latex_len = latex.len(),
+                        error = %err,
+                        "mathjax svg: convert failed"
+                    );
                     map_guard.insert(
                         key,
                         MathJaxSvgEntry::Error(Arc::<str>::from(err.to_string())),
@@ -3171,6 +3396,13 @@ mod tests {
     }
 
     #[test]
+    fn pulldown_parses_multiline_display_math_when_enabled() {
+        use pulldown_cmark::Event;
+        let events = parse_events("$$\n\\int_0^1 x^2\\,dx = \\frac{1}{3}\n$$\n");
+        assert!(events.iter().any(|e| matches!(e, Event::DisplayMath(_))));
+    }
+
+    #[test]
     fn mdstream_math_block_body_strips_common_delimiters() {
         let mut stream = mdstream::MdStream::default();
         let update = stream.append("$$\n\\int_0^1 x^2\\,dx = \\frac{1}{3}\n$$\n");
@@ -3186,6 +3418,14 @@ mod tests {
 
         let body = parse_math_block_body(math.display_or_raw());
         assert!(body.contains("\\int_0^1"));
+    }
+
+    #[test]
+    fn detects_display_math_only_events() {
+        let events = parse_events("$$x^2$$\n");
+        let latex = display_math_only_events(&events);
+        assert!(latex.is_some());
+        assert_eq!(latex.unwrap().as_ref(), "x^2");
     }
 
     #[test]
