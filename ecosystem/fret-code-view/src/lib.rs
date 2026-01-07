@@ -7,13 +7,13 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use fret_core::{
-    Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-    TimerToken,
+    Color, Edges, FontId, FontWeight, Px, RichText, SemanticsRole, TextOverflow, TextRun,
+    TextStyle, TextWrap, TimerToken,
 };
 use fret_runtime::Effect;
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, PositionStyle,
-    PressableProps, TextProps,
+    PressableProps, StyledTextProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::scroll as decl_scroll;
@@ -450,25 +450,32 @@ fn render_code_line<H: UiHost>(
         letter_spacing_em: None,
     };
 
-    stack::hstack(cx, stack::HStackProps::default().gap(Space::N0), |cx| {
-        line.segments
-            .iter()
-            .map(|seg| {
-                let fg = theme.color_required("foreground");
-                let color = seg
-                    .highlight
-                    .and_then(|h| syntax_color(theme, h))
-                    .unwrap_or(fg);
-                cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: seg.text.clone(),
-                    style: Some(text_style.clone()),
-                    color: Some(color),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                })
-            })
-            .collect()
+    let fg = theme.color_required("foreground");
+
+    let mut text = String::new();
+    let mut runs: Vec<TextRun> = Vec::with_capacity(line.segments.len());
+    for seg in &line.segments {
+        if seg.text.is_empty() {
+            continue;
+        }
+        let color = seg.highlight.and_then(|h| syntax_color(theme, h));
+        text.push_str(seg.text.as_ref());
+        runs.push(TextRun {
+            len: seg.text.len(),
+            color,
+            weight: None,
+            slant: None,
+        });
+    }
+
+    let rich = RichText::new(Arc::<str>::from(text), runs);
+    cx.styled_text_props(StyledTextProps {
+        layout: Default::default(),
+        rich,
+        style: Some(text_style),
+        color: Some(fg),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
     })
 }
 

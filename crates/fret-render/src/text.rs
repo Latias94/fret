@@ -477,7 +477,9 @@ impl TextMeasureKey {
 #[derive(Debug, Clone)]
 struct TextMeasureEntry {
     text_hash: u64,
+    runs_hash: u64,
     text: Arc<str>,
+    runs: Option<Arc<[TextRun]>>,
     metrics: TextMetrics,
 }
 
@@ -1137,7 +1139,7 @@ impl TextSystem {
         if let Some(bucket) = self.measure_cache.get_mut(&key)
             && let Some(hit) = bucket
                 .iter()
-                .find(|e| e.text_hash == text_hash && e.text.as_ref() == text)
+                .find(|e| e.text_hash == text_hash && e.runs_hash == 0 && e.text.as_ref() == text)
         {
             return hit.metrics;
         }
@@ -1180,7 +1182,85 @@ impl TextSystem {
         let bucket = self.measure_cache.entry(key).or_default();
         bucket.push_back(TextMeasureEntry {
             text_hash,
+            runs_hash: 0,
             text: Arc::<str>::from(text),
+            runs: None,
+            metrics,
+        });
+        while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {
+            bucket.pop_front();
+        }
+
+        metrics
+    }
+
+    pub fn measure_rich(
+        &mut self,
+        rich: &RichText,
+        base_style: &TextStyle,
+        constraints: TextConstraints,
+    ) -> TextMetrics {
+        const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
+
+        let key = TextMeasureKey::new(base_style, constraints, self.font_stack_key);
+        let text_hash = hash_text(rich.text.as_ref());
+        let runs_hash = runs_fingerprint(rich.runs.as_ref());
+
+        if let Some(bucket) = self.measure_cache.get_mut(&key)
+            && let Some(hit) = bucket.iter().find(|e| {
+                e.text_hash == text_hash
+                    && e.runs_hash == runs_hash
+                    && e.text.as_ref() == rich.text.as_ref()
+                    && e.runs.as_ref().is_some_and(|r| {
+                        Arc::ptr_eq(r, &rich.runs) || r.as_ref() == rich.runs.as_ref()
+                    })
+            })
+        {
+            return hit.metrics;
+        }
+
+        let scale = constraints.scale_factor.max(1.0);
+        let font_size_px = (base_style.size.0 * scale).max(1.0);
+
+        let mut attrs = Attrs::new().family(family_for_font_id(&base_style.font));
+        attrs = attrs.weight(Weight(base_style.weight.0));
+        attrs = match base_style.slant {
+            TextSlant::Normal => attrs,
+            TextSlant::Italic => attrs.style(CosmicStyle::Italic),
+            TextSlant::Oblique => attrs.style(CosmicStyle::Oblique),
+        };
+        if let Some(letter_spacing_em) = base_style.letter_spacing_em
+            && letter_spacing_em != 0.0
+            && letter_spacing_em.is_finite()
+        {
+            attrs = attrs.letter_spacing(letter_spacing_em);
+        }
+        if let Some(line_height) = base_style.line_height {
+            let line_height_px = (line_height.0 * scale).max(font_size_px);
+            if line_height_px.is_finite() {
+                attrs = attrs.metrics(Metrics::new(font_size_px, line_height_px));
+            }
+        }
+
+        let metrics = layout_text(
+            &mut self.font_system,
+            &mut self.scratch,
+            rich.text.as_ref(),
+            &attrs,
+            Some(rich.runs.as_ref()),
+            font_size_px,
+            constraints,
+            scale,
+        )
+        .0
+        .metrics;
+
+        let bucket = self.measure_cache.entry(key).or_default();
+        bucket.push_back(TextMeasureEntry {
+            text_hash,
+            runs_hash,
+            text: rich.text.clone(),
+            runs: Some(rich.runs.clone()),
             metrics,
         });
         while bucket.len() > MEASURE_CACHE_PER_BUCKET_LIMIT {

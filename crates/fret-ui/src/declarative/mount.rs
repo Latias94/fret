@@ -429,6 +429,7 @@ fn mount_element<H: UiHost>(
         }),
         ElementKind::Spacer(p) => ElementInstance::Spacer(p),
         ElementKind::Text(p) => ElementInstance::Text(p),
+        ElementKind::StyledText(p) => ElementInstance::StyledText(p),
         ElementKind::TextInput(p) => ElementInstance::TextInput(p),
         ElementKind::TextArea(p) => ElementInstance::TextArea(p),
         ElementKind::ResizablePanelGroup(p) => ElementInstance::ResizablePanelGroup(p),
