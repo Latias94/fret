@@ -6321,253 +6321,321 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             }
         }
 
-        let tooltip = selection_tooltip.or_else(|| {
-            let format_y = |y: f64, axis: YAxis| {
-                if axis == YAxis::Right && self.show_y2_axis {
-                    let span = view_bounds_y2
-                        .map(|b| (b.y_max - b.y_min).abs())
-                        .unwrap_or(y_span);
-                    self.y2_axis_labels.format(y, span)
-                } else if axis == YAxis::Right2 && self.show_y3_axis {
-                    let span = view_bounds_y3
-                        .map(|b| (b.y_max - b.y_min).abs())
-                        .unwrap_or(y_span);
-                    self.y3_axis_labels.format(y, span)
-                } else if axis == YAxis::Right3 && self.show_y4_axis {
-                    let span = view_bounds_y4
-                        .map(|b| (b.y_max - b.y_min).abs())
-                        .unwrap_or(y_span);
-                    self.y4_axis_labels.format(y, span)
-                } else {
-                    self.tooltip_y_labels.format(y, y_span)
-                }
-            };
-
-            self.hover
-                .map(|hover| {
-                    let (series_count, series_label, y_axis) = self
-                        .model
-                        .read(cx.app, |_app, m| {
-                            let series_count = L::series_meta(m).len();
-                            let series_label = L::series_label(m, hover.series_id);
-                            let y_axis = L::series_y_axis(m, hover.series_id);
-                            (series_count, series_label, y_axis)
-                        })
-                        .unwrap_or((0, None, YAxis::Left));
-
-                    let x_text = self.tooltip_x_labels.format(hover.data.x, x_span);
-                    let y_text = format_y(hover.data.y, y_axis);
-                    let text = if series_count > 1 {
-                        if let Some(label) = series_label.as_deref() {
-                            format!("{label}  x={x_text}  y={y_text}")
-                        } else {
-                            format!("s={}  x={x_text}  y={y_text}", hover.series_id.0)
-                        }
+        let tooltip = selection_tooltip
+            .map(|(anchor, text)| (anchor, text, None))
+            .or_else(|| {
+                let format_y = |y: f64, axis: YAxis| {
+                    if axis == YAxis::Right && self.show_y2_axis {
+                        let span = view_bounds_y2
+                            .map(|b| (b.y_max - b.y_min).abs())
+                            .unwrap_or(y_span);
+                        self.y2_axis_labels.format(y, span)
+                    } else if axis == YAxis::Right2 && self.show_y3_axis {
+                        let span = view_bounds_y3
+                            .map(|b| (b.y_max - b.y_min).abs())
+                            .unwrap_or(y_span);
+                        self.y3_axis_labels.format(y, span)
+                    } else if axis == YAxis::Right3 && self.show_y4_axis {
+                        let span = view_bounds_y4
+                            .map(|b| (b.y_max - b.y_min).abs())
+                            .unwrap_or(y_span);
+                        self.y4_axis_labels.format(y, span)
                     } else {
-                        format!("x={x_text}  y={y_text}")
-                    };
-                    let text = if series_count == 0
-                        && let Some(label) = series_label.as_deref()
-                    {
-                        format!("{label}  {text}")
-                    } else {
-                        text
-                    };
-                    let text = if let Some(v) = hover.value
-                        && v.is_finite()
-                    {
-                        let v_text = if v.abs() < 10_000.0 {
-                            format!("{v:.4}")
-                        } else {
-                            format!("{v:.4e}")
-                        };
-                        format!("{text}  value={v_text}")
-                    } else {
-                        text
-                    };
-                    (hover.plot_px, text)
-                })
-                .or_else(|| {
-                    if self.style.series_tooltip != SeriesTooltipMode::NearestAtCursor {
-                        return None;
+                        self.tooltip_y_labels.format(y, y_span)
                     }
+                };
 
-                    let cursor_px = cursor_px?;
-                    let cursor_data = cursor_data?;
+                self.hover
+                    .and_then(|hover| {
+                        if self.style.series_tooltip == SeriesTooltipMode::NearestAtCursor
+                            && state.pinned_series.is_some()
+                        {
+                            return None;
+                        }
 
-                    let hidden = &state.hidden_series;
-                    let readout_args = PlotCursorReadoutArgs {
-                        x: cursor_data.x,
-                        plot_size: layout.plot.size,
-                        view_bounds,
-                        x_scale: self.x_scale,
-                        y_scale: self.y_scale,
-                        scale_factor: cx.scale_factor,
-                        hidden,
-                    };
-                    let readout_rows = self
-                        .model
-                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
-                        .unwrap_or_default();
+                        let (series_count, series_label, y_axis) = self
+                            .model
+                            .read(cx.app, |_app, m| {
+                                let series_count = L::series_meta(m).len();
+                                let series_label = L::series_label(m, hover.series_id);
+                                let y_axis = L::series_y_axis(m, hover.series_id);
+                                (series_count, series_label, y_axis)
+                            })
+                            .unwrap_or((0, None, YAxis::Left));
 
-                    let pinned = state.pinned_series.filter(|id| !hidden.contains(id));
-                    let legend_hover = self.legend_hover.filter(|id| !hidden.contains(id));
+                        let series_color = self
+                            .model
+                            .read(cx.app, |_app, m| {
+                                let meta = L::series_meta(m);
+                                let series_count = meta.len().max(1);
+                                let mut series_index = 0usize;
+                                let mut override_color = None;
+                                for (i, s) in meta.iter().enumerate() {
+                                    if s.id == hover.series_id {
+                                        series_index = i;
+                                        override_color = s.stroke_color;
+                                        break;
+                                    }
+                                }
+                                resolve_series_color(
+                                    series_index,
+                                    self.style,
+                                    series_count,
+                                    override_color,
+                                )
+                            })
+                            .unwrap_or(crosshair_color);
 
-                    let mut best: Option<(f64, PlotCursorReadoutRow)> = None;
-                    for row in readout_rows {
-                        if let Some(pinned) = pinned {
-                            if row.series_id != pinned {
+                        let x_text = self.tooltip_x_labels.format(hover.data.x, x_span);
+                        let y_text = format_y(hover.data.y, y_axis);
+                        let line = format!("x={x_text}  y={y_text}");
+                        let header = if series_count > 1 {
+                            series_label
+                                .as_deref()
+                                .map(|s| s.to_string())
+                                .unwrap_or_else(|| format!("s={}", hover.series_id.0))
+                        } else {
+                            String::new()
+                        };
+                        let header = if series_count == 0
+                            && let Some(label) = series_label.as_deref()
+                        {
+                            label.to_string()
+                        } else {
+                            header
+                        };
+
+                        let header = if let Some(v) = hover.value
+                            && v.is_finite()
+                        {
+                            let v_text = if v.abs() < 10_000.0 {
+                                format!("{v:.4}")
+                            } else {
+                                format!("{v:.4e}")
+                            };
+                            if header.is_empty() {
+                                format!("value={v_text}")
+                            } else {
+                                format!("{header}  value={v_text}")
+                            }
+                        } else {
+                            header
+                        };
+
+                        let text = if header.is_empty() {
+                            line
+                        } else {
+                            format!("{header}\n{line}")
+                        };
+
+                        Some((hover.plot_px, text, Some(series_color)))
+                    })
+                    .or_else(|| {
+                        if self.style.series_tooltip != SeriesTooltipMode::NearestAtCursor {
+                            return None;
+                        }
+
+                        let cursor_px = cursor_px?;
+                        let cursor_data = cursor_data?;
+
+                        let hidden = &state.hidden_series;
+                        let readout_args = PlotCursorReadoutArgs {
+                            x: cursor_data.x,
+                            plot_size: layout.plot.size,
+                            view_bounds,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                            scale_factor: cx.scale_factor,
+                            hidden,
+                        };
+                        let readout_rows = self
+                            .model
+                            .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
+                            .unwrap_or_default();
+
+                        let pinned = state.pinned_series.filter(|id| !hidden.contains(id));
+                        let legend_hover = self.legend_hover.filter(|id| !hidden.contains(id));
+
+                        let mut best: Option<(f64, PlotCursorReadoutRow)> = None;
+                        for row in readout_rows {
+                            if let Some(pinned) = pinned {
+                                if row.series_id != pinned {
+                                    continue;
+                                }
+                            } else if let Some(hovered) = legend_hover {
+                                if row.series_id != hovered {
+                                    continue;
+                                }
+                            }
+
+                            let Some(y) = row.y.filter(|y| y.is_finite()) else {
+                                continue;
+                            };
+                            let dist = (cursor_data.y - y).abs();
+                            if !dist.is_finite() {
                                 continue;
                             }
-                        } else if let Some(hovered) = legend_hover {
-                            if row.series_id != hovered {
-                                continue;
+
+                            if best.as_ref().is_none_or(|(d, _)| dist < *d) {
+                                best = Some((dist, row));
                             }
                         }
 
-                        let Some(y) = row.y.filter(|y| y.is_finite()) else {
-                            continue;
+                        let (_dist, row) = best?;
+                        let y = row.y?;
+                        let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
+                        let y_text = format_y(y, row.y_axis);
+                        let header = if !row.label.is_empty() {
+                            row.label.to_string()
+                        } else {
+                            format!("s={}", row.series_id.0)
                         };
-                        let dist = (cursor_data.y - y).abs();
-                        if !dist.is_finite() {
-                            continue;
+                        let line = format!("x={x_text}  y={y_text}");
+                        let text = format!("{header}\n{line}");
+
+                        let series_color = self
+                            .model
+                            .read(cx.app, |_app, m| {
+                                let meta = L::series_meta(m);
+                                let series_count = meta.len().max(1);
+                                let mut series_index = 0usize;
+                                let mut override_color = None;
+                                for (i, s) in meta.iter().enumerate() {
+                                    if s.id == row.series_id {
+                                        series_index = i;
+                                        override_color = s.stroke_color;
+                                        break;
+                                    }
+                                }
+                                resolve_series_color(
+                                    series_index,
+                                    self.style,
+                                    series_count,
+                                    override_color,
+                                )
+                            })
+                            .unwrap_or(crosshair_color);
+
+                        Some((cursor_px, text, Some(series_color)))
+                    })
+                    .or_else(|| {
+                        if self.style.mouse_readout != MouseReadoutMode::Tooltip {
+                            return None;
                         }
 
-                        if best.as_ref().is_none_or(|(d, _)| dist < *d) {
-                            best = Some((dist, row));
+                        let cursor_px = cursor_px?;
+                        let cursor_data = cursor_data?;
+
+                        let hidden = &state.hidden_series;
+                        let readout_args = PlotCursorReadoutArgs {
+                            x: cursor_data.x,
+                            plot_size: layout.plot.size,
+                            view_bounds,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                            scale_factor: cx.scale_factor,
+                            hidden,
+                        };
+                        let mut readout_rows = self
+                            .model
+                            .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
+                            .unwrap_or_default();
+
+                        if let Some(pinned) = state.pinned_series {
+                            readout_rows.retain(|r| r.series_id == pinned);
                         }
-                    }
 
-                    let (_dist, row) = best?;
-                    let y = row.y?;
-                    let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
-                    let y_text = format_y(y, row.y_axis);
-                    let text = if !row.label.is_empty() {
-                        format!("{}  x={x_text}  y={y_text}", row.label)
-                    } else {
-                        format!("s={}  x={x_text}  y={y_text}", row.series_id.0)
-                    };
+                        let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
+                        let y_text = self.tooltip_y_labels.format(cursor_data.y, y_span);
+                        let mut text = format!("x={x_text}  y={y_text}");
+                        for row in readout_rows {
+                            let y_text = row
+                                .y
+                                .filter(|y| y.is_finite())
+                                .map(|y| format_y(y, row.y_axis))
+                                .unwrap_or_else(|| "NA".to_string());
+                            text.push_str(&format!("\n{}: y={y_text}", row.label));
+                        }
 
-                    Some((cursor_px, text))
-                })
-                .or_else(|| {
-                    if self.style.mouse_readout != MouseReadoutMode::Tooltip {
-                        return None;
-                    }
+                        if let Some(query) = state.query {
+                            let x0 = self.tooltip_x_labels.format(query.x_min, x_span);
+                            let x1 = self.tooltip_x_labels.format(query.x_max, x_span);
+                            let y0 = self.tooltip_y_labels.format(query.y_min, y_span);
+                            let y1 = self.tooltip_y_labels.format(query.y_max, y_span);
+                            text.push_str(&format!("\nquery: x=[{x0}, {x1}]  y=[{y0}, {y1}]"));
+                        }
 
-                    let cursor_px = cursor_px?;
-                    let cursor_data = cursor_data?;
+                        Some((cursor_px, text, None))
+                    })
+                    .or_else(|| {
+                        let linked_x = state.linked_cursor_x?;
+                        if self.style.linked_cursor_readout != MouseReadoutMode::Tooltip {
+                            return None;
+                        }
+                        if !linked_x.is_finite() {
+                            return None;
+                        }
 
-                    let hidden = &state.hidden_series;
-                    let readout_args = PlotCursorReadoutArgs {
-                        x: cursor_data.x,
-                        plot_size: layout.plot.size,
-                        view_bounds,
-                        x_scale: self.x_scale,
-                        y_scale: self.y_scale,
-                        scale_factor: cx.scale_factor,
-                        hidden,
-                    };
-                    let mut readout_rows = self
-                        .model
-                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
-                        .unwrap_or_default();
+                        let transform = PlotTransform {
+                            viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
+                            data: view_bounds,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                        };
+                        let Some(linked_x_px) = transform.data_x_to_px(linked_x) else {
+                            return None;
+                        };
 
-                    if let Some(pinned) = state.pinned_series {
-                        readout_rows.retain(|r| r.series_id == pinned);
-                    }
+                        let anchor_local = Point::new(
+                            Px(linked_x_px.0.clamp(0.0, layout.plot.size.width.0)),
+                            Px(0.0),
+                        );
 
-                    let x_text = self.tooltip_x_labels.format(cursor_data.x, x_span);
-                    let y_text = self.tooltip_y_labels.format(cursor_data.y, y_span);
-                    let mut text = format!("x={x_text}  y={y_text}");
-                    for row in readout_rows {
-                        let y_text = row
-                            .y
-                            .filter(|y| y.is_finite())
-                            .map(|y| format_y(y, row.y_axis))
-                            .unwrap_or_else(|| "NA".to_string());
-                        text.push_str(&format!("\n{}: y={y_text}", row.label));
-                    }
+                        let hidden = &state.hidden_series;
+                        let readout_args = PlotCursorReadoutArgs {
+                            x: linked_x,
+                            plot_size: layout.plot.size,
+                            view_bounds,
+                            x_scale: self.x_scale,
+                            y_scale: self.y_scale,
+                            scale_factor: cx.scale_factor,
+                            hidden,
+                        };
+                        let mut readout_rows = self
+                            .model
+                            .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
+                            .unwrap_or_default();
+                        apply_readout_policy(
+                            &mut readout_rows,
+                            state.pinned_series,
+                            self.legend_hover,
+                            self.style.linked_cursor_readout_policy,
+                        );
 
-                    if let Some(query) = state.query {
-                        let x0 = self.tooltip_x_labels.format(query.x_min, x_span);
-                        let x1 = self.tooltip_x_labels.format(query.x_max, x_span);
-                        let y0 = self.tooltip_y_labels.format(query.y_min, y_span);
-                        let y1 = self.tooltip_y_labels.format(query.y_max, y_span);
-                        text.push_str(&format!("\nquery: x=[{x0}, {x1}]  y=[{y0}, {y1}]"));
-                    }
+                        let x_text = self.tooltip_x_labels.format(linked_x, x_span);
+                        let mut text = format!("x={x_text}");
+                        for row in readout_rows {
+                            let y_text = row
+                                .y
+                                .filter(|y| y.is_finite())
+                                .map(|y| format_y(y, row.y_axis))
+                                .unwrap_or_else(|| "NA".to_string());
+                            text.push_str(&format!("\n{}: y={y_text}", row.label));
+                        }
 
-                    Some((cursor_px, text))
-                })
-                .or_else(|| {
-                    let linked_x = state.linked_cursor_x?;
-                    if self.style.linked_cursor_readout != MouseReadoutMode::Tooltip {
-                        return None;
-                    }
-                    if !linked_x.is_finite() {
-                        return None;
-                    }
+                        if let Some(query) = state.query {
+                            let x0 = self.tooltip_x_labels.format(query.x_min, x_span);
+                            let x1 = self.tooltip_x_labels.format(query.x_max, x_span);
+                            let y0 = self.tooltip_y_labels.format(query.y_min, y_span);
+                            let y1 = self.tooltip_y_labels.format(query.y_max, y_span);
+                            text.push_str(&format!("\nquery: x=[{x0}, {x1}]  y=[{y0}, {y1}]"));
+                        }
 
-                    let transform = PlotTransform {
-                        viewport: Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size),
-                        data: view_bounds,
-                        x_scale: self.x_scale,
-                        y_scale: self.y_scale,
-                    };
-                    let Some(linked_x_px) = transform.data_x_to_px(linked_x) else {
-                        return None;
-                    };
+                        Some((anchor_local, text, None))
+                    })
+            });
 
-                    let anchor_local = Point::new(
-                        Px(linked_x_px.0.clamp(0.0, layout.plot.size.width.0)),
-                        Px(0.0),
-                    );
-
-                    let hidden = &state.hidden_series;
-                    let readout_args = PlotCursorReadoutArgs {
-                        x: linked_x,
-                        plot_size: layout.plot.size,
-                        view_bounds,
-                        x_scale: self.x_scale,
-                        y_scale: self.y_scale,
-                        scale_factor: cx.scale_factor,
-                        hidden,
-                    };
-                    let mut readout_rows = self
-                        .model
-                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
-                        .unwrap_or_default();
-                    apply_readout_policy(
-                        &mut readout_rows,
-                        state.pinned_series,
-                        self.legend_hover,
-                        self.style.linked_cursor_readout_policy,
-                    );
-
-                    let x_text = self.tooltip_x_labels.format(linked_x, x_span);
-                    let mut text = format!("x={x_text}");
-                    for row in readout_rows {
-                        let y_text = row
-                            .y
-                            .filter(|y| y.is_finite())
-                            .map(|y| format_y(y, row.y_axis))
-                            .unwrap_or_else(|| "NA".to_string());
-                        text.push_str(&format!("\n{}: y={y_text}", row.label));
-                    }
-
-                    if let Some(query) = state.query {
-                        let x0 = self.tooltip_x_labels.format(query.x_min, x_span);
-                        let x1 = self.tooltip_x_labels.format(query.x_max, x_span);
-                        let y0 = self.tooltip_y_labels.format(query.y_min, y_span);
-                        let y1 = self.tooltip_y_labels.format(query.y_max, y_span);
-                        text.push_str(&format!("\nquery: x=[{x0}, {x1}]  y=[{y0}, {y1}]"));
-                    }
-
-                    Some((anchor_local, text))
-                })
-        });
-
-        if let Some((anchor_local, text)) = tooltip {
+        if let Some((anchor_local, text, swatch_color)) = tooltip {
             let font_size = theme_font_size;
             let style = TextStyle {
                 font: FontId::default(),
@@ -6611,8 +6679,13 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     Px(layout.plot.origin.y.0 + anchor_local.y.0),
                 );
                 let pad = Px(6.0);
+                let swatch_size = Px(10.0);
+                let swatch_gap = Px(8.0);
+                let swatch_extra = swatch_color
+                    .map(|_| swatch_size.0 + swatch_gap.0)
+                    .unwrap_or(0.0);
                 let gap = Px(10.0);
-                let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0);
+                let w = Px(tt.metrics.size.width.0 + pad.0 * 2.0 + swatch_extra);
                 let h = Px(tt.metrics.size.height.0 + pad.0 * 2.0);
 
                 let mut x = Px(anchor.x.0 + gap.0);
@@ -6636,8 +6709,23 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     corner_radii: fret_core::Corners::all(Px(6.0)),
                 });
 
+                if let Some(swatch_color) = swatch_color {
+                    let swatch_top = rect.origin.y.0 + (rect.size.height.0 - swatch_size.0) * 0.5;
+                    cx.scene.push(SceneOp::Quad {
+                        order: DrawOrder(21),
+                        rect: Rect::new(
+                            Point::new(Px(rect.origin.x.0 + pad.0), Px(swatch_top)),
+                            Size::new(swatch_size, swatch_size),
+                        ),
+                        background: swatch_color,
+                        border: fret_core::Edges::all(Px(1.0)),
+                        border_color: tooltip_border,
+                        corner_radii: fret_core::Corners::all(Px(2.0)),
+                    });
+                }
+
                 let origin = Point::new(
-                    Px(rect.origin.x.0 + pad.0),
+                    Px(rect.origin.x.0 + pad.0 + swatch_extra),
                     Px(rect.origin.y.0 + pad.0 + tt.metrics.baseline.0),
                 );
                 cx.scene.push(SceneOp::Text {
