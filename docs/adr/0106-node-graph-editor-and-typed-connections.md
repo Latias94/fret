@@ -15,7 +15,9 @@ editor primitive that we want to reuse across multiple domains:
 Local upstream references show three complementary strengths:
 
 - `repo-ref/imgui-node-editor`: mature interaction protocol (“draw your content, we do the rest”),
-  including link creation/deletion queries, selection, navigation, and persisted editor state hooks.
+  including link creation/deletion queries, selection, navigation, persisted editor state hooks, and
+  a **canvas coordinate escape hatch** (`Suspend/Resume`) for screen-space popups/menus while the
+  graph is pan/zoom transformed.
 - `repo-ref/Graphics/Packages/com.unity.shadergraph`: asset-first graph model, strong slot compatibility
   rules, graph validation/diagnostics, dynamic slot concretization, unknown-node survival, and migration.
 - `repo-ref/egui-snarl`: small data model + separate UI state + a “viewer” trait that externalizes
@@ -188,6 +190,14 @@ Rationale:
 
 - This is required for plugin ecosystems, cross-team projects, and forward compatibility.
 
+Reserved builtin kinds (locked):
+
+- `fret.reroute`: a schema-less "wire reroute" node used for routing and interaction affordances.
+  - It may be inserted by editor gestures (split-edge) even when the domain registry does not
+    contain a schema for it.
+  - Its ports are implementation-defined by `fret-node` and must remain stable (one data in, one
+    data out; no domain payload semantics).
+
 Node kind versioning and migration (locked):
 
 - Each node instance stores `{ kind: NodeKindKey, kind_version: u32, data: ... }`.
@@ -309,6 +319,15 @@ The `fret-ui` integration uses:
   - pointer down/move/up streams for drag interactions,
   - key handlers for shortcuts and command routing,
   - context menu triggers and node creation flows (ADR 0074).
+
+Canvas coordinate escape hatch (locked):
+
+- The editor must be able to render and interact with **screen-space** UI (context menus, typeahead
+  search, tooltips, toasts) while the graph content is under a pan/zoom transform.
+- This is the Fret equivalent of `imgui-node-editor`'s `Suspend/Resume`:
+  - "Graph content" lives under the canvas transform.
+  - "Overlays" are rendered outside that transform, using window/screen coordinates, but can be
+    anchored to graph elements via explicit `canvas_to_screen` geometry conversions.
 
 Interaction protocol target (inspired by `imgui-node-editor`):
 
