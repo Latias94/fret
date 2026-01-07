@@ -325,38 +325,17 @@ $$
 
         let checker_rgba = Arc::new(checkerboard_rgba8(96, 96));
 
+        let wrap_enabled = app.models().get_copied(&wrap_code).unwrap_or(false);
+
         let mut components = markdown::MarkdownComponents::<App>::default().with_open_url();
+        components.code_block_ui.wrap = if wrap_enabled {
+            fret_code_view::CodeBlockWrap::Word
+        } else {
+            fret_code_view::CodeBlockWrap::ScrollX
+        };
+        components.code_block_ui.max_height = Some(Px(360.0));
+
         let on_link_activate = components.on_link_activate.clone();
-
-        components.code_block = Some(Arc::new({
-            let wrap_code = wrap_code.clone();
-            move |cx, info| {
-                cx.observe_model(&wrap_code, Invalidation::Layout);
-                let wrap_enabled = cx.app.models().get_copied(&wrap_code).unwrap_or(false);
-
-                let mut options = fret_code_view::CodeBlockUiOptions::default();
-                options.show_header = true;
-                options.header_divider = true;
-                options.header_background = fret_code_view::CodeBlockHeaderBackground::Secondary;
-                options.show_copy_button = true;
-                options.copy_button_on_hover = true;
-                options.copy_button_placement = fret_code_view::CodeBlockCopyButtonPlacement::Header;
-                options.wrap = if wrap_enabled {
-                    fret_code_view::CodeBlockWrap::Word
-                } else {
-                    fret_code_view::CodeBlockWrap::ScrollX
-                };
-
-                fret_code_view::code_block_with_header_slots(
-                    cx,
-                    &info.code,
-                    info.language.as_deref(),
-                    false,
-                    options,
-                    fret_code_view::CodeBlockHeaderSlots::default(),
-                )
-            }
-        }));
 
         components.image = Some(Arc::new(move |cx, info| {
             let theme = Theme::global(&*cx.app).clone();
