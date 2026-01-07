@@ -13,6 +13,10 @@ use fret_runtime::{
 pub const CMD_NODE_GRAPH_UNDO: &str = "node_graph.undo";
 pub const CMD_NODE_GRAPH_REDO: &str = "node_graph.redo";
 pub const CMD_NODE_GRAPH_OPEN_INSERT_NODE: &str = "node_graph.open_insert_node";
+pub const CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE: &str =
+    "node_graph.open_split_edge_insert_node";
+pub const CMD_NODE_GRAPH_INSERT_REROUTE: &str = "node_graph.insert_reroute";
+pub const CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER: &str = "node_graph.open_conversion_picker";
 pub const CMD_NODE_GRAPH_COPY: &str = "node_graph.copy";
 pub const CMD_NODE_GRAPH_CUT: &str = "node_graph.cut";
 pub const CMD_NODE_GRAPH_PASTE: &str = "node_graph.paste";
@@ -126,6 +130,33 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Insert Node…")
             .with_category("Node Graph")
             .with_keywords(["insert", "node", "create", "add"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE),
+        CommandMeta::new("Insert Node on Edge…")
+            .with_category("Node Graph")
+            .with_keywords(["insert", "node", "edge", "split"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_INSERT_REROUTE),
+        CommandMeta::new("Insert Reroute")
+            .with_category("Node Graph")
+            .with_keywords(["reroute", "edge", "wire"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER),
+        CommandMeta::new("Convert Connection…")
+            .with_category("Node Graph")
+            .with_keywords(["convert", "connection", "type"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
     );

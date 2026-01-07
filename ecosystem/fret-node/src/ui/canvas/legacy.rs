@@ -25,8 +25,9 @@ use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint
 
 use crate::ui::commands::{
     CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CUT, CMD_NODE_GRAPH_DELETE_SELECTION,
-    CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_PASTE,
-    CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
+    CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_INSERT_REROUTE, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
+    CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
+    CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
 };
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
@@ -52,6 +53,7 @@ struct InteractionState {
     last_pos: Option<Point>,
     last_canvas_pos: Option<CanvasPoint>,
     last_bounds: Option<Rect>,
+    last_conversion: Option<LastConversionContext>,
     panning: bool,
     pending_node_drag: Option<PendingNodeDrag>,
     node_drag: Option<NodeDrag>,
@@ -146,6 +148,14 @@ struct ToastState {
 struct PendingPaste {
     token: ClipboardToken,
     at: CanvasPoint,
+}
+
+#[derive(Debug, Clone)]
+struct LastConversionContext {
+    from: PortId,
+    to: PortId,
+    at: CanvasPoint,
+    candidates: Vec<InsertNodeCandidate>,
 }
 
 /// Retained node-graph canvas widget (MVP).
@@ -1143,6 +1153,68 @@ impl NodeGraphCanvas {
         });
     }
 
+    fn open_edge_insert_node_picker<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        edge: EdgeId,
+        invoked_at: Point,
+    ) {
+        let candidates: Vec<InsertNodeCandidate> = {
+            let presenter = &mut *self.presenter;
+            self.graph
+                .read_ref(host, |graph| {
+                    presenter.list_insertable_nodes_for_edge(graph, edge)
+                })
+                .ok()
+                .unwrap_or_default()
+        };
+
+        let mut menu_candidates: Vec<InsertNodeCandidate> = Vec::new();
+        menu_candidates.push(InsertNodeCandidate {
+            kind: NodeKindKey::new(REROUTE_KIND),
+            label: Arc::<str>::from("Reroute"),
+            enabled: true,
+            template: None,
+            payload: serde_json::Value::Null,
+        });
+        menu_candidates.extend(candidates);
+
+        let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
+        for (ix, c) in menu_candidates.iter().enumerate() {
+            items.push(NodeGraphContextMenuItem {
+                label: c.label.clone(),
+                enabled: c.enabled,
+                action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
+            });
+        }
+
+        if items.is_empty() {
+            self.show_toast(
+                host,
+                window,
+                DiagnosticSeverity::Info,
+                "no insertable nodes for edge",
+            );
+            return;
+        }
+
+        let snapshot = self.sync_view_state(host);
+        let bounds = self.interaction.last_bounds.unwrap_or_default();
+        let origin = self.clamp_context_menu_origin(invoked_at, items.len(), bounds, &snapshot);
+        let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
+        self.interaction.context_menu = Some(ContextMenuState {
+            origin,
+            invoked_at,
+            target: ContextMenuTarget::EdgeInsertNodePicker(edge),
+            items,
+            candidates: menu_candidates,
+            hovered_item: None,
+            active_item,
+            typeahead: String::new(),
+        });
+    }
+
     fn activate_context_menu_item<H: UiHost>(
         &mut self,
         cx: &mut EventCx<'_, H>,
@@ -1924,6 +1996,123 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 cx.invalidate_self(Invalidation::Paint);
                 true
             }
+            CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE => {
+                if snapshot.selected_edges.len() != 1 {
+                    return true;
+                }
+                let edge = snapshot.selected_edges[0];
+                let invoked_at = self
+                    .interaction
+                    .last_pos
+                    .unwrap_or_else(|| Point::new(Px(0.0), Px(0.0)));
+                self.open_edge_insert_node_picker(cx.app, cx.window, edge, invoked_at);
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_INSERT_REROUTE => {
+                if snapshot.selected_edges.len() != 1 {
+                    return true;
+                }
+                let edge_id = snapshot.selected_edges[0];
+                let invoked_at = self
+                    .interaction
+                    .last_pos
+                    .unwrap_or_else(|| Point::new(Px(0.0), Px(0.0)));
+                let at = self.reroute_pos_for_invoked_at(invoked_at);
+
+                let outcome = {
+                    let presenter = &mut *self.presenter;
+                    self.graph
+                        .read_ref(cx.app, |graph| {
+                            let plan = presenter.plan_split_edge(
+                                graph,
+                                edge_id,
+                                &NodeKindKey::new(REROUTE_KIND),
+                                at,
+                            );
+                            match plan.decision {
+                                ConnectDecision::Accept => Ok(plan.ops),
+                                ConnectDecision::Reject => Err(plan.diagnostics),
+                            }
+                        })
+                        .ok()
+                };
+
+                match outcome {
+                    Some(Ok(ops)) => {
+                        let node_id = Self::first_added_node_id(&ops);
+                        if self.commit_ops(cx.app, cx.window, Some("Insert Reroute"), ops) {
+                            if let Some(node_id) = node_id {
+                                self.update_view_state(cx.app, |s| {
+                                    s.selected_edges.clear();
+                                    s.selected_nodes.clear();
+                                    s.selected_nodes.push(node_id);
+                                    s.draw_order.retain(|id| *id != node_id);
+                                    s.draw_order.push(node_id);
+                                });
+                            }
+                        }
+                    }
+                    Some(Err(diags)) => {
+                        if let Some((sev, msg)) = Self::toast_from_diagnostics(&diags) {
+                            self.show_toast(cx.app, cx.window, sev, msg);
+                        }
+                    }
+                    None => {}
+                }
+
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER => {
+                let Some(ctx0) = self.interaction.last_conversion.clone() else {
+                    self.show_toast(
+                        cx.app,
+                        cx.window,
+                        DiagnosticSeverity::Info,
+                        "no recent conversion candidates",
+                    );
+                    return true;
+                };
+
+                let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
+                for (ix, c) in ctx0.candidates.iter().enumerate() {
+                    items.push(NodeGraphContextMenuItem {
+                        label: c.label.clone(),
+                        enabled: c.enabled,
+                        action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
+                    });
+                }
+
+                let bounds = self.interaction.last_bounds.unwrap_or_default();
+                let origin = self.clamp_context_menu_origin(
+                    Point::new(Px(ctx0.at.x), Px(ctx0.at.y)),
+                    items.len(),
+                    bounds,
+                    &snapshot,
+                );
+                let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
+                self.interaction.context_menu = Some(ContextMenuState {
+                    origin,
+                    invoked_at: Point::new(Px(ctx0.at.x), Px(ctx0.at.y)),
+                    target: ContextMenuTarget::ConnectionConvertPicker {
+                        from: ctx0.from,
+                        to: ctx0.to,
+                        at: ctx0.at,
+                    },
+                    items,
+                    candidates: ctx0.candidates,
+                    hovered_item: None,
+                    active_item,
+                    typeahead: String::new(),
+                });
+
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
             CMD_NODE_GRAPH_UNDO => {
                 let did = self.undo_last(cx.app, cx.window);
                 if did {
@@ -2457,12 +2646,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 items.push(NodeGraphContextMenuItem {
                                     label: Arc::<str>::from("Insert Node..."),
                                     enabled: true,
-                                    action: NodeGraphContextMenuAction::OpenInsertNodePicker,
+                                    action: NodeGraphContextMenuAction::Command(CommandId::from(
+                                        CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
+                                    )),
                                 });
                                 items.push(NodeGraphContextMenuItem {
                                     label: Arc::<str>::from("Insert Reroute"),
                                     enabled: true,
-                                    action: NodeGraphContextMenuAction::InsertReroute,
+                                    action: NodeGraphContextMenuAction::Command(CommandId::from(
+                                        CMD_NODE_GRAPH_INSERT_REROUTE,
+                                    )),
                                 });
                                 items.push(NodeGraphContextMenuItem {
                                     label: Arc::<str>::from("Delete"),
@@ -3216,6 +3409,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                             }
                                         }
                                         Outcome::OpenConversionPicker(candidates) => {
+                                            self.interaction.last_conversion =
+                                                Some(LastConversionContext {
+                                                    from,
+                                                    to: target,
+                                                    at: CanvasPoint {
+                                                        x: w.pos.x.0,
+                                                        y: w.pos.y.0,
+                                                    },
+                                                    candidates: candidates.clone(),
+                                                });
                                             let mut items: Vec<NodeGraphContextMenuItem> =
                                                 Vec::new();
                                             for (ix, c) in candidates.iter().enumerate() {
