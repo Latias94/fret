@@ -157,6 +157,15 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
 
     inputs.sort_by_key(|(ix, _)| *ix);
 
+    let mut seed_ty = output
+        .and_then(|id| graph.ports.get(&id))
+        .and_then(|p| p.ty.clone());
+    if seed_ty.is_none() {
+        seed_ty = inputs
+            .iter()
+            .find_map(|(_, id)| graph.ports.get(id).and_then(|p| p.ty.clone()));
+    }
+
     if output.is_none() {
         let key = PortKey::new(VARIADIC_OUTPUT_KEY);
         let id = alloc_port_id(graph, node_id, &key);
@@ -168,7 +177,7 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
                 dir: PortDirection::Out,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Multi,
-                ty: None,
+                ty: seed_ty.clone(),
                 data: serde_json::Value::Null,
             },
         });
@@ -186,7 +195,7 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
                 dir: PortDirection::In,
                 kind: PortKind::Data,
                 capacity: PortCapacity::Single,
-                ty: None,
+                ty: seed_ty.clone(),
                 data: serde_json::Value::Null,
             },
         });
@@ -207,7 +216,7 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
                     dir: PortDirection::In,
                     kind: PortKind::Data,
                     capacity: PortCapacity::Single,
-                    ty: None,
+                    ty: seed_ty.clone(),
                     data: serde_json::Value::Null,
                 },
             });
