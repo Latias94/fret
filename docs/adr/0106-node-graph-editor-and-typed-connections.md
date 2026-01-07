@@ -394,6 +394,52 @@ Port geometry contract (handles vs measurement):
   per-frame recomputation (ReactFlow’s `internals.handleBounds` pattern), but these caches must be
   treated as derived data and never as graph semantics.
 
+Derived geometry and internals (locked):
+
+- The editor must maintain a clear separation between **user-authored graph state** and **derived UI internals**.
+  Inspired by ReactFlow / XyFlow's "internal node" model, the following fields are considered derived:
+  - measured node size (`measured.width/height`),
+  - absolute/cached node position in the current parent/extent context (`positionAbsolute`),
+  - handle/port bounds (`handleBounds` / anchor rects),
+  - z-index / stacking hints derived from selection policy.
+- Derived internals:
+  - may be cached for performance,
+  - must be invalidated deterministically (node resize, zoom changes, node template changes, port layout changes),
+  - must not be serialized into the graph asset.
+- API clarity constraint:
+  - avoid overloading `Node.width/height` or other user-facing fields with measured values;
+    measured geometry must have its own namespace in editor state to prevent "who owns size?" confusion.
+
+Connection modes and handle resolution (locked):
+
+- We standardize a `connection_mode` concept (ReactFlow parity):
+  - `Strict`: connections can only be created when the pointer is over a concrete compatible handle/port.
+  - `Loose`: connections may "snap" to a compatible handle within a radius, even if the pointer is not
+    exactly over the handle (useful for dense graphs / touch).
+- Handle resolution is a UI concern but must be deterministic:
+  - The UI chooses a candidate `(from_port, to_port)` pair based on the pointer position, connection radius,
+    and `connection_mode`, and then delegates final acceptance to the rules layer via `ConnectPlan`.
+  - When multiple handles are within range, the UI must use a deterministic tie-breaker (closest distance,
+    then stable port ordering) to avoid flicker.
+- The UI exposes tunables in editor view state (not graph semantics):
+  - `connection_radius` (for loose mode),
+  - `edge_interaction_width` (wire hit slop independent from stroke thickness),
+  - `reconnect_radius` (see below),
+  - `auto_pan` parameters for drag/connect.
+
+Reconnection protocol and anchors (locked):
+
+- Edge reconnection is a first-class workflow:
+  - dragging from an existing edge endpoint or from a dedicated reconnection handle triggers a
+    reconnection interaction,
+  - the rules layer decides via `plan_reconnect_edge` (preserving `EdgeId` when possible).
+- Edges may be configured as reconnectable or not (ReactFlow parity):
+  - reconnectability is a UI policy flag and may be controlled per edge kind or per edge instance.
+- Custom reconnection anchors are supported:
+  - an edge may expose one or more "reconnect anchors" (small hit targets) that start a reconnection drag,
+    similar to ReactFlow's `EdgeReconnectAnchor` concept for custom edges,
+  - anchors must have a configurable hit radius (`reconnect_radius`) independent of wire stroke thickness.
+
 Node presentation contract (Viewer-style):
 
 - The node graph widget does not own domain UI. Instead, a presenter/viewer surface is provided
