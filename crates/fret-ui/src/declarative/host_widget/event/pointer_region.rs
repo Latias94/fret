@@ -81,6 +81,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             button,
             modifiers,
             pointer_type,
+            ..
         }) => {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
@@ -187,6 +188,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             button,
             modifiers,
             pointer_type,
+            ..
         }) => {
             let was_captured = cx.captured == Some(cx.node);
 

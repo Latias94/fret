@@ -14,6 +14,8 @@ fret-app-kit = { path = "../../ecosystem/fret-app-kit" }
 fret-ui-docking = { path = "../../ecosystem/fret-ui-docking" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["table"] }
+fret-plot = { path = "../../ecosystem/fret-plot" }
+fret-plot3d = { path = "../../ecosystem/fret-plot3d" }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
@@ -26,6 +28,8 @@ fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-ru
 tracing.workspace = true
 tracing-subscriber.workspace = true
 winit.workspace = true
+wgpu.workspace = true
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ureq = "2"

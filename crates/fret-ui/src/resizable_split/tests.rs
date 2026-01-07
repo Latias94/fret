@@ -139,6 +139,7 @@ fn resizable_split_drag_updates_fraction_model() {
             position: Point::new(Px(200.0), Px(10.0)),
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );

@@ -200,6 +200,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
                 pointer_type: Default::default(),
             }),
         );
@@ -210,6 +211,7 @@ mod tests {
                 position: click,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
+                click_count: 1,
                 pointer_type: Default::default(),
             }),
         );

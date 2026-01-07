@@ -61,6 +61,7 @@ mod tests {
         app.set_frame_id(FrameId(1));
 
         // First call enters the opening phase: request animation frames + redraw.
+
         let out0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
             fade_presence(cx, true, 3)
         });
@@ -75,6 +76,7 @@ mod tests {
         assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
 
         // While animating: keep requesting redraw, but do not reacquire a new RAF lease.
+
         app.set_tick_id(TickId(2));
         app.set_frame_id(FrameId(2));
         let out1 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
@@ -91,6 +93,7 @@ mod tests {
         assert!(effects1.iter().any(|e| *e == Effect::Redraw(window)));
 
         // Stable open: no longer animating, so no more redraw requests.
+
         app.set_tick_id(TickId(3));
         app.set_frame_id(FrameId(3));
         let out2 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p0", |cx| {
@@ -109,7 +112,7 @@ mod tests {
         app.set_tick_id(TickId(1));
         app.set_frame_id(FrameId(1));
 
-        // 先打开到稳定。
+        // Open first and reach a stable state.
         let _ = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p1", |cx| {
             fade_presence(cx, true, 1)
         });
@@ -119,7 +122,7 @@ mod tests {
         });
         let _ = app.flush_effects();
 
-        // 触发关闭动画：应重新申请 RAF 并请求重绘。
+        // Trigger a close animation: reacquire a RAF lease and request a redraw.
         app.set_tick_id(TickId(2));
         app.set_frame_id(FrameId(2));
         let out = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p1", |cx| {

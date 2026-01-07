@@ -927,23 +927,27 @@ impl<H: UiHost> UiTree<H> {
                     PointerEvent::Down {
                         button,
                         modifiers,
+                        click_count,
                         pointer_type,
                         ..
                     } => PointerEvent::Down {
                         position,
                         button: *button,
                         modifiers: *modifiers,
+                        click_count: *click_count,
                         pointer_type: *pointer_type,
                     },
                     PointerEvent::Up {
                         button,
                         modifiers,
+                        click_count,
                         pointer_type,
                         ..
                     } => PointerEvent::Up {
                         position,
                         button: *button,
                         modifiers: *modifiers,
+                        click_count: *click_count,
                         pointer_type: *pointer_type,
                     },
                     PointerEvent::Wheel {

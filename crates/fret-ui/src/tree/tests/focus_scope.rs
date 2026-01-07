@@ -324,6 +324,7 @@ fn focus_scope_prevents_pointer_focus_from_leaving_subtree_when_trapped() {
             position: click,
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
@@ -335,6 +336,7 @@ fn focus_scope_prevents_pointer_focus_from_leaving_subtree_when_trapped() {
             position: click,
             button: fret_core::MouseButton::Left,
             modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
             pointer_type: fret_core::PointerType::Mouse,
         }),
     );
