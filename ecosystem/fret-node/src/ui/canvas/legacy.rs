@@ -109,6 +109,7 @@ struct EdgeDrag {
 
 #[derive(Debug, Clone)]
 enum ContextMenuTarget {
+    Background,
     Edge(EdgeId),
     EdgeInsertNodePicker(EdgeId),
     ConnectionConvertPicker {
@@ -1046,6 +1047,9 @@ impl NodeGraphCanvas {
         menu_candidates: &[InsertNodeCandidate],
     ) {
         match (target, item.action) {
+            (_, NodeGraphContextMenuAction::Command(command)) => {
+                cx.dispatch_command(command);
+            }
             (
                 ContextMenuTarget::Edge(edge_id),
                 NodeGraphContextMenuAction::OpenInsertNodePicker,
@@ -1763,6 +1767,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
         let snapshot = self.sync_view_state(cx.app);
+        if cx.input_ctx.focus_is_text_input && command.as_str().starts_with("node_graph.") {
+            return false;
+        }
 
         match command.as_str() {
             CMD_NODE_GRAPH_UNDO => {
@@ -2230,6 +2237,53 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     };
 
                     let Some(edge) = hit_edge else {
+                        let has_selection = !snapshot.selected_nodes.is_empty()
+                            || !snapshot.selected_edges.is_empty();
+                        let items: Vec<NodeGraphContextMenuItem> = vec![
+                            NodeGraphContextMenuItem {
+                                label: Arc::<str>::from("Paste"),
+                                enabled: cx.window.is_some(),
+                                action: NodeGraphContextMenuAction::Command(CommandId::from(
+                                    CMD_NODE_GRAPH_PASTE,
+                                )),
+                            },
+                            NodeGraphContextMenuItem {
+                                label: Arc::<str>::from("Select All"),
+                                enabled: true,
+                                action: NodeGraphContextMenuAction::Command(CommandId::from(
+                                    CMD_NODE_GRAPH_SELECT_ALL,
+                                )),
+                            },
+                            NodeGraphContextMenuItem {
+                                label: Arc::<str>::from("Delete Selection"),
+                                enabled: has_selection,
+                                action: NodeGraphContextMenuAction::Command(CommandId::from(
+                                    CMD_NODE_GRAPH_DELETE_SELECTION,
+                                )),
+                            },
+                        ];
+
+                        let origin = self.clamp_context_menu_origin(
+                            *position,
+                            items.len(),
+                            cx.bounds,
+                            &snapshot,
+                        );
+                        let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
+                        self.interaction.context_menu = Some(ContextMenuState {
+                            origin,
+                            invoked_at: *position,
+                            target: ContextMenuTarget::Background,
+                            items,
+                            candidates: Vec::new(),
+                            hovered_item: None,
+                            active_item,
+                            typeahead: String::new(),
+                        });
+                        cx.request_focus(cx.node);
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
                         return;
                     };
 
@@ -2253,7 +2307,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 items.push(NodeGraphContextMenuItem {
                                     label: Arc::<str>::from("Delete"),
                                     enabled: true,
-                                    action: NodeGraphContextMenuAction::DeleteEdge,
+                                    action: NodeGraphContextMenuAction::Command(CommandId::from(
+                                        CMD_NODE_GRAPH_DELETE_SELECTION,
+                                    )),
                                 });
                                 items
                             })
@@ -2279,6 +2335,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         typeahead: String::new(),
                     });
                     self.interaction.hover_edge = None;
+                    cx.request_focus(cx.node);
 
                     self.update_view_state(cx.app, |s| {
                         s.selected_nodes.clear();

@@ -7,7 +7,7 @@
 use fret_core::{KeyCode, Modifiers};
 use fret_runtime::{
     CommandId, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord,
-    PlatformFilter,
+    PlatformFilter, WhenExpr,
 };
 
 pub const CMD_NODE_GRAPH_UNDO: &str = "node_graph.undo";
@@ -25,6 +25,10 @@ fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybind
         chord: KeyChord::new(key, mods),
         when: None,
     }
+}
+
+fn when_node_graph_editing() -> WhenExpr {
+    WhenExpr::parse("!focus.is_text_input").expect("valid when expr")
 }
 
 pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
@@ -122,6 +126,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_category("Node Graph")
             .with_keywords(["undo", "history"])
             .with_scope(widget)
+            .with_when(when_node_graph_editing())
             .with_default_keybindings([
                 mac_cmd(KeyCode::KeyZ),
                 win_ctrl(KeyCode::KeyZ),
@@ -137,6 +142,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_category("Node Graph")
             .with_keywords(["redo", "history"])
             .with_scope(widget)
+            .with_when(when_node_graph_editing())
             .with_default_keybindings([
                 mac_cmd_shift(KeyCode::KeyZ),
                 win_ctrl(KeyCode::KeyY),
@@ -155,6 +161,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_category("Node Graph")
             .with_keywords(["copy", "clipboard"])
             .with_scope(widget)
+            .with_when(when_node_graph_editing())
             .with_default_keybindings([
                 mac_cmd(KeyCode::KeyC),
                 win_ctrl(KeyCode::KeyC),
@@ -169,6 +176,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_category("Node Graph")
             .with_keywords(["cut", "clipboard"])
             .with_scope(widget)
+            .with_when(when_node_graph_editing())
             .with_default_keybindings([
                 mac_cmd(KeyCode::KeyX),
                 win_ctrl(KeyCode::KeyX),
@@ -183,6 +191,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_category("Node Graph")
             .with_keywords(["paste", "clipboard"])
             .with_scope(widget)
+            .with_when(when_node_graph_editing())
             .with_default_keybindings([
                 mac_cmd(KeyCode::KeyV),
                 win_ctrl(KeyCode::KeyV),
@@ -197,6 +206,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_category("Node Graph")
             .with_keywords(["duplicate", "clone"])
             .with_scope(widget)
+            .with_when(when_node_graph_editing())
             .with_default_keybindings([
                 mac_cmd(KeyCode::KeyD),
                 win_ctrl(KeyCode::KeyD),
@@ -211,6 +221,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
             .with_category("Node Graph")
             .with_keywords(["select", "all"])
             .with_scope(widget)
+            .with_when(when_node_graph_editing())
             .with_default_keybindings([
                 mac_cmd(KeyCode::KeyA),
                 win_ctrl(KeyCode::KeyA),
@@ -224,6 +235,7 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Delete Selection")
             .with_category("Node Graph")
             .with_keywords(["delete", "remove", "selection"])
-            .with_scope(widget),
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
     );
 }

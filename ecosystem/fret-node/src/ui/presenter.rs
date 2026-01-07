@@ -1,7 +1,6 @@
-use std::sync::Arc;
-
 use fret_core::Color;
 use serde_json::Value;
+use std::sync::Arc;
 
 use crate::REROUTE_KIND;
 use crate::core::{
@@ -16,6 +15,7 @@ use crate::rules::{
 use crate::schema::NodeRegistry;
 use crate::types::TypeDesc;
 use crate::{profile::DataflowProfile, profile::GraphProfile};
+use fret_runtime::CommandId;
 
 use super::style::NodeGraphStyle;
 
@@ -26,6 +26,7 @@ pub enum NodeGraphContextMenuAction {
     InsertNodeCandidate(usize),
     InsertReroute,
     DeleteEdge,
+    Command(CommandId),
     Custom(u64),
 }
 
