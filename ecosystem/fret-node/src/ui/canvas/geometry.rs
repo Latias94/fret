@@ -61,12 +61,7 @@ impl CanvasGeometry {
                 zoom,
             );
 
-            out.nodes.insert(
-                node_id,
-                NodeGeometry {
-                    rect,
-                },
-            );
+            out.nodes.insert(node_id, NodeGeometry { rect });
 
             for (dir, ports) in [(PortDirection::In, &inputs), (PortDirection::Out, &outputs)] {
                 for (row, port_id) in ports.iter().copied().enumerate() {

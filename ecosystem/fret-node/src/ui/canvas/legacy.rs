@@ -17,7 +17,7 @@ use crate::core::{
 };
 use crate::io::{NodeGraphConnectionMode, NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::{
-    GraphFragment, GraphOp, GraphTransaction, IdRemapSeed, IdRemapper, PasteTuning,
+    GraphFragment, GraphHistory, GraphOp, GraphTransaction, IdRemapSeed, IdRemapper, PasteTuning,
     apply_transaction,
 };
 use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
@@ -70,6 +70,7 @@ struct PendingNodeDrag {
 struct NodeDrag {
     node: GraphNodeId,
     grab_offset: Point,
+    start_node_pos: CanvasPoint,
 }
 
 #[derive(Debug, Clone)]
@@ -152,6 +153,7 @@ pub struct NodeGraphCanvas {
 
     cached_pan: CanvasPoint,
     cached_zoom: f32,
+    history: GraphHistory,
 
     wire_paths: Vec<fret_core::PathId>,
     text_blobs: Vec<TextBlobId>,
@@ -206,6 +208,7 @@ impl NodeGraphCanvas {
             close_command: None,
             cached_pan: CanvasPoint::default(),
             cached_zoom: 1.0,
+            history: GraphHistory::default(),
             wire_paths: Vec::new(),
             text_blobs: Vec::new(),
             interaction: InteractionState::default(),
@@ -309,66 +312,124 @@ impl NodeGraphCanvas {
         if ops.is_empty() {
             return true;
         }
-        let tx = GraphTransaction { label: None, ops };
 
+        let tx = GraphTransaction { label: None, ops };
+        match self.apply_transaction_result(host, &tx) {
+            Ok(committed) => {
+                self.history.record(committed);
+                true
+            }
+            Err(diags) => {
+                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diags) {
+                    self.show_toast(host, window, sev, msg);
+                }
+                false
+            }
+        }
+    }
+
+    fn apply_transaction_result<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        tx: &GraphTransaction,
+    ) -> Result<GraphTransaction, Vec<Diagnostic>> {
         let Some(mut scratch) = self.graph.read_ref(host, |g| g.clone()).ok() else {
-            return false;
+            return Err(vec![Diagnostic {
+                key: "tx.graph_unavailable".to_string(),
+                severity: DiagnosticSeverity::Error,
+                target: crate::rules::DiagnosticTarget::Graph,
+                message: "graph unavailable".to_string(),
+                fixes: Vec::new(),
+            }]);
         };
 
-        let mut diagnostics: Option<Vec<Diagnostic>> = None;
-
-        let ok = if let Some(profile) = self.presenter.profile_mut() {
-            match apply_transaction_with_profile(&mut scratch, profile, &tx) {
-                Ok(_committed) => true,
-                Err(err) => {
-                    match &err {
-                        ApplyPipelineError::Rejected {
-                            diagnostics: diags, ..
-                        } => {
-                            diagnostics = Some(diags.clone());
-                        }
-                        _ => {
-                            diagnostics = Some(vec![Diagnostic {
-                                key: "tx.apply_failed".to_string(),
-                                severity: DiagnosticSeverity::Error,
-                                target: crate::rules::DiagnosticTarget::Graph,
-                                message: err.to_string(),
-                                fixes: Vec::new(),
-                            }]);
-                        }
+        let committed = if let Some(profile) = self.presenter.profile_mut() {
+            match apply_transaction_with_profile(&mut scratch, profile, tx) {
+                Ok(committed) => committed,
+                Err(err) => match &err {
+                    ApplyPipelineError::Rejected {
+                        diagnostics: diags, ..
+                    } => return Err(diags.clone()),
+                    _ => {
+                        return Err(vec![Diagnostic {
+                            key: "tx.apply_failed".to_string(),
+                            severity: DiagnosticSeverity::Error,
+                            target: crate::rules::DiagnosticTarget::Graph,
+                            message: err.to_string(),
+                            fixes: Vec::new(),
+                        }]);
                     }
-                    false
-                }
+                },
             }
         } else {
-            match apply_transaction(&mut scratch, &tx) {
-                Ok(()) => true,
+            match apply_transaction(&mut scratch, tx) {
+                Ok(()) => GraphTransaction {
+                    label: tx.label.clone(),
+                    ops: tx.ops.clone(),
+                },
                 Err(err) => {
-                    diagnostics = Some(vec![Diagnostic {
+                    return Err(vec![Diagnostic {
                         key: "tx.apply_failed".to_string(),
                         severity: DiagnosticSeverity::Error,
                         target: crate::rules::DiagnosticTarget::Graph,
                         message: err.to_string(),
                         fixes: Vec::new(),
                     }]);
-                    false
                 }
             }
         };
 
-        if !ok {
-            if let Some(diags) = diagnostics {
-                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diags) {
-                    self.show_toast(host, window, sev, msg);
-                }
-            }
-            return false;
-        }
-
         let _ = self.graph.update(host, |g, _cx| {
             *g = scratch;
         });
-        true
+
+        Ok(committed)
+    }
+
+    fn undo_last<H: UiHost>(&mut self, host: &mut H, window: Option<AppWindowId>) -> bool {
+        let mut history = std::mem::take(&mut self.history);
+        let result = history.undo(|tx| self.apply_transaction_result(host, tx));
+        self.history = history;
+
+        match result {
+            Ok(true) => {
+                self.update_view_state(host, |s| {
+                    s.selected_edges.clear();
+                    s.selected_nodes.clear();
+                });
+                true
+            }
+            Ok(false) => false,
+            Err(diags) => {
+                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diags) {
+                    self.show_toast(host, window, sev, msg);
+                }
+                false
+            }
+        }
+    }
+
+    fn redo_last<H: UiHost>(&mut self, host: &mut H, window: Option<AppWindowId>) -> bool {
+        let mut history = std::mem::take(&mut self.history);
+        let result = history.redo(|tx| self.apply_transaction_result(host, tx));
+        self.history = history;
+
+        match result {
+            Ok(true) => {
+                self.update_view_state(host, |s| {
+                    s.selected_edges.clear();
+                    s.selected_nodes.clear();
+                });
+                true
+            }
+            Ok(false) => false,
+            Err(diags) => {
+                if let Some((sev, msg)) = Self::toast_from_diagnostics(&diags) {
+                    self.show_toast(host, window, sev, msg);
+                }
+                false
+            }
+        }
     }
 
     fn screen_to_canvas(bounds: Rect, screen: Point, pan: CanvasPoint, zoom: f32) -> CanvasPoint {
@@ -1764,6 +1825,28 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             cx.invalidate_self(Invalidation::Paint);
                             return;
                         }
+                        fret_core::KeyCode::KeyZ => {
+                            let did = if modifiers.shift {
+                                self.redo_last(cx.app, cx.window)
+                            } else {
+                                self.undo_last(cx.app, cx.window)
+                            };
+                            if did {
+                                cx.request_redraw();
+                                cx.invalidate_self(Invalidation::Paint);
+                            }
+                            cx.stop_propagation();
+                            return;
+                        }
+                        fret_core::KeyCode::KeyY => {
+                            let did = self.redo_last(cx.app, cx.window);
+                            if did {
+                                cx.request_redraw();
+                                cx.invalidate_self(Invalidation::Paint);
+                            }
+                            cx.stop_propagation();
+                            return;
+                        }
                         fret_core::KeyCode::KeyC => {
                             self.copy_selected_nodes_to_clipboard(cx.app, &snapshot.selected_nodes);
                             cx.stop_propagation();
@@ -2346,9 +2429,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             || dx * dx + dy * dy >= threshold_graph * threshold_graph
                         {
                             self.interaction.pending_node_drag = None;
+                            let start_node_pos = self
+                                .graph
+                                .read_ref(cx.app, |g| g.nodes.get(&pending.node).map(|n| n.pos))
+                                .ok()
+                                .flatten()
+                                .unwrap_or_default();
                             self.interaction.node_drag = Some(NodeDrag {
                                 node: pending.node,
                                 grab_offset: pending.grab_offset,
+                                start_node_pos,
                             });
                         } else {
                             return;
@@ -2379,11 +2469,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         if snap_to_grid {
                             to = Self::snap_canvas_point(to, snap_grid);
                         }
-                        let tx = GraphTransaction {
-                            label: None,
-                            ops: vec![GraphOp::SetNodePos { id, from, to }],
-                        };
-                        let _ = apply_transaction(g, &tx);
+                        if from != to {
+                            if let Some(node) = g.nodes.get_mut(&id) {
+                                node.pos = to;
+                            }
+                        }
                     });
                     if auto_pan_delta.x != 0.0 || auto_pan_delta.y != 0.0 {
                         self.update_view_state(cx.app, |s| {
@@ -2646,11 +2736,32 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 if *button == MouseButton::Left {
-                    if self.interaction.node_drag.is_some()
-                        || self.interaction.pending_node_drag.is_some()
-                    {
-                        self.interaction.node_drag = None;
+                    if let Some(drag) = self.interaction.node_drag.take() {
+                        let end = self
+                            .graph
+                            .read_ref(cx.app, |g| g.nodes.get(&drag.node).map(|n| n.pos))
+                            .ok()
+                            .flatten();
+                        if let Some(end) = end
+                            && drag.start_node_pos != end
+                        {
+                            self.history.record(GraphTransaction {
+                                label: Some("Move Node".to_string()),
+                                ops: vec![GraphOp::SetNodePos {
+                                    id: drag.node,
+                                    from: drag.start_node_pos,
+                                    to: end,
+                                }],
+                            });
+                        }
                         self.interaction.pending_node_drag = None;
+                        cx.release_pointer_capture();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+
+                    if self.interaction.pending_node_drag.take().is_some() {
                         cx.release_pointer_capture();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
