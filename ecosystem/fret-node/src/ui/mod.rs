@@ -5,10 +5,12 @@
 #![cfg(feature = "fret-ui")]
 
 pub mod canvas;
+pub mod commands;
 pub mod presenter;
 pub mod style;
 
 pub use canvas::NodeGraphCanvas;
+pub use commands::register_node_graph_commands;
 pub use presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
     NodeGraphContextMenuItem, NodeGraphPresenter, RegistryNodeGraphPresenter,

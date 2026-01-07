@@ -23,6 +23,11 @@ use crate::ops::{
 use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
+use crate::ui::commands::{
+    CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CUT, CMD_NODE_GRAPH_DELETE_SELECTION,
+    CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_SELECT_ALL,
+    CMD_NODE_GRAPH_UNDO,
+};
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
     NodeGraphContextMenuItem, NodeGraphPresenter,
@@ -45,6 +50,7 @@ struct ViewSnapshot {
 #[derive(Debug, Default, Clone)]
 struct InteractionState {
     last_pos: Option<Point>,
+    last_canvas_pos: Option<CanvasPoint>,
     panning: bool,
     pending_node_drag: Option<PendingNodeDrag>,
     node_drag: Option<NodeDrag>,
@@ -494,25 +500,17 @@ impl NodeGraphCanvas {
         host.push_effect(Effect::ClipboardSetText { text });
     }
 
-    fn request_paste_from_clipboard<H: UiHost>(
+    fn request_paste_at_canvas<H: UiHost>(
         &mut self,
         host: &mut H,
         window: Option<AppWindowId>,
-        bounds: Rect,
-        snapshot: &ViewSnapshot,
+        at: CanvasPoint,
     ) {
         let Some(window) = window else {
             return;
         };
 
         let token = host.next_clipboard_token();
-        let screen = self.interaction.last_pos.unwrap_or_else(|| {
-            Point::new(
-                Px(bounds.origin.x.0 + 0.5 * bounds.size.width.0),
-                Px(bounds.origin.y.0 + 0.5 * bounds.size.height.0),
-            )
-        });
-        let at = Self::screen_to_canvas(bounds, screen, snapshot.pan, snapshot.zoom);
         self.interaction.pending_paste = Some(PendingPaste { token, at });
         host.push_effect(Effect::ClipboardGetText { window, token });
     }
@@ -1763,6 +1761,107 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         }
     }
 
+    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
+        let snapshot = self.sync_view_state(cx.app);
+
+        match command.as_str() {
+            CMD_NODE_GRAPH_UNDO => {
+                let did = self.undo_last(cx.app, cx.window);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_REDO => {
+                let did = self.redo_last(cx.app, cx.window);
+                if did {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                true
+            }
+            CMD_NODE_GRAPH_SELECT_ALL => {
+                let nodes = self
+                    .graph
+                    .read_ref(cx.app, |graph| {
+                        graph.nodes.keys().copied().collect::<Vec<_>>()
+                    })
+                    .ok()
+                    .unwrap_or_default();
+                self.update_view_state(cx.app, |s| {
+                    s.selected_edges.clear();
+                    s.selected_nodes = nodes;
+                });
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_COPY => {
+                self.copy_selected_nodes_to_clipboard(cx.app, &snapshot.selected_nodes);
+                true
+            }
+            CMD_NODE_GRAPH_CUT => {
+                self.copy_selected_nodes_to_clipboard(cx.app, &snapshot.selected_nodes);
+
+                let selected_nodes = snapshot.selected_nodes.clone();
+                let selected_edges = snapshot.selected_edges.clone();
+                let remove_ops = self
+                    .graph
+                    .read_ref(cx.app, |graph| {
+                        Self::delete_selection_ops(graph, &selected_nodes, &selected_edges)
+                    })
+                    .ok()
+                    .unwrap_or_default();
+                let _ = self.commit_ops(cx.app, cx.window, Some("Cut"), remove_ops);
+                self.update_view_state(cx.app, |s| {
+                    s.selected_edges.clear();
+                    s.selected_nodes.clear();
+                });
+
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_PASTE => {
+                let at = self.interaction.last_canvas_pos.unwrap_or_default();
+                self.request_paste_at_canvas(cx.app, cx.window, at);
+                true
+            }
+            CMD_NODE_GRAPH_DUPLICATE => {
+                self.duplicate_selection(cx.app, cx.window, &snapshot.selected_nodes);
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_DELETE_SELECTION => {
+                let selected_edges = snapshot.selected_edges.clone();
+                let selected_nodes = snapshot.selected_nodes.clone();
+                if selected_edges.is_empty() && selected_nodes.is_empty() {
+                    return true;
+                }
+
+                let remove_ops = self
+                    .graph
+                    .read_ref(cx.app, |graph| {
+                        Self::delete_selection_ops(graph, &selected_nodes, &selected_edges)
+                    })
+                    .ok()
+                    .unwrap_or_default();
+
+                let _ = self.commit_ops(cx.app, cx.window, Some("Delete Selection"), remove_ops);
+                self.update_view_state(cx.app, |s| {
+                    s.selected_edges.clear();
+                    s.selected_nodes.clear();
+                });
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            _ => false,
+        }
+    }
+
     fn render_transform(&self, bounds: Rect) -> Option<Transform2D> {
         let zoom = self.cached_zoom;
         if !zoom.is_finite() || zoom <= 0.0 {
@@ -1831,86 +1930,43 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 if modifiers.ctrl || modifiers.meta {
                     match *key {
                         fret_core::KeyCode::KeyA => {
-                            let nodes = self
-                                .graph
-                                .read_ref(cx.app, |graph| {
-                                    graph.nodes.keys().copied().collect::<Vec<_>>()
-                                })
-                                .ok()
-                                .unwrap_or_default();
-                            self.update_view_state(cx.app, |s| {
-                                s.selected_edges.clear();
-                                s.selected_nodes = nodes;
-                            });
+                            cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_SELECT_ALL));
                             cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
                             return;
                         }
                         fret_core::KeyCode::KeyZ => {
-                            let did = if modifiers.shift {
-                                self.redo_last(cx.app, cx.window)
+                            let cmd = if modifiers.shift {
+                                CMD_NODE_GRAPH_REDO
                             } else {
-                                self.undo_last(cx.app, cx.window)
+                                CMD_NODE_GRAPH_UNDO
                             };
-                            if did {
-                                cx.request_redraw();
-                                cx.invalidate_self(Invalidation::Paint);
-                            }
+                            cx.dispatch_command(CommandId::from(cmd));
                             cx.stop_propagation();
                             return;
                         }
                         fret_core::KeyCode::KeyY => {
-                            let did = self.redo_last(cx.app, cx.window);
-                            if did {
-                                cx.request_redraw();
-                                cx.invalidate_self(Invalidation::Paint);
-                            }
+                            cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_REDO));
                             cx.stop_propagation();
                             return;
                         }
                         fret_core::KeyCode::KeyC => {
-                            self.copy_selected_nodes_to_clipboard(cx.app, &snapshot.selected_nodes);
+                            cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_COPY));
                             cx.stop_propagation();
                             return;
                         }
                         fret_core::KeyCode::KeyX => {
-                            self.copy_selected_nodes_to_clipboard(cx.app, &snapshot.selected_nodes);
-                            let selected_nodes = snapshot.selected_nodes.clone();
-                            let selected_edges = snapshot.selected_edges.clone();
-                            let remove_ops = self
-                                .graph
-                                .read_ref(cx.app, |graph| {
-                                    Self::delete_selection_ops(
-                                        graph,
-                                        &selected_nodes,
-                                        &selected_edges,
-                                    )
-                                })
-                                .ok()
-                                .unwrap_or_default();
-                            self.apply_ops(cx.app, cx.window, remove_ops);
-                            self.update_view_state(cx.app, |s| {
-                                s.selected_edges.clear();
-                                s.selected_nodes.clear();
-                            });
+                            cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_CUT));
                             cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
                             return;
                         }
                         fret_core::KeyCode::KeyV => {
-                            self.request_paste_from_clipboard(
-                                cx.app, cx.window, cx.bounds, &snapshot,
-                            );
+                            cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_PASTE));
                             cx.stop_propagation();
                             return;
                         }
                         fret_core::KeyCode::KeyD => {
-                            self.duplicate_selection(cx.app, cx.window, &snapshot.selected_nodes);
+                            cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_DUPLICATE));
                             cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
                             return;
                         }
                         _ => {}
@@ -2077,30 +2133,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                let selected_edges = snapshot.selected_edges.clone();
-                let selected_nodes = snapshot.selected_nodes.clone();
-                if selected_edges.is_empty() && selected_nodes.is_empty() {
-                    return;
-                }
-
-                let remove_ops = {
-                    let this = &*self;
-                    this.graph
-                        .read_ref(cx.app, |graph| {
-                            Self::delete_selection_ops(graph, &selected_nodes, &selected_edges)
-                        })
-                        .ok()
-                        .unwrap_or_default()
-                };
-
-                self.apply_ops(cx.app, cx.window, remove_ops);
-                self.update_view_state(cx.app, |s| {
-                    s.selected_edges.clear();
-                    s.selected_nodes.clear();
-                });
+                cx.dispatch_command(CommandId::from(CMD_NODE_GRAPH_DELETE_SELECTION));
                 cx.stop_propagation();
-                cx.request_redraw();
-                cx.invalidate_self(Invalidation::Paint);
+                return;
             }
             Event::Pointer(fret_core::PointerEvent::Down {
                 position,
@@ -2109,6 +2144,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 ..
             }) => {
                 self.interaction.last_pos = Some(*position);
+                self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
+                    cx.bounds,
+                    *position,
+                    snapshot.pan,
+                    zoom,
+                ));
 
                 if *button == MouseButton::Left {
                     if let Some(command) = self.close_command.clone() {
@@ -2414,10 +2455,22 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }) => {
                 let Some(last) = self.interaction.last_pos else {
                     self.interaction.last_pos = Some(*position);
+                    self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
+                        cx.bounds,
+                        *position,
+                        snapshot.pan,
+                        zoom,
+                    ));
                     return;
                 };
                 let delta = Point::new(Px(position.x.0 - last.x.0), Px(position.y.0 - last.y.0));
                 self.interaction.last_pos = Some(*position);
+                self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
+                    cx.bounds,
+                    *position,
+                    snapshot.pan,
+                    zoom,
+                ));
 
                 if self.close_command.is_some()
                     && self.interaction.node_drag.is_none()
@@ -2748,6 +2801,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 position, button, ..
             }) => {
                 self.interaction.last_pos = Some(*position);
+                self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
+                    cx.bounds,
+                    *position,
+                    snapshot.pan,
+                    zoom,
+                ));
 
                 if *button == MouseButton::Middle && self.interaction.panning {
                     self.interaction.panning = false;
