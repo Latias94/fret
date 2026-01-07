@@ -555,6 +555,26 @@ impl<H: UiHost> MarkdownComponents<H> {
         self.on_link_activate = Some(on_link_activate_open_url());
         self
     }
+
+    pub fn with_code_block_wrap(mut self, wrap: fret_code_view::CodeBlockWrap) -> Self {
+        self.code_block_ui.wrap = wrap;
+        self
+    }
+
+    pub fn with_code_block_max_height(mut self, max_height: Option<Px>) -> Self {
+        self.code_block_ui.max_height = max_height;
+        self
+    }
+
+    pub fn with_code_block_scrollbar_x(mut self, show: bool) -> Self {
+        self.code_block_ui.show_scrollbar_x = show;
+        self
+    }
+
+    pub fn with_code_block_scrollbar_x_on_hover(mut self, on_hover: bool) -> Self {
+        self.code_block_ui.scrollbar_x_on_hover = on_hover;
+        self
+    }
 }
 
 fn parse_fenced_code_language(info: &str) -> Option<Arc<str>> {
@@ -612,12 +632,7 @@ fn render_code_block<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let mut options = components.code_block_ui;
-
-    if options.max_height.is_none() {
-        options.max_height = theme
-            .metric_by_key("fret.markdown.code_block.max_height")
-            .or_else(|| theme.metric_by_key("markdown.code_block.max_height"));
-    }
+    resolve_code_block_ui(theme, &mut options);
 
     let mut header = fret_code_view::CodeBlockHeaderSlots::default();
     if let Some(render_actions) = &components.code_block_actions {
@@ -632,6 +647,14 @@ fn render_code_block<H: UiHost>(
         options,
         header,
     )
+}
+
+fn resolve_code_block_ui(theme: &Theme, options: &mut fret_code_view::CodeBlockUiOptions) {
+    if options.max_height.is_none() {
+        options.max_height = theme
+            .metric_by_key("fret.markdown.code_block.max_height")
+            .or_else(|| theme.metric_by_key("markdown.code_block.max_height"));
+    }
 }
 
 fn render_thematic_break<H: UiHost>(
@@ -3432,6 +3455,215 @@ fn coalesce_link_runs(pieces: Vec<InlinePiece>) -> Vec<InlinePiece> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::{
+        any::{Any, TypeId},
+        collections::{HashMap, HashSet},
+    };
+
+    use fret_core::{AppWindowId, ClipboardToken, ImageUploadToken, Point, TimerToken};
+    use fret_runtime::{
+        CommandRegistry, CommandsHost, DragHost, DragKind, DragSession, Effect, EffectSink,
+        FrameId, GlobalsHost, ModelHost, ModelId, ModelStore, ModelsHost, TickId, TimeHost,
+    };
+    use fret_ui::ThemeConfig;
+
+    #[derive(Default)]
+    struct ThemeTestHost {
+        globals: HashMap<TypeId, Box<dyn Any>>,
+        models: ModelStore,
+        commands: CommandRegistry,
+        redraw: HashSet<AppWindowId>,
+        effects: Vec<Effect>,
+        drag: Option<DragSession>,
+        tick_id: TickId,
+        frame_id: FrameId,
+        next_timer_token: u64,
+        next_clipboard_token: u64,
+        next_image_upload_token: u64,
+    }
+
+    impl GlobalsHost for ThemeTestHost {
+        fn set_global<T: Any>(&mut self, value: T) {
+            self.globals.insert(TypeId::of::<T>(), Box::new(value));
+        }
+
+        fn global<T: Any>(&self) -> Option<&T> {
+            self.globals
+                .get(&TypeId::of::<T>())
+                .and_then(|v| v.downcast_ref::<T>())
+        }
+
+        fn global_mut<T: Any>(&mut self) -> Option<&mut T> {
+            self.globals
+                .get_mut(&TypeId::of::<T>())
+                .and_then(|v| v.downcast_mut::<T>())
+        }
+
+        fn with_global_mut<T: Any, R>(
+            &mut self,
+            init: impl FnOnce() -> T,
+            f: impl FnOnce(&mut T, &mut Self) -> R,
+        ) -> R {
+            #[derive(Debug)]
+            struct GlobalLeaseMarker;
+
+            struct Guard<T: Any> {
+                type_id: TypeId,
+                value: Option<T>,
+                globals: *mut HashMap<TypeId, Box<dyn Any>>,
+            }
+
+            impl<T: Any> Drop for Guard<T> {
+                fn drop(&mut self) {
+                    let Some(value) = self.value.take() else {
+                        return;
+                    };
+                    unsafe {
+                        (*self.globals).insert(self.type_id, Box::new(value));
+                    }
+                }
+            }
+
+            let type_id = TypeId::of::<T>();
+            let existing = self
+                .globals
+                .insert(type_id, Box::new(GlobalLeaseMarker) as Box<dyn Any>);
+
+            let existing = match existing {
+                None => None,
+                Some(v) => {
+                    if v.is::<GlobalLeaseMarker>() {
+                        panic!("global already leased: {type_id:?}");
+                    }
+                    Some(*v.downcast::<T>().expect("global type id must match"))
+                }
+            };
+
+            let mut guard = Guard::<T> {
+                type_id,
+                value: Some(existing.unwrap_or_else(init)),
+                globals: &mut self.globals as *mut _,
+            };
+
+            let result = {
+                let value = guard.value.as_mut().expect("guard value exists");
+                f(value, self)
+            };
+
+            drop(guard);
+            result
+        }
+    }
+
+    impl ModelHost for ThemeTestHost {
+        fn models(&self) -> &ModelStore {
+            &self.models
+        }
+
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+    }
+
+    impl ModelsHost for ThemeTestHost {
+        fn take_changed_models(&mut self) -> Vec<ModelId> {
+            self.models.take_changed_models()
+        }
+    }
+
+    impl CommandsHost for ThemeTestHost {
+        fn commands(&self) -> &CommandRegistry {
+            &self.commands
+        }
+    }
+
+    impl EffectSink for ThemeTestHost {
+        fn request_redraw(&mut self, window: AppWindowId) {
+            self.redraw.insert(window);
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+    }
+
+    impl TimeHost for ThemeTestHost {
+        fn tick_id(&self) -> TickId {
+            self.tick_id
+        }
+
+        fn frame_id(&self) -> FrameId {
+            self.frame_id
+        }
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.next_timer_token = self.next_timer_token.saturating_add(1);
+            TimerToken(self.next_timer_token)
+        }
+
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            ClipboardToken(self.next_clipboard_token)
+        }
+
+        fn next_image_upload_token(&mut self) -> ImageUploadToken {
+            self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
+            ImageUploadToken(self.next_image_upload_token)
+        }
+    }
+
+    impl DragHost for ThemeTestHost {
+        fn drag(&self) -> Option<&DragSession> {
+            self.drag.as_ref()
+        }
+
+        fn drag_mut(&mut self) -> Option<&mut DragSession> {
+            self.drag.as_mut()
+        }
+
+        fn cancel_drag(&mut self) {
+            self.drag = None;
+        }
+
+        fn begin_drag_with_kind<T: Any>(
+            &mut self,
+            kind: DragKind,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
+        ) {
+            self.drag = Some(DragSession::new(source_window, kind, start, payload));
+        }
+
+        fn begin_cross_window_drag_with_kind<T: Any>(
+            &mut self,
+            kind: DragKind,
+            source_window: AppWindowId,
+            start: Point,
+            payload: T,
+        ) {
+            self.drag = Some(DragSession::new_cross_window(source_window, kind, start, payload));
+        }
+    }
+
+    fn theme_with_metrics(metrics: &[(&str, f32)]) -> Theme {
+        let mut host = ThemeTestHost::default();
+        let theme = Theme::global_mut(&mut host);
+
+        let mut cfg = ThemeConfig {
+            name: theme.name.clone(),
+            author: theme.author.clone(),
+            url: theme.url.clone(),
+            colors: HashMap::new(),
+            metrics: HashMap::new(),
+        };
+        for (k, v) in metrics {
+            cfg.metrics.insert((*k).to_string(), *v);
+        }
+
+        theme.apply_config(&cfg);
+        theme.clone()
+    }
 
     fn count_top_level_list_items(events: &[pulldown_cmark::Event<'static>]) -> usize {
         use pulldown_cmark::{Event, Tag, TagEnd};
@@ -3720,5 +3952,35 @@ $$
         assert!(!is_safe_open_url("javascript:alert(1)"));
         assert!(!is_safe_open_url("data:text/html;base64,PHNjcmlwdD4="));
         assert!(!is_safe_open_url("file:///etc/passwd"));
+    }
+
+    #[test]
+    fn code_block_max_height_prefers_fret_namespace() {
+        let theme = theme_with_metrics(&[
+            ("markdown.code_block.max_height", 111.0),
+            ("fret.markdown.code_block.max_height", 222.0),
+        ]);
+        let mut options = fret_code_view::CodeBlockUiOptions::default();
+        options.max_height = None;
+        resolve_code_block_ui(&theme, &mut options);
+        assert_eq!(options.max_height, Some(Px(222.0)));
+    }
+
+    #[test]
+    fn code_block_max_height_falls_back_to_markdown_namespace() {
+        let theme = theme_with_metrics(&[("markdown.code_block.max_height", 123.0)]);
+        let mut options = fret_code_view::CodeBlockUiOptions::default();
+        options.max_height = None;
+        resolve_code_block_ui(&theme, &mut options);
+        assert_eq!(options.max_height, Some(Px(123.0)));
+    }
+
+    #[test]
+    fn code_block_max_height_does_not_override_explicit_option() {
+        let theme = theme_with_metrics(&[("fret.markdown.code_block.max_height", 999.0)]);
+        let mut options = fret_code_view::CodeBlockUiOptions::default();
+        options.max_height = Some(Px(321.0));
+        resolve_code_block_ui(&theme, &mut options);
+        assert_eq!(options.max_height, Some(Px(321.0)));
     }
 }
