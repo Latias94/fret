@@ -7,7 +7,7 @@ use crate::engine::lod::{
     compute_bounds_step, finalize_bounds, minmax_per_pixel_finalize, minmax_per_pixel_step,
 };
 use crate::engine::model::ChartModel;
-use crate::engine::window::DataWindowX;
+use crate::engine::window::{DataWindowX, DataWindowY};
 use crate::marks::{MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkTree};
 use crate::paint::StrokeStyleV2;
 use crate::scheduler::WorkBudget;
@@ -137,6 +137,35 @@ impl MarksStage {
                 let window_for_bounds = axis_locked_window_x(x_axis_range)
                     .or(state.data_window_x.get(&series.x_axis).copied());
 
+                let y_axis_range = model
+                    .axes
+                    .get(&series.y_axis)
+                    .map(|a| a.range)
+                    .unwrap_or_default();
+                let y_window_for_bounds = axis_locked_window_y(y_axis_range)
+                    .or(state.data_window_y.get(&series.y_axis).copied());
+
+                if let Some(mut y_window) = y_window_for_bounds {
+                    y_window.clamp_non_degenerate();
+
+                    let (x_min, x_max) = if let Some(mut w) = window_for_bounds {
+                        w.clamp_non_degenerate();
+                        (w.min, w.max)
+                    } else {
+                        let mut bounds = compute_bounds(x, y).unwrap_or_default();
+                        bounds.clamp_non_degenerate();
+                        (bounds.x_min, bounds.x_max)
+                    };
+
+                    self.bounds = Some(DataBounds {
+                        x_min,
+                        x_max,
+                        y_min: y_window.min,
+                        y_max: y_window.max,
+                    });
+                    continue;
+                }
+
                 let done = compute_bounds_step(
                     &mut self.bounds_cursor,
                     &mut self.bounds_accum,
@@ -166,7 +195,6 @@ impl MarksStage {
                     windowed.x_min = bounds.x_min;
                     windowed.x_max = bounds.x_max;
                 }
-                apply_axis_ranges(model, series.x_axis, series.y_axis, &mut windowed);
                 windowed.clamp_non_degenerate();
                 self.bounds = Some(windowed);
             }
@@ -189,8 +217,8 @@ impl MarksStage {
                 let mut window = window;
                 window.clamp_non_degenerate();
 
-                bounds.x_min = bounds.x_min.max(window.x_min);
-                bounds.x_max = bounds.x_max.min(window.x_max);
+                bounds.x_min = bounds.x_min.max(window.min);
+                bounds.x_max = bounds.x_max.min(window.max);
                 bounds.clamp_non_degenerate();
             }
 
@@ -259,35 +287,20 @@ impl MarksStage {
 }
 
 fn axis_locked_window_x(range: AxisRange) -> Option<DataWindowX> {
+    axis_locked_window_1d(range)
+}
+
+fn axis_locked_window_y(range: AxisRange) -> Option<DataWindowY> {
+    axis_locked_window_1d(range)
+}
+
+fn axis_locked_window_1d(range: AxisRange) -> Option<DataWindowX> {
     match range {
         AxisRange::Auto => None,
         AxisRange::Fixed { min, max } => {
-            let mut w = DataWindowX {
-                x_min: min,
-                x_max: max,
-            };
+            let mut w = DataWindowX { min, max };
             w.clamp_non_degenerate();
             Some(w)
-        }
-    }
-}
-
-fn apply_axis_ranges(
-    model: &ChartModel,
-    x_axis: crate::ids::AxisId,
-    y_axis: crate::ids::AxisId,
-    bounds: &mut DataBounds,
-) {
-    if let Some(axis) = model.axes.get(&x_axis) {
-        if let AxisRange::Fixed { min, max } = axis.range {
-            bounds.x_min = bounds.x_min.max(min);
-            bounds.x_max = bounds.x_max.min(max);
-        }
-    }
-    if let Some(axis) = model.axes.get(&y_axis) {
-        if let AxisRange::Fixed { min, max } = axis.range {
-            bounds.y_min = bounds.y_min.max(min);
-            bounds.y_max = bounds.y_max.min(max);
         }
     }
 }

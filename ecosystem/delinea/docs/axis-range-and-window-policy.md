@@ -22,14 +22,17 @@ data-space range of an axis:
 In v1, `Fixed` implies the axis is non-interactive in the headless engine:
 view window updates (e.g. zoom/pan) are ignored for that axis.
 
-### `DataWindowX`
+### `DataWindowX` / `DataWindowY`
 
-`DataWindowX` is an ephemeral view window used to represent interactive zoom/pan
-in data space. It is stored in `ChartState` (not in `ChartModel`) because it is
-considered view-state rather than a durable chart option.
+`DataWindowX` / `DataWindowY` are ephemeral 1D view windows used to represent
+interactive zoom/pan in data space. They are stored in `ChartState` (not in
+`ChartModel`) because they are considered view-state rather than durable chart
+options.
 
-In v1 it is stored per X axis (`AxisId -> DataWindowX`) to keep the model ready
-for multiple axes.
+The underlying data structure is `DataWindow { min, max }`.
+
+In v1 they are stored per axis (`AxisId -> DataWindowX` and `AxisId -> DataWindowY`)
+to keep the model ready for multiple axes.
 
 ## Precedence rules (v1)
 
@@ -41,7 +44,15 @@ When producing marks (bounds + LOD + projection):
 2. Otherwise, if `ChartState.data_window_x[axis]` is present, it becomes the effective X window.
 3. Otherwise, the engine uses the full dataset range.
 
-Y axis `Fixed` range is applied as a clamp on the computed bounds.
+For Y:
+
+1. If the Y axis range is `Fixed`, the engine uses it as the effective Y window.
+   - `ChartState.data_window_y[axis]` is ignored for that axis.
+2. Otherwise, if `ChartState.data_window_y[axis]` is present, it becomes the effective Y window.
+3. Otherwise, the engine derives Y bounds from the dataset (restricted by the effective X window).
+
+In v1 the LOD stage clamps Y values to the effective Y window to avoid out-of-range
+values dominating min/max selection.
 
 ## Patch/merge semantics
 
@@ -66,6 +77,6 @@ The exact mapping is intentionally left to the UI layer.
 
 - `LockMin` / `LockMax` (ImPlot-style partial locks).
 - Per-axis windows (multiple X/Y axes).
-- Y view windows (`DataWindowY`) and 2D box zoom.
+- 2D box zoom (paired X/Y window updates).
 - Non-linear scales (log/time) and tick generation.
 - 3D: replace `DataWindowX` with generalized camera/view transforms.

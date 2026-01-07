@@ -76,7 +76,7 @@ pub fn compute_bounds_step(
         }
 
         if let Some(w) = window_x
-            && (xi < w.x_min || xi > w.x_max)
+            && (xi < w.min || xi > w.max)
         {
             continue;
         }
@@ -97,7 +97,7 @@ pub fn finalize_bounds(accum: &BoundsAccum, window_x: Option<DataWindowX>) -> Op
 
     let (x_min, x_max) = if let Some(mut w) = window_x {
         w.clamp_non_degenerate();
-        (w.x_min, w.x_max)
+        (w.min, w.max)
     } else {
         // Caller should set x bounds from a separate pass if needed.
         (0.0, 1.0)

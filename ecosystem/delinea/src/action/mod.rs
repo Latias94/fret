@@ -1,6 +1,6 @@
 use fret_core::Point;
 
-use crate::engine::window::DataWindowX;
+use crate::engine::window::{DataWindowX, DataWindowY};
 use crate::ids::{AxisId, LinkGroupId, SeriesId};
 
 #[cfg(feature = "serde")]
@@ -22,6 +22,10 @@ pub enum Action {
     SetDataWindowX {
         axis: AxisId,
         window: Option<DataWindowX>,
+    },
+    SetDataWindowY {
+        axis: AxisId,
+        window: Option<DataWindowY>,
     },
     SetSeriesVisible {
         series: SeriesId,

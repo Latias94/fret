@@ -29,6 +29,7 @@ pub struct ChartState {
     pub revision: Revision,
     pub link: LinkConfig,
     pub data_window_x: BTreeMap<crate::ids::AxisId, window::DataWindowX>,
+    pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
     pub hover_px: Option<Point>,
 }
 
@@ -138,6 +139,16 @@ impl ChartEngine {
                     self.state.data_window_x.insert(axis, window);
                 } else {
                     self.state.data_window_x.remove(&axis);
+                }
+                self.state.revision.bump();
+                self.marks_stage.mark_dirty();
+            }
+            Action::SetDataWindowY { axis, window } => {
+                if let Some(mut window) = window {
+                    window.clamp_non_degenerate();
+                    self.state.data_window_y.insert(axis, window);
+                } else {
+                    self.state.data_window_y.remove(&axis);
                 }
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();

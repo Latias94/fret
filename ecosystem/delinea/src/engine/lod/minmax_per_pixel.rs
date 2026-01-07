@@ -132,15 +132,27 @@ pub fn minmax_per_pixel_step(
         }
         b.last = Some(i);
 
+        let yi_clamped = yi.clamp(bounds.y_min, bounds.y_max);
+
         let min_index = b.min.unwrap_or(i);
-        if yi < y[min_index] {
+        let min_y = y
+            .get(min_index)
+            .copied()
+            .unwrap_or(f64::NAN)
+            .clamp(bounds.y_min, bounds.y_max);
+        if yi_clamped < min_y {
             b.min = Some(i);
         } else if b.min.is_none() {
             b.min = Some(i);
         }
 
         let max_index = b.max.unwrap_or(i);
-        if yi > y[max_index] {
+        let max_y = y
+            .get(max_index)
+            .copied()
+            .unwrap_or(f64::NAN)
+            .clamp(bounds.y_min, bounds.y_max);
+        if yi_clamped > max_y {
             b.max = Some(i);
         } else if b.max.is_none() {
             b.max = Some(i);
@@ -176,6 +188,7 @@ pub fn minmax_per_pixel_finalize(
     };
 
     let to_px = |xi: f64, yi: f64| -> Point {
+        let yi = yi.clamp(bounds.y_min, bounds.y_max);
         let tx = (xi - bounds.x_min) / x_span;
         let ty = (yi - bounds.y_min) / y_span;
 
