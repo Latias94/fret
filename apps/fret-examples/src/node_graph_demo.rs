@@ -17,6 +17,7 @@ use fret_node::io::NodeGraphViewState;
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
 use fret_node::ui::NodeGraphCanvas;
 use fret_node::ui::RegistryNodeGraphPresenter;
+use fret_node::ui::register_node_graph_commands;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
@@ -488,6 +489,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
+    register_node_graph_commands(app.commands_mut());
 
     let graph = app.models_mut().insert(build_demo_graph());
     let view = app.models_mut().insert(NodeGraphViewState::default());
