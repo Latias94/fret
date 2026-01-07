@@ -190,11 +190,18 @@ pub fn markdown_with<H: UiHost>(
     let theme = Theme::global(&*cx.app).clone();
     let markdown_theme = MarkdownTheme::resolve(&theme);
 
-    let mut stream = mdstream::MdStream::default();
+    // mdstream defaults to `FootnotesMode::SingleBlock`, which intentionally collapses documents
+    // with footnotes into one block (stability-first). For UI rendering we prefer keeping blocks
+    // so headings, lists, math blocks, etc can be laid out independently.
+    let mut stream = mdstream::MdStream::new(mdstream::Options {
+        footnotes: mdstream::FootnotesMode::Invalidate,
+        ..Default::default()
+    });
     let update = stream.append(source);
 
     let mut state = MarkdownPulldownState::new();
     state.apply_update(update);
+    state.apply_update(stream.finalize());
 
     markdown_mdstream_pulldown_with(
         cx,
@@ -278,6 +285,95 @@ enum MathJaxSvgEntry {
     Loading,
     Ready(MathJaxSvgReady),
     Error(Arc<str>),
+}
+
+#[cfg(feature = "mathjax-svg")]
+struct MathJaxWorker {
+    tx: std::sync::mpsc::Sender<MathJaxWorkItem>,
+}
+
+#[cfg(feature = "mathjax-svg")]
+struct MathJaxWorkItem {
+    map: Arc<std::sync::Mutex<std::collections::HashMap<MathJaxKey, MathJaxSvgEntry>>>,
+    key: MathJaxKey,
+}
+
+#[cfg(feature = "mathjax-svg")]
+static MATHJAX_WORKER: std::sync::OnceLock<MathJaxWorker> = std::sync::OnceLock::new();
+
+#[cfg(feature = "mathjax-svg")]
+fn mathjax_worker() -> &'static MathJaxWorker {
+    MATHJAX_WORKER.get_or_init(|| {
+        let (tx, rx) = std::sync::mpsc::channel::<MathJaxWorkItem>();
+        std::thread::spawn(move || {
+            for item in rx {
+                let key = item.key;
+                let latex = key.latex.clone();
+                tracing::info!(
+                    target: "fret_markdown::math",
+                    mode = ?key.mode,
+                    latex_len = latex.len(),
+                    "mathjax svg: convert queued"
+                );
+
+                let result = std::panic::catch_unwind(|| match key.mode {
+                    MathJaxMode::Inline => mathjax_svg::convert_to_svg_inline(&latex),
+                    MathJaxMode::Display => mathjax_svg::convert_to_svg(&latex),
+                });
+
+                let mut map_guard = item.map.lock().expect("mathjax svg cache lock");
+                match result {
+                    Ok(Ok(svg)) => {
+                        let has_current_color =
+                            svg.contains("currentColor") || svg.contains("currentcolor");
+                        let svg = if has_current_color {
+                            svg.replace("currentColor", "#000000")
+                                .replace("currentcolor", "#000000")
+                        } else {
+                            svg
+                        };
+
+                        tracing::info!(
+                            target: "fret_markdown::math",
+                            mode = ?key.mode,
+                            latex_len = latex.len(),
+                            has_current_color,
+                            "mathjax svg: converted"
+                        );
+
+                        let aspect_ratio = svg_viewbox_aspect_ratio(&svg);
+                        map_guard.insert(
+                            key,
+                            MathJaxSvgEntry::Ready(MathJaxSvgReady {
+                                svg_bytes: Arc::<[u8]>::from(svg.into_bytes()),
+                                aspect_ratio,
+                            }),
+                        );
+                    }
+                    Ok(Err(err)) => {
+                        tracing::info!(
+                            target: "fret_markdown::math",
+                            mode = ?key.mode,
+                            latex_len = latex.len(),
+                            error = %err,
+                            "mathjax svg: convert failed"
+                        );
+                        map_guard.insert(
+                            key,
+                            MathJaxSvgEntry::Error(Arc::<str>::from(err.to_string())),
+                        );
+                    }
+                    Err(_) => {
+                        map_guard.insert(
+                            key,
+                            MathJaxSvgEntry::Error(Arc::<str>::from("mathjax svg: panic")),
+                        );
+                    }
+                }
+            }
+        });
+        MathJaxWorker { tx }
+    })
 }
 
 #[cfg(feature = "mathjax-svg")]
@@ -2967,63 +3063,17 @@ fn mathjax_svg_entry<H: UiHost>(
         });
 
     if let Some((map, key)) = spawn {
-        std::thread::spawn(move || {
-            let latex = key.latex.clone();
-            tracing::info!(
-                target: "fret_markdown::math",
-                mode = ?key.mode,
-                latex_len = latex.len(),
-                "mathjax svg: spawn convert"
-            );
-            let result = match key.mode {
-                MathJaxMode::Inline => mathjax_svg::convert_to_svg_inline(&latex),
-                MathJaxMode::Display => mathjax_svg::convert_to_svg(&latex),
-            };
-
+        let work = MathJaxWorkItem {
+            map: map.clone(),
+            key: key.clone(),
+        };
+        if let Err(_err) = mathjax_worker().tx.send(work) {
             let mut map_guard = map.lock().expect("mathjax svg cache lock");
-            match result {
-                Ok(svg) => {
-                    let has_current_color =
-                        svg.contains("currentColor") || svg.contains("currentcolor");
-                    let svg = if has_current_color {
-                        svg.replace("currentColor", "#000000")
-                            .replace("currentcolor", "#000000")
-                    } else {
-                        svg
-                    };
-
-                    tracing::info!(
-                        target: "fret_markdown::math",
-                        mode = ?key.mode,
-                        latex_len = latex.len(),
-                        has_current_color,
-                        "mathjax svg: converted"
-                    );
-
-                    let aspect_ratio = svg_viewbox_aspect_ratio(&svg);
-                    map_guard.insert(
-                        key,
-                        MathJaxSvgEntry::Ready(MathJaxSvgReady {
-                            svg_bytes: Arc::<[u8]>::from(svg.into_bytes()),
-                            aspect_ratio,
-                        }),
-                    );
-                }
-                Err(err) => {
-                    tracing::info!(
-                        target: "fret_markdown::math",
-                        mode = ?key.mode,
-                        latex_len = latex.len(),
-                        error = %err,
-                        "mathjax svg: convert failed"
-                    );
-                    map_guard.insert(
-                        key,
-                        MathJaxSvgEntry::Error(Arc::<str>::from(err.to_string())),
-                    );
-                }
-            }
-        });
+            map_guard.insert(
+                key,
+                MathJaxSvgEntry::Error(Arc::<str>::from("mathjax svg worker unavailable")),
+            );
+        }
     }
 
     entry
