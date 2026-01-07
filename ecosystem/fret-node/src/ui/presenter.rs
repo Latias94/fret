@@ -2,15 +2,17 @@ use std::sync::Arc;
 
 use fret_core::Color;
 
-use crate::core::{EdgeId, Graph, NodeId, PortId, PortKind};
+use crate::core::{CanvasPoint, EdgeId, Graph, NodeId, NodeKindKey, PortId, PortKind};
 use crate::ops::GraphOp;
 use crate::rules::{ConnectPlan, EdgeEndpoint, plan_connect, plan_reconnect_edge};
 
 use super::style::NodeGraphStyle;
 
 /// Context menu actions surfaced by the canvas widget.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NodeGraphContextMenuAction {
+    OpenInsertNodePicker,
+    InsertNode(NodeKindKey),
     InsertReroute,
     DeleteEdge,
     Custom(u64),
@@ -22,6 +24,14 @@ pub struct NodeGraphContextMenuItem {
     pub label: Arc<str>,
     pub enabled: bool,
     pub action: NodeGraphContextMenuAction,
+}
+
+/// A candidate node kind for insertion.
+#[derive(Debug, Clone)]
+pub struct InsertNodeCandidate {
+    pub kind: NodeKindKey,
+    pub label: Arc<str>,
+    pub enabled: bool,
 }
 
 /// Viewer/presenter surface for the node graph UI.
@@ -50,6 +60,32 @@ pub trait NodeGraphPresenter {
             crate::core::EdgeKind::Data => style.wire_color_data,
             crate::core::EdgeKind::Exec => style.wire_color_exec,
         }
+    }
+
+    /// Lists insertable nodes for split-edge workflows.
+    ///
+    /// Implementations may inspect the edge type and port types to return compatible candidates.
+    fn list_insertable_nodes_for_edge(
+        &mut self,
+        graph: &Graph,
+        edge: EdgeId,
+    ) -> Vec<InsertNodeCandidate> {
+        let _ = (graph, edge);
+        Vec::new()
+    }
+
+    /// Plans splitting an edge by inserting a node.
+    ///
+    /// Returning `Some(ops)` applies them as a single transaction.
+    fn plan_split_edge(
+        &mut self,
+        graph: &Graph,
+        edge: EdgeId,
+        node_kind: &NodeKindKey,
+        at: CanvasPoint,
+    ) -> Option<Vec<GraphOp>> {
+        let _ = (graph, edge, node_kind, at);
+        None
     }
 
     /// Fills the right-click context menu for an edge.
