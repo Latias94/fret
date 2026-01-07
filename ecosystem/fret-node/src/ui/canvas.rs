@@ -840,13 +840,16 @@ impl NodeGraphCanvas {
                 };
 
                 let outcome = {
+                    let presenter = &mut *self.presenter;
                     self.graph
                         .read_ref(cx.app, |graph| {
                             let template = match &candidate.template {
                                 Some(t) => t,
                                 None => return Outcome::Ignore,
                             };
-                            let spec = match template.instantiate(*at) {
+                            let at = presenter
+                                .conversion_insert_position(graph, *from, *to, *at, template);
+                            let spec = match template.instantiate(at) {
                                 Ok(spec) => spec,
                                 Err(err) => {
                                     return Outcome::Reject(
@@ -2289,14 +2292,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                                     let mut out: Vec<InsertNodeCandidate> =
                                                                         Vec::new();
                                                                     for t in conversions {
+                                                                        let label = presenter
+                                                                            .conversion_label(
+                                                                                &scratch,
+                                                                                src,
+                                                                                target,
+                                                                                &t,
+                                                                            );
                                                                         out.push(InsertNodeCandidate {
                                                                             kind: t.kind.clone(),
-                                                                            label: Arc::<str>::from(
-                                                                                format!(
-                                                                                    "Convert: {}",
-                                                                                    t.kind.0
-                                                                                ),
-                                                                            ),
+                                                                            label,
                                                                             enabled: true,
                                                                             template: Some(t),
                                                                             payload: serde_json::Value::Null,
@@ -2306,9 +2311,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                                     break;
                                                                 }
                                                                 if conversions.len() == 1 {
-                                                                    if let Ok(spec) = conversions[0]
-                                                                        .instantiate(convert_at)
-                                                                    {
+                                                                    let template = &conversions[0];
+                                                                    let at = presenter
+                                                                        .conversion_insert_position(
+                                                                            &scratch,
+                                                                            src,
+                                                                            target,
+                                                                            convert_at,
+                                                                            template,
+                                                                        );
+                                                                    if let Ok(spec) = template.instantiate(at) {
                                                                         let insert_plan =
                                                                             plan_connect_by_inserting_node(
                                                                                 &scratch,

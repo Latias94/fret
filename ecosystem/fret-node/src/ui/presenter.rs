@@ -276,6 +276,31 @@ pub trait NodeGraphPresenter {
     ) -> Vec<InsertNodeTemplate> {
         Vec::new()
     }
+
+    /// Returns a UI label for a conversion candidate.
+    fn conversion_label(
+        &mut self,
+        _graph: &Graph,
+        _from: PortId,
+        _to: PortId,
+        template: &InsertNodeTemplate,
+    ) -> Arc<str> {
+        Arc::<str>::from(format!("Convert: {}", template.kind.0))
+    }
+
+    /// Returns where a conversion node should be inserted (canvas space).
+    ///
+    /// `default_at` is typically the cursor position at drop time.
+    fn conversion_insert_position(
+        &mut self,
+        _graph: &Graph,
+        _from: PortId,
+        _to: PortId,
+        default_at: CanvasPoint,
+        _template: &InsertNodeTemplate,
+    ) -> CanvasPoint {
+        default_at
+    }
 }
 
 /// Default presenter used by the canvas widget when no domain presenter is provided.
