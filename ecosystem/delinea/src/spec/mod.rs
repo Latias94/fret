@@ -40,6 +40,12 @@ pub enum AxisKind {
 pub enum AxisRange {
     #[default]
     Auto,
+    LockMin {
+        min: f64,
+    },
+    LockMax {
+        max: f64,
+    },
     Fixed {
         min: f64,
         max: f64,
@@ -50,6 +56,16 @@ impl AxisRange {
     pub fn clamp_non_degenerate(&mut self) {
         match self {
             AxisRange::Auto => {}
+            AxisRange::LockMin { min } => {
+                if !min.is_finite() {
+                    *min = 0.0;
+                }
+            }
+            AxisRange::LockMax { max } => {
+                if !max.is_finite() {
+                    *max = 1.0;
+                }
+            }
             AxisRange::Fixed { min, max } => {
                 if !min.is_finite() || !max.is_finite() || *max <= *min {
                     *min = 0.0;
@@ -57,6 +73,28 @@ impl AxisRange {
                 }
             }
         }
+    }
+
+    pub fn locked_min(&self) -> Option<f64> {
+        match *self {
+            AxisRange::Auto => None,
+            AxisRange::LockMin { min } => Some(min),
+            AxisRange::LockMax { .. } => None,
+            AxisRange::Fixed { min, .. } => Some(min),
+        }
+    }
+
+    pub fn locked_max(&self) -> Option<f64> {
+        match *self {
+            AxisRange::Auto => None,
+            AxisRange::LockMin { .. } => None,
+            AxisRange::LockMax { max } => Some(max),
+            AxisRange::Fixed { max, .. } => Some(max),
+        }
+    }
+
+    pub fn is_fixed(&self) -> bool {
+        matches!(self, AxisRange::Fixed { .. })
     }
 }
 
@@ -66,8 +104,8 @@ pub struct AxisSpec {
     pub id: AxisId,
     pub kind: AxisKind,
     pub grid: GridId,
-    /// When set, the axis becomes non-interactive (locked) in the headless engine:
-    /// the visible range is fixed and view windows are ignored.
+    /// When set, the axis is constrained in data space.
+    /// In v1, `Fixed` fully overrides view windows; partial locks override only one bound.
     pub range: Option<AxisRange>,
 }
 

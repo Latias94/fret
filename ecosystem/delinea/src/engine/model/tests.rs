@@ -155,10 +155,7 @@ fn merge_axis_range_updates_layout_without_structure() {
                     id: crate::ids::AxisId::new(1),
                     kind: AxisKind::X,
                     grid: crate::ids::GridId::new(1),
-                    range: Some(crate::spec::AxisRange::Fixed {
-                        min: 10.0,
-                        max: 20.0,
-                    }),
+                    range: Some(crate::spec::AxisRange::LockMin { min: 10.0 }),
                 })],
                 ..ChartPatch::default()
             },
@@ -171,13 +168,7 @@ fn merge_axis_range_updates_layout_without_structure() {
     assert!(report.marks_changed);
 
     let axis = model.axes.get(&crate::ids::AxisId::new(1)).unwrap();
-    assert_eq!(
-        axis.range,
-        crate::spec::AxisRange::Fixed {
-            min: 10.0,
-            max: 20.0
-        }
-    );
+    assert_eq!(axis.range, crate::spec::AxisRange::LockMin { min: 10.0 });
     assert_eq!(model.revs.spec, before.spec);
     assert!(model.revs.layout.0 > before.layout.0);
     assert!(model.revs.marks.0 > before.marks.0);

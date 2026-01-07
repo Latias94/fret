@@ -17,10 +17,11 @@ axis locking / zoom locking in `delinea` without coupling to any specific UI.
 data-space range of an axis:
 
 - `Auto`: engine derives a suitable range from the dataset (and optional view window).
-- `Fixed { min, max }`: engine treats the axis as locked and uses this range.
+- `LockMin { min }` / `LockMax { max }`: one bound is fixed, the other bound can still follow view windows and/or data.
+- `Fixed { min, max }`: both bounds are fixed.
 
-In v1, `Fixed` implies the axis is non-interactive in the headless engine:
-view window updates (e.g. zoom/pan) are ignored for that axis.
+In v1, `Fixed` fully overrides view windows for that axis. Partial locks override
+only the locked bound.
 
 ### `DataWindowX` / `DataWindowY`
 
@@ -51,6 +52,8 @@ For Y:
 2. Otherwise, if `ChartState.data_window_y[axis]` is present, it becomes the effective Y window.
 3. Otherwise, the engine derives Y bounds from the dataset (restricted by the effective X window).
 
+Partial locks (`LockMin`/`LockMax`) are applied as constraints after selecting the effective window.
+
 In v1 the LOD stage clamps Y values to the effective Y window to avoid out-of-range
 values dominating min/max selection.
 
@@ -77,8 +80,7 @@ The exact mapping is intentionally left to the UI layer.
 
 ## Future work
 
-- `LockMin` / `LockMax` (ImPlot-style partial locks).
-- Per-axis windows (multiple X/Y axes).
+ - Per-axis windows (multiple X/Y axes).
 - 2D box zoom (paired X/Y window updates).
 - Non-linear scales (log/time) and tick generation.
 - 3D: replace `DataWindowX` with generalized camera/view transforms.

@@ -163,6 +163,10 @@ impl MarksStage {
                         y_min: y_window.min,
                         y_max: y_window.max,
                     });
+                    if let Some(bounds) = self.bounds.as_mut() {
+                        apply_axis_constraints(model, series.x_axis, series.y_axis, bounds);
+                        bounds.clamp_non_degenerate();
+                    }
                     continue;
                 }
 
@@ -195,6 +199,7 @@ impl MarksStage {
                     windowed.x_min = bounds.x_min;
                     windowed.x_max = bounds.x_max;
                 }
+                apply_axis_constraints(model, series.x_axis, series.y_axis, &mut windowed);
                 windowed.clamp_non_degenerate();
                 self.bounds = Some(windowed);
             }
@@ -221,6 +226,9 @@ impl MarksStage {
                 bounds.x_max = bounds.x_max.min(window.max);
                 bounds.clamp_non_degenerate();
             }
+
+            apply_axis_constraints(model, series.x_axis, series.y_axis, &mut bounds);
+            bounds.clamp_non_degenerate();
 
             let points_budget = budget.take_points(4096) as usize;
             if points_budget == 0 {
@@ -297,10 +305,50 @@ fn axis_locked_window_y(range: AxisRange) -> Option<DataWindowY> {
 fn axis_locked_window_1d(range: AxisRange) -> Option<DataWindowX> {
     match range {
         AxisRange::Auto => None,
+        AxisRange::LockMin { .. } | AxisRange::LockMax { .. } => None,
         AxisRange::Fixed { min, max } => {
             let mut w = DataWindowX { min, max };
             w.clamp_non_degenerate();
             Some(w)
+        }
+    }
+}
+
+fn apply_axis_constraints(
+    model: &ChartModel,
+    x_axis: crate::ids::AxisId,
+    y_axis: crate::ids::AxisId,
+    bounds: &mut DataBounds,
+) {
+    if let Some(axis) = model.axes.get(&x_axis) {
+        apply_axis_constraint_1d(axis.range, &mut bounds.x_min, &mut bounds.x_max);
+    }
+    if let Some(axis) = model.axes.get(&y_axis) {
+        apply_axis_constraint_1d(axis.range, &mut bounds.y_min, &mut bounds.y_max);
+    }
+}
+
+fn apply_axis_constraint_1d(range: AxisRange, min: &mut f64, max: &mut f64) {
+    match range {
+        AxisRange::Auto => {}
+        AxisRange::Fixed {
+            min: fixed_min,
+            max: fixed_max,
+        } => {
+            *min = fixed_min;
+            *max = fixed_max;
+        }
+        AxisRange::LockMin { min: fixed_min } => {
+            *min = fixed_min;
+            if !max.is_finite() || *max <= *min {
+                *max = fixed_min + 1.0;
+            }
+        }
+        AxisRange::LockMax { max: fixed_max } => {
+            *max = fixed_max;
+            if !min.is_finite() || *min >= *max {
+                *min = fixed_max - 1.0;
+            }
         }
     }
 }
