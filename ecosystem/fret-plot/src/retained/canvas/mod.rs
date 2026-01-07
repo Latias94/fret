@@ -110,6 +110,47 @@ fn apply_axis_locks(
     next
 }
 
+fn all_visible_axes_zoom_locked(
+    show_y2_axis: bool,
+    show_y3_axis: bool,
+    show_y4_axis: bool,
+    lock_x_zoom: bool,
+    lock_y1_zoom: bool,
+    lock_y2_zoom: bool,
+    lock_y3_zoom: bool,
+    lock_y4_zoom: bool,
+) -> bool {
+    lock_x_zoom
+        && lock_y1_zoom
+        && (!show_y2_axis || lock_y2_zoom)
+        && (!show_y3_axis || lock_y3_zoom)
+        && (!show_y4_axis || lock_y4_zoom)
+}
+
+fn fit_view_bounds_with_zoom_locks(
+    current: DataRect,
+    fit: DataRect,
+    lock_x_zoom: bool,
+    lock_y_zoom: bool,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+    x_constraints: AxisConstraints,
+    y_constraints: AxisConstraints,
+) -> Option<DataRect> {
+    if lock_x_zoom && lock_y_zoom {
+        return None;
+    }
+
+    let next = apply_axis_locks(current, fit, lock_x_zoom, lock_y_zoom);
+    Some(constrain_view_bounds_scaled(
+        next,
+        x_scale,
+        y_scale,
+        x_constraints,
+        y_constraints,
+    ))
+}
+
 fn log10_decade_exponent(v: f64) -> Option<i32> {
     if !v.is_finite() || v <= 0.0 {
         return None;
@@ -550,6 +591,85 @@ mod wheel_zoom_policy_tests {
             wheel_zoom_mode(map, PlotRegion::YAxis(YAxis::Right2), mods),
             Some(WheelZoomMode::YAxis(YAxis::Right2))
         );
+    }
+}
+
+#[cfg(test)]
+mod fit_and_box_zoom_lock_tests {
+    use super::*;
+
+    #[test]
+    fn all_visible_axes_zoom_locked_ignores_hidden_axes() {
+        assert!(all_visible_axes_zoom_locked(
+            false, false, false, true, true, false, false, false,
+        ));
+    }
+
+    #[test]
+    fn all_visible_axes_zoom_locked_requires_visible_axes_locked() {
+        assert!(!all_visible_axes_zoom_locked(
+            true, false, false, true, true, false, true, true,
+        ));
+    }
+
+    #[test]
+    fn fit_view_bounds_is_none_when_both_axes_locked() {
+        let current = DataRect {
+            x_min: 0.0,
+            x_max: 10.0,
+            y_min: 0.0,
+            y_max: 10.0,
+        };
+        let fit = DataRect {
+            x_min: -5.0,
+            x_max: 5.0,
+            y_min: -2.0,
+            y_max: 2.0,
+        };
+
+        assert_eq!(
+            fit_view_bounds_with_zoom_locks(
+                current,
+                fit,
+                true,
+                true,
+                AxisScale::Linear,
+                AxisScale::Linear,
+                AxisConstraints::default(),
+                AxisConstraints::default(),
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn fit_view_bounds_preserves_locked_axis_and_updates_unlocked_axis() {
+        let current = DataRect {
+            x_min: 0.0,
+            x_max: 10.0,
+            y_min: 0.0,
+            y_max: 10.0,
+        };
+        let fit = DataRect {
+            x_min: -5.0,
+            x_max: 5.0,
+            y_min: -2.0,
+            y_max: 2.0,
+        };
+
+        let next = fit_view_bounds_with_zoom_locks(
+            current,
+            fit,
+            true,
+            false,
+            AxisScale::Linear,
+            AxisScale::Linear,
+            AxisConstraints::default(),
+            AxisConstraints::default(),
+        )
+        .expect("expected update");
+        assert_eq!((next.x_min, next.x_max), (current.x_min, current.x_max));
+        assert_eq!((next.y_min, next.y_max), (fit.y_min, fit.y_max));
     }
 }
 
@@ -2603,19 +2723,85 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
 
                                 let _ = self.update_plot_state(cx.app, |s| match region {
                                     PlotRegion::Plot => {
-                                        s.view_is_auto = false;
-                                        s.view_bounds = Some(fit);
-                                        if show_y2_axis {
+                                        let all_locked = all_visible_axes_zoom_locked(
+                                            show_y2_axis,
+                                            show_y3_axis,
+                                            show_y4_axis,
+                                            lock_x_zoom,
+                                            lock_y1_zoom,
+                                            lock_y2_zoom,
+                                            lock_y3_zoom,
+                                            lock_y4_zoom,
+                                        );
+                                        if all_locked {
+                                            // Axis locks prevent any view change; keep auto-fit state intact.
+                                            return;
+                                        }
+
+                                        if let Some(next) = fit_view_bounds_with_zoom_locks(
+                                            current,
+                                            fit,
+                                            lock_x_zoom,
+                                            lock_y1_zoom,
+                                            x_scale,
+                                            y_scale,
+                                            x_constraints,
+                                            y_constraints,
+                                        ) {
+                                            s.view_is_auto = false;
+                                            s.view_bounds = Some(next);
+                                        }
+
+                                        if show_y2_axis
+                                            && let (Some(current_axis), Some(fit_axis)) =
+                                                (current_y2, fit_y2)
+                                            && let Some(next) = fit_view_bounds_with_zoom_locks(
+                                                current_axis,
+                                                fit_axis,
+                                                lock_x_zoom,
+                                                lock_y2_zoom,
+                                                x_scale,
+                                                y2_scale,
+                                                x_constraints,
+                                                y2_constraints,
+                                            )
+                                        {
                                             s.view_y2_is_auto = false;
-                                            s.view_bounds_y2 = fit_y2;
+                                            s.view_bounds_y2 = Some(next);
                                         }
-                                        if show_y3_axis {
+                                        if show_y3_axis
+                                            && let (Some(current_axis), Some(fit_axis)) =
+                                                (current_y3, fit_y3)
+                                            && let Some(next) = fit_view_bounds_with_zoom_locks(
+                                                current_axis,
+                                                fit_axis,
+                                                lock_x_zoom,
+                                                lock_y3_zoom,
+                                                x_scale,
+                                                y3_scale,
+                                                x_constraints,
+                                                y3_constraints,
+                                            )
+                                        {
                                             s.view_y3_is_auto = false;
-                                            s.view_bounds_y3 = fit_y3;
+                                            s.view_bounds_y3 = Some(next);
                                         }
-                                        if show_y4_axis {
+                                        if show_y4_axis
+                                            && let (Some(current_axis), Some(fit_axis)) =
+                                                (current_y4, fit_y4)
+                                            && let Some(next) = fit_view_bounds_with_zoom_locks(
+                                                current_axis,
+                                                fit_axis,
+                                                lock_x_zoom,
+                                                lock_y4_zoom,
+                                                x_scale,
+                                                y4_scale,
+                                                x_constraints,
+                                                y4_constraints,
+                                            )
+                                        {
                                             s.view_y4_is_auto = false;
-                                            s.view_bounds_y4 = fit_y4;
+                                            s.view_bounds_y4 = Some(next);
                                         }
                                     }
                                     PlotRegion::XAxis => {
@@ -2898,11 +3084,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             let h = (start.y.0 - end.y.0).abs();
 
                             if w >= 4.0 && h >= 4.0 {
-                                let all_locked = self.lock_x.zoom
-                                    && self.lock_y.zoom
-                                    && (!self.show_y2_axis || self.lock_y2.zoom)
-                                    && (!self.show_y3_axis || self.lock_y3.zoom)
-                                    && (!self.show_y4_axis || self.lock_y4.zoom);
+                                let all_locked = all_visible_axes_zoom_locked(
+                                    self.show_y2_axis,
+                                    self.show_y3_axis,
+                                    self.show_y4_axis,
+                                    self.lock_x.zoom,
+                                    self.lock_y.zoom,
+                                    self.lock_y2.zoom,
+                                    self.lock_y3.zoom,
+                                    self.lock_y4.zoom,
+                                );
                                 if all_locked {
                                     // Axis locks prevent any view change; keep auto-fit state intact.
                                     // The selection rectangle is still useful feedback for users.
