@@ -12,9 +12,8 @@ use fret_ui_kit::primitives::hover_card as radix_hover_card;
 use fret_ui_kit::primitives::hover_intent::{self, HoverIntentConfig};
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, Radius, Space,
-};
+use fret_ui_kit::primitives::presence as radix_presence;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
@@ -23,6 +22,12 @@ use crate::overlay_motion;
 const HOVER_CARD_DEFAULT_OPEN_DELAY_FRAMES: u32 =
     (overlay_motion::SHADCN_MOTION_TICKS_500 + overlay_motion::SHADCN_MOTION_TICKS_200) as u32;
 const HOVER_CARD_DEFAULT_CLOSE_DELAY_FRAMES: u32 = overlay_motion::SHADCN_MOTION_TICKS_300 as u32;
+
+fn shadcn_zoom_transform(origin: fret_core::Point, scale: f32) -> Transform2D {
+    Transform2D::translation(origin)
+        * Transform2D::scale_uniform(scale)
+        * Transform2D::translation(fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0)))
+}
 
 fn hover_card_content_chrome(theme: &Theme) -> ChromeRefinement {
     let bg = theme.color_required("popover");
@@ -203,14 +208,17 @@ impl HoverCard {
             let cfg = HoverIntentConfig::new(open_delay_frames as u64, close_delay_frames as u64);
             let update = hover_intent::drive(cx, hovered, cfg);
             let opening = update.open;
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
                 opening,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
+                0.95,
+                1.0,
                 overlay_motion::shadcn_ease,
             );
-            let opacity = motion.progress;
+            let opacity = motion.opacity;
+            let scale = motion.scale;
 
             let out = vec![trigger];
             if !motion.present {
@@ -273,7 +281,7 @@ impl HoverCard {
                     arrow.then_some(arrow_size),
                 );
 
-                let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                let zoom = shadcn_zoom_transform(origin, scale);
                 let slide = if opening {
                     overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
                 } else {
@@ -450,6 +458,7 @@ mod tests {
     };
     use fret_ui::overlay_placement;
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::OverlayController;
 
     #[derive(Default)]
     struct FakeServices;
