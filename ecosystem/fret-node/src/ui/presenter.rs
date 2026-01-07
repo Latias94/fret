@@ -11,6 +11,7 @@ use super::style::NodeGraphStyle;
 /// Context menu actions surfaced by the canvas widget.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NodeGraphContextMenuAction {
+    InsertReroute,
     DeleteEdge,
     Custom(u64),
 }

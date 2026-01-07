@@ -8,10 +8,14 @@ use fret_core::{
 };
 use fret_runtime::Model;
 use fret_ui::{UiHost, retained_bridge::*};
+use serde_json::Value;
 
-use crate::core::{CanvasPoint, EdgeId, Graph, NodeId as GraphNodeId, PortDirection, PortId};
+use crate::core::{
+    CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId as GraphNodeId, NodeKindKey, Port,
+    PortCapacity, PortDirection, PortId, PortKey, PortKind,
+};
 use crate::io::NodeGraphViewState;
-use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
+use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction, apply_transaction};
 use crate::rules::EdgeEndpoint;
 
 use super::presenter::{
@@ -78,6 +82,7 @@ enum ContextMenuTarget {
 #[derive(Debug, Clone)]
 struct ContextMenuState {
     origin: Point,
+    invoked_at: Point,
     target: ContextMenuTarget,
     items: Vec<NodeGraphContextMenuItem>,
     hovered_item: Option<usize>,
@@ -367,9 +372,120 @@ impl NodeGraphCanvas {
         &mut self,
         cx: &mut EventCx<'_, H>,
         target: &ContextMenuTarget,
+        invoked_at: Point,
         item: NodeGraphContextMenuItem,
     ) {
         match (target, item.action) {
+            (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::InsertReroute) => {
+                let planned = {
+                    let this = &*self;
+                    this.graph
+                        .read_ref(cx.app, |graph| {
+                            let edge = graph.edges.get(edge_id)?.clone();
+                            let from_port = graph.ports.get(&edge.from)?;
+                            let to_port = graph.ports.get(&edge.to)?;
+
+                            let port_kind = match edge.kind {
+                                EdgeKind::Data => PortKind::Data,
+                                EdgeKind::Exec => PortKind::Exec,
+                            };
+                            let ty = from_port.ty.clone().or_else(|| to_port.ty.clone());
+
+                            let node_id = GraphNodeId::new();
+                            let in_port_id = PortId::new();
+                            let out_port_id = PortId::new();
+                            let new_edge_id = EdgeId::new();
+
+                            let node = Node {
+                                kind: NodeKindKey::new("fret.reroute"),
+                                kind_version: 1,
+                                pos: CanvasPoint {
+                                    x: invoked_at.x.0,
+                                    y: invoked_at.y.0,
+                                },
+                                collapsed: false,
+                                ports: Vec::new(),
+                                data: Value::default(),
+                            };
+
+                            let in_port = Port {
+                                node: node_id,
+                                key: PortKey::new("in"),
+                                dir: PortDirection::In,
+                                kind: port_kind,
+                                capacity: PortCapacity::Single,
+                                ty: ty.clone(),
+                                data: Value::default(),
+                            };
+
+                            let out_port = Port {
+                                node: node_id,
+                                key: PortKey::new("out"),
+                                dir: PortDirection::Out,
+                                kind: port_kind,
+                                capacity: PortCapacity::Multi,
+                                ty,
+                                data: Value::default(),
+                            };
+
+                            let old_endpoints = EdgeEndpoints {
+                                from: edge.from,
+                                to: edge.to,
+                            };
+
+                            let mut ops: Vec<GraphOp> = Vec::new();
+                            ops.push(GraphOp::AddNode { id: node_id, node });
+                            ops.push(GraphOp::AddPort {
+                                id: in_port_id,
+                                port: in_port,
+                            });
+                            ops.push(GraphOp::AddPort {
+                                id: out_port_id,
+                                port: out_port,
+                            });
+                            ops.push(GraphOp::SetNodePorts {
+                                id: node_id,
+                                from: Vec::new(),
+                                to: vec![in_port_id, out_port_id],
+                            });
+
+                            ops.push(GraphOp::SetEdgeEndpoints {
+                                id: *edge_id,
+                                from: old_endpoints,
+                                to: EdgeEndpoints {
+                                    from: edge.from,
+                                    to: in_port_id,
+                                },
+                            });
+
+                            ops.push(GraphOp::AddEdge {
+                                id: new_edge_id,
+                                edge: Edge {
+                                    kind: edge.kind,
+                                    from: out_port_id,
+                                    to: edge.to,
+                                },
+                            });
+
+                            Some((ops, node_id))
+                        })
+                        .ok()
+                        .flatten()
+                };
+
+                let Some((ops, node_id)) = planned else {
+                    return;
+                };
+
+                self.apply_ops(cx.app, ops);
+                self.update_view_state(cx.app, |s| {
+                    s.selected_edges.clear();
+                    s.selected_nodes.clear();
+                    s.selected_nodes.push(node_id);
+                    s.draw_order.retain(|id| *id != node_id);
+                    s.draw_order.push(node_id);
+                });
+            }
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::DeleteEdge) => {
                 let remove_ops = {
                     let this = &*self;
@@ -749,11 +865,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             {
                                 let item = menu.items.get(ix).cloned();
                                 let target = menu.target.clone();
+                                let invoked_at = menu.invoked_at;
                                 self.interaction.context_menu = None;
                                 if let Some(item) = item
                                     && item.enabled
                                 {
-                                    self.activate_context_menu_item(cx, &target, item);
+                                    self.activate_context_menu_item(cx, &target, invoked_at, item);
                                 }
                             } else {
                                 self.interaction.context_menu = None;
@@ -808,6 +925,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
                                 presenter.fill_edge_context_menu(graph, edge, style, &mut items);
                                 items.push(NodeGraphContextMenuItem {
+                                    label: Arc::<str>::from("Insert Reroute"),
+                                    enabled: true,
+                                    action: NodeGraphContextMenuAction::InsertReroute,
+                                });
+                                items.push(NodeGraphContextMenuItem {
                                     label: Arc::<str>::from("Delete"),
                                     enabled: true,
                                     action: NodeGraphContextMenuAction::DeleteEdge,
@@ -826,6 +948,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     );
                     self.interaction.context_menu = Some(ContextMenuState {
                         origin,
+                        invoked_at: *position,
                         target: ContextMenuTarget::Edge(edge),
                         items,
                         hovered_item: None,
