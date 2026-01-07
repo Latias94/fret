@@ -416,6 +416,19 @@ impl ChartCanvas {
         format_tick_value(window, value)
     }
 
+    fn y_local_for_data_value(window: DataWindow, value: f64, plot_height_px: f32) -> f32 {
+        let mut window = window;
+        window.clamp_non_degenerate();
+
+        let span = window.span();
+        if !span.is_finite() || span <= 0.0 || !value.is_finite() {
+            return plot_height_px;
+        }
+
+        let t = ((value - window.min) / span).clamp(0.0, 1.0) as f32;
+        plot_height_px * (1.0 - t)
+    }
+
     fn clear_axis_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
         for blob in self.axis_text.drain(..) {
             services.text().release(blob);
@@ -443,8 +456,8 @@ impl ChartCanvas {
         let x_window = self.current_window_x(x_axis);
         let y_window = self.current_window_y(y_axis);
 
-        let axis_order = DrawOrder(self.style.draw_order.0.saturating_add(9_500));
-        let label_order = DrawOrder(self.style.draw_order.0.saturating_add(9_501));
+        let axis_order = DrawOrder(self.style.draw_order.0.saturating_add(8_500));
+        let label_order = DrawOrder(self.style.draw_order.0.saturating_add(8_501));
 
         let line_w = self.style.axis_line_width.0.max(1.0);
         let tick_len = self.style.axis_tick_length.0.max(0.0);
@@ -597,10 +610,33 @@ impl ChartCanvas {
         }
         self.cached_paths.clear();
 
-        let model = self.engine.model();
+        let plot_h = self.last_layout.plot.size.height.0;
+        let area_series: Vec<(delinea::SeriesId, delinea::AxisId, delinea::AreaBaseline)> = self
+            .engine
+            .model()
+            .series_in_order()
+            .filter(|s| s.kind == delinea::SeriesKind::Area && s.visible)
+            .map(|s| (s.id, s.y_axis, s.area_baseline))
+            .collect();
+
+        let mut area_baseline_y_local: BTreeMap<delinea::SeriesId, f32> = BTreeMap::new();
+        for (series_id, y_axis, baseline) in area_series {
+            let y = match baseline {
+                delinea::AreaBaseline::AxisMin => plot_h,
+                delinea::AreaBaseline::Zero => {
+                    let y_window = self.current_window_y(y_axis);
+                    Self::y_local_for_data_value(y_window, 0.0, plot_h)
+                }
+                delinea::AreaBaseline::Value(value) => {
+                    let y_window = self.current_window_y(y_axis);
+                    Self::y_local_for_data_value(y_window, value, plot_h)
+                }
+            };
+            area_baseline_y_local.insert(series_id, y);
+        }
+
         let marks = &self.engine.output().marks;
         let origin = self.last_layout.plot.origin;
-        let baseline_y_local = self.last_layout.plot.size.height.0;
 
         for node in &marks.nodes {
             if node.kind != MarkKind::Polyline {
@@ -611,10 +647,9 @@ impl ChartCanvas {
                 continue;
             };
 
-            let is_area = node
+            let baseline_y_local = node
                 .source_series
-                .and_then(|id| model.series.get(&id))
-                .is_some_and(|s| s.kind == delinea::SeriesKind::Area);
+                .and_then(|id| area_baseline_y_local.get(&id).copied());
 
             let start = poly.points.start;
             let end = poly.points.end;
@@ -653,7 +688,7 @@ impl ChartCanvas {
                 },
             );
 
-            let fill = if is_area {
+            let fill = if let Some(baseline_y_local) = baseline_y_local {
                 let mut fill_commands: Vec<PathCommand> = Vec::with_capacity(commands.len() + 4);
                 fill_commands.extend_from_slice(&commands);
 
