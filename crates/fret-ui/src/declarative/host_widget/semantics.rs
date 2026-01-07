@@ -16,6 +16,23 @@ impl ElementHostWidget {
                 cx.set_role(SemanticsRole::Text);
                 cx.set_label(props.text.as_ref().to_string());
             }
+            ElementInstance::SelectableText(props) => {
+                cx.set_role(SemanticsRole::Text);
+                cx.set_label(props.rich.text.as_ref().to_string());
+                cx.set_text_selection_supported(true);
+                if cx.focus == Some(cx.node) {
+                    let (anchor, caret) = crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::SelectableTextState::default,
+                        |state| (state.selection_anchor, state.caret),
+                    );
+                    cx.set_text_selection(anchor as u32, caret as u32);
+                } else {
+                    cx.clear_text_selection();
+                }
+            }
             ElementInstance::Semantics(props) => {
                 cx.set_role(props.role);
                 if let Some(label) = props.label.as_ref() {

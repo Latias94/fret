@@ -17,8 +17,8 @@ use crate::element::{
     AnyElement, ColumnProps, ContainerProps, ElementKind, FlexProps, GridProps, HoverRegionProps,
     ImageProps, InteractivityGateProps, LayoutStyle, OpacityProps, PointerRegionProps,
     PressableProps, PressableState, ResizablePanelGroupProps, RowProps, ScrollProps,
-    ScrollbarProps, SpacerProps, SpinnerProps, StackProps, StyledTextProps, SvgIconProps,
-    TextAreaProps, TextInputProps, TextProps, VirtualListOptions, VirtualListProps,
+    ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps, StyledTextProps,
+    SvgIconProps, TextAreaProps, TextInputProps, TextProps, VirtualListOptions, VirtualListProps,
     VirtualListState, VisualTransformProps,
 };
 use crate::widget::Invalidation;
@@ -1086,6 +1086,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             AnyElement::new(id, ElementKind::StyledText(props), Vec::new())
+        })
+    }
+
+    #[track_caller]
+    pub fn selectable_text(&mut self, rich: fret_core::RichText) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(
+                id,
+                ElementKind::SelectableText(SelectableTextProps::new(rich)),
+                Vec::new(),
+            )
+        })
+    }
+
+    #[track_caller]
+    pub fn selectable_text_props(&mut self, props: SelectableTextProps) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            AnyElement::new(id, ElementKind::SelectableText(props), Vec::new())
         })
     }
 

@@ -9,6 +9,7 @@ mod pressable;
 mod roving_flex;
 mod scroll;
 mod scrollbar;
+mod selectable_text;
 mod text;
 mod wheel_region;
 
@@ -74,6 +75,9 @@ impl ElementHostWidget {
         }
 
         match instance {
+            ElementInstance::SelectableText(props) => {
+                selectable_text::handle_selectable_text(self, cx, window, props, event);
+            }
             ElementInstance::TextInput(props) => {
                 text::handle_text_input(self, cx, props, event);
             }

@@ -13,7 +13,7 @@ use fret_core::{
 use fret_runtime::Effect;
 use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, PositionStyle,
-    PressableProps, StyledTextProps, TextProps,
+    PressableProps, SelectableTextProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::scroll as decl_scroll;
@@ -469,7 +469,7 @@ fn render_code_line<H: UiHost>(
     }
 
     let rich = RichText::new(Arc::<str>::from(text), runs);
-    cx.styled_text_props(StyledTextProps {
+    cx.selectable_text_props(SelectableTextProps {
         layout: Default::default(),
         rich,
         style: Some(text_style),

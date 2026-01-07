@@ -10,7 +10,7 @@ use fret_runtime::Effect;
 use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PositionStyle, PressableProps, ScrollAxis, ScrollProps, StyledTextProps, TextProps,
+    PositionStyle, PressableProps, ScrollAxis, ScrollProps, SelectableTextProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
@@ -1433,7 +1433,7 @@ fn render_rich_text_inline<H: UiHost>(
 
     let rich = RichText::new(Arc::<str>::from(text), runs);
 
-    let mut props = StyledTextProps::new(rich);
+    let mut props = SelectableTextProps::new(rich);
     props.layout.size.width = Length::Fill;
     props.style = Some(TextStyle {
         font: base.font.clone(),
@@ -1447,7 +1447,7 @@ fn render_rich_text_inline<H: UiHost>(
     props.wrap = TextWrap::Word;
     props.overflow = TextOverflow::Clip;
 
-    Some(cx.styled_text_props(props))
+    Some(cx.selectable_text_props(props))
 }
 
 fn inline_pieces_maybe_unwrapped(events: &[pulldown_cmark::Event<'static>]) -> Vec<InlinePiece> {

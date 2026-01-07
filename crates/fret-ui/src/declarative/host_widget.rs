@@ -431,6 +431,53 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         };
 
         match instance {
+            ElementInstance::SelectableText(props) => {
+                if cx.focus != Some(cx.node) {
+                    return false;
+                }
+                match command.as_str() {
+                    "text.copy" => {}
+                    "text.select_all" => {
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::SelectableTextState::default,
+                            |state| {
+                                state.selection_anchor = 0;
+                                state.caret = props.rich.text.len();
+                                state.affinity = fret_core::CaretAffinity::Downstream;
+                                state.dragging = false;
+                            },
+                        );
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return true;
+                    }
+                    _ => return false,
+                }
+
+                let (anchor, caret) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| (state.selection_anchor, state.caret),
+                );
+                let start = anchor.min(caret);
+                let end = anchor.max(caret);
+                if start < end && end <= props.rich.text.len() {
+                    if let Some(sel) = props.rich.text.get(start..end) {
+                        cx.app.push_effect(Effect::ClipboardSetText {
+                            text: sel.to_string(),
+                        });
+                    }
+                }
+
+                cx.stop_propagation();
+                true
+            }
             ElementInstance::FocusScope(props) if props.trap_focus => {
                 let forward = match command.as_str() {
                     "focus.next" => Some(true),

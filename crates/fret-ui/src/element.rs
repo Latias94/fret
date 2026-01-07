@@ -2,8 +2,8 @@ use crate::UiHost;
 use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
-    Color, Corners, Edges, ImageId, NodeId, Px, RichText, SemanticsRole, SvgFit, TextOverflow,
-    TextStyle, TextWrap, UvRect,
+    CaretAffinity, Color, Corners, Edges, ImageId, NodeId, Px, RichText, SemanticsRole, SvgFit,
+    TextOverflow, TextStyle, TextWrap, UvRect,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -50,6 +50,7 @@ pub enum ElementKind {
     Spacer(SpacerProps),
     Text(TextProps),
     StyledText(StyledTextProps),
+    SelectableText(SelectableTextProps),
     TextInput(TextInputProps),
     TextArea(TextAreaProps),
     ResizablePanelGroup(ResizablePanelGroupProps),
@@ -678,6 +679,36 @@ pub struct StyledTextProps {
     pub overflow: TextOverflow,
 }
 
+#[derive(Debug, Clone)]
+pub struct SelectableTextProps {
+    pub layout: LayoutStyle,
+    pub rich: RichText,
+    pub style: Option<TextStyle>,
+    /// Base color for glyphs without a per-run override.
+    pub color: Option<Color>,
+    pub wrap: TextWrap,
+    pub overflow: TextOverflow,
+}
+
+#[derive(Debug, Clone)]
+pub struct SelectableTextState {
+    pub selection_anchor: usize,
+    pub caret: usize,
+    pub affinity: CaretAffinity,
+    pub dragging: bool,
+}
+
+impl Default for SelectableTextState {
+    fn default() -> Self {
+        Self {
+            selection_anchor: 0,
+            caret: 0,
+            affinity: CaretAffinity::Downstream,
+            dragging: false,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct TextInputProps {
     pub layout: LayoutStyle,
@@ -920,6 +951,19 @@ impl TextProps {
 }
 
 impl StyledTextProps {
+    pub fn new(rich: RichText) -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            rich,
+            style: None,
+            color: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+        }
+    }
+}
+
+impl SelectableTextProps {
     pub fn new(rich: RichText) -> Self {
         Self {
             layout: LayoutStyle::default(),
@@ -1207,6 +1251,12 @@ impl IntoElement for TextProps {
 impl IntoElement for StyledTextProps {
     fn into_element(self, id: GlobalElementId) -> AnyElement {
         AnyElement::new(id, ElementKind::StyledText(self), Vec::new())
+    }
+}
+
+impl IntoElement for SelectableTextProps {
+    fn into_element(self, id: GlobalElementId) -> AnyElement {
+        AnyElement::new(id, ElementKind::SelectableText(self), Vec::new())
     }
 }
 

@@ -116,7 +116,8 @@ impl ElementHostWidget {
             | ElementInstance::SvgIcon(_)
             | ElementInstance::Spinner(_)
             | ElementInstance::Text(_)
-            | ElementInstance::StyledText(_) => true,
+            | ElementInstance::StyledText(_)
+            | ElementInstance::SelectableText(_) => true,
             ElementInstance::Spacer(_) => true,
         };
         self.clip_hit_test_corner_radii = match &instance {
@@ -594,6 +595,76 @@ impl ElementHostWidget {
                 clamp_to_constraints(metrics.size, props.layout, cx.available)
             }
             ElementInstance::StyledText(props) => {
+                let theme_revision = cx.theme().revision();
+                cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
+                let font_stack_key = cx
+                    .app
+                    .global::<fret_runtime::TextFontStackKey>()
+                    .map(|k| k.0)
+                    .unwrap_or(0);
+                let font_size = cx
+                    .theme()
+                    .metric_by_key("font.size")
+                    .unwrap_or(cx.theme().metrics.font_size);
+                let style = props.style.unwrap_or(TextStyle {
+                    font: FontId::default(),
+                    size: font_size,
+                    line_height: Some(
+                        cx.theme()
+                            .metric_by_key("font.line_height")
+                            .unwrap_or(cx.theme().metrics.font_line_height),
+                    ),
+                    ..Default::default()
+                });
+                let mut measure_width = match props.layout.size.width {
+                    Length::Px(px) => Px(px.0.max(0.0)),
+                    Length::Fill | Length::Auto => cx.available.width,
+                };
+                if let Some(max_w) = props.layout.size.max_width {
+                    measure_width = Px(measure_width.0.min(max_w.0.max(0.0)));
+                }
+                measure_width = Px(measure_width.0.max(0.0).min(cx.available.width.0.max(0.0)));
+                let constraints = TextConstraints {
+                    max_width: Some(measure_width),
+                    wrap: props.wrap,
+                    overflow: props.overflow,
+                    scale_factor: cx.scale_factor,
+                };
+
+                let scale_bits = cx.scale_factor.to_bits();
+                let can_reuse_metrics = self.text_cache.metrics.is_some()
+                    && self.text_cache.last_rich.as_ref() == Some(&props.rich)
+                    && self.text_cache.last_style.as_ref() == Some(&style)
+                    && self.text_cache.last_wrap == Some(props.wrap)
+                    && self.text_cache.last_overflow == Some(props.overflow)
+                    && self.text_cache.last_measure_width == Some(measure_width)
+                    && self.text_cache.measured_scale_factor_bits == Some(scale_bits)
+                    && self.text_cache.last_theme_revision == Some(theme_revision)
+                    && self.text_cache.last_font_stack_key == Some(font_stack_key);
+
+                let metrics = if can_reuse_metrics {
+                    self.text_cache.metrics.expect("cached metrics")
+                } else {
+                    let metrics = cx
+                        .services
+                        .text()
+                        .measure_rich(&props.rich, &style, constraints);
+                    self.text_cache.metrics = Some(metrics);
+                    self.text_cache.measured_scale_factor_bits = Some(scale_bits);
+                    self.text_cache.last_text = None;
+                    self.text_cache.last_rich = Some(props.rich.clone());
+                    self.text_cache.last_style = Some(style);
+                    self.text_cache.last_wrap = Some(props.wrap);
+                    self.text_cache.last_overflow = Some(props.overflow);
+                    self.text_cache.last_measure_width = Some(measure_width);
+                    self.text_cache.last_theme_revision = Some(theme_revision);
+                    self.text_cache.last_font_stack_key = Some(font_stack_key);
+                    metrics
+                };
+
+                clamp_to_constraints(metrics.size, props.layout, cx.available)
+            }
+            ElementInstance::SelectableText(props) => {
                 let theme_revision = cx.theme().revision();
                 cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
                 let font_stack_key = cx
