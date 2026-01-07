@@ -19,13 +19,22 @@ use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
+use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space,
 };
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+
+fn shadcn_zoom_transform(origin: fret_core::Point, scale: f32) -> fret_core::Transform2D {
+    fret_core::Transform2D::translation(origin)
+        * fret_core::Transform2D::scale_uniform(scale)
+        * fret_core::Transform2D::translation(fret_core::Point::new(
+            fret_core::Px(-origin.x.0),
+            fret_core::Px(-origin.y.0),
+        ))
+}
 
 fn apply_popover_trigger_a11y(
     mut trigger: AnyElement,
@@ -255,11 +264,13 @@ impl Popover {
                 radix_popover::popover_root_name(trigger_id)
             };
 
-            let motion = OverlayController::transition_with_durations_and_easing(
+            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
                 cx,
                 is_open,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
+                0.95,
+                1.0,
                 overlay_motion::shadcn_ease,
             );
             let overlay_presence = OverlayPresence {
@@ -291,7 +302,8 @@ impl Popover {
                         .unwrap_or_else(|| theme.metric_required("metric.radius.md"))
                 });
 
-                let opacity = motion.progress;
+                let opacity = motion.opacity;
+                let scale = motion.scale;
                 let opening = is_open;
                 let dialog_id_for_trigger = dialog_id_for_trigger.clone();
                 let modal = self.modal;
@@ -363,7 +375,7 @@ impl Popover {
                         anchor,
                         arrow.then_some(arrow_size),
                     );
-                    let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
+                    let zoom = shadcn_zoom_transform(origin, scale);
                     let slide = if opening {
                         overlay_motion::shadcn_enter_slide_transform(layout.side, opacity, opening)
                     } else {
@@ -722,6 +734,7 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
+    use fret_ui_kit::OverlayController;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
