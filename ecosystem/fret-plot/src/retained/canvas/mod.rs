@@ -1537,8 +1537,23 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     && !modifiers.alt
                     && !modifiers.alt_gr
                     && !modifiers.meta;
-                let lock_mods_ok = !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
-                if lock_mods_ok && *key == KeyCode::KeyL {
+                let lock_action = if let Some(chord) = self.input_map.axis_pan_lock_toggle
+                    && chord.matches(*key, *modifiers)
+                {
+                    Some((true, false))
+                } else if let Some(chord) = self.input_map.axis_zoom_lock_toggle
+                    && chord.matches(*key, *modifiers)
+                {
+                    Some((false, true))
+                } else if let Some(chord) = self.input_map.axis_lock_toggle
+                    && chord.matches(*key, *modifiers)
+                {
+                    Some((true, true))
+                } else {
+                    None
+                };
+
+                if let Some((toggle_pan, toggle_zoom)) = lock_action {
                     let Some(pos) = self.last_pointer_pos else {
                         return;
                     };
@@ -1563,16 +1578,12 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         return;
                     };
 
-                    let toggle_pan = modifiers.shift && !modifiers.ctrl;
-                    let toggle_zoom = modifiers.ctrl && !modifiers.shift;
-                    let toggle_both = !toggle_pan && !toggle_zoom;
-
                     match region {
                         PlotRegion::XAxis => {
-                            if toggle_both || toggle_pan {
+                            if toggle_pan {
                                 self.lock_x.pan = !self.lock_x.pan;
                             }
-                            if toggle_both || toggle_zoom {
+                            if toggle_zoom {
                                 self.lock_x.zoom = !self.lock_x.zoom;
                             }
                         }
@@ -1583,15 +1594,15 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 YAxis::Right2 => &mut self.lock_y3,
                                 YAxis::Right3 => &mut self.lock_y4,
                             };
-                            if toggle_both || toggle_pan {
+                            if toggle_pan {
                                 lock.pan = !lock.pan;
                             }
-                            if toggle_both || toggle_zoom {
+                            if toggle_zoom {
                                 lock.zoom = !lock.zoom;
                             }
                         }
                         PlotRegion::Plot => {
-                            if toggle_both || toggle_pan {
+                            if toggle_pan {
                                 self.lock_x.pan = !self.lock_x.pan;
                                 self.lock_y.pan = !self.lock_y.pan;
                                 if self.show_y2_axis {
@@ -1604,7 +1615,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     self.lock_y4.pan = !self.lock_y4.pan;
                                 }
                             }
-                            if toggle_both || toggle_zoom {
+                            if toggle_zoom {
                                 self.lock_x.zoom = !self.lock_x.zoom;
                                 self.lock_y.zoom = !self.lock_y.zoom;
                                 if self.show_y2_axis {
@@ -1794,8 +1805,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 self.drag_output = None;
 
                 // Axis lock UI: Ctrl+Click on an axis region toggles pan+zoom lock.
-                if modifiers.ctrl
-                    && *button == MouseButton::Left
+                if let Some(chord) = self.input_map.axis_lock_click
+                    && chord.matches(*button, *modifiers)
                     && let Some(region) = layout.hit_test_region(*position)
                     && region != PlotRegion::Plot
                 {
