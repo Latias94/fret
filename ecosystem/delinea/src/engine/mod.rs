@@ -14,6 +14,7 @@ use crate::text::TextMeasurer;
 
 pub mod lod;
 pub mod stages;
+pub mod window;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -23,6 +24,7 @@ use serde::{Deserialize, Serialize};
 pub struct ChartState {
     pub revision: Revision,
     pub link: LinkConfig,
+    pub data_window_x: Option<window::DataWindowX>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -110,6 +112,10 @@ impl ChartEngine {
 
     pub fn apply_action(&mut self, action: Action) {
         match action {
+            Action::SetDataWindowX { window } => {
+                self.state.data_window_x = window;
+                self.state.revision.bump();
+            }
             Action::SetLinkGroup { group } => {
                 self.state.link.group = group;
                 self.state.revision.bump();
@@ -147,6 +153,7 @@ impl ChartEngine {
         let done = self.marks_stage.step(
             &self.spec,
             &self.datasets,
+            &self.state,
             viewport,
             &mut budget,
             &mut self.lod_scratch,

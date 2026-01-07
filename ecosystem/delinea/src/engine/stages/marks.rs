@@ -1,6 +1,7 @@
 use fret_core::Rect;
 
 use crate::data::DatasetStore;
+use crate::engine::ChartState;
 use crate::engine::lod::{
     LodScratch, MinMaxPerPixelCursor, compute_bounds, minmax_per_pixel_finalize,
     minmax_per_pixel_step,
@@ -61,6 +62,7 @@ impl MarksStage {
         &mut self,
         spec: &ChartSpec,
         datasets: &DatasetStore,
+        state: &ChartState,
         viewport: Rect,
         budget: &mut WorkBudget,
         scratch: &mut LodScratch,
@@ -108,6 +110,15 @@ impl MarksStage {
                 continue;
             };
             bounds.clamp_non_degenerate();
+
+            if let Some(window) = state.data_window_x {
+                let mut window = window;
+                window.clamp_non_degenerate();
+
+                bounds.x_min = bounds.x_min.max(window.x_min);
+                bounds.x_max = bounds.x_max.min(window.x_max);
+                bounds.clamp_non_degenerate();
+            }
 
             let points_budget = budget.take_points(4096) as usize;
             if points_budget == 0 {

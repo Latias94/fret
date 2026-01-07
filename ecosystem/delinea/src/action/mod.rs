@@ -1,5 +1,6 @@
 use fret_core::Point;
 
+use crate::engine::window::DataWindowX;
 use crate::ids::{LinkGroupId, SeriesId};
 
 #[cfg(feature = "serde")]
@@ -11,6 +12,7 @@ pub enum Action {
     HoverAt { point: Point },
     Pan { delta_px: Point },
     Zoom { center_px: Point, log2_scale: f32 },
+    SetDataWindowX { window: Option<DataWindowX> },
     SetSeriesVisible { series: SeriesId, visible: bool },
     SetLinkGroup { group: Option<LinkGroupId> },
 }
