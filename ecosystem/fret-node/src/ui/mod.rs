@@ -11,6 +11,6 @@ pub mod style;
 pub use canvas::NodeGraphCanvas;
 pub use presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
-    NodeGraphContextMenuItem, NodeGraphPresenter,
+    NodeGraphContextMenuItem, NodeGraphPresenter, RegistryNodeGraphPresenter,
 };
 pub use style::NodeGraphStyle;

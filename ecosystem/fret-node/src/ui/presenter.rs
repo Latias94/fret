@@ -13,6 +13,7 @@ use crate::rules::{
     ConnectPlan, EdgeEndpoint, InsertNodeSpec, InsertNodeTemplate, plan_connect,
     plan_reconnect_edge, plan_split_edge_by_inserting_node,
 };
+use crate::schema::NodeRegistry;
 use crate::types::TypeDesc;
 use crate::{profile::DataflowProfile, profile::GraphProfile};
 
@@ -342,5 +343,73 @@ impl NodeGraphPresenter for DefaultNodeGraphPresenter {
 
     fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
         Some(&mut self.profile)
+    }
+}
+
+/// Presenter that uses `NodeRegistry` for titles and port labels.
+///
+/// - `node_title` comes from `NodeSchema.title` (falls back to `Node.kind`).
+/// - `port_label` comes from `PortDecl.label` when available; dynamic ports fall back to `Port.key`.
+/// - `plan_connect` is profile-driven by default (typed connect + concretize/validate pipeline).
+
+pub struct RegistryNodeGraphPresenter {
+    registry: NodeRegistry,
+    profile: Box<dyn GraphProfile>,
+}
+
+impl RegistryNodeGraphPresenter {
+    pub fn new(registry: NodeRegistry) -> Self {
+        Self {
+            registry,
+            profile: Box::new(DataflowProfile::new()),
+        }
+    }
+
+    pub fn with_profile(mut self, profile: impl GraphProfile + 'static) -> Self {
+        self.profile = Box::new(profile);
+        self
+    }
+
+    fn schema_for_node<'a>(
+        &'a self,
+        graph: &'a Graph,
+        node: NodeId,
+    ) -> Option<&'a crate::schema::NodeSchema> {
+        let n = graph.nodes.get(&node)?;
+        self.registry.get(self.registry.resolve_kind(&n.kind))
+    }
+}
+
+impl NodeGraphPresenter for RegistryNodeGraphPresenter {
+    fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str> {
+        self.schema_for_node(graph, node)
+            .map(|s| Arc::<str>::from(s.title.clone()))
+            .unwrap_or_else(|| {
+                graph
+                    .nodes
+                    .get(&node)
+                    .map(|n| Arc::<str>::from(n.kind.0.clone()))
+                    .unwrap_or_else(|| Arc::<str>::from("<missing node>"))
+            })
+    }
+
+    fn port_label(&self, graph: &Graph, port: PortId) -> Arc<str> {
+        let Some(p) = graph.ports.get(&port) else {
+            return Arc::<str>::from("<missing port>");
+        };
+        let Some(schema) = self.schema_for_node(graph, p.node) else {
+            return Arc::<str>::from(p.key.0.clone());
+        };
+        schema
+            .ports
+            .iter()
+            .find(|decl| decl.key == p.key)
+            .and_then(|decl| decl.label.as_ref())
+            .map(|s| Arc::<str>::from(s.clone()))
+            .unwrap_or_else(|| Arc::<str>::from(p.key.0.clone()))
+    }
+
+    fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
+        Some(&mut *self.profile)
     }
 }
