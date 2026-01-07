@@ -340,6 +340,7 @@ impl ElementHostWidget {
         // `Px(1.0e9)`), otherwise scroll position can be clamped to zero prematurely.
         let is_probe_layout = cx.available.height.0 >= 1.0e8 || cx.available.width.0 >= 1.0e8;
         let external_handle = props.scroll_handle.clone();
+        let mut needs_redraw = false;
         let offset = crate::elements::with_element_state(
             &mut *cx.app,
             window,
@@ -348,14 +349,45 @@ impl ElementHostWidget {
             |state| {
                 let handle = external_handle.as_ref().unwrap_or(&state.scroll_handle);
                 if !is_probe_layout {
+                    let prev_offset = handle.offset();
+                    let prev_max = handle.max_offset();
+
                     handle.set_viewport_size(desired);
                     handle.set_content_size(Size::new(content_w, content_h));
-                    let prev = handle.offset();
-                    handle.set_offset(prev);
+                    let next_max = handle.max_offset();
+
+                    // If we were pinned at the edge and the scrollable extent grows (e.g. due to
+                    // deferred content measurement or rounding up fractional sizes), keep us pinned
+                    // so scroll affordances don't "re-appear" while the user is already at the end.
+                    let edge_epsilon = Px(0.5);
+                    let pinned_x = props.axis.scroll_x()
+                        && prev_max.x.0 > edge_epsilon.0
+                        && (prev_offset.x.0 - prev_max.x.0).abs() <= edge_epsilon.0
+                        && next_max.x.0 > prev_max.x.0 + edge_epsilon.0;
+                    let pinned_y = props.axis.scroll_y()
+                        && prev_max.y.0 > edge_epsilon.0
+                        && (prev_offset.y.0 - prev_max.y.0).abs() <= edge_epsilon.0
+                        && next_max.y.0 > prev_max.y.0 + edge_epsilon.0;
+
+                    let desired_offset = Point::new(
+                        if pinned_x { next_max.x } else { prev_offset.x },
+                        if pinned_y { next_max.y } else { prev_offset.y },
+                    );
+                    handle.set_offset(desired_offset);
+
+                    let next_offset = handle.offset();
+                    if (next_offset.x.0 - prev_offset.x.0).abs() > 0.01
+                        || (next_offset.y.0 - prev_offset.y.0).abs() > 0.01
+                    {
+                        needs_redraw = true;
+                    }
                 }
                 handle.offset()
             },
         );
+        if needs_redraw {
+            cx.app.request_redraw(window);
+        }
 
         let offset_x = if props.axis.scroll_x() {
             offset.x
