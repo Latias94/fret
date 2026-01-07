@@ -405,35 +405,11 @@ impl ChartCanvas {
     }
 
     fn axis_ticks(window: DataWindow, count: usize) -> Vec<f64> {
-        let mut out = Vec::new();
-        let span = window.span();
-        if !span.is_finite() || span <= 0.0 || count < 2 {
-            out.push(window.min);
-            out.push(window.max);
-            return out;
-        }
-
-        out.reserve(count);
-        for i in 0..count {
-            let t = (i as f64) / ((count - 1) as f64);
-            out.push(window.min + t * span);
-        }
-        out
+        nice_ticks(window, count)
     }
 
     fn format_tick(window: DataWindow, value: f64) -> String {
-        let span = window.span().abs();
-        if !span.is_finite() || span <= 0.0 {
-            return format!("{value}");
-        }
-
-        let log10 = span.log10();
-        let digits = if log10.is_finite() {
-            (2.0 - log10).round().clamp(0.0, 6.0) as usize
-        } else {
-            3
-        };
-        format!("{value:.digits$}")
+        format_tick_value(window, value)
     }
 
     fn clear_axis_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -505,8 +481,12 @@ impl ChartCanvas {
             scale_factor: cx.scale_factor,
         };
 
+        let x_tick_count = (layout.plot.size.width.0 / 80.0).round().clamp(2.0, 12.0) as usize;
+        let y_tick_count = (layout.plot.size.height.0 / 56.0).round().clamp(2.0, 12.0) as usize;
+
         // X ticks + labels.
-        for value in Self::axis_ticks(x_window, 5) {
+        let mut last_right = f32::NEG_INFINITY;
+        for value in Self::axis_ticks(x_window, x_tick_count) {
             let t = ((value - x_window.min) / x_window.span()).clamp(0.0, 1.0) as f32;
             let x_px = layout.plot.origin.x.0 + t * layout.plot.size.width.0;
             let y0 = layout.plot.origin.y.0 + layout.plot.size.height.0;
@@ -525,21 +505,30 @@ impl ChartCanvas {
 
             let label = Self::format_tick(x_window, value);
             let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
-            self.axis_text.push(blob);
 
             let label_x = x_px - metrics.size.width.0 * 0.5;
             let label_y = layout.x_axis.origin.y.0
                 + (layout.x_axis.size.height.0 - metrics.size.height.0) * 0.5;
-            cx.scene.push(SceneOp::Text {
-                order: label_order,
-                origin: Point::new(Px(label_x), Px(label_y)),
-                text: blob,
-                color: self.style.axis_label_color,
-            });
+
+            let gap = 4.0;
+            let right = label_x + metrics.size.width.0;
+            if label_x >= last_right + gap {
+                cx.scene.push(SceneOp::Text {
+                    order: label_order,
+                    origin: Point::new(Px(label_x), Px(label_y)),
+                    text: blob,
+                    color: self.style.axis_label_color,
+                });
+                self.axis_text.push(blob);
+                last_right = right;
+            } else {
+                cx.services.text().release(blob);
+            }
         }
 
         // Y ticks + labels.
-        for value in Self::axis_ticks(y_window, 5) {
+        let mut last_bottom = f32::NEG_INFINITY;
+        for value in Self::axis_ticks(y_window, y_tick_count) {
             let t = ((value - y_window.min) / y_window.span()).clamp(0.0, 1.0) as f32;
             let y_px = layout.plot.origin.y.0 + (1.0 - t) * layout.plot.size.height.0;
             let x0 = layout.plot.origin.x.0;
@@ -558,17 +547,25 @@ impl ChartCanvas {
 
             let label = Self::format_tick(y_window, value);
             let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
-            self.axis_text.push(blob);
 
             let label_x = layout.y_axis.origin.x.0
                 + (layout.y_axis.size.width.0 - metrics.size.width.0 - 4.0).max(0.0);
             let label_y = y_px - metrics.size.height.0 * 0.5;
-            cx.scene.push(SceneOp::Text {
-                order: label_order,
-                origin: Point::new(Px(label_x), Px(label_y)),
-                text: blob,
-                color: self.style.axis_label_color,
-            });
+
+            let gap = 2.0;
+            let bottom = label_y + metrics.size.height.0;
+            if label_y >= last_bottom + gap {
+                cx.scene.push(SceneOp::Text {
+                    order: label_order,
+                    origin: Point::new(Px(label_x), Px(label_y)),
+                    text: blob,
+                    color: self.style.axis_label_color,
+                });
+                self.axis_text.push(blob);
+                last_bottom = bottom;
+            } else {
+                cx.services.text().release(blob);
+            }
         }
     }
 
@@ -1294,6 +1291,130 @@ fn rect_from_points_clamped(bounds: Rect, a: Point, b: Point) -> Rect {
     )
 }
 
+fn nice_ticks(window: DataWindow, target_count: usize) -> Vec<f64> {
+    let mut out = Vec::new();
+
+    let mut window = window;
+    window.clamp_non_degenerate();
+    let span = window.span();
+
+    if !span.is_finite() || span <= 0.0 || target_count == 0 {
+        out.push(window.min);
+        out.push(window.max);
+        return out;
+    }
+
+    if target_count == 1 {
+        out.push(0.5 * (window.min + window.max));
+        return out;
+    }
+
+    let step = nice_step(span / (target_count as f64 - 1.0));
+    if !step.is_finite() || step <= 0.0 {
+        out.push(window.min);
+        out.push(window.max);
+        return out;
+    }
+
+    let start = (window.min / step).floor() * step;
+    let end = (window.max / step).ceil() * step;
+    if !start.is_finite() || !end.is_finite() || end < start {
+        out.push(window.min);
+        out.push(window.max);
+        return out;
+    }
+
+    let mut v = start;
+    // Prevent pathological loops due to floating rounding.
+    let max_steps = 10_000usize;
+    for _ in 0..max_steps {
+        if v > end + step * 0.5 {
+            break;
+        }
+        let clamped = v.clamp(window.min, window.max);
+        if out
+            .last()
+            .is_none_or(|prev| (clamped - *prev).abs() > step * 0.1)
+        {
+            out.push(clamped);
+        }
+        v += step;
+    }
+
+    if out.is_empty() {
+        out.push(window.min);
+        out.push(window.max);
+    } else {
+        let first = *out.first().unwrap_or(&window.min);
+        let last = *out.last().unwrap_or(&window.max);
+        if (first - window.min).abs() > step * 0.1 {
+            out.insert(0, window.min);
+        }
+        if (last - window.max).abs() > step * 0.1 {
+            out.push(window.max);
+        }
+    }
+
+    out
+}
+
+fn nice_step(raw_step: f64) -> f64 {
+    if !raw_step.is_finite() || raw_step <= 0.0 {
+        return 0.0;
+    }
+
+    let exponent = raw_step.abs().log10().floor();
+    let base = 10f64.powf(exponent);
+    if !base.is_finite() || base <= 0.0 {
+        return raw_step;
+    }
+
+    let fraction = raw_step / base;
+    let nice_fraction = if fraction <= 1.0 {
+        1.0
+    } else if fraction <= 2.0 {
+        2.0
+    } else if fraction <= 5.0 {
+        5.0
+    } else {
+        10.0
+    };
+
+    nice_fraction * base
+}
+
+fn format_tick_value(window: DataWindow, value: f64) -> String {
+    let mut window = window;
+    window.clamp_non_degenerate();
+
+    let span = window.span().abs();
+    if !span.is_finite() || span <= 0.0 {
+        return format!("{value}");
+    }
+
+    let step = nice_step(span / 4.0);
+    let digits = if step.is_finite() && step > 0.0 {
+        let log10 = step.abs().log10();
+        (-log10).ceil().clamp(0.0, 8.0) as usize
+    } else {
+        3
+    };
+
+    let mut s = format!("{value:.digits$}");
+    if s.contains('.') {
+        while s.ends_with('0') {
+            s.pop();
+        }
+        if s.ends_with('.') {
+            s.pop();
+        }
+    }
+    if s == "-0" {
+        s = "0".to_string();
+    }
+    s
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1328,5 +1449,14 @@ mod tests {
         let rect = rect_from_points_clamped(bounds, a, b);
         assert_eq!(rect.origin, bounds.origin);
         assert_eq!(rect.size, bounds.size);
+    }
+
+    #[test]
+    fn nice_ticks_include_endpoints() {
+        let window = DataWindow { min: 0.2, max: 9.7 };
+        let ticks = nice_ticks(window, 5);
+        assert!(!ticks.is_empty());
+        assert_eq!(*ticks.first().unwrap(), window.min);
+        assert_eq!(*ticks.last().unwrap(), window.max);
     }
 }
