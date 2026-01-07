@@ -87,6 +87,8 @@ struct ContextMenuState {
     target: ContextMenuTarget,
     items: Vec<NodeGraphContextMenuItem>,
     hovered_item: Option<usize>,
+    active_item: usize,
+    typeahead: String,
 }
 
 /// Retained node-graph canvas widget (MVP).
@@ -518,12 +520,15 @@ impl NodeGraphCanvas {
                 let origin =
                     self.clamp_context_menu_origin(invoked_at, items.len(), cx.bounds, &snapshot);
 
+                let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
                 self.interaction.context_menu = Some(ContextMenuState {
                     origin,
                     invoked_at,
                     target: ContextMenuTarget::EdgeInsertNodePicker(*edge_id),
                     items,
                     hovered_item: None,
+                    active_item,
+                    typeahead: String::new(),
                 });
             }
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::InsertReroute) => {
@@ -692,7 +697,9 @@ impl NodeGraphCanvas {
                 Size::new(Px(inner_w), Px(item_h)),
             );
 
-            if menu.hovered_item == Some(ix) && item.enabled {
+            let is_active = menu.active_item == ix;
+            let is_hovered = menu.hovered_item == Some(ix);
+            if (is_hovered || is_active) && item.enabled {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(51),
                     rect: item_rect,
@@ -927,6 +934,113 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
+                if let Some(menu) = self.interaction.context_menu.as_mut() {
+                    match *key {
+                        fret_core::KeyCode::ArrowDown => {
+                            let n = menu.items.len();
+                            if n > 0 {
+                                let mut ix = (menu.active_item + 1) % n;
+                                for _ in 0..n {
+                                    if menu.items.get(ix).is_some_and(|it| it.enabled) {
+                                        break;
+                                    }
+                                    ix = (ix + 1) % n;
+                                }
+                                menu.active_item = ix;
+                            }
+                            menu.typeahead.clear();
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                        fret_core::KeyCode::ArrowUp => {
+                            let n = menu.items.len();
+                            if n > 0 {
+                                let mut ix = if menu.active_item == 0 {
+                                    n - 1
+                                } else {
+                                    menu.active_item - 1
+                                };
+                                for _ in 0..n {
+                                    if menu.items.get(ix).is_some_and(|it| it.enabled) {
+                                        break;
+                                    }
+                                    ix = if ix == 0 { n - 1 } else { ix - 1 };
+                                }
+                                menu.active_item = ix;
+                            }
+                            menu.typeahead.clear();
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                        fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
+                            let ix = menu.active_item.min(menu.items.len().saturating_sub(1));
+                            let item = menu.items.get(ix).cloned();
+                            let target = menu.target.clone();
+                            let invoked_at = menu.invoked_at;
+                            self.interaction.context_menu = None;
+
+                            if let Some(item) = item
+                                && item.enabled
+                            {
+                                self.activate_context_menu_item(cx, &target, invoked_at, item);
+                            }
+
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                        fret_core::KeyCode::Backspace => {
+                            if !menu.typeahead.is_empty() {
+                                menu.typeahead.pop();
+                                cx.stop_propagation();
+                                cx.request_redraw();
+                                cx.invalidate_self(Invalidation::Paint);
+                                return;
+                            }
+                        }
+                        _ => {}
+                    }
+
+                    if let Some(ch) = fret_core::keycode_to_ascii_lowercase(*key) {
+                        let try_find = |needle: &str| -> Option<usize> {
+                            if needle.is_empty() {
+                                return None;
+                            }
+                            menu.items.iter().position(|it| {
+                                it.enabled
+                                    && it.label.as_ref().to_ascii_lowercase().starts_with(needle)
+                            })
+                        };
+
+                        menu.typeahead.push(ch);
+                        let mut needle = menu.typeahead.to_ascii_lowercase();
+                        let mut hit = try_find(&needle);
+                        if hit.is_none() {
+                            needle.clear();
+                            needle.push(ch);
+                            hit = try_find(&needle);
+                            if hit.is_some() {
+                                menu.typeahead.clear();
+                                menu.typeahead.push(ch);
+                            }
+                        }
+
+                        if let Some(ix) = hit {
+                            menu.active_item = ix.min(menu.items.len().saturating_sub(1));
+                        }
+
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+                }
+
                 if !matches!(
                     key,
                     fret_core::KeyCode::Delete | fret_core::KeyCode::Backspace
@@ -1069,12 +1183,15 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         cx.bounds,
                         &snapshot,
                     );
+                    let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
                     self.interaction.context_menu = Some(ContextMenuState {
                         origin,
                         invoked_at: *position,
                         target: ContextMenuTarget::Edge(edge),
                         items,
                         hovered_item: None,
+                        active_item,
+                        typeahead: String::new(),
                     });
                     self.interaction.hover_edge = None;
 
@@ -1309,6 +1426,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     let new_hover = hit_context_menu_item(&self.style, menu, *position, zoom);
                     if menu.hovered_item != new_hover {
                         menu.hovered_item = new_hover;
+                        if let Some(ix) = new_hover {
+                            if menu.items.get(ix).is_some_and(|it| it.enabled) {
+                                menu.active_item = ix.min(menu.items.len().saturating_sub(1));
+                                menu.typeahead.clear();
+                            }
+                        }
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
                     }
