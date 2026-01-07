@@ -773,6 +773,7 @@ fn scroll_thumb_drag_updates_offset_horizontal() {
                             layout: scroll_layout,
                             axis: crate::element::ScrollAxis::X,
                             scroll_handle: Some(scroll_handle.clone()),
+                            ..Default::default()
                         },
                         |cx| {
                             let mut content_layout = crate::element::LayoutStyle::default();

@@ -508,11 +508,8 @@ impl ElementHostWidget {
                             continue;
                         };
 
-                        let (handle, handle_key, scroll_y) = match record.instance {
+                        let (handle, handle_key, scroll_x, scroll_y) = match record.instance {
                             ElementInstance::Scroll(props) => {
-                                if !props.axis.scroll_y() {
-                                    continue;
-                                }
                                 let handle = if let Some(handle) = props.scroll_handle.as_ref() {
                                     handle.clone()
                                 } else {
@@ -525,52 +522,79 @@ impl ElementHostWidget {
                                     )
                                 };
                                 let key = props.scroll_handle.as_ref().map(|h| h.binding_key());
-                                (handle, key, true)
+                                (handle, key, props.axis.scroll_x(), props.axis.scroll_y())
                             }
                             ElementInstance::VirtualList(props) => {
-                                if props.axis != fret_core::Axis::Vertical {
+                                if props.axis == fret_core::Axis::Vertical {
+                                    (
+                                        props.scroll_handle.base_handle().clone(),
+                                        Some(props.scroll_handle.base_handle().binding_key()),
+                                        false,
+                                        true,
+                                    )
+                                } else {
                                     continue;
                                 }
-                                (
-                                    props.scroll_handle.base_handle().clone(),
-                                    Some(props.scroll_handle.base_handle().binding_key()),
-                                    true,
-                                )
                             }
                             _ => continue,
                         };
 
-                        if !scroll_y {
+                        if !scroll_x && !scroll_y {
                             continue;
                         }
 
                         let Some(scroll_bounds) = cx.tree.node_bounds(node) else {
                             break;
                         };
+                        let left = scroll_bounds.origin.x;
+                        let right =
+                            fret_core::Px(scroll_bounds.origin.x.0 + scroll_bounds.size.width.0);
                         let top = scroll_bounds.origin.y;
                         let bottom =
                             fret_core::Px(scroll_bounds.origin.y.0 + scroll_bounds.size.height.0);
 
-                        let mut step = Px(0.0);
-                        if pointer_pos.y.0 < top.0 + EDGE_MARGIN.0 {
-                            let t = ((top.0 + EDGE_MARGIN.0 - pointer_pos.y.0) / EDGE_MARGIN.0)
-                                .clamp(0.0, 1.0);
-                            step = Px(-MAX_STEP.0 * t);
-                        } else if pointer_pos.y.0 > bottom.0 - EDGE_MARGIN.0 {
-                            let t = ((pointer_pos.y.0 - (bottom.0 - EDGE_MARGIN.0))
-                                / EDGE_MARGIN.0)
-                                .clamp(0.0, 1.0);
-                            step = Px(MAX_STEP.0 * t);
+                        let mut step_x = Px(0.0);
+                        if scroll_x {
+                            if pointer_pos.x.0 < left.0 + EDGE_MARGIN.0 {
+                                let t = ((left.0 + EDGE_MARGIN.0 - pointer_pos.x.0)
+                                    / EDGE_MARGIN.0)
+                                    .clamp(0.0, 1.0);
+                                step_x = Px(-MAX_STEP.0 * t);
+                            } else if pointer_pos.x.0 > right.0 - EDGE_MARGIN.0 {
+                                let t = ((pointer_pos.x.0 - (right.0 - EDGE_MARGIN.0))
+                                    / EDGE_MARGIN.0)
+                                    .clamp(0.0, 1.0);
+                                step_x = Px(MAX_STEP.0 * t);
+                            }
                         }
 
-                        if step.0.abs() < 0.01 {
+                        let mut step_y = Px(0.0);
+                        if scroll_y {
+                            if pointer_pos.y.0 < top.0 + EDGE_MARGIN.0 {
+                                let t = ((top.0 + EDGE_MARGIN.0 - pointer_pos.y.0)
+                                    / EDGE_MARGIN.0)
+                                    .clamp(0.0, 1.0);
+                                step_y = Px(-MAX_STEP.0 * t);
+                            } else if pointer_pos.y.0 > bottom.0 - EDGE_MARGIN.0 {
+                                let t = ((pointer_pos.y.0 - (bottom.0 - EDGE_MARGIN.0))
+                                    / EDGE_MARGIN.0)
+                                    .clamp(0.0, 1.0);
+                                step_y = Px(MAX_STEP.0 * t);
+                            }
+                        }
+
+                        if step_x.0.abs() < 0.01 && step_y.0.abs() < 0.01 {
                             break;
                         }
 
                         let prev = handle.offset();
-                        handle.set_offset(fret_core::Point::new(prev.x, Px(prev.y.0 + step.0)));
+                        handle.set_offset(fret_core::Point::new(
+                            Px(prev.x.0 + step_x.0),
+                            Px(prev.y.0 + step_y.0),
+                        ));
                         let next = handle.offset();
-                        let did_scroll = (next.y.0 - prev.y.0).abs() > 0.01;
+                        let did_scroll =
+                            (next.y.0 - prev.y.0).abs() > 0.01 || (next.x.0 - prev.x.0).abs() > 0.01;
 
                         if did_scroll {
                             if let Some(handle_key) = handle_key {

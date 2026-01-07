@@ -1121,6 +1121,12 @@ pub struct ScrollProps {
     pub layout: LayoutStyle,
     pub axis: ScrollAxis,
     pub scroll_handle: Option<crate::scroll::ScrollHandle>,
+    /// When true (default), scroll containers probe their content with a very large available size
+    /// along the scroll axis to measure the full scrollable extent.
+    ///
+    /// When false, probing uses the viewport constraints, which allows word-wrapping content while
+    /// still permitting scrolling for long unbreakable tokens.
+    pub probe_unbounded: bool,
 }
 
 impl Default for ScrollProps {
@@ -1133,6 +1139,7 @@ impl Default for ScrollProps {
             layout,
             axis: ScrollAxis::Y,
             scroll_handle: None,
+            probe_unbounded: true,
         }
     }
 }

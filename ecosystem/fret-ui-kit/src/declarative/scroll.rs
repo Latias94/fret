@@ -188,6 +188,7 @@ pub fn overflow_scroll_with_handle_xy<H: UiHost>(
                 layout: scroll_layout,
                 axis: ScrollAxis::Both,
                 scroll_handle: Some(handle.clone()),
+                ..Default::default()
             },
             f,
         );
@@ -358,6 +359,7 @@ pub fn overflow_scroll_x_content<H: UiHost>(
                 layout: scroll_layout,
                 axis: ScrollAxis::X,
                 scroll_handle: Some(handle.clone()),
+                ..Default::default()
             },
             |cx| vec![content(cx)],
         );

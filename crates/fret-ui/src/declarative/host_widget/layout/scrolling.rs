@@ -298,12 +298,12 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::ScrollProps,
     ) -> Size {
-        let probe_w = if props.axis.scroll_x() {
+        let probe_w = if props.axis.scroll_x() && props.probe_unbounded {
             Px(1.0e9)
         } else {
             cx.available.width
         };
-        let probe_h = if props.axis.scroll_y() {
+        let probe_h = if props.axis.scroll_y() && props.probe_unbounded {
             Px(1.0e9)
         } else {
             cx.available.height
