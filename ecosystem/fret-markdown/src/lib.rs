@@ -575,6 +575,16 @@ impl<H: UiHost> MarkdownComponents<H> {
         self.code_block_ui.scrollbar_x_on_hover = on_hover;
         self
     }
+
+    pub fn with_code_block_scrollbar_y(mut self, show: bool) -> Self {
+        self.code_block_ui.show_scrollbar_y = show;
+        self
+    }
+
+    pub fn with_code_block_scrollbar_y_on_hover(mut self, on_hover: bool) -> Self {
+        self.code_block_ui.scrollbar_y_on_hover = on_hover;
+        self
+    }
 }
 
 fn parse_fenced_code_language(info: &str) -> Option<Arc<str>> {
