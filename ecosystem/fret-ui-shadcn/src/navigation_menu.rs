@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_core::{TextWrap, Transform2D};
-use fret_runtime::Model;
+use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, OpacityProps,
     PointerRegionProps, PressableA11y, PressableProps, SizeStyle, StackProps, TextProps,
@@ -133,6 +133,130 @@ impl NavigationMenuTrigger {
 
     pub fn children(self) -> Vec<AnyElement> {
         self.children
+    }
+}
+
+/// shadcn/ui `NavigationMenuLink` (v4).
+///
+/// In the upstream DOM implementation this is an element that participates in Radix's
+/// root-dismiss-on-select behavior. Fret does not use implicit context objects, so this wrapper
+/// requires the navigation menu `model` and closes it on selection (unless the click is modified
+/// with Ctrl/Meta, matching Radix semantics).
+#[derive(Debug, Clone)]
+pub struct NavigationMenuLink {
+    model: Model<Option<Arc<str>>>,
+    children: Vec<AnyElement>,
+    label: Option<Arc<str>>,
+    command: Option<CommandId>,
+    disabled: bool,
+    dismiss_on_ctrl_or_meta: bool,
+}
+
+impl NavigationMenuLink {
+    pub fn new(model: Model<Option<Arc<str>>>, children: Vec<AnyElement>) -> Self {
+        Self {
+            model,
+            children,
+            label: None,
+            command: None,
+            disabled: false,
+            dismiss_on_ctrl_or_meta: false,
+        }
+    }
+
+    pub fn child(model: Model<Option<Arc<str>>>, child: AnyElement) -> Self {
+        Self::new(model, vec![child])
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    /// When `false` (default), activation with Ctrl/Meta pressed does not dismiss the menu.
+    pub fn dismiss_on_ctrl_or_meta(mut self, dismiss_on_ctrl_or_meta: bool) -> Self {
+        self.dismiss_on_ctrl_or_meta = dismiss_on_ctrl_or_meta;
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        #[derive(Default)]
+        struct ModifierState {
+            suppress_dismiss_for_next_activate: bool,
+        }
+
+        let model = self.model.clone();
+        let disabled = self.disabled;
+        let command = self.command;
+        let label = self.label.clone();
+        let children = std::rc::Rc::new(self.children);
+        let dismiss_on_ctrl_or_meta = self.dismiss_on_ctrl_or_meta;
+
+        cx.pressable_with_id_props(move |cx, _st, link_id| {
+            let modifier_state: Arc<std::sync::Mutex<ModifierState>> = cx.with_state_for(
+                link_id,
+                || Arc::new(std::sync::Mutex::new(ModifierState::default())),
+                |s| s.clone(),
+            );
+
+            let modifier_state_for_pointer = modifier_state.clone();
+            cx.pressable_add_on_pointer_down(Arc::new(move |_host, _cx, down| {
+                use fret_ui::action::PressablePointerDownResult as R;
+
+                let suppress =
+                    (down.modifiers.ctrl || down.modifiers.meta) && !dismiss_on_ctrl_or_meta;
+                let mut st = modifier_state_for_pointer
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner());
+                st.suppress_dismiss_for_next_activate = suppress;
+                R::Continue
+            }));
+
+            let modifier_state_for_activate = modifier_state.clone();
+            let model_for_activate = model.clone();
+            cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
+                if disabled {
+                    return;
+                }
+
+                if let Some(command) = command.as_ref() {
+                    host.dispatch_command(Some(action_cx.window), command.clone());
+                }
+
+                let mut st = modifier_state_for_activate
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner());
+                let suppress = st.suppress_dismiss_for_next_activate;
+                st.suppress_dismiss_for_next_activate = false;
+                if suppress {
+                    return;
+                }
+
+                let _ = host.models_mut().update(&model_for_activate, |v| *v = None);
+            }));
+
+            let mut pressable = PressableProps::default();
+            pressable.enabled = !disabled;
+            pressable.focusable = !disabled;
+            pressable.a11y = PressableA11y {
+                role: Some(SemanticsRole::Button),
+                label: label.clone(),
+                ..Default::default()
+            };
+
+            (pressable, children.as_ref().clone())
+        })
     }
 }
 
@@ -1175,5 +1299,110 @@ mod tests {
             !has_open_timer,
             "expected no delayed-open timer after escape gating"
         );
+    }
+
+    #[test]
+    fn navigation_menu_link_does_not_dismiss_on_ctrl_click() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        bump_frame(&mut app);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-link",
+            |cx| {
+                vec![
+                    NavigationMenuLink::new(model.clone(), vec![cx.text("Go")])
+                        .label("Go")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let go_btn = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Go"))
+            .expect("Go button semantics");
+        let pos = Point::new(
+            Px(go_btn.bounds.origin.x.0 + go_btn.bounds.size.width.0 * 0.5),
+            Px(go_btn.bounds.origin.y.0 + go_btn.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Up {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Up {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected, None);
     }
 }
