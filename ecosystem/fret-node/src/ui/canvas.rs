@@ -87,6 +87,7 @@ struct ContextMenuState {
     invoked_at: Point,
     target: ContextMenuTarget,
     items: Vec<NodeGraphContextMenuItem>,
+    candidates: Vec<InsertNodeCandidate>,
     hovered_item: Option<usize>,
     active_item: usize,
     typeahead: String,
@@ -462,17 +463,21 @@ impl NodeGraphCanvas {
                         .unwrap_or_default()
                 };
 
-                let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
-                items.push(NodeGraphContextMenuItem {
+                let mut menu_candidates: Vec<InsertNodeCandidate> = Vec::new();
+                menu_candidates.push(InsertNodeCandidate {
+                    kind: NodeKindKey::new(REROUTE_KIND),
                     label: Arc::<str>::from("Reroute"),
                     enabled: true,
-                    action: NodeGraphContextMenuAction::InsertNode(NodeKindKey::new(REROUTE_KIND)),
+                    payload: serde_json::Value::Null,
                 });
-                for c in candidates {
+                menu_candidates.extend(candidates);
+
+                let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
+                for (ix, c) in menu_candidates.iter().enumerate() {
                     items.push(NodeGraphContextMenuItem {
-                        label: c.label,
+                        label: c.label.clone(),
                         enabled: c.enabled,
-                        action: NodeGraphContextMenuAction::InsertNode(c.kind),
+                        action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
                     });
                 }
 
@@ -486,6 +491,7 @@ impl NodeGraphCanvas {
                     invoked_at,
                     target: ContextMenuTarget::EdgeInsertNodePicker(*edge_id),
                     items,
+                    candidates: menu_candidates,
                     hovered_item: None,
                     active_item,
                     typeahead: String::new(),
@@ -499,12 +505,7 @@ impl NodeGraphCanvas {
                     let presenter = &mut *self.presenter;
                     self.graph
                         .read_ref(cx.app, |graph| {
-                            let plan = presenter.plan_split_edge(
-                                graph,
-                                *edge_id,
-                                &kind,
-                                at,
-                            );
+                            let plan = presenter.plan_split_edge(graph, *edge_id, &kind, at);
                             match plan.decision {
                                 ConnectDecision::Accept => Ok(plan.ops),
                                 ConnectDecision::Reject => Err(plan.diagnostics),
@@ -567,7 +568,7 @@ impl NodeGraphCanvas {
             }
             (
                 ContextMenuTarget::EdgeInsertNodePicker(edge_id),
-                NodeGraphContextMenuAction::InsertNode(kind),
+                NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
             ) => {
                 enum Outcome {
                     Apply(Vec<GraphOp>),
@@ -575,8 +576,17 @@ impl NodeGraphCanvas {
                     Ignore,
                 }
 
+                let Some(candidate) = self
+                    .interaction
+                    .context_menu
+                    .as_ref()
+                    .and_then(|m| m.candidates.get(candidate_ix).cloned())
+                else {
+                    return;
+                };
+
                 let outcome = {
-                    let at = if kind.0 == REROUTE_KIND {
+                    let at = if candidate.kind.0 == REROUTE_KIND {
                         self.reroute_pos_for_invoked_at(invoked_at)
                     } else {
                         CanvasPoint {
@@ -584,12 +594,12 @@ impl NodeGraphCanvas {
                             y: invoked_at.y.0,
                         }
                     };
-                    let kind_for_plan = kind.clone();
 
                     let presenter = &mut *self.presenter;
                     self.graph
                         .read_ref(cx.app, |graph| {
-                            let plan = presenter.plan_split_edge(graph, *edge_id, &kind_for_plan, at);
+                            let plan = presenter
+                                .plan_split_edge_candidate(graph, *edge_id, &candidate, at);
                             match plan.decision {
                                 ConnectDecision::Accept => Outcome::Apply(plan.ops),
                                 ConnectDecision::Reject => {
@@ -600,7 +610,7 @@ impl NodeGraphCanvas {
                                                 DiagnosticSeverity::Error,
                                                 Arc::<str>::from(format!(
                                                     "node insertion was rejected: {}",
-                                                    kind.0
+                                                    candidate.kind.0
                                                 )),
                                             )
                                         })
@@ -613,7 +623,7 @@ impl NodeGraphCanvas {
 
                 match outcome {
                     Outcome::Apply(ops) => {
-                        let select_node = kind.0 == REROUTE_KIND;
+                        let select_node = candidate.kind.0 == REROUTE_KIND;
                         let node_id = select_node
                             .then(|| Self::first_added_node_id(&ops))
                             .flatten();
@@ -1279,6 +1289,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         invoked_at: *position,
                         target: ContextMenuTarget::Edge(edge),
                         items,
+                        candidates: Vec::new(),
                         hovered_item: None,
                         active_item,
                         typeahead: String::new(),

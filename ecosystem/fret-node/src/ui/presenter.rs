@@ -20,7 +20,7 @@ use super::style::NodeGraphStyle;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NodeGraphContextMenuAction {
     OpenInsertNodePicker,
-    InsertNode(NodeKindKey),
+    InsertNodeCandidate(usize),
     InsertReroute,
     DeleteEdge,
     Custom(u64),
@@ -40,6 +40,7 @@ pub struct InsertNodeCandidate {
     pub kind: NodeKindKey,
     pub label: Arc<str>,
     pub enabled: bool,
+    pub payload: Value,
 }
 
 /// Viewer/presenter surface for the node graph UI.
@@ -160,6 +161,20 @@ pub trait NodeGraphPresenter {
                 output: out_port_id,
             },
         )
+    }
+
+    /// Plans splitting an edge by inserting a selected candidate node.
+    ///
+    /// This allows candidate-specific configuration via `InsertNodeCandidate::payload` without
+    /// forcing every option to be represented as a distinct `NodeKindKey`.
+    fn plan_split_edge_candidate(
+        &mut self,
+        graph: &Graph,
+        edge: EdgeId,
+        candidate: &InsertNodeCandidate,
+        at: CanvasPoint,
+    ) -> ConnectPlan {
+        self.plan_split_edge(graph, edge, &candidate.kind, at)
     }
 
     /// Fills the right-click context menu for an edge.
