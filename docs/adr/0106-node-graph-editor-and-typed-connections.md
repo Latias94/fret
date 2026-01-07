@@ -599,6 +599,39 @@ spatial indexes for hit-testing), but:
 - derived caches are rebuildable from the serialized canonical state,
 - caches are not part of the stable asset format unless explicitly versioned and justified.
 
+The UI layer additionally maintains **editor internals** (derived geometry) similar to ReactFlow/XyFlow:
+
+- node rectangles (in canvas and screen space),
+- port handle bounds and anchor points (screen px),
+- edge routing samples and edge hit-testing slop,
+- spatial indexes (grid/R-tree) to keep hit-testing and selection rectangles fast on 10k+ graphs.
+
+Hard boundary (locked):
+
+- Internals are **never** serialized into the graph asset.
+- Internals may be persisted as editor-state only when they are user intent (e.g. node z-order),
+  not when they are derived measurement (e.g. handle bounds).
+
+Invalidation contract (locked):
+
+- Derived geometry caches must be invalidated by a small set of monotonic revision keys:
+  - graph model revision,
+  - view state revision (camera/zoom/draw order),
+  - presenter geometry revision (custom anchor hints / sizing heuristics),
+  - optional measured geometry revision (host-provided layout measurements).
+
+Measured geometry injection (locked):
+
+- Hosts may feed measured node sizes and handle bounds into the canvas without mutating the graph model.
+- Measured values are expressed in screen-space logical pixels (px), consistent with the style system.
+- The injection surface is a small, thread-safe store (`MeasuredGeometryStore`) + a presenter wrapper
+  (`MeasuredNodeGraphPresenter`) that consults the store before delegating to the inner presenter.
+
+Rationale:
+
+- This mirrors XyFlow’s separation of user-authored node data from derived internals (`handleBounds`),
+  and prevents graph assets from accumulating render/layout-specific noise.
+
 ### 13) Graph symbols (blackboard/variables) are first-class
 
 Many graph domains require “graph-scoped inputs”:
@@ -836,5 +869,5 @@ Cons:
   - how it composes with parent/child extents and group frames.
 - Whether to expose a viewer hook to adjust the canvas transform (inspired by `egui-snarl`’s
   `SnarlViewer::current_transform`) to support “UI scaling” modes where text remains readable at extreme zoom.
-- Whether to add a spatial index (R-tree/grid) for edge/port hit-testing and selection rectangles when graphs
-  reach 10k+ elements, and where it lives (derived cache keyed by graph revision vs incremental maintenance).
+- How to connect `crates/fret-ui`’s post-layout measurement (node bounds / handle bounds) to the measured-geometry
+  injection surface without introducing frame-order hazards or accidental coupling to a specific layout engine.
