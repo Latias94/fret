@@ -1,5 +1,7 @@
 //! Markdown renderer component(s) for Fret.
 
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use fret_core::{
@@ -246,6 +248,7 @@ pub struct ParagraphInfo {
 
 #[derive(Debug, Clone)]
 pub struct CodeBlockInfo {
+    pub id: BlockId,
     pub language: Option<Arc<str>>,
     pub code: Arc<str>,
 }
@@ -431,6 +434,11 @@ pub type CodeBlockRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, CodeBlockInfo) -> AnyElement;
 pub type CodeBlockActionsRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, CodeBlockInfo) -> AnyElement;
+pub type CodeBlockUiResolver<H> = dyn for<'a> Fn(
+    &mut ElementContext<'a, H>,
+    &CodeBlockInfo,
+    &mut fret_code_view::CodeBlockUiOptions,
+) -> ();
 pub type RawBlockRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, RawBlockInfo) -> AnyElement;
 pub type ListRenderer<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, ListInfo) -> AnyElement;
@@ -494,6 +502,17 @@ pub struct MarkdownComponents<H: UiHost> {
     ///
     /// If you set `code_block`, you own the full rendering and this value is ignored.
     pub code_block_ui: fret_code_view::CodeBlockUiOptions,
+    /// Whether the default fenced code block renderer should resolve `max_height` from theme
+    /// tokens when `code_block_ui.max_height` is unset.
+    ///
+    /// This is a policy knob on `fret-markdown` rather than `fret-code-view` because only
+    /// Markdown knows which theme token names are relevant.
+    pub code_block_max_height_from_theme: bool,
+    /// Per-code-block UI tweaks for the default fenced code block renderer (`fret-code-view`).
+    ///
+    /// This is applied after theme token resolution, so the resolver can override the final
+    /// `CodeBlockUiOptions` for specific blocks (expand/collapse, wrap overrides, etc.).
+    pub code_block_ui_resolver: Option<Arc<CodeBlockUiResolver<H>>>,
     /// Render an optional “actions” area for fenced code blocks.
     ///
     /// Note: This is only used by the default code block renderer. If you provide `code_block`,
@@ -535,6 +554,8 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
             paragraph: None,
             code_block: None,
             code_block_ui,
+            code_block_max_height_from_theme: true,
+            code_block_ui_resolver: None,
             code_block_actions: None,
             raw_block: None,
             list: None,
@@ -563,6 +584,19 @@ impl<H: UiHost> MarkdownComponents<H> {
 
     pub fn with_code_block_max_height(mut self, max_height: Option<Px>) -> Self {
         self.code_block_ui.max_height = max_height;
+        self
+    }
+
+    pub fn with_code_block_max_height_from_theme(mut self, enabled: bool) -> Self {
+        self.code_block_max_height_from_theme = enabled;
+        self
+    }
+
+    pub fn with_code_block_ui_resolver(
+        mut self,
+        resolver: Option<Arc<CodeBlockUiResolver<H>>>,
+    ) -> Self {
+        self.code_block_ui_resolver = resolver;
         self
     }
 
@@ -642,7 +676,12 @@ fn render_code_block<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let mut options = components.code_block_ui;
-    resolve_code_block_ui(theme, &mut options);
+    if components.code_block_max_height_from_theme {
+        resolve_code_block_ui(theme, &mut options);
+    }
+    if let Some(resolve) = &components.code_block_ui_resolver {
+        resolve(cx, &info, &mut options);
+    }
 
     let mut header = fret_code_view::CodeBlockHeaderSlots::default();
     if let Some(render_actions) = &components.code_block_actions {
@@ -661,9 +700,17 @@ fn render_code_block<H: UiHost>(
 
 fn resolve_code_block_ui(theme: &Theme, options: &mut fret_code_view::CodeBlockUiOptions) {
     if options.max_height.is_none() {
-        options.max_height = theme
-            .metric_by_key("fret.markdown.code_block.max_height")
-            .or_else(|| theme.metric_by_key("markdown.code_block.max_height"));
+        let canonical = "fret.markdown.code_block.max_height";
+        let compat = "markdown.code_block.max_height";
+        options.max_height = if theme.metric_key_configured(canonical) {
+            theme.metric_by_key(canonical)
+        } else if theme.metric_key_configured(compat) {
+            theme.metric_by_key(compat)
+        } else {
+            theme
+                .metric_by_key(canonical)
+                .or_else(|| theme.metric_by_key(compat))
+        };
     }
 }
 
@@ -1169,7 +1216,11 @@ fn render_mdstream_block_with_events<H: UiHost>(
         }
         mdstream::BlockKind::CodeFence => {
             let (language, code) = parse_code_fence_body(block.display_or_raw());
-            let info = CodeBlockInfo { language, code };
+            let info = CodeBlockInfo {
+                id: block.id,
+                language,
+                code,
+            };
             if let Some(render) = &components.code_block {
                 render(cx, info)
             } else {
@@ -2102,6 +2153,7 @@ fn render_pulldown_code_block<H: UiHost>(
         CodeBlockKind::Fenced(info) => parse_fenced_code_language(info),
     };
 
+    let start = *cursor;
     *cursor += 1;
     let mut buf = String::new();
     while *cursor < events.len() {
@@ -2117,7 +2169,14 @@ fn render_pulldown_code_block<H: UiHost>(
         *cursor += 1;
     }
 
+    let mut hasher = DefaultHasher::new();
+    start.hash(&mut hasher);
+    language.as_deref().hash(&mut hasher);
+    buf.hash(&mut hasher);
+    let id = BlockId(hasher.finish());
+
     let info = CodeBlockInfo {
+        id,
         language,
         code: Arc::<str>::from(buf),
     };
@@ -3652,7 +3711,12 @@ mod tests {
             start: Point,
             payload: T,
         ) {
-            self.drag = Some(DragSession::new_cross_window(source_window, kind, start, payload));
+            self.drag = Some(DragSession::new_cross_window(
+                source_window,
+                kind,
+                start,
+                payload,
+            ));
         }
     }
 

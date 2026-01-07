@@ -111,7 +111,7 @@ Metrics:
 - `markdown.blockquote.padding` (fallback: `metric.padding.sm`)
 - `markdown.table.cell.padding_x` (fallback: `metric.padding.sm`)
 - `markdown.table.cell.padding_y` (fallback: `metric.padding.sm * 0.5`)
-- `markdown.code_block.max_height` (optional; default: unset)
+- `markdown.code_block.max_height` (default: `max(metric.font.mono_line_height * 16, metric.font.mono_size * 18)`)
 - `markdown.math.inline.padding_x` (fallback: `markdown.inline_code.padding_x`)
 - `markdown.math.inline.padding_y` (fallback: `markdown.inline_code.padding_y`)
 - `markdown.math.block.padding` (fallback: `metric.padding.md`)

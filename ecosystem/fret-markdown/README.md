@@ -18,15 +18,23 @@ let components = fret_markdown::MarkdownComponents::<App>::default()
     // Default fenced code blocks are rendered via `fret-code-view`.
     .with_code_block_wrap(fret_code_view::CodeBlockWrap::ScrollX)
     .with_code_block_scrollbar_x(true)
-    // Optional: cap code block height and enable internal Y scrolling.
-    // Prefer the theme token `fret.markdown.code_block.max_height` / `markdown.code_block.max_height`.
-    .with_code_block_max_height(Some(fret_core::Px(360.0)));
+    // Optional: cap code block height via theme (default: ~16 lines) and enable internal Y scrolling.
+    // Theme keys:
+    // - canonical: `fret.markdown.code_block.max_height`
+    // - compat: `markdown.code_block.max_height`
+    .with_code_block_max_height_from_theme(true)
+    .with_code_block_scrollbar_y(true);
 
 // Optional: add an “actions” area for code fences (copy, download, expand, …).
 let components = fret_markdown::MarkdownComponents {
     code_block_actions: Some(Arc::new(|cx, info| {
+        // `info.id` is a stable block identifier (useful for per-block state like expand/collapse).
         // return AnyElement
         todo!()
+    })),
+    // Optional: tweak the default code block renderer per fence (expand/collapse, wrap overrides, …).
+    code_block_ui_resolver: Some(Arc::new(|_cx, _info, _options| {
+        // mutate options
     })),
     ..components
 };
@@ -44,10 +52,12 @@ markdown::Markdown::new(source).into_element_with(cx, &components);
 
 Code blocks:
 
-- `fret.markdown.code_block.max_height` / `markdown.code_block.max_height` (optional): when set,
-  caps code block height and enables internal vertical scrolling.
+- `fret.markdown.code_block.max_height` / `markdown.code_block.max_height` (default: derived from
+  mono font metrics, roughly 16 lines): caps code block height and enables internal vertical scrolling.
 - `MarkdownComponents.code_block_ui.show_scrollbar_y` (optional): when enabled and `max_height` is
   set, show a vertical scrollbar for tall code blocks (hover-visible by default, matching shadcn / Radix).
+- `MarkdownComponents.code_block_max_height_from_theme` (default: true): disable this to opt out of
+  theme-driven `max_height` resolution.
 
 See `docs/adr/0103-text-decorations-and-markdown-theme-tokens.md` for the full token list and
 compatibility rules.
