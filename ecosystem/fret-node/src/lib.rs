@@ -7,6 +7,9 @@
 
 #![deny(unsafe_code)]
 
+/// Reserved builtin node kind for a schema-less wire reroute node.
+pub const REROUTE_KIND: &str = "fret.reroute";
+
 pub mod core;
 pub mod io;
 pub mod ops;

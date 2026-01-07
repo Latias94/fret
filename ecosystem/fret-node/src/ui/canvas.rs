@@ -9,14 +9,13 @@ use fret_core::{
 };
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::{UiHost, retained_bridge::*};
-use serde_json::Value;
 
+use crate::REROUTE_KIND;
 use crate::core::{
-    CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId as GraphNodeId, NodeKindKey, Port,
-    PortCapacity, PortDirection, PortId, PortKey, PortKind,
+    CanvasPoint, EdgeId, Graph, NodeId as GraphNodeId, NodeKindKey, PortDirection, PortId,
 };
 use crate::io::NodeGraphViewState;
-use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction, apply_transaction};
+use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
 use super::presenter::{
@@ -122,7 +121,8 @@ pub struct NodeGraphCanvas {
 }
 
 impl NodeGraphCanvas {
-    const REROUTE_KIND: &'static str = "fret.reroute";
+    const REROUTE_INPUTS: usize = 1;
+    const REROUTE_OUTPUTS: usize = 1;
 
     fn show_toast<H: UiHost>(
         &mut self,
@@ -423,102 +423,21 @@ impl NodeGraphCanvas {
         (self.style.node_width, base + pin_area)
     }
 
-    fn plan_insert_reroute_ops(
-        &self,
-        graph: &Graph,
-        edge_id: EdgeId,
-        at: Point,
-    ) -> Option<(Vec<GraphOp>, GraphNodeId)> {
-        let edge = graph.edges.get(&edge_id)?.clone();
-        let from_port = graph.ports.get(&edge.from)?;
-        let to_port = graph.ports.get(&edge.to)?;
+    fn reroute_pos_for_invoked_at(&self, invoked_at: Point) -> CanvasPoint {
+        let (w, h) = self.node_default_size_for_ports(Self::REROUTE_INPUTS, Self::REROUTE_OUTPUTS);
+        CanvasPoint {
+            x: invoked_at.x.0 - 0.5 * w,
+            y: invoked_at.y.0 - 0.5 * h,
+        }
+    }
 
-        let port_kind = match edge.kind {
-            EdgeKind::Data => PortKind::Data,
-            EdgeKind::Exec => PortKind::Exec,
-        };
-        let ty = from_port.ty.clone().or_else(|| to_port.ty.clone());
-
-        let node_id = GraphNodeId::new();
-        let in_port_id = PortId::new();
-        let out_port_id = PortId::new();
-        let new_edge_id = EdgeId::new();
-
-        let (w, h) = self.node_default_size_for_ports(1, 1);
-        let pos = CanvasPoint {
-            x: at.x.0 - 0.5 * w,
-            y: at.y.0 - 0.5 * h,
-        };
-
-        let node = Node {
-            kind: NodeKindKey::new(Self::REROUTE_KIND),
-            kind_version: 1,
-            pos,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::default(),
-        };
-
-        let in_port = Port {
-            node: node_id,
-            key: PortKey::new("in"),
-            dir: PortDirection::In,
-            kind: port_kind,
-            capacity: PortCapacity::Single,
-            ty: ty.clone(),
-            data: Value::default(),
-        };
-
-        let out_port = Port {
-            node: node_id,
-            key: PortKey::new("out"),
-            dir: PortDirection::Out,
-            kind: port_kind,
-            capacity: PortCapacity::Multi,
-            ty,
-            data: Value::default(),
-        };
-
-        let old_endpoints = EdgeEndpoints {
-            from: edge.from,
-            to: edge.to,
-        };
-
-        let mut ops: Vec<GraphOp> = Vec::new();
-        ops.push(GraphOp::AddNode { id: node_id, node });
-        ops.push(GraphOp::AddPort {
-            id: in_port_id,
-            port: in_port,
-        });
-        ops.push(GraphOp::AddPort {
-            id: out_port_id,
-            port: out_port,
-        });
-        ops.push(GraphOp::SetNodePorts {
-            id: node_id,
-            from: Vec::new(),
-            to: vec![in_port_id, out_port_id],
-        });
-
-        ops.push(GraphOp::SetEdgeEndpoints {
-            id: edge_id,
-            from: old_endpoints,
-            to: EdgeEndpoints {
-                from: edge.from,
-                to: in_port_id,
-            },
-        });
-
-        ops.push(GraphOp::AddEdge {
-            id: new_edge_id,
-            edge: Edge {
-                kind: edge.kind,
-                from: out_port_id,
-                to: edge.to,
-            },
-        });
-
-        Some((ops, node_id))
+    fn first_added_node_id(ops: &[GraphOp]) -> Option<GraphNodeId> {
+        for op in ops {
+            if let GraphOp::AddNode { id, .. } = op {
+                return Some(*id);
+            }
+        }
+        None
     }
 
     fn activate_context_menu_item<H: UiHost>(
@@ -547,9 +466,7 @@ impl NodeGraphCanvas {
                 items.push(NodeGraphContextMenuItem {
                     label: Arc::<str>::from("Reroute"),
                     enabled: true,
-                    action: NodeGraphContextMenuAction::InsertNode(NodeKindKey::new(
-                        Self::REROUTE_KIND,
-                    )),
+                    action: NodeGraphContextMenuAction::InsertNode(NodeKindKey::new(REROUTE_KIND)),
                 });
                 for c in candidates {
                     items.push(NodeGraphContextMenuItem {
@@ -575,34 +492,53 @@ impl NodeGraphCanvas {
                 });
             }
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::InsertReroute) => {
-                let planned = {
-                    let this = &*self;
-                    this.graph
+                let at = self.reroute_pos_for_invoked_at(invoked_at);
+                let kind = NodeKindKey::new(REROUTE_KIND);
+
+                let outcome = {
+                    let presenter = &mut *self.presenter;
+                    self.graph
                         .read_ref(cx.app, |graph| {
-                            this.plan_insert_reroute_ops(graph, *edge_id, invoked_at)
+                            let plan = presenter.plan_split_edge(
+                                graph,
+                                *edge_id,
+                                &kind,
+                                at,
+                            );
+                            match plan.decision {
+                                ConnectDecision::Accept => Ok(plan.ops),
+                                ConnectDecision::Reject => Err(plan.diagnostics),
+                            }
                         })
                         .ok()
-                        .flatten()
                 };
 
-                let Some((ops, node_id)) = planned else {
-                    self.show_toast(
-                        cx.app,
-                        cx.window,
-                        DiagnosticSeverity::Error,
-                        Arc::<str>::from("failed to insert reroute"),
-                    );
-                    return;
-                };
-
-                self.apply_ops(cx.app, ops);
-                self.update_view_state(cx.app, |s| {
-                    s.selected_edges.clear();
-                    s.selected_nodes.clear();
-                    s.selected_nodes.push(node_id);
-                    s.draw_order.retain(|id| *id != node_id);
-                    s.draw_order.push(node_id);
-                });
+                match outcome {
+                    Some(Ok(ops)) => {
+                        let node_id = Self::first_added_node_id(&ops);
+                        self.apply_ops(cx.app, ops);
+                        if let Some(node_id) = node_id {
+                            self.update_view_state(cx.app, |s| {
+                                s.selected_edges.clear();
+                                s.selected_nodes.clear();
+                                s.selected_nodes.push(node_id);
+                                s.draw_order.retain(|id| *id != node_id);
+                                s.draw_order.push(node_id);
+                            });
+                        }
+                    }
+                    Some(Err(diags)) => {
+                        let (sev, msg) =
+                            Self::toast_from_diagnostics(&diags).unwrap_or_else(|| {
+                                (
+                                    DiagnosticSeverity::Error,
+                                    Arc::<str>::from("failed to insert reroute"),
+                                )
+                            });
+                        self.show_toast(cx.app, cx.window, sev, msg);
+                    }
+                    None => {}
+                }
             }
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::DeleteEdge) => {
                 let remove_ops = {
@@ -633,38 +569,6 @@ impl NodeGraphCanvas {
                 ContextMenuTarget::EdgeInsertNodePicker(edge_id),
                 NodeGraphContextMenuAction::InsertNode(kind),
             ) => {
-                if kind.0 == Self::REROUTE_KIND {
-                    let planned = {
-                        let this = &*self;
-                        this.graph
-                            .read_ref(cx.app, |graph| {
-                                this.plan_insert_reroute_ops(graph, *edge_id, invoked_at)
-                            })
-                            .ok()
-                            .flatten()
-                    };
-
-                    let Some((ops, node_id)) = planned else {
-                        self.show_toast(
-                            cx.app,
-                            cx.window,
-                            DiagnosticSeverity::Error,
-                            Arc::<str>::from("failed to insert reroute"),
-                        );
-                        return;
-                    };
-
-                    self.apply_ops(cx.app, ops);
-                    self.update_view_state(cx.app, |s| {
-                        s.selected_edges.clear();
-                        s.selected_nodes.clear();
-                        s.selected_nodes.push(node_id);
-                        s.draw_order.retain(|id| *id != node_id);
-                        s.draw_order.push(node_id);
-                    });
-                    return;
-                }
-
                 enum Outcome {
                     Apply(Vec<GraphOp>),
                     Reject(DiagnosticSeverity, Arc<str>),
@@ -672,18 +576,20 @@ impl NodeGraphCanvas {
                 }
 
                 let outcome = {
+                    let at = if kind.0 == REROUTE_KIND {
+                        self.reroute_pos_for_invoked_at(invoked_at)
+                    } else {
+                        CanvasPoint {
+                            x: invoked_at.x.0,
+                            y: invoked_at.y.0,
+                        }
+                    };
+                    let kind_for_plan = kind.clone();
+
                     let presenter = &mut *self.presenter;
                     self.graph
                         .read_ref(cx.app, |graph| {
-                            let plan = presenter.plan_split_edge(
-                                graph,
-                                *edge_id,
-                                &kind,
-                                CanvasPoint {
-                                    x: invoked_at.x.0,
-                                    y: invoked_at.y.0,
-                                },
-                            );
+                            let plan = presenter.plan_split_edge(graph, *edge_id, &kind_for_plan, at);
                             match plan.decision {
                                 ConnectDecision::Accept => Outcome::Apply(plan.ops),
                                 ConnectDecision::Reject => {
@@ -706,7 +612,22 @@ impl NodeGraphCanvas {
                 };
 
                 match outcome {
-                    Outcome::Apply(ops) => self.apply_ops(cx.app, ops),
+                    Outcome::Apply(ops) => {
+                        let select_node = kind.0 == REROUTE_KIND;
+                        let node_id = select_node
+                            .then(|| Self::first_added_node_id(&ops))
+                            .flatten();
+                        self.apply_ops(cx.app, ops);
+                        if let Some(node_id) = node_id {
+                            self.update_view_state(cx.app, |s| {
+                                s.selected_edges.clear();
+                                s.selected_nodes.clear();
+                                s.selected_nodes.push(node_id);
+                                s.draw_order.retain(|id| *id != node_id);
+                                s.draw_order.push(node_id);
+                            });
+                        }
+                    }
                     Outcome::Reject(sev, msg) => self.show_toast(cx.app, cx.window, sev, msg),
                     Outcome::Ignore => {}
                 }

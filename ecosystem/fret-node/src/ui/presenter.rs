@@ -1,10 +1,18 @@
 use std::sync::Arc;
 
 use fret_core::Color;
+use serde_json::Value;
 
-use crate::core::{CanvasPoint, EdgeId, Graph, NodeId, NodeKindKey, PortId, PortKind};
+use crate::REROUTE_KIND;
+use crate::core::{
+    CanvasPoint, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
+    PortDirection, PortId, PortKey, PortKind,
+};
 use crate::ops::GraphOp;
-use crate::rules::{ConnectPlan, EdgeEndpoint, plan_connect, plan_reconnect_edge};
+use crate::rules::{
+    ConnectPlan, EdgeEndpoint, InsertNodeSpec, plan_connect, plan_reconnect_edge,
+    plan_split_edge_by_inserting_node,
+};
 
 use super::style::NodeGraphStyle;
 
@@ -84,8 +92,74 @@ pub trait NodeGraphPresenter {
         node_kind: &NodeKindKey,
         at: CanvasPoint,
     ) -> ConnectPlan {
-        let _ = (graph, edge, node_kind, at);
-        ConnectPlan::reject("split-edge insertion is not supported")
+        if node_kind.0 != REROUTE_KIND {
+            let _ = (graph, edge, node_kind, at);
+            return ConnectPlan::reject("split-edge insertion is not supported");
+        }
+
+        let edge_id = edge;
+
+        let Some(edge) = graph.edges.get(&edge_id) else {
+            return ConnectPlan::reject("missing edge");
+        };
+        let Some(from_port) = graph.ports.get(&edge.from) else {
+            return ConnectPlan::reject("missing edge.from port");
+        };
+        let Some(to_port) = graph.ports.get(&edge.to) else {
+            return ConnectPlan::reject("missing edge.to port");
+        };
+
+        let port_kind = match edge.kind {
+            EdgeKind::Data => PortKind::Data,
+            EdgeKind::Exec => PortKind::Exec,
+        };
+        let ty = from_port.ty.clone().or_else(|| to_port.ty.clone());
+
+        let node_id = NodeId::new();
+        let in_port_id = PortId::new();
+        let out_port_id = PortId::new();
+
+        let node = Node {
+            kind: node_kind.clone(),
+            kind_version: 1,
+            pos: at,
+            collapsed: false,
+            ports: Vec::new(),
+            data: Value::default(),
+        };
+
+        let in_port = Port {
+            node: node_id,
+            key: PortKey::new("in"),
+            dir: PortDirection::In,
+            kind: port_kind,
+            capacity: PortCapacity::Single,
+            ty: ty.clone(),
+            data: Value::default(),
+        };
+
+        let out_port = Port {
+            node: node_id,
+            key: PortKey::new("out"),
+            dir: PortDirection::Out,
+            kind: port_kind,
+            capacity: PortCapacity::Multi,
+            ty,
+            data: Value::default(),
+        };
+
+        plan_split_edge_by_inserting_node(
+            graph,
+            edge_id,
+            EdgeId::new(),
+            InsertNodeSpec {
+                node_id,
+                node,
+                ports: vec![(in_port_id, in_port), (out_port_id, out_port)],
+                input: in_port_id,
+                output: out_port_id,
+            },
+        )
     }
 
     /// Fills the right-click context menu for an edge.
