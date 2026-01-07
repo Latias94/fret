@@ -780,15 +780,13 @@ impl WinitAppDriver for MarkdownDemoDriver {
         {
             if let Ok(id) = id.parse::<u64>() {
                 let id = markdown::BlockId(id);
-                let _ = app
-                    .models_mut()
-                    .update(&state.expanded_code_blocks, |set| {
-                        if set.contains(&id) {
-                            set.remove(&id);
-                        } else {
-                            set.insert(id);
-                        }
-                    });
+                let _ = app.models_mut().update(&state.expanded_code_blocks, |set| {
+                    if set.contains(&id) {
+                        set.remove(&id);
+                    } else {
+                        set.insert(id);
+                    }
+                });
                 app.push_effect(Effect::Redraw(window));
             }
             return;
