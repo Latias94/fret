@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use fret_app::App;
 use fret_app::{CommandId, Effect, WindowRequest};
@@ -26,7 +26,10 @@ use fret_node::ui::presenter::{
     InsertNodeCandidate, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
 };
 use fret_node::ui::style::NodeGraphStyle;
-use fret_node::ui::{NodeGraphCanvas, RegistryNodeGraphPresenter, register_node_graph_commands};
+use fret_node::ui::{
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, RegistryNodeGraphPresenter,
+    register_node_graph_commands,
+};
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
@@ -38,45 +41,32 @@ const CMD_TOGGLE_WEIRD_LAYOUT: &str = "node_graph_demo.toggle_weird_layout";
 const WEIRD_KIND: &str = "demo.weird_layout";
 
 #[derive(Debug)]
-struct DemoGeometryState {
-    mode_b: AtomicBool,
-    revision: AtomicU64,
+struct DemoWeirdLayoutMeasuredState {
+    enabled: AtomicBool,
 }
 
-impl DemoGeometryState {
+impl DemoWeirdLayoutMeasuredState {
     fn new() -> Self {
         Self {
-            mode_b: AtomicBool::new(false),
-            revision: AtomicU64::new(1),
+            enabled: AtomicBool::new(false),
         }
     }
 
-    fn geometry_revision(&self) -> u64 {
-        self.revision.load(Ordering::Relaxed)
-    }
-
     fn toggle(&self) -> bool {
-        let next = !self.mode_b.load(Ordering::Relaxed);
-        self.mode_b.store(next, Ordering::Relaxed);
-        self.revision.fetch_add(1, Ordering::Relaxed);
+        let next = !self.enabled.load(Ordering::Relaxed);
+        self.enabled.store(next, Ordering::Relaxed);
         next
-    }
-
-    fn is_mode_b(&self) -> bool {
-        self.mode_b.load(Ordering::Relaxed)
     }
 }
 
 struct DemoPresenter {
     inner: RegistryNodeGraphPresenter,
-    geom: Arc<DemoGeometryState>,
 }
 
 impl DemoPresenter {
-    fn new(registry: NodeRegistry, geom: Arc<DemoGeometryState>) -> Self {
+    fn new(registry: NodeRegistry) -> Self {
         Self {
             inner: RegistryNodeGraphPresenter::new(registry),
-            geom,
         }
     }
 
@@ -88,17 +78,46 @@ impl DemoPresenter {
     }
 
     fn weird_size_px(&self) -> (f32, f32) {
-        if self.geom.is_mode_b() {
-            (420.0, 120.0)
+        (280.0, 240.0)
+    }
+
+    fn weird_anchor_for_key(
+        mode_b: bool,
+        key: &str,
+        (w, h): (f32, f32),
+        pin_radius: f32,
+    ) -> Option<PortAnchorHint> {
+        let r = pin_radius.max(1.0);
+        let (cx, cy) = if mode_b {
+            match key {
+                "in_a" => (w * 0.22, 18.0),
+                "in_b" => (w * 0.62, 18.0),
+                "out_main" => (w - 18.0, h * 0.50),
+                "out_aux" => (w * 0.50, h - 18.0),
+                _ => return None,
+            }
         } else {
-            (280.0, 240.0)
-        }
+            match key {
+                "in_a" => (18.0, h * 0.22),
+                "in_b" => (18.0, h * 0.72),
+                "out_main" => (w - 18.0, h * 0.35),
+                "out_aux" => (w - 42.0, h * 0.80),
+                _ => return None,
+            }
+        };
+
+        let center = Point::new(Px(cx), Px(cy));
+        let bounds = Rect::new(
+            Point::new(Px(cx - r), Px(cy - r)),
+            Size::new(Px(2.0 * r), Px(2.0 * r)),
+        );
+        Some(PortAnchorHint { center, bounds })
     }
 }
 
 impl NodeGraphPresenter for DemoPresenter {
     fn geometry_revision(&self) -> u64 {
-        self.geom.geometry_revision()
+        1
     }
 
     fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str> {
@@ -168,32 +187,7 @@ impl NodeGraphPresenter for DemoPresenter {
         let p = graph.ports.get(&port)?;
         let key = p.key.0.as_str();
         let (w, h) = self.weird_size_px();
-
-        let r = style.pin_radius.max(1.0);
-        let (cx, cy) = if self.geom.is_mode_b() {
-            match key {
-                "in_a" => (w * 0.22, 18.0),
-                "in_b" => (w * 0.62, 18.0),
-                "out_main" => (w - 18.0, h * 0.50),
-                "out_aux" => (w * 0.50, h - 18.0),
-                _ => return None,
-            }
-        } else {
-            match key {
-                "in_a" => (18.0, h * 0.22),
-                "in_b" => (18.0, h * 0.72),
-                "out_main" => (w - 18.0, h * 0.35),
-                "out_aux" => (w - 42.0, h * 0.80),
-                _ => return None,
-            }
-        };
-
-        let center = Point::new(Px(cx), Px(cy));
-        let bounds = Rect::new(
-            Point::new(Px(cx - r), Px(cy - r)),
-            Size::new(Px(2.0 * r), Px(2.0 * r)),
-        );
-        Some(PortAnchorHint { center, bounds })
+        Self::weird_anchor_for_key(false, key, (w, h), style.pin_radius)
     }
 }
 
@@ -675,16 +669,18 @@ impl NodeGraphDemoDriver {
             .global::<NodeRegistry>()
             .expect("NodeRegistry global must exist")
             .clone();
-        let geom = app
-            .global::<Arc<DemoGeometryState>>()
-            .expect("DemoGeometryState global must exist")
+        let measured = app
+            .global::<Arc<MeasuredGeometryStore>>()
+            .expect("MeasuredGeometryStore global must exist")
             .clone();
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        let presenter =
+            MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.clone());
         let canvas = NodeGraphCanvas::new(models.graph, models.view)
-            .with_presenter(DemoPresenter::new(registry, geom))
+            .with_presenter(presenter)
             .with_close_command(CommandId::new("node_graph_demo.close"));
         let root = ui.create_node_retained(canvas);
         ui.set_root(root);
@@ -767,8 +763,72 @@ impl WinitAppDriver for NodeGraphDemoDriver {
         }
 
         if command.as_str() == CMD_TOGGLE_WEIRD_LAYOUT {
-            if let Some(geom) = app.global::<Arc<DemoGeometryState>>().cloned() {
-                geom.toggle();
+            let Some(toggle) = app.global::<Arc<DemoWeirdLayoutMeasuredState>>().cloned() else {
+                return;
+            };
+            let Some(measured) = app.global::<Arc<MeasuredGeometryStore>>().cloned() else {
+                return;
+            };
+            let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
+                return;
+            };
+
+            let enabled = toggle.toggle();
+            let pin_radius = 6.0;
+            let weird_targets = models
+                .graph
+                .read_ref(app, |g| {
+                    let mut targets = Vec::new();
+                    for (node_id, node) in &g.nodes {
+                        if node.kind.0.as_str() != WEIRD_KIND {
+                            continue;
+                        }
+
+                        let mut ports = Vec::new();
+                        for port_id in &node.ports {
+                            let Some(port) = g.ports.get(port_id) else {
+                                continue;
+                            };
+                            let key = port.key.0.as_str();
+                            if matches!(key, "in_a" | "in_b" | "out_main" | "out_aux") {
+                                ports.push((*port_id, key.to_string()));
+                            }
+                        }
+
+                        targets.push((*node_id, ports));
+                    }
+                    targets
+                })
+                .ok();
+
+            if let Some(targets) = weird_targets {
+                let weird_size_px = if enabled {
+                    (420.0, 120.0)
+                } else {
+                    (280.0, 240.0)
+                };
+                measured.update(|node_sizes, anchors| {
+                    for (node_id, ports) in targets {
+                        if enabled {
+                            node_sizes.insert(node_id, weird_size_px);
+                            for (port_id, key) in ports {
+                                if let Some(anchor) = DemoPresenter::weird_anchor_for_key(
+                                    true,
+                                    &key,
+                                    weird_size_px,
+                                    pin_radius,
+                                ) {
+                                    anchors.insert(port_id, anchor);
+                                }
+                            }
+                        } else {
+                            node_sizes.remove(&node_id);
+                            for (port_id, _) in ports {
+                                anchors.remove(&port_id);
+                            }
+                        }
+                    }
+                });
                 app.request_redraw(window);
             }
         }
@@ -830,7 +890,8 @@ pub fn run() -> anyhow::Result<()> {
     let view = app.models_mut().insert(NodeGraphViewState::default());
     app.set_global(NodeGraphDemoModels { graph, view });
     app.set_global(build_demo_registry());
-    app.set_global(Arc::new(DemoGeometryState::new()));
+    app.set_global(Arc::new(MeasuredGeometryStore::new()));
+    app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_demo".to_string(),
