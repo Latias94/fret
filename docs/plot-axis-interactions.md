@@ -31,6 +31,26 @@ Axis-only modifiers when the wheel is over the plot region:
 Note: ImPlot defaults do not include axis-only modifiers for the wheel, but we keep them because
 they are common in editor UIs and work well with axis locks.
 
+### Wheel zoom input mapping (PlotInputMap)
+
+The wheel zoom implementation uses `PlotInputMap` to decide when zoom is allowed and how it is
+constrained when the pointer is over the plot region.
+
+| InputMap field | Default | Effect |
+| --- | --- | --- |
+| `wheel_zoom_mod` | `None` | When set, wheel zoom only activates if the modifier is pressed. |
+| `wheel_zoom_x_only_mod` | `Some(Shift)` | Over plot region: zoom X only (Y zoom factor forced to 1.0). |
+| `wheel_zoom_y_only_mod` | `Some(Ctrl)` | Over plot region: zoom Y only (X zoom factor forced to 1.0). |
+
+Precedence rules (over the plot region):
+
+- If `wheel_zoom_mod` is set and not pressed, wheel zoom is ignored.
+- If `wheel_zoom_x_only_mod` matches, it takes precedence over `wheel_zoom_y_only_mod`.
+- Otherwise if `wheel_zoom_y_only_mod` matches, apply Y-only zoom.
+
+Over axis regions, the axis region routing takes precedence (X axis always X-only, Y axis always
+that axis only).
+
 ## Drag pan policy
 
 Pan is routed based on the region where the drag begins:

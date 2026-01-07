@@ -273,4 +273,10 @@ mod tests {
         assert_eq!(map.wheel_zoom_x_only_mod, Some(ModifierKey::Shift));
         assert_eq!(map.wheel_zoom_y_only_mod, Some(ModifierKey::Ctrl));
     }
+
+    #[test]
+    fn wheel_zoom_mod_is_none_by_default() {
+        let map = PlotInputMap::default();
+        assert_eq!(map.wheel_zoom_mod, None);
+    }
 }
