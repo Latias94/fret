@@ -9,17 +9,192 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::{UiFrameCx, UiTree};
 
+use std::sync::Arc;
+
 use fret_node::Graph;
 use fret_node::TypeDesc;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
+use fret_node::profile::{DataflowProfile, GraphProfile};
+use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
 use fret_node::ui::NodeGraphCanvas;
+use fret_node::ui::NodeGraphPresenter;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct DemoPresenter {
+    registry: NodeRegistry,
+    profile: DataflowProfile,
+}
+
+impl DemoPresenter {
+    fn new(registry: NodeRegistry) -> Self {
+        Self {
+            registry,
+            profile: DataflowProfile::new(),
+        }
+    }
+
+    fn schema_for_node<'a>(&'a self, graph: &'a Graph, node: NodeId) -> Option<&'a NodeSchema> {
+        let n = graph.nodes.get(&node)?;
+        self.registry.get(self.registry.resolve_kind(&n.kind))
+    }
+
+    fn schema_for_port<'a>(
+        &'a self,
+        graph: &'a Graph,
+        port: PortId,
+    ) -> Option<(&'a NodeSchema, &'a Port)> {
+        let p = graph.ports.get(&port)?;
+        let schema = self.schema_for_node(graph, p.node)?;
+        Some((schema, p))
+    }
+}
+
+impl NodeGraphPresenter for DemoPresenter {
+    fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str> {
+        self.schema_for_node(graph, node)
+            .map(|s| Arc::<str>::from(s.title.clone()))
+            .unwrap_or_else(|| {
+                graph
+                    .nodes
+                    .get(&node)
+                    .map(|n| Arc::<str>::from(n.kind.0.clone()))
+                    .unwrap_or_else(|| Arc::<str>::from("<missing node>"))
+            })
+    }
+
+    fn port_label(&self, graph: &Graph, port: PortId) -> Arc<str> {
+        if let Some((_schema, p)) = self.schema_for_port(graph, port) {
+            // Dynamic ports on `fret.variadic_merge` are labeled by key (`in0`, `in1`, ...).
+            if p.key.0.starts_with("in") {
+                return Arc::<str>::from(p.key.0.clone());
+            }
+        }
+
+        self.schema_for_port(graph, port)
+            .and_then(|(schema, p)| {
+                schema
+                    .ports
+                    .iter()
+                    .find(|decl| decl.key == p.key)
+                    .and_then(|decl| decl.label.as_ref())
+                    .map(|s| Arc::<str>::from(s.clone()))
+            })
+            .unwrap_or_else(|| {
+                graph
+                    .ports
+                    .get(&port)
+                    .map(|p| Arc::<str>::from(p.key.0.clone()))
+                    .unwrap_or_else(|| Arc::<str>::from("<missing port>"))
+            })
+    }
+
+    fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
+        Some(&mut self.profile)
+    }
+}
+
+fn build_demo_registry() -> NodeRegistry {
+    let mut reg = NodeRegistry::new();
+
+    reg.register(NodeSchema {
+        kind: NodeKindKey::new("demo.float"),
+        latest_kind_version: 1,
+        kind_aliases: Vec::new(),
+        title: "Float".to_string(),
+        category: vec!["Demo".to_string()],
+        keywords: vec!["number".to_string(), "float".to_string()],
+        ports: vec![PortDecl {
+            key: PortKey::new("out"),
+            dir: PortDirection::Out,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Multi,
+            ty: Some(TypeDesc::Float),
+            label: Some("Out".to_string()),
+        }],
+        default_data: serde_json::Value::Null,
+    });
+
+    reg.register(NodeSchema {
+        kind: NodeKindKey::new("fret.variadic_merge"),
+        latest_kind_version: 1,
+        kind_aliases: Vec::new(),
+        title: "Variadic Merge".to_string(),
+        category: vec!["Fret".to_string(), "Graph".to_string()],
+        keywords: vec!["variadic".to_string(), "merge".to_string()],
+        ports: vec![PortDecl {
+            key: PortKey::new("out"),
+            dir: PortDirection::Out,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Multi,
+            ty: Some(TypeDesc::Float),
+            label: Some("Out".to_string()),
+        }],
+        default_data: serde_json::Value::Null,
+    });
+
+    reg.register(NodeSchema {
+        kind: NodeKindKey::new("demo.add"),
+        latest_kind_version: 1,
+        kind_aliases: Vec::new(),
+        title: "Add".to_string(),
+        category: vec!["Demo".to_string(), "Math".to_string()],
+        keywords: vec!["add".to_string(), "+".to_string()],
+        ports: vec![
+            PortDecl {
+                key: PortKey::new("a"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: Some(TypeDesc::Float),
+                label: Some("A".to_string()),
+            },
+            PortDecl {
+                key: PortKey::new("b"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: Some(TypeDesc::Float),
+                label: Some("B".to_string()),
+            },
+            PortDecl {
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: Some(TypeDesc::Float),
+                label: Some("Out".to_string()),
+            },
+        ],
+        default_data: serde_json::Value::Null,
+    });
+
+    reg.register(NodeSchema {
+        kind: NodeKindKey::new("demo.output"),
+        latest_kind_version: 1,
+        kind_aliases: Vec::new(),
+        title: "Output".to_string(),
+        category: vec!["Demo".to_string()],
+        keywords: vec!["sink".to_string(), "output".to_string()],
+        ports: vec![PortDecl {
+            key: PortKey::new("in"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            ty: Some(TypeDesc::Float),
+            label: Some("In".to_string()),
+        }],
+        default_data: serde_json::Value::Null,
+    });
+
+    reg
 }
 
 fn build_demo_graph() -> Graph {
@@ -250,11 +425,16 @@ impl NodeGraphDemoDriver {
             .global::<NodeGraphDemoModels>()
             .expect("NodeGraphDemoModels global must exist")
             .clone();
+        let registry = app
+            .global::<NodeRegistry>()
+            .expect("NodeRegistry global must exist")
+            .clone();
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
         let canvas = NodeGraphCanvas::new(models.graph, models.view)
+            .with_presenter(DemoPresenter::new(registry))
             .with_close_command(CommandId::new("node_graph_demo.close"));
         let root = ui.create_node_retained(canvas);
         ui.set_root(root);
@@ -389,6 +569,7 @@ pub fn run() -> anyhow::Result<()> {
     let graph = app.models_mut().insert(build_demo_graph());
     let view = app.models_mut().insert(NodeGraphViewState::default());
     app.set_global(NodeGraphDemoModels { graph, view });
+    app.set_global(build_demo_registry());
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_demo".to_string(),
