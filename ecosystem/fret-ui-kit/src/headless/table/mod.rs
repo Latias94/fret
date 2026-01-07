@@ -30,7 +30,7 @@ pub use column_pinning::{
 };
 pub use column_sizing::{
     ColumnResizeDirection, ColumnResizeMode, begin_column_resize, column_can_resize,
-    drag_column_resize, end_column_resize, resolved_column_size,
+    column_resize_preview_size, drag_column_resize, end_column_resize, resolved_column_size,
 };
 pub use column_sizing::{ColumnSizingRegion, ColumnSizingState, column_size};
 pub use column_sizing_info::ColumnSizingInfoState;

@@ -18,9 +18,9 @@ use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::headless::table::{
     ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, FlatRowOrderCache,
-    FlatRowOrderDeps, Row, RowKey, SortSpec, TableState, begin_column_resize, column_size,
-    drag_column_resize, end_column_resize, is_column_visible, is_row_selected, order_columns,
-    split_pinned_columns,
+    FlatRowOrderDeps, Row, RowKey, SortSpec, TableState, begin_column_resize,
+    column_resize_preview_size, column_size, drag_column_resize, end_column_resize,
+    is_column_visible, is_row_selected, order_columns, split_pinned_columns,
 };
 
 fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
@@ -82,6 +82,36 @@ fn next_sort_for_column(current: Option<bool>) -> Option<bool> {
         Some(false) => Some(true),
         Some(true) => None,
     }
+}
+
+fn clamp_column_width<TData>(col: &ColumnDef<TData>, props: &TableViewProps, width: f32) -> Px {
+    let min_w = col.min_size.max(props.min_column_width.0).max(0.0);
+    let max_w = col.max_size.max(min_w);
+    Px(width.clamp(min_w, max_w))
+}
+
+fn resolve_column_width<TData>(
+    col: &ColumnDef<TData>,
+    state: &TableState,
+    props: &TableViewProps,
+) -> Px {
+    let base = column_size(&state.column_sizing, &col.id).unwrap_or(props.default_column_width.0);
+    let base = clamp_column_width(col, props, base);
+
+    if props.enable_column_resizing
+        && props.column_resize_mode == ColumnResizeMode::OnEnd
+        && state
+            .column_sizing_info
+            .is_resizing_column
+            .as_ref()
+            .is_some_and(|active| active.as_ref() == col.id.as_ref())
+    {
+        if let Some(preview) = column_resize_preview_size(&state.column_sizing_info, &col.id) {
+            return clamp_column_width(col, props, preview);
+        }
+    }
+
+    base
 }
 
 #[derive(Debug, Clone)]
@@ -273,12 +303,11 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                         &col.id,
                                                                     );
 
-                                                                    let col_w = column_size(
-                                                                        &state_value.column_sizing,
-                                                                        &col.id,
-                                                                    )
-                                                                    .map(|w| Px(w.max(0.0)))
-                                                                    .unwrap_or(props.default_column_width);
+                                                                    let col_w = resolve_column_width(
+                                                                        col,
+                                                                        &state_value,
+                                                                        &props,
+                                                                    );
 
                                                                     let cell_props = ContainerProps {
                                                                         padding: Edges::all(Px(0.0)),
@@ -353,8 +382,9 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                 if props.enable_column_resizing {
                                                                                     let col_id = col.id.clone();
                                                                                     let state_model = state.clone();
-                                                                                    let min_w = props.min_column_width;
                                                                                     let default_w = props.default_column_width;
+                                                                                    let min_w = col.min_size.max(props.min_column_width.0).max(0.0);
+                                                                                    let max_w = col.max_size.max(min_w);
                                                                                     let resize_mode = props.column_resize_mode;
                                                                                     let resize_direction = props.column_resize_direction;
 
@@ -395,7 +425,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             .get(&col_id_down)
                                                                                                             .copied()
                                                                                                             .unwrap_or(default_w.0)
-                                                                                                            .max(min_w.0);
+                                                                                                            .clamp(min_w, max_w);
                                                                                                         st.column_sizing.insert(col_id_down.clone(), start);
                                                                                                         begin_column_resize(
                                                                                                             &mut st.column_sizing_info,
@@ -424,9 +454,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             mv.position.x.0,
                                                                                                         );
                                                                                                         if let Some(next) = st.column_sizing.get(&col_id_move).copied() {
-                                                                                                            if next < min_w.0 {
-                                                                                                                st.column_sizing.insert(col_id_move.clone(), min_w.0);
-                                                                                                            }
+                                                                                                            st.column_sizing.insert(col_id_move.clone(), next.clamp(min_w, max_w));
                                                                                                         }
                                                                                                     });
                                                                                                     true
@@ -455,9 +483,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             Some(up.position.x.0),
                                                                                                         );
                                                                                                         if let Some(next) = st.column_sizing.get(&col_id_up).copied() {
-                                                                                                            if next < min_w.0 {
-                                                                                                                st.column_sizing.insert(col_id_up.clone(), min_w.0);
-                                                                                                            }
+                                                                                                            st.column_sizing.insert(col_id_up.clone(), next.clamp(min_w, max_w));
                                                                                                         }
                                                                                                     });
                                                                                                     true
@@ -612,13 +638,10 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                         |cx| {
                                                                             cols.iter()
                                                                                 .map(|col| {
-                                                                                    let col_w = column_size(
-                                                                                        &state_value.column_sizing,
-                                                                                        &col.id,
-                                                                                    )
-                                                                                    .map(|w| Px(w.max(0.0)))
-                                                                                    .unwrap_or(
-                                                                                        props.default_column_width,
+                                                                                    let col_w = resolve_column_width(
+                                                                                        col,
+                                                                                        &state_value,
+                                                                                        &props,
                                                                                     );
                                                                                     cx.container(
                                                                                         ContainerProps {

@@ -43,6 +43,17 @@ fn round_column_size(size: f32) -> f32 {
     (size * 100.0).round() / 100.0
 }
 
+pub fn column_resize_preview_size(info: &ColumnSizingInfoState, column: &ColumnId) -> Option<f32> {
+    let delta_percentage = info.delta_percentage?;
+    let (_, start) = info
+        .column_sizing_start
+        .iter()
+        .find(|(id, _)| id.as_ref() == column.as_ref())?;
+    Some(round_column_size(
+        (*start + *start * delta_percentage).max(0.0),
+    ))
+}
+
 pub fn begin_column_resize(
     info: &mut ColumnSizingInfoState,
     resizing_column: ColumnId,
@@ -285,5 +296,32 @@ mod tests {
         assert_eq!(sizing.get(&ColumnId::from("a")).copied(), Some(50.0));
         assert_eq!(info.delta_offset, Some(-50.0));
         assert_eq!(info.delta_percentage, Some(-0.5));
+    }
+
+    #[test]
+    fn column_resize_preview_reads_from_info_without_touching_sizing() {
+        let mut sizing = ColumnSizingState::default();
+        let mut info = ColumnSizingInfoState::default();
+
+        begin_column_resize(
+            &mut info,
+            ColumnId::from("a"),
+            0.0,
+            vec![(ColumnId::from("a"), 100.0)],
+        );
+
+        drag_column_resize(
+            ColumnResizeMode::OnEnd,
+            ColumnResizeDirection::Ltr,
+            &mut sizing,
+            &mut info,
+            50.0,
+        );
+
+        assert!(sizing.is_empty());
+        assert_eq!(
+            column_resize_preview_size(&info, &ColumnId::from("a")),
+            Some(150.0)
+        );
     }
 }
