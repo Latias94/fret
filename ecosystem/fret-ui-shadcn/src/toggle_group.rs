@@ -64,8 +64,14 @@ pub use fret_ui_kit::primitives::toggle_group::{ToggleGroupKind, ToggleGroupOrie
 
 #[derive(Clone)]
 enum ToggleGroupModel {
-    Single(Model<Option<Arc<str>>>),
-    Multiple(Model<Vec<Arc<str>>>),
+    Single {
+        model: Option<Model<Option<Arc<str>>>>,
+        default_value: Option<Arc<str>>,
+    },
+    Multiple {
+        model: Option<Model<Vec<Arc<str>>>>,
+        default_value: Vec<Arc<str>>,
+    },
 }
 
 #[derive(Clone)]
@@ -125,8 +131,8 @@ pub struct ToggleGroup {
 impl std::fmt::Debug for ToggleGroup {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let kind = match &self.model {
-            ToggleGroupModel::Single(_) => ToggleGroupKind::Single,
-            ToggleGroupModel::Multiple(_) => ToggleGroupKind::Multiple,
+            ToggleGroupModel::Single { .. } => ToggleGroupKind::Single,
+            ToggleGroupModel::Multiple { .. } => ToggleGroupKind::Multiple,
         };
         f.debug_struct("ToggleGroup")
             .field("kind", &kind)
@@ -146,7 +152,30 @@ impl std::fmt::Debug for ToggleGroup {
 impl ToggleGroup {
     pub fn single(model: Model<Option<Arc<str>>>) -> Self {
         Self {
-            model: ToggleGroupModel::Single(model),
+            model: ToggleGroupModel::Single {
+                model: Some(model),
+                default_value: None,
+            },
+            items: Vec::new(),
+            disabled: false,
+            orientation: ToggleGroupOrientation::default(),
+            loop_navigation: true,
+            variant: ToggleVariant::default(),
+            size: ToggleSize::default(),
+            spacing: Space::N0,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates an uncontrolled single-select toggle group with an optional initial value (Radix
+    /// `defaultValue`).
+    pub fn single_uncontrolled<T: Into<Arc<str>>>(default_value: Option<T>) -> Self {
+        Self {
+            model: ToggleGroupModel::Single {
+                model: None,
+                default_value: default_value.map(Into::into),
+            },
             items: Vec::new(),
             disabled: false,
             orientation: ToggleGroupOrientation::default(),
@@ -161,7 +190,30 @@ impl ToggleGroup {
 
     pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {
         Self {
-            model: ToggleGroupModel::Multiple(model),
+            model: ToggleGroupModel::Multiple {
+                model: Some(model),
+                default_value: Vec::new(),
+            },
+            items: Vec::new(),
+            disabled: false,
+            orientation: ToggleGroupOrientation::default(),
+            loop_navigation: true,
+            variant: ToggleVariant::default(),
+            size: ToggleSize::default(),
+            spacing: Space::N0,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates an uncontrolled multi-select toggle group with an initial set of values (Radix
+    /// `defaultValue`).
+    pub fn multiple_uncontrolled(default_value: Vec<Arc<str>>) -> Self {
+        Self {
+            model: ToggleGroupModel::Multiple {
+                model: None,
+                default_value,
+            },
             items: Vec::new(),
             disabled: false,
             orientation: ToggleGroupOrientation::default(),
@@ -239,9 +291,33 @@ impl ToggleGroup {
 
         let theme = Theme::global(&*cx.app).clone();
 
-        let (selected_single, selected_multi) = match &model {
-            ToggleGroupModel::Single(m) => (cx.watch_model(m).layout().cloned().flatten(), None),
-            ToggleGroupModel::Multiple(m) => (None, cx.watch_model(m).layout().cloned()),
+        let (model_single, model_multi, selected_single, selected_multi) = match &model {
+            ToggleGroupModel::Single {
+                model: controlled,
+                default_value,
+            } => {
+                let model = fret_ui_kit::primitives::toggle_group::toggle_group_use_single_model(
+                    cx,
+                    controlled.clone(),
+                    || default_value.clone(),
+                )
+                .model();
+                let selected = cx.watch_model(&model).layout().cloned().flatten();
+                (Some(model), None, selected, None)
+            }
+            ToggleGroupModel::Multiple {
+                model: controlled,
+                default_value,
+            } => {
+                let model = fret_ui_kit::primitives::toggle_group::toggle_group_use_multiple_model(
+                    cx,
+                    controlled.clone(),
+                    || default_value.clone(),
+                )
+                .model();
+                let selected = cx.watch_model(&model).layout().cloned();
+                (None, Some(model), None, selected)
+            }
         };
 
         let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
@@ -295,11 +371,6 @@ impl ToggleGroup {
                 border_color: Some(ColorRef::Color(border)),
                 ..Default::default()
             },
-        };
-
-        let (model_single, model_multi) = match &model {
-            ToggleGroupModel::Single(m) => (Some(m.clone()), None),
-            ToggleGroupModel::Multiple(m) => (None, Some(m.clone())),
         };
 
         let roving = RovingFocusProps {
@@ -498,12 +569,32 @@ pub fn toggle_group_single<H: UiHost>(
     ToggleGroup::single(model).items(f(cx)).into_element(cx)
 }
 
+pub fn toggle_group_single_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+    cx: &mut ElementContext<'_, H>,
+    default_value: Option<T>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
+) -> AnyElement {
+    ToggleGroup::single_uncontrolled(default_value)
+        .items(f(cx))
+        .into_element(cx)
+}
+
 pub fn toggle_group_multiple<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<Arc<str>>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
 ) -> AnyElement {
     ToggleGroup::multiple(model).items(f(cx)).into_element(cx)
+}
+
+pub fn toggle_group_multiple_uncontrolled<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    default_value: Vec<Arc<str>>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ToggleGroupItem>,
+) -> AnyElement {
+    ToggleGroup::multiple_uncontrolled(default_value)
+        .items(f(cx))
+        .into_element(cx)
 }
 
 #[cfg(test)]
@@ -584,6 +675,74 @@ mod tests {
                     ToggleGroupItem::new("gamma", vec![]),
                 ];
                 vec![ToggleGroup::single(model).items(items).into_element(cx)]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_single_uncontrolled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_value: Option<Arc<str>>,
+    ) -> fret_core::NodeId {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "toggle-group-single-uncontrolled",
+            |cx| {
+                let items = vec![
+                    ToggleGroupItem::new("alpha", vec![]),
+                    ToggleGroupItem::new("beta", vec![]),
+                    ToggleGroupItem::new("gamma", vec![]),
+                ];
+                vec![
+                    ToggleGroup::single_uncontrolled(default_value.clone())
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_multiple_uncontrolled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_value: Vec<Arc<str>>,
+    ) -> fret_core::NodeId {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "toggle-group-multiple-uncontrolled",
+            |cx| {
+                let items = vec![
+                    ToggleGroupItem::new("alpha", vec![]),
+                    ToggleGroupItem::new("beta", vec![]),
+                    ToggleGroupItem::new("gamma", vec![]),
+                ];
+                vec![
+                    ToggleGroup::multiple_uncontrolled(default_value.clone())
+                        .items(items)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -712,5 +871,163 @@ mod tests {
             .expect("focused node");
         assert_eq!(focused_node.role, SemanticsRole::RadioButton);
         assert_eq!(focused_node.label.as_deref(), Some("beta"));
+    }
+
+    #[test]
+    fn toggle_group_single_uncontrolled_applies_default_value_once_and_allows_deactivate() {
+        fn checked(ui: &UiTree<App>, label: &str) -> Option<bool> {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some(label))
+                .and_then(|n| n.flags.checked)
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = render_single_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("alpha")),
+        );
+        assert_eq!(checked(&ui, "alpha"), Some(true));
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let _ = render_single_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("alpha")),
+        );
+        assert_eq!(checked(&ui, "alpha"), Some(false));
+
+        // The internal model should not be reset by repeatedly passing the same default value.
+        let _ = render_single_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("alpha")),
+        );
+        assert_eq!(checked(&ui, "alpha"), Some(false));
+    }
+
+    #[test]
+    fn toggle_group_multiple_uncontrolled_applies_default_value_once_and_allows_toggle() {
+        fn selected(ui: &UiTree<App>, label: &str) -> bool {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some(label))
+                .is_some_and(|n| n.flags.selected)
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let default_value = vec![Arc::from("alpha"), Arc::from("gamma")];
+        let root = render_multiple_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            default_value.clone(),
+        );
+        assert!(selected(&ui, "alpha"));
+        assert!(selected(&ui, "gamma"));
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let _ = render_multiple_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            default_value.clone(),
+        );
+        assert!(!selected(&ui, "alpha"));
+        assert!(selected(&ui, "gamma"));
+
+        // The internal model should not be reset by repeatedly passing the same default value.
+        let _ = render_multiple_uncontrolled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            default_value,
+        );
+        assert!(!selected(&ui, "alpha"));
+        assert!(selected(&ui, "gamma"));
     }
 }

@@ -25,6 +25,7 @@ examples in `repo-ref/ui`.
   `AccordionContent` surface mirroring Radix/shadcn.
 - Pass: Supports both single and multiple open models (`Model<Option<Arc<str>>>` and
   `Model<Vec<Arc<str>>>`), including `collapsible(true)` in the single-open mode.
+- Pass: Supports uncontrolled `defaultValue` (internal selection model).
 
 Note: A fully composable, Radix-shaped surface exists in the primitives layer for non-shadcn users
 (`fret-ui-kit::primitives::accordion::AccordionRoot` / `AccordionTrigger` / `AccordionContent`),

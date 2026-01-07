@@ -95,6 +95,26 @@ impl AccordionRoot {
         }
     }
 
+    /// Creates an accordion root with a controlled/uncontrolled selection model (Radix `value` /
+    /// `defaultValue`).
+    ///
+    /// Notes:
+    /// - The internal model (uncontrolled mode) is stored in element state at the call site.
+    /// - Call this from a stable subtree (key the root node if you need state to survive reordering).
+    pub fn single_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        controlled: Option<Model<Option<Arc<str>>>>,
+        default_value: impl FnOnce() -> Option<Arc<str>>,
+    ) -> Self {
+        let model = crate::primitives::controllable_state::use_controllable_model(
+            cx,
+            controlled,
+            default_value,
+        )
+        .model();
+        Self::single(model)
+    }
+
     pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {
         Self {
             kind: AccordionKind::Multiple,
@@ -104,6 +124,26 @@ impl AccordionRoot {
             disabled: false,
             loop_navigation: true,
         }
+    }
+
+    /// Creates an accordion root with a controlled/uncontrolled selection model (Radix `value` /
+    /// `defaultValue`).
+    ///
+    /// Notes:
+    /// - The internal model (uncontrolled mode) is stored in element state at the call site.
+    /// - Call this from a stable subtree (key the root node if you need state to survive reordering).
+    pub fn multiple_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        controlled: Option<Model<Vec<Arc<str>>>>,
+        default_value: impl FnOnce() -> Vec<Arc<str>>,
+    ) -> Self {
+        let model = crate::primitives::controllable_state::use_controllable_model(
+            cx,
+            controlled,
+            default_value,
+        )
+        .model();
+        Self::multiple(model)
     }
 
     pub fn kind(&self) -> AccordionKind {

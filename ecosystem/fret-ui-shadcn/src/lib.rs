@@ -69,7 +69,8 @@ pub mod tooltip;
 
 pub use accordion::{
     Accordion, AccordionContent, AccordionItem, AccordionKind, AccordionTrigger,
-    accordion_multiple, accordion_single,
+    accordion_multiple, accordion_multiple_uncontrolled, accordion_single,
+    accordion_single_uncontrolled,
 };
 pub use alert::{Alert, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{
@@ -182,7 +183,8 @@ pub use tabs::{Tabs, TabsItem, tabs, tabs_uncontrolled};
 pub use textarea::{Textarea, textarea};
 pub use toggle::{Toggle, ToggleSize, ToggleVariant, toggle};
 pub use toggle_group::{
-    ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple, toggle_group_single,
+    ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,
+    toggle_group_multiple_uncontrolled, toggle_group_single, toggle_group_single_uncontrolled,
 };
 pub use tooltip::{
     Tooltip, TooltipAlign, TooltipAnchor, TooltipContent, TooltipProvider, TooltipSide,

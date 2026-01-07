@@ -21,6 +21,7 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 ### Composition surface
 
 - Pass: Supports `single` (`Model<Option<Arc<str>>>`) and `multiple` (`Model<Vec<Arc<str>>>`) modes.
+- Pass: Supports uncontrolled `defaultValue` (internal selection model).
 - Pass: Supports `orientation` and `loop_navigation` (Radix `orientation` / `loop` outcomes).
 - Pass: Supports `variant` (`default` / `outline`) and size (`sm` / `default` / `lg`).
 - Pass: Supports `spacing(...)` (gap between items).

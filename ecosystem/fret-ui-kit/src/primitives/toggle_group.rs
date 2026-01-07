@@ -9,7 +9,9 @@
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
+use fret_runtime::Model;
 use fret_ui::element::PressableA11y;
+use fret_ui::{ElementContext, UiHost};
 
 /// Matches Radix ToggleGroup `type` outcome.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,6 +54,26 @@ pub fn toggle_group_item_a11y_single(label: Arc<str>, checked: bool) -> Pressabl
 /// Back-compat shim: treated as the multiple-select button-like outcome.
 pub fn toggle_group_item_a11y(label: Arc<str>, pressed: bool) -> PressableA11y {
     toggle_group_item_a11y_multiple(label, pressed)
+}
+
+/// Returns a selection model for a single-select toggle group that behaves like Radix
+/// `useControllableState` (`value` / `defaultValue`).
+pub fn toggle_group_use_single_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled: Option<Model<Option<Arc<str>>>>,
+    default_value: impl FnOnce() -> Option<Arc<str>>,
+) -> crate::primitives::controllable_state::ControllableModel<Option<Arc<str>>> {
+    crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
+}
+
+/// Returns a selection model for a multi-select toggle group that behaves like Radix
+/// `useControllableState` (`value` / `defaultValue`).
+pub fn toggle_group_use_multiple_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled: Option<Model<Vec<Arc<str>>>>,
+    default_value: impl FnOnce() -> Vec<Arc<str>>,
+) -> crate::primitives::controllable_state::ControllableModel<Vec<Arc<str>>> {
+    crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
 }
 
 /// Derive the "tab stop" index for a single-select toggle group:

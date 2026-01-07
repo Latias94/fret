@@ -29,6 +29,8 @@ Fret does not use React context. Instead, toggle-group behavior is composed via:
 ## Current parity notes
 
 - Pass: `single` / `multiple` selection outcomes are supported by shadcn recipes.
+- Pass: Controlled/uncontrolled selection (`value` / `defaultValue`) is supported via
+  `ecosystem/fret-ui-kit/src/primitives/controllable_state.rs`.
 - Pass: `orientation` + `loop` outcomes are supported via `RovingFlex` + APG navigation.
 - Pass: Item semantics matches Radix outcomes: `single` mode uses `RadioButton` + `checked`, while
   `multiple` mode uses a button-like `selected` flag (pressed).

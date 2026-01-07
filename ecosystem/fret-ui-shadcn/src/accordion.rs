@@ -55,11 +55,13 @@ pub use fret_ui_kit::primitives::accordion::AccordionKind;
 #[derive(Clone)]
 enum AccordionModel {
     Single {
-        model: Model<Option<Arc<str>>>,
+        model: Option<Model<Option<Arc<str>>>>,
+        default_value: Option<Arc<str>>,
         collapsible: bool,
     },
     Multiple {
-        model: Model<Vec<Arc<str>>>,
+        model: Option<Model<Vec<Arc<str>>>>,
+        default_value: Vec<Arc<str>>,
     },
 }
 
@@ -387,7 +389,7 @@ pub struct Accordion {
 
 impl std::fmt::Debug for Accordion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let kind = match self.model {
+        let kind = match &self.model {
             AccordionModel::Single { .. } => AccordionKind::Single,
             AccordionModel::Multiple { .. } => AccordionKind::Multiple,
         };
@@ -404,7 +406,22 @@ impl Accordion {
     pub fn single(model: Model<Option<Arc<str>>>) -> Self {
         Self {
             model: AccordionModel::Single {
-                model,
+                model: Some(model),
+                default_value: None,
+                collapsible: false,
+            },
+            items: Vec::new(),
+            disabled: false,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates an uncontrolled accordion with an optional initial value (Radix `defaultValue`).
+    pub fn single_uncontrolled<T: Into<Arc<str>>>(default_value: Option<T>) -> Self {
+        Self {
+            model: AccordionModel::Single {
+                model: None,
+                default_value: default_value.map(Into::into),
                 collapsible: false,
             },
             items: Vec::new(),
@@ -415,7 +432,23 @@ impl Accordion {
 
     pub fn multiple(model: Model<Vec<Arc<str>>>) -> Self {
         Self {
-            model: AccordionModel::Multiple { model },
+            model: AccordionModel::Multiple {
+                model: Some(model),
+                default_value: Vec::new(),
+            },
+            items: Vec::new(),
+            disabled: false,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates an uncontrolled accordion with an initial set of values (Radix `defaultValue`).
+    pub fn multiple_uncontrolled(default_value: Vec<Arc<str>>) -> Self {
+        Self {
+            model: AccordionModel::Multiple {
+                model: None,
+                default_value,
+            },
             items: Vec::new(),
             disabled: false,
             layout: LayoutRefinement::default(),
@@ -425,10 +458,15 @@ impl Accordion {
     pub fn collapsible(mut self, collapsible: bool) -> Self {
         if let AccordionModel::Single {
             model,
+            default_value,
             collapsible: _,
         } = self.model
         {
-            self.model = AccordionModel::Single { model, collapsible };
+            self.model = AccordionModel::Single {
+                model,
+                default_value,
+                collapsible,
+            };
         }
         self
     }
@@ -463,11 +501,21 @@ impl Accordion {
             let layout = self.layout;
 
             let root = match &model {
-                AccordionModel::Single { model, collapsible } => {
-                    radix_accordion::AccordionRoot::single(model.clone()).collapsible(*collapsible)
-                }
-                AccordionModel::Multiple { model } => {
-                    radix_accordion::AccordionRoot::multiple(model.clone())
+                AccordionModel::Single {
+                    model,
+                    default_value,
+                    collapsible,
+                } => radix_accordion::AccordionRoot::single_controllable(cx, model.clone(), || {
+                    default_value.clone()
+                })
+                .collapsible(*collapsible),
+                AccordionModel::Multiple {
+                    model,
+                    default_value,
+                } => {
+                    radix_accordion::AccordionRoot::multiple_controllable(cx, model.clone(), || {
+                        default_value.clone()
+                    })
                 }
             }
             .disabled(group_disabled)
@@ -620,12 +668,32 @@ pub fn accordion_single<H: UiHost>(
     Accordion::single(model).items(f(cx)).into_element(cx)
 }
 
+pub fn accordion_single_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
+    cx: &mut ElementContext<'_, H>,
+    default_value: Option<T>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
+) -> AnyElement {
+    Accordion::single_uncontrolled(default_value)
+        .items(f(cx))
+        .into_element(cx)
+}
+
 pub fn accordion_multiple<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<Vec<Arc<str>>>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
 ) -> AnyElement {
     Accordion::multiple(model).items(f(cx)).into_element(cx)
+}
+
+pub fn accordion_multiple_uncontrolled<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    default_value: Vec<Arc<str>>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AccordionItem>,
+) -> AnyElement {
+    Accordion::multiple_uncontrolled(default_value)
+        .items(f(cx))
+        .into_element(cx)
 }
 
 #[cfg(test)]
@@ -725,6 +793,41 @@ mod tests {
         ui.set_root(root);
     }
 
+    fn render_accordion_frame_uncontrolled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_value: Option<Arc<str>>,
+        collapsible: bool,
+    ) {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let item_1 = AccordionItem::new(
+                    Arc::from("item-1"),
+                    AccordionTrigger::new(vec![cx.text("Item 1")])
+                        .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0)))),
+                    AccordionContent::new(vec![cx.text("Content 1")]),
+                );
+                let item_2 = AccordionItem::new(
+                    Arc::from("item-2"),
+                    AccordionTrigger::new(vec![cx.text("Item 2")])
+                        .refine_layout(LayoutRefinement::default().h_px(MetricRef::Px(Px(40.0)))),
+                    AccordionContent::new(vec![cx.text("Content 2")]),
+                );
+
+                let accordion = Accordion::single_uncontrolled(default_value.clone())
+                    .collapsible(collapsible)
+                    .items([item_1, item_2])
+                    .into_element(cx);
+
+                vec![accordion]
+            });
+
+        ui.set_root(root);
+    }
+
     fn render_accordion_frame_with_semantics(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -738,6 +841,31 @@ mod tests {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
 
         render_accordion_frame(ui, app, services, window, bounds, open, collapsible);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_accordion_frame_uncontrolled_with_semantics(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_value: Option<Arc<str>>,
+        collapsible: bool,
+    ) {
+        app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+        render_accordion_frame_uncontrolled(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            default_value,
+            collapsible,
+        );
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
     }
@@ -776,6 +904,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -786,6 +915,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(
@@ -802,6 +932,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -812,6 +943,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(app.models().get_cloned(&open).flatten().as_deref(), None);
@@ -825,6 +957,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -835,6 +968,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(
@@ -877,6 +1011,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -887,6 +1022,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(
@@ -903,6 +1039,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         ui.dispatch_event(
@@ -913,6 +1050,7 @@ mod tests {
                 button: fret_core::MouseButton::Left,
                 modifiers: fret_core::Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
             }),
         );
         assert_eq!(
@@ -1044,6 +1182,94 @@ mod tests {
                 true,
             );
         }
+        assert!(!snapshot_has_label(&ui, "Content 1"));
+    }
+
+    #[test]
+    fn accordion_single_uncontrolled_applies_default_value_once_and_does_not_reset() {
+        fn snapshot_has_label(ui: &UiTree<App>, label: &str) -> bool {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .any(|n| n.label.as_deref() == Some(label))
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        render_accordion_frame_uncontrolled_with_semantics(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            Some(Arc::from("item-1")),
+            false,
+        );
+        assert!(snapshot_has_label(&ui, "Content 1"));
+
+        // Click second trigger to open item-2.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: Point::new(Px(10.0), Px(60.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                position: Point::new(Px(10.0), Px(60.0)),
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        // Render enough frames for presence to settle and for the previous content to unmount.
+        for _ in 0..24 {
+            render_accordion_frame_uncontrolled_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                Some(Arc::from("item-1")),
+                false,
+            );
+        }
+
+        assert!(snapshot_has_label(&ui, "Content 2"));
+        assert!(!snapshot_has_label(&ui, "Content 1"));
+
+        // The internal model should not reset back to default_value on subsequent renders.
+        for _ in 0..8 {
+            render_accordion_frame_uncontrolled_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                Some(Arc::from("item-1")),
+                false,
+            );
+        }
+        assert!(snapshot_has_label(&ui, "Content 2"));
         assert!(!snapshot_has_label(&ui, "Content 1"));
     }
 }
