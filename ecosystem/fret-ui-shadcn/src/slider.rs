@@ -123,6 +123,19 @@ impl Slider {
         }
     }
 
+    /// Creates a slider with a controlled/uncontrolled values model (Radix `value` / `defaultValue`).
+    ///
+    /// Note: If `value` is `None`, the internal model is stored in element state at the call site.
+    /// Call this from a stable subtree (key the parent node if needed).
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        value: Option<Model<Vec<f32>>>,
+        default_value: impl FnOnce() -> Vec<f32>,
+    ) -> Self {
+        let model = radix_slider::slider_use_values_model(cx, value, default_value).model();
+        Self::new(model)
+    }
+
     pub fn range(mut self, min: f32, max: f32) -> Self {
         self.min = min;
         self.max = max;
@@ -715,12 +728,12 @@ mod tests {
         assert_eq!(values.len(), 2);
         assert!(
             (values[0] - 10.0).abs() < 0.01,
-            "expected first thumb鈮?0, got {}",
+            "expected first thumb ~= 10, got {}",
             values[0]
         );
         assert!(
             (values[1] - 100.0).abs() < 0.01,
-            "expected second thumb鈮?00, got {}",
+            "expected second thumb ~= 100, got {}",
             values[1]
         );
     }

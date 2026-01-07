@@ -14,7 +14,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -306,10 +305,9 @@ impl Tabs {
         let layout = self.layout;
         let force_mount_content = self.force_mount_content;
 
-        let model = controllable_state::use_controllable_model(cx, controlled_model, || {
-            default_value.clone()
-        })
-        .model();
+        let model =
+            radix_tabs::tabs_use_value_model(cx, controlled_model, || default_value.clone())
+                .model();
 
         let theme = Theme::global(&*cx.app).clone();
         let gap = tabs_gap(&theme);
