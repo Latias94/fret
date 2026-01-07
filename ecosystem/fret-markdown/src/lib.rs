@@ -190,13 +190,7 @@ pub fn markdown_with<H: UiHost>(
     let theme = Theme::global(&*cx.app).clone();
     let markdown_theme = MarkdownTheme::resolve(&theme);
 
-    // mdstream defaults to `FootnotesMode::SingleBlock`, which intentionally collapses documents
-    // with footnotes into one block (stability-first). For UI rendering we prefer keeping blocks
-    // so headings, lists, math blocks, etc can be laid out independently.
-    let mut stream = mdstream::MdStream::new(mdstream::Options {
-        footnotes: mdstream::FootnotesMode::Invalidate,
-        ..Default::default()
-    });
+    let mut stream = mdstream::MdStream::new(mdstream_options_for_markdown());
     let update = stream.append(source);
 
     let mut state = MarkdownPulldownState::new();
@@ -211,6 +205,16 @@ pub fn markdown_with<H: UiHost>(
         &state.adapter,
         components,
     )
+}
+
+pub fn mdstream_options_for_markdown() -> mdstream::Options {
+    // mdstream defaults to `FootnotesMode::SingleBlock`, which intentionally collapses documents
+    // with footnotes into one block (stability-first). For UI rendering we prefer keeping blocks
+    // so headings, lists, math blocks, etc can be laid out independently.
+    mdstream::Options {
+        footnotes: mdstream::FootnotesMode::Invalidate,
+        ..Default::default()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -848,6 +852,50 @@ impl MarkdownPulldownState {
 }
 
 impl Default for MarkdownPulldownState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug)]
+pub struct MarkdownStreamState {
+    opts: mdstream::Options,
+    stream: mdstream::MdStream,
+    state: MarkdownPulldownState,
+}
+
+impl MarkdownStreamState {
+    pub fn new() -> Self {
+        Self::new_with_options(mdstream_options_for_markdown())
+    }
+
+    pub fn new_with_options(opts: mdstream::Options) -> Self {
+        Self {
+            stream: mdstream::MdStream::new(opts.clone()),
+            opts,
+            state: MarkdownPulldownState::new(),
+        }
+    }
+
+    pub fn state(&self) -> &MarkdownPulldownState {
+        &self.state
+    }
+
+    pub fn clear(&mut self) {
+        self.stream = mdstream::MdStream::new(self.opts.clone());
+        self.state.clear();
+    }
+
+    pub fn append(&mut self, chunk: &str) -> mdstream::AppliedUpdate {
+        self.state.apply_update(self.stream.append(chunk))
+    }
+
+    pub fn finalize(&mut self) -> mdstream::AppliedUpdate {
+        self.state.apply_update(self.stream.finalize())
+    }
+}
+
+impl Default for MarkdownStreamState {
     fn default() -> Self {
         Self::new()
     }
@@ -3301,6 +3349,37 @@ mod tests {
         let _a2 = state.apply_update(u2);
         assert_eq!(state.doc().committed().len(), 2);
         assert!(state.doc().pending().is_none());
+    }
+
+    #[test]
+    fn markdown_stream_state_keeps_blocks_with_footnotes() {
+        let source = r#"# A
+
+Footnotes are supported.[^note]
+
+[^note]: This is a footnote definition.
+
+$$
+\int_0^1 x^2\,dx = \frac{1}{3}
+$$
+"#;
+
+        let mut st = MarkdownStreamState::new();
+        st.append(source);
+        st.finalize();
+
+        let committed = st.state().doc().committed();
+        assert!(committed.len() > 1);
+        assert!(
+            committed
+                .iter()
+                .any(|b| b.kind == mdstream::BlockKind::FootnoteDefinition)
+        );
+        assert!(
+            committed
+                .iter()
+                .any(|b| b.kind == mdstream::BlockKind::MathBlock)
+        );
     }
 
     #[test]
