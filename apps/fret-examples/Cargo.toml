@@ -11,8 +11,8 @@ hotpatch = ["fret-launch/hotpatch-subsecond"]
 [dependencies]
 anyhow.workspace = true
 fret-icons = { path = "../../ecosystem/fret-icons" }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs"] }
-fret-app-kit = { path = "../../ecosystem/fret-app-kit" }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "ui-app-driver"] }
+fret-ui-assets = { path = "../../ecosystem/fret-ui-assets" }
 fret-ui-docking = { path = "../../ecosystem/fret-ui-docking" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["table"] }
@@ -27,6 +27,7 @@ fret-app = { path = "../../crates/fret-app" }
 fret-ui-app = { path = "../../crates/fret-ui-app" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-rust"] }
+fret-code-view = { path = "../../ecosystem/fret-code-view" }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 winit.workspace = true
