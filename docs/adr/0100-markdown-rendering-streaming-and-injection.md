@@ -19,6 +19,8 @@ Key constraints and requirements:
 4) **Injection points**: Apps must be able to render certain nodes with their own components (callouts, code block actions, custom links/images).
 5) **Syntax highlighting**: Code fences should support tree-sitter highlighting with language injections.
 6) **Security posture**: Markdown rendering must not execute content or perform I/O by default.
+7) **Selection & copy** (expected): Rich content surfaces should support mouse selection and
+   clipboard extraction without coupling selection semantics to the element tree structure (see ADR 0110).
 
 We reference:
 
