@@ -3,9 +3,25 @@ use std::sync::Arc;
 use fret_core::Color;
 
 use crate::core::{EdgeId, Graph, NodeId, PortId, PortKind};
+use crate::ops::GraphOp;
 use crate::rules::{ConnectPlan, EdgeEndpoint, plan_connect, plan_reconnect_edge};
 
 use super::style::NodeGraphStyle;
+
+/// Context menu actions surfaced by the canvas widget.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum NodeGraphContextMenuAction {
+    DeleteEdge,
+    Custom(u64),
+}
+
+/// A context menu item.
+#[derive(Debug, Clone)]
+pub struct NodeGraphContextMenuItem {
+    pub label: Arc<str>,
+    pub enabled: bool,
+    pub action: NodeGraphContextMenuAction,
+}
 
 /// Viewer/presenter surface for the node graph UI.
 ///
@@ -33,6 +49,32 @@ pub trait NodeGraphPresenter {
             crate::core::EdgeKind::Data => style.wire_color_data,
             crate::core::EdgeKind::Exec => style.wire_color_exec,
         }
+    }
+
+    /// Fills the right-click context menu for an edge.
+    ///
+    /// The canvas will append built-in actions (e.g. `Delete`) after these items.
+    fn fill_edge_context_menu(
+        &mut self,
+        graph: &Graph,
+        edge: EdgeId,
+        _style: &NodeGraphStyle,
+        _out: &mut Vec<NodeGraphContextMenuItem>,
+    ) {
+        let _ = (graph, edge);
+    }
+
+    /// Handles a custom context menu action.
+    ///
+    /// Returning `Some(ops)` applies them as a single transaction.
+    fn on_edge_context_menu_action(
+        &mut self,
+        graph: &Graph,
+        edge: EdgeId,
+        action: u64,
+    ) -> Option<Vec<GraphOp>> {
+        let _ = (graph, edge, action);
+        None
     }
 
     /// Connection decision point.

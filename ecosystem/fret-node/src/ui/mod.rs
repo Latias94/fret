@@ -9,5 +9,8 @@ pub mod presenter;
 pub mod style;
 
 pub use canvas::NodeGraphCanvas;
-pub use presenter::{DefaultNodeGraphPresenter, NodeGraphPresenter};
+pub use presenter::{
+    DefaultNodeGraphPresenter, NodeGraphContextMenuAction, NodeGraphContextMenuItem,
+    NodeGraphPresenter,
+};
 pub use style::NodeGraphStyle;

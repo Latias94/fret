@@ -1,4 +1,4 @@
-use fret_core::Color;
+use fret_core::{Color, Px, TextStyle};
 
 /// Visual tuning for the node graph canvas.
 #[derive(Debug, Clone)]
@@ -28,6 +28,20 @@ pub struct NodeGraphStyle {
     pub wire_color_data: Color,
     pub wire_color_exec: Color,
     pub wire_color_preview: Color,
+
+    pub wire_width_selected_mul: f32,
+    pub wire_width_hover_mul: f32,
+
+    pub context_menu_width: f32,
+    pub context_menu_padding: f32,
+    pub context_menu_item_height: f32,
+    pub context_menu_corner_radius: f32,
+    pub context_menu_background: Color,
+    pub context_menu_border: Color,
+    pub context_menu_hover_background: Color,
+    pub context_menu_text: Color,
+    pub context_menu_text_disabled: Color,
+    pub context_menu_text_style: TextStyle,
 
     pub min_zoom: f32,
     pub max_zoom: f32,
@@ -115,6 +129,48 @@ impl Default for NodeGraphStyle {
                 g: 0.95,
                 b: 0.95,
                 a: 0.85,
+            },
+
+            wire_width_selected_mul: 1.6,
+            wire_width_hover_mul: 1.25,
+
+            context_menu_width: 200.0,
+            context_menu_padding: 10.0,
+            context_menu_item_height: 26.0,
+            context_menu_corner_radius: 6.0,
+            context_menu_background: Color {
+                r: 0.10,
+                g: 0.11,
+                b: 0.12,
+                a: 0.98,
+            },
+            context_menu_border: Color {
+                r: 0.26,
+                g: 0.27,
+                b: 0.28,
+                a: 1.0,
+            },
+            context_menu_hover_background: Color {
+                r: 0.17,
+                g: 0.18,
+                b: 0.19,
+                a: 1.0,
+            },
+            context_menu_text: Color {
+                r: 0.92,
+                g: 0.93,
+                b: 0.94,
+                a: 1.0,
+            },
+            context_menu_text_disabled: Color {
+                r: 0.60,
+                g: 0.62,
+                b: 0.64,
+                a: 1.0,
+            },
+            context_menu_text_style: TextStyle {
+                size: Px(13.0),
+                ..TextStyle::default()
             },
 
             min_zoom: 0.15,

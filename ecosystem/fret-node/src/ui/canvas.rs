@@ -1,8 +1,10 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand, PathConstraints, PathStyle,
-    Point, Px, Rect, SceneOp, Size, StrokeStyle, Transform2D,
+    Point, Px, Rect, SceneOp, Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow,
+    TextWrap, Transform2D,
 };
 use fret_runtime::Model;
 use fret_ui::{UiHost, retained_bridge::*};
@@ -12,7 +14,10 @@ use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::rules::EdgeEndpoint;
 
-use super::presenter::{DefaultNodeGraphPresenter, NodeGraphPresenter};
+use super::presenter::{
+    DefaultNodeGraphPresenter, NodeGraphContextMenuAction, NodeGraphContextMenuItem,
+    NodeGraphPresenter,
+};
 use super::style::NodeGraphStyle;
 
 #[derive(Debug, Clone)]
@@ -30,6 +35,8 @@ struct InteractionState {
     panning: bool,
     node_drag: Option<NodeDrag>,
     wire_drag: Option<WireDrag>,
+    hover_edge: Option<EdgeId>,
+    context_menu: Option<ContextMenuState>,
 }
 
 #[derive(Debug, Clone)]
@@ -56,6 +63,19 @@ struct WireDrag {
     pos: Point,
 }
 
+#[derive(Debug, Clone)]
+enum ContextMenuTarget {
+    Edge(EdgeId),
+}
+
+#[derive(Debug, Clone)]
+struct ContextMenuState {
+    origin: Point,
+    target: ContextMenuTarget,
+    items: Vec<NodeGraphContextMenuItem>,
+    hovered_item: Option<usize>,
+}
+
 /// Retained node-graph canvas widget (MVP).
 ///
 /// This draws nodes and wires and supports:
@@ -73,6 +93,7 @@ pub struct NodeGraphCanvas {
     cached_zoom: f32,
 
     wire_paths: Vec<fret_core::PathId>,
+    text_blobs: Vec<TextBlobId>,
     interaction: InteractionState,
 }
 
@@ -86,6 +107,7 @@ impl NodeGraphCanvas {
             cached_pan: CanvasPoint::default(),
             cached_zoom: 1.0,
             wire_paths: Vec::new(),
+            text_blobs: Vec::new(),
             interaction: InteractionState::default(),
         }
     }
@@ -309,6 +331,162 @@ impl NodeGraphCanvas {
         best.map(|(id, _)| id)
     }
 
+    fn clamp_context_menu_origin(
+        &self,
+        desired: Point,
+        item_count: usize,
+        bounds: Rect,
+        snapshot: &ViewSnapshot,
+    ) -> Point {
+        let rect = context_menu_rect_at(&self.style, desired, item_count, snapshot.zoom);
+
+        let viewport_w = bounds.size.width.0 / snapshot.zoom;
+        let viewport_h = bounds.size.height.0 / snapshot.zoom;
+        let viewport_origin_x = -snapshot.pan.x;
+        let viewport_origin_y = -snapshot.pan.y;
+
+        let min_x = viewport_origin_x;
+        let min_y = viewport_origin_y;
+        let max_x = viewport_origin_x + (viewport_w - rect.size.width.0).max(0.0);
+        let max_y = viewport_origin_y + (viewport_h - rect.size.height.0).max(0.0);
+
+        Point::new(
+            Px(desired.x.0.clamp(min_x, max_x)),
+            Px(desired.y.0.clamp(min_y, max_y)),
+        )
+    }
+
+    fn activate_context_menu_item<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        target: &ContextMenuTarget,
+        item: NodeGraphContextMenuItem,
+    ) {
+        match (target, item.action) {
+            (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::DeleteEdge) => {
+                let remove_ops = {
+                    let this = &*self;
+                    this.graph
+                        .read_ref(cx.app, |graph| {
+                            graph
+                                .edges
+                                .get(edge_id)
+                                .map(|edge| {
+                                    vec![GraphOp::RemoveEdge {
+                                        id: *edge_id,
+                                        edge: edge.clone(),
+                                    }]
+                                })
+                                .unwrap_or_default()
+                        })
+                        .ok()
+                        .unwrap_or_default()
+                };
+
+                self.apply_ops(cx.app, remove_ops);
+                self.update_view_state(cx.app, |s| {
+                    s.selected_edges.retain(|id| *id != *edge_id);
+                });
+            }
+            (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::Custom(action_id)) => {
+                let ops = {
+                    let presenter = &mut *self.presenter;
+                    self.graph
+                        .read_ref(cx.app, |graph| {
+                            presenter.on_edge_context_menu_action(graph, *edge_id, action_id)
+                        })
+                        .ok()
+                        .flatten()
+                        .unwrap_or_default()
+                };
+
+                if !ops.is_empty() {
+                    self.apply_ops(cx.app, ops);
+                }
+            }
+        }
+    }
+
+    fn paint_context_menu<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        menu: &ContextMenuState,
+        zoom: f32,
+    ) {
+        let rect = context_menu_rect_at(&self.style, menu.origin, menu.items.len(), zoom);
+        let border_w = Px(1.0 / zoom);
+        let radius = Px(self.style.context_menu_corner_radius / zoom);
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(50),
+            rect,
+            background: self.style.context_menu_background,
+            border: Edges::all(border_w),
+            border_color: self.style.context_menu_border,
+            corner_radii: Corners::all(radius),
+        });
+
+        let pad = self.style.context_menu_padding / zoom;
+        let item_h = self.style.context_menu_item_height / zoom;
+        let inner_x = rect.origin.x.0 + pad;
+        let inner_y = rect.origin.y.0 + pad;
+        let inner_w = (rect.size.width.0 - 2.0 * pad).max(0.0);
+
+        let mut text_style = self.style.context_menu_text_style.clone();
+        text_style.size = Px(text_style.size.0 / zoom);
+        if let Some(lh) = text_style.line_height.as_mut() {
+            lh.0 /= zoom;
+        }
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(inner_w)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor * zoom,
+        };
+
+        for (ix, item) in menu.items.iter().enumerate() {
+            let item_rect = Rect::new(
+                Point::new(Px(inner_x), Px(inner_y + ix as f32 * item_h)),
+                Size::new(Px(inner_w), Px(item_h)),
+            );
+
+            if menu.hovered_item == Some(ix) && item.enabled {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(51),
+                    rect: item_rect,
+                    background: self.style.context_menu_hover_background,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(4.0 / zoom)),
+                });
+            }
+
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare(item.label.as_ref(), &text_style, constraints);
+            self.text_blobs.push(blob);
+
+            let text_x = item_rect.origin.x;
+            let inner_y =
+                item_rect.origin.y.0 + (item_rect.size.height.0 - metrics.size.height.0) * 0.5;
+            let text_y = Px(inner_y + metrics.baseline.0);
+            let color = if item.enabled {
+                self.style.context_menu_text
+            } else {
+                self.style.context_menu_text_disabled
+            };
+
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(52),
+                origin: Point::new(text_x, text_y),
+                text: blob,
+                color,
+            });
+        }
+    }
+
     fn yank_edge_from_port(
         &self,
         graph: &Graph,
@@ -427,6 +605,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         for id in self.wire_paths.drain(..) {
             services.path().release(id);
         }
+        for id in self.text_blobs.drain(..) {
+            services.text().release(id);
+        }
     }
 
     fn render_transform(&self, bounds: Rect) -> Option<Transform2D> {
@@ -455,6 +636,15 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         match event {
             Event::KeyDown { key, .. } => {
+                if *key == fret_core::KeyCode::Escape {
+                    if self.interaction.context_menu.take().is_some() {
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                    }
+                    return;
+                }
+
                 if !matches!(
                     key,
                     fret_core::KeyCode::Delete | fret_core::KeyCode::Backspace
@@ -503,9 +693,106 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }) => {
                 self.interaction.last_pos = Some(*position);
 
+                if let Some(menu) = self.interaction.context_menu.as_mut() {
+                    match button {
+                        MouseButton::Left => {
+                            if let Some(ix) =
+                                hit_context_menu_item(&self.style, menu, *position, zoom)
+                            {
+                                let item = menu.items.get(ix).cloned();
+                                let target = menu.target.clone();
+                                self.interaction.context_menu = None;
+                                if let Some(item) = item
+                                    && item.enabled
+                                {
+                                    self.activate_context_menu_item(cx, &target, item);
+                                }
+                            } else {
+                                self.interaction.context_menu = None;
+                            }
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                        MouseButton::Right => {
+                            self.interaction.context_menu = None;
+                        }
+                        _ => {
+                            self.interaction.context_menu = None;
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                    }
+                }
+
                 if *button == MouseButton::Middle {
+                    self.interaction.hover_edge = None;
                     self.interaction.panning = true;
                     cx.capture_pointer(cx.node);
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                    return;
+                }
+
+                if *button == MouseButton::Right {
+                    let hit_edge = {
+                        let this = &*self;
+                        this.graph
+                            .read_ref(cx.app, |graph| {
+                                this.hit_edge(graph, &snapshot, *position, zoom)
+                            })
+                            .ok()
+                            .flatten()
+                    };
+
+                    let Some(edge) = hit_edge else {
+                        return;
+                    };
+
+                    let items = {
+                        let presenter = &mut *self.presenter;
+                        let style = &self.style;
+                        self.graph
+                            .read_ref(cx.app, |graph| {
+                                let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
+                                presenter.fill_edge_context_menu(graph, edge, style, &mut items);
+                                items.push(NodeGraphContextMenuItem {
+                                    label: Arc::<str>::from("Delete"),
+                                    enabled: true,
+                                    action: NodeGraphContextMenuAction::DeleteEdge,
+                                });
+                                items
+                            })
+                            .ok()
+                            .unwrap_or_default()
+                    };
+
+                    let origin = self.clamp_context_menu_origin(
+                        *position,
+                        items.len(),
+                        cx.bounds,
+                        &snapshot,
+                    );
+                    self.interaction.context_menu = Some(ContextMenuState {
+                        origin,
+                        target: ContextMenuTarget::Edge(edge),
+                        items,
+                        hovered_item: None,
+                    });
+                    self.interaction.hover_edge = None;
+
+                    self.update_view_state(cx.app, |s| {
+                        s.selected_nodes.clear();
+                        if !s.selected_edges.iter().any(|id| *id == edge) {
+                            s.selected_edges.clear();
+                            s.selected_edges.push(edge);
+                        }
+                    });
+
+                    cx.stop_propagation();
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
                     return;
@@ -514,6 +801,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 if *button != MouseButton::Left {
                     return;
                 }
+
+                self.interaction.hover_edge = None;
 
                 #[derive(Debug, Clone, Copy)]
                 enum Hit {
@@ -672,6 +961,33 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     w.pos = *position;
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
+                    return;
+                }
+
+                if let Some(menu) = self.interaction.context_menu.as_mut() {
+                    let new_hover = hit_context_menu_item(&self.style, menu, *position, zoom);
+                    if menu.hovered_item != new_hover {
+                        menu.hovered_item = new_hover;
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                    }
+                    return;
+                }
+
+                let new_hover = {
+                    let this = &*self;
+                    this.graph
+                        .read_ref(cx.app, |graph| {
+                            this.hit_edge(graph, &snapshot, *position, zoom)
+                        })
+                        .ok()
+                        .flatten()
+                };
+
+                if self.interaction.hover_edge != new_hover {
+                    self.interaction.hover_edge = new_hover;
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
                 }
             }
             Event::Pointer(fret_core::PointerEvent::Up {
@@ -795,6 +1111,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         for id in self.wire_paths.drain(..) {
             cx.services.path().release(id);
         }
+        for id in self.text_blobs.drain(..) {
+            cx.services.text().release(id);
+        }
 
         let zoom = snapshot.zoom;
         let pan = snapshot.pan;
@@ -875,11 +1194,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         #[derive(Debug, Default)]
         struct RenderData {
-            edges: Vec<(EdgeId, Point, Point, Color, bool)>,
+            edges: Vec<(EdgeId, Point, Point, Color, bool, bool)>,
             nodes: Vec<(GraphNodeId, Rect, bool)>,
             pins: Vec<(Rect, Color)>,
             port_centers: HashMap<PortId, Point>,
         }
+
+        let hovered_edge = self.interaction.hover_edge;
 
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
@@ -938,6 +1259,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             to,
                             color,
                             selected_edges.contains(&edge_id),
+                            hovered_edge == Some(edge_id),
                         ));
                     }
 
@@ -946,12 +1268,33 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 .unwrap_or_default()
         };
 
-        for (_edge_id, from, to, color, selected) in render.edges {
-            let width = if selected {
-                self.style.wire_width * 1.6
+        let mut edges_normal: Vec<(Point, Point, Color, f32)> = Vec::new();
+        let mut edges_selected: Vec<(Point, Point, Color, f32)> = Vec::new();
+        let mut edges_hovered: Vec<(Point, Point, Color, f32)> = Vec::new();
+
+        for (_edge_id, from, to, color, selected, hovered) in render.edges {
+            let mut width = self.style.wire_width;
+            if selected {
+                width *= self.style.wire_width_selected_mul;
+            }
+            if hovered {
+                width *= self.style.wire_width_hover_mul;
+            }
+
+            if hovered {
+                edges_hovered.push((from, to, color, width));
+            } else if selected {
+                edges_selected.push((from, to, color, width));
             } else {
-                self.style.wire_width
-            };
+                edges_normal.push((from, to, color, width));
+            }
+        }
+
+        for (from, to, color, width) in edges_normal
+            .into_iter()
+            .chain(edges_selected)
+            .chain(edges_hovered)
+        {
             if let Some(path) =
                 Self::prepare_wire_path(cx.services, from, to, zoom, cx.scale_factor, width)
             {
@@ -1021,8 +1364,52 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             });
         }
 
+        if let Some(menu) = self.interaction.context_menu.clone() {
+            self.paint_context_menu(cx, &menu, zoom);
+        }
+
         cx.scene.push(SceneOp::PopClip);
     }
+}
+
+fn context_menu_rect_at(
+    style: &NodeGraphStyle,
+    origin: Point,
+    item_count: usize,
+    zoom: f32,
+) -> Rect {
+    let w = style.context_menu_width / zoom;
+    let item_h = style.context_menu_item_height / zoom;
+    let pad = style.context_menu_padding / zoom;
+    let h = (2.0 * pad + item_h * item_count.max(1) as f32).max(item_h + 2.0 * pad);
+    Rect::new(origin, Size::new(Px(w), Px(h)))
+}
+
+fn hit_context_menu_item(
+    style: &NodeGraphStyle,
+    menu: &ContextMenuState,
+    pos: Point,
+    zoom: f32,
+) -> Option<usize> {
+    let rect = context_menu_rect_at(style, menu.origin, menu.items.len(), zoom);
+    if !rect.contains(pos) {
+        return None;
+    }
+
+    let pad = style.context_menu_padding / zoom;
+    let item_h = style.context_menu_item_height / zoom;
+    let inner_top = rect.origin.y.0 + pad;
+    let y = pos.y.0 - inner_top;
+    if y < 0.0 {
+        return None;
+    }
+
+    let ix = (y / item_h).floor() as isize;
+    if ix < 0 {
+        return None;
+    }
+    let ix = ix as usize;
+    (ix < menu.items.len()).then_some(ix)
 }
 
 fn wire_distance2(p: Point, from: Point, to: Point, zoom: f32) -> f32 {
