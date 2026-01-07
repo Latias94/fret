@@ -44,21 +44,32 @@ pub fn hover_hit_test(
             continue;
         };
 
-        let Some(x) = table.column_f64(series.x_col) else {
+        let Some(dataset) = model.datasets.get(&series.dataset) else {
             continue;
         };
-        let y_col = if series.kind == SeriesKind::Band {
+
+        let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+            continue;
+        };
+        let Some(x) = table.column_f64(x_col) else {
+            continue;
+        };
+
+        let y_field = if series.kind == SeriesKind::Band {
             let variant = (node.id.0 & 0x7) as u8;
             if variant == 2 {
-                let Some(y2) = series.y2_col else {
+                let Some(y2) = series.encode.y2 else {
                     continue;
                 };
                 y2
             } else {
-                series.y_col
+                series.encode.y
             }
         } else {
-            series.y_col
+            series.encode.y
+        };
+        let Some(y_col) = dataset.fields.get(&y_field).copied() else {
+            continue;
         };
         let Some(y) = table.column_f64(y_col) else {
             continue;
@@ -168,7 +179,8 @@ mod tests {
         MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkTree,
     };
     use crate::spec::{
-        AxisKind, AxisSpec, ChartSpec, DatasetSpec, GridSpec, SeriesKind, SeriesSpec,
+        AxisKind, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
+        SeriesSpec,
     };
 
     #[test]
@@ -197,11 +209,25 @@ mod tests {
         let x_axis = AxisId::new(1);
         let y_axis = AxisId::new(2);
         let series_id = SeriesId::new(1);
+        let x_field = crate::ids::FieldId::new(1);
+        let y_field = crate::ids::FieldId::new(2);
 
         let spec = ChartSpec {
             id: chart_id,
             viewport: None,
-            datasets: vec![DatasetSpec { id: dataset_id }],
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+            }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
                 AxisSpec {
@@ -221,9 +247,11 @@ mod tests {
                 id: series_id,
                 kind: SeriesKind::Line,
                 dataset: dataset_id,
-                x_col: 0,
-                y_col: 1,
-                y2_col: None,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
                 x_axis,
                 y_axis,
                 area_baseline: None,

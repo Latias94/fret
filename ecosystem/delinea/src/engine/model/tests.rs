@@ -3,14 +3,30 @@ use std::collections::BTreeSet;
 use fret_core::{Point, Px, Rect, Size};
 
 use super::*;
-use crate::spec::{AxisKind, AxisSpec, ChartSpec, DatasetSpec, GridSpec, SeriesKind, SeriesSpec};
+use crate::spec::{
+    AxisKind, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
+    SeriesSpec,
+};
 
 fn basic_spec() -> ChartSpec {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
     ChartSpec {
         id: crate::ids::ChartId::new(1),
         viewport: None,
         datasets: vec![DatasetSpec {
-            id: crate::ids::DatasetId::new(1),
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
         }],
         grids: vec![GridSpec {
             id: crate::ids::GridId::new(1),
@@ -32,10 +48,12 @@ fn basic_spec() -> ChartSpec {
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
             kind: SeriesKind::Line,
-            dataset: crate::ids::DatasetId::new(1),
-            x_col: 0,
-            y_col: 1,
-            y2_col: None,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
             x_axis: crate::ids::AxisId::new(1),
             y_axis: crate::ids::AxisId::new(2),
             area_baseline: None,
@@ -47,7 +65,7 @@ fn basic_spec() -> ChartSpec {
 fn band_requires_y2_col() {
     let mut spec = basic_spec();
     spec.series[0].kind = SeriesKind::Band;
-    spec.series[0].y2_col = None;
+    spec.series[0].encode.y2 = None;
     let err = ChartModel::from_spec(spec).unwrap_err();
     assert!(matches!(err, ModelError::InvalidSpec { .. }));
 }
@@ -100,6 +118,8 @@ fn replace_merge_can_replace_series_only() {
     let mut model = ChartModel::from_spec(spec).unwrap();
 
     let replace_families: BTreeSet<ReplaceFamily> = [ReplaceFamily::Series].into_iter().collect();
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
     let report = model
         .apply_patch(
             ChartPatch {
@@ -108,9 +128,11 @@ fn replace_merge_can_replace_series_only() {
                     id: crate::ids::SeriesId::new(2),
                     kind: SeriesKind::Line,
                     dataset: crate::ids::DatasetId::new(1),
-                    x_col: 0,
-                    y_col: 1,
-                    y2_col: None,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
                     visible: Some(true),
@@ -135,6 +157,8 @@ fn replace_merge_keeps_and_merges_matching_ids() {
     let mut model = ChartModel::from_spec(spec).unwrap();
 
     let replace_families: BTreeSet<ReplaceFamily> = [ReplaceFamily::Series].into_iter().collect();
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
     let report = model
         .apply_patch(
             ChartPatch {
@@ -143,9 +167,11 @@ fn replace_merge_keeps_and_merges_matching_ids() {
                     id: crate::ids::SeriesId::new(1),
                     kind: SeriesKind::Line,
                     dataset: crate::ids::DatasetId::new(1),
-                    x_col: 0,
-                    y_col: 1,
-                    y2_col: None,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
                     visible: Some(false),
@@ -262,6 +288,8 @@ fn merge_axis_range_updates_layout_without_structure() {
 fn merge_series_visibility_updates_visual_without_structure() {
     let spec = basic_spec();
     let mut model = ChartModel::from_spec(spec).unwrap();
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
 
     let report = model
         .apply_patch(
@@ -270,9 +298,11 @@ fn merge_series_visibility_updates_visual_without_structure() {
                     id: crate::ids::SeriesId::new(1),
                     kind: SeriesKind::Line,
                     dataset: crate::ids::DatasetId::new(1),
-                    x_col: 0,
-                    y_col: 1,
-                    y2_col: None,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
                     visible: Some(false),

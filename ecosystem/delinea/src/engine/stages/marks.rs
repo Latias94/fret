@@ -112,16 +112,33 @@ impl MarksStage {
                 continue;
             };
 
-            let Some(x) = table.column_f64(series.x_col) else {
+            let Some(dataset) = model.datasets.get(&series.dataset) else {
                 self.series_index += 1;
                 continue;
             };
-            let Some(y0) = table.column_f64(series.y_col) else {
+            let Some(x_col) = dataset.fields.get(&series.encode.x).copied() else {
+                self.series_index += 1;
+                continue;
+            };
+            let Some(y_col) = dataset.fields.get(&series.encode.y).copied() else {
+                self.series_index += 1;
+                continue;
+            };
+
+            let Some(x) = table.column_f64(x_col) else {
+                self.series_index += 1;
+                continue;
+            };
+            let Some(y0) = table.column_f64(y_col) else {
                 self.series_index += 1;
                 continue;
             };
             let y1 = if series.kind == crate::spec::SeriesKind::Band {
-                let Some(y2_col) = series.y2_col else {
+                let Some(y2_field) = series.encode.y2 else {
+                    self.series_index += 1;
+                    continue;
+                };
+                let Some(y2_col) = dataset.fields.get(&y2_field).copied() else {
                     self.series_index += 1;
                     continue;
                 };

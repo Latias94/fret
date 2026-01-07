@@ -1,10 +1,12 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use fret_core::Rect;
 
-use crate::engine::model::{AxisModel, ChartModel, GridModel, ModelError, SeriesModel};
-use crate::ids::{AxisId, DatasetId, GridId, SeriesId};
-use crate::spec::{AreaBaseline, AxisKind, AxisRange, SeriesKind};
+use crate::engine::model::{
+    AxisModel, ChartModel, DatasetModel, GridModel, ModelError, SeriesModel,
+};
+use crate::ids::{AxisId, DatasetId, FieldId, GridId, SeriesId};
+use crate::spec::{AreaBaseline, AxisKind, AxisRange, FieldSpec, SeriesEncode, SeriesKind};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -69,13 +71,17 @@ impl ChartPatch {
 
                 let mut dataset_ids = BTreeSet::<DatasetId>::new();
                 for op in self.datasets {
-                    if let DatasetOp::Upsert { id } = op {
-                        if !dataset_ids.insert(id) {
+                    if let DatasetOp::Upsert(dataset) = op {
+                        if !dataset_ids.insert(dataset.id) {
                             return Err(ModelError::DuplicateId { kind: "dataset" });
                         }
-                        model
-                            .datasets
-                            .insert(id, crate::engine::model::DatasetModel { id });
+                        model.datasets.insert(
+                            dataset.id,
+                            DatasetModel {
+                                id: dataset.id,
+                                fields: dataset_fields_map(&dataset)?,
+                            },
+                        );
                     }
                 }
 
@@ -108,9 +114,9 @@ impl ChartPatch {
                         if !series_ids.insert(series.id) {
                             return Err(ModelError::DuplicateId { kind: "series" });
                         }
-                        if series.kind == SeriesKind::Band && series.y2_col.is_none() {
+                        if series.kind == SeriesKind::Band && series.encode.y2.is_none() {
                             return Err(ModelError::InvalidSpec {
-                                reason: "series.kind=Band requires y2_col",
+                                reason: "series.kind=Band requires encode.y2",
                             });
                         }
                         if !model.datasets.contains_key(&series.dataset) {
@@ -194,11 +200,19 @@ impl ChartPatch {
 
         for op in self.datasets {
             match op {
-                DatasetOp::Upsert { id } => {
-                    model
+                DatasetOp::Upsert(dataset) => {
+                    let next = DatasetModel {
+                        id: dataset.id,
+                        fields: dataset_fields_map(&dataset)?,
+                    };
+                    if model
                         .datasets
-                        .insert(id, crate::engine::model::DatasetModel { id });
-                    report.structure_changed = true;
+                        .get(&dataset.id)
+                        .is_none_or(|existing| existing.fields != next.fields)
+                    {
+                        model.datasets.insert(dataset.id, next);
+                        report.structure_changed = true;
+                    }
                 }
                 DatasetOp::Remove { id } => {
                     if model.datasets.remove(&id).is_some() {
@@ -260,9 +274,9 @@ impl ChartPatch {
         for op in self.series {
             match op {
                 SeriesOp::Upsert(series) => {
-                    if series.kind == SeriesKind::Band && series.y2_col.is_none() {
+                    if series.kind == SeriesKind::Band && series.encode.y2.is_none() {
                         return Err(ModelError::InvalidSpec {
-                            reason: "series.kind=Band requires y2_col",
+                            reason: "series.kind=Band requires encode.y2",
                         });
                     }
                     if !model.datasets.contains_key(&series.dataset) {
@@ -279,6 +293,27 @@ impl ChartPatch {
                         });
                     }
 
+                    let Some(dataset) = model.datasets.get(&series.dataset) else {
+                        return Err(ModelError::MissingReference { kind: "dataset" });
+                    };
+                    if !dataset.fields.contains_key(&series.encode.x) {
+                        return Err(ModelError::MissingReference {
+                            kind: "dataset.field.x",
+                        });
+                    }
+                    if !dataset.fields.contains_key(&series.encode.y) {
+                        return Err(ModelError::MissingReference {
+                            kind: "dataset.field.y",
+                        });
+                    }
+                    if let Some(y2) = series.encode.y2
+                        && !dataset.fields.contains_key(&y2)
+                    {
+                        return Err(ModelError::MissingReference {
+                            kind: "dataset.field.y2",
+                        });
+                    }
+
                     let Some(existing) = model.series.get_mut(&series.id) else {
                         if series_replace_order.is_none() {
                             model.series_order.push(series.id);
@@ -290,17 +325,13 @@ impl ChartPatch {
 
                     if existing.kind != series.kind
                         || existing.dataset != series.dataset
-                        || existing.x_col != series.x_col
-                        || existing.y_col != series.y_col
-                        || existing.y2_col != series.y2_col
+                        || existing.encode != series.encode
                         || existing.x_axis != series.x_axis
                         || existing.y_axis != series.y_axis
                     {
                         existing.kind = series.kind;
                         existing.dataset = series.dataset;
-                        existing.x_col = series.x_col;
-                        existing.y_col = series.y_col;
-                        existing.y2_col = series.y2_col;
+                        existing.encode = series.encode;
                         existing.x_axis = series.x_axis;
                         existing.y_axis = series.y_axis;
                         report.structure_changed = true;
@@ -358,8 +389,8 @@ impl ChartPatch {
 fn desired_dataset_ids(ops: &[DatasetOp]) -> Result<BTreeSet<DatasetId>, ModelError> {
     let mut desired = BTreeSet::<DatasetId>::new();
     for op in ops {
-        if let DatasetOp::Upsert { id } = op {
-            if !desired.insert(*id) {
+        if let DatasetOp::Upsert(dataset) = op {
+            if !desired.insert(dataset.id) {
                 return Err(ModelError::DuplicateId { kind: "dataset" });
             }
         }
@@ -420,6 +451,31 @@ fn validate_references(model: &ChartModel) -> Result<(), ModelError> {
         if !model.datasets.contains_key(&series.dataset) {
             return Err(ModelError::MissingReference { kind: "dataset" });
         }
+        let Some(dataset) = model.datasets.get(&series.dataset) else {
+            return Err(ModelError::MissingReference { kind: "dataset" });
+        };
+        if series.kind == SeriesKind::Band && series.encode.y2.is_none() {
+            return Err(ModelError::InvalidSpec {
+                reason: "series.kind=Band requires encode.y2",
+            });
+        }
+        if !dataset.fields.contains_key(&series.encode.x) {
+            return Err(ModelError::MissingReference {
+                kind: "dataset.field.x",
+            });
+        }
+        if !dataset.fields.contains_key(&series.encode.y) {
+            return Err(ModelError::MissingReference {
+                kind: "dataset.field.y",
+            });
+        }
+        if let Some(y2) = series.encode.y2
+            && !dataset.fields.contains_key(&y2)
+        {
+            return Err(ModelError::MissingReference {
+                kind: "dataset.field.y2",
+            });
+        }
         if !model.axes.contains_key(&series.x_axis) {
             return Err(ModelError::MissingReference {
                 kind: "axis.x_axis",
@@ -435,6 +491,18 @@ fn validate_references(model: &ChartModel) -> Result<(), ModelError> {
     Ok(())
 }
 
+fn dataset_fields_map(patch: &DatasetPatch) -> Result<BTreeMap<FieldId, usize>, ModelError> {
+    let mut fields = BTreeMap::<FieldId, usize>::new();
+    for field in &patch.fields {
+        if fields.insert(field.id, field.column).is_some() {
+            return Err(ModelError::DuplicateId {
+                kind: "dataset.field",
+            });
+        }
+    }
+    Ok(fields)
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PatchReport {
@@ -446,8 +514,15 @@ pub struct PatchReport {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum DatasetOp {
-    Upsert { id: DatasetId },
+    Upsert(DatasetPatch),
     Remove { id: DatasetId },
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DatasetPatch {
+    pub id: DatasetId,
+    pub fields: Vec<FieldSpec>,
 }
 
 #[derive(Debug, Clone)]
@@ -499,9 +574,7 @@ pub struct SeriesPatch {
     pub id: SeriesId,
     pub kind: SeriesKind,
     pub dataset: DatasetId,
-    pub x_col: usize,
-    pub y_col: usize,
-    pub y2_col: Option<usize>,
+    pub encode: SeriesEncode,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
     pub visible: Option<bool>,
@@ -514,9 +587,7 @@ impl From<SeriesPatch> for SeriesModel {
             id: p.id,
             kind: p.kind,
             dataset: p.dataset,
-            x_col: p.x_col,
-            y_col: p.y_col,
-            y2_col: p.y2_col,
+            encode: p.encode,
             x_axis: p.x_axis,
             y_axis: p.y_axis,
             visible: p.visible.unwrap_or(true),

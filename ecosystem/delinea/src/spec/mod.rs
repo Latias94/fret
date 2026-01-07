@@ -1,6 +1,6 @@
 use fret_core::Rect;
 
-use crate::ids::{AxisId, ChartId, DatasetId, GridId, SeriesId};
+use crate::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -20,6 +20,15 @@ pub struct ChartSpec {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DatasetSpec {
     pub id: DatasetId,
+    pub fields: Vec<FieldSpec>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct FieldSpec {
+    pub id: FieldId,
+    /// Column index in the dataset table.
+    pub column: usize,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -116,8 +125,16 @@ pub enum SeriesKind {
     Bar,
     Scatter,
     Area,
-    /// A filled band between `y_col` (low) and `y2_col` (high).
+    /// A filled band between `encode.y` (low) and `encode.y2` (high).
     Band,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct SeriesEncode {
+    pub x: FieldId,
+    pub y: FieldId,
+    pub y2: Option<FieldId>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -138,12 +155,7 @@ pub struct SeriesSpec {
     pub id: SeriesId,
     pub kind: SeriesKind,
     pub dataset: DatasetId,
-    /// Column index for x values (temporary, P0).
-    pub x_col: usize,
-    /// Column index for y values (temporary, P0).
-    pub y_col: usize,
-    /// Column index for second y values (used by `Band`, ignored otherwise).
-    pub y2_col: Option<usize>,
+    pub encode: SeriesEncode,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
     /// Area baseline configuration (only used when `kind == Area`).

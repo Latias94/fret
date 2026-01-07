@@ -29,6 +29,7 @@ define_id!(ComponentId);
 define_id!(AxisId);
 define_id!(GridId);
 define_id!(DatasetId);
+define_id!(FieldId);
 define_id!(TransformId);
 define_id!(LinkGroupId);
 

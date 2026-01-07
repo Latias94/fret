@@ -257,22 +257,33 @@ impl ChartCanvas {
         let mut max = f64::NEG_INFINITY;
 
         let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
-        for series in self.engine.model().series.values() {
+        let model = self.engine.model();
+        for series in model.series.values() {
             let axis_id = if is_x { series.x_axis } else { series.y_axis };
             if axis_id != axis {
                 continue;
             }
 
+            let Some(dataset) = model.datasets.get(&series.dataset) else {
+                continue;
+            };
+
             if is_x {
-                series_cols.push((series.dataset, series.x_col));
+                let Some(col) = dataset.fields.get(&series.encode.x).copied() else {
+                    continue;
+                };
+                series_cols.push((series.dataset, col));
                 continue;
             }
 
-            series_cols.push((series.dataset, series.y_col));
+            if let Some(col) = dataset.fields.get(&series.encode.y).copied() {
+                series_cols.push((series.dataset, col));
+            }
             if series.kind == delinea::SeriesKind::Band
-                && let Some(y2) = series.y2_col
+                && let Some(y2) = series.encode.y2
+                && let Some(col) = dataset.fields.get(&y2).copied()
             {
-                series_cols.push((series.dataset, y2));
+                series_cols.push((series.dataset, col));
             }
         }
 

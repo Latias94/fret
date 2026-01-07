@@ -5,16 +5,32 @@ use crate::data::{Column, DataTable};
 use crate::engine::ChartEngine;
 use crate::engine::window::DataWindow;
 use crate::scheduler::WorkBudget;
-use crate::spec::{AxisKind, AxisSpec, ChartSpec, DatasetSpec, GridSpec, SeriesKind, SeriesSpec};
+use crate::spec::{
+    AxisKind, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
+    SeriesSpec,
+};
 use crate::text::{TextMeasurer, TextMetrics};
 use fret_core::{Px, Rect, Size};
 
 fn basic_spec() -> ChartSpec {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
     ChartSpec {
         id: crate::ids::ChartId::new(1),
         viewport: None,
         datasets: vec![DatasetSpec {
-            id: crate::ids::DatasetId::new(1),
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
         }],
         grids: vec![GridSpec {
             id: crate::ids::GridId::new(1),
@@ -36,10 +52,12 @@ fn basic_spec() -> ChartSpec {
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
             kind: SeriesKind::Line,
-            dataset: crate::ids::DatasetId::new(1),
-            x_col: 0,
-            y_col: 1,
-            y2_col: None,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
             x_axis: crate::ids::AxisId::new(1),
             y_axis: crate::ids::AxisId::new(2),
             area_baseline: None,
@@ -104,6 +122,9 @@ fn band_emits_two_polylines() {
     let x_axis = crate::ids::AxisId::new(1);
     let y_axis = crate::ids::AxisId::new(2);
     let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y0_field = crate::ids::FieldId::new(2);
+    let y1_field = crate::ids::FieldId::new(3);
 
     let spec = ChartSpec {
         id: crate::ids::ChartId::new(1),
@@ -111,7 +132,23 @@ fn band_emits_two_polylines() {
             fret_core::Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(400.0)),
         )),
-        datasets: vec![DatasetSpec { id: dataset_id }],
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y0_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: y1_field,
+                    column: 2,
+                },
+            ],
+        }],
         grids: vec![GridSpec { id: grid_id }],
         axes: vec![
             AxisSpec {
@@ -131,9 +168,11 @@ fn band_emits_two_polylines() {
             id: series_id,
             kind: SeriesKind::Band,
             dataset: dataset_id,
-            x_col: 0,
-            y_col: 1,
-            y2_col: Some(2),
+            encode: SeriesEncode {
+                x: x_field,
+                y: y0_field,
+                y2: Some(y1_field),
+            },
             x_axis,
             y_axis,
             area_baseline: None,

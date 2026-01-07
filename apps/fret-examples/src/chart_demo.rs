@@ -11,9 +11,9 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
 use delinea::data::{Column, DataTable};
-use delinea::ids::AxisId;
+use delinea::ids::{AxisId, FieldId};
 use delinea::{AxisKind, AxisRange, SeriesKind};
-use delinea::{ChartSpec, DatasetSpec, GridSpec, SeriesSpec};
+use delinea::{ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec};
 use fret_chart::retained::{ChartCanvas, ChartStyle};
 
 struct ChartDemoWindowState {
@@ -38,11 +38,30 @@ impl ChartDemoDriver {
         let x_axis = AxisId::new(1);
         let y_axis = AxisId::new(2);
         let series_id = delinea::ids::SeriesId::new(1);
+        let x_field = FieldId::new(1);
+        let y_low_field = FieldId::new(2);
+        let y_high_field = FieldId::new(3);
 
         let spec = ChartSpec {
             id: delinea::ids::ChartId::new(1),
             viewport: None,
-            datasets: vec![DatasetSpec { id: dataset_id }],
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_low_field,
+                        column: 1,
+                    },
+                    FieldSpec {
+                        id: y_high_field,
+                        column: 2,
+                    },
+                ],
+            }],
             grids: vec![GridSpec { id: grid_id }],
             axes: vec![
                 delinea::AxisSpec {
@@ -62,9 +81,11 @@ impl ChartDemoDriver {
                 id: series_id,
                 kind: SeriesKind::Band,
                 dataset: dataset_id,
-                x_col: 0,
-                y_col: 1,
-                y2_col: Some(2),
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_low_field,
+                    y2: Some(y_high_field),
+                },
                 x_axis,
                 y_axis,
                 area_baseline: None,
