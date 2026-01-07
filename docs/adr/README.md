@@ -264,6 +264,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
 - `docs/adr/0097-plot-widgets-and-crate-placement.md`
 - `docs/adr/0098-plot3d-rendering-strategy.md`
+- `docs/adr/0099-plot-architecture-and-performance.md`
 - `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 - `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
 - `docs/adr/0093-crate-structure-core-backends-apps.md`
@@ -280,3 +281,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0052-ui-host-runtime-boundary.md`
 - `docs/adr/0053-external-drag-payload-portability.md`
 - `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
+- `docs/adr/0111-delinea-headless-chart-engine.md`
+- `docs/adr/0112-delinea-large-data-and-rendering-contracts.md`
+- `docs/adr/0113-painted-paths-and-paint-v1.md`
+- `docs/adr/0114-delinea-option-patching-and-pipeline.md`

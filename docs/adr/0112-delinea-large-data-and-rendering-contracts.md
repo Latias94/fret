@@ -1,4 +1,4 @@
-# ADR 0112: Delenia Large-Data Pipeline, Zero-Alloc Baseline, and Rendering Prerequisites
+# ADR 0112: Delinea Large-Data Pipeline, Zero-Alloc Baseline, and Rendering Prerequisites
 
 Status: Proposed
 Scope: `delinea` (headless engine), `fret-chart` (UI adapter), and required scene/paint contracts for chart parity

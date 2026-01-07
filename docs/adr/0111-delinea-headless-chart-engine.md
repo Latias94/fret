@@ -1,4 +1,4 @@
-# ADR 0111: Delenia Headless Chart Engine + `fret-chart` UI Integration
+# ADR 0111: Delinea Headless Chart Engine + `fret-chart` UI Integration
 
 Status: Proposed
 Scope: `ecosystem/delinea` (headless), `ecosystem/fret-chart` (UI), and the long-term boundary with `ecosystem/fret-plot`
