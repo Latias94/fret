@@ -9,5 +9,6 @@ mod event;
 mod geometry;
 mod legacy;
 mod paint;
+mod spatial;
 
 pub use legacy::NodeGraphCanvas;

@@ -86,22 +86,9 @@ impl CanvasGeometry {
         out
     }
 
-    pub(crate) fn hit_port(&self, pos: Point) -> Option<PortId> {
-        self.ports
-            .iter()
-            .find_map(|(port_id, g)| rect_contains(g.bounds, pos).then_some(*port_id))
-    }
-
     pub(crate) fn port_center(&self, port: PortId) -> Option<Point> {
         self.ports.get(&port).map(|p| p.center)
     }
-}
-
-pub(crate) fn rect_contains(rect: Rect, pos: Point) -> bool {
-    pos.x.0 >= rect.origin.x.0
-        && pos.y.0 >= rect.origin.y.0
-        && pos.x.0 <= rect.origin.x.0 + rect.size.width.0
-        && pos.y.0 <= rect.origin.y.0 + rect.size.height.0
 }
 
 pub(crate) fn node_order(graph: &Graph, draw_order: &[NodeId]) -> Vec<NodeId> {
