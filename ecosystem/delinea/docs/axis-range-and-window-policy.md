@@ -67,6 +67,8 @@ The engine only defines semantics. A UI adapter (e.g. `fret-chart`) may map:
 - Gestures:
   - Wheel: zoom X (update `data_window_x[axis]`).
   - Drag: pan X (update `data_window_x[axis]`).
+- Box zoom:
+  - Drag a rectangle: compute data windows and apply `SetViewWindow2D` for the target X/Y axes.
 - Shortcuts:
   - `L`: toggle X axis lock (set `AxisRange::Fixed` to current visible range, or back to `Auto`).
   - `R`: reset view (clear `data_window_x[axis]`, set axis ranges to `Auto`).

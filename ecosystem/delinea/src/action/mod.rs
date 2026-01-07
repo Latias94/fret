@@ -27,6 +27,12 @@ pub enum Action {
         axis: AxisId,
         window: Option<DataWindowY>,
     },
+    SetViewWindow2D {
+        x_axis: AxisId,
+        y_axis: AxisId,
+        x: Option<DataWindowX>,
+        y: Option<DataWindowY>,
+    },
     SetSeriesVisible {
         series: SeriesId,
         visible: bool,

@@ -23,6 +23,9 @@ pub mod window;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChartState {
@@ -150,6 +153,29 @@ impl ChartEngine {
                 } else {
                     self.state.data_window_y.remove(&axis);
                 }
+                self.state.revision.bump();
+                self.marks_stage.mark_dirty();
+            }
+            Action::SetViewWindow2D {
+                x_axis,
+                y_axis,
+                x,
+                y,
+            } => {
+                if let Some(mut x) = x {
+                    x.clamp_non_degenerate();
+                    self.state.data_window_x.insert(x_axis, x);
+                } else {
+                    self.state.data_window_x.remove(&x_axis);
+                }
+
+                if let Some(mut y) = y {
+                    y.clamp_non_degenerate();
+                    self.state.data_window_y.insert(y_axis, y);
+                } else {
+                    self.state.data_window_y.remove(&y_axis);
+                }
+
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
             }
