@@ -33,7 +33,7 @@ token-driven theming and retained rendering/cache.
 | `PlotCandlestick` | `CandlestickPlotCanvas` / `CandlestickSeries` | ✅ | Demo: `apps/fret-examples/src/candlestick_demo.rs`. |
 | `PlotPieChart` | (none) | ❌ | Likely belongs to a charting layer, not a cartesian plot core. |
 | `PlotDigital` | (none) | ❌ | Could be modeled as a step/segment series; clarify UX + sampling. |
-| `PlotImage` | (none) | ❌ | Different from `Heatmap`: arbitrary image in plot coordinates. |
+| `PlotImage` | `PlotOverlays::images` (`PlotImage`) | ✅ | Renders `ImageId` as a data-aligned rect via `SceneOp::ImageRegion` (layers: below/above grid). |
 | `PlotText` | `PlotOverlays::text` (`PlotText`) | 🟡 | Implemented as a caller-owned overlay (ADR 0106). No rich text/callouts yet. |
 | `PlotHistogram2D` | (none) | ❌ | Similar to heatmap but derived from samples and binning. |
 | `PlotDummy` | (none) | ❌ | Not needed; can be handled by layout/legend policies if required. |
@@ -61,7 +61,6 @@ P0 (high leverage for “commercial-grade” plot UX):
 
 - Tags + text annotations (plot-space primitives, rendered as overlays).
 - Drag tools (point/line/rect), with snapping and modifier-driven constraints.
-- Plot-space images (`PlotImage`) for overlays, background layers, and data-aligned textures.
 
 P1 (broad capability expansion):
 

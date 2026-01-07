@@ -27,6 +27,7 @@ pub mod markdown_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot3d_demo;
 pub mod plot_demo;
+pub mod plot_image_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot_stress_demo;
 pub mod shaded_demo;
