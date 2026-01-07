@@ -3,20 +3,25 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::ops::Range;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use fret_core::{
     Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    TimerToken,
 };
 use fret_runtime::Effect;
 use fret_ui::element::{
-    AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, PressableProps, TextProps,
+    AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, PositionStyle,
+    PressableProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, Justify, LayoutRefinement, MetricRef, Radius, Space,
+};
 
 #[derive(Debug, Clone)]
 pub struct CodeBlock {
@@ -145,7 +150,9 @@ pub fn code_block_with<H: UiHost>(
         }
         chrome
     };
-    let props = decl_style::container_props(&theme, chrome, LayoutRefinement::default().w_full());
+    let mut props =
+        decl_style::container_props(&theme, chrome, LayoutRefinement::default().w_full());
+    props.layout.position = PositionStyle::Relative;
 
     let language = language.map(str::trim).filter(|s| !s.is_empty());
     let prepared = cx.with_state(CodeBlockPreparedState::default, |st| {
@@ -153,20 +160,14 @@ pub fn code_block_with<H: UiHost>(
         st.prepared.clone()
     });
 
-    let header_visible = options.show_header || options.show_copy_button || language.is_some();
+    let header_visible = options.show_header || language.is_some();
+    let code = Arc::<str>::from(code.to_string());
 
     cx.container(props, |cx| {
         vec![cx.hover_region(HoverRegionProps::default(), |cx, hovered| {
             let mut out = Vec::new();
             if header_visible {
-                out.push(render_code_block_header(
-                    cx,
-                    &theme,
-                    language,
-                    options,
-                    hovered,
-                    Arc::<str>::from(code.to_string()),
-                ));
+                out.push(render_code_block_header(cx, &theme, language));
             }
             out.push(decl_scroll::overflow_scroll_x_vstack(
                 cx,
@@ -194,6 +195,11 @@ pub fn code_block_with<H: UiHost>(
                         .collect::<Vec<_>>()
                 },
             ));
+
+            let show_copy = options.show_copy_button && (!options.copy_button_on_hover || hovered);
+            if show_copy {
+                out.push(render_copy_button_overlay(cx, &theme, code.clone()));
+            }
             out
         })]
     })
@@ -203,9 +209,6 @@ fn render_code_block_header<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     language: Option<&str>,
-    options: CodeBlockUiOptions,
-    hovered: bool,
-    code: Arc<str>,
 ) -> AnyElement {
     stack::hstack(
         cx,
@@ -232,39 +235,114 @@ fn render_code_block_header<H: UiHost>(
                 }));
             }
 
-            let mut right = Vec::new();
-            let show_copy = options.show_copy_button && (!options.copy_button_on_hover || hovered);
-            if show_copy {
-                right.push(render_copy_button(cx, code));
-            }
-
-            vec![
-                stack::hstack(cx, stack::HStackProps::default().gap(Space::N1), |_| left),
-                stack::hstack(cx, stack::HStackProps::default().gap(Space::N1), |_| right),
-            ]
+            vec![stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N1),
+                |_| left,
+            )]
         },
     )
 }
 
-fn render_copy_button<H: UiHost>(cx: &mut ElementContext<'_, H>, code: Arc<str>) -> AnyElement {
-    let mut props = PressableProps::default();
-    props.a11y.role = Some(SemanticsRole::Button);
-    props.a11y.label = Some(Arc::<str>::from("Copy"));
-    props.focusable = false;
+#[derive(Debug, Default)]
+struct CopyFeedback {
+    copied: bool,
+    token: Option<TimerToken>,
+}
 
-    cx.pressable(props, move |cx, st| {
-        let (bg_pressed, bg_hover, bg_idle, radius_sm, font_size, line_height, fg) = {
-            let theme = Theme::global(&*cx.app);
-            (
-                theme.color_required("accent"),
-                theme.color_required("color.menu.item.hover"),
-                theme.color_required("secondary"),
-                theme.metric_required("metric.radius.sm"),
-                theme.metric_required("metric.font.size"),
-                theme.metric_required("metric.font.line_height"),
-                theme.color_required("foreground"),
-            )
-        };
+#[derive(Clone, Default)]
+struct CopyFeedbackRef(Arc<Mutex<CopyFeedback>>);
+
+impl CopyFeedbackRef {
+    fn lock(&self) -> std::sync::MutexGuard<'_, CopyFeedback> {
+        self.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+fn render_copy_button_overlay<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    code: Arc<str>,
+) -> AnyElement {
+    let inset = MetricRef::space(Space::N1p5).resolve(theme);
+
+    let mut props = ContainerProps::default();
+    props.layout.position = PositionStyle::Absolute;
+    props.layout.inset.top = Some(inset);
+    props.layout.inset.right = Some(inset);
+    props.layout.size.width = Length::Auto;
+
+    cx.container(props, |cx| vec![render_copy_button(cx, theme, code)])
+}
+
+fn render_copy_button<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    code: Arc<str>,
+) -> AnyElement {
+    let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
+    let copied = feedback.lock().copied;
+    let label = if copied { "Copied" } else { "Copy" };
+
+    cx.pressable_with_id_props(move |cx, st, id| {
+        let mut props = PressableProps::default();
+        props.a11y.role = Some(SemanticsRole::Button);
+        props.a11y.label = Some(Arc::<str>::from(label));
+        props.focusable = false;
+
+        cx.timer_on_timer_for(
+            id,
+            Arc::new({
+                let feedback = feedback.clone();
+                move |_host, _cx, token| {
+                    let mut feedback = feedback.lock();
+                    if feedback.token != Some(token) {
+                        return false;
+                    }
+                    feedback.token = None;
+                    feedback.copied = false;
+                    true
+                }
+            }),
+        );
+
+        cx.pressable_on_activate({
+            let code = code.clone();
+            let feedback = feedback.clone();
+            Arc::new(move |host, action_cx, _reason| {
+                host.push_effect(Effect::ClipboardSetText {
+                    text: code.to_string(),
+                });
+
+                let (prev, token) = {
+                    let mut feedback = feedback.lock();
+                    let prev = feedback.token.take();
+                    let token = host.next_timer_token();
+                    feedback.copied = true;
+                    feedback.token = Some(token);
+                    (prev, token)
+                };
+
+                if let Some(prev) = prev {
+                    host.push_effect(Effect::CancelTimer { token: prev });
+                }
+                host.push_effect(Effect::SetTimer {
+                    window: Some(action_cx.window),
+                    token,
+                    after: Duration::from_secs(2),
+                    repeat: None,
+                });
+                host.request_redraw(action_cx.window);
+            })
+        });
+
+        let bg_pressed = theme.color_required("accent");
+        let bg_hover = theme.color_required("color.menu.item.hover");
+        let bg_idle = theme.color_required("secondary");
+        let radius_sm = theme.metric_required("metric.radius.sm");
+        let font_size = theme.metric_required("metric.font.size");
+        let line_height = theme.metric_required("metric.font.line_height");
+        let fg = theme.color_required("foreground");
 
         let bg = if st.pressed {
             bg_pressed
@@ -274,46 +352,43 @@ fn render_copy_button<H: UiHost>(cx: &mut ElementContext<'_, H>, code: Arc<str>)
             bg_idle
         };
 
-        cx.pressable_on_activate({
-            let code = code.clone();
-            Arc::new(move |host, _cx, _reason| {
-                host.push_effect(Effect::ClipboardSetText {
-                    text: code.to_string(),
-                });
-            })
-        });
+        let pad_y = MetricRef::space(Space::N0p5).resolve(theme);
+        let pad_x = MetricRef::space(Space::N1p5).resolve(theme);
 
         let mut container = ContainerProps::default();
         container.padding = Edges {
-            top: Px(2.0),
-            right: Px(8.0),
-            bottom: Px(2.0),
-            left: Px(8.0),
+            top: pad_y,
+            right: pad_x,
+            bottom: pad_y,
+            left: pad_x,
         };
         container.corner_radii = fret_core::Corners::all(radius_sm);
         container.background = Some(bg);
         container.border = Edges::all(Px(0.0));
 
-        vec![cx.container(container, |cx| {
-            vec![cx.text_props(TextProps {
-                layout: {
-                    let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Auto;
-                    layout
-                },
-                text: Arc::<str>::from("Copy"),
-                style: Some(TextStyle {
-                    font: FontId::default(),
-                    size: font_size,
-                    weight: FontWeight::SEMIBOLD,
-                    line_height: Some(line_height),
-                    letter_spacing_em: None,
-                }),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            })]
-        })]
+        (
+            props,
+            vec![cx.container(container, |cx| {
+                vec![cx.text_props(TextProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Auto;
+                        layout
+                    },
+                    text: Arc::<str>::from(label),
+                    style: Some(TextStyle {
+                        font: FontId::default(),
+                        size: font_size,
+                        weight: FontWeight::SEMIBOLD,
+                        line_height: Some(line_height),
+                        letter_spacing_em: None,
+                    }),
+                    color: Some(fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })]
+            })],
+        )
     })
 }
 
