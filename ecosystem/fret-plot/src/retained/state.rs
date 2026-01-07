@@ -49,6 +49,21 @@ pub enum PlotDragOutput {
     },
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PlotAxisLock {
+    pub pan: bool,
+    pub zoom: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PlotAxisLocks {
+    pub x: PlotAxisLock,
+    pub y: PlotAxisLock,
+    pub y2: PlotAxisLock,
+    pub y3: PlotAxisLock,
+    pub y4: PlotAxisLock,
+}
+
 /// A caller-owned output snapshot for plot interaction state.
 ///
 /// This is intended for building higher-level behaviors such as linked plots, inspectors, and
@@ -134,6 +149,8 @@ pub struct PlotState {
     pub pinned_series: Option<SeriesId>,
     /// Optional user query selection in data space.
     pub query: Option<DataRect>,
+    /// Axis pan/zoom locks.
+    pub axis_locks: PlotAxisLocks,
     /// Plot overlays owned by the caller (e.g. reference lines).
     pub overlays: PlotOverlays,
 }
@@ -153,6 +170,7 @@ impl Default for PlotState {
             hidden_series: HashSet::new(),
             pinned_series: None,
             query: None,
+            axis_locks: PlotAxisLocks::default(),
             overlays: PlotOverlays::default(),
         }
     }

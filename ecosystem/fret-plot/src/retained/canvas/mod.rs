@@ -35,8 +35,8 @@ use super::layers::{
 };
 use super::layout::{PlotLayout, PlotRegion};
 use super::state::{
-    PlotDragOutput, PlotDragPhase, PlotHoverOutput, PlotImage, PlotImageLayer, PlotOutput,
-    PlotOutputSnapshot, PlotState,
+    PlotAxisLock, PlotAxisLocks, PlotDragOutput, PlotDragPhase, PlotHoverOutput, PlotImage,
+    PlotImageLayer, PlotOutput, PlotOutputSnapshot, PlotState,
 };
 use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 
@@ -225,12 +225,6 @@ fn format_colorbar_value(v: f32) -> String {
     format!("{v:.3}")
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-struct AxisLock {
-    pan: bool,
-    zoom: bool,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DragRectHandle {
     Inside,
@@ -322,11 +316,11 @@ pub struct PlotCanvas<L: PlotLayer + 'static> {
     show_y2_axis: bool,
     show_y3_axis: bool,
     show_y4_axis: bool,
-    lock_x: AxisLock,
-    lock_y: AxisLock,
-    lock_y2: AxisLock,
-    lock_y3: AxisLock,
-    lock_y4: AxisLock,
+    lock_x: PlotAxisLock,
+    lock_y: PlotAxisLock,
+    lock_y2: PlotAxisLock,
+    lock_y3: PlotAxisLock,
+    lock_y4: PlotAxisLock,
     x_constraints: AxisConstraints,
     y_constraints: AxisConstraints,
     y2_constraints: AxisConstraints,
@@ -703,11 +697,11 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             show_y2_axis: false,
             show_y3_axis: false,
             show_y4_axis: false,
-            lock_x: AxisLock::default(),
-            lock_y: AxisLock::default(),
-            lock_y2: AxisLock::default(),
-            lock_y3: AxisLock::default(),
-            lock_y4: AxisLock::default(),
+            lock_x: PlotAxisLock::default(),
+            lock_y: PlotAxisLock::default(),
+            lock_y2: PlotAxisLock::default(),
+            lock_y3: PlotAxisLock::default(),
+            lock_y4: PlotAxisLock::default(),
             x_constraints: AxisConstraints::default(),
             y_constraints: AxisConstraints::default(),
             y2_constraints: AxisConstraints::default(),
@@ -828,92 +822,107 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
     }
 
     pub fn x_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_x = AxisLock {
+        self.lock_x = PlotAxisLock {
             pan: locked,
             zoom: locked,
         };
+        self.plot_state.axis_locks.x = self.lock_x;
         self
     }
 
     pub fn y_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_y = AxisLock {
+        self.lock_y = PlotAxisLock {
             pan: locked,
             zoom: locked,
         };
+        self.plot_state.axis_locks.y = self.lock_y;
         self
     }
 
     pub fn y2_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_y2 = AxisLock {
+        self.lock_y2 = PlotAxisLock {
             pan: locked,
             zoom: locked,
         };
+        self.plot_state.axis_locks.y2 = self.lock_y2;
         self
     }
 
     pub fn y3_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_y3 = AxisLock {
+        self.lock_y3 = PlotAxisLock {
             pan: locked,
             zoom: locked,
         };
+        self.plot_state.axis_locks.y3 = self.lock_y3;
         self
     }
 
     pub fn y4_axis_locked(mut self, locked: bool) -> Self {
-        self.lock_y4 = AxisLock {
+        self.lock_y4 = PlotAxisLock {
             pan: locked,
             zoom: locked,
         };
+        self.plot_state.axis_locks.y4 = self.lock_y4;
         self
     }
 
     pub fn x_axis_pan_locked(mut self, locked: bool) -> Self {
         self.lock_x.pan = locked;
+        self.plot_state.axis_locks.x = self.lock_x;
         self
     }
 
     pub fn x_axis_zoom_locked(mut self, locked: bool) -> Self {
         self.lock_x.zoom = locked;
+        self.plot_state.axis_locks.x = self.lock_x;
         self
     }
 
     pub fn y_axis_pan_locked(mut self, locked: bool) -> Self {
         self.lock_y.pan = locked;
+        self.plot_state.axis_locks.y = self.lock_y;
         self
     }
 
     pub fn y_axis_zoom_locked(mut self, locked: bool) -> Self {
         self.lock_y.zoom = locked;
+        self.plot_state.axis_locks.y = self.lock_y;
         self
     }
 
     pub fn y2_axis_pan_locked(mut self, locked: bool) -> Self {
         self.lock_y2.pan = locked;
+        self.plot_state.axis_locks.y2 = self.lock_y2;
         self
     }
 
     pub fn y2_axis_zoom_locked(mut self, locked: bool) -> Self {
         self.lock_y2.zoom = locked;
+        self.plot_state.axis_locks.y2 = self.lock_y2;
         self
     }
 
     pub fn y3_axis_pan_locked(mut self, locked: bool) -> Self {
         self.lock_y3.pan = locked;
+        self.plot_state.axis_locks.y3 = self.lock_y3;
         self
     }
 
     pub fn y3_axis_zoom_locked(mut self, locked: bool) -> Self {
         self.lock_y3.zoom = locked;
+        self.plot_state.axis_locks.y3 = self.lock_y3;
         self
     }
 
     pub fn y4_axis_pan_locked(mut self, locked: bool) -> Self {
         self.lock_y4.pan = locked;
+        self.plot_state.axis_locks.y4 = self.lock_y4;
         self
     }
 
     pub fn y4_axis_zoom_locked(mut self, locked: bool) -> Self {
         self.lock_y4.zoom = locked;
+        self.plot_state.axis_locks.y4 = self.lock_y4;
         self
     }
 
@@ -1143,6 +1152,52 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
         } else {
             self.plot_state.clone()
         }
+    }
+
+    fn canvas_axis_locks(&self) -> PlotAxisLocks {
+        PlotAxisLocks {
+            x: self.lock_x,
+            y: self.lock_y,
+            y2: self.lock_y2,
+            y3: self.lock_y3,
+            y4: self.lock_y4,
+        }
+    }
+
+    fn set_canvas_axis_locks(&mut self, locks: PlotAxisLocks) {
+        self.lock_x = locks.x;
+        self.lock_y = locks.y;
+        self.lock_y2 = locks.y2;
+        self.lock_y3 = locks.y3;
+        self.lock_y4 = locks.y4;
+    }
+
+    fn sync_axis_locks<H: UiHost>(&mut self, app: &mut H) {
+        let state = self.read_plot_state(app);
+        let state_locks = state.axis_locks;
+        let canvas_locks = self.canvas_axis_locks();
+
+        if self.plot_state_model.is_some() {
+            // Allow PlotCanvas builder configuration to provide initial locks when the caller
+            // uses an external PlotState but has not set axis locks yet.
+            if state_locks == PlotAxisLocks::default() && canvas_locks != PlotAxisLocks::default() {
+                let _ = self.update_plot_state(app, |s| {
+                    s.axis_locks = canvas_locks;
+                });
+            } else if state_locks != canvas_locks {
+                self.set_canvas_axis_locks(state_locks);
+            }
+        } else if self.plot_state.axis_locks != canvas_locks {
+            // Internal PlotState should always stay in sync with the widget-owned lock flags.
+            self.plot_state.axis_locks = canvas_locks;
+        }
+    }
+
+    fn persist_axis_locks<H: UiHost>(&mut self, app: &mut H) {
+        let locks = self.canvas_axis_locks();
+        let _ = self.update_plot_state(app, |s| {
+            s.axis_locks = locks;
+        });
     }
 
     fn update_plot_state<H: UiHost>(
@@ -1472,6 +1527,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         // Axis enablement is derived from the model (series -> axis assignment), so make sure
         // we don't accidentally interpret "right axis series" using the primary Y transform.
         self.ensure_required_axes_enabled(cx.app);
+        self.sync_axis_locks(cx.app);
         let resolved_style = self.resolve_style_from_theme(cx.theme());
 
         match event {
@@ -1563,6 +1619,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             }
                         }
                     }
+
+                    self.persist_axis_locks(cx.app);
 
                     self.hover = None;
                     self.cursor_px = None;
@@ -1758,6 +1816,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         }
                         PlotRegion::Plot => {}
                     }
+
+                    self.persist_axis_locks(cx.app);
 
                     self.hover = None;
                     self.cursor_px = None;
@@ -4055,6 +4115,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         self.last_scale_factor = cx.scale_factor;
 
         self.ensure_required_axes_enabled(cx.app);
+        self.sync_axis_locks(cx.app);
 
         let default_style = LinePlotStyle::default();
         let font_stack_key = cx
@@ -6406,7 +6467,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         }
 
         // Axis lock indicators (P0: lightweight discoverability).
-        let lock_indicator = |lock: AxisLock| match (lock.pan, lock.zoom) {
+        let lock_indicator = |lock: PlotAxisLock| match (lock.pan, lock.zoom) {
             (false, false) => None,
             (true, true) => Some("L"),
             (true, false) => Some("P"),
