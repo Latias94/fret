@@ -146,6 +146,9 @@ impl Dialog {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let overlay_closable = self.overlay_closable;
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
+                let dialog_options = radix_dialog::DialogOptions::default()
+                    .dismiss_on_overlay_press(overlay_closable)
+                    .initial_focus(None);
 
                 let opacity = motion.progress;
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
@@ -167,13 +170,6 @@ impl Dialog {
                             corner_radii: Corners::all(Px(0.0)),
                         },
                         |_cx| Vec::new(),
-                    );
-
-                    let barrier = radix_dialog::modal_barrier(
-                        cx,
-                        self.open.clone(),
-                        overlay_closable,
-                        vec![barrier_fill],
                     );
 
                     let outer = cx.bounds;
@@ -234,12 +230,22 @@ impl Dialog {
                         },
                         ..Default::default()
                     };
+                    let barrier_children = vec![barrier_fill];
+                    let open_for_children = self.open.clone();
                     vec![cx.opacity_props(
                         OpacityProps {
                             layout: opacity_layout.clone(),
                             opacity,
                         },
-                        move |_cx| vec![barrier, dialog],
+                        move |cx| {
+                            radix_dialog::modal_dialog_layer_children(
+                                cx,
+                                open_for_children.clone(),
+                                dialog_options,
+                                barrier_children,
+                                dialog,
+                            )
+                        },
                     )]
                 });
 
@@ -249,13 +255,12 @@ impl Dialog {
                     });
                 }
 
-                let options = radix_dialog::DialogOptions::default().initial_focus(None);
                 let request = radix_dialog::modal_dialog_request_with_options(
                     id,
                     id,
                     self.open,
                     overlay_presence,
-                    options,
+                    dialog_options,
                     overlay_children,
                 );
                 radix_dialog::request_modal_dialog(cx, request);

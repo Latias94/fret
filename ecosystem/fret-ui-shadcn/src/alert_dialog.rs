@@ -136,6 +136,9 @@ impl AlertDialog {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
                 let opacity = motion.progress;
+                let barrier_options = radix_dialog::DialogOptions::default()
+                    .dismiss_on_overlay_press(false)
+                    .initial_focus(None);
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let barrier_fill = cx.container(
@@ -156,12 +159,6 @@ impl AlertDialog {
                             corner_radii: Corners::all(Px(0.0)),
                         },
                         |_cx| Vec::new(),
-                    );
-
-                    let barrier = radix_alert_dialog::alert_dialog_modal_barrier(
-                        cx,
-                        self.open.clone(),
-                        vec![barrier_fill],
                     );
 
                     crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
@@ -226,23 +223,30 @@ impl AlertDialog {
                         },
                         ..Default::default()
                     };
+                    let content_layout = opacity_layout.clone();
+                    let barrier_children = vec![barrier_fill];
+                    let open_for_children = self.open.clone();
 
                     vec![cx.opacity_props(
                         OpacityProps {
-                            layout: opacity_layout.clone(),
+                            layout: opacity_layout,
                             opacity,
                         },
                         move |cx| {
-                            vec![
-                                barrier,
-                                cx.visual_transform_props(
-                                    VisualTransformProps {
-                                        layout: opacity_layout,
-                                        transform: zoom,
-                                    },
-                                    move |_cx| vec![wrapper],
-                                ),
-                            ]
+                            let content = cx.visual_transform_props(
+                                VisualTransformProps {
+                                    layout: content_layout,
+                                    transform: zoom,
+                                },
+                                move |_cx| vec![wrapper],
+                            );
+                            radix_dialog::modal_dialog_layer_children(
+                                cx,
+                                open_for_children.clone(),
+                                barrier_options,
+                                barrier_children,
+                                content,
+                            )
                         },
                     )]
                 });
