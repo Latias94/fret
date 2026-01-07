@@ -387,6 +387,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                     let max_w = col.max_size.max(min_w);
                                                                                     let resize_mode = props.column_resize_mode;
                                                                                     let resize_direction = props.column_resize_direction;
+                                                                                    let grip_color = border;
 
                                                                                     pieces.push(cx.pointer_region(
                                                                                         PointerRegionProps {
@@ -489,7 +490,34 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                     true
                                                                                                 }),
                                                                                             );
-                                                                                            Vec::new()
+                                                                                            vec![stack::hstack(
+                                                                                                cx,
+                                                                                                stack::HStackProps::default()
+                                                                                                    .gap_x(Space::N0)
+                                                                                                    .justify(Justify::Center)
+                                                                                                    .items(Items::Stretch),
+                                                                                                |cx| {
+                                                                                                    vec![cx.container(
+                                                                                                        ContainerProps {
+                                                                                                            background: Some(grip_color),
+                                                                                                            layout: LayoutStyle {
+                                                                                                                size: fret_ui::element::SizeStyle {
+                                                                                                                    width: Length::Px(Px(2.0)),
+                                                                                                                    height: Length::Fill,
+                                                                                                                    ..Default::default()
+                                                                                                                },
+                                                                                                                flex: fret_ui::element::FlexItemStyle {
+                                                                                                                    shrink: 0.0,
+                                                                                                                    ..Default::default()
+                                                                                                                },
+                                                                                                                ..Default::default()
+                                                                                                            },
+                                                                                                            ..Default::default()
+                                                                                                        },
+                                                                                                        |_| Vec::new(),
+                                                                                                    )]
+                                                                                                },
+                                                                                            )]
                                                                                         },
                                                                                     ));
                                                                                 }
@@ -510,6 +538,20 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                     ScrollProps {
                                                                         axis: ScrollAxis::X,
                                                                         scroll_handle: Some(scroll_x),
+                                                                        layout: LayoutStyle {
+                                                                            size: fret_ui::element::SizeStyle {
+                                                                                width: Length::Fill,
+                                                                                height: Length::Fill,
+                                                                                ..Default::default()
+                                                                            },
+                                                                            flex: fret_ui::element::FlexItemStyle {
+                                                                                grow: 1.0,
+                                                                                shrink: 1.0,
+                                                                                basis: Length::Px(Px(0.0)),
+                                                                                ..Default::default()
+                                                                            },
+                                                                            ..Default::default()
+                                                                        },
                                                                         ..Default::default()
                                                                     },
                                                                     |_| vec![row],
@@ -648,6 +690,11 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                             padding: Edges::symmetric(
                                                                                                 cell_px, cell_py,
                                                                                             ),
+                                                                                            border: Edges {
+                                                                                                right: Px(1.0),
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            border_color: Some(border),
                                                                                             layout: LayoutStyle {
                                                                                                 size: fret_ui::element::SizeStyle {
                                                                                                     width: Length::Px(col_w),
@@ -675,6 +722,20 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                             ScrollProps {
                                                                                 axis: ScrollAxis::X,
                                                                                 scroll_handle: Some(scroll_x),
+                                                                                layout: LayoutStyle {
+                                                                                    size: fret_ui::element::SizeStyle {
+                                                                                        width: Length::Fill,
+                                                                                        height: Length::Fill,
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    flex: fret_ui::element::FlexItemStyle {
+                                                                                        grow: 1.0,
+                                                                                        shrink: 1.0,
+                                                                                        basis: Length::Px(Px(0.0)),
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    ..Default::default()
+                                                                                },
                                                                                 ..Default::default()
                                                                             },
                                                                             |_| vec![row],
