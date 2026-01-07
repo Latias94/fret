@@ -652,6 +652,7 @@ impl NodeGraphCanvas {
         target: &ContextMenuTarget,
         invoked_at: Point,
         item: NodeGraphContextMenuItem,
+        menu_candidates: &[InsertNodeCandidate],
     ) {
         match (target, item.action) {
             (
@@ -782,12 +783,7 @@ impl NodeGraphCanvas {
                     Ignore,
                 }
 
-                let Some(candidate) = self
-                    .interaction
-                    .context_menu
-                    .as_ref()
-                    .and_then(|m| m.candidates.get(candidate_ix).cloned())
-                else {
+                let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
 
@@ -858,14 +854,12 @@ impl NodeGraphCanvas {
                     Ignore,
                 }
 
-                let Some(candidate) = self
-                    .interaction
-                    .context_menu
-                    .as_ref()
-                    .and_then(|m| m.candidates.get(candidate_ix).cloned())
-                else {
+                let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
+
+                let zoom = self.cached_zoom;
+                let style = self.style.clone();
 
                 let outcome = {
                     let presenter = &mut *self.presenter;
@@ -875,8 +869,34 @@ impl NodeGraphCanvas {
                                 Some(t) => t,
                                 None => return Outcome::Ignore,
                             };
-                            let at = presenter
-                                .conversion_insert_position(graph, *from, *to, *at, template);
+
+                            let zoom = if zoom.is_finite() && zoom > 0.0 {
+                                zoom
+                            } else {
+                                1.0
+                            };
+                            let inputs = template
+                                .ports
+                                .iter()
+                                .filter(|p| p.dir == PortDirection::In)
+                                .count();
+                            let outputs = template
+                                .ports
+                                .iter()
+                                .filter(|p| p.dir == PortDirection::Out)
+                                .count();
+                            let rows = inputs.max(outputs) as f32;
+                            let base = style.node_header_height + 2.0 * style.node_padding;
+                            let h = (base + rows * style.pin_row_height) / zoom;
+                            let w = style.node_width / zoom;
+                            let default_at = CanvasPoint {
+                                x: at.x - 0.5 * w,
+                                y: at.y - 0.5 * h,
+                            };
+
+                            let at = presenter.conversion_insert_position(
+                                graph, *from, *to, default_at, template,
+                            );
                             let spec = match template.instantiate(at) {
                                 Ok(spec) => spec,
                                 Err(err) => {
@@ -1516,12 +1536,19 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             let item = menu.items.get(ix).cloned();
                             let target = menu.target.clone();
                             let invoked_at = menu.invoked_at;
+                            let candidates = menu.candidates.clone();
                             self.interaction.context_menu = None;
 
                             if let Some(item) = item
                                 && item.enabled
                             {
-                                self.activate_context_menu_item(cx, &target, invoked_at, item);
+                                self.activate_context_menu_item(
+                                    cx,
+                                    &target,
+                                    invoked_at,
+                                    item,
+                                    &candidates,
+                                );
                             }
 
                             cx.stop_propagation();
@@ -1644,11 +1671,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 let item = menu.items.get(ix).cloned();
                                 let target = menu.target.clone();
                                 let invoked_at = menu.invoked_at;
+                                let candidates = menu.candidates.clone();
                                 self.interaction.context_menu = None;
                                 if let Some(item) = item
                                     && item.enabled
                                 {
-                                    self.activate_context_menu_item(cx, &target, invoked_at, item);
+                                    self.activate_context_menu_item(
+                                        cx,
+                                        &target,
+                                        invoked_at,
+                                        item,
+                                        &candidates,
+                                    );
                                 }
                             } else {
                                 self.interaction.context_menu = None;
@@ -2298,6 +2332,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                                     let (outcome, toast) = {
                                         let presenter = &mut *self.presenter;
+                                        let style = self.style.clone();
                                         self.graph
                                             .read_ref(cx.app, |graph| {
                                                 let mut scratch = graph.clone();
@@ -2363,12 +2398,48 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                                 }
                                                                 if conversions.len() == 1 {
                                                                     let template = &conversions[0];
+
+                                                                    let inputs = template
+                                                                        .ports
+                                                                        .iter()
+                                                                        .filter(|p| {
+                                                                            p.dir
+                                                                                == PortDirection::In
+                                                                        })
+                                                                        .count();
+                                                                    let outputs = template
+                                                                        .ports
+                                                                        .iter()
+                                                                        .filter(|p| {
+                                                                            p.dir
+                                                                                == PortDirection::Out
+                                                                        })
+                                                                        .count();
+                                                                    let rows = inputs.max(outputs)
+                                                                        as f32;
+                                                                    let zoom = if zoom.is_finite()
+                                                                        && zoom > 0.0
+                                                                    {
+                                                                        zoom
+                                                                    } else {
+                                                                        1.0
+                                                                    };
+                                                                    let base = style.node_header_height
+                                                                        + 2.0 * style.node_padding;
+                                                                    let h = (base + rows * style.pin_row_height)
+                                                                        / zoom;
+                                                                    let w = style.node_width / zoom;
+                                                                    let default_at = CanvasPoint {
+                                                                        x: convert_at.x - 0.5 * w,
+                                                                        y: convert_at.y - 0.5 * h,
+                                                                    };
+
                                                                     let at = presenter
                                                                         .conversion_insert_position(
                                                                             &scratch,
                                                                             src,
                                                                             target,
-                                                                            convert_at,
+                                                                            default_at,
                                                                             template,
                                                                         );
                                                                     if let Ok(spec) = template.instantiate(at) {
