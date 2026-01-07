@@ -55,3 +55,6 @@ pub trait GraphProfile {
         Vec::new()
     }
 }
+
+#[cfg(test)]
+mod tests;
