@@ -1,0 +1,6 @@
+[package]
+name = "fret-node"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
