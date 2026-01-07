@@ -25,6 +25,7 @@ struct MarkdownDemoWindowState {
     ui: UiTree<App>,
     markdown: Arc<str>,
     wrap_code: Model<bool>,
+    cap_code_height: Model<bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -200,6 +201,7 @@ impl MarkdownDemoDriver {
         ui.set_window(window);
 
         let wrap_code = app.models_mut().insert(false);
+        let cap_code_height = app.models_mut().insert(true);
 
         let markdown: Arc<str> = Arc::from(
             r##"# Markdown Demo
@@ -298,6 +300,7 @@ $$
             ui,
             markdown,
             wrap_code,
+            cap_code_height,
         }
     }
 
@@ -309,6 +312,7 @@ $$
         bounds: Rect,
         markdown_source: Arc<str>,
         wrap_code: Model<bool>,
+        cap_code_height: Model<bool>,
     ) {
         let cache_changed = app.with_global_mut(RemoteImageCache::default, |cache, app| {
             let mut changed = cache.poll_completed();
@@ -325,7 +329,14 @@ $$
 
         let checker_rgba = Arc::new(checkerboard_rgba8(96, 96));
 
+        let theme_snapshot = Theme::global(app).clone();
         let wrap_enabled = app.models().get_copied(&wrap_code).unwrap_or(false);
+        let cap_enabled = app.models().get_copied(&cap_code_height).unwrap_or(true);
+        let code_block_max_height = {
+            let font_size = theme_snapshot.metric_required("metric.font.size").0;
+            let line_height = theme_snapshot.metric_required("metric.font.line_height").0;
+            Px((line_height * 16.0).max(font_size * 18.0))
+        };
 
         let mut components = markdown::MarkdownComponents::<App>::default().with_open_url();
         components.code_block_ui.wrap = if wrap_enabled {
@@ -333,6 +344,7 @@ $$
         } else {
             fret_code_view::CodeBlockWrap::ScrollX
         };
+        components.code_block_ui.max_height = cap_enabled.then_some(code_block_max_height);
 
         let on_link_activate = components.on_link_activate.clone();
 
@@ -535,6 +547,16 @@ $$
                                                     .get_copied(&wrap_code)
                                                     .unwrap_or(false);
 
+                                                cx.observe_model(
+                                                    &cap_code_height,
+                                                    Invalidation::Layout,
+                                                );
+                                                let cap_enabled = cx
+                                                    .app
+                                                    .models()
+                                                    .get_copied(&cap_code_height)
+                                                    .unwrap_or(true);
+
                                                 vec![
                                                     cx.text(format!(
                                                         "wrap code: {}",
@@ -542,6 +564,13 @@ $$
                                                     )),
                                                     shadcn::Switch::new(wrap_code.clone())
                                                         .a11y_label("Wrap code blocks")
+                                                        .into_element(cx),
+                                                    cx.text(format!(
+                                                        "cap code height: {}",
+                                                        if cap_enabled { "on" } else { "off" }
+                                                    )),
+                                                    shadcn::Switch::new(cap_code_height.clone())
+                                                        .a11y_label("Cap code block height")
                                                         .into_element(cx),
                                                 ]
                                             },
@@ -741,6 +770,7 @@ impl WinitAppDriver for MarkdownDemoDriver {
             bounds,
             state.markdown.clone(),
             state.wrap_code.clone(),
+            state.cap_code_height.clone(),
         );
 
         state.ui.request_semantics_snapshot();
@@ -775,7 +805,6 @@ fn apply_markdown_demo_theme_tokens(app: &mut App) {
         let font_size = theme.metric_required("metric.font.size").0;
         let line_height = theme.metric_required("metric.font.line_height").0;
         let block_height = (line_height * 3.25).max(font_size * 4.0);
-        let code_block_max_height = (line_height * 16.0).max(font_size * 18.0);
 
         let mut cfg = ThemeConfig {
             name: theme.name.clone(),
@@ -793,10 +822,6 @@ fn apply_markdown_demo_theme_tokens(app: &mut App) {
         );
         cfg.metrics
             .insert("fret.markdown.math.block.height".to_string(), block_height);
-        cfg.metrics.insert(
-            "fret.markdown.code_block.max_height".to_string(),
-            code_block_max_height,
-        );
 
         theme.apply_config(&cfg);
     });
