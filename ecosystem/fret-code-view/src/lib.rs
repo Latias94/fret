@@ -291,10 +291,13 @@ pub fn code_block_with_header_slots<H: UiHost>(
     });
 
     let code = Arc::<str>::from(code.to_string());
+    let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
 
     cx.container(props, |cx| {
         vec![cx.hover_region(HoverRegionProps::default(), |cx, hovered| {
-            let show_copy = options.show_copy_button && (!options.copy_button_on_hover || hovered);
+            let copied = feedback.lock().copied;
+            let copy_visible = !options.copy_button_on_hover || hovered || copied;
+            let show_copy = options.show_copy_button && copy_visible;
 
             let header_visible = options.show_header
                 || language.is_some()
@@ -303,10 +306,6 @@ pub fn code_block_with_header_slots<H: UiHost>(
 
             if !header_visible {
                 header.show_language = false;
-            }
-
-            if show_copy && options.copy_button_placement == CodeBlockCopyButtonPlacement::Header {
-                header.right.push(render_copy_button(cx, &theme, code.clone()));
             }
 
             let content = stack::vstack(
@@ -324,6 +323,18 @@ pub fn code_block_with_header_slots<H: UiHost>(
                             &header,
                             options.header_divider,
                             options.header_background,
+                            if options.show_copy_button
+                                && options.copy_button_placement
+                                    == CodeBlockCopyButtonPlacement::Header
+                            {
+                                Some(CopyButtonInHeader {
+                                    feedback: feedback.clone(),
+                                    code: code.clone(),
+                                    visible: copy_visible,
+                                })
+                            } else {
+                                None
+                            },
                         ));
                     }
                     out.push(render_code_block_body(cx, &theme, &prepared, options.wrap));
@@ -333,11 +344,18 @@ pub fn code_block_with_header_slots<H: UiHost>(
 
             let mut out = vec![content];
             if show_copy && options.copy_button_placement == CodeBlockCopyButtonPlacement::Overlay {
-                out.push(render_copy_button_overlay(cx, &theme, code.clone()));
+                out.push(render_copy_button_overlay(cx, &theme, feedback.clone(), code.clone()));
             }
             out
         })]
     })
+}
+
+#[derive(Clone)]
+struct CopyButtonInHeader {
+    feedback: CopyFeedbackRef,
+    code: Arc<str>,
+    visible: bool,
 }
 
 fn render_code_block_header<H: UiHost>(
@@ -347,6 +365,7 @@ fn render_code_block_header<H: UiHost>(
     header: &CodeBlockHeaderSlots,
     divider: bool,
     background: CodeBlockHeaderBackground,
+    copy: Option<CopyButtonInHeader>,
 ) -> AnyElement {
     let pad_x = MetricRef::space(Space::N2).resolve(theme);
     let pad_y = MetricRef::space(Space::N1).resolve(theme);
@@ -403,6 +422,12 @@ fn render_code_block_header<H: UiHost>(
 
                 let mut right = Vec::new();
                 right.extend(header.right.iter().cloned());
+                if let Some(copy) = copy {
+                    let el = render_copy_button(cx, theme, copy.feedback, copy.code);
+                    right.push(cx.opacity(if copy.visible { 1.0 } else { 0.0 }, |cx| {
+                        vec![cx.interactivity_gate(true, copy.visible, |_cx| vec![el])]
+                    }));
+                }
 
                 vec![
                     stack::hstack(
@@ -493,6 +518,7 @@ impl CopyFeedbackRef {
 fn render_copy_button_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    feedback: CopyFeedbackRef,
     code: Arc<str>,
 ) -> AnyElement {
     let inset = MetricRef::space(Space::N1p5).resolve(theme);
@@ -503,15 +529,15 @@ fn render_copy_button_overlay<H: UiHost>(
     props.layout.inset.right = Some(inset);
     props.layout.size.width = Length::Auto;
 
-    cx.container(props, |cx| vec![render_copy_button(cx, theme, code)])
+    cx.container(props, |cx| vec![render_copy_button(cx, theme, feedback, code)])
 }
 
 fn render_copy_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
+    feedback: CopyFeedbackRef,
     code: Arc<str>,
 ) -> AnyElement {
-    let feedback = cx.with_state(CopyFeedbackRef::default, |st| st.clone());
     let copied = feedback.lock().copied;
     let label = if copied { "Copied" } else { "Copy" };
 
