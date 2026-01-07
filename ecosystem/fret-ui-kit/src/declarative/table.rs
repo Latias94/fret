@@ -364,6 +364,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                 let row_index_by_key = &cache.row_index_by_key;
                 let group_labels = &cache.group_labels;
                 let group_aggs_text = &cache.group_aggs_text;
+                let group_aggs_u64 = &cache.group_aggs_u64;
 
                 let mut visible: Vec<DisplayRow> = Vec::new();
                 let mut roots: Vec<crate::headless::table::GroupedRowIndex> =
@@ -407,6 +408,27 @@ pub fn table_virtualized<H: UiHost, TData>(
                                 && cb.as_ref() == col.id.as_ref()
                             {
                                 ord = Some(va.cmp(vb));
+                            }
+
+                            if ord.is_none() {
+                                let va = group_aggs_u64.get(&ra.key).and_then(|entries| {
+                                    entries
+                                        .iter()
+                                        .find(|entry| entry.0.as_ref() == col.id.as_ref())
+                                        .map(|entry| entry.1)
+                                });
+                                let vb = group_aggs_u64.get(&rb.key).and_then(|entries| {
+                                    entries
+                                        .iter()
+                                        .find(|entry| entry.0.as_ref() == col.id.as_ref())
+                                        .map(|entry| entry.1)
+                                });
+                                ord = match (va, vb) {
+                                    (Some(va), Some(vb)) => Some(va.cmp(&vb)),
+                                    (Some(_), None) => Some(std::cmp::Ordering::Less),
+                                    (None, Some(_)) => Some(std::cmp::Ordering::Greater),
+                                    (None, None) => None,
+                                };
                             }
 
                             if ord.is_none() {
@@ -457,6 +479,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                         row_index_by_key,
                         group_labels,
                         group_aggs_text,
+                        group_aggs_u64,
                         deps.sorting.as_slice(),
                         columns,
                         data,
@@ -513,168 +536,160 @@ pub fn table_virtualized<H: UiHost, TData>(
                 .build();
 
             let grouped = table.grouped_row_model().clone();
-
-            let mut group_labels: std::collections::HashMap<RowKey, Arc<str>> = Default::default();
-            let mut group_aggs_text: std::collections::HashMap<
-                RowKey,
-                Arc<[(ColumnId, Arc<str>)]>,
-            > = Default::default();
-            for &node in grouped.flat_rows() {
-                let Some(row) = grouped.row(node) else {
-                    continue;
-                };
-                if matches!(row.kind, GroupedRowKind::Group { .. }) {
-                    group_labels.insert(
-                        row.key,
-                        group_label_for_key(&row.kind, data, &row_index_by_key, &col_by_id),
-                    );
-                    group_aggs_text.insert(
-                        row.key,
-                        group_aggregations(
-                            &grouped,
-                            node,
-                            &row.kind,
-                            data,
-                            &row_index_by_key,
-                            &agg_columns,
-                        ),
-                    );
-                }
-            }
-
-            fn for_each_leaf(
+            fn compute_group_aggregations<TData>(
                 model: &crate::headless::table::GroupedRowModel,
-                root: crate::headless::table::GroupedRowIndex,
-                f: &mut impl FnMut(RowKey),
-            ) {
-                let mut stack: Vec<crate::headless::table::GroupedRowIndex> = vec![root];
-                while let Some(index) = stack.pop() {
-                    let Some(row) = model.row(index) else {
-                        continue;
-                    };
-                    match &row.kind {
-                        GroupedRowKind::Group { .. } => {
-                            for &child in &row.sub_rows {
-                                stack.push(child);
-                            }
-                        }
-                        GroupedRowKind::Leaf { row_key } => f(*row_key),
-                    }
-                }
-            }
-
-            fn group_aggregations<TData>(
-                model: &crate::headless::table::GroupedRowModel,
-                group_index: crate::headless::table::GroupedRowIndex,
-                kind: &GroupedRowKind,
                 data: &[TData],
                 row_index_by_key: &std::collections::HashMap<RowKey, usize>,
                 agg_columns: &[&ColumnDef<TData>],
-            ) -> Arc<[(ColumnId, Arc<str>)]> {
-                let GroupedRowKind::Group { leaf_row_count, .. } = kind else {
-                    return Arc::from([]);
-                };
+            ) -> (
+                std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
+                std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
+            ) {
                 if agg_columns.is_empty() {
-                    return Arc::from([]);
+                    return (Default::default(), Default::default());
                 }
 
-                let mut out: Vec<(ColumnId, Arc<str>)> = Vec::new();
-                out.reserve(agg_columns.len());
+                #[derive(Clone)]
+                struct PlanCol<TData> {
+                    id: ColumnId,
+                    agg: Aggregation,
+                    extract: Option<std::sync::Arc<dyn Fn(&TData) -> u64>>,
+                }
 
-                for col in agg_columns {
-                    let value = match col.aggregation {
-                        Aggregation::None => None,
-                        Aggregation::Count => Some(*leaf_row_count as u64),
-                        Aggregation::SumU64 => col
-                            .value_u64_fn
-                            .as_ref()
-                            .or_else(|| col.facet_key_fn.as_ref())
-                            .map_or(None, |facet| {
-                                let mut sum = 0u64;
-                                let mut ok = true;
-                                for_each_leaf(model, group_index, &mut |leaf_key| {
-                                    let Some(&i) = row_index_by_key.get(&leaf_key) else {
-                                        return;
-                                    };
-                                    let v = facet(&data[i]);
-                                    sum = match sum.checked_add(v) {
-                                        Some(next) => next,
-                                        None => {
-                                            ok = false;
-                                            sum
-                                        }
-                                    };
-                                });
-                                ok.then_some(sum)
-                            }),
-                        Aggregation::MinU64 => col
-                            .value_u64_fn
-                            .as_ref()
-                            .or_else(|| col.facet_key_fn.as_ref())
-                            .map_or(None, |facet| {
-                                let mut min: Option<u64> = None;
-                                for_each_leaf(model, group_index, &mut |leaf_key| {
-                                    let Some(&i) = row_index_by_key.get(&leaf_key) else {
-                                        return;
-                                    };
-                                    let v = facet(&data[i]);
-                                    min = Some(min.map(|m| m.min(v)).unwrap_or(v));
-                                });
-                                min
-                            }),
-                        Aggregation::MaxU64 => col
-                            .value_u64_fn
-                            .as_ref()
-                            .or_else(|| col.facet_key_fn.as_ref())
-                            .map_or(None, |facet| {
-                                let mut max: Option<u64> = None;
-                                for_each_leaf(model, group_index, &mut |leaf_key| {
-                                    let Some(&i) = row_index_by_key.get(&leaf_key) else {
-                                        return;
-                                    };
-                                    let v = facet(&data[i]);
-                                    max = Some(max.map(|m| m.max(v)).unwrap_or(v));
-                                });
-                                max
-                            }),
-                        Aggregation::MeanU64 => col
-                            .value_u64_fn
-                            .as_ref()
-                            .or_else(|| col.facet_key_fn.as_ref())
-                            .map_or(None, |facet| {
-                                let mut sum = 0u64;
-                                let mut count = 0u64;
-                                let mut ok = true;
-                                for_each_leaf(model, group_index, &mut |leaf_key| {
-                                    let Some(&i) = row_index_by_key.get(&leaf_key) else {
-                                        return;
-                                    };
-                                    let v = facet(&data[i]);
-                                    count = count.saturating_add(1);
-                                    sum = match sum.checked_add(v) {
-                                        Some(next) => next,
-                                        None => {
-                                            ok = false;
-                                            sum
-                                        }
-                                    };
-                                });
-                                if !ok || count == 0 {
-                                    None
-                                } else {
-                                    Some(sum / count)
-                                }
-                            }),
-                    };
+                let plan: Vec<PlanCol<TData>> = agg_columns
+                    .iter()
+                    .map(|c| PlanCol {
+                        id: c.id.clone(),
+                        agg: c.aggregation,
+                        extract: c.value_u64_fn.clone().or_else(|| c.facet_key_fn.clone()),
+                    })
+                    .collect();
 
-                    let Some(value) = value else {
+                let plan_len = plan.len();
+                let arena_len = model
+                    .flat_rows()
+                    .iter()
+                    .copied()
+                    .max()
+                    .map(|i| i + 1)
+                    .unwrap_or(0);
+
+                let idx = |node: usize, col: usize| node * plan_len + col;
+
+                let mut sum: Vec<Option<u64>> = vec![None; arena_len * plan_len];
+                let mut min: Vec<Option<u64>> = vec![None; arena_len * plan_len];
+                let mut max: Vec<Option<u64>> = vec![None; arena_len * plan_len];
+
+                for &node in model.flat_rows().iter().rev() {
+                    let Some(row) = model.row(node) else {
                         continue;
                     };
 
-                    out.push((col.id.clone(), Arc::from(value.to_string())));
+                    match &row.kind {
+                        GroupedRowKind::Leaf { row_key } => {
+                            let Some(&data_index) = row_index_by_key.get(row_key) else {
+                                continue;
+                            };
+                            for (col_i, col) in plan.iter().enumerate() {
+                                let Some(extract) = col.extract.as_ref() else {
+                                    continue;
+                                };
+                                let v = extract(&data[data_index]);
+                                let i = idx(node, col_i);
+                                sum[i] = Some(v);
+                                min[i] = Some(v);
+                                max[i] = Some(v);
+                            }
+                        }
+                        GroupedRowKind::Group { .. } => {
+                            for (col_i, col) in plan.iter().enumerate() {
+                                if col.extract.is_none() {
+                                    continue;
+                                }
+                                let mut s: Option<u64> = Some(0);
+                                let mut mi: Option<u64> = None;
+                                let mut ma: Option<u64> = None;
+
+                                for &child in &row.sub_rows {
+                                    let ci = idx(child, col_i);
+                                    let child_sum = sum[ci];
+                                    let child_min = min[ci];
+                                    let child_max = max[ci];
+
+                                    s = match (s, child_sum) {
+                                        (Some(a), Some(b)) => a.checked_add(b),
+                                        _ => None,
+                                    };
+                                    mi = match (mi, child_min) {
+                                        (Some(a), Some(b)) => Some(a.min(b)),
+                                        (None, Some(b)) => Some(b),
+                                        _ => None,
+                                    };
+                                    ma = match (ma, child_max) {
+                                        (Some(a), Some(b)) => Some(a.max(b)),
+                                        (None, Some(b)) => Some(b),
+                                        _ => None,
+                                    };
+                                }
+
+                                let i = idx(node, col_i);
+                                sum[i] = s;
+                                min[i] = mi;
+                                max[i] = ma;
+                            }
+                        }
+                    }
                 }
 
-                Arc::from(out.into_boxed_slice())
+                let mut out_u64: std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>> =
+                    Default::default();
+                let mut out_text: std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>> =
+                    Default::default();
+
+                for &node in model.flat_rows() {
+                    let Some(row) = model.row(node) else {
+                        continue;
+                    };
+                    let GroupedRowKind::Group { leaf_row_count, .. } = &row.kind else {
+                        continue;
+                    };
+
+                    let denom = *leaf_row_count as u64;
+
+                    let mut u64_values: Vec<(ColumnId, u64)> = Vec::new();
+                    let mut text_values: Vec<(ColumnId, Arc<str>)> = Vec::new();
+                    u64_values.reserve(plan_len);
+                    text_values.reserve(plan_len);
+
+                    for (col_i, col) in plan.iter().enumerate() {
+                        let value: Option<u64> = match col.agg {
+                            Aggregation::None => None,
+                            Aggregation::Count => Some(denom),
+                            Aggregation::SumU64 => sum[idx(node, col_i)],
+                            Aggregation::MinU64 => min[idx(node, col_i)],
+                            Aggregation::MaxU64 => max[idx(node, col_i)],
+                            Aggregation::MeanU64 => {
+                                if denom == 0 {
+                                    None
+                                } else {
+                                    sum[idx(node, col_i)].map(|s| s / denom)
+                                }
+                            }
+                        };
+
+                        let Some(v) = value else {
+                            continue;
+                        };
+
+                        u64_values.push((col.id.clone(), v));
+                        text_values.push((col.id.clone(), Arc::from(v.to_string())));
+                    }
+
+                    out_u64.insert(row.key, Arc::from(u64_values.into_boxed_slice()));
+                    out_text.insert(row.key, Arc::from(text_values.into_boxed_slice()));
+                }
+
+                (out_u64, out_text)
             }
 
             fn group_label_for_key<TData>(
@@ -710,6 +725,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                 row_index_by_key: &std::collections::HashMap<RowKey, usize>,
                 group_labels: &std::collections::HashMap<RowKey, Arc<str>>,
                 group_aggs_text: &std::collections::HashMap<RowKey, Arc<[(ColumnId, Arc<str>)]>>,
+                group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(ColumnId, u64)]>>,
                 sorting: &[SortSpec],
                 columns: &[ColumnDef<TData>],
                 data: &[TData],
@@ -792,6 +808,35 @@ pub fn table_virtualized<H: UiHost, TData>(
                                         }
 
                                         if ord.is_none() {
+                                            let va =
+                                                group_aggs_u64.get(&ra.key).and_then(|entries| {
+                                                    entries
+                                                        .iter()
+                                                        .find(|entry| {
+                                                            entry.0.as_ref() == col.id.as_ref()
+                                                        })
+                                                        .map(|entry| entry.1)
+                                                });
+                                            let vb =
+                                                group_aggs_u64.get(&rb.key).and_then(|entries| {
+                                                    entries
+                                                        .iter()
+                                                        .find(|entry| {
+                                                            entry.0.as_ref() == col.id.as_ref()
+                                                        })
+                                                        .map(|entry| entry.1)
+                                                });
+                                            ord = match (va, vb) {
+                                                (Some(va), Some(vb)) => Some(va.cmp(&vb)),
+                                                (Some(_), None) => Some(std::cmp::Ordering::Less),
+                                                (None, Some(_)) => {
+                                                    Some(std::cmp::Ordering::Greater)
+                                                }
+                                                (None, None) => None,
+                                            };
+                                        }
+
+                                        if ord.is_none() {
                                             let extract_u64 = col
                                                 .value_u64_fn
                                                 .as_ref()
@@ -852,6 +897,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                     row_index_by_key,
                                     group_labels,
                                     group_aggs_text,
+                                    group_aggs_u64,
                                     sorting,
                                     columns,
                                     data,
@@ -871,6 +917,22 @@ pub fn table_virtualized<H: UiHost, TData>(
                             depth: row.depth,
                         });
                     }
+                }
+            }
+
+            let (group_aggs_u64, group_aggs_text) =
+                compute_group_aggregations(&grouped, data, &row_index_by_key, &agg_columns);
+
+            let mut group_labels: std::collections::HashMap<RowKey, Arc<str>> = Default::default();
+            for &node in grouped.flat_rows() {
+                let Some(row) = grouped.row(node) else {
+                    continue;
+                };
+                if matches!(row.kind, GroupedRowKind::Group { .. }) {
+                    group_labels.insert(
+                        row.key,
+                        group_label_for_key(&row.kind, data, &row_index_by_key, &col_by_id),
+                    );
                 }
             }
 
@@ -919,6 +981,27 @@ pub fn table_virtualized<H: UiHost, TData>(
                         }
 
                         if ord.is_none() {
+                            let va = group_aggs_u64.get(&ra.key).and_then(|entries| {
+                                entries
+                                    .iter()
+                                    .find(|entry| entry.0.as_ref() == col.id.as_ref())
+                                    .map(|entry| entry.1)
+                            });
+                            let vb = group_aggs_u64.get(&rb.key).and_then(|entries| {
+                                entries
+                                    .iter()
+                                    .find(|entry| entry.0.as_ref() == col.id.as_ref())
+                                    .map(|entry| entry.1)
+                            });
+                            ord = match (va, vb) {
+                                (Some(va), Some(vb)) => Some(va.cmp(&vb)),
+                                (Some(_), None) => Some(std::cmp::Ordering::Less),
+                                (None, Some(_)) => Some(std::cmp::Ordering::Greater),
+                                (None, None) => None,
+                            };
+                        }
+
+                        if ord.is_none() {
                             let extract_u64 = col
                                 .value_u64_fn
                                 .as_ref()
@@ -964,6 +1047,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                     &row_index_by_key,
                     &group_labels,
                     &group_aggs_text,
+                    &group_aggs_u64,
                     deps.sorting.as_slice(),
                     columns,
                     data,
@@ -987,7 +1071,7 @@ pub fn table_virtualized<H: UiHost, TData>(
             cache.grouped = grouped;
             cache.row_index_by_key = row_index_by_key;
             cache.group_labels = group_labels;
-            cache.group_aggs_u64 = Default::default();
+            cache.group_aggs_u64 = group_aggs_u64;
             cache.group_aggs_text = group_aggs_text;
             cache.deps = Some(deps.clone());
             cache.page_rows = page_rows.clone();
