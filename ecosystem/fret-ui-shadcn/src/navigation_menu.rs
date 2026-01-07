@@ -8,11 +8,17 @@ use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
     PressableA11y, PressableProps, TextProps,
 };
+use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::primitives::{popper, popper_content};
+use fret_ui_kit::{
+    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, OverlayRequest,
+    Radius, Space,
+};
 
 fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
     let px = theme
@@ -69,6 +75,18 @@ fn nav_menu_viewport_bg(theme: &Theme) -> Color {
 
 fn nav_menu_viewport_border(theme: &Theme) -> Color {
     theme.color_required("border")
+}
+
+fn nav_menu_viewport_side_offset(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.navigation_menu.viewport.side_offset")
+        .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme))
+}
+
+fn nav_menu_viewport_window_margin(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.navigation_menu.viewport.window_margin")
+        .unwrap_or(Px(8.0))
 }
 
 #[derive(Debug, Clone)]
@@ -220,14 +238,6 @@ impl NavigationMenu {
             .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(&theme));
         let root_gap = MetricRef::space(Space::N3).resolve(&theme);
 
-        let selected: Option<Arc<str>> = cx.watch_model(&value_model).layout().cloned().flatten();
-        let active_idx = selected.as_deref().and_then(|v| {
-            items
-                .iter()
-                .position(|it| it.value.as_ref() == v)
-                .filter(|_| !menu_disabled)
-        });
-
         let root_props = decl_style::container_props(&theme, chrome, layout);
 
         cx.container(root_props, move |cx| {
@@ -238,6 +248,56 @@ impl NavigationMenu {
                     || Arc::new(Mutex::new(radix_navigation_menu::NavigationMenuRootState::default())),
                     |s| s.clone(),
                 );
+
+            #[derive(Default)]
+            struct TriggerIdRegistry {
+                ids: std::collections::HashMap<Arc<str>, fret_ui::elements::GlobalElementId>,
+            }
+
+            #[derive(Default)]
+            struct OpenModelState {
+                model: Option<Model<bool>>,
+            }
+
+            let open_model = cx.with_state_for(root_id, OpenModelState::default, |st| st.model.clone());
+            let open_model = if let Some(model) = open_model {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state_for(root_id, OpenModelState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            };
+
+            let selected: Option<Arc<str>> = cx.watch_model(&value_model).layout().cloned().flatten();
+            let open: bool = cx.watch_model(&open_model).layout().copied().unwrap_or(false);
+            let mut selected_local = selected.clone();
+
+            if !open && selected_local.is_some() {
+                let mut host = fret_ui::action::UiActionHostAdapter { app: &mut *cx.app };
+                let action_cx = fret_ui::action::ActionCx {
+                    window: cx.window,
+                    target: root_id,
+                };
+                let mut st = root_state.lock().unwrap_or_else(|e| e.into_inner());
+                st.on_item_dismiss(&mut host, action_cx, &value_model, cfg);
+                selected_local = None;
+            }
+
+            let open_should = selected_local.is_some();
+            let _ = cx.app.models_mut().update(&open_model, |v| {
+                if *v != open_should {
+                    *v = open_should;
+                }
+            });
+
+            let active_idx = selected_local.as_deref().and_then(|v| {
+                items
+                    .iter()
+                    .position(|it| it.value.as_ref() == v)
+                    .filter(|_| !menu_disabled)
+            });
 
             let value_model_for_timer = value_model.clone();
             let root_state_for_timer = root_state.clone();
@@ -266,8 +326,9 @@ impl NavigationMenu {
             let value_for_list = value_model.clone();
             let value_for_viewport = value_model.clone();
             let root_state_for_list = root_state.clone();
-            let selected_for_list = selected.clone();
+            let selected_for_list = selected_local.clone();
             let trigger_text_style_for_list = trigger_text_style.clone();
+            let root_id_for_registry = root_id;
 
             let list = cx.flex(list_props, move |cx| {
                 items_for_children
@@ -357,9 +418,14 @@ impl NavigationMenu {
                                     ));
                                 }
 
-                                vec![cx.pressable(pressable, move |cx, st| {
+                                let item_value_for_registry = item_value.clone();
+                                vec![cx.pressable_with_id(pressable, move |cx, st, trigger_id| {
+                                    cx.with_state_for(root_id_for_registry, TriggerIdRegistry::default, |st| {
+                                        st.ids.insert(item_value_for_registry.clone(), trigger_id);
+                                    });
+
                                     if !disabled {
-                                        let element = cx.root_id();
+                                        let element = trigger_id;
                                         let root_state_for_escape = root_state_for_trigger.clone();
                                         let value_for_escape = value_for_trigger.clone();
                                         let trigger_state_for_escape = trigger_state.clone();
@@ -507,51 +573,112 @@ impl NavigationMenu {
                 .map(|active| active.content.clone())
                 .unwrap_or_default();
 
-            let viewport = if viewport.is_empty() {
-                Vec::new()
-            } else {
-                let layout = {
-                    let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Fill;
-                    layout
-                };
-                let root_state_for_viewport = root_state.clone();
-                vec![cx.pressable(
-                    PressableProps {
-                        layout,
-                        enabled: true,
-                        focusable: false,
-                        focus_ring: None,
-                        a11y: PressableA11y::default(),
-                    },
-                    move |cx, _st| {
-                        let root_state_for_hover = root_state_for_viewport.clone();
-                        let value_for_hover = value_for_viewport.clone();
-                        cx.pressable_on_hover_change(Arc::new(move |host, action_cx, hovered| {
-                            let mut root = root_state_for_hover
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
-                            if hovered {
-                                root.on_content_enter(host);
-                            } else {
-                                root.on_content_leave(host, action_cx, &value_for_hover, cfg);
-                            }
-                        }));
-
-                        let viewport_props = ContainerProps {
-                            layout: LayoutStyle::default(),
-                            padding: Edges::all(viewport_pad),
-                            background: Some(viewport_bg),
-                            shadow: None,
-                            border: Edges::all(Px(1.0)),
-                            border_color: Some(viewport_border),
-                            corner_radii: Corners::all(viewport_radius),
-                        };
-
-                        vec![cx.container(viewport_props, move |_cx| viewport.clone())]
-                    },
-                )]
+            let is_open = selected_local.is_some() && !viewport.is_empty();
+            let overlay_presence = OverlayPresence {
+                present: is_open,
+                interactive: is_open,
             };
+
+            if overlay_presence.present {
+                let side_offset = nav_menu_viewport_side_offset(&theme);
+                let window_margin = nav_menu_viewport_window_margin(&theme);
+                let overlay_root_name = OverlayController::popover_root_name(root_id);
+
+                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                    let anchor_id = selected_local.as_deref().and_then(|v| {
+                        cx.with_state_for(root_id, TriggerIdRegistry::default, |st| {
+                            st.ids.get(v).copied()
+                        })
+                    });
+                    let anchor = anchor_id.and_then(|id| overlay::anchor_bounds_for_element(cx, id));
+                    let Some(anchor) = anchor else {
+                        return Vec::new();
+                    };
+
+                    let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
+                    let content_size = cx
+                        .last_bounds_for_element(cx.root_id())
+                        .map(|r| r.size)
+                        .unwrap_or(estimated);
+
+                    let layout = popper::popper_content_layout_sized(
+                        overlay::outer_bounds_with_window_margin(cx.bounds, window_margin),
+                        anchor,
+                        content_size,
+                        popper::PopperContentPlacement::new(
+                            LayoutDirection::Ltr,
+                            Side::Bottom,
+                            Align::Start,
+                            side_offset,
+                        ),
+                    );
+                    let placed = layout.rect;
+
+                    let root_state_for_viewport = root_state.clone();
+                    let value_for_hover = value_for_viewport.clone();
+                    let viewport_children = viewport.clone();
+
+                    let panel = popper_content::popper_wrapper_panel_at(
+                        cx,
+                        placed,
+                        Edges::all(Px(0.0)),
+                        fret_ui::element::Overflow::Visible,
+                        move |cx| {
+                            let viewport_props = ContainerProps {
+                                layout: LayoutStyle::default(),
+                                padding: Edges::all(viewport_pad),
+                                background: Some(viewport_bg),
+                                shadow: None,
+                                border: Edges::all(Px(1.0)),
+                                border_color: Some(viewport_border),
+                                corner_radii: Corners::all(viewport_radius),
+                            };
+
+                            vec![cx.pressable(
+                                PressableProps {
+                                    layout: LayoutStyle::default(),
+                                    enabled: true,
+                                    focusable: false,
+                                    focus_ring: None,
+                                    a11y: PressableA11y::default(),
+                                },
+                                move |cx, _st| {
+                                    let root_state_for_hover = root_state_for_viewport.clone();
+                                    let value_for_hover = value_for_hover.clone();
+                                    cx.pressable_on_hover_change(Arc::new(
+                                        move |host, action_cx, hovered| {
+                                            let mut root = root_state_for_hover
+                                                .lock()
+                                                .unwrap_or_else(|e| e.into_inner());
+                                            if hovered {
+                                                root.on_content_enter(host);
+                                            } else {
+                                                root.on_content_leave(host, action_cx, &value_for_hover, cfg);
+                                            }
+                                        },
+                                    ));
+
+                                    vec![cx.container(viewport_props, move |_cx| {
+                                        viewport_children.clone()
+                                    })]
+                                },
+                            )]
+                        },
+                    );
+
+                    vec![panel]
+                });
+
+                let mut request = OverlayRequest::dismissible_popover(
+                    root_id,
+                    root_id,
+                    open_model.clone(),
+                    overlay_presence,
+                    overlay_children,
+                );
+                request.root_name = Some(overlay_root_name);
+                OverlayController::request(cx, request);
+            }
 
             vec![cx.flex(
                 FlexProps {
@@ -567,7 +694,6 @@ impl NavigationMenu {
                 move |_cx| {
                     let mut out = Vec::new();
                     out.push(list);
-                    out.extend(viewport);
                     out
                 },
             )]
