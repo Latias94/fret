@@ -8,6 +8,7 @@ The goal is to provide an ImPlot-like “muscle memory” baseline without commi
 ## Coordinate conventions
 
 - Screen space: Fret logical pixels, origin at the top-left of the widget bounds.
+- Plot space: `ChartCanvas` reserves axis bands and padding; series rendering and interactions are computed inside the plot rect.
 - Data space: `delinea::DataWindow` is **increasing to the right** for X and **increasing upward** for Y.
 - Mapping:
   - `x_data = x_window.min + t * (x_window.max - x_window.min)`, where `t = x_px / width_px`.
@@ -23,6 +24,8 @@ The defaults are intentionally aligned with ImPlot:
 - Wheel zoom: `Mouse wheel`
   - Hold `Shift`: zoom X only
   - Hold `Ctrl`: zoom Y only
+  - Wheel on the X axis band: zoom X only
+  - Wheel on the Y axis band: zoom Y only
 
 - Reset view: `LMB double-click`
   - On plot area: resets both axes to auto (clears `DataWindow` overrides)
@@ -56,13 +59,11 @@ For persistent axis constraints, use `delinea::AxisRange` in the spec/model:
 
 - `Ctrl + LMB` toggles axis pan+zoom lock.
 
-Because axes are not rendered yet in `fret-chart`, the current P0 hit targets are a heuristic:
+Axis targeting is based on the rendered layout:
 
-- Left 24px band: toggles Y axis lock
-- Bottom 24px band: toggles X axis lock
-- Elsewhere: toggles both axes
-
-This will be replaced by explicit axis layout regions once we render axes and labels in `fret-chart`.
+- Pointer inside the X axis band toggles/targets X.
+- Pointer inside the Y axis band toggles/targets Y.
+- Pointer inside the plot rect toggles/targets both axes.
 
 ## Mapping to `delinea` actions
 

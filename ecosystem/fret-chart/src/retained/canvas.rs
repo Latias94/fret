@@ -7,9 +7,9 @@ use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, ChartEngine, WorkBudget};
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, PathCommand,
-    PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp, Size,
-    StrokeStyle,
+    Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton,
+    PathCommand, PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp,
+    Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap,
 };
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
@@ -63,15 +63,25 @@ enum AxisRegion {
     YAxis,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct ChartLayout {
+    bounds: Rect,
+    plot: Rect,
+    x_axis: Rect,
+    y_axis: Rect,
+}
+
 pub struct ChartCanvas {
     engine: ChartEngine,
     style: ChartStyle,
     input_map: ChartInputMap,
     last_bounds: Rect,
+    last_layout: ChartLayout,
     last_pointer_pos: Option<Point>,
     last_marks_rev: delinea::ids::Revision,
     last_scale_factor_bits: u32,
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
+    axis_text: Vec<TextBlobId>,
     pan_drag: Option<PanDrag>,
     box_zoom_drag: Option<BoxZoomDrag>,
     lock_x_pan: bool,
@@ -87,10 +97,12 @@ impl ChartCanvas {
             style: ChartStyle::default(),
             input_map: ChartInputMap::default(),
             last_bounds: Rect::default(),
+            last_layout: ChartLayout::default(),
             last_pointer_pos: None,
             last_marks_rev: delinea::ids::Revision::default(),
             last_scale_factor_bits: 0,
             cached_paths: BTreeMap::default(),
+            axis_text: Vec::default(),
             pan_drag: None,
             box_zoom_drag: None,
             lock_x_pan: false,
@@ -116,18 +128,52 @@ impl ChartCanvas {
         self.input_map = map;
     }
 
+    fn compute_layout(&self, bounds: Rect) -> ChartLayout {
+        let mut inner = bounds;
+        inner.origin.x.0 += self.style.padding.left.0;
+        inner.origin.y.0 += self.style.padding.top.0;
+        inner.size.width.0 =
+            (inner.size.width.0 - self.style.padding.left.0 - self.style.padding.right.0).max(0.0);
+        inner.size.height.0 =
+            (inner.size.height.0 - self.style.padding.top.0 - self.style.padding.bottom.0).max(0.0);
+
+        let axis_band_x = self.style.axis_band_x.0.max(0.0);
+        let axis_band_y = self.style.axis_band_y.0.max(0.0);
+
+        let plot_w = (inner.size.width.0 - axis_band_x).max(0.0);
+        let plot_h = (inner.size.height.0 - axis_band_y).max(0.0);
+
+        let plot = Rect::new(
+            Point::new(Px(inner.origin.x.0 + axis_band_x), inner.origin.y),
+            Size::new(Px(plot_w), Px(plot_h)),
+        );
+
+        let y_axis = Rect::new(inner.origin, Size::new(Px(axis_band_x), Px(plot_h)));
+        let x_axis = Rect::new(
+            Point::new(plot.origin.x, Px(plot.origin.y.0 + plot.size.height.0)),
+            Size::new(Px(plot_w), Px(axis_band_y)),
+        );
+
+        ChartLayout {
+            bounds,
+            plot,
+            x_axis,
+            y_axis,
+        }
+    }
+
     pub fn create_node<H: UiHost>(ui: &mut fret_ui::UiTree<H>, canvas: Self) -> fret_core::NodeId {
         use fret_ui::retained_bridge::UiTreeRetainedExt as _;
         ui.create_node_retained(canvas)
     }
 
-    fn sync_viewport(&mut self, bounds: Rect) {
-        if self.engine.model().viewport == Some(bounds) {
+    fn sync_viewport(&mut self, viewport: Rect) {
+        if self.engine.model().viewport == Some(viewport) {
             return;
         }
         let _ = self.engine.apply_patch(
             ChartPatch {
-                viewport: Some(Some(bounds)),
+                viewport: Some(Some(viewport)),
                 ..ChartPatch::default()
             },
             PatchMode::Merge,
@@ -287,18 +333,12 @@ impl ChartCanvas {
         }
     }
 
-    fn axis_region(bounds: Rect, position: Point) -> AxisRegion {
-        // P0 heuristic: since we don't render axes yet, treat thin bands along the left/bottom
-        // edges as axis hit targets for lock toggles.
-        let axis_band = 24.0;
-        let local_x = position.x.0 - bounds.origin.x.0;
-        let local_y = position.y.0 - bounds.origin.y.0;
-
-        if local_x >= 0.0 && local_x <= axis_band {
-            return AxisRegion::YAxis;
-        }
-        if local_y >= bounds.size.height.0 - axis_band && local_y <= bounds.size.height.0 {
+    fn axis_region(layout: ChartLayout, position: Point) -> AxisRegion {
+        if layout.x_axis.contains(position) {
             return AxisRegion::XAxis;
+        }
+        if layout.y_axis.contains(position) {
+            return AxisRegion::YAxis;
         }
         AxisRegion::Plot
     }
@@ -364,6 +404,174 @@ impl ChartCanvas {
         window.min + t * window.span()
     }
 
+    fn axis_ticks(window: DataWindow, count: usize) -> Vec<f64> {
+        let mut out = Vec::new();
+        let span = window.span();
+        if !span.is_finite() || span <= 0.0 || count < 2 {
+            out.push(window.min);
+            out.push(window.max);
+            return out;
+        }
+
+        out.reserve(count);
+        for i in 0..count {
+            let t = (i as f64) / ((count - 1) as f64);
+            out.push(window.min + t * span);
+        }
+        out
+    }
+
+    fn format_tick(window: DataWindow, value: f64) -> String {
+        let span = window.span().abs();
+        if !span.is_finite() || span <= 0.0 {
+            return format!("{value}");
+        }
+
+        let log10 = span.log10();
+        let digits = if log10.is_finite() {
+            (2.0 - log10).round().clamp(0.0, 6.0) as usize
+        } else {
+            3
+        };
+        format!("{value:.digits$}")
+    }
+
+    fn clear_axis_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
+        for blob in self.axis_text.drain(..) {
+            services.text().release(blob);
+        }
+    }
+
+    fn draw_axes<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        self.clear_axis_text_cache(cx.services);
+
+        let layout = self.last_layout;
+        if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+            return;
+        }
+
+        let Some((x_axis, y_axis)) = self.primary_axes() else {
+            return;
+        };
+
+        let x_window = self.current_window_x(x_axis);
+        let y_window = self.current_window_y(y_axis);
+
+        let axis_order = DrawOrder(self.style.draw_order.0.saturating_add(2));
+        let label_order = DrawOrder(self.style.draw_order.0.saturating_add(3));
+
+        let line_w = self.style.axis_line_width.0.max(1.0);
+        let tick_len = self.style.axis_tick_length.0.max(0.0);
+
+        // Axis baselines (as thin quads).
+        cx.scene.push(SceneOp::Quad {
+            order: axis_order,
+            rect: Rect::new(
+                Point::new(
+                    layout.plot.origin.x,
+                    Px(layout.plot.origin.y.0 + layout.plot.size.height.0 - line_w * 0.5),
+                ),
+                Size::new(layout.plot.size.width, Px(line_w)),
+            ),
+            background: self.style.axis_line_color,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+        cx.scene.push(SceneOp::Quad {
+            order: axis_order,
+            rect: Rect::new(
+                Point::new(
+                    Px(layout.plot.origin.x.0 - line_w * 0.5),
+                    layout.plot.origin.y,
+                ),
+                Size::new(Px(line_w), layout.plot.size.height),
+            ),
+            background: self.style.axis_line_color,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(0.0)),
+        });
+
+        let text_style = TextStyle {
+            size: Px(12.0),
+            weight: FontWeight::NORMAL,
+            ..TextStyle::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+
+        // X ticks + labels.
+        for value in Self::axis_ticks(x_window, 5) {
+            let t = ((value - x_window.min) / x_window.span()).clamp(0.0, 1.0) as f32;
+            let x_px = layout.plot.origin.x.0 + t * layout.plot.size.width.0;
+            let y0 = layout.plot.origin.y.0 + layout.plot.size.height.0;
+
+            cx.scene.push(SceneOp::Quad {
+                order: axis_order,
+                rect: Rect::new(
+                    Point::new(Px(x_px - 0.5 * line_w), Px(y0)),
+                    Size::new(Px(line_w), Px(tick_len)),
+                ),
+                background: self.style.axis_tick_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+
+            let label = Self::format_tick(x_window, value);
+            let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+            self.axis_text.push(blob);
+
+            let label_x = x_px - metrics.size.width.0 * 0.5;
+            let label_y = layout.x_axis.origin.y.0
+                + (layout.x_axis.size.height.0 - metrics.size.height.0) * 0.5;
+            cx.scene.push(SceneOp::Text {
+                order: label_order,
+                origin: Point::new(Px(label_x), Px(label_y)),
+                text: blob,
+                color: self.style.axis_label_color,
+            });
+        }
+
+        // Y ticks + labels.
+        for value in Self::axis_ticks(y_window, 5) {
+            let t = ((value - y_window.min) / y_window.span()).clamp(0.0, 1.0) as f32;
+            let y_px = layout.plot.origin.y.0 + (1.0 - t) * layout.plot.size.height.0;
+            let x0 = layout.plot.origin.x.0;
+
+            cx.scene.push(SceneOp::Quad {
+                order: axis_order,
+                rect: Rect::new(
+                    Point::new(Px(x0 - tick_len), Px(y_px - 0.5 * line_w)),
+                    Size::new(Px(tick_len), Px(line_w)),
+                ),
+                background: self.style.axis_tick_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+
+            let label = Self::format_tick(y_window, value);
+            let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+            self.axis_text.push(blob);
+
+            let label_x = layout.y_axis.origin.x.0
+                + (layout.y_axis.size.width.0 - metrics.size.width.0 - 4.0).max(0.0);
+            let label_y = y_px - metrics.size.height.0 * 0.5;
+            cx.scene.push(SceneOp::Text {
+                order: label_order,
+                origin: Point::new(Px(label_x), Px(label_y)),
+                text: blob,
+                color: self.style.axis_label_color,
+            });
+        }
+    }
+
     fn rebuild_paths_if_needed<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         let marks_rev = self.engine.output().marks.revision;
         let scale_factor_bits = cx.scale_factor.to_bits();
@@ -380,7 +588,7 @@ impl ChartCanvas {
         self.cached_paths.clear();
 
         let marks = &self.engine.output().marks;
-        let origin = self.last_bounds.origin;
+        let origin = self.last_layout.plot.origin;
 
         for node in &marks.nodes {
             if node.kind != MarkKind::Polyline {
@@ -454,7 +662,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     let toggle_zoom = modifiers.ctrl && !modifiers.shift;
                     let toggle_both = !toggle_pan && !toggle_zoom;
 
-                    match Self::axis_region(cx.bounds, pos) {
+                    let layout = self.compute_layout(cx.bounds);
+                    match Self::axis_region(layout, pos) {
                         AxisRegion::XAxis => {
                             if toggle_both || toggle_pan {
                                 self.lock_x_pan = !self.lock_x_pan;
@@ -539,9 +748,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     if let Some(drag) = self.pan_drag
                         && buttons.left
                     {
-                        let bounds = cx.bounds;
-                        let width = bounds.size.width.0;
-                        let height = bounds.size.height.0;
+                        let layout = self.compute_layout(cx.bounds);
+                        let width = layout.plot.size.width.0;
+                        let height = layout.plot.size.height.0;
                         if width <= 0.0 || height <= 0.0 {
                             return;
                         }
@@ -606,7 +815,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     let Some((x_axis, y_axis)) = self.primary_axes() else {
                         return;
                     };
-                    match Self::axis_region(cx.bounds, *position) {
+                    let layout = self.compute_layout(cx.bounds);
+                    match Self::axis_region(layout, *position) {
                         AxisRegion::XAxis => {
                             if self.axis_is_fixed(x_axis).is_none() {
                                 self.set_data_window_x(x_axis, None);
@@ -646,7 +856,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 }
 
                 if self.input_map.axis_lock_toggle.matches(*button, *modifiers) {
-                    match Self::axis_region(cx.bounds, *position) {
+                    let layout = self.compute_layout(cx.bounds);
+                    match Self::axis_region(layout, *position) {
                         AxisRegion::XAxis => {
                             self.lock_x_pan = !self.lock_x_pan;
                             self.lock_x_zoom = !self.lock_x_zoom;
@@ -680,6 +891,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     .box_zoom_alt
                     .is_some_and(|chord| chord.matches(*button, *modifiers));
                 if start_box_primary || start_box_alt {
+                    let layout = self.compute_layout(cx.bounds);
+                    if !layout.plot.contains(*position) {
+                        return;
+                    }
+
                     let Some((x_axis, y_axis)) = self.primary_axes() else {
                         return;
                     };
@@ -724,6 +940,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     return;
                 }
 
+                let layout = self.compute_layout(cx.bounds);
+                if !layout.plot.contains(*position) {
+                    return;
+                }
+
                 let Some((x_axis, y_axis)) = self.primary_axes() else {
                     return;
                 };
@@ -764,21 +985,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         cx.release_pointer_capture();
                     }
 
-                    let bounds = cx.bounds;
-                    let width = bounds.size.width.0;
-                    let height = bounds.size.height.0;
+                    let layout = self.compute_layout(cx.bounds);
+                    let plot = layout.plot;
+                    let width = plot.size.width.0;
+                    let height = plot.size.height.0;
                     if width > 0.0 && height > 0.0 {
                         let start_local = Point::new(
-                            Px(drag.start_pos.x.0 - bounds.origin.x.0),
-                            Px(drag.start_pos.y.0 - bounds.origin.y.0),
+                            Px(drag.start_pos.x.0 - plot.origin.x.0),
+                            Px(drag.start_pos.y.0 - plot.origin.y.0),
                         );
                         let end_local = Point::new(
-                            Px(drag.current_pos.x.0 - bounds.origin.x.0),
-                            Px(drag.current_pos.y.0 - bounds.origin.y.0),
+                            Px(drag.current_pos.x.0 - plot.origin.x.0),
+                            Px(drag.current_pos.y.0 - plot.origin.y.0),
                         );
 
                         let (start_local, end_local) = Self::apply_box_select_modifiers(
-                            bounds.size,
+                            plot.size,
                             start_local,
                             end_local,
                             *modifiers,
@@ -871,9 +1093,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     return;
                 };
 
-                let bounds = cx.bounds;
-                let width = bounds.size.width.0;
-                let height = bounds.size.height.0;
+                let layout = self.compute_layout(cx.bounds);
+                let plot = layout.plot;
+                let width = plot.size.width.0;
+                let height = plot.size.height.0;
                 if width <= 0.0 || height <= 0.0 {
                     return;
                 }
@@ -883,16 +1106,41 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     return;
                 }
 
+                if let Some(required) = self.input_map.wheel_zoom_mod
+                    && !required.is_pressed(*modifiers)
+                {
+                    return;
+                }
+
                 // Match ImPlot's default feel: zoom factor ~= 2^(delta_y * 0.0025)
                 let log2_scale = delta_y * 0.0025;
 
-                let local_x = position.x.0 - bounds.origin.x.0;
-                let local_y = position.y.0 - bounds.origin.y.0;
+                let in_plot = plot.contains(*position);
+                let in_x_axis = layout.x_axis.contains(*position);
+                let in_y_axis = layout.y_axis.contains(*position);
+                if !in_plot && !in_x_axis && !in_y_axis {
+                    return;
+                }
+
+                let local_x = (position.x.0 - plot.origin.x.0).clamp(0.0, width);
+                let local_y = (position.y.0 - plot.origin.y.0).clamp(0.0, height);
                 let center_x = local_x;
                 let center_y_from_bottom = height - local_y;
 
-                let zoom_x = !modifiers.ctrl;
-                let zoom_y = !modifiers.shift;
+                let zoom_x = if in_x_axis {
+                    true
+                } else if in_y_axis {
+                    false
+                } else {
+                    !modifiers.ctrl
+                };
+                let zoom_y = if in_x_axis {
+                    false
+                } else if in_y_axis {
+                    true
+                } else {
+                    !modifiers.shift
+                };
 
                 let next_x = zoom_x.then(|| {
                     if self.lock_x_zoom {
@@ -948,13 +1196,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> fret_core::Size {
         self.last_bounds = cx.bounds;
-        self.sync_viewport(cx.bounds);
+        self.last_layout = self.compute_layout(cx.bounds);
+        self.sync_viewport(self.last_layout.plot);
         cx.available
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         self.last_bounds = cx.bounds;
-        self.sync_viewport(cx.bounds);
+        self.last_layout = self.compute_layout(cx.bounds);
+        self.sync_viewport(self.last_layout.plot);
 
         // P0: run the engine synchronously for now.
         let mut measurer = NullTextMeasurer::default();
@@ -968,7 +1218,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         if let Some(background) = self.style.background {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(self.style.draw_order.0.saturating_sub(1)),
-                rect: self.last_bounds,
+                rect: self.last_layout.bounds,
                 background,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
@@ -977,20 +1227,21 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         cx.scene.push(SceneOp::PushClipRect {
-            rect: self.last_bounds,
+            rect: self.last_layout.plot,
         });
 
         for cached in self.cached_paths.values() {
             cx.scene.push(SceneOp::Path {
                 order: self.style.draw_order,
-                origin: self.last_bounds.origin,
+                origin: self.last_layout.plot.origin,
                 path: cached.path,
                 color: self.style.stroke_color,
             });
         }
 
         if let Some(drag) = self.box_zoom_drag {
-            let rect = rect_from_points_clamped(self.last_bounds, drag.start_pos, drag.current_pos);
+            let rect =
+                rect_from_points_clamped(self.last_layout.plot, drag.start_pos, drag.current_pos);
             if rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0 {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(self.style.draw_order.0.saturating_add(1)),
@@ -1004,6 +1255,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         cx.scene.push(SceneOp::PopClip);
+        self.draw_axes(cx);
     }
 
     fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
@@ -1011,6 +1263,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             services.path().release(cached.path);
         }
         self.cached_paths.clear();
+
+        for blob in self.axis_text.drain(..) {
+            services.text().release(blob);
+        }
     }
 }
 
