@@ -17,15 +17,15 @@ use crate::core::{
 };
 use crate::io::{NodeGraphConnectionMode, NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
-use crate::rules::{
-    ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint, plan_connect_by_inserting_node,
-};
+use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
     NodeGraphContextMenuItem, NodeGraphPresenter,
 };
 use crate::ui::style::NodeGraphStyle;
+
+use super::conversion;
 
 #[derive(Debug, Clone)]
 struct ViewSnapshot {
@@ -870,50 +870,8 @@ impl NodeGraphCanvas {
                                 None => return Outcome::Ignore,
                             };
 
-                            let zoom = if zoom.is_finite() && zoom > 0.0 {
-                                zoom
-                            } else {
-                                1.0
-                            };
-                            let inputs = template
-                                .ports
-                                .iter()
-                                .filter(|p| p.dir == PortDirection::In)
-                                .count();
-                            let outputs = template
-                                .ports
-                                .iter()
-                                .filter(|p| p.dir == PortDirection::Out)
-                                .count();
-                            let rows = inputs.max(outputs) as f32;
-                            let base = style.node_header_height + 2.0 * style.node_padding;
-                            let h = (base + rows * style.pin_row_height) / zoom;
-                            let w = style.node_width / zoom;
-                            let default_at = CanvasPoint {
-                                x: at.x - 0.5 * w,
-                                y: at.y - 0.5 * h,
-                            };
-
-                            let at = presenter.conversion_insert_position(
-                                graph, *from, *to, default_at, template,
-                            );
-                            let spec = match template.instantiate(at) {
-                                Ok(spec) => spec,
-                                Err(err) => {
-                                    return Outcome::Reject(
-                                        DiagnosticSeverity::Error,
-                                        Arc::<str>::from(err),
-                                    );
-                                }
-                            };
-
-                            let plan = plan_connect_by_inserting_node(
-                                graph,
-                                *from,
-                                *to,
-                                EdgeId::new(),
-                                EdgeId::new(),
-                                spec,
+                            let plan = conversion::plan_insert_conversion(
+                                presenter, graph, &style, zoom, *from, *to, *at, template,
                             );
                             match plan.decision {
                                 ConnectDecision::Accept => Outcome::Apply(plan.ops),
@@ -2173,9 +2131,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                     let presenter = &mut *self.presenter;
                                     self.graph
                                         .read_ref(cx.app, |graph| {
-                                            !presenter
-                                                .list_conversions(graph, *from, target)
-                                                .is_empty()
+                                            conversion::is_convertible(
+                                                presenter, graph, *from, target,
+                                            )
                                         })
                                         .ok()
                                         .unwrap_or(false)
@@ -2375,99 +2333,42 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                                         &scratch, src, target,
                                                                     );
                                                                 if conversions.len() > 1 {
-                                                                    let mut out: Vec<InsertNodeCandidate> =
-                                                                        Vec::new();
-                                                                    for t in conversions {
-                                                                        let label = presenter
-                                                                            .conversion_label(
-                                                                                &scratch,
-                                                                                src,
-                                                                                target,
-                                                                                &t,
-                                                                            );
-                                                                        out.push(InsertNodeCandidate {
-                                                                            kind: t.kind.clone(),
-                                                                            label,
-                                                                            enabled: true,
-                                                                            template: Some(t),
-                                                                            payload: serde_json::Value::Null,
-                                                                        });
-                                                                    }
-                                                                    picker = Some(out);
-                                                                    break;
-                                                                }
-                                                                if conversions.len() == 1 {
-                                                                    let template = &conversions[0];
-
-                                                                    let inputs = template
-                                                                        .ports
-                                                                        .iter()
-                                                                        .filter(|p| {
-                                                                            p.dir
-                                                                                == PortDirection::In
-                                                                        })
-                                                                        .count();
-                                                                    let outputs = template
-                                                                        .ports
-                                                                        .iter()
-                                                                        .filter(|p| {
-                                                                            p.dir
-                                                                                == PortDirection::Out
-                                                                        })
-                                                                        .count();
-                                                                    let rows = inputs.max(outputs)
-                                                                        as f32;
-                                                                    let zoom = if zoom.is_finite()
-                                                                        && zoom > 0.0
-                                                                    {
-                                                                        zoom
-                                                                    } else {
-                                                                        1.0
-                                                                    };
-                                                                    let base = style.node_header_height
-                                                                        + 2.0 * style.node_padding;
-                                                                    let h = (base + rows * style.pin_row_height)
-                                                                        / zoom;
-                                                                    let w = style.node_width / zoom;
-                                                                    let default_at = CanvasPoint {
-                                                                        x: convert_at.x - 0.5 * w,
-                                                                        y: convert_at.y - 0.5 * h,
-                                                                    };
-
-                                                                    let at = presenter
-                                                                        .conversion_insert_position(
+                                                                    picker = Some(
+                                                                        conversion::build_picker_candidates(
+                                                                            presenter,
                                                                             &scratch,
                                                                             src,
                                                                             target,
-                                                                            default_at,
-                                                                            template,
-                                                                        );
-                                                                    if let Ok(spec) = template.instantiate(at) {
-                                                                        let insert_plan =
-                                                                            plan_connect_by_inserting_node(
-                                                                                &scratch,
-                                                                                src,
-                                                                                target,
-                                                                                EdgeId::new(),
-                                                                                EdgeId::new(),
-                                                                                spec,
-                                                                            );
+                                                                            conversions,
+                                                                        ),
+                                                                    );
+                                                                    break;
+                                                                }
+                                                                if conversions.len() == 1 {
+                                                                    if let Some(insert_plan) =
+                                                                        conversion::try_auto_insert_conversion(
+                                                                            presenter,
+                                                                            &scratch,
+                                                                            &style,
+                                                                            zoom,
+                                                                            src,
+                                                                            target,
+                                                                            convert_at,
+                                                                            &conversions,
+                                                                        )
+                                                                    {
                                                                         if insert_plan.decision
                                                                             == ConnectDecision::Accept
                                                                         {
                                                                             let tx = GraphTransaction {
                                                                                 label: None,
-                                                                                ops: insert_plan
-                                                                                    .ops
-                                                                                    .clone(),
+                                                                                ops: insert_plan.ops.clone(),
                                                                             };
                                                                             let _ = apply_transaction(
                                                                                 &mut scratch,
                                                                                 &tx,
                                                                             );
-                                                                            ops_all.extend(
-                                                                                insert_plan.ops,
-                                                                            );
+                                                                            ops_all.extend(insert_plan.ops);
                                                                             continue;
                                                                         }
                                                                     }
