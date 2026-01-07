@@ -587,41 +587,46 @@ fn render_code_block_body<H: UiHost>(
             }
 
             let scroll_id = scroll.id;
-            vec![cx.stack_props(StackProps { layout: outer_layout }, move |cx| {
-                let scrollbar_layout = LayoutStyle {
-                    position: PositionStyle::Absolute,
-                    inset: InsetStyle {
-                        top: Some(Px(0.0)),
-                        right: Some(Px(0.0)),
-                        bottom: Some(if scrollbar_x_visible {
-                            scrollbar_w
-                        } else {
-                            Px(0.0)
-                        }),
-                        left: None,
-                    },
-                    size: SizeStyle {
-                        width: Length::Px(scrollbar_w),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                };
-
-                vec![
-                    scroll,
-                    cx.scrollbar(ScrollbarProps {
-                        layout: scrollbar_layout,
-                        axis: ScrollbarAxis::Vertical,
-                        scroll_target: Some(scroll_id),
-                        scroll_handle: handle,
-                        style: ScrollbarStyle {
-                            thumb,
-                            thumb_hover,
+            vec![cx.stack_props(
+                StackProps {
+                    layout: outer_layout,
+                },
+                move |cx| {
+                    let scrollbar_layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            top: Some(Px(0.0)),
+                            right: Some(Px(0.0)),
+                            bottom: Some(if scrollbar_x_visible {
+                                scrollbar_w
+                            } else {
+                                Px(0.0)
+                            }),
+                            left: None,
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(scrollbar_w),
                             ..Default::default()
                         },
-                    }),
-                ]
-            })]
+                        ..Default::default()
+                    };
+
+                    vec![
+                        scroll,
+                        cx.scrollbar(ScrollbarProps {
+                            layout: scrollbar_layout,
+                            axis: ScrollbarAxis::Vertical,
+                            scroll_target: Some(scroll_id),
+                            scroll_handle: handle,
+                            style: ScrollbarStyle {
+                                thumb,
+                                thumb_hover,
+                                ..Default::default()
+                            },
+                        }),
+                    ]
+                },
+            )]
         } else {
             vec![content]
         }
@@ -679,7 +684,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
             layout: {
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Auto;
-                layout.size.height = Length::Fill;
+                layout.size.height = Length::Auto;
                 layout
             },
             padding: Edges::all(Px(0.0)),
@@ -770,7 +775,14 @@ fn render_code_block_text<H: UiHost>(
 
     let mut scroll_layout = LayoutStyle::default();
     scroll_layout.size.width = Length::Fill;
-    scroll_layout.size.height = Length::Auto;
+    scroll_layout.size.height = match wrap {
+        TextWrap::None => {
+            let line_height = theme.metric_required("metric.font.mono_line_height");
+            let lines = prepared.lines.len().max(1) as f32;
+            Length::Px(Px(line_height.0 * lines))
+        }
+        TextWrap::Word => Length::Auto,
+    };
     scroll_layout.overflow = Overflow::Clip;
 
     let text_layout = {
