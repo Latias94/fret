@@ -345,6 +345,8 @@ $$
             fret_code_view::CodeBlockWrap::ScrollX
         };
         components.code_block_ui.max_height = cap_enabled.then_some(code_block_max_height);
+        components.code_block_ui.show_scrollbar_y = cap_enabled;
+        components.code_block_ui.scrollbar_y_on_hover = true;
 
         let on_link_activate = components.on_link_activate.clone();
 

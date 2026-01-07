@@ -108,6 +108,8 @@ pub struct CodeBlock {
     max_height: Option<Px>,
     show_scrollbar_x: bool,
     scrollbar_x_on_hover: bool,
+    show_scrollbar_y: bool,
+    scrollbar_y_on_hover: bool,
 }
 
 impl CodeBlock {
@@ -127,6 +129,8 @@ impl CodeBlock {
             max_height: None,
             show_scrollbar_x: false,
             scrollbar_x_on_hover: true,
+            show_scrollbar_y: false,
+            scrollbar_y_on_hover: true,
         }
     }
 
@@ -195,6 +199,16 @@ impl CodeBlock {
         self
     }
 
+    pub fn show_scrollbar_y(mut self, show: bool) -> Self {
+        self.show_scrollbar_y = show;
+        self
+    }
+
+    pub fn scrollbar_y_on_hover(mut self, on_hover: bool) -> Self {
+        self.scrollbar_y_on_hover = on_hover;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         code_block_with(
             cx,
@@ -213,6 +227,8 @@ impl CodeBlock {
                 max_height: self.max_height,
                 show_scrollbar_x: self.show_scrollbar_x,
                 scrollbar_x_on_hover: self.scrollbar_x_on_hover,
+                show_scrollbar_y: self.show_scrollbar_y,
+                scrollbar_y_on_hover: self.scrollbar_y_on_hover,
             },
         )
     }
@@ -246,6 +262,8 @@ pub struct CodeBlockUiOptions {
     pub max_height: Option<Px>,
     pub show_scrollbar_x: bool,
     pub scrollbar_x_on_hover: bool,
+    pub show_scrollbar_y: bool,
+    pub scrollbar_y_on_hover: bool,
 }
 
 impl Default for CodeBlockUiOptions {
@@ -262,6 +280,8 @@ impl Default for CodeBlockUiOptions {
             max_height: None,
             show_scrollbar_x: false,
             scrollbar_x_on_hover: true,
+            show_scrollbar_y: false,
+            scrollbar_y_on_hover: true,
         }
     }
 }
@@ -326,6 +346,9 @@ pub fn code_block_with_header_slots<H: UiHost>(
             let copy_visible = !options.copy_button_on_hover || hovered || copied;
             let scrollbar_x_visible =
                 options.show_scrollbar_x && (!options.scrollbar_x_on_hover || hovered);
+            let scrollbar_y_visible = options.show_scrollbar_y
+                && options.max_height.is_some()
+                && (!options.scrollbar_y_on_hover || hovered);
 
             let header_visible = options.show_header
                 || language.is_some()
@@ -371,6 +394,7 @@ pub fn code_block_with_header_slots<H: UiHost>(
                         &prepared,
                         options.wrap,
                         scrollbar_x_visible,
+                        scrollbar_y_visible,
                         options.max_height,
                     ));
                     out
@@ -490,6 +514,7 @@ fn render_code_block_body<H: UiHost>(
     prepared: &crate::prepare::PreparedCodeBlock,
     wrap: CodeBlockWrap,
     scrollbar_x_visible: bool,
+    scrollbar_y_visible: bool,
     max_height: Option<Px>,
 ) -> AnyElement {
     let pad = MetricRef::space(Space::N2).resolve(theme);
@@ -500,27 +525,103 @@ fn render_code_block_body<H: UiHost>(
     props.padding = Edges::all(pad);
 
     cx.container(props, |cx| {
-        let content = if !prepared.show_line_numbers {
-            render_code_block_text(cx, theme, prepared, wrap, scrollbar_x_visible)
+        let scrollbar_w = theme.metric_required("metric.scrollbar.width");
+        let reserved_right_for_x_scrollbar = if scrollbar_y_visible {
+            scrollbar_w
         } else {
-            render_code_block_with_line_numbers(cx, theme, prepared, wrap, scrollbar_x_visible)
+            Px(0.0)
+        };
+
+        let content = if !prepared.show_line_numbers {
+            render_code_block_text(
+                cx,
+                theme,
+                prepared,
+                wrap,
+                scrollbar_x_visible,
+                reserved_right_for_x_scrollbar,
+            )
+        } else {
+            render_code_block_with_line_numbers(
+                cx,
+                theme,
+                prepared,
+                wrap,
+                scrollbar_x_visible,
+                reserved_right_for_x_scrollbar,
+            )
         };
 
         if let Some(max_height) = max_height {
-            let mut scroll_layout = LayoutStyle::default();
-            scroll_layout.size.width = Length::Fill;
-            scroll_layout.size.height = Length::Auto;
-            scroll_layout.size.max_height = Some(max_height);
-            scroll_layout.overflow = Overflow::Clip;
+            let thumb = theme.color_required("scrollbar.thumb.background");
+            let thumb_hover = theme.color_required("scrollbar.thumb.hover.background");
+            let handle = cx.with_state(ScrollHandle::default, |h| h.clone());
 
-            vec![cx.scroll(
+            let outer_layout = {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout.size.height = Length::Auto;
+                layout.size.max_height = Some(max_height);
+                layout.overflow = Overflow::Clip;
+                layout
+            };
+
+            let scroll = cx.scroll(
                 ScrollProps {
-                    layout: scroll_layout,
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout.overflow = Overflow::Clip;
+                        layout
+                    },
                     axis: ScrollAxis::Y,
+                    scroll_handle: Some(handle.clone()),
                     ..Default::default()
                 },
                 |_cx| vec![content],
-            )]
+            );
+
+            if !scrollbar_y_visible {
+                return vec![scroll];
+            }
+
+            let scroll_id = scroll.id;
+            vec![cx.stack_props(StackProps { layout: outer_layout }, move |cx| {
+                let scrollbar_layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        top: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        bottom: Some(if scrollbar_x_visible {
+                            scrollbar_w
+                        } else {
+                            Px(0.0)
+                        }),
+                        left: None,
+                    },
+                    size: SizeStyle {
+                        width: Length::Px(scrollbar_w),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+
+                vec![
+                    scroll,
+                    cx.scrollbar(ScrollbarProps {
+                        layout: scrollbar_layout,
+                        axis: ScrollbarAxis::Vertical,
+                        scroll_target: Some(scroll_id),
+                        scroll_handle: handle,
+                        style: ScrollbarStyle {
+                            thumb,
+                            thumb_hover,
+                            ..Default::default()
+                        },
+                    }),
+                ]
+            })]
         } else {
             vec![content]
         }
@@ -533,6 +634,7 @@ fn render_code_block_with_line_numbers<H: UiHost>(
     prepared: &crate::prepare::PreparedCodeBlock,
     wrap: CodeBlockWrap,
     scrollbar_x_visible: bool,
+    scrollbar_x_right_inset: Px,
 ) -> AnyElement {
     let number_style = TextStyle {
         font: FontId::monospace(),
@@ -595,7 +697,14 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         |_cx| vec![line_numbers_text],
     );
 
-    let code = render_code_block_text(cx, theme, prepared, wrap, scrollbar_x_visible);
+    let code = render_code_block_text(
+        cx,
+        theme,
+        prepared,
+        wrap,
+        scrollbar_x_visible,
+        scrollbar_x_right_inset,
+    );
 
     stack::hstack(
         cx,
@@ -613,6 +722,7 @@ fn render_code_block_text<H: UiHost>(
     prepared: &crate::prepare::PreparedCodeBlock,
     wrap: CodeBlockWrap,
     scrollbar_x_visible: bool,
+    scrollbar_x_right_inset: Px,
 ) -> AnyElement {
     let mut text = String::new();
     let mut runs: Vec<TextRun> = Vec::new();
@@ -717,7 +827,7 @@ fn render_code_block_text<H: UiHost>(
                 position: PositionStyle::Absolute,
                 inset: InsetStyle {
                     top: None,
-                    right: Some(Px(0.0)),
+                    right: Some(scrollbar_x_right_inset),
                     bottom: Some(Px(0.0)),
                     left: Some(Px(0.0)),
                 },

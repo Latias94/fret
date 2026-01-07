@@ -40,6 +40,7 @@ a small `controllable_state` helper because it is a common contract shared by ma
 - `label` -> `ecosystem/fret-ui-kit/src/primitives/label.rs`
 - `menu` -> `ecosystem/fret-ui-kit/src/primitives/menu/*`
 - `menubar` -> `ecosystem/fret-ui-kit/src/primitives/menubar.rs` (facade over `menu`, plus trigger-row + ArrowLeft/Right switching policy in `primitives/menubar/trigger_row.rs`)
+- `navigation-menu` -> `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs`
 - `popover` -> `ecosystem/fret-ui-kit/src/primitives/popover.rs` (facade over window overlays + popper)
 - `popper` -> `ecosystem/fret-ui-kit/src/primitives/popper.rs` (+ `popper_content.rs`)
 - `presence` -> `ecosystem/fret-ui-kit/src/primitives/presence.rs`

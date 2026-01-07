@@ -63,4 +63,6 @@ Fret does not have CSS animation events. Motion is composed from:
 
 ## Follow-ups (future)
 
-- Extend motion taxonomy coverage to remaining overlay-ish components as they are added (e.g. NavigationMenu).
+- Extend motion taxonomy coverage to remaining overlay-ish components as they are added.
+- NavigationMenu: Viewport open/close now uses fade + zoom; directional `data-motion` transitions
+  (switching between values) are still a follow-up.
