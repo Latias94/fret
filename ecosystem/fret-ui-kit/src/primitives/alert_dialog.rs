@@ -20,6 +20,19 @@ use fret_ui::{ElementContext, UiHost};
 use crate::primitives::dialog as dialog_prim;
 use crate::primitives::dialog::DialogOptions;
 
+/// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+///
+/// AlertDialog itself is a constrained Dialog variant. This helper exists to standardize how
+/// recipes derive the open model (`open` / `defaultOpen`) before applying alert-dialog-specific
+/// focus preferences.
+pub fn alert_dialog_use_open_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_open: Option<Model<bool>>,
+    default_open: impl FnOnce() -> bool,
+) -> crate::primitives::controllable_state::ControllableModel<bool> {
+    crate::primitives::open_state::open_use_model(cx, controlled_open, default_open)
+}
+
 #[derive(Default)]
 struct AlertDialogCancelRegistry {
     by_open: HashMap<ModelId, GlobalElementId>,
