@@ -12,14 +12,10 @@ use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::{popper, popper_content};
-use fret_ui_kit::{
-    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    OverlayRequest, Radius, Space,
-};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space};
 
 use crate::overlay_motion;
 
@@ -716,183 +712,225 @@ impl NavigationMenu {
             if overlay_presence.present {
                 let side_offset = nav_menu_viewport_side_offset(&theme);
                 let window_margin = nav_menu_viewport_window_margin(&theme);
-                let overlay_root_name = OverlayController::popover_root_name(root_id);
+                let indicator_size = nav_menu_indicator_size(&theme);
 
-                let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
-                    let opacity = motion.opacity;
-                    let scale = motion.scale;
-                    let anchor_id = selected_local.as_deref().and_then(|v| {
-                        radix_navigation_menu::navigation_menu_trigger_id(cx, root_id, v)
-                    });
-                    let anchor =
-                        anchor_id.and_then(|id| overlay::anchor_bounds_for_element(cx, id));
-                    let Some(anchor) = anchor else {
-                        return Vec::new();
-                    };
+                let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
+                let measured = selected_local
+                    .as_deref()
+                    .and_then(|value| {
+                        radix_navigation_menu::navigation_menu_viewport_content_id(
+                            cx, root_id, value,
+                        )
+                    })
+                    .and_then(|id| cx.last_bounds_for_element(id).map(|r| r.size));
+                if viewport_enabled {
+                    if let (Some(selected_value), Some(size)) = (selected_local.clone(), measured) {
+                        radix_navigation_menu::navigation_menu_register_viewport_size(
+                            cx,
+                            root_id,
+                            selected_value,
+                            size,
+                        );
+                    }
+                }
 
-                    let root_state_for_viewport = root_state.clone();
-                    let value_for_hover = value_for_viewport.clone();
-                    let viewport_children = viewport.clone();
-                    let content_switch = content_switch.clone();
-                    let content_switch_slide_px = content_switch_slide_px;
+                let fallback = measured.unwrap_or(estimated);
+                let content_size = if viewport_enabled {
+                    radix_navigation_menu::navigation_menu_viewport_size_for_transition(
+                        cx,
+                        root_id,
+                        selected_local.clone(),
+                        &values,
+                        transition,
+                        fallback,
+                    )
+                    .size
+                } else {
+                    fallback
+                };
 
-                    let viewport_props = if viewport_enabled {
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                overflow: fret_ui::element::Overflow::Clip,
-                                ..Default::default()
-                            },
-                            padding: Edges::all(viewport_pad),
-                            background: Some(viewport_bg),
-                            shadow: None,
-                            border: Edges::all(Px(1.0)),
-                            border_color: Some(viewport_border),
-                            corner_radii: Corners::all(viewport_radius),
-                        }
-                    } else {
-                        ContainerProps {
-                            layout: LayoutStyle {
-                                overflow: fret_ui::element::Overflow::Visible,
-                                ..Default::default()
-                            },
-                            padding: Edges::all(Px(0.0)),
-                            background: None,
-                            shadow: None,
-                            border: Edges::all(Px(0.0)),
-                            border_color: None,
-                            corner_radii: Corners::all(Px(0.0)),
-                        }
-                    };
+                let root_state_for_viewport = root_state.clone();
+                let value_for_hover = value_for_viewport.clone();
+                let viewport_children = viewport.clone();
+                let content_switch = content_switch.clone();
+                let content_switch_slide_px = content_switch_slide_px;
 
-                    let content = cx.pressable(
-                        PressableProps {
-                            layout: LayoutStyle::default(),
-                            enabled: true,
-                            focusable: false,
-                            focus_ring: None,
-                            a11y: PressableA11y::default(),
+                let viewport_props = if viewport_enabled {
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            overflow: fret_ui::element::Overflow::Clip,
+                            ..Default::default()
                         },
-                        move |cx, _st| {
-                            let root_state_for_hover = root_state_for_viewport.clone();
-                            let value_for_hover = value_for_hover.clone();
-                            cx.pressable_on_hover_change(Arc::new(
-                                move |host, action_cx, hovered| {
-                                    let mut root = root_state_for_hover
-                                        .lock()
-                                        .unwrap_or_else(|e| e.into_inner());
-                                    if hovered {
-                                        root.on_content_enter(host);
+                        padding: Edges::all(viewport_pad),
+                        background: Some(viewport_bg),
+                        shadow: None,
+                        border: Edges::all(Px(1.0)),
+                        border_color: Some(viewport_border),
+                        corner_radii: Corners::all(viewport_radius),
+                    }
+                } else {
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            overflow: fret_ui::element::Overflow::Visible,
+                            ..Default::default()
+                        },
+                        padding: Edges::all(Px(0.0)),
+                        background: None,
+                        shadow: None,
+                        border: Edges::all(Px(0.0)),
+                        border_color: None,
+                        corner_radii: Corners::all(Px(0.0)),
+                    }
+                };
+
+                let placement = popper::PopperContentPlacement::new(
+                    LayoutDirection::Ltr,
+                    Side::Bottom,
+                    Align::Start,
+                    side_offset,
+                );
+
+                let args = radix_navigation_menu::NavigationMenuViewportOverlayRequestArgs {
+                    window_margin,
+                    placement,
+                    content_size,
+                    indicator_size,
+                };
+
+                let opacity = motion.opacity;
+                let scale = motion.scale;
+                let selected_value_for_content_id = selected_local.clone();
+                let selected_for_overlay = selected_local.clone();
+                radix_navigation_menu::navigation_menu_request_viewport_overlay(
+                    cx,
+                    root_id,
+                    open_model.clone(),
+                    overlay_presence,
+                    selected_for_overlay.as_deref(),
+                    args,
+                    move |cx, layout| {
+                        let root_state_for_hover = root_state_for_viewport.clone();
+                        let value_for_hover = value_for_hover.clone();
+                        let viewport_props = viewport_props;
+                        let viewport_children = viewport_children;
+                        let content_switch = content_switch;
+                        let content_switch_slide_px = content_switch_slide_px;
+
+                        let content = cx.pressable(
+                            PressableProps {
+                                layout: LayoutStyle::default(),
+                                enabled: true,
+                                focusable: false,
+                                focus_ring: None,
+                                a11y: PressableA11y::default(),
+                            },
+                            move |cx, _st| {
+                                let root_state_for_hover = root_state_for_hover.clone();
+                                let value_for_hover = value_for_hover.clone();
+                                cx.pressable_on_hover_change(Arc::new(
+                                    move |host, action_cx, hovered| {
+                                        let mut root = root_state_for_hover
+                                            .lock()
+                                            .unwrap_or_else(|e| e.into_inner());
+                                        if hovered {
+                                            root.on_content_enter(host);
+                                        } else {
+                                            root.on_content_leave(
+                                                host,
+                                                action_cx,
+                                                &value_for_hover,
+                                                cfg,
+                                            );
+                                        }
+                                    },
+                                ));
+
+                                vec![cx.container(viewport_props, move |cx| {
+                                    let Some((t, forward, from_children)) = content_switch.clone()
+                                    else {
+                                        return viewport_children.clone();
+                                    };
+
+                                    let to_children = viewport_children.clone();
+                                    let t = t.clamp(0.0, 1.0);
+                                    let slide = content_switch_slide_px.0;
+
+                                    let (from_dx, to_dx) = if forward {
+                                        (-slide * t, slide * (1.0 - t))
                                     } else {
-                                        root.on_content_leave(
-                                            host,
-                                            action_cx,
-                                            &value_for_hover,
-                                            cfg,
-                                        );
-                                    }
-                                },
-                            ));
+                                        (slide * t, -slide * (1.0 - t))
+                                    };
 
-                            vec![cx.container(viewport_props, move |cx| {
-                                let Some((t, forward, from_children)) = content_switch.clone()
-                                else {
-                                    return viewport_children.clone();
-                                };
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size = SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    };
+                                    layout.overflow = fret_ui::element::Overflow::Clip;
+                                    let layout_for_layers = layout;
 
-                                let to_children = viewport_children.clone();
-                                let t = t.clamp(0.0, 1.0);
-                                let slide = content_switch_slide_px.0;
+                                    vec![cx.stack_props(
+                                        StackProps {
+                                            layout: layout_for_layers,
+                                        },
+                                        move |cx| {
+                                            let mut layer_layout = LayoutStyle::default();
+                                            layer_layout.size = SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            };
 
-                                let (from_dx, to_dx) = if forward {
-                                    (-slide * t, slide * (1.0 - t))
-                                } else {
-                                    (slide * t, -slide * (1.0 - t))
-                                };
+                                            let from_opacity = 1.0 - t;
+                                            let to_opacity = t;
 
-                                let mut layout = LayoutStyle::default();
-                                layout.size = SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                };
-                                layout.overflow = fret_ui::element::Overflow::Clip;
-                                let layout_for_layers = layout;
+                                            let from = cx.opacity_props(
+                                                OpacityProps {
+                                                    layout: layer_layout,
+                                                    opacity: from_opacity,
+                                                },
+                                                move |cx| {
+                                                    let layer = cx.visual_transform_props(
+                                                        VisualTransformProps {
+                                                            layout: layer_layout,
+                                                            transform: Transform2D::translation(
+                                                                Point::new(Px(from_dx), Px(0.0)),
+                                                            ),
+                                                        },
+                                                        move |_cx| from_children.clone(),
+                                                    );
+                                                    vec![layer]
+                                                },
+                                            );
 
-                                vec![cx.stack_props(
-                                    StackProps {
-                                        layout: layout_for_layers,
-                                    },
-                                    move |cx| {
-                                        let mut layer_layout = LayoutStyle::default();
-                                        layer_layout.size = SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        };
+                                            let to = cx.opacity_props(
+                                                OpacityProps {
+                                                    layout: layer_layout,
+                                                    opacity: to_opacity,
+                                                },
+                                                move |cx| {
+                                                    let layer = cx.visual_transform_props(
+                                                        VisualTransformProps {
+                                                            layout: layer_layout,
+                                                            transform: Transform2D::translation(
+                                                                Point::new(Px(to_dx), Px(0.0)),
+                                                            ),
+                                                        },
+                                                        move |_cx| to_children.clone(),
+                                                    );
+                                                    vec![layer]
+                                                },
+                                            );
 
-                                        let from_opacity = 1.0 - t;
-                                        let to_opacity = t;
+                                            vec![from, to]
+                                        },
+                                    )]
+                                })]
+                            },
+                        );
 
-                                        let from = cx.opacity_props(
-                                            OpacityProps {
-                                                layout: layer_layout,
-                                                opacity: from_opacity,
-                                            },
-                                            move |cx| {
-                                                let layer = cx.visual_transform_props(
-                                                    VisualTransformProps {
-                                                        layout: layer_layout,
-                                                        transform: Transform2D::translation(
-                                                            Point::new(Px(from_dx), Px(0.0)),
-                                                        ),
-                                                    },
-                                                    move |_cx| from_children.clone(),
-                                                );
-                                                vec![layer]
-                                            },
-                                        );
-
-                                        let to = cx.opacity_props(
-                                            OpacityProps {
-                                                layout: layer_layout,
-                                                opacity: to_opacity,
-                                            },
-                                            move |cx| {
-                                                let layer = cx.visual_transform_props(
-                                                    VisualTransformProps {
-                                                        layout: layer_layout,
-                                                        transform: Transform2D::translation(
-                                                            Point::new(Px(to_dx), Px(0.0)),
-                                                        ),
-                                                    },
-                                                    move |_cx| to_children.clone(),
-                                                );
-                                                vec![layer]
-                                            },
-                                        );
-
-                                        vec![from, to]
-                                    },
-                                )]
-                            })]
-                        },
-                    );
-
-                    let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
-                    let measured = cx.last_bounds_for_element(content.id).map(|r| r.size);
-                    let fallback = measured.unwrap_or(estimated);
-                    let content_size = if viewport_enabled {
-                        if let (Some(selected_value), Some(size)) =
-                            (selected_local.clone(), measured)
-                        {
-                            radix_navigation_menu::navigation_menu_register_viewport_size(
-                                cx,
-                                root_id,
-                                selected_value,
-                                size,
-                            );
-                        }
-                        if let Some(selected_value) = selected_local.clone() {
+                        if let Some(selected_value) = selected_value_for_content_id.clone() {
                             radix_navigation_menu::navigation_menu_register_viewport_content_id(
                                 cx,
                                 root_id,
@@ -901,135 +939,71 @@ impl NavigationMenu {
                             );
                         }
 
-                        let viewport_size =
-                            radix_navigation_menu::navigation_menu_viewport_size_for_transition(
-                                cx,
-                                root_id,
-                                selected_local.clone(),
-                                &values,
-                                transition,
-                                fallback,
-                            );
-                        viewport_size.size
-                    } else {
-                        fallback
-                    };
+                        let transform = shadcn_zoom_transform(layout.transform_origin, scale);
 
-                    let layout = popper::popper_content_layout_sized(
-                        overlay::outer_bounds_with_window_margin(cx.bounds, window_margin),
-                        anchor,
-                        content_size,
-                        popper::PopperContentPlacement::new(
-                            LayoutDirection::Ltr,
-                            Side::Bottom,
-                            Align::Start,
-                            side_offset,
-                        ),
-                    );
-                    let placed = layout.rect;
+                        let panel = popper_content::popper_wrapper_panel_at(
+                            cx,
+                            layout.placed,
+                            Edges::all(Px(0.0)),
+                            fret_ui::element::Overflow::Visible,
+                            move |_cx| vec![content],
+                        );
 
-                    let origin = popper::popper_content_transform_origin(&layout, anchor, None);
-                    let zoom = shadcn_zoom_transform(origin, scale);
-                    let transform = zoom;
+                        let indicator = popper_content::popper_wrapper_panel_at(
+                            cx,
+                            layout.indicator_rect,
+                            Edges::all(Px(0.0)),
+                            fret_ui::element::Overflow::Visible,
+                            move |cx| {
+                                let mut layout = LayoutStyle::default();
+                                layout.size = SizeStyle {
+                                    width: Length::Fill,
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                };
 
-                    let panel = popper_content::popper_wrapper_panel_at(
-                        cx,
-                        placed,
-                        Edges::all(Px(0.0)),
-                        fret_ui::element::Overflow::Visible,
-                        move |_cx| vec![content],
-                    );
+                                let center = Point::new(
+                                    Px(indicator_size.0 * 0.5),
+                                    Px(indicator_size.0 * 0.5),
+                                );
+                                let rotate = Transform2D::rotation_about_degrees(45.0, center);
 
-                    let indicator_size = nav_menu_indicator_size(&theme);
-                    let indicator_rect = radix_navigation_menu::navigation_menu_indicator_rect(
-                        anchor,
-                        placed,
-                        layout.side,
-                        indicator_size,
-                    );
+                                vec![cx.visual_transform_props(
+                                    VisualTransformProps {
+                                        layout,
+                                        transform: rotate,
+                                    },
+                                    move |cx| {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size = SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        };
+                                        vec![cx.container(
+                                            ContainerProps {
+                                                layout,
+                                                padding: Edges::all(Px(0.0)),
+                                                background: Some(viewport_bg),
+                                                shadow: None,
+                                                border: Edges::all(Px(1.0)),
+                                                border_color: Some(viewport_border),
+                                                corner_radii: Corners::all(Px(2.0)),
+                                            },
+                                            |_cx| Vec::new(),
+                                        )]
+                                    },
+                                )]
+                            },
+                        );
 
-                    let indicator = popper_content::popper_wrapper_panel_at(
-                        cx,
-                        indicator_rect,
-                        Edges::all(Px(0.0)),
-                        fret_ui::element::Overflow::Visible,
-                        move |cx| {
-                            let mut layout = LayoutStyle::default();
-                            layout.size = SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            };
-
-                            let center =
-                                Point::new(Px(indicator_size.0 * 0.5), Px(indicator_size.0 * 0.5));
-                            let rotate = Transform2D::rotation_about_degrees(45.0, center);
-
-                            vec![cx.visual_transform_props(
-                                VisualTransformProps {
-                                    layout,
-                                    transform: rotate,
-                                },
-                                move |cx| {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size = SizeStyle {
-                                        width: Length::Fill,
-                                        height: Length::Fill,
-                                        ..Default::default()
-                                    };
-                                    vec![cx.container(
-                                        ContainerProps {
-                                            layout,
-                                            padding: Edges::all(Px(0.0)),
-                                            background: Some(viewport_bg),
-                                            shadow: None,
-                                            border: Edges::all(Px(1.0)),
-                                            border_color: Some(viewport_border),
-                                            corner_radii: Corners::all(Px(2.0)),
-                                        },
-                                        |_cx| Vec::new(),
-                                    )]
-                                },
-                            )]
-                        },
-                    );
-
-                    let mut overlay_layout = LayoutStyle::default();
-                    overlay_layout.size = SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Fill,
-                        ..Default::default()
-                    };
-                    let overlay_layout_for_transform = overlay_layout.clone();
-                    let overlay_content = cx.opacity_props(
-                        OpacityProps {
-                            layout: overlay_layout,
+                        radix_navigation_menu::NavigationMenuViewportOverlayRenderOutput {
                             opacity,
-                        },
-                        move |cx| {
-                            let content = cx.visual_transform_props(
-                                VisualTransformProps {
-                                    layout: overlay_layout_for_transform,
-                                    transform,
-                                },
-                                move |_cx| vec![indicator, panel],
-                            );
-                            vec![content]
-                        },
-                    );
-
-                    vec![overlay_content]
-                });
-
-                let mut request = OverlayRequest::dismissible_popover(
-                    root_id,
-                    root_id,
-                    open_model.clone(),
-                    overlay_presence,
-                    overlay_children,
+                            transform,
+                            children: vec![indicator, panel],
+                        }
+                    },
                 );
-                request.root_name = Some(overlay_root_name);
-                OverlayController::request(cx, request);
             }
 
             vec![cx.flex(

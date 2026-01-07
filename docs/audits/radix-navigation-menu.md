@@ -52,8 +52,8 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
 - Pass: Delay/skipDelay/closeDelay timers match Radix defaults and intent.
 - Pass: Trigger pointer-move gating after Escape close matches Radix's "do not reopen immediately".
 - Pass: Value model supports controlled/uncontrolled selection (Radix `useControllableState`).
-- Partial: Viewport/indicator are modeled as recipe-layer overlay elements rather than a reusable
-  Radix-named primitives facade surface.
+- Pass: Viewport/indicator overlay wiring is available as a reusable primitives helper
+  (`navigation_menu_request_viewport_overlay(...)`); recipes remain responsible for skin/layout.
 - Pass: `data-motion` direction semantics are exposed via `NavigationMenuContentMotion` and
   `navigation_menu_content_transition(...)`.
 - Pass: Viewport-measured width/height can be registered and interpolated via the primitive facade,
@@ -61,7 +61,5 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
 
 ## Follow-ups (recommended)
 
-- Consider downshifting the "viewport content registry" into `fret-ui-kit::primitives::navigation_menu`
-  so non-shadcn consumers can reuse it (similar to how `menu` is shared and facaded).
 - Consider evolving the viewport sizing contract to cover RTL and "content registry" semantics
   (Radix tracks per-item content refs and sizes) if/when non-shadcn recipes need it.

@@ -11,9 +11,12 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size};
+use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size, Transform2D};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, UiActionHost};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, Length, OpacityProps, SizeStyle, VisualTransformProps,
+};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::Side;
@@ -21,6 +24,9 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::model_watch::ModelWatchExt;
 use crate::headless::transition::TransitionTimeline;
+use crate::overlay;
+use crate::primitives::popper;
+use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Radix `delayDuration` default (milliseconds).
 pub const DEFAULT_DELAY_DURATION_MS: u64 = 200;
@@ -343,6 +349,128 @@ pub fn navigation_menu_indicator_rect(
         Point::new(Px(x), Px(y)),
         Size::new(indicator_size, indicator_size),
     )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NavigationMenuViewportOverlayLayout {
+    pub anchor: Rect,
+    pub placed: Rect,
+    pub side: Side,
+    pub transform_origin: Point,
+    pub indicator_rect: Rect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NavigationMenuViewportOverlayRequestArgs {
+    pub window_margin: Px,
+    pub placement: popper::PopperContentPlacement,
+    pub content_size: Size,
+    pub indicator_size: Px,
+}
+
+#[derive(Debug, Clone)]
+pub struct NavigationMenuViewportOverlayRenderOutput {
+    pub opacity: f32,
+    pub transform: Transform2D,
+    pub children: Vec<AnyElement>,
+}
+
+/// Requests a dismissible popover overlay for a navigation menu viewport/indicator pair.
+///
+/// This is a policy helper: it computes popper placement from the active trigger id, builds an
+/// overlay root name, and submits a `dismissible_popover` request. The caller provides the visual
+/// children and animation parameters (opacity/transform) so skins can remain in recipe layers.
+pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    open_model: Model<bool>,
+    presence: OverlayPresence,
+    selected_value: Option<&str>,
+    args: NavigationMenuViewportOverlayRequestArgs,
+    render: impl FnOnce(
+        &mut ElementContext<'_, H>,
+        NavigationMenuViewportOverlayLayout,
+    ) -> NavigationMenuViewportOverlayRenderOutput,
+) -> Option<NavigationMenuViewportOverlayLayout> {
+    if !presence.present {
+        return None;
+    }
+
+    let overlay_root_name = OverlayController::popover_root_name(root_id);
+    let mut computed_layout: Option<NavigationMenuViewportOverlayLayout> = None;
+
+    let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+        let Some(value) = selected_value else {
+            return Vec::new();
+        };
+        let anchor_id = navigation_menu_trigger_id(cx, root_id, value);
+        let anchor = anchor_id.and_then(|id| overlay::anchor_bounds_for_element(cx, id));
+        let Some(anchor) = anchor else {
+            return Vec::new();
+        };
+
+        let popper_layout = popper::popper_content_layout_sized(
+            overlay::outer_bounds_with_window_margin(cx.bounds, args.window_margin),
+            anchor,
+            args.content_size,
+            args.placement,
+        );
+        let placed = popper_layout.rect;
+
+        let transform_origin =
+            popper::popper_content_transform_origin(&popper_layout, anchor, None);
+        let indicator_rect =
+            navigation_menu_indicator_rect(anchor, placed, popper_layout.side, args.indicator_size);
+
+        let layout = NavigationMenuViewportOverlayLayout {
+            anchor,
+            placed,
+            side: popper_layout.side,
+            transform_origin,
+            indicator_rect,
+        };
+        computed_layout = Some(layout);
+
+        let out = render(cx, layout);
+
+        let mut overlay_layout = LayoutStyle::default();
+        overlay_layout.size = SizeStyle {
+            width: Length::Fill,
+            height: Length::Fill,
+            ..Default::default()
+        };
+        let overlay_layout_for_transform = overlay_layout.clone();
+        let overlay_content = cx.opacity_props(
+            OpacityProps {
+                layout: overlay_layout,
+                opacity: out.opacity,
+            },
+            move |cx| {
+                let content = cx.visual_transform_props(
+                    VisualTransformProps {
+                        layout: overlay_layout_for_transform,
+                        transform: out.transform,
+                    },
+                    move |_cx| out.children,
+                );
+                vec![content]
+            },
+        );
+
+        vec![overlay_content]
+    });
+
+    let mut request = OverlayRequest::dismissible_popover(
+        root_id,
+        root_id,
+        open_model,
+        presence,
+        overlay_children,
+    );
+    request.root_name = Some(overlay_root_name);
+    OverlayController::request(cx, request);
+
+    computed_layout
 }
 
 /// A composable, Radix-shaped navigation-menu configuration surface.
