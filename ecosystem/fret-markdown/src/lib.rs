@@ -490,6 +490,10 @@ pub struct MarkdownComponents<H: UiHost> {
     pub heading: Option<Arc<HeadingRenderer<H>>>,
     pub paragraph: Option<Arc<ParagraphRenderer<H>>>,
     pub code_block: Option<Arc<CodeBlockRenderer<H>>>,
+    /// UI policy for the default fenced code block renderer (`fret-code-view`).
+    ///
+    /// If you set `code_block`, you own the full rendering and this value is ignored.
+    pub code_block_ui: fret_code_view::CodeBlockUiOptions,
     /// Render an optional “actions” area for fenced code blocks.
     ///
     /// Note: This is only used by the default code block renderer. If you provide `code_block`,
@@ -516,10 +520,21 @@ pub struct MarkdownComponents<H: UiHost> {
 
 impl<H: UiHost> Default for MarkdownComponents<H> {
     fn default() -> Self {
+        let mut code_block_ui = fret_code_view::CodeBlockUiOptions::default();
+        code_block_ui.show_header = true;
+        code_block_ui.header_divider = true;
+        code_block_ui.header_background = fret_code_view::CodeBlockHeaderBackground::Secondary;
+        code_block_ui.show_copy_button = true;
+        code_block_ui.copy_button_on_hover = true;
+        code_block_ui.copy_button_placement = fret_code_view::CodeBlockCopyButtonPlacement::Header;
+        code_block_ui.show_scrollbar_x = true;
+        code_block_ui.scrollbar_x_on_hover = true;
+
         Self {
             heading: None,
             paragraph: None,
             code_block: None,
+            code_block_ui,
             code_block_actions: None,
             raw_block: None,
             list: None,
@@ -595,13 +610,14 @@ fn render_code_block<H: UiHost>(
     info: CodeBlockInfo,
     components: &MarkdownComponents<H>,
 ) -> AnyElement {
-    let mut options = fret_code_view::CodeBlockUiOptions::default();
-    options.show_header = true;
-    options.header_divider = true;
-    options.header_background = fret_code_view::CodeBlockHeaderBackground::Secondary;
-    options.show_copy_button = true;
-    options.copy_button_on_hover = true;
-    options.copy_button_placement = fret_code_view::CodeBlockCopyButtonPlacement::Header;
+    let theme = Theme::global(&*cx.app);
+    let mut options = components.code_block_ui;
+
+    if options.max_height.is_none() {
+        options.max_height = theme
+            .metric_by_key("fret.markdown.code_block.max_height")
+            .or_else(|| theme.metric_by_key("markdown.code_block.max_height"));
+    }
 
     let mut header = fret_code_view::CodeBlockHeaderSlots::default();
     if let Some(render_actions) = &components.code_block_actions {
