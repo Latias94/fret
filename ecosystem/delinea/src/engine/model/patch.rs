@@ -43,6 +43,7 @@ pub struct ChartPatch {
 impl ChartPatch {
     pub fn apply(self, model: &mut ChartModel, mode: PatchMode) -> Result<PatchReport, ModelError> {
         let mut report = PatchReport::default();
+        let mut series_replace_order: Option<Vec<SeriesId>> = None;
 
         if mode == PatchMode::Replace || self.replace_families.contains(&ReplaceFamily::Viewport) {
             if self.viewport.is_some() {
@@ -53,8 +54,8 @@ impl ChartPatch {
 
         match mode {
             PatchMode::Replace => {
-                if self.viewport.is_some() {
-                    model.viewport = self.viewport.unwrap();
+                if let Some(vp) = self.viewport {
+                    model.viewport = vp;
                     model.revs.bump_layout();
                     report.marks_changed = true;
                 }
@@ -66,28 +67,47 @@ impl ChartPatch {
                 model.series_order.clear();
                 report.structure_changed = true;
 
+                let mut dataset_ids = BTreeSet::<DatasetId>::new();
                 for op in self.datasets {
                     if let DatasetOp::Upsert { id } = op {
+                        if !dataset_ids.insert(id) {
+                            return Err(ModelError::DuplicateId { kind: "dataset" });
+                        }
                         model
                             .datasets
                             .insert(id, crate::engine::model::DatasetModel { id });
                     }
                 }
+
+                let mut grid_ids = BTreeSet::<GridId>::new();
                 for op in self.grids {
                     if let GridOp::Upsert { id } = op {
+                        if !grid_ids.insert(id) {
+                            return Err(ModelError::DuplicateId { kind: "grid" });
+                        }
                         model.grids.insert(id, GridModel { id });
                     }
                 }
+
+                let mut axis_ids = BTreeSet::<AxisId>::new();
                 for op in self.axes {
                     if let AxisOp::Upsert(axis) = op {
+                        if !axis_ids.insert(axis.id) {
+                            return Err(ModelError::DuplicateId { kind: "axis" });
+                        }
                         if !model.grids.contains_key(&axis.grid) {
                             return Err(ModelError::MissingReference { kind: "grid" });
                         }
                         model.axes.insert(axis.id, AxisModel::from(axis));
                     }
                 }
+
+                let mut series_ids = BTreeSet::<SeriesId>::new();
                 for op in self.series {
                     if let SeriesOp::Upsert(series) = op {
+                        if !series_ids.insert(series.id) {
+                            return Err(ModelError::DuplicateId { kind: "series" });
+                        }
                         if !model.datasets.contains_key(&series.dataset) {
                             return Err(ModelError::MissingReference { kind: "dataset" });
                         }
@@ -111,31 +131,50 @@ impl ChartPatch {
                 return Ok(report);
             }
             PatchMode::ReplaceMerge => {
-                // Apply replacement for explicit families, otherwise merge.
+                // ECharts-inspired semantics for "replaceMerge":
+                // - families listed in `replace_families` are treated like a new option list:
+                //   items not listed are removed,
+                //   items with matching IDs are kept and merged,
+                //   new IDs are inserted.
+
                 if self.replace_families.contains(&ReplaceFamily::Datasets) {
-                    model.datasets.clear();
-                    report.structure_changed = true;
+                    let desired = desired_dataset_ids(&self.datasets)?;
+                    let before = model.datasets.len();
+                    model.datasets.retain(|id, _| desired.contains(id));
+                    if model.datasets.len() != before {
+                        report.structure_changed = true;
+                    }
                 }
+
                 if self.replace_families.contains(&ReplaceFamily::Grids) {
-                    model.grids.clear();
-                    report.structure_changed = true;
+                    let desired = desired_grid_ids(&self.grids)?;
+                    let before = model.grids.len();
+                    model.grids.retain(|id, _| desired.contains(id));
+                    if model.grids.len() != before {
+                        report.structure_changed = true;
+                    }
                 }
+
                 if self.replace_families.contains(&ReplaceFamily::Axes) {
-                    model.axes.clear();
-                    report.structure_changed = true;
+                    let desired = desired_axis_ids(&self.axes)?;
+                    let before = model.axes.len();
+                    model.axes.retain(|id, _| desired.contains(id));
+                    if model.axes.len() != before {
+                        report.structure_changed = true;
+                    }
                 }
+
                 if self.replace_families.contains(&ReplaceFamily::Series) {
-                    model.series.clear();
-                    model.series_order.clear();
-                    report.structure_changed = true;
-                }
-                if self.replace_families.contains(&ReplaceFamily::Viewport)
-                    && self.viewport.is_some()
-                {
-                    model.viewport = self.viewport.unwrap();
-                    model.revs.bump_layout();
-                    report.viewport_changed = true;
-                    report.marks_changed = true;
+                    let (desired, order) = desired_series_ids_and_order(&self.series)?;
+
+                    let before = model.series.len();
+                    model.series.retain(|id, _| desired.contains(id));
+                    model.series_order.retain(|id| desired.contains(id));
+                    if model.series.len() != before {
+                        report.structure_changed = true;
+                    }
+
+                    series_replace_order = Some(order);
                 }
             }
             PatchMode::Merge => {}
@@ -231,7 +270,9 @@ impl ChartPatch {
                     }
 
                     let Some(existing) = model.series.get_mut(&series.id) else {
-                        model.series_order.push(series.id);
+                        if series_replace_order.is_none() {
+                            model.series_order.push(series.id);
+                        }
                         model.series.insert(series.id, SeriesModel::from(series));
                         report.structure_changed = true;
                         continue;
@@ -263,20 +304,115 @@ impl ChartPatch {
                 }
                 SeriesOp::Remove { id } => {
                     if model.series.remove(&id).is_some() {
-                        model.series_order.retain(|s| *s != id);
+                        if series_replace_order.is_none() {
+                            model.series_order.retain(|s| *s != id);
+                        }
                         report.structure_changed = true;
                     }
                 }
             }
         }
 
+        if let Some(order) = series_replace_order {
+            let new_order: Vec<SeriesId> = order
+                .into_iter()
+                .filter(|id| model.series.contains_key(id))
+                .collect();
+
+            if model.series_order != new_order {
+                model.series_order = new_order;
+                report.structure_changed = true;
+            }
+        }
+
         if report.structure_changed {
+            validate_references(model)?;
             model.revs.bump_spec();
             report.marks_changed = true;
         }
 
         Ok(report)
     }
+}
+
+fn desired_dataset_ids(ops: &[DatasetOp]) -> Result<BTreeSet<DatasetId>, ModelError> {
+    let mut desired = BTreeSet::<DatasetId>::new();
+    for op in ops {
+        if let DatasetOp::Upsert { id } = op {
+            if !desired.insert(*id) {
+                return Err(ModelError::DuplicateId { kind: "dataset" });
+            }
+        }
+    }
+    Ok(desired)
+}
+
+fn desired_grid_ids(ops: &[GridOp]) -> Result<BTreeSet<GridId>, ModelError> {
+    let mut desired = BTreeSet::<GridId>::new();
+    for op in ops {
+        if let GridOp::Upsert { id } = op {
+            if !desired.insert(*id) {
+                return Err(ModelError::DuplicateId { kind: "grid" });
+            }
+        }
+    }
+    Ok(desired)
+}
+
+fn desired_axis_ids(ops: &[AxisOp]) -> Result<BTreeSet<AxisId>, ModelError> {
+    let mut desired = BTreeSet::<AxisId>::new();
+    for op in ops {
+        if let AxisOp::Upsert(axis) = op {
+            if !desired.insert(axis.id) {
+                return Err(ModelError::DuplicateId { kind: "axis" });
+            }
+        }
+    }
+    Ok(desired)
+}
+
+fn desired_series_ids_and_order(
+    ops: &[SeriesOp],
+) -> Result<(BTreeSet<SeriesId>, Vec<SeriesId>), ModelError> {
+    let mut desired = BTreeSet::<SeriesId>::new();
+    let mut order = Vec::<SeriesId>::new();
+
+    for op in ops {
+        if let SeriesOp::Upsert(series) = op {
+            if !desired.insert(series.id) {
+                return Err(ModelError::DuplicateId { kind: "series" });
+            }
+            order.push(series.id);
+        }
+    }
+
+    Ok((desired, order))
+}
+
+fn validate_references(model: &ChartModel) -> Result<(), ModelError> {
+    for axis in model.axes.values() {
+        if !model.grids.contains_key(&axis.grid) {
+            return Err(ModelError::MissingReference { kind: "grid" });
+        }
+    }
+
+    for series in model.series.values() {
+        if !model.datasets.contains_key(&series.dataset) {
+            return Err(ModelError::MissingReference { kind: "dataset" });
+        }
+        if !model.axes.contains_key(&series.x_axis) {
+            return Err(ModelError::MissingReference {
+                kind: "axis.x_axis",
+            });
+        }
+        if !model.axes.contains_key(&series.y_axis) {
+            return Err(ModelError::MissingReference {
+                kind: "axis.y_axis",
+            });
+        }
+    }
+
+    Ok(())
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

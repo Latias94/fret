@@ -117,6 +117,75 @@ fn replace_merge_can_replace_series_only() {
 }
 
 #[test]
+fn replace_merge_keeps_and_merges_matching_ids() {
+    let spec = basic_spec();
+    let mut model = ChartModel::from_spec(spec).unwrap();
+
+    let replace_families: BTreeSet<ReplaceFamily> = [ReplaceFamily::Series].into_iter().collect();
+    let report = model
+        .apply_patch(
+            ChartPatch {
+                replace_families,
+                series: vec![SeriesOp::Upsert(SeriesPatch {
+                    id: crate::ids::SeriesId::new(1),
+                    kind: SeriesKind::Line,
+                    dataset: crate::ids::DatasetId::new(1),
+                    x_col: 0,
+                    y_col: 1,
+                    x_axis: crate::ids::AxisId::new(1),
+                    y_axis: crate::ids::AxisId::new(2),
+                    visible: Some(false),
+                })],
+                ..ChartPatch::default()
+            },
+            PatchMode::ReplaceMerge,
+        )
+        .unwrap();
+
+    assert!(!report.structure_changed);
+    assert!(report.marks_changed);
+    assert_eq!(model.series_order, vec![crate::ids::SeriesId::new(1)]);
+    assert_eq!(
+        model
+            .series
+            .get(&crate::ids::SeriesId::new(1))
+            .unwrap()
+            .visible,
+        false
+    );
+}
+
+#[test]
+fn replace_merge_rejects_dangling_references() {
+    let spec = basic_spec();
+    let mut model = ChartModel::from_spec(spec).unwrap();
+
+    let replace_families: BTreeSet<ReplaceFamily> = [ReplaceFamily::Axes].into_iter().collect();
+    let err = model
+        .apply_patch(
+            ChartPatch {
+                replace_families,
+                axes: vec![AxisOp::Upsert(AxisPatch {
+                    id: crate::ids::AxisId::new(1),
+                    kind: AxisKind::X,
+                    grid: crate::ids::GridId::new(1),
+                    range: None,
+                })],
+                ..ChartPatch::default()
+            },
+            PatchMode::ReplaceMerge,
+        )
+        .unwrap_err();
+
+    assert!(matches!(
+        err,
+        ModelError::MissingReference {
+            kind: "axis.y_axis"
+        }
+    ));
+}
+
+#[test]
 fn replace_validates_references() {
     let spec = basic_spec();
     let mut model = ChartModel::from_spec(spec).unwrap();
