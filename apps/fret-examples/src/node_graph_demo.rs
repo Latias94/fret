@@ -1,11 +1,18 @@
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+
 use fret_app::App;
 use fret_app::{CommandId, Effect, WindowRequest};
-use fret_core::{AppWindowId, Event};
+use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Point, Px, Rect, Size};
 use fret_launch::{
     WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext, run_app,
 };
 use fret_runtime::PlatformCapabilities;
+use fret_runtime::{
+    CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, PlatformFilter,
+    WhenExpr,
+};
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::{UiFrameCx, UiTree};
 
@@ -15,14 +22,179 @@ use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKin
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
-use fret_node::ui::NodeGraphCanvas;
-use fret_node::ui::RegistryNodeGraphPresenter;
-use fret_node::ui::register_node_graph_commands;
+use fret_node::ui::presenter::{
+    InsertNodeCandidate, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
+};
+use fret_node::ui::style::NodeGraphStyle;
+use fret_node::ui::{NodeGraphCanvas, RegistryNodeGraphPresenter, register_node_graph_commands};
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
+}
+
+const CMD_TOGGLE_WEIRD_LAYOUT: &str = "node_graph_demo.toggle_weird_layout";
+const WEIRD_KIND: &str = "demo.weird_layout";
+
+#[derive(Debug)]
+struct DemoGeometryState {
+    mode_b: AtomicBool,
+    revision: AtomicU64,
+}
+
+impl DemoGeometryState {
+    fn new() -> Self {
+        Self {
+            mode_b: AtomicBool::new(false),
+            revision: AtomicU64::new(1),
+        }
+    }
+
+    fn geometry_revision(&self) -> u64 {
+        self.revision.load(Ordering::Relaxed)
+    }
+
+    fn toggle(&self) -> bool {
+        let next = !self.mode_b.load(Ordering::Relaxed);
+        self.mode_b.store(next, Ordering::Relaxed);
+        self.revision.fetch_add(1, Ordering::Relaxed);
+        next
+    }
+
+    fn is_mode_b(&self) -> bool {
+        self.mode_b.load(Ordering::Relaxed)
+    }
+}
+
+struct DemoPresenter {
+    inner: RegistryNodeGraphPresenter,
+    geom: Arc<DemoGeometryState>,
+}
+
+impl DemoPresenter {
+    fn new(registry: NodeRegistry, geom: Arc<DemoGeometryState>) -> Self {
+        Self {
+            inner: RegistryNodeGraphPresenter::new(registry),
+            geom,
+        }
+    }
+
+    fn is_weird(graph: &Graph, node: NodeId) -> bool {
+        graph
+            .nodes
+            .get(&node)
+            .is_some_and(|n| n.kind.0 == WEIRD_KIND)
+    }
+
+    fn weird_size_px(&self) -> (f32, f32) {
+        if self.geom.is_mode_b() {
+            (420.0, 120.0)
+        } else {
+            (280.0, 240.0)
+        }
+    }
+}
+
+impl NodeGraphPresenter for DemoPresenter {
+    fn geometry_revision(&self) -> u64 {
+        self.geom.geometry_revision()
+    }
+
+    fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str> {
+        self.inner.node_title(graph, node)
+    }
+
+    fn port_label(&self, graph: &Graph, port: PortId) -> Arc<str> {
+        self.inner.port_label(graph, port)
+    }
+
+    fn list_insertable_nodes(&mut self, graph: &Graph) -> Vec<InsertNodeCandidate> {
+        self.inner.list_insertable_nodes(graph)
+    }
+
+    fn plan_create_node(
+        &mut self,
+        graph: &Graph,
+        candidate: &InsertNodeCandidate,
+        at: CanvasPoint,
+    ) -> Result<Vec<fret_node::ops::GraphOp>, Arc<str>> {
+        self.inner.plan_create_node(graph, candidate, at)
+    }
+
+    fn fill_edge_context_menu(
+        &mut self,
+        graph: &Graph,
+        edge: EdgeId,
+        style: &NodeGraphStyle,
+        out: &mut Vec<NodeGraphContextMenuItem>,
+    ) {
+        self.inner.fill_edge_context_menu(graph, edge, style, out)
+    }
+
+    fn on_edge_context_menu_action(
+        &mut self,
+        graph: &Graph,
+        edge: EdgeId,
+        action: u64,
+    ) -> Option<Vec<fret_node::ops::GraphOp>> {
+        self.inner.on_edge_context_menu_action(graph, edge, action)
+    }
+
+    fn profile_mut(&mut self) -> Option<&mut dyn fret_node::profile::GraphProfile> {
+        self.inner.profile_mut()
+    }
+
+    fn node_size_hint_px(
+        &mut self,
+        graph: &Graph,
+        node: NodeId,
+        _style: &NodeGraphStyle,
+    ) -> Option<(f32, f32)> {
+        Self::is_weird(graph, node).then(|| self.weird_size_px())
+    }
+
+    fn port_anchor_hint(
+        &mut self,
+        graph: &Graph,
+        node: NodeId,
+        port: PortId,
+        style: &NodeGraphStyle,
+    ) -> Option<PortAnchorHint> {
+        if !Self::is_weird(graph, node) {
+            return None;
+        }
+
+        let p = graph.ports.get(&port)?;
+        let key = p.key.0.as_str();
+        let (w, h) = self.weird_size_px();
+
+        let r = style.pin_radius.max(1.0);
+        let (cx, cy) = if self.geom.is_mode_b() {
+            match key {
+                "in_a" => (w * 0.22, 18.0),
+                "in_b" => (w * 0.62, 18.0),
+                "out_main" => (w - 18.0, h * 0.50),
+                "out_aux" => (w * 0.50, h - 18.0),
+                _ => return None,
+            }
+        } else {
+            match key {
+                "in_a" => (18.0, h * 0.22),
+                "in_b" => (18.0, h * 0.72),
+                "out_main" => (w - 18.0, h * 0.35),
+                "out_aux" => (w - 42.0, h * 0.80),
+                _ => return None,
+            }
+        };
+
+        let center = Point::new(Px(cx), Px(cy));
+        let bounds = Rect::new(
+            Point::new(Px(cx - r), Px(cy - r)),
+            Size::new(Px(2.0 * r), Px(2.0 * r)),
+        );
+        Some(PortAnchorHint { center, bounds })
+    }
 }
 
 fn build_demo_registry() -> NodeRegistry {
@@ -118,6 +290,55 @@ fn build_demo_registry() -> NodeRegistry {
         default_data: serde_json::Value::Null,
     });
 
+    reg.register(NodeSchema {
+        kind: NodeKindKey::new(WEIRD_KIND),
+        latest_kind_version: 1,
+        kind_aliases: Vec::new(),
+        title: "Weird Layout".to_string(),
+        category: vec!["Demo".to_string(), "Layout".to_string()],
+        keywords: vec![
+            "weird".to_string(),
+            "layout".to_string(),
+            "anchors".to_string(),
+            "measured".to_string(),
+        ],
+        ports: vec![
+            PortDecl {
+                key: PortKey::new("in_a"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: Some(TypeDesc::Float),
+                label: Some("In A".to_string()),
+            },
+            PortDecl {
+                key: PortKey::new("in_b"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: Some(TypeDesc::Float),
+                label: Some("In B".to_string()),
+            },
+            PortDecl {
+                key: PortKey::new("out_main"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: Some(TypeDesc::Float),
+                label: Some("Main".to_string()),
+            },
+            PortDecl {
+                key: PortKey::new("out_aux"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: Some(TypeDesc::Float),
+                label: Some("Aux".to_string()),
+            },
+        ],
+        default_data: serde_json::Value::Null,
+    });
+
     reg
 }
 
@@ -129,6 +350,7 @@ fn build_demo_graph() -> Graph {
     let node_merge = NodeId::new();
     let node_add = NodeId::new();
     let node_out = NodeId::new();
+    let node_weird = NodeId::new();
 
     let port_value_a_out = PortId::new();
     let port_value_b_out = PortId::new();
@@ -139,6 +361,10 @@ fn build_demo_graph() -> Graph {
     let port_add_b = PortId::new();
     let port_add_out = PortId::new();
     let port_out_in = PortId::new();
+    let port_weird_in_a = PortId::new();
+    let port_weird_in_b = PortId::new();
+    let port_weird_out_main = PortId::new();
+    let port_weird_out_aux = PortId::new();
 
     graph.nodes.insert(
         node_value_a,
@@ -192,6 +418,22 @@ fn build_demo_graph() -> Graph {
             pos: CanvasPoint { x: 840.0, y: 140.0 },
             collapsed: false,
             ports: vec![port_out_in],
+            data: serde_json::Value::Null,
+        },
+    );
+    graph.nodes.insert(
+        node_weird,
+        Node {
+            kind: NodeKindKey::new(WEIRD_KIND),
+            kind_version: 1,
+            pos: CanvasPoint { x: 560.0, y: 300.0 },
+            collapsed: false,
+            ports: vec![
+                port_weird_in_a,
+                port_weird_in_b,
+                port_weird_out_main,
+                port_weird_out_aux,
+            ],
             data: serde_json::Value::Null,
         },
     );
@@ -306,6 +548,54 @@ fn build_demo_graph() -> Graph {
             data: serde_json::Value::Null,
         },
     );
+    graph.ports.insert(
+        port_weird_in_a,
+        Port {
+            node: node_weird,
+            key: PortKey::new("in_a"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            ty: Some(TypeDesc::Float),
+            data: serde_json::Value::Null,
+        },
+    );
+    graph.ports.insert(
+        port_weird_in_b,
+        Port {
+            node: node_weird,
+            key: PortKey::new("in_b"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            ty: Some(TypeDesc::Float),
+            data: serde_json::Value::Null,
+        },
+    );
+    graph.ports.insert(
+        port_weird_out_main,
+        Port {
+            node: node_weird,
+            key: PortKey::new("out_main"),
+            dir: PortDirection::Out,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            ty: Some(TypeDesc::Float),
+            data: serde_json::Value::Null,
+        },
+    );
+    graph.ports.insert(
+        port_weird_out_aux,
+        Port {
+            node: node_weird,
+            key: PortKey::new("out_aux"),
+            dir: PortDirection::Out,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            ty: Some(TypeDesc::Float),
+            data: serde_json::Value::Null,
+        },
+    );
 
     graph.edges.insert(
         EdgeId::new(),
@@ -319,8 +609,40 @@ fn build_demo_graph() -> Graph {
         EdgeId::new(),
         Edge {
             kind: EdgeKind::Data,
+            from: port_value_b_out,
+            to: port_merge_in1,
+        },
+    );
+    graph.edges.insert(
+        EdgeId::new(),
+        Edge {
+            kind: EdgeKind::Data,
             from: port_merge_out,
             to: port_add_a,
+        },
+    );
+    graph.edges.insert(
+        EdgeId::new(),
+        Edge {
+            kind: EdgeKind::Data,
+            from: port_merge_out,
+            to: port_weird_in_a,
+        },
+    );
+    graph.edges.insert(
+        EdgeId::new(),
+        Edge {
+            kind: EdgeKind::Data,
+            from: port_value_b_out,
+            to: port_weird_in_b,
+        },
+    );
+    graph.edges.insert(
+        EdgeId::new(),
+        Edge {
+            kind: EdgeKind::Data,
+            from: port_weird_out_main,
+            to: port_add_b,
         },
     );
     graph.edges.insert(
@@ -353,12 +675,16 @@ impl NodeGraphDemoDriver {
             .global::<NodeRegistry>()
             .expect("NodeRegistry global must exist")
             .clone();
+        let geom = app
+            .global::<Arc<DemoGeometryState>>()
+            .expect("DemoGeometryState global must exist")
+            .clone();
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
         let canvas = NodeGraphCanvas::new(models.graph, models.view)
-            .with_presenter(RegistryNodeGraphPresenter::new(registry))
+            .with_presenter(DemoPresenter::new(registry, geom))
             .with_close_command(CommandId::new("node_graph_demo.close"));
         let root = ui.create_node_retained(canvas);
         ui.set_root(root);
@@ -437,6 +763,14 @@ impl WinitAppDriver for NodeGraphDemoDriver {
 
         if command.as_str() == "node_graph_demo.close" {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+
+        if command.as_str() == CMD_TOGGLE_WEIRD_LAYOUT {
+            if let Some(geom) = app.global::<Arc<DemoGeometryState>>().cloned() {
+                geom.toggle();
+                app.request_redraw(window);
+            }
         }
     }
 
@@ -490,11 +824,13 @@ pub fn run() -> anyhow::Result<()> {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
     register_node_graph_commands(app.commands_mut());
+    register_demo_commands(app.commands_mut());
 
     let graph = app.models_mut().insert(build_demo_graph());
     let view = app.models_mut().insert(NodeGraphViewState::default());
     app.set_global(NodeGraphDemoModels { graph, view });
     app.set_global(build_demo_registry());
+    app.set_global(Arc::new(DemoGeometryState::new()));
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_demo".to_string(),
@@ -503,4 +839,70 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     run_app(config, app, NodeGraphDemoDriver::default()).map_err(anyhow::Error::from)
+}
+
+fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
+    DefaultKeybinding {
+        platform,
+        chord: KeyChord::new(key, mods),
+        when: None,
+    }
+}
+
+fn register_demo_commands(registry: &mut CommandRegistry) {
+    let mac_cmd = |key: KeyCode| {
+        kb(
+            PlatformFilter::Macos,
+            key,
+            Modifiers {
+                meta: true,
+                ..Default::default()
+            },
+        )
+    };
+    let win_ctrl = |key: KeyCode| {
+        kb(
+            PlatformFilter::Windows,
+            key,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        )
+    };
+    let linux_ctrl = |key: KeyCode| {
+        kb(
+            PlatformFilter::Linux,
+            key,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        )
+    };
+    let web_ctrl = |key: KeyCode| {
+        kb(
+            PlatformFilter::Web,
+            key,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        )
+    };
+
+    registry.register(
+        CommandId::new(CMD_TOGGLE_WEIRD_LAYOUT),
+        CommandMeta::new("Toggle Weird Layout")
+            .with_category("Demo")
+            .with_keywords(["toggle", "layout", "anchors", "geometry"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd(KeyCode::KeyL),
+                win_ctrl(KeyCode::KeyL),
+                linux_ctrl(KeyCode::KeyL),
+                web_ctrl(KeyCode::KeyL),
+            ]),
+    );
 }
