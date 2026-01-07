@@ -673,6 +673,16 @@ Editor view state includes:
 - optional interaction settings: snap grid, selection mode (partial vs full), connection mode
   (strict vs loose), and auto-pan tuning for drag/connect.
 
+Multi-view (docking) integration:
+
+- Multiple node-graph canvases may view the same `GraphId` simultaneously (split views, multiple tabs).
+- Each canvas instance must maintain its own in-memory `NodeGraphViewState` so camera/selection can
+  differ per view. The persistence layer must not assume a single canonical view state per graph.
+- Persisted state MAY store:
+  - a single `"state"` (the “last active view”), and/or
+  - a `"views"` map keyed by a host-provided stable view key (e.g. docking panel instance id),
+    allowing restoring multiple views when reopening a workspace.
+
 Persistence:
 
 - Editor state is stored outside the graph asset by default and keyed by `GraphId`:
@@ -730,7 +740,15 @@ Selection is editor-owned policy but must be exposed as data:
 - Selection can feed an inspector/property panel via the editor-layer protocol (ADR 0048), enabling
   node/edge properties to be edited without coupling the UI widget to domain logic.
 - Core editing commands are command IDs (ADR 0023), not hard-coded key handlers:
-  - `node_graph.create_node`
+  - `node_graph.undo`
+  - `node_graph.redo`
+  - `node_graph.open_insert_node` (background picker / palette)
+  - `node_graph.open_split_edge_insert_node` (edge “insert node” picker)
+  - `node_graph.insert_reroute`
+  - `node_graph.open_conversion_picker` (re-open last conversion candidates)
+  - `node_graph.copy`
+  - `node_graph.cut`
+  - `node_graph.paste`
   - `node_graph.delete_selection`
   - `node_graph.duplicate_selection`
   - `node_graph.frame_selection`
@@ -811,3 +829,12 @@ Cons:
   formats behind a stable serde model.
 - Whether to support additional “compat read” formats (e.g. RON) while keeping JSON as canonical.
 - Whether node graph assets should additionally carry an asset-database GUID alongside `GraphId` (ADR 0026).
+- Whether to lock a stable "view key" contract for multi-view persistence (dock panel id, explicit `ViewId`,
+  or per-asset “named views”), and how to migrate between them when layouts change.
+- Whether node resizing is a first-class interaction (ReactFlow/XyFlow `NodeResizer` parity), and if so:
+  - where explicit sizes live (graph vs extension data vs editor-state),
+  - how it composes with parent/child extents and group frames.
+- Whether to expose a viewer hook to adjust the canvas transform (inspired by `egui-snarl`’s
+  `SnarlViewer::current_transform`) to support “UI scaling” modes where text remains readable at extreme zoom.
+- Whether to add a spatial index (R-tree/grid) for edge/port hit-testing and selection rectangles when graphs
+  reach 10k+ elements, and where it lives (derived cache keyed by graph revision vs incremental maintenance).
