@@ -435,8 +435,53 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 if cx.focus != Some(cx.node) {
                     return false;
                 }
+                fn prev_char_boundary(s: &str, idx: usize) -> usize {
+                    let idx = idx.min(s.len());
+                    if idx == 0 {
+                        return 0;
+                    }
+                    let mut i = idx.saturating_sub(1);
+                    while i > 0 && !s.is_char_boundary(i) {
+                        i = i.saturating_sub(1);
+                    }
+                    i
+                }
+
+                fn next_char_boundary(s: &str, idx: usize) -> usize {
+                    let idx = idx.min(s.len());
+                    if idx >= s.len() {
+                        return s.len();
+                    }
+                    let mut i = (idx + 1).min(s.len());
+                    while i < s.len() && !s.is_char_boundary(i) {
+                        i = (i + 1).min(s.len());
+                    }
+                    i
+                }
+
+                let mut needs_repaint = false;
+                let mut handled = false;
+
                 match command.as_str() {
-                    "text.copy" => {}
+                    "text.copy" => {
+                        let (anchor, caret) = crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::SelectableTextState::default,
+                            |state| (state.selection_anchor, state.caret),
+                        );
+                        let start = anchor.min(caret);
+                        let end = anchor.max(caret);
+                        if start < end && end <= props.rich.text.len() {
+                            if let Some(sel) = props.rich.text.get(start..end) {
+                                cx.app.push_effect(Effect::ClipboardSetText {
+                                    text: sel.to_string(),
+                                });
+                            }
+                        }
+                        handled = true;
+                    }
                     "text.select_all" => {
                         crate::elements::with_element_state(
                             &mut *cx.app,
@@ -450,29 +495,83 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                                 state.dragging = false;
                             },
                         );
-                        cx.invalidate_self(Invalidation::Paint);
-                        cx.request_redraw();
-                        cx.stop_propagation();
-                        return true;
+                        needs_repaint = true;
+                        handled = true;
                     }
-                    _ => return false,
+                    "text.move_left" => {
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::SelectableTextState::default,
+                            |state| {
+                                let next = prev_char_boundary(&props.rich.text, state.caret);
+                                state.caret = next;
+                                state.selection_anchor = next;
+                                state.affinity = fret_core::CaretAffinity::Downstream;
+                                state.dragging = false;
+                            },
+                        );
+                        needs_repaint = true;
+                        handled = true;
+                    }
+                    "text.move_right" => {
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::SelectableTextState::default,
+                            |state| {
+                                let next = next_char_boundary(&props.rich.text, state.caret);
+                                state.caret = next;
+                                state.selection_anchor = next;
+                                state.affinity = fret_core::CaretAffinity::Downstream;
+                                state.dragging = false;
+                            },
+                        );
+                        needs_repaint = true;
+                        handled = true;
+                    }
+                    "text.select_left" => {
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::SelectableTextState::default,
+                            |state| {
+                                state.caret = prev_char_boundary(&props.rich.text, state.caret);
+                                state.affinity = fret_core::CaretAffinity::Downstream;
+                                state.dragging = false;
+                            },
+                        );
+                        needs_repaint = true;
+                        handled = true;
+                    }
+                    "text.select_right" => {
+                        crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            self.element,
+                            crate::element::SelectableTextState::default,
+                            |state| {
+                                state.caret = next_char_boundary(&props.rich.text, state.caret);
+                                state.affinity = fret_core::CaretAffinity::Downstream;
+                                state.dragging = false;
+                            },
+                        );
+                        needs_repaint = true;
+                        handled = true;
+                    }
+                    _ => {}
                 }
 
-                let (anchor, caret) = crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    self.element,
-                    crate::element::SelectableTextState::default,
-                    |state| (state.selection_anchor, state.caret),
-                );
-                let start = anchor.min(caret);
-                let end = anchor.max(caret);
-                if start < end && end <= props.rich.text.len() {
-                    if let Some(sel) = props.rich.text.get(start..end) {
-                        cx.app.push_effect(Effect::ClipboardSetText {
-                            text: sel.to_string(),
-                        });
-                    }
+                if !handled {
+                    return false;
+                }
+
+                if needs_repaint {
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
                 }
 
                 cx.stop_propagation();
