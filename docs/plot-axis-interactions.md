@@ -48,8 +48,11 @@ Precedence rules (over the plot region):
 - If `wheel_zoom_x_only_mod` matches, it takes precedence over `wheel_zoom_y_only_mod`.
 - Otherwise if `wheel_zoom_y_only_mod` matches, apply Y-only zoom.
 
-Over axis regions, the axis region routing takes precedence (X axis always X-only, Y axis always
-that axis only).
+Over axis regions, region routing takes precedence over axis-only modifiers:
+
+- Over the X axis region: always X-only zoom (all Y zoom factors forced to 1.0).
+- Over a Y axis region: always zoom only that Y axis (X zoom factor forced to 1.0 and other Y
+  zoom factors forced to 1.0).
 
 ## Drag pan policy
 
