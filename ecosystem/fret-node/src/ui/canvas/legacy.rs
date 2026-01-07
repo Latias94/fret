@@ -1759,9 +1759,51 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             Event::KeyDown { key, modifiers, .. } => {
                 if modifiers.ctrl || modifiers.meta {
                     match *key {
+                        fret_core::KeyCode::KeyA => {
+                            let nodes = self
+                                .graph
+                                .read_ref(cx.app, |graph| {
+                                    graph.nodes.keys().copied().collect::<Vec<_>>()
+                                })
+                                .ok()
+                                .unwrap_or_default();
+                            self.update_view_state(cx.app, |s| {
+                                s.selected_edges.clear();
+                                s.selected_nodes = nodes;
+                            });
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
                         fret_core::KeyCode::KeyC => {
                             self.copy_selected_nodes_to_clipboard(cx.app, &snapshot.selected_nodes);
                             cx.stop_propagation();
+                            return;
+                        }
+                        fret_core::KeyCode::KeyX => {
+                            self.copy_selected_nodes_to_clipboard(cx.app, &snapshot.selected_nodes);
+                            let selected_nodes = snapshot.selected_nodes.clone();
+                            let selected_edges = snapshot.selected_edges.clone();
+                            let remove_ops = self
+                                .graph
+                                .read_ref(cx.app, |graph| {
+                                    Self::delete_selection_ops(
+                                        graph,
+                                        &selected_nodes,
+                                        &selected_edges,
+                                    )
+                                })
+                                .ok()
+                                .unwrap_or_default();
+                            self.apply_ops(cx.app, cx.window, remove_ops);
+                            self.update_view_state(cx.app, |s| {
+                                s.selected_edges.clear();
+                                s.selected_nodes.clear();
+                            });
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
                             return;
                         }
                         fret_core::KeyCode::KeyV => {
