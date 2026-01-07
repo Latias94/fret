@@ -736,10 +736,27 @@ impl NavigationMenu {
                     );
 
                     let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
-                    let content_size = cx
-                        .last_bounds_for_element(content.id)
-                        .map(|r| r.size)
-                        .unwrap_or(estimated);
+                    let measured = cx.last_bounds_for_element(content.id).map(|r| r.size);
+                    if let (Some(selected_value), Some(size)) = (selected_local.clone(), measured) {
+                        radix_navigation_menu::navigation_menu_register_viewport_size(
+                            cx,
+                            root_id,
+                            selected_value,
+                            size,
+                        );
+                    }
+
+                    let fallback = measured.unwrap_or(estimated);
+                    let viewport_size =
+                        radix_navigation_menu::navigation_menu_viewport_size_for_transition(
+                            cx,
+                            root_id,
+                            selected_local.clone(),
+                            &values,
+                            transition,
+                            fallback,
+                        );
+                    let content_size = viewport_size.size;
 
                     let layout = popper::popper_content_layout_sized(
                         overlay::outer_bounds_with_window_margin(cx.bounds, window_margin),

@@ -36,6 +36,8 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
     - `NavigationMenuTrigger` / `NavigationMenuContent` / `NavigationMenuLink` (Radix-named parts)
     - `navigation_menu_use_value_model(...)` (controlled/uncontrolled model helper)
     - `navigation_menu_register_trigger_id(...)` / `navigation_menu_trigger_id(...)` (indicator/viewport anchoring)
+    - `navigation_menu_register_viewport_size(...)` / `navigation_menu_viewport_size_for_transition(...)`
+      (viewport sizing contract; Radix CSS var equivalent)
 - shadcn recipe layer:
   - `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` (styling + overlay composition)
 
@@ -48,12 +50,12 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
   Radix-named primitives facade surface.
 - Pass: `data-motion` direction semantics are exposed via `NavigationMenuContentMotion` and
   `navigation_menu_content_transition(...)`.
-- Missing: Viewport-measured width/height exposure as stable variables (Radix CSS vars).
+- Pass: Viewport-measured width/height can be registered and interpolated via the primitive facade,
+  providing a portable replacement for Radix CSS vars.
 
 ## Follow-ups (recommended)
 
 - Consider downshifting the "viewport content registry" into `fret-ui-kit::primitives::navigation_menu`
   so non-shadcn consumers can reuse it (similar to how `menu` is shared and facaded).
-- Consider exposing a "viewport size contract" surface (Radix CSS vars
-  `--radix-navigation-menu-viewport-{width,height}`) so recipes can converge on a shared sizing
-  policy without relying on DOM/CSS.
+- Consider evolving the viewport sizing contract to cover RTL and "content registry" semantics
+  (Radix tracks per-item content refs and sizes) if/when non-shadcn recipes need it.

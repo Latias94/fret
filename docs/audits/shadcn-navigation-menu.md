@@ -67,8 +67,9 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 ### Indicator parity (new-york)
 
 - Pass: Indicator is rendered as a rotated square and shares the viewport's open/close motion.
-- Note: Exact positioning and shadow/token fidelity may differ until the viewport sizing contract
-  is fully downshifted (Radix uses an indicator track ref + layout measurement).
+- Note: Exact positioning and shadow/token fidelity may still differ (Radix uses an indicator track
+  ref + DOM layout measurement); Fret drives viewport sizing via a primitive contract and anchors
+  using trigger element ids.
 
 ## Validation
 
@@ -77,6 +78,6 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ## Follow-ups (recommended)
 
-- Add a headless "motion direction" helper so content transitions can match `data-motion`
-  (`from-start`/`from-end`/`to-start`/`to-end`) without relying on DOM/CSS.
 - Consider adding a `viewport` toggle to the shadcn wrapper if we want strict API parity.
+- Consider adding a shadcn-facing `NavigationMenuLink` wrapper that reuses the primitive `Link`
+  dismiss semantics (Radix closes on link select unless the event is modified).

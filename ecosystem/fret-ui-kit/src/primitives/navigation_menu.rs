@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use fret_core::PointerType;
+use fret_core::{PointerType, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::elements::ContinuousFrames;
@@ -100,6 +100,152 @@ pub fn navigation_menu_trigger_id<H: UiHost>(
     cx.with_state_for(root_id, TriggerIdRegistry::default, |st| {
         st.ids.get(value).copied()
     })
+}
+
+#[derive(Default)]
+struct ViewportSizeRegistry {
+    sizes: HashMap<Arc<str>, Size>,
+    last_size: Option<Size>,
+}
+
+/// Registers the last measured viewport size for a given value.
+///
+/// This is a portable replacement for Radix's viewport CSS vars
+/// `--radix-navigation-menu-viewport-{width,height}`: recipes can read these values and animate
+/// their own overlay/layout policies accordingly.
+pub fn navigation_menu_register_viewport_size<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    value: Arc<str>,
+    size: Size,
+) {
+    cx.with_state_for(root_id, ViewportSizeRegistry::default, |st| {
+        st.sizes.insert(value, size);
+        st.last_size = Some(size);
+    });
+}
+
+fn lerp_px(a: fret_core::Px, b: fret_core::Px, t: f32) -> fret_core::Px {
+    let t = t.clamp(0.0, 1.0);
+    fret_core::Px(a.0 + (b.0 - a.0) * t)
+}
+
+fn lerp_size(a: Size, b: Size, t: f32) -> Size {
+    Size::new(lerp_px(a.width, b.width, t), lerp_px(a.height, b.height, t))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NavigationMenuViewportSizeOutput {
+    pub size: Size,
+    pub from_size: Option<Size>,
+    pub to_size: Option<Size>,
+    pub progress: f32,
+    pub animating: bool,
+}
+
+impl Default for NavigationMenuViewportSizeOutput {
+    fn default() -> Self {
+        Self {
+            size: Size::default(),
+            from_size: None,
+            to_size: None,
+            progress: 1.0,
+            animating: false,
+        }
+    }
+}
+
+/// Returns the current viewport size, interpolating between the previous and next content sizes
+/// when switching values.
+///
+/// This models Radix's viewport sizing behavior (CSS vars + CSS transitions) in a recipe-friendly
+/// way: it exposes a single `Size` that can be fed into layout solvers or animated wrapper panels.
+pub fn navigation_menu_viewport_size_for_transition<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    selected: Option<Arc<str>>,
+    values: &[Arc<str>],
+    transition: NavigationMenuContentTransitionOutput,
+    fallback: Size,
+) -> NavigationMenuViewportSizeOutput {
+    let (active_size, last_size, from_size, to_size) =
+        cx.with_state_for(root_id, ViewportSizeRegistry::default, |st| {
+            let active_size = selected
+                .as_ref()
+                .and_then(|v| st.sizes.get(v).copied())
+                .or(st.last_size)
+                .unwrap_or(fallback);
+
+            let from_size = transition
+                .from_idx
+                .and_then(|idx| values.get(idx))
+                .and_then(|v| st.sizes.get(v).copied());
+            let to_size = transition
+                .to_idx
+                .and_then(|idx| values.get(idx))
+                .and_then(|v| st.sizes.get(v).copied());
+
+            (active_size, st.last_size, from_size, to_size)
+        });
+
+    if !transition.switching {
+        return NavigationMenuViewportSizeOutput {
+            size: active_size,
+            from_size: None,
+            to_size: None,
+            progress: 1.0,
+            animating: false,
+        };
+    }
+
+    let Some(from_idx) = transition.from_idx else {
+        return NavigationMenuViewportSizeOutput {
+            size: active_size,
+            from_size: None,
+            to_size: None,
+            progress: 1.0,
+            animating: false,
+        };
+    };
+    let Some(to_idx) = transition.to_idx else {
+        return NavigationMenuViewportSizeOutput {
+            size: active_size,
+            from_size: None,
+            to_size: None,
+            progress: 1.0,
+            animating: false,
+        };
+    };
+    if from_idx == to_idx {
+        return NavigationMenuViewportSizeOutput {
+            size: active_size,
+            from_size: None,
+            to_size: None,
+            progress: 1.0,
+            animating: false,
+        };
+    }
+
+    let from_size = from_size.or(to_size).or(last_size).unwrap_or(fallback);
+    let to_size = to_size
+        .or(Some(from_size))
+        .or(last_size)
+        .unwrap_or(fallback);
+
+    let progress = transition.progress.clamp(0.0, 1.0);
+    let size = if transition.animating {
+        lerp_size(from_size, to_size, progress)
+    } else {
+        to_size
+    };
+
+    NavigationMenuViewportSizeOutput {
+        size,
+        from_size: Some(from_size),
+        to_size: Some(to_size),
+        progress,
+        animating: transition.animating,
+    }
 }
 
 /// A composable, Radix-shaped navigation-menu configuration surface.
@@ -1069,7 +1215,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::AppWindowId;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_ui::GlobalElementId;
     use fret_ui::action::UiActionHostAdapter;
 
@@ -1230,5 +1376,58 @@ mod tests {
         let (from, to) = content_motion(2, 1);
         assert_eq!(from, NavigationMenuContentMotion::ToEnd);
         assert_eq!(to, NavigationMenuContentMotion::FromStart);
+    }
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn viewport_size_interpolates_between_registered_sizes() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let root_id = cx.root_id();
+            let a: Arc<str> = Arc::from("a");
+            let b: Arc<str> = Arc::from("b");
+            let values = vec![a.clone(), b.clone()];
+
+            navigation_menu_register_viewport_size(
+                cx,
+                root_id,
+                a.clone(),
+                Size::new(Px(100.0), Px(50.0)),
+            );
+            navigation_menu_register_viewport_size(
+                cx,
+                root_id,
+                b.clone(),
+                Size::new(Px(200.0), Px(150.0)),
+            );
+
+            let transition = NavigationMenuContentTransitionOutput {
+                from_idx: Some(0),
+                to_idx: Some(1),
+                switching: true,
+                progress: 0.5,
+                animating: true,
+                from_motion: NavigationMenuContentMotion::ToStart,
+                to_motion: NavigationMenuContentMotion::FromEnd,
+            };
+
+            let out = navigation_menu_viewport_size_for_transition(
+                cx,
+                root_id,
+                Some(b.clone()),
+                &values,
+                transition,
+                Size::new(Px(10.0), Px(10.0)),
+            );
+            assert_eq!(out.size, Size::new(Px(150.0), Px(100.0)));
+        });
     }
 }
