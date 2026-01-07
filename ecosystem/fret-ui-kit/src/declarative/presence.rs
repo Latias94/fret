@@ -58,12 +58,32 @@ pub fn scale_fade_presence_with_durations<H: UiHost>(
     from_scale: f32,
     to_scale: f32,
 ) -> ScaleFadePresenceOutput {
+    scale_fade_presence_with_durations_and_easing(
+        cx,
+        open,
+        open_ticks,
+        close_ticks,
+        from_scale,
+        to_scale,
+        crate::headless::easing::smoothstep,
+    )
+}
+
+pub fn scale_fade_presence_with_durations_and_easing<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    from_scale: f32,
+    to_scale: f32,
+    ease: fn(f32) -> f32,
+) -> ScaleFadePresenceOutput {
     let out = transition::drive_transition_with_durations_and_easing(
         cx,
         open,
         open_ticks,
         close_ticks,
-        crate::headless::easing::smoothstep,
+        ease,
     );
     let scale = from_scale + (to_scale - from_scale) * out.progress;
     ScaleFadePresenceOutput {

@@ -69,6 +69,26 @@ pub fn scale_fade_presence_with_durations<H: UiHost>(
     )
 }
 
+pub fn scale_fade_presence_with_durations_and_easing<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    from_scale: f32,
+    to_scale: f32,
+    ease: fn(f32) -> f32,
+) -> ScaleFadePresenceOutput {
+    crate::declarative::presence::scale_fade_presence_with_durations_and_easing(
+        cx,
+        open,
+        open_ticks,
+        close_ticks,
+        from_scale,
+        to_scale,
+        ease,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -191,5 +211,30 @@ mod tests {
                 .any(|e| *e == Effect::RequestAnimationFrame(window))
         );
         assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
+    }
+
+    #[test]
+    fn scale_fade_presence_with_durations_and_easing_applies_custom_ease() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+
+        let out0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p3", |cx| {
+            scale_fade_presence_with_durations_and_easing(
+                cx,
+                true,
+                4,
+                4,
+                0.8,
+                1.0,
+                crate::headless::easing::linear,
+            )
+        });
+        assert!(out0.present);
+        assert!(out0.animating);
+        assert!((out0.opacity - 0.25).abs() < 1e-6);
+        assert!((out0.scale - 0.85).abs() < 1e-6);
     }
 }
