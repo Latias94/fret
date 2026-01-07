@@ -84,11 +84,9 @@ fn select_scroll_with_buttons<H: UiHost>(
             // appear when content visually fits.
             let scroll_epsilon = Px(0.5);
             let has_scroll = max.y.0 > scroll_epsilon.0;
-            // Avoid flicker near the bounds when offsets are fractional (e.g. wheel deltas,
-            // scaling/zoom, and layout rounding). Radix relies on integer scroll metrics; we
-            // approximate the same UX with a small epsilon hysteresis.
-            let show_up = has_scroll && offset.y.0 > scroll_epsilon.0;
-            let show_down = has_scroll && (max.y.0 - offset.y.0) > scroll_epsilon.0;
+            let show_up = has_scroll && offset.y.0 > 0.0;
+            // Match Radix Select's `Math.ceil(scrollTop) < maxScroll` guard for zoomed UIs.
+            let show_down = has_scroll && offset.y.0.ceil() < max.y.0;
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                  icon: fret_icons::IconId,
