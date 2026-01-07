@@ -1301,6 +1301,256 @@ fn modal_can_remain_present_while_still_blocking_underlay_during_close_animation
 }
 
 #[test]
+fn modal_restores_focus_to_trigger_while_closing_but_still_present() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable element mappings for the trigger.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let trigger_node =
+        fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+    ui.set_focus(Some(trigger_node));
+
+    let modal_id = GlobalElementId(0xabc);
+    let mut modal_focusable: Option<GlobalElementId> = None;
+    let modal_children =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+            vec![cx.pressable_with_id(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(80.0));
+                        layout.size.height = Length::Px(Px(32.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st, id| {
+                    modal_focusable = Some(id);
+                    Vec::new()
+                },
+            )]
+        });
+    let modal_focusable = modal_focusable.expect("modal focusable element id");
+
+    // Second frame: install a modal overlay and ensure focus is inside the modal layer.
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: modal_id,
+            root_name: modal_root_name(modal_id),
+            trigger: Some(trigger),
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: Some(modal_focusable),
+            children: modal_children.clone(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let modal_focus_node =
+        fret_ui::elements::node_for_element(&mut app, window, modal_focusable).expect("modal node");
+    assert_eq!(ui.focus(), Some(modal_focus_node));
+
+    // Third frame: close (`open=false`) but keep `present=true` to simulate an exit transition.
+    let _ = app.models_mut().update(&open, |v| *v = false);
+
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: modal_id,
+            root_name: modal_root_name(modal_id),
+            trigger: Some(trigger),
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: Some(modal_focusable),
+            children: modal_children,
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let trigger_node =
+        fret_ui::elements::node_for_element(&mut app, window, trigger).expect("trigger node");
+    assert_eq!(ui.focus(), Some(trigger_node));
+}
+
+#[test]
+fn modal_initial_focus_is_only_applied_on_opening_edge() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(true);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: render base to establish stable element mappings for the trigger.
+    let trigger = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let modal_id = GlobalElementId(0xabc);
+    let mut a: Option<GlobalElementId> = None;
+    let mut b: Option<GlobalElementId> = None;
+
+    let modal_children =
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "modal-child", |cx| {
+            let props = PressableProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(80.0));
+                    layout.size.height = Length::Px(Px(32.0));
+                    layout
+                },
+                enabled: true,
+                focusable: true,
+                ..Default::default()
+            };
+
+            vec![
+                cx.pressable_with_id(props.clone(), |_cx, _st, id| {
+                    a = Some(id);
+                    Vec::new()
+                }),
+                cx.pressable_with_id(props, |_cx, _st, id| {
+                    b = Some(id);
+                    Vec::new()
+                }),
+            ]
+        });
+    let a = a.expect("focusable a element id");
+    let b = b.expect("focusable b element id");
+
+    // Second frame: mount a modal overlay with two focusable elements, using `initial_focus=A`.
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: modal_id,
+            root_name: modal_root_name(modal_id),
+            trigger: Some(trigger),
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: Some(a),
+            children: modal_children.clone(),
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let node_a = fret_ui::elements::node_for_element(&mut app, window, a).expect("node a");
+    let node_b = fret_ui::elements::node_for_element(&mut app, window, b).expect("node b");
+    assert_eq!(ui.focus(), Some(node_a));
+
+    // Simulate user moving focus within the modal.
+    ui.set_focus(Some(node_b));
+    assert_eq!(ui.focus(), Some(node_b));
+
+    // Third frame: keep the modal open and re-request it. Initial focus should not be re-applied.
+    begin_frame(&mut app, window);
+    let _ = render_base_with_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    request_modal_for_window(
+        &mut app,
+        window,
+        ModalRequest {
+            id: modal_id,
+            root_name: modal_root_name(modal_id),
+            trigger: Some(trigger),
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: Some(a),
+            children: modal_children,
+        },
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(ui.focus(), Some(node_b));
+}
+
+#[test]
 fn non_modal_overlay_can_remain_present_while_pointer_transparent_during_close_animation() {
     let window = AppWindowId::default();
     let mut app = App::new();
