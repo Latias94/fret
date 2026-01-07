@@ -262,6 +262,26 @@ Rationale:
   from the UI alone.
 - `ConnectPlan` aligns with the query/accept flow in `imgui-node-editor` while remaining rules-driven.
 
+Conversion discovery and disambiguation (locked):
+
+- The system must support “this connection is rejected, but could be made valid via explicit conversion”.
+- To avoid embedding UI decisions into rules, conversion insertion is treated as a separate, UI-driven
+  workflow:
+  - `plan_connect` answers the direct-connect question and may include deterministic auto-fixes
+    (e.g. disconnecting conflicting edges), but it must not silently change runtime semantics.
+  - The presenter may additionally expose a set of conversion candidates via
+    `NodeGraphPresenter::list_conversions(graph, from, to) -> Vec<InsertNodeTemplate>`.
+  - The UI uses these candidates to:
+    - show “convertible” affordances during hover/preview,
+    - auto-insert a conversion node when there is exactly one unambiguous candidate (optional policy),
+    - or open a conversion picker (screen-space overlay) when multiple candidates exist.
+- Conversion candidates are inserted as explicit graph edits (ops), producing a concrete conversion
+  node in the serialized graph. No implicit casts are applied.
+- Presenter hooks control UX without changing semantics:
+  - `NodeGraphPresenter::conversion_label(...) -> Arc<str>` defines the label shown in the picker/UI,
+  - `NodeGraphPresenter::conversion_insert_position(...) -> CanvasPoint` defines where the conversion
+    node is placed (e.g. midpoint between endpoints for ShaderGraph-like readability).
+
 Type inference and conversion boundary (locked):
 
 - `TypeDesc` is a data model, not a policy engine:
@@ -328,6 +348,20 @@ Canvas coordinate escape hatch (locked):
   - "Graph content" lives under the canvas transform.
   - "Overlays" are rendered outside that transform, using window/screen coordinates, but can be
     anchored to graph elements via explicit `canvas_to_screen` geometry conversions.
+- This is the preferred way to implement “floating” editor affordances (conversion pickers, node
+  searchers, tooltips) without requiring node content to be implemented as independent floating
+  windows.
+
+Rendering model (locked):
+
+- The node graph editor is a single canvas widget embedded in panels/tabs (docking/multi-view), not a
+  collection of native floating windows.
+- Node UIs are rendered as regular retained widget subtrees (header/body/ports) authored by the
+  presenter/viewer surface; the editor owns only interaction and layout framing.
+- Wires, background patterns, selection rectangles, and other canvas-level visuals are drawn by the
+  editor widget using Fret’s renderer primitives (paths, strokes, fills) under the canvas transform.
+- Screen-space popups/menus (including conversion pickers) use overlays rendered outside the canvas
+  transform (see above), avoiding the need for a separate “floating window” UI subsystem.
 
 Interaction protocol target (inspired by `imgui-node-editor`):
 
