@@ -21,6 +21,7 @@ use fret_ui::element::{AnyElement, ElementKind, PressableProps, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::declarative::ModelWatchExt;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::primitives::dialog as dialog_prim;
@@ -79,6 +80,77 @@ pub fn popover_root_name(id: GlobalElementId) -> String {
 /// Stable per-overlay root naming convention for popover-like overlays (modal variant).
 pub fn popover_modal_root_name(id: GlobalElementId) -> String {
     OverlayController::modal_root_name(id)
+}
+
+/// A Radix-shaped `Popover` root configuration surface.
+///
+/// Upstream supports a controlled/uncontrolled `open` state (`open` + `defaultOpen`). In Fret this
+/// maps to either:
+/// - a caller-provided `Model<bool>` (controlled), or
+/// - an internal `Model<bool>` stored in element state (uncontrolled).
+#[derive(Debug, Clone, Default)]
+pub struct PopoverRoot {
+    open: Option<Model<bool>>,
+    default_open: bool,
+    options: PopoverOptions,
+}
+
+impl PopoverRoot {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the controlled `open` model (`Some`) or selects uncontrolled mode (`None`).
+    pub fn open(mut self, open: Option<Model<bool>>) -> Self {
+        self.open = open;
+        self
+    }
+
+    /// Sets the uncontrolled initial open value (Radix `defaultOpen`).
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
+    }
+
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.options = self.options.modal(modal);
+        self
+    }
+
+    pub fn consume_outside_pointer_events(mut self, consume: bool) -> Self {
+        self.options = self.options.consume_outside_pointer_events(consume);
+        self
+    }
+
+    pub fn initial_focus(mut self, element: GlobalElementId) -> Self {
+        self.options = self.options.initial_focus(element);
+        self
+    }
+
+    pub fn options(&self) -> PopoverOptions {
+        self.options
+    }
+
+    /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+    pub fn use_open_model<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> crate::primitives::controllable_state::ControllableModel<bool> {
+        popover_use_open_model(cx, self.open.clone(), || self.default_open)
+    }
+
+    pub fn open_model<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Model<bool> {
+        self.use_open_model(cx).model()
+    }
+
+    /// Reads the current open value from the derived open model.
+    pub fn is_open<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
+        let open_model = self.open_model(cx);
+        cx.watch_model(&open_model)
+            .layout()
+            .copied()
+            .unwrap_or(false)
+    }
 }
 
 /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
@@ -267,6 +339,34 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         )
+    }
+
+    #[test]
+    fn popover_root_open_model_uses_controlled_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(true);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let root = PopoverRoot::new()
+                .open(Some(controlled.clone()))
+                .default_open(false);
+            assert_eq!(root.open_model(cx), controlled);
+        });
+    }
+
+    #[test]
+    fn popover_root_options_builder_updates_options() {
+        let root = PopoverRoot::new()
+            .modal(true)
+            .consume_outside_pointer_events(true)
+            .initial_focus(GlobalElementId(0xbeef));
+        let options = root.options();
+        assert_eq!(options.variant, PopoverVariant::Modal);
+        assert!(options.consume_outside_pointer_events);
+        assert_eq!(options.initial_focus, Some(GlobalElementId(0xbeef)));
     }
 
     #[test]
