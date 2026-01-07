@@ -92,7 +92,7 @@ fn select_scroll_with_buttons<H: UiHost>(
             // Avoid flicker near the bounds when offsets are fractional (e.g. wheel deltas,
             // scaling/zoom, and layout rounding). When we reach the bottom, keep us pinned there
             // even if the measured max offset updates in a later frame.
-            let (show_up, show_down) = cx.with_state(ScrollAffordanceState::default, |st| {
+            let (show_up, show_down, request_frame) = cx.with_state(ScrollAffordanceState::default, |st| {
                 let off_epsilon = Px(0.5);
                 let has_scroll = max.y.0 > off_epsilon.0;
 
@@ -100,7 +100,7 @@ fn select_scroll_with_buttons<H: UiHost>(
                 if !has_scroll {
                     st.pin_bottom = false;
                     st.last_offset_y = offset.y;
-                    return (false, false);
+                    return (false, false, false);
                 }
                 if st.pin_bottom && offset.y.0 + off_epsilon.0 < st.last_offset_y.0 {
                     st.pin_bottom = false;
@@ -111,17 +111,24 @@ fn select_scroll_with_buttons<H: UiHost>(
                     st.pin_bottom = true;
                 }
 
+                let mut request_frame = false;
                 if st.pin_bottom && remaining_down.0 > off_epsilon.0 {
                     handle.scroll_to_offset(Point::new(offset.x, max.y));
                     offset = handle.offset();
                     remaining_down = Px((max.y.0 - offset.y.0).max(0.0));
+                    // `scroll_to_offset` can take effect in a subsequent frame; request one so the
+                    // affordances reflect the settled scroll metrics.
+                    request_frame = true;
                 }
 
                 let show_up = has_scroll && offset.y.0 > off_epsilon.0;
                 let show_down = has_scroll && remaining_down.0 > off_epsilon.0;
                 st.last_offset_y = offset.y;
-                (show_up, show_down)
+                (show_up, show_down, request_frame)
             });
+            if request_frame {
+                cx.request_frame();
+            }
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                   icon: fret_icons::IconId,
@@ -3147,6 +3154,127 @@ mod tests {
         assert!(
             last_bottom > list_top + 0.01 && last_top < list_bottom - 0.01,
             "expected last item to remain visible after wheel scrolling; list={list_bounds:?} last={last_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn select_scroll_down_button_hides_at_bottom_after_wheel() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..80)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+        let scroll_handle = fret_ui::scroll::ScrollHandle::default();
+
+        let _ = render_frame_with_scroll_handle_settled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            &items,
+            &scroll_handle,
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame_with_scroll_handle_settled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            &items,
+            &scroll_handle,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("list node");
+        let list_bounds = ui.debug_node_bounds(list.id).expect("list bounds");
+        let wheel_pos = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(bounds.origin.x.0 + bounds.size.width.0 * fx),
+                    Px(bounds.origin.y.0 + bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&list.id)
+                {
+                    return p;
+                }
+            }
+            panic!(
+                "expected to find a hit-testable wheel position inside list; window={bounds:?} list={list_bounds:?}"
+            );
+        })();
+
+        for _ in 0..200 {
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                    position: wheel_pos,
+                    delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
+                    modifiers: Modifiers::default(),
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+        }
+
+        for _ in 0..5 {
+            let _ = render_frame_with_scroll_handle_settled(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                &items,
+                &scroll_handle,
+            );
+        }
+
+        let offset = scroll_handle.offset();
+        let max = scroll_handle.max_offset();
+        assert!(
+            (max.y.0 - offset.y.0).abs() <= 0.5,
+            "expected scroll to clamp at bottom; offset={offset:?} max={max:?}"
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll down")
+            }),
+            "expected scroll down affordance to be hidden at the bottom; offset={offset:?} max={max:?}"
         );
     }
 
