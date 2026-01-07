@@ -5,10 +5,102 @@ pub(super) fn handle_selectable_text<H: UiHost>(
     this: &mut ElementHostWidget,
     cx: &mut EventCx<'_, H>,
     window: AppWindowId,
-    _props: crate::element::SelectableTextProps,
+    props: crate::element::SelectableTextProps,
     event: &Event,
 ) {
     match event {
+        Event::KeyDown {
+            key,
+            modifiers,
+            repeat: _,
+        } => {
+            if cx.focus != Some(cx.node) {
+                return;
+            }
+
+            let command: Option<&'static str> = match *key {
+                fret_core::KeyCode::KeyA if modifiers.ctrl || modifiers.meta => {
+                    Some("text.select_all")
+                }
+                fret_core::KeyCode::KeyC if modifiers.ctrl || modifiers.meta => Some("text.copy"),
+                fret_core::KeyCode::ArrowLeft => {
+                    let word = modifiers.ctrl || modifiers.alt;
+                    Some(match (modifiers.shift, word) {
+                        (true, true) => "text.select_word_left",
+                        (true, false) => "text.select_left",
+                        (false, true) => "text.move_word_left",
+                        (false, false) => "text.move_left",
+                    })
+                }
+                fret_core::KeyCode::ArrowRight => {
+                    let word = modifiers.ctrl || modifiers.alt;
+                    Some(match (modifiers.shift, word) {
+                        (true, true) => "text.select_word_right",
+                        (true, false) => "text.select_right",
+                        (false, true) => "text.move_word_right",
+                        (false, false) => "text.move_right",
+                    })
+                }
+                fret_core::KeyCode::Home => Some(if modifiers.shift {
+                    "text.select_home"
+                } else {
+                    "text.move_home"
+                }),
+                fret_core::KeyCode::End => Some(if modifiers.shift {
+                    "text.select_end"
+                } else {
+                    "text.move_end"
+                }),
+                _ => None,
+            };
+
+            let Some(command) = command else {
+                return;
+            };
+
+            let (handled, copy_range, needs_repaint) = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::element::SelectableTextState::default,
+                |state| {
+                    let outcome = crate::text_surface::apply_selectable_text_command(
+                        &props.rich.text,
+                        state,
+                        command,
+                    );
+                    match outcome {
+                        crate::text_surface::SelectableTextCommandOutcome::Handled {
+                            needs_repaint,
+                            copy_range,
+                        } => (true, copy_range, needs_repaint),
+                        crate::text_surface::SelectableTextCommandOutcome::NotHandled => {
+                            (false, None, false)
+                        }
+                    }
+                },
+            );
+
+            if !handled {
+                return;
+            }
+
+            if let Some((start, end)) = copy_range
+                && end <= props.rich.text.len()
+                && let Some(sel) = props.rich.text.get(start..end)
+            {
+                cx.app.push_effect(Effect::ClipboardSetText {
+                    text: sel.to_string(),
+                });
+            }
+
+            if needs_repaint {
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+            }
+
+            cx.stop_propagation();
+        }
         Event::SetTextSelection { anchor, focus } => {
             crate::elements::with_element_state(
                 &mut *cx.app,

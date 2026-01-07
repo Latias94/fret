@@ -435,138 +435,43 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 if cx.focus != Some(cx.node) {
                     return false;
                 }
-                fn prev_char_boundary(s: &str, idx: usize) -> usize {
-                    let idx = idx.min(s.len());
-                    if idx == 0 {
-                        return 0;
-                    }
-                    let mut i = idx.saturating_sub(1);
-                    while i > 0 && !s.is_char_boundary(i) {
-                        i = i.saturating_sub(1);
-                    }
-                    i
-                }
+                let (outcome, range) = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::SelectableTextState::default,
+                    |state| {
+                        let outcome = crate::text_surface::apply_selectable_text_command(
+                            &props.rich.text,
+                            state,
+                            command.as_str(),
+                        );
+                        let range = match outcome {
+                            crate::text_surface::SelectableTextCommandOutcome::Handled {
+                                copy_range: Some(r),
+                                ..
+                            } => Some(r),
+                            _ => None,
+                        };
+                        (outcome, range)
+                    },
+                );
 
-                fn next_char_boundary(s: &str, idx: usize) -> usize {
-                    let idx = idx.min(s.len());
-                    if idx >= s.len() {
-                        return s.len();
-                    }
-                    let mut i = (idx + 1).min(s.len());
-                    while i < s.len() && !s.is_char_boundary(i) {
-                        i = (i + 1).min(s.len());
-                    }
-                    i
-                }
-
-                let mut needs_repaint = false;
-                let mut handled = false;
-
-                match command.as_str() {
-                    "text.copy" => {
-                        let (anchor, caret) = crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::SelectableTextState::default,
-                            |state| (state.selection_anchor, state.caret),
-                        );
-                        let start = anchor.min(caret);
-                        let end = anchor.max(caret);
-                        if start < end && end <= props.rich.text.len() {
-                            if let Some(sel) = props.rich.text.get(start..end) {
-                                cx.app.push_effect(Effect::ClipboardSetText {
-                                    text: sel.to_string(),
-                                });
-                            }
-                        }
-                        handled = true;
-                    }
-                    "text.select_all" => {
-                        crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::SelectableTextState::default,
-                            |state| {
-                                state.selection_anchor = 0;
-                                state.caret = props.rich.text.len();
-                                state.affinity = fret_core::CaretAffinity::Downstream;
-                                state.dragging = false;
-                            },
-                        );
-                        needs_repaint = true;
-                        handled = true;
-                    }
-                    "text.move_left" => {
-                        crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::SelectableTextState::default,
-                            |state| {
-                                let next = prev_char_boundary(&props.rich.text, state.caret);
-                                state.caret = next;
-                                state.selection_anchor = next;
-                                state.affinity = fret_core::CaretAffinity::Downstream;
-                                state.dragging = false;
-                            },
-                        );
-                        needs_repaint = true;
-                        handled = true;
-                    }
-                    "text.move_right" => {
-                        crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::SelectableTextState::default,
-                            |state| {
-                                let next = next_char_boundary(&props.rich.text, state.caret);
-                                state.caret = next;
-                                state.selection_anchor = next;
-                                state.affinity = fret_core::CaretAffinity::Downstream;
-                                state.dragging = false;
-                            },
-                        );
-                        needs_repaint = true;
-                        handled = true;
-                    }
-                    "text.select_left" => {
-                        crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::SelectableTextState::default,
-                            |state| {
-                                state.caret = prev_char_boundary(&props.rich.text, state.caret);
-                                state.affinity = fret_core::CaretAffinity::Downstream;
-                                state.dragging = false;
-                            },
-                        );
-                        needs_repaint = true;
-                        handled = true;
-                    }
-                    "text.select_right" => {
-                        crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::SelectableTextState::default,
-                            |state| {
-                                state.caret = next_char_boundary(&props.rich.text, state.caret);
-                                state.affinity = fret_core::CaretAffinity::Downstream;
-                                state.dragging = false;
-                            },
-                        );
-                        needs_repaint = true;
-                        handled = true;
-                    }
-                    _ => {}
-                }
-
-                if !handled {
+                let crate::text_surface::SelectableTextCommandOutcome::Handled {
+                    needs_repaint,
+                    copy_range: _,
+                } = outcome
+                else {
                     return false;
+                };
+
+                if let Some((start, end)) = range
+                    && end <= props.rich.text.len()
+                    && let Some(sel) = props.rich.text.get(start..end)
+                {
+                    cx.app.push_effect(Effect::ClipboardSetText {
+                        text: sel.to_string(),
+                    });
                 }
 
                 if needs_repaint {
