@@ -12,6 +12,8 @@ mod column_visibility;
 mod faceting;
 mod filtering;
 mod flat_row_order;
+mod grouped_aggregation;
+mod grouped_sorting;
 mod grouping;
 mod memo;
 mod options;
@@ -50,6 +52,8 @@ pub use filtering::{
     filter_row_model,
 };
 pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_order};
+pub use grouped_aggregation::compute_grouped_u64_aggregations;
+pub use grouped_sorting::sort_grouped_row_indices_in_place;
 pub use grouping::{
     GroupedColumnMode, GroupedRow, GroupedRowIndex, GroupedRowKind, GroupedRowModel, GroupingState,
     column_can_group, group_row_model, grouped_index, grouped_row_model_from_leaf,
