@@ -144,6 +144,12 @@ enum DragRectHandle {
     Bottom,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DragAxisConstraint {
+    XOnly,
+    YOnly,
+}
+
 #[derive(Debug, Clone, Copy)]
 enum DragCapture {
     LineX {
@@ -164,6 +170,8 @@ enum DragCapture {
         axis: YAxis,
         button: MouseButton,
         offset: DataPoint,
+        start: DataPoint,
+        constraint: Option<DragAxisConstraint>,
         current: DataPoint,
     },
     Rect {
@@ -172,6 +180,8 @@ enum DragCapture {
         button: MouseButton,
         handle: DragRectHandle,
         offset: DataPoint,
+        start: DataRect,
+        constraint: Option<DragAxisConstraint>,
         current: DataRect,
     },
 }
@@ -1883,6 +1893,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             axis: point.axis,
                             button: *button,
                             offset,
+                            start: point.point,
+                            constraint: None,
                             current: point.point,
                         };
                         if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
@@ -2034,6 +2046,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 button: *button,
                                 handle,
                                 offset,
+                                start: rect.rect,
+                                constraint: None,
                                 current: rect.rect,
                             };
                             if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
@@ -3160,7 +3174,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 cx.request_redraw();
                 cx.stop_propagation();
             }
-            Event::Pointer(PointerEvent::Move { position, .. }) => {
+            Event::Pointer(PointerEvent::Move {
+                position,
+                modifiers,
+                ..
+            }) => {
                 self.last_pointer_pos = Some(*position);
                 let (
                     y_axis_gap,
@@ -3228,6 +3246,29 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 }
 
                 if let Some(mut capture) = self.drag_capture {
+                    let snap_to_nearest_tick = |value: f64, ticks: &[f64]| -> f64 {
+                        let mut best: Option<(f64, f64)> = None;
+                        for t in ticks {
+                            if !t.is_finite() {
+                                continue;
+                            }
+                            let dist = (value - t).abs();
+                            if best.as_ref().is_none_or(|(best_dist, _)| dist < *best_dist) {
+                                best = Some((dist, *t));
+                            }
+                        }
+                        best.map(|(_, t)| t).unwrap_or(value)
+                    };
+                    let snap_x = |x: f64| -> f64 { snap_to_nearest_tick(x, &self.axis_ticks_x) };
+                    let snap_y = |axis: YAxis, y: f64| -> f64 {
+                        match axis {
+                            YAxis::Left => snap_to_nearest_tick(y, &self.axis_ticks_y),
+                            YAxis::Right => snap_to_nearest_tick(y, &self.axis_ticks_y2),
+                            YAxis::Right2 => snap_to_nearest_tick(y, &self.axis_ticks_y3),
+                            YAxis::Right3 => snap_to_nearest_tick(y, &self.axis_ticks_y4),
+                        }
+                    };
+
                     let state = self.read_plot_state(cx.app);
                     let view_bounds = self.current_view_bounds(cx.app, &state);
                     let view_bounds_y2 = self.current_view_bounds_y2(cx.app, &state, view_bounds);
@@ -3322,16 +3363,47 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             id,
                             axis,
                             offset,
+                            start,
+                            constraint,
                             current,
                             ..
                         } => {
                             if let Some(transform) = transform_for_y_axis(*axis) {
                                 let data = transform.px_to_data(local);
                                 if data.x.is_finite() && data.y.is_finite() {
-                                    let next = DataPoint {
+                                    let mut next = DataPoint {
                                         x: data.x - offset.x,
                                         y: data.y - offset.y,
                                     };
+
+                                    if modifiers.shift {
+                                        let next_constraint = match *constraint {
+                                            Some(c) => Some(c),
+                                            None => {
+                                                let dx = (next.x - start.x).abs();
+                                                let dy = (next.y - start.y).abs();
+                                                Some(if dx >= dy {
+                                                    DragAxisConstraint::XOnly
+                                                } else {
+                                                    DragAxisConstraint::YOnly
+                                                })
+                                            }
+                                        };
+                                        if let Some(c) = next_constraint {
+                                            match c {
+                                                DragAxisConstraint::XOnly => next.y = start.y,
+                                                DragAxisConstraint::YOnly => next.x = start.x,
+                                            }
+                                        }
+                                        *constraint = next_constraint;
+                                    } else {
+                                        *constraint = None;
+                                    }
+
+                                    if modifiers.alt || modifiers.alt_gr {
+                                        next.x = snap_x(next.x);
+                                        next.y = snap_y(*axis, next.y);
+                                    }
                                     if next.x.is_finite() && next.y.is_finite() {
                                         *current = next;
                                         self.drag_output = Some(PlotDragOutput::Point {
@@ -3349,6 +3421,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             axis,
                             handle,
                             offset,
+                            start,
+                            constraint,
                             current,
                             ..
                         } => {
@@ -3358,8 +3432,8 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     let mut next = *current;
                                     match handle {
                                         DragRectHandle::Inside => {
-                                            let w = current.width();
-                                            let h = current.height();
+                                            let w = start.width();
+                                            let h = start.height();
                                             next.x_min = data.x - offset.x;
                                             next.x_max = next.x_min + w;
                                             next.y_min = data.y - offset.y;
@@ -3387,6 +3461,73 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                             next.y_min = data.y - offset.y;
                                             if next.y_min > next.y_max {
                                                 next.y_min = next.y_max;
+                                            }
+                                        }
+                                    }
+
+                                    if matches!(handle, DragRectHandle::Inside) && modifiers.shift {
+                                        let next_constraint = match *constraint {
+                                            Some(c) => Some(c),
+                                            None => {
+                                                let dx = (next.x_min - start.x_min).abs();
+                                                let dy = (next.y_min - start.y_min).abs();
+                                                Some(if dx >= dy {
+                                                    DragAxisConstraint::XOnly
+                                                } else {
+                                                    DragAxisConstraint::YOnly
+                                                })
+                                            }
+                                        };
+                                        if let Some(c) = next_constraint {
+                                            match c {
+                                                DragAxisConstraint::XOnly => {
+                                                    next.y_min = start.y_min;
+                                                    next.y_max = start.y_max;
+                                                }
+                                                DragAxisConstraint::YOnly => {
+                                                    next.x_min = start.x_min;
+                                                    next.x_max = start.x_max;
+                                                }
+                                            }
+                                        }
+                                        *constraint = next_constraint;
+                                    } else {
+                                        *constraint = None;
+                                    }
+
+                                    if modifiers.alt || modifiers.alt_gr {
+                                        match handle {
+                                            DragRectHandle::Inside => {
+                                                let w = start.width();
+                                                let h = start.height();
+                                                next.x_min = snap_x(next.x_min);
+                                                next.y_min = snap_y(*axis, next.y_min);
+                                                next.x_max = next.x_min + w;
+                                                next.y_max = next.y_min + h;
+                                            }
+                                            DragRectHandle::Left => {
+                                                next.x_min = snap_x(next.x_min);
+                                                if next.x_min > next.x_max {
+                                                    next.x_min = next.x_max;
+                                                }
+                                            }
+                                            DragRectHandle::Right => {
+                                                next.x_max = snap_x(next.x_max);
+                                                if next.x_max < next.x_min {
+                                                    next.x_max = next.x_min;
+                                                }
+                                            }
+                                            DragRectHandle::Top => {
+                                                next.y_max = snap_y(*axis, next.y_max);
+                                                if next.y_max < next.y_min {
+                                                    next.y_max = next.y_min;
+                                                }
+                                            }
+                                            DragRectHandle::Bottom => {
+                                                next.y_min = snap_y(*axis, next.y_min);
+                                                if next.y_min > next.y_max {
+                                                    next.y_min = next.y_max;
+                                                }
                                             }
                                         }
                                     }
