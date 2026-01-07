@@ -10,8 +10,11 @@ use fret_node::Graph;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
-use fret_node::ops::{EdgeEndpoints, GraphOp};
-use fret_node::rules::{ConnectDecision, ConnectPlan, DiagnosticSeverity, DiagnosticTarget};
+use fret_node::ops::GraphOp;
+use fret_node::rules::{
+    ConnectDecision, ConnectPlan, DiagnosticSeverity, DiagnosticTarget, InsertNodeSpec,
+    plan_connect_by_inserting_node, plan_split_edge_by_inserting_node,
+};
 use fret_node::types::TypeDesc;
 use fret_node::ui::{InsertNodeCandidate, NodeGraphCanvas, NodeGraphPresenter};
 use fret_runtime::PlatformCapabilities;
@@ -182,13 +185,7 @@ impl DemoTypedPresenter {
         let Some(edge) = graph.edges.get(&edge_id) else {
             return ConnectPlan::reject("missing edge");
         };
-        let Some(from_port) = graph.ports.get(&edge.from) else {
-            return ConnectPlan::reject("missing edge.from port");
-        };
-        let Some(to_port) = graph.ports.get(&edge.to) else {
-            return ConnectPlan::reject("missing edge.to port");
-        };
-        if from_port.kind != PortKind::Data || to_port.kind != PortKind::Data {
+        if edge.kind != EdgeKind::Data {
             return ConnectPlan::reject("only data edges are supported in demo");
         }
 
@@ -225,50 +222,18 @@ impl DemoTypedPresenter {
             data: serde_json::Value::Null,
         };
 
-        let old = EdgeEndpoints {
-            from: edge.from,
-            to: edge.to,
-        };
-
-        let mut ops: Vec<GraphOp> = Vec::new();
-        ops.push(GraphOp::AddNode { id: node_id, node });
-        ops.push(GraphOp::AddPort {
-            id: in_port_id,
-            port: in_port,
-        });
-        ops.push(GraphOp::AddPort {
-            id: out_port_id,
-            port: out_port,
-        });
-        ops.push(GraphOp::SetNodePorts {
-            id: node_id,
-            from: Vec::new(),
-            to: vec![in_port_id, out_port_id],
-        });
-
-        // Preserve edge identity for the first segment.
-        ops.push(GraphOp::SetEdgeEndpoints {
-            id: edge_id,
-            from: old,
-            to: EdgeEndpoints {
-                from: edge.from,
-                to: in_port_id,
+        plan_split_edge_by_inserting_node(
+            graph,
+            edge_id,
+            new_edge_id,
+            InsertNodeSpec {
+                node_id,
+                node,
+                ports: vec![(in_port_id, in_port), (out_port_id, out_port)],
+                input: in_port_id,
+                output: out_port_id,
             },
-        });
-        ops.push(GraphOp::AddEdge {
-            id: new_edge_id,
-            edge: Edge {
-                kind: edge.kind,
-                from: out_port_id,
-                to: edge.to,
-            },
-        });
-
-        ConnectPlan {
-            decision: ConnectDecision::Accept,
-            diagnostics: Vec::new(),
-            ops,
-        }
+        )
     }
 
     fn plan_new_connection_with_convert(
@@ -280,69 +245,67 @@ impl DemoTypedPresenter {
         from_ty: TypeDesc,
         to_ty: TypeDesc,
     ) -> ConnectPlan {
-        let Some(from_port) = graph.ports.get(&from) else {
-            return ConnectPlan::reject("missing from port");
-        };
-        let Some(to_port) = graph.ports.get(&to) else {
-            return ConnectPlan::reject("missing to port");
-        };
-
-        let from_node = graph.nodes.get(&from_port.node);
-        let to_node = graph.nodes.get(&to_port.node);
-
-        let at = match (from_node, to_node) {
-            (Some(a), Some(b)) => CanvasPoint {
-                x: 0.5 * (a.pos.x + b.pos.x) + 120.0,
-                y: 0.5 * (a.pos.y + b.pos.y),
-            },
+        let at = match (graph.ports.get(&from), graph.ports.get(&to)) {
+            (Some(from_port), Some(to_port)) => {
+                let from_node = graph.nodes.get(&from_port.node);
+                let to_node = graph.nodes.get(&to_port.node);
+                match (from_node, to_node) {
+                    (Some(a), Some(b)) => CanvasPoint {
+                        x: 0.5 * (a.pos.x + b.pos.x) + 120.0,
+                        y: 0.5 * (a.pos.y + b.pos.y),
+                    },
+                    _ => CanvasPoint { x: 240.0, y: 120.0 },
+                }
+            }
             _ => CanvasPoint { x: 240.0, y: 120.0 },
         };
 
-        // Create a temporary edge to reuse the split-edge planner: insert convert and connect.
-        let tmp_edge_id = EdgeId::new();
-        let tmp_edge = Edge {
-            kind: EdgeKind::Data,
-            from,
-            to,
+        let node_id = NodeId::new();
+        let in_port_id = PortId::new();
+        let out_port_id = PortId::new();
+
+        let node = Node {
+            kind: node_kind.clone(),
+            kind_version: 1,
+            pos: at,
+            collapsed: false,
+            ports: Vec::new(),
+            data: serde_json::Value::Null,
         };
 
-        let mut graph_clone = graph.clone();
-        graph_clone.edges.insert(tmp_edge_id, tmp_edge);
+        let in_port = Port {
+            node: node_id,
+            key: PortKey::new("in"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            ty: Some(from_ty),
+            data: serde_json::Value::Null,
+        };
+        let out_port = Port {
+            node: node_id,
+            key: PortKey::new("out"),
+            dir: PortDirection::Out,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Multi,
+            ty: Some(to_ty),
+            data: serde_json::Value::Null,
+        };
 
-        let mut plan = self.plan_insert_convert_between(
-            &graph_clone,
-            tmp_edge_id,
-            node_kind,
-            at,
-            from_ty,
-            to_ty,
-        );
-        // Transform the first segment from SetEdgeEndpoints into AddEdge, since the edge does not exist yet.
-        let mut ops: Vec<GraphOp> = Vec::new();
-        for op in plan.ops.drain(..) {
-            match op {
-                GraphOp::SetEdgeEndpoints { id, to, .. } if id == tmp_edge_id => {
-                    ops.push(GraphOp::AddEdge {
-                        id: EdgeId::new(),
-                        edge: Edge {
-                            kind: EdgeKind::Data,
-                            from: to.from,
-                            to: to.to,
-                        },
-                    });
-                }
-                GraphOp::AddEdge { id, edge } if id == tmp_edge_id => {
-                    ops.push(GraphOp::AddEdge {
-                        id: EdgeId::new(),
-                        edge,
-                    });
-                }
-                other => ops.push(other),
-            }
-        }
-        plan.ops = ops;
-
-        plan
+        plan_connect_by_inserting_node(
+            graph,
+            from,
+            to,
+            EdgeId::new(),
+            EdgeId::new(),
+            InsertNodeSpec {
+                node_id,
+                node,
+                ports: vec![(in_port_id, in_port), (out_port_id, out_port)],
+                input: in_port_id,
+                output: out_port_id,
+            },
+        )
     }
 }
 
@@ -438,6 +401,37 @@ impl NodeGraphPresenter for DemoTypedPresenter {
             return ConnectPlan::reject("cannot connect ports on the same node");
         }
 
+        let from_ty = from_port.ty.as_ref();
+        let to_ty = to_port.ty.as_ref();
+
+        if let (Some(from_ty), Some(to_ty)) = (from_ty, to_ty) {
+            if let Some(kind) = convert_kind(from_ty, to_ty)
+                && convert_spec(&kind).is_some()
+            {
+                let (from_ty, to_ty, _) = convert_spec(&kind).expect("checked");
+                return self
+                    .plan_new_connection_with_convert(graph, from, to, &kind, from_ty, to_ty);
+            }
+
+            if from_ty != to_ty {
+                return ConnectPlan {
+                    decision: ConnectDecision::Reject,
+                    diagnostics: vec![fret_node::rules::Diagnostic {
+                        key: "demo.type_mismatch".to_string(),
+                        severity: DiagnosticSeverity::Error,
+                        target: DiagnosticTarget::Graph,
+                        message: format!(
+                            "type mismatch: {} -> {}",
+                            type_name(from_ty),
+                            type_name(to_ty)
+                        ),
+                        fixes: Vec::new(),
+                    }],
+                    ops: Vec::new(),
+                };
+            }
+        }
+
         // Capacity handling (mimic the rule layer).
         let mut ops: Vec<GraphOp> = Vec::new();
         if from_port.capacity == PortCapacity::Single {
@@ -458,43 +452,6 @@ impl NodeGraphPresenter for DemoTypedPresenter {
                         edge: edge.clone(),
                     });
                 }
-            }
-        }
-
-        let from_ty = from_port.ty.as_ref();
-        let to_ty = to_port.ty.as_ref();
-
-        if let (Some(from_ty), Some(to_ty)) = (from_ty, to_ty) {
-            if let Some(kind) = convert_kind(from_ty, to_ty)
-                && convert_spec(&kind).is_some()
-            {
-                let (from_ty, to_ty, _) = convert_spec(&kind).expect("checked");
-                let mut plan =
-                    self.plan_new_connection_with_convert(graph, from, to, &kind, from_ty, to_ty);
-                ops.append(&mut plan.ops);
-                return ConnectPlan {
-                    decision: ConnectDecision::Accept,
-                    diagnostics: Vec::new(),
-                    ops,
-                };
-            }
-
-            if from_ty != to_ty {
-                return ConnectPlan {
-                    decision: ConnectDecision::Reject,
-                    diagnostics: vec![fret_node::rules::Diagnostic {
-                        key: "demo.type_mismatch".to_string(),
-                        severity: DiagnosticSeverity::Error,
-                        target: DiagnosticTarget::Graph,
-                        message: format!(
-                            "type mismatch: {} -> {}",
-                            type_name(from_ty),
-                            type_name(to_ty)
-                        ),
-                        fixes: Vec::new(),
-                    }],
-                    ops: Vec::new(),
-                };
             }
         }
 

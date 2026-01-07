@@ -5,7 +5,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
-    Edge, EdgeId, EdgeKind, Graph, NodeId, PortCapacity, PortDirection, PortId, PortKind, SymbolId,
+    Edge, EdgeId, EdgeKind, Graph, Node, NodeId, Port, PortCapacity, PortDirection, PortId,
+    PortKind, SymbolId,
 };
 use crate::ops::{EdgeEndpoints, GraphOp};
 
@@ -112,6 +113,67 @@ impl ConnectPlan {
     }
 }
 
+/// Specification for inserting a new node as part of a connection workflow.
+///
+/// The `ports` list defines the desired UI ordering for the inserted node.
+#[derive(Debug, Clone)]
+pub struct InsertNodeSpec {
+    pub node_id: NodeId,
+    pub node: Node,
+    pub ports: Vec<(PortId, Port)>,
+    pub input: PortId,
+    pub output: PortId,
+}
+
+fn port_kind_for_edge_kind(edge_kind: EdgeKind) -> PortKind {
+    match edge_kind {
+        EdgeKind::Data => PortKind::Data,
+        EdgeKind::Exec => PortKind::Exec,
+    }
+}
+
+fn edge_kind_for_port_kind(port_kind: PortKind) -> Option<EdgeKind> {
+    match port_kind {
+        PortKind::Data => Some(EdgeKind::Data),
+        PortKind::Exec => Some(EdgeKind::Exec),
+    }
+}
+
+fn disconnect_for_capacity(
+    graph: &Graph,
+    edge_kind: EdgeKind,
+    from_id: PortId,
+    from_capacity: PortCapacity,
+    to_id: PortId,
+    to_capacity: PortCapacity,
+) -> Vec<GraphOp> {
+    let mut ops: Vec<GraphOp> = Vec::new();
+
+    if from_capacity == PortCapacity::Single {
+        for (edge_id, edge) in graph.edges.iter() {
+            if edge.kind == edge_kind && edge.from == from_id {
+                ops.push(GraphOp::RemoveEdge {
+                    id: *edge_id,
+                    edge: edge.clone(),
+                });
+            }
+        }
+    }
+
+    if to_capacity == PortCapacity::Single {
+        for (edge_id, edge) in graph.edges.iter() {
+            if edge.kind == edge_kind && edge.to == to_id {
+                ops.push(GraphOp::RemoveEdge {
+                    id: *edge_id,
+                    edge: edge.clone(),
+                });
+            }
+        }
+    }
+
+    ops
+}
+
 /// Plans connecting two ports.
 ///
 /// This is a rules-driven decision point used by the UI interaction loop.
@@ -157,29 +219,8 @@ pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
         }
     }
 
-    let mut ops: Vec<GraphOp> = Vec::new();
-
-    if from.capacity == PortCapacity::Single {
-        for (edge_id, edge) in graph.edges.iter() {
-            if edge.kind == edge_kind && edge.from == from_id {
-                ops.push(GraphOp::RemoveEdge {
-                    id: *edge_id,
-                    edge: edge.clone(),
-                });
-            }
-        }
-    }
-
-    if to.capacity == PortCapacity::Single {
-        for (edge_id, edge) in graph.edges.iter() {
-            if edge.kind == edge_kind && edge.to == to_id {
-                ops.push(GraphOp::RemoveEdge {
-                    id: *edge_id,
-                    edge: edge.clone(),
-                });
-            }
-        }
-    }
+    let mut ops: Vec<GraphOp> =
+        disconnect_for_capacity(graph, edge_kind, from_id, from.capacity, to_id, to.capacity);
 
     ops.push(GraphOp::AddEdge {
         id: EdgeId::new(),
@@ -187,6 +228,277 @@ pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
             kind: edge_kind,
             from: from_id,
             to: to_id,
+        },
+    });
+
+    ConnectPlan {
+        decision: ConnectDecision::Accept,
+        diagnostics: Vec::new(),
+        ops,
+    }
+}
+
+/// Plans connecting two ports by inserting a node between them.
+///
+/// This is intended for "auto-fix" workflows like inserting a conversion node when types mismatch.
+pub fn plan_connect_by_inserting_node(
+    graph: &Graph,
+    a: PortId,
+    b: PortId,
+    first_edge_id: EdgeId,
+    second_edge_id: EdgeId,
+    inserted: InsertNodeSpec,
+) -> ConnectPlan {
+    let Some(port_a) = graph.ports.get(&a) else {
+        return ConnectPlan::reject(format!("missing port: {a:?}"));
+    };
+    let Some(port_b) = graph.ports.get(&b) else {
+        return ConnectPlan::reject(format!("missing port: {b:?}"));
+    };
+
+    let (from_id, to_id, from, to) = match (port_a.dir, port_b.dir) {
+        (PortDirection::Out, PortDirection::In) => (a, b, port_a, port_b),
+        (PortDirection::In, PortDirection::Out) => (b, a, port_b, port_a),
+        _ => {
+            return ConnectPlan::reject("ports must have opposite directions (in/out)");
+        }
+    };
+
+    if from.node == to.node {
+        return ConnectPlan::reject("cannot connect ports on the same node");
+    }
+
+    if from.kind != to.kind {
+        return ConnectPlan::reject(format!(
+            "port kinds are incompatible: from={:?} to={:?}",
+            from.kind, to.kind
+        ));
+    }
+
+    let Some(edge_kind) = edge_kind_for_port_kind(from.kind) else {
+        return ConnectPlan::reject("port kinds are incompatible");
+    };
+
+    if graph.edges.contains_key(&first_edge_id) {
+        return ConnectPlan::reject(format!("edge already exists: {first_edge_id:?}"));
+    }
+    if graph.edges.contains_key(&second_edge_id) {
+        return ConnectPlan::reject(format!("edge already exists: {second_edge_id:?}"));
+    }
+
+    if inserted.node_id == from.node || inserted.node_id == to.node {
+        return ConnectPlan::reject("inserted node id must be distinct from endpoints");
+    }
+    if graph.nodes.contains_key(&inserted.node_id) {
+        return ConnectPlan::reject(format!("node already exists: {:?}", inserted.node_id));
+    }
+    for (port_id, _) in &inserted.ports {
+        if graph.ports.contains_key(port_id) {
+            return ConnectPlan::reject(format!("port already exists: {port_id:?}"));
+        }
+    }
+
+    if inserted.input == inserted.output {
+        return ConnectPlan::reject("inserted input/output ports must be distinct");
+    }
+
+    let expected_port_kind = port_kind_for_edge_kind(edge_kind);
+    let mut inserted_in: Option<&Port> = None;
+    let mut inserted_out: Option<&Port> = None;
+    for (port_id, port) in &inserted.ports {
+        if port.node != inserted.node_id {
+            return ConnectPlan::reject(format!(
+                "inserted port has wrong node: port={port_id:?} expected={:?} got={:?}",
+                inserted.node_id, port.node
+            ));
+        }
+        if port.kind != expected_port_kind {
+            return ConnectPlan::reject(format!(
+                "inserted port kind is incompatible: port={port_id:?} kind={:?} expected={:?}",
+                port.kind, expected_port_kind
+            ));
+        }
+        if *port_id == inserted.input {
+            inserted_in = Some(port);
+        }
+        if *port_id == inserted.output {
+            inserted_out = Some(port);
+        }
+    }
+
+    let Some(inserted_in) = inserted_in else {
+        return ConnectPlan::reject("inserted input port is missing from spec");
+    };
+    let Some(inserted_out) = inserted_out else {
+        return ConnectPlan::reject("inserted output port is missing from spec");
+    };
+
+    if inserted_in.dir != PortDirection::In || inserted_out.dir != PortDirection::Out {
+        return ConnectPlan::reject("inserted ports must be in -> out");
+    }
+
+    let mut ops: Vec<GraphOp> =
+        disconnect_for_capacity(graph, edge_kind, from_id, from.capacity, to_id, to.capacity);
+
+    let mut node = inserted.node.clone();
+    node.ports = Vec::new();
+    ops.push(GraphOp::AddNode {
+        id: inserted.node_id,
+        node,
+    });
+
+    let port_order: Vec<PortId> = inserted.ports.iter().map(|(id, _)| *id).collect();
+    for (port_id, port) in inserted.ports {
+        ops.push(GraphOp::AddPort { id: port_id, port });
+    }
+    ops.push(GraphOp::SetNodePorts {
+        id: inserted.node_id,
+        from: Vec::new(),
+        to: port_order,
+    });
+
+    ops.push(GraphOp::AddEdge {
+        id: first_edge_id,
+        edge: Edge {
+            kind: edge_kind,
+            from: from_id,
+            to: inserted.input,
+        },
+    });
+    ops.push(GraphOp::AddEdge {
+        id: second_edge_id,
+        edge: Edge {
+            kind: edge_kind,
+            from: inserted.output,
+            to: to_id,
+        },
+    });
+
+    ConnectPlan {
+        decision: ConnectDecision::Accept,
+        diagnostics: Vec::new(),
+        ops,
+    }
+}
+
+/// Plans splitting an existing edge by inserting a node (preserving the edge identity for the first segment).
+pub fn plan_split_edge_by_inserting_node(
+    graph: &Graph,
+    edge_id: EdgeId,
+    new_edge_id: EdgeId,
+    inserted: InsertNodeSpec,
+) -> ConnectPlan {
+    let Some(edge) = graph.edges.get(&edge_id) else {
+        return ConnectPlan::reject(format!("missing edge: {edge_id:?}"));
+    };
+    if graph.edges.contains_key(&new_edge_id) {
+        return ConnectPlan::reject(format!("edge already exists: {new_edge_id:?}"));
+    }
+
+    let Some(from_port) = graph.ports.get(&edge.from) else {
+        return ConnectPlan::reject("missing edge.from port");
+    };
+    let Some(to_port) = graph.ports.get(&edge.to) else {
+        return ConnectPlan::reject("missing edge.to port");
+    };
+
+    if from_port.dir != PortDirection::Out || to_port.dir != PortDirection::In {
+        return ConnectPlan::reject("edge must be out -> in");
+    }
+
+    let expected_port_kind = port_kind_for_edge_kind(edge.kind);
+    if from_port.kind != expected_port_kind || to_port.kind != expected_port_kind {
+        return ConnectPlan::reject("edge kind is incompatible with ports");
+    }
+
+    if inserted.node_id == from_port.node || inserted.node_id == to_port.node {
+        return ConnectPlan::reject("inserted node id must be distinct from endpoints");
+    }
+    if graph.nodes.contains_key(&inserted.node_id) {
+        return ConnectPlan::reject(format!("node already exists: {:?}", inserted.node_id));
+    }
+    for (port_id, _) in &inserted.ports {
+        if graph.ports.contains_key(port_id) {
+            return ConnectPlan::reject(format!("port already exists: {port_id:?}"));
+        }
+    }
+
+    if inserted.input == inserted.output {
+        return ConnectPlan::reject("inserted input/output ports must be distinct");
+    }
+
+    let mut inserted_in: Option<&Port> = None;
+    let mut inserted_out: Option<&Port> = None;
+    for (port_id, port) in &inserted.ports {
+        if port.node != inserted.node_id {
+            return ConnectPlan::reject(format!(
+                "inserted port has wrong node: port={port_id:?} expected={:?} got={:?}",
+                inserted.node_id, port.node
+            ));
+        }
+        if port.kind != expected_port_kind {
+            return ConnectPlan::reject(format!(
+                "inserted port kind is incompatible: port={port_id:?} kind={:?} expected={:?}",
+                port.kind, expected_port_kind
+            ));
+        }
+        if *port_id == inserted.input {
+            inserted_in = Some(port);
+        }
+        if *port_id == inserted.output {
+            inserted_out = Some(port);
+        }
+    }
+
+    let Some(inserted_in) = inserted_in else {
+        return ConnectPlan::reject("inserted input port is missing from spec");
+    };
+    let Some(inserted_out) = inserted_out else {
+        return ConnectPlan::reject("inserted output port is missing from spec");
+    };
+
+    if inserted_in.dir != PortDirection::In || inserted_out.dir != PortDirection::Out {
+        return ConnectPlan::reject("inserted ports must be in -> out");
+    }
+
+    let old = EdgeEndpoints {
+        from: edge.from,
+        to: edge.to,
+    };
+
+    let mut ops: Vec<GraphOp> = Vec::new();
+
+    let mut node = inserted.node.clone();
+    node.ports = Vec::new();
+    ops.push(GraphOp::AddNode {
+        id: inserted.node_id,
+        node,
+    });
+
+    let port_order: Vec<PortId> = inserted.ports.iter().map(|(id, _)| *id).collect();
+    for (port_id, port) in inserted.ports {
+        ops.push(GraphOp::AddPort { id: port_id, port });
+    }
+    ops.push(GraphOp::SetNodePorts {
+        id: inserted.node_id,
+        from: Vec::new(),
+        to: port_order,
+    });
+
+    ops.push(GraphOp::SetEdgeEndpoints {
+        id: edge_id,
+        from: old,
+        to: EdgeEndpoints {
+            from: edge.from,
+            to: inserted.input,
+        },
+    });
+    ops.push(GraphOp::AddEdge {
+        id: new_edge_id,
+        edge: Edge {
+            kind: edge.kind,
+            from: inserted.output,
+            to: edge.to,
         },
     });
 
