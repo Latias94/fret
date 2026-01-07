@@ -61,6 +61,9 @@ Axis locks are split into two independent flags:
 
 Locks apply consistently across plot-region and axis-region interactions.
 
+Lock state is stored in `PlotState::axis_locks`, so it can be persisted or shared when the caller
+provides an external `Model<PlotState>`.
+
 ### UI & shortcuts
 
 The goal is to keep locks discoverable without forcing a context menu early:
