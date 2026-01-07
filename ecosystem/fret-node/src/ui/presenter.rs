@@ -10,8 +10,8 @@ use crate::core::{
 };
 use crate::ops::GraphOp;
 use crate::rules::{
-    ConnectPlan, EdgeEndpoint, InsertNodeSpec, plan_connect, plan_reconnect_edge,
-    plan_split_edge_by_inserting_node,
+    ConnectPlan, EdgeEndpoint, InsertNodeSpec, InsertNodeTemplate, plan_connect,
+    plan_reconnect_edge, plan_split_edge_by_inserting_node,
 };
 
 use super::style::NodeGraphStyle;
@@ -40,6 +40,7 @@ pub struct InsertNodeCandidate {
     pub kind: NodeKindKey,
     pub label: Arc<str>,
     pub enabled: bool,
+    pub template: Option<InsertNodeTemplate>,
     pub payload: Value,
 }
 
@@ -174,7 +175,14 @@ pub trait NodeGraphPresenter {
         candidate: &InsertNodeCandidate,
         at: CanvasPoint,
     ) -> ConnectPlan {
-        self.plan_split_edge(graph, edge, &candidate.kind, at)
+        if let Some(template) = &candidate.template {
+            match template.instantiate(at) {
+                Ok(spec) => plan_split_edge_by_inserting_node(graph, edge, EdgeId::new(), spec),
+                Err(err) => ConnectPlan::reject(err),
+            }
+        } else {
+            self.plan_split_edge(graph, edge, &candidate.kind, at)
+        }
     }
 
     /// Fills the right-click context menu for an edge.

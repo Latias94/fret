@@ -468,6 +468,7 @@ impl NodeGraphCanvas {
                     kind: NodeKindKey::new(REROUTE_KIND),
                     label: Arc::<str>::from("Reroute"),
                     enabled: true,
+                    template: None,
                     payload: serde_json::Value::Null,
                 });
                 menu_candidates.extend(candidates);

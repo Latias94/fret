@@ -356,6 +356,7 @@ impl NodeGraphPresenter for DemoTypedPresenter {
             kind,
             label,
             enabled: true,
+            template: None,
             payload: serde_json::Value::Null,
         }]
     }
