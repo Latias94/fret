@@ -5,19 +5,28 @@ use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::sync::Arc;
 
-use fret_core::{Color, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, TextProps};
+use fret_core::{
+    Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+};
+use fret_runtime::Effect;
+use fret_ui::element::{
+    AnyElement, ContainerProps, HoverRegionProps, LayoutStyle, Length, PressableProps, TextProps,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::scroll as decl_scroll;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 
 #[derive(Debug, Clone)]
 pub struct CodeBlock {
     code: Arc<str>,
     language: Option<Arc<str>>,
     show_line_numbers: bool,
+    show_header: bool,
+    show_copy_button: bool,
+    copy_button_on_hover: bool,
+    border: bool,
 }
 
 impl CodeBlock {
@@ -26,6 +35,10 @@ impl CodeBlock {
             code: code.into(),
             language: None,
             show_line_numbers: false,
+            show_header: false,
+            show_copy_button: false,
+            copy_button_on_hover: true,
+            border: true,
         }
     }
 
@@ -39,12 +52,38 @@ impl CodeBlock {
         self
     }
 
+    pub fn show_header(mut self, show: bool) -> Self {
+        self.show_header = show;
+        self
+    }
+
+    pub fn show_copy_button(mut self, show: bool) -> Self {
+        self.show_copy_button = show;
+        self
+    }
+
+    pub fn copy_button_on_hover(mut self, on_hover: bool) -> Self {
+        self.copy_button_on_hover = on_hover;
+        self
+    }
+
+    pub fn border(mut self, border: bool) -> Self {
+        self.border = border;
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        code_block(
+        code_block_with(
             cx,
             &self.code,
             self.language.as_deref(),
             self.show_line_numbers,
+            CodeBlockUiOptions {
+                show_header: self.show_header,
+                show_copy_button: self.show_copy_button,
+                copy_button_on_hover: self.copy_button_on_hover,
+                border: self.border,
+            },
         )
     }
 }
@@ -55,19 +94,58 @@ pub fn code_block<H: UiHost>(
     language: Option<&str>,
     show_line_numbers: bool,
 ) -> AnyElement {
+    code_block_with(
+        cx,
+        code,
+        language,
+        show_line_numbers,
+        CodeBlockUiOptions::default(),
+    )
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CodeBlockUiOptions {
+    pub show_header: bool,
+    pub show_copy_button: bool,
+    pub copy_button_on_hover: bool,
+    pub border: bool,
+}
+
+impl Default for CodeBlockUiOptions {
+    fn default() -> Self {
+        Self {
+            show_header: false,
+            show_copy_button: false,
+            copy_button_on_hover: true,
+            border: true,
+        }
+    }
+}
+
+pub fn code_block_with<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+    options: CodeBlockUiOptions,
+) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
     let bg = theme.color_required("card");
     let border = theme.color_required("border");
-    let props = decl_style::container_props(
-        &theme,
-        ChromeRefinement::default()
-            .p(Space::N2)
-            .rounded(Radius::Md)
-            .border_1()
-            .bg(ColorRef::Color(bg))
-            .border_color(ColorRef::Color(border)),
-        LayoutRefinement::default().w_full(),
-    );
+
+    let chrome = {
+        let mut chrome = ChromeRefinement::default().p(Space::N2).rounded(Radius::Md);
+        if options.border {
+            chrome = chrome
+                .border_1()
+                .bg(ColorRef::Color(bg))
+                .border_color(ColorRef::Color(border));
+        } else {
+            chrome = chrome.bg(ColorRef::Color(bg));
+        }
+        chrome
+    };
+    let props = decl_style::container_props(&theme, chrome, LayoutRefinement::default().w_full());
 
     let language = language.map(str::trim).filter(|s| !s.is_empty());
     let prepared = cx.with_state(CodeBlockPreparedState::default, |st| {
@@ -75,33 +153,167 @@ pub fn code_block<H: UiHost>(
         st.prepared.clone()
     });
 
+    let header_visible = options.show_header || options.show_copy_button || language.is_some();
+
     cx.container(props, |cx| {
-        vec![decl_scroll::overflow_scroll_x_vstack(
-            cx,
-            LayoutRefinement::default().w_full(),
-            false,
-            stack::VStackProps::default().gap(Space::N0),
-            |cx| {
-                prepared
-                    .lines
-                    .iter()
-                    .enumerate()
-                    .map(|(i, line)| {
-                        if prepared.show_line_numbers {
-                            render_code_line_with_number(
-                                cx,
-                                &theme,
-                                i + 1,
-                                prepared.line_number_width,
-                                line,
-                            )
-                        } else {
-                            render_code_line(cx, &theme, line)
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            },
-        )]
+        vec![cx.hover_region(HoverRegionProps::default(), |cx, hovered| {
+            let mut out = Vec::new();
+            if header_visible {
+                out.push(render_code_block_header(
+                    cx,
+                    &theme,
+                    language,
+                    options,
+                    hovered,
+                    Arc::<str>::from(code.to_string()),
+                ));
+            }
+            out.push(decl_scroll::overflow_scroll_x_vstack(
+                cx,
+                LayoutRefinement::default().w_full(),
+                false,
+                stack::VStackProps::default().gap(Space::N0),
+                |cx| {
+                    prepared
+                        .lines
+                        .iter()
+                        .enumerate()
+                        .map(|(i, line)| {
+                            if prepared.show_line_numbers {
+                                render_code_line_with_number(
+                                    cx,
+                                    &theme,
+                                    i + 1,
+                                    prepared.line_number_width,
+                                    line,
+                                )
+                            } else {
+                                render_code_line(cx, &theme, line)
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                },
+            ));
+            out
+        })]
+    })
+}
+
+fn render_code_block_header<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    language: Option<&str>,
+    options: CodeBlockUiOptions,
+    hovered: bool,
+    code: Arc<str>,
+) -> AnyElement {
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .gap(Space::N2)
+            .justify(Justify::Between)
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            let mut left = Vec::new();
+            if let Some(lang) = language {
+                left.push(cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: Arc::<str>::from(lang.to_string()),
+                    style: Some(TextStyle {
+                        font: FontId::monospace(),
+                        size: theme.metric_required("metric.font.mono_size"),
+                        weight: FontWeight::SEMIBOLD,
+                        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+                        letter_spacing_em: None,
+                    }),
+                    color: Some(theme.color_required("muted-foreground")),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                }));
+            }
+
+            let mut right = Vec::new();
+            let show_copy = options.show_copy_button && (!options.copy_button_on_hover || hovered);
+            if show_copy {
+                right.push(render_copy_button(cx, code));
+            }
+
+            vec![
+                stack::hstack(cx, stack::HStackProps::default().gap(Space::N1), |_| left),
+                stack::hstack(cx, stack::HStackProps::default().gap(Space::N1), |_| right),
+            ]
+        },
+    )
+}
+
+fn render_copy_button<H: UiHost>(cx: &mut ElementContext<'_, H>, code: Arc<str>) -> AnyElement {
+    let mut props = PressableProps::default();
+    props.a11y.role = Some(SemanticsRole::Button);
+    props.a11y.label = Some(Arc::<str>::from("Copy"));
+    props.focusable = false;
+
+    cx.pressable(props, move |cx, st| {
+        let (bg_pressed, bg_hover, bg_idle, radius_sm, font_size, line_height, fg) = {
+            let theme = Theme::global(&*cx.app);
+            (
+                theme.color_required("accent"),
+                theme.color_required("color.menu.item.hover"),
+                theme.color_required("secondary"),
+                theme.metric_required("metric.radius.sm"),
+                theme.metric_required("metric.font.size"),
+                theme.metric_required("metric.font.line_height"),
+                theme.color_required("foreground"),
+            )
+        };
+
+        let bg = if st.pressed {
+            bg_pressed
+        } else if st.hovered {
+            bg_hover
+        } else {
+            bg_idle
+        };
+
+        cx.pressable_on_activate({
+            let code = code.clone();
+            Arc::new(move |host, _cx, _reason| {
+                host.push_effect(Effect::ClipboardSetText {
+                    text: code.to_string(),
+                });
+            })
+        });
+
+        let mut container = ContainerProps::default();
+        container.padding = Edges {
+            top: Px(2.0),
+            right: Px(8.0),
+            bottom: Px(2.0),
+            left: Px(8.0),
+        };
+        container.corner_radii = fret_core::Corners::all(radius_sm);
+        container.background = Some(bg);
+        container.border = Edges::all(Px(0.0));
+
+        vec![cx.container(container, |cx| {
+            vec![cx.text_props(TextProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Auto;
+                    layout
+                },
+                text: Arc::<str>::from("Copy"),
+                style: Some(TextStyle {
+                    font: FontId::default(),
+                    size: font_size,
+                    weight: FontWeight::SEMIBOLD,
+                    line_height: Some(line_height),
+                    letter_spacing_em: None,
+                }),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+            })]
+        })]
     })
 }
 
@@ -216,7 +428,9 @@ impl CodeBlockPreparedState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct CodeBlockKey {
     code_hash: u64,
+    code_len: usize,
     language_hash: u64,
+    language_len: usize,
     show_line_numbers: bool,
 }
 
@@ -224,7 +438,9 @@ impl Default for CodeBlockKey {
     fn default() -> Self {
         Self {
             code_hash: 0,
+            code_len: 0,
             language_hash: 0,
+            language_len: 0,
             show_line_numbers: false,
         }
     }
@@ -232,9 +448,12 @@ impl Default for CodeBlockKey {
 
 impl CodeBlockKey {
     fn new(code: &str, language: Option<&str>, show_line_numbers: bool) -> Self {
+        let language = language.unwrap_or("");
         Self {
             code_hash: hash_value(code),
-            language_hash: hash_value(language.unwrap_or("")),
+            code_len: code.len(),
+            language_hash: hash_value(language),
+            language_len: language.len(),
             show_line_numbers,
         }
     }

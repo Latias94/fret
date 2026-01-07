@@ -44,5 +44,6 @@ syntax-zig = ["fret-syntax/lang-zig"]
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui" }
+fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-syntax = { path = "../fret-syntax", default-features = false }
