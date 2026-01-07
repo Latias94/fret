@@ -108,6 +108,11 @@ impl ChartPatch {
                         if !series_ids.insert(series.id) {
                             return Err(ModelError::DuplicateId { kind: "series" });
                         }
+                        if series.kind == SeriesKind::Band && series.y2_col.is_none() {
+                            return Err(ModelError::InvalidSpec {
+                                reason: "series.kind=Band requires y2_col",
+                            });
+                        }
                         if !model.datasets.contains_key(&series.dataset) {
                             return Err(ModelError::MissingReference { kind: "dataset" });
                         }
@@ -255,6 +260,11 @@ impl ChartPatch {
         for op in self.series {
             match op {
                 SeriesOp::Upsert(series) => {
+                    if series.kind == SeriesKind::Band && series.y2_col.is_none() {
+                        return Err(ModelError::InvalidSpec {
+                            reason: "series.kind=Band requires y2_col",
+                        });
+                    }
                     if !model.datasets.contains_key(&series.dataset) {
                         return Err(ModelError::MissingReference { kind: "dataset" });
                     }
@@ -282,6 +292,7 @@ impl ChartPatch {
                         || existing.dataset != series.dataset
                         || existing.x_col != series.x_col
                         || existing.y_col != series.y_col
+                        || existing.y2_col != series.y2_col
                         || existing.x_axis != series.x_axis
                         || existing.y_axis != series.y_axis
                     {
@@ -289,6 +300,7 @@ impl ChartPatch {
                         existing.dataset = series.dataset;
                         existing.x_col = series.x_col;
                         existing.y_col = series.y_col;
+                        existing.y2_col = series.y2_col;
                         existing.x_axis = series.x_axis;
                         existing.y_axis = series.y_axis;
                         report.structure_changed = true;
@@ -489,6 +501,7 @@ pub struct SeriesPatch {
     pub dataset: DatasetId,
     pub x_col: usize,
     pub y_col: usize,
+    pub y2_col: Option<usize>,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
     pub visible: Option<bool>,
@@ -503,6 +516,7 @@ impl From<SeriesPatch> for SeriesModel {
             dataset: p.dataset,
             x_col: p.x_col,
             y_col: p.y_col,
+            y2_col: p.y2_col,
             x_axis: p.x_axis,
             y_axis: p.y_axis,
             visible: p.visible.unwrap_or(true),

@@ -116,6 +116,8 @@ pub enum SeriesKind {
     Bar,
     Scatter,
     Area,
+    /// A filled band between `y_col` (low) and `y2_col` (high).
+    Band,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -140,6 +142,8 @@ pub struct SeriesSpec {
     pub x_col: usize,
     /// Column index for y values (temporary, P0).
     pub y_col: usize,
+    /// Column index for second y values (used by `Band`, ignored otherwise).
+    pub y2_col: Option<usize>,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
     /// Area baseline configuration (only used when `kind == Area`).

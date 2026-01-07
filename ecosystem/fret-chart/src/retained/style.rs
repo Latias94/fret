@@ -6,6 +6,7 @@ pub struct ChartStyle {
     pub stroke_color: Color,
     pub stroke_width: Px,
     pub area_fill_color: Color,
+    pub band_fill_color: Color,
     pub selection_fill: Color,
     pub selection_stroke: Color,
     pub selection_stroke_width: Px,
@@ -36,7 +37,12 @@ pub struct ChartStyle {
 impl Default for ChartStyle {
     fn default() -> Self {
         Self {
-            background: None,
+            background: Some(Color {
+                r: 0.06,
+                g: 0.06,
+                b: 0.07,
+                a: 1.0,
+            }),
             stroke_color: Color {
                 r: 1.0,
                 g: 1.0,
@@ -49,6 +55,12 @@ impl Default for ChartStyle {
                 g: 0.6,
                 b: 1.0,
                 a: 0.18,
+            },
+            band_fill_color: Color {
+                r: 0.2,
+                g: 0.6,
+                b: 1.0,
+                a: 0.12,
             },
             selection_fill: Color {
                 r: 0.2,

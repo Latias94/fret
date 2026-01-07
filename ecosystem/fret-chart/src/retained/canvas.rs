@@ -1,4 +1,6 @@
 use std::collections::BTreeMap;
+use std::ops::Range;
+use std::time::{Duration, Instant};
 
 use delinea::engine::EngineError;
 use delinea::engine::model::{ChartPatch, ModelError, PatchMode};
@@ -34,6 +36,7 @@ impl TextMeasurer for NullTextMeasurer {
 struct CachedPath {
     stroke: fret_core::PathId,
     fill: Option<fret_core::PathId>,
+    fill_color: Option<Color>,
     order: u32,
 }
 
@@ -253,20 +256,25 @@ impl ChartCanvas {
         let mut min = f64::INFINITY;
         let mut max = f64::NEG_INFINITY;
 
-        let series_cols: Vec<(delinea::DatasetId, usize)> = self
-            .engine
-            .model()
-            .series
-            .values()
-            .filter_map(|s| {
-                let axis_id = if is_x { s.x_axis } else { s.y_axis };
-                if axis_id != axis {
-                    return None;
-                }
-                let col = if is_x { s.x_col } else { s.y_col };
-                Some((s.dataset, col))
-            })
-            .collect();
+        let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
+        for series in self.engine.model().series.values() {
+            let axis_id = if is_x { series.x_axis } else { series.y_axis };
+            if axis_id != axis {
+                continue;
+            }
+
+            if is_x {
+                series_cols.push((series.dataset, series.x_col));
+                continue;
+            }
+
+            series_cols.push((series.dataset, series.y_col));
+            if series.kind == delinea::SeriesKind::Band
+                && let Some(y2) = series.y2_col
+            {
+                series_cols.push((series.dataset, y2));
+            }
+        }
 
         let store = self.engine.datasets_mut();
         for (dataset_id, col) in series_cols {
@@ -637,6 +645,16 @@ impl ChartCanvas {
 
         let marks = &self.engine.output().marks;
         let origin = self.last_layout.plot.origin;
+        let model = self.engine.model();
+
+        let mut band_ranges: BTreeMap<
+            delinea::SeriesId,
+            (Option<Range<usize>>, Option<Range<usize>>),
+        > = BTreeMap::new();
+        let mut band_mark_ids: BTreeMap<
+            delinea::SeriesId,
+            (Option<delinea::ids::MarkId>, Option<delinea::ids::MarkId>),
+        > = BTreeMap::new();
 
         for node in &marks.nodes {
             if node.kind != MarkKind::Polyline {
@@ -646,6 +664,29 @@ impl ChartCanvas {
             let MarkPayloadRef::Polyline(poly) = &node.payload else {
                 continue;
             };
+
+            let series_kind = node
+                .source_series
+                .and_then(|id| model.series.get(&id).map(|s| s.kind));
+
+            if series_kind == Some(delinea::SeriesKind::Band)
+                && let Some(series_id) = node.source_series
+            {
+                let variant = (node.id.0 & 0x7) as u8;
+                let entry = band_ranges.entry(series_id).or_default();
+                let ids = band_mark_ids.entry(series_id).or_default();
+                match variant {
+                    1 => {
+                        entry.0 = Some(poly.points.clone());
+                        ids.0 = Some(node.id);
+                    }
+                    2 => {
+                        entry.1 = Some(poly.points.clone());
+                        ids.1 = Some(node.id);
+                    }
+                    _ => {}
+                }
+            }
 
             let baseline_y_local = node
                 .source_series
@@ -722,6 +763,7 @@ impl ChartCanvas {
             } else {
                 None
             };
+            let fill_color = fill.map(|_| self.style.area_fill_color);
 
             let mark_id = node.id;
             self.cached_paths.insert(
@@ -729,9 +771,71 @@ impl ChartCanvas {
                 CachedPath {
                     stroke,
                     fill,
+                    fill_color,
                     order: node.order.0,
                 },
             );
+        }
+
+        for (series_id, (lower, upper)) in band_ranges {
+            let (Some(lower_range), Some(upper_range)) = (lower, upper) else {
+                continue;
+            };
+            let Some((Some(lower_id), Some(_upper_id))) = band_mark_ids.get(&series_id).copied()
+            else {
+                continue;
+            };
+
+            if upper_range.end <= upper_range.start || lower_range.end <= lower_range.start {
+                continue;
+            }
+            if upper_range.end > marks.arena.points.len()
+                || lower_range.end > marks.arena.points.len()
+            {
+                continue;
+            }
+
+            let upper_points = &marks.arena.points[upper_range.start..upper_range.end];
+            let lower_points = &marks.arena.points[lower_range.start..lower_range.end];
+            if upper_points.len() < 2 || lower_points.len() < 2 {
+                continue;
+            }
+
+            let mut fill_commands: Vec<PathCommand> =
+                Vec::with_capacity(upper_points.len() + lower_points.len() + 1);
+            let first = upper_points[0];
+            fill_commands.push(PathCommand::MoveTo(fret_core::Point::new(
+                Px(first.x.0 - origin.x.0),
+                Px(first.y.0 - origin.y.0),
+            )));
+            for p in &upper_points[1..] {
+                fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
+                    Px(p.x.0 - origin.x.0),
+                    Px(p.y.0 - origin.y.0),
+                )));
+            }
+            for p in lower_points.iter().rev() {
+                fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
+                    Px(p.x.0 - origin.x.0),
+                    Px(p.y.0 - origin.y.0),
+                )));
+            }
+            fill_commands.push(PathCommand::Close);
+
+            let (fill_path, _metrics) = cx.services.path().prepare(
+                &fill_commands,
+                PathStyle::Fill(fret_core::FillStyle::default()),
+                PathConstraints {
+                    scale_factor: cx.scale_factor,
+                },
+            );
+
+            if let Some(cached) = self.cached_paths.get_mut(&lower_id) {
+                cached.fill = Some(fill_path);
+                cached.fill_color = Some(self.style.band_fill_color);
+            } else {
+                cx.services.path().release(fill_path);
+            }
         }
     }
 }
@@ -1296,16 +1400,45 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        self.last_bounds = cx.bounds;
-        self.last_layout = self.compute_layout(cx.bounds);
-        self.sync_viewport(self.last_layout.plot);
+        if self.last_bounds != cx.bounds
+            || self.last_layout.plot.size.width.0 <= 0.0
+            || self.last_layout.plot.size.height.0 <= 0.0
+        {
+            self.last_bounds = cx.bounds;
+            self.last_layout = self.compute_layout(cx.bounds);
+            self.sync_viewport(self.last_layout.plot);
+        }
 
-        // P0: run the engine synchronously for now.
         let mut measurer = NullTextMeasurer::default();
-        let _ = self
-            .engine
-            .step(&mut measurer, WorkBudget::new(u32::MAX, 0, u32::MAX))
-            .map_err(|_e: EngineError| ());
+
+        // P0: run the engine synchronously, but allow multiple internal steps per paint so that
+        // medium-sized datasets can produce the first set of marks without relying on external
+        // redraw triggers.
+        let start = Instant::now();
+        let mut unfinished = true;
+        let mut steps_ran = 0u32;
+        while unfinished && steps_ran < 8 && start.elapsed() < Duration::from_millis(4) {
+            let budget = if self.cached_paths.is_empty() {
+                WorkBudget::new(262_144, 0, 32)
+            } else {
+                WorkBudget::new(32_768, 0, 8)
+            };
+
+            let step = self.engine.step(&mut measurer, budget);
+            match step {
+                Ok(step) => {
+                    unfinished = step.unfinished;
+                }
+                Err(EngineError::MissingViewport) => {
+                    unfinished = false;
+                }
+            }
+            steps_ran = steps_ran.saturating_add(1);
+        }
+
+        if unfinished && let Some(window) = cx.window {
+            cx.app.request_redraw(window);
+        }
 
         self.rebuild_paths_if_needed(cx);
         self.clear_tooltip_text_cache(cx.services);
@@ -1336,7 +1469,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     order: DrawOrder(base_order),
                     origin: self.last_layout.plot.origin,
                     path: fill,
-                    color: self.style.area_fill_color,
+                    color: cached.fill_color.unwrap_or(self.style.area_fill_color),
                 });
             }
             cx.scene.push(SceneOp::Path {

@@ -18,6 +18,8 @@ pub enum ModelError {
     DuplicateId { kind: &'static str },
     #[error("missing referenced id: {kind}")]
     MissingReference { kind: &'static str },
+    #[error("invalid spec: {reason}")]
+    InvalidSpec { reason: &'static str },
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -125,6 +127,11 @@ impl ChartModel {
             if !series_ids.insert(series.id) {
                 return Err(ModelError::DuplicateId { kind: "series" });
             }
+            if series.kind == SeriesKind::Band && series.y2_col.is_none() {
+                return Err(ModelError::InvalidSpec {
+                    reason: "series.kind=Band requires y2_col",
+                });
+            }
             if !model.datasets.contains_key(&series.dataset) {
                 return Err(ModelError::MissingReference { kind: "dataset" });
             }
@@ -148,6 +155,7 @@ impl ChartModel {
                     dataset: series.dataset,
                     x_col: series.x_col,
                     y_col: series.y_col,
+                    y2_col: series.y2_col,
                     x_axis: series.x_axis,
                     y_axis: series.y_axis,
                     visible: true,
@@ -200,6 +208,7 @@ pub struct SeriesModel {
     pub dataset: DatasetId,
     pub x_col: usize,
     pub y_col: usize,
+    pub y2_col: Option<usize>,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
     pub visible: bool,

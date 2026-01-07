@@ -35,11 +35,21 @@ fn basic_spec() -> ChartSpec {
             dataset: crate::ids::DatasetId::new(1),
             x_col: 0,
             y_col: 1,
+            y2_col: None,
             x_axis: crate::ids::AxisId::new(1),
             y_axis: crate::ids::AxisId::new(2),
             area_baseline: None,
         }],
     }
+}
+
+#[test]
+fn band_requires_y2_col() {
+    let mut spec = basic_spec();
+    spec.series[0].kind = SeriesKind::Band;
+    spec.series[0].y2_col = None;
+    let err = ChartModel::from_spec(spec).unwrap_err();
+    assert!(matches!(err, ModelError::InvalidSpec { .. }));
 }
 
 #[test]
@@ -100,6 +110,7 @@ fn replace_merge_can_replace_series_only() {
                     dataset: crate::ids::DatasetId::new(1),
                     x_col: 0,
                     y_col: 1,
+                    y2_col: None,
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
                     visible: Some(true),
@@ -134,6 +145,7 @@ fn replace_merge_keeps_and_merges_matching_ids() {
                     dataset: crate::ids::DatasetId::new(1),
                     x_col: 0,
                     y_col: 1,
+                    y2_col: None,
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
                     visible: Some(false),
@@ -260,6 +272,7 @@ fn merge_series_visibility_updates_visual_without_structure() {
                     dataset: crate::ids::DatasetId::new(1),
                     x_col: 0,
                     y_col: 1,
+                    y2_col: None,
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
                     visible: Some(false),

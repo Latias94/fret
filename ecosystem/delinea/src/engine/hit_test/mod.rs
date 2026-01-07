@@ -28,7 +28,11 @@ pub fn hover_hit_test(
         let Some(series) = model.series.get(&series_id) else {
             continue;
         };
-        if series.kind != SeriesKind::Line || !series.visible {
+        if !matches!(
+            series.kind,
+            SeriesKind::Line | SeriesKind::Area | SeriesKind::Band
+        ) || !series.visible
+        {
             continue;
         }
 
@@ -43,7 +47,20 @@ pub fn hover_hit_test(
         let Some(x) = table.column_f64(series.x_col) else {
             continue;
         };
-        let Some(y) = table.column_f64(series.y_col) else {
+        let y_col = if series.kind == SeriesKind::Band {
+            let variant = (node.id.0 & 0x7) as u8;
+            if variant == 2 {
+                let Some(y2) = series.y2_col else {
+                    continue;
+                };
+                y2
+            } else {
+                series.y_col
+            }
+        } else {
+            series.y_col
+        };
+        let Some(y) = table.column_f64(y_col) else {
             continue;
         };
 
@@ -206,6 +223,7 @@ mod tests {
                 dataset: dataset_id,
                 x_col: 0,
                 y_col: 1,
+                y2_col: None,
                 x_axis,
                 y_axis,
                 area_baseline: None,

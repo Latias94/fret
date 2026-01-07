@@ -60,10 +60,11 @@ impl ChartDemoDriver {
             ],
             series: vec![SeriesSpec {
                 id: series_id,
-                kind: SeriesKind::Area,
+                kind: SeriesKind::Band,
                 dataset: dataset_id,
                 x_col: 0,
                 y_col: 1,
+                y2_col: Some(2),
                 x_axis,
                 y_axis,
                 area_baseline: None,
@@ -78,18 +79,21 @@ impl ChartDemoDriver {
 
         let n = 65_536usize;
         let mut x: Vec<f64> = Vec::with_capacity(n);
-        let mut y: Vec<f64> = Vec::with_capacity(n);
+        let mut y0: Vec<f64> = Vec::with_capacity(n);
+        let mut y1: Vec<f64> = Vec::with_capacity(n);
         for i in 0..n {
             let t = i as f64 / (n - 1) as f64;
             let xi = t * 1000.0;
             let yi = (t * std::f64::consts::TAU * 8.0).sin();
             x.push(xi);
-            y.push(yi);
+            y0.push(yi);
+            y1.push(yi + 0.25);
         }
 
         let mut table = DataTable::default();
         table.push_column(Column::F64(x));
-        table.push_column(Column::F64(y));
+        table.push_column(Column::F64(y0));
+        table.push_column(Column::F64(y1));
         canvas
             .engine_mut()
             .datasets_mut()

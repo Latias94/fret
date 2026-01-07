@@ -1,9 +1,13 @@
 use std::collections::BTreeMap;
 
 use crate::action::Action;
+use crate::data::{Column, DataTable};
 use crate::engine::ChartEngine;
 use crate::engine::window::DataWindow;
+use crate::scheduler::WorkBudget;
 use crate::spec::{AxisKind, AxisSpec, ChartSpec, DatasetSpec, GridSpec, SeriesKind, SeriesSpec};
+use crate::text::{TextMeasurer, TextMetrics};
+use fret_core::{Px, Rect, Size};
 
 fn basic_spec() -> ChartSpec {
     ChartSpec {
@@ -35,6 +39,7 @@ fn basic_spec() -> ChartSpec {
             dataset: crate::ids::DatasetId::new(1),
             x_col: 0,
             y_col: 1,
+            y2_col: None,
             x_axis: crate::ids::AxisId::new(1),
             y_axis: crate::ids::AxisId::new(2),
             area_baseline: None,
@@ -77,4 +82,104 @@ fn set_view_window_2d_updates_both_axes() {
         },
     );
     assert_eq!(engine.state().data_window_y, expected_y);
+}
+
+#[derive(Debug, Default)]
+struct NullTextMeasurer;
+
+impl TextMeasurer for NullTextMeasurer {
+    fn measure(
+        &mut self,
+        _text: crate::ids::StringId,
+        _style: crate::text::TextStyleId,
+    ) -> TextMetrics {
+        TextMetrics::default()
+    }
+}
+
+#[test]
+fn band_emits_two_polylines() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(400.0)),
+        )),
+        datasets: vec![DatasetSpec { id: dataset_id }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                kind: AxisKind::X,
+                grid: grid_id,
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                range: None,
+            },
+        ],
+        series: vec![SeriesSpec {
+            id: series_id,
+            kind: SeriesKind::Band,
+            dataset: dataset_id,
+            x_col: 0,
+            y_col: 1,
+            y2_col: Some(2),
+            x_axis,
+            y_axis,
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    // Intentionally larger than the per-step bounds budget (4096) so that the engine must
+    // make progress across multiple `step()` calls.
+    let n = 32_768usize;
+    let mut xs = Vec::with_capacity(n);
+    let mut lo = Vec::with_capacity(n);
+    let mut hi = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = i as f64 / (n - 1) as f64;
+        xs.push(t * 10.0);
+        let y = (t * core::f64::consts::TAU).sin();
+        lo.push(y);
+        hi.push(y + 0.5);
+    }
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(lo));
+    table.push_column(Column::F64(hi));
+    engine.datasets_mut().datasets.push((dataset_id, table));
+
+    let mut measurer = NullTextMeasurer::default();
+    for _ in 0..512 {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(2_048, 0, 2))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+
+    let out = engine.output();
+    assert!(!out.marks.nodes.is_empty(), "expected marks to be emitted");
+    assert!(
+        out.marks.nodes.len() >= 2,
+        "expected band to emit two polyline nodes"
+    );
+    assert!(
+        out.marks.arena.points.len() >= 2,
+        "expected band marks to have points"
+    );
 }

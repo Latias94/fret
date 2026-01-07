@@ -1,4 +1,4 @@
-use fret_core::Rect;
+use fret_core::{Point, Px, Rect};
 
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
@@ -8,6 +8,7 @@ use crate::engine::lod::{
 };
 use crate::engine::model::ChartModel;
 use crate::engine::window::{DataWindowX, DataWindowY};
+use crate::ids::MarkId;
 use crate::marks::{MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkTree};
 use crate::paint::StrokeStyleV2;
 use crate::scheduler::WorkBudget;
@@ -90,7 +91,9 @@ impl MarksStage {
             };
             if !matches!(
                 series.kind,
-                crate::spec::SeriesKind::Line | crate::spec::SeriesKind::Area
+                crate::spec::SeriesKind::Line
+                    | crate::spec::SeriesKind::Area
+                    | crate::spec::SeriesKind::Band
             ) {
                 self.series_index += 1;
                 continue;
@@ -113,12 +116,28 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            let Some(y) = table.column_f64(series.y_col) else {
+            let Some(y0) = table.column_f64(series.y_col) else {
                 self.series_index += 1;
                 continue;
             };
+            let y1 = if series.kind == crate::spec::SeriesKind::Band {
+                let Some(y2_col) = series.y2_col else {
+                    self.series_index += 1;
+                    continue;
+                };
+                let Some(y1) = table.column_f64(y2_col) else {
+                    self.series_index += 1;
+                    continue;
+                };
+                Some(y1)
+            } else {
+                None
+            };
 
-            if self.cursor.next_index == 0 {
+            if self.cursor.next_index == 0
+                && self.bounds.is_none()
+                && self.bounds_cursor.next_index == 0
+            {
                 scratch.reset_buckets();
                 self.finalized = false;
                 self.bounds = None;
@@ -155,7 +174,7 @@ impl MarksStage {
                         w.clamp_non_degenerate();
                         (w.min, w.max)
                     } else {
-                        let mut bounds = compute_bounds(x, y).unwrap_or_default();
+                        let mut bounds = compute_bounds(x, y0).unwrap_or_default();
                         bounds.clamp_non_degenerate();
                         (bounds.x_min, bounds.x_max)
                     };
@@ -170,41 +189,76 @@ impl MarksStage {
                         apply_axis_constraints(model, series.x_axis, series.y_axis, bounds);
                         bounds.clamp_non_degenerate();
                     }
-                    continue;
+                } else if series.kind == crate::spec::SeriesKind::Band
+                    && let Some(y1) = y1
+                {
+                    let mut bounds0 = compute_bounds(x, y0).unwrap_or_default();
+                    bounds0.clamp_non_degenerate();
+                    let mut bounds1 = compute_bounds(x, y1).unwrap_or_default();
+                    bounds1.clamp_non_degenerate();
+
+                    let mut combined = DataBounds {
+                        x_min: bounds0.x_min.min(bounds1.x_min),
+                        x_max: bounds0.x_max.max(bounds1.x_max),
+                        y_min: bounds0.y_min.min(bounds1.y_min),
+                        y_max: bounds0.y_max.max(bounds1.y_max),
+                    };
+
+                    if let Some(mut w) = window_for_bounds {
+                        w.clamp_non_degenerate();
+                        combined.x_min = w.min;
+                        combined.x_max = w.max;
+                    }
+
+                    apply_axis_constraints(model, series.x_axis, series.y_axis, &mut combined);
+                    combined.clamp_non_degenerate();
+                    self.bounds = Some(combined);
+                } else {
+                    let mut done = compute_bounds_step(
+                        &mut self.bounds_cursor,
+                        &mut self.bounds_accum,
+                        x,
+                        y0,
+                        window_for_bounds,
+                        points_budget,
+                    )
+                    .unwrap_or(true);
+
+                    while !done {
+                        let points_budget = budget.take_points(4096) as usize;
+                        if points_budget == 0 {
+                            return false;
+                        }
+                        done = compute_bounds_step(
+                            &mut self.bounds_cursor,
+                            &mut self.bounds_accum,
+                            x,
+                            y0,
+                            window_for_bounds,
+                            points_budget,
+                        )
+                        .unwrap_or(true);
+                    }
+
+                    let mut bounds = compute_bounds(x, y0).unwrap_or_default();
+                    bounds.clamp_non_degenerate();
+
+                    let mut windowed = finalize_bounds(&self.bounds_accum, window_for_bounds)
+                        .unwrap_or(DataBounds {
+                            x_min: bounds.x_min,
+                            x_max: bounds.x_max,
+                            y_min: bounds.y_min,
+                            y_max: bounds.y_max,
+                        });
+
+                    if window_for_bounds.is_none() {
+                        windowed.x_min = bounds.x_min;
+                        windowed.x_max = bounds.x_max;
+                    }
+                    apply_axis_constraints(model, series.x_axis, series.y_axis, &mut windowed);
+                    windowed.clamp_non_degenerate();
+                    self.bounds = Some(windowed);
                 }
-
-                let done = compute_bounds_step(
-                    &mut self.bounds_cursor,
-                    &mut self.bounds_accum,
-                    x,
-                    y,
-                    window_for_bounds,
-                    points_budget,
-                )
-                .unwrap_or(true);
-
-                if !done {
-                    return false;
-                }
-
-                let mut bounds = compute_bounds(x, y).unwrap_or_default();
-                bounds.clamp_non_degenerate();
-
-                let mut windowed = finalize_bounds(&self.bounds_accum, window_for_bounds)
-                    .unwrap_or(DataBounds {
-                        x_min: bounds.x_min,
-                        x_max: bounds.x_max,
-                        y_min: bounds.y_min,
-                        y_max: bounds.y_max,
-                    });
-
-                if window_for_bounds.is_none() {
-                    windowed.x_min = bounds.x_min;
-                    windowed.x_max = bounds.x_max;
-                }
-                apply_axis_constraints(model, series.x_axis, series.y_axis, &mut windowed);
-                windowed.clamp_non_degenerate();
-                self.bounds = Some(windowed);
             }
             let Some(mut bounds) = self.bounds else {
                 self.series_index += 1;
@@ -233,23 +287,22 @@ impl MarksStage {
             apply_axis_constraints(model, series.x_axis, series.y_axis, &mut bounds);
             bounds.clamp_non_degenerate();
 
-            let points_budget = budget.take_points(4096) as usize;
-            if points_budget == 0 {
-                return false;
-            }
+            let mut finished_scan = false;
+            while !finished_scan {
+                let points_budget = budget.take_points(4096) as usize;
+                if points_budget == 0 {
+                    return false;
+                }
 
-            let finished_scan = minmax_per_pixel_step(
-                &mut self.cursor,
-                scratch,
-                x,
-                y,
-                &bounds,
-                viewport,
-                points_budget,
-            );
-
-            if !finished_scan {
-                return false;
+                finished_scan = minmax_per_pixel_step(
+                    &mut self.cursor,
+                    scratch,
+                    x,
+                    y0,
+                    &bounds,
+                    viewport,
+                    points_budget,
+                );
             }
 
             if !self.finalized {
@@ -260,30 +313,105 @@ impl MarksStage {
                 let range = minmax_per_pixel_finalize(
                     scratch,
                     x,
-                    y,
+                    y0,
                     &bounds,
                     viewport,
                     &mut marks.arena.points,
                     &mut marks.arena.data_indices,
                 );
-                let point_count = range.len() as u64;
-
+                let range_len = (range.end - range.start) as u64;
                 let stroke = Some((crate::ids::PaintId(0), StrokeStyleV2::default()));
-                marks.nodes.push(MarkNode {
-                    id: crate::ids::MarkId(series.id.0),
-                    parent: None,
-                    layer: crate::ids::LayerId(1),
-                    order: MarkOrderKey(self.series_index as u32),
-                    kind: MarkKind::Polyline,
-                    source_series: Some(series.id),
-                    payload: MarkPayloadRef::Polyline(MarkPolylineRef {
-                        points: range,
-                        stroke,
-                    }),
-                });
+                let base_order = self.series_index as u32;
 
-                stats.points_emitted += point_count;
-                stats.marks_emitted += 1;
+                if series.kind == crate::spec::SeriesKind::Band
+                    && let Some(y1) = y1
+                {
+                    let lower_range = range.clone();
+                    let start_upper = marks.arena.points.len();
+
+                    let x_span = bounds.x_max - bounds.x_min;
+                    let y_span = bounds.y_max - bounds.y_min;
+                    let x_span = if x_span.is_finite() && x_span > 0.0 {
+                        x_span
+                    } else {
+                        1.0
+                    };
+                    let y_span = if y_span.is_finite() && y_span > 0.0 {
+                        y_span
+                    } else {
+                        1.0
+                    };
+
+                    let indices: Vec<u32> = marks.arena.data_indices[lower_range.clone()].to_vec();
+                    for idx_u32 in indices {
+                        let i = idx_u32 as usize;
+                        let xi = x.get(i).copied().unwrap_or(f64::NAN);
+                        let yi = y1.get(i).copied().unwrap_or(f64::NAN);
+                        if !xi.is_finite() || !yi.is_finite() {
+                            continue;
+                        }
+
+                        let yi = yi.clamp(bounds.y_min, bounds.y_max);
+                        let tx = ((xi - bounds.x_min) / x_span).clamp(0.0, 1.0);
+                        let ty = ((yi - bounds.y_min) / y_span).clamp(0.0, 1.0);
+
+                        let px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                        let px_y =
+                            viewport.origin.y.0 + (1.0 - (ty as f32)) * viewport.size.height.0;
+
+                        marks.arena.points.push(Point::new(Px(px_x), Px(px_y)));
+                        marks.arena.data_indices.push(idx_u32);
+                    }
+
+                    let upper_range = start_upper..marks.arena.points.len();
+
+                    marks.nodes.push(MarkNode {
+                        id: series_mark_id(series.id, 1),
+                        parent: None,
+                        layer: crate::ids::LayerId(1),
+                        order: MarkOrderKey(base_order.saturating_mul(2)),
+                        kind: MarkKind::Polyline,
+                        source_series: Some(series.id),
+                        payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                            points: lower_range.clone(),
+                            stroke: stroke.clone(),
+                        }),
+                    });
+                    marks.nodes.push(MarkNode {
+                        id: series_mark_id(series.id, 2),
+                        parent: None,
+                        layer: crate::ids::LayerId(1),
+                        order: MarkOrderKey(base_order.saturating_mul(2).saturating_add(1)),
+                        kind: MarkKind::Polyline,
+                        source_series: Some(series.id),
+                        payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                            points: upper_range.clone(),
+                            stroke: stroke.clone(),
+                        }),
+                    });
+
+                    stats.points_emitted += (lower_range.end - lower_range.start) as u64;
+                    stats.points_emitted += (upper_range.end - upper_range.start) as u64;
+                    stats.marks_emitted += 2;
+                    marks.revision.bump();
+                } else {
+                    marks.nodes.push(MarkNode {
+                        id: series_mark_id(series.id, 0),
+                        parent: None,
+                        layer: crate::ids::LayerId(1),
+                        order: MarkOrderKey(base_order.saturating_mul(2)),
+                        kind: MarkKind::Polyline,
+                        source_series: Some(series.id),
+                        payload: MarkPayloadRef::Polyline(MarkPolylineRef {
+                            points: range,
+                            stroke: stroke.clone(),
+                        }),
+                    });
+
+                    stats.points_emitted += range_len;
+                    stats.marks_emitted += 1;
+                    marks.revision.bump();
+                }
                 self.finalized = true;
             }
 
@@ -295,6 +423,10 @@ impl MarksStage {
 
         true
     }
+}
+
+fn series_mark_id(series: crate::ids::SeriesId, variant: u64) -> MarkId {
+    MarkId((series.0 << 3) | (variant & 0x7))
 }
 
 fn axis_locked_window_x(range: AxisRange) -> Option<DataWindowX> {
