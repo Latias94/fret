@@ -388,6 +388,34 @@ impl NodeGraphPresenter for DemoTypedPresenter {
             ops,
         }
     }
+
+    fn list_conversions(
+        &mut self,
+        graph: &Graph,
+        from: PortId,
+        to: PortId,
+    ) -> Vec<InsertNodeTemplate> {
+        let Some(from_port) = graph.ports.get(&from) else {
+            return Vec::new();
+        };
+        let Some(to_port) = graph.ports.get(&to) else {
+            return Vec::new();
+        };
+        if from_port.kind != PortKind::Data || to_port.kind != PortKind::Data {
+            return Vec::new();
+        }
+        let (from_ty, to_ty) = match (from_port.ty.as_ref(), to_port.ty.as_ref()) {
+            (Some(a), Some(b)) => (a, b),
+            _ => return Vec::new(),
+        };
+        let Some(kind) = convert_kind(from_ty, to_ty) else {
+            return Vec::new();
+        };
+        let Some((from_ty, to_ty, _label)) = convert_spec(&kind) else {
+            return Vec::new();
+        };
+        vec![convert_template(&kind, from_ty, to_ty)]
+    }
 }
 
 struct NodeGraphDomainDemoWindowState {

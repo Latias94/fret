@@ -17,7 +17,9 @@ use crate::core::{
 };
 use crate::io::{NodeGraphConnectionMode, NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
-use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
+use crate::rules::{
+    ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint, plan_connect_by_inserting_node,
+};
 
 use super::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
@@ -46,6 +48,7 @@ struct InteractionState {
     hover_edge: Option<EdgeId>,
     hover_port: Option<PortId>,
     hover_port_valid: bool,
+    hover_port_convertible: bool,
     context_menu: Option<ContextMenuState>,
     toast: Option<ToastState>,
 }
@@ -1048,11 +1051,20 @@ impl NodeGraphCanvas {
             && self.interaction.hover_port.is_some()
             && !self.interaction.hover_port_valid
         {
-            Color {
-                r: 0.90,
-                g: 0.35,
-                b: 0.35,
-                a: 1.0,
+            if self.interaction.hover_port_convertible {
+                Color {
+                    r: 0.95,
+                    g: 0.75,
+                    b: 0.20,
+                    a: 1.0,
+                }
+            } else {
+                Color {
+                    r: 0.90,
+                    g: 0.35,
+                    b: 0.35,
+                    a: 1.0,
+                }
             }
         } else {
             self.style.context_menu_border
@@ -1334,6 +1346,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
                     self.interaction.hover_port = None;
                     self.interaction.hover_port_valid = false;
+                    self.interaction.hover_port_convertible = false;
                     self.interaction.hover_edge = None;
 
                     if canceled {
@@ -1669,6 +1682,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.edge_drag = None;
                         self.interaction.hover_port = None;
                         self.interaction.hover_port_valid = false;
+                        self.interaction.hover_port_convertible = false;
                         let yank = (modifiers.ctrl || modifiers.meta).then(|| {
                             let this = &*self;
                             this.graph
@@ -1708,6 +1722,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.edge_drag = None;
                         self.interaction.hover_port = None;
                         self.interaction.hover_port_valid = false;
+                        self.interaction.hover_port_convertible = false;
                         let offset = Point::new(
                             Px(position.x.0 - rect.origin.x.0),
                             Px(position.y.0 - rect.origin.y.0),
@@ -1736,6 +1751,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.wire_drag = None;
                         self.interaction.hover_port = None;
                         self.interaction.hover_port_valid = false;
+                        self.interaction.hover_port_convertible = false;
                         let multi = modifiers.ctrl || modifiers.meta;
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
@@ -1766,6 +1782,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.wire_drag = None;
                         self.interaction.hover_port = None;
                         self.interaction.hover_port_valid = false;
+                        self.interaction.hover_port_convertible = false;
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
                             s.selected_edges.clear();
@@ -1981,11 +1998,36 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         false
                     };
 
+                    let new_hover_convertible = if !new_hover_valid {
+                        if let Some(target) = new_hover {
+                            match &w.kind {
+                                WireDragKind::New { from, bundle } if bundle.len() <= 1 => {
+                                    let presenter = &mut *self.presenter;
+                                    self.graph
+                                        .read_ref(cx.app, |graph| {
+                                            !presenter
+                                                .list_conversions(graph, *from, target)
+                                                .is_empty()
+                                        })
+                                        .ok()
+                                        .unwrap_or(false)
+                                }
+                                _ => false,
+                            }
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    };
+
                     if self.interaction.hover_port != new_hover
                         || self.interaction.hover_port_valid != new_hover_valid
+                        || self.interaction.hover_port_convertible != new_hover_convertible
                     {
                         self.interaction.hover_port = new_hover;
                         self.interaction.hover_port_valid = new_hover_valid;
+                        self.interaction.hover_port_convertible = new_hover_convertible;
                     }
 
                     self.interaction.wire_drag = Some(w);
@@ -2108,6 +2150,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         });
                         self.interaction.hover_port = None;
                         self.interaction.hover_port_valid = false;
+                        self.interaction.hover_port_convertible = false;
 
                         match w.kind {
                             WireDragKind::New { from, bundle } => {
@@ -2127,6 +2170,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                     vec![from]
                                                 } else {
                                                     bundle
+                                                };
+                                                let allow_convert = sources.len() == 1;
+                                                let convert_at = CanvasPoint {
+                                                    x: w.pos.x.0,
+                                                    y: w.pos.y.0,
                                                 };
                                                 let mut ops_all: Vec<GraphOp> = Vec::new();
                                                 let mut toast: Option<(
@@ -2150,6 +2198,45 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                             ops_all.extend(plan.ops);
                                                         }
                                                         ConnectDecision::Reject => {
+                                                            if allow_convert {
+                                                                let conversions = presenter
+                                                                    .list_conversions(
+                                                                        &scratch, src, target,
+                                                                    );
+                                                                if conversions.len() == 1 {
+                                                                    if let Ok(spec) = conversions[0]
+                                                                        .instantiate(convert_at)
+                                                                    {
+                                                                        let insert_plan =
+                                                                            plan_connect_by_inserting_node(
+                                                                                &scratch,
+                                                                                src,
+                                                                                target,
+                                                                                EdgeId::new(),
+                                                                                EdgeId::new(),
+                                                                                spec,
+                                                                            );
+                                                                        if insert_plan.decision
+                                                                            == ConnectDecision::Accept
+                                                                        {
+                                                                            let tx = GraphTransaction {
+                                                                                label: None,
+                                                                                ops: insert_plan
+                                                                                    .ops
+                                                                                    .clone(),
+                                                                            };
+                                                                            let _ = apply_transaction(
+                                                                                &mut scratch,
+                                                                                &tx,
+                                                                            );
+                                                                            ops_all.extend(
+                                                                                insert_plan.ops,
+                                                                            );
+                                                                            continue;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
                                                             if toast.is_none() {
                                                                 toast =
                                                                     Self::toast_from_diagnostics(
@@ -2422,6 +2509,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let hovered_edge = self.interaction.hover_edge;
         let hovered_port = self.interaction.hover_port;
         let hovered_port_valid = self.interaction.hover_port_valid;
+        let hovered_port_convertible = self.interaction.hover_port_convertible;
         let wire_drag = self.interaction.wire_drag.clone();
         let marked_ports: HashSet<PortId> = match wire_drag.as_ref().map(|w| &w.kind) {
             Some(WireDragKind::New { bundle, .. }) if bundle.len() > 1 => {
@@ -2539,19 +2627,28 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         if let Some(w) = &self.interaction.wire_drag {
             let to = hovered_port
-                .filter(|_| hovered_port_valid)
+                .filter(|_| hovered_port_valid || hovered_port_convertible)
                 .and_then(|port| render.port_centers.get(&port).copied())
                 .unwrap_or(w.pos);
-            let color = if hovered_port.is_some() && !hovered_port_valid {
-                Color {
-                    r: 0.90,
-                    g: 0.35,
-                    b: 0.35,
-                    a: 0.95,
-                }
-            } else {
-                self.style.wire_color_preview
-            };
+            let color =
+                if hovered_port.is_some() && !hovered_port_valid && !hovered_port_convertible {
+                    Color {
+                        r: 0.90,
+                        g: 0.35,
+                        b: 0.35,
+                        a: 0.95,
+                    }
+                } else if hovered_port.is_some() && hovered_port_convertible && !hovered_port_valid
+                {
+                    Color {
+                        r: 0.95,
+                        g: 0.75,
+                        b: 0.20,
+                        a: 0.95,
+                    }
+                } else {
+                    self.style.wire_color_preview
+                };
 
             let mut draw_preview = |from: Point| {
                 if let Some(path) = Self::prepare_wire_path(
@@ -2646,6 +2743,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             if hovered_port == Some(port_id) {
                 let border_color = if hovered_port_valid {
                     color
+                } else if hovered_port_convertible {
+                    Color {
+                        r: 0.95,
+                        g: 0.75,
+                        b: 0.20,
+                        a: 1.0,
+                    }
                 } else {
                     Color {
                         r: 0.90,

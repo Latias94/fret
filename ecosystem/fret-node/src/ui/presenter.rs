@@ -13,6 +13,7 @@ use crate::rules::{
     ConnectPlan, EdgeEndpoint, InsertNodeSpec, InsertNodeTemplate, plan_connect,
     plan_reconnect_edge, plan_split_edge_by_inserting_node,
 };
+use crate::types::TypeDesc;
 
 use super::style::NodeGraphStyle;
 
@@ -230,6 +231,50 @@ pub trait NodeGraphPresenter {
         new_port: PortId,
     ) -> ConnectPlan {
         plan_reconnect_edge(graph, edge, endpoint, new_port)
+    }
+
+    /// Returns the (possibly domain-derived) type of a port.
+    ///
+    /// This is a "typed graph profile" hook; the default implementation falls back to `Port::ty`.
+    fn type_of_port(&self, graph: &Graph, port: PortId) -> Option<TypeDesc> {
+        graph.ports.get(&port).and_then(|p| p.ty.clone())
+    }
+
+    /// Fast (UI-friendly) connectivity check for previews and hover states.
+    ///
+    /// Default implementation delegates to `plan_connect` but strips ops.
+    fn can_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
+        let mut plan = self.plan_connect(graph, a, b);
+        plan.ops.clear();
+        plan
+    }
+
+    /// Fast (UI-friendly) reconnect check for previews and hover states.
+    ///
+    /// Default implementation delegates to `plan_reconnect_edge` but strips ops.
+    fn can_reconnect_edge(
+        &mut self,
+        graph: &Graph,
+        edge: EdgeId,
+        endpoint: EdgeEndpoint,
+        new_port: PortId,
+    ) -> ConnectPlan {
+        let mut plan = self.plan_reconnect_edge(graph, edge, endpoint, new_port);
+        plan.ops.clear();
+        plan
+    }
+
+    /// Lists conversion templates that could make a rejected connection possible.
+    ///
+    /// UI may use this to show "convertible" targets, and to optionally auto-insert a conversion
+    /// node when there is exactly one unambiguous choice.
+    fn list_conversions(
+        &mut self,
+        _graph: &Graph,
+        _from: PortId,
+        _to: PortId,
+    ) -> Vec<InsertNodeTemplate> {
+        Vec::new()
     }
 }
 
