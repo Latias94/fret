@@ -3,8 +3,8 @@ use fret_core::Rect;
 use crate::data::DatasetStore;
 use crate::engine::ChartState;
 use crate::engine::lod::{
-    LodScratch, MinMaxPerPixelCursor, compute_bounds, minmax_per_pixel_finalize,
-    minmax_per_pixel_step,
+    BoundsAccum, BoundsCursor, DataBounds, LodScratch, MinMaxPerPixelCursor, compute_bounds,
+    compute_bounds_step, finalize_bounds, minmax_per_pixel_finalize, minmax_per_pixel_step,
 };
 use crate::marks::{MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkTree};
 use crate::paint::StrokeStyleV2;
@@ -16,11 +16,13 @@ use crate::stats::EngineStats;
 pub struct MarksStage {
     series_index: usize,
     cursor: MinMaxPerPixelCursor,
+    bounds_cursor: BoundsCursor,
+    bounds_accum: BoundsAccum,
     finalized: bool,
     dirty: bool,
     last_series_count: usize,
     last_data_rev: crate::ids::Revision,
-    bounds: Option<crate::engine::lod::DataBounds>,
+    bounds: Option<DataBounds>,
 }
 
 impl MarksStage {
@@ -54,8 +56,11 @@ impl MarksStage {
     pub fn reset(&mut self) {
         self.series_index = 0;
         self.cursor = MinMaxPerPixelCursor::default();
+        self.bounds_cursor = BoundsCursor::default();
+        self.bounds_accum.reset();
         self.finalized = false;
         self.dirty = false;
+        self.bounds = None;
     }
 
     pub fn step(
@@ -98,10 +103,47 @@ impl MarksStage {
                 scratch.reset_buckets();
                 self.finalized = false;
                 self.bounds = None;
+                self.bounds_cursor = BoundsCursor::default();
+                self.bounds_accum.reset();
             }
 
             if self.bounds.is_none() {
-                self.bounds = compute_bounds(x, y);
+                let points_budget = budget.take_points(4096) as usize;
+                if points_budget == 0 {
+                    return false;
+                }
+
+                let done = compute_bounds_step(
+                    &mut self.bounds_cursor,
+                    &mut self.bounds_accum,
+                    x,
+                    y,
+                    state.data_window_x,
+                    points_budget,
+                )
+                .unwrap_or(true);
+
+                if !done {
+                    return false;
+                }
+
+                let mut bounds = compute_bounds(x, y).unwrap_or_default();
+                bounds.clamp_non_degenerate();
+
+                let mut windowed = finalize_bounds(&self.bounds_accum, state.data_window_x)
+                    .unwrap_or(DataBounds {
+                        x_min: bounds.x_min,
+                        x_max: bounds.x_max,
+                        y_min: bounds.y_min,
+                        y_max: bounds.y_max,
+                    });
+
+                if state.data_window_x.is_none() {
+                    windowed.x_min = bounds.x_min;
+                    windowed.x_max = bounds.x_max;
+                }
+                windowed.clamp_non_degenerate();
+                self.bounds = Some(windowed);
             }
             let Some(mut bounds) = self.bounds else {
                 self.series_index += 1;

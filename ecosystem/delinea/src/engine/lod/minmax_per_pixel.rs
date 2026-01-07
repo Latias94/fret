@@ -2,35 +2,7 @@ use core::ops::Range;
 
 use fret_core::{Point, Px, Rect};
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct DataBounds {
-    pub x_min: f64,
-    pub x_max: f64,
-    pub y_min: f64,
-    pub y_max: f64,
-}
-
-impl DataBounds {
-    pub fn is_valid(&self) -> bool {
-        self.x_min.is_finite()
-            && self.x_max.is_finite()
-            && self.y_min.is_finite()
-            && self.y_max.is_finite()
-            && self.x_max > self.x_min
-            && self.y_max > self.y_min
-    }
-
-    pub fn clamp_non_degenerate(&mut self) {
-        if !self.x_min.is_finite() || !self.x_max.is_finite() || self.x_max <= self.x_min {
-            self.x_min = 0.0;
-            self.x_max = 1.0;
-        }
-        if !self.y_min.is_finite() || !self.y_max.is_finite() || self.y_max <= self.y_min {
-            self.y_min = 0.0;
-            self.y_max = 1.0;
-        }
-    }
-}
+use crate::engine::lod::DataBounds;
 
 #[derive(Debug, Default, Clone)]
 pub struct LodScratch {
@@ -141,6 +113,9 @@ pub fn minmax_per_pixel_step(
         let xi = x[i];
         let yi = y[i];
         if !xi.is_finite() || !yi.is_finite() {
+            continue;
+        }
+        if xi < bounds.x_min || xi > bounds.x_max {
             continue;
         }
 
