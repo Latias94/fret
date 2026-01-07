@@ -440,6 +440,48 @@ Reconnection protocol and anchors (locked):
     similar to ReactFlow's `EdgeReconnectAnchor` concept for custom edges,
   - anchors must have a configurable hit radius (`reconnect_radius`) independent of wire stroke thickness.
 
+Parent/child subflows and movement extents (locked):
+
+- The editor must support a parent/child relationship between nodes (ReactFlow parity: `parentId`):
+  - a child node's `pos` is interpreted as **relative to its parent**,
+  - a node's derived absolute position is computed from the parent chain + per-node origin rules
+    (derived internals; see "Derived geometry and internals").
+- Parent/child is a **layout/interaction contract**:
+  - dragging a parent moves its children as a group,
+  - selection, hit-testing, and z-order must behave deterministically when parents overlap children.
+- Movement extents must support both global and per-node constraints (ReactFlow parity: `nodeExtent`):
+  - graph-wide extent ("global node extent") clamps nodes from leaving a defined canvas region,
+  - per-node extent may override the global extent for that node.
+- Parent extent modes:
+  - a child may declare its extent as `"parent"` (clamp within the parent bounds),
+  - alternatively, a child may opt into `"expand_parent"` behavior: moving/resizing the child can
+    expand the parent bounds rather than clamping the child.
+- Deterministic clamping during multi-select drag:
+  - when dragging multiple nodes under a global extent, clamping must be applied based on the
+    bounding box of the dragged set, not per-node independently, to avoid jitter and drift
+    (matches ReactFlow's multi-drag extent adjustments).
+- These constraints are **editor interaction policy**, but their inputs must be persistable:
+  - parent/child relationships are part of the graph document (asset semantics),
+  - extents may be stored as graph semantics (for graphs that require it) or as profile policy defaults.
+
+Auto-pan, snapping, and drag thresholds (locked):
+
+- The editor supports snapping to a grid for node move and resize interactions (ReactFlow parity):
+  - `snap_to_grid: bool`
+  - `snap_grid: (x, y)`
+  - snapping must be applied consistently in all coordinate conversion helpers (screen <-> canvas)
+    and in all interactive edits (drag, paste, align tools).
+- Drag threshold must be stable under zoom:
+  - the minimal pointer movement before a drag starts is measured in screen pixels and must not
+    implicitly scale with zoom (matches XyFlow's `nodeDragThreshold` fixes).
+- Auto-pan is supported for editor-grade UX:
+  - auto-pan while dragging nodes near viewport edges,
+  - auto-pan while connecting/reconnecting edges near viewport edges,
+  - optional auto-pan when focusing a node via keyboard navigation.
+- Auto-pan tunables are part of editor view state (not graph semantics):
+  - enable flags per workflow (node drag / connect / focus),
+  - speed and edge margin thresholds.
+
 Node presentation contract (Viewer-style):
 
 - The node graph widget does not own domain UI. Instead, a presenter/viewer surface is provided
