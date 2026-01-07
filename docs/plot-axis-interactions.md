@@ -73,5 +73,12 @@ The goal is to keep locks discoverable without forcing a context menu early:
 - `Shift+L` toggles pan lock for the region under the pointer.
 - `Ctrl+L` toggles zoom lock for the region under the pointer.
 
+These shortcuts are configurable via `PlotInputMap`:
+
+- `axis_lock_click`
+- `axis_lock_toggle`
+- `axis_pan_lock_toggle`
+- `axis_zoom_lock_toggle`
+
 When `L`-toggling in the plot region, `fret-plot` treats this as a “global lock” toggle and
 applies it to X and all visible Y axes.
