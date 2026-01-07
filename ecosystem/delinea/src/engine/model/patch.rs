@@ -4,7 +4,7 @@ use fret_core::Rect;
 
 use crate::engine::model::{AxisModel, ChartModel, GridModel, ModelError, SeriesModel};
 use crate::ids::{AxisId, DatasetId, GridId, SeriesId};
-use crate::spec::{AxisKind, AxisRange, SeriesKind};
+use crate::spec::{AreaBaseline, AxisKind, AxisRange, SeriesKind};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -301,6 +301,14 @@ impl ChartPatch {
                             report.marks_changed = true;
                         }
                     }
+
+                    if let Some(baseline) = series.area_baseline
+                        && existing.area_baseline != baseline
+                    {
+                        existing.area_baseline = baseline;
+                        model.revs.bump_visual();
+                        report.marks_changed = true;
+                    }
                 }
                 SeriesOp::Remove { id } => {
                     if model.series.remove(&id).is_some() {
@@ -484,6 +492,7 @@ pub struct SeriesPatch {
     pub x_axis: AxisId,
     pub y_axis: AxisId,
     pub visible: Option<bool>,
+    pub area_baseline: Option<AreaBaseline>,
 }
 
 impl From<SeriesPatch> for SeriesModel {
@@ -497,6 +506,7 @@ impl From<SeriesPatch> for SeriesModel {
             x_axis: p.x_axis,
             y_axis: p.y_axis,
             visible: p.visible.unwrap_or(true),
+            area_baseline: p.area_baseline.unwrap_or_default(),
         }
     }
 }

@@ -8,7 +8,7 @@ use fret_core::Rect;
 use thiserror::Error;
 
 use crate::ids::{AxisId, ChartId, DatasetId, GridId, Revision, SeriesId};
-use crate::spec::{AxisKind, AxisRange, SeriesKind};
+use crate::spec::{AreaBaseline, AxisKind, AxisRange, SeriesKind};
 
 pub use patch::*;
 
@@ -151,6 +151,7 @@ impl ChartModel {
                     x_axis: series.x_axis,
                     y_axis: series.y_axis,
                     visible: true,
+                    area_baseline: series.area_baseline.unwrap_or_default(),
                 },
             );
         }
@@ -202,4 +203,5 @@ pub struct SeriesModel {
     pub x_axis: AxisId,
     pub y_axis: AxisId,
     pub visible: bool,
+    pub area_baseline: AreaBaseline,
 }

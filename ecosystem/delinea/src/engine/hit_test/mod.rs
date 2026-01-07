@@ -208,6 +208,7 @@ mod tests {
                 y_col: 1,
                 x_axis,
                 y_axis,
+                area_baseline: None,
             }],
         };
 

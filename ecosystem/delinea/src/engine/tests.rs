@@ -37,6 +37,7 @@ fn basic_spec() -> ChartSpec {
             y_col: 1,
             x_axis: crate::ids::AxisId::new(1),
             y_axis: crate::ids::AxisId::new(2),
+            area_baseline: None,
         }],
     }
 }

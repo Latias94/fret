@@ -37,6 +37,7 @@ fn basic_spec() -> ChartSpec {
             y_col: 1,
             x_axis: crate::ids::AxisId::new(1),
             y_axis: crate::ids::AxisId::new(2),
+            area_baseline: None,
         }],
     }
 }
@@ -102,6 +103,7 @@ fn replace_merge_can_replace_series_only() {
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
                     visible: Some(true),
+                    area_baseline: None,
                 })],
                 ..ChartPatch::default()
             },
@@ -135,6 +137,7 @@ fn replace_merge_keeps_and_merges_matching_ids() {
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
                     visible: Some(false),
+                    area_baseline: None,
                 })],
                 ..ChartPatch::default()
             },
@@ -260,6 +263,7 @@ fn merge_series_visibility_updates_visual_without_structure() {
                     x_axis: crate::ids::AxisId::new(1),
                     y_axis: crate::ids::AxisId::new(2),
                     visible: Some(false),
+                    area_baseline: None,
                 })],
                 ..ChartPatch::default()
             },

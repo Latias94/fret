@@ -118,6 +118,18 @@ pub enum SeriesKind {
     Area,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum AreaBaseline {
+    /// Close the area to the minimum of the current Y window.
+    #[default]
+    AxisMin,
+    /// Close the area to Y=0 in data space (clamped to the current Y window).
+    Zero,
+    /// Close the area to a fixed Y value in data space (clamped to the current Y window).
+    Value(f64),
+}
+
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SeriesSpec {
@@ -130,4 +142,6 @@ pub struct SeriesSpec {
     pub y_col: usize,
     pub x_axis: AxisId,
     pub y_axis: AxisId,
+    /// Area baseline configuration (only used when `kind == Area`).
+    pub area_baseline: Option<AreaBaseline>,
 }
