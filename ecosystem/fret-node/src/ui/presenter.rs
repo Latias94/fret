@@ -76,6 +76,25 @@ pub trait NodeGraphPresenter {
         }
     }
 
+    /// Lists nodes that can be inserted into the graph from a palette (background insert).
+    ///
+    /// Returning an empty list disables the insert-node picker by default.
+    fn list_insertable_nodes(&mut self, _graph: &Graph) -> Vec<InsertNodeCandidate> {
+        Vec::new()
+    }
+
+    /// Plans inserting a node into the graph (background insert).
+    ///
+    /// The returned ops must be valid reversible graph edits.
+    fn plan_create_node(
+        &mut self,
+        _graph: &Graph,
+        _candidate: &InsertNodeCandidate,
+        _at: CanvasPoint,
+    ) -> Result<Vec<GraphOp>, Arc<str>> {
+        Err(Arc::<str>::from("node insertion is not supported"))
+    }
+
     /// Lists insertable nodes for split-edge workflows.
     ///
     /// Implementations may inspect the edge type and port types to return compatible candidates.
@@ -412,5 +431,73 @@ impl NodeGraphPresenter for RegistryNodeGraphPresenter {
 
     fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
         Some(&mut *self.profile)
+    }
+
+    fn list_insertable_nodes(&mut self, _graph: &Graph) -> Vec<InsertNodeCandidate> {
+        let mut out: Vec<InsertNodeCandidate> = Vec::new();
+        for schema in self.registry.schemas() {
+            let label = if schema.category.is_empty() {
+                schema.title.clone()
+            } else {
+                format!("{}/{}", schema.category.join("/"), schema.title)
+            };
+            out.push(InsertNodeCandidate {
+                kind: schema.kind.clone(),
+                label: Arc::<str>::from(label),
+                enabled: true,
+                template: None,
+                payload: Value::Null,
+            });
+        }
+        out
+    }
+
+    fn plan_create_node(
+        &mut self,
+        _graph: &Graph,
+        candidate: &InsertNodeCandidate,
+        at: CanvasPoint,
+    ) -> Result<Vec<GraphOp>, Arc<str>> {
+        let Some(schema) = self.registry.get(&candidate.kind).cloned() else {
+            return Err(Arc::<str>::from("missing node schema"));
+        };
+
+        let node_id = NodeId::new();
+        let node = Node {
+            kind: schema.kind,
+            kind_version: schema.latest_kind_version,
+            pos: at,
+            collapsed: false,
+            ports: Vec::new(),
+            data: schema.default_data,
+        };
+
+        let mut port_ids: Vec<PortId> = Vec::new();
+        let mut ops: Vec<GraphOp> = Vec::new();
+        ops.push(GraphOp::AddNode { id: node_id, node });
+        for decl in schema.ports {
+            let port_id = PortId::new();
+            port_ids.push(port_id);
+            ops.push(GraphOp::AddPort {
+                id: port_id,
+                port: Port {
+                    node: node_id,
+                    key: decl.key,
+                    dir: decl.dir,
+                    kind: decl.kind,
+                    capacity: decl.capacity,
+                    ty: decl.ty,
+                    data: Value::Null,
+                },
+            });
+        }
+
+        ops.push(GraphOp::SetNodePorts {
+            id: node_id,
+            from: Vec::new(),
+            to: port_ids,
+        });
+
+        Ok(ops)
     }
 }

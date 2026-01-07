@@ -88,4 +88,9 @@ impl NodeRegistry {
     pub fn get(&self, kind: &NodeKindKey) -> Option<&NodeSchema> {
         self.by_kind.get(kind)
     }
+
+    /// Iterates all registered schemas in deterministic order (by kind key).
+    pub fn schemas(&self) -> impl Iterator<Item = &NodeSchema> {
+        self.by_kind.values()
+    }
 }

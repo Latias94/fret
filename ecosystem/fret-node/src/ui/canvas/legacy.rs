@@ -25,8 +25,8 @@ use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint
 
 use crate::ui::commands::{
     CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CUT, CMD_NODE_GRAPH_DELETE_SELECTION,
-    CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_SELECT_ALL,
-    CMD_NODE_GRAPH_UNDO,
+    CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_PASTE,
+    CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
 };
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
@@ -51,6 +51,7 @@ struct ViewSnapshot {
 struct InteractionState {
     last_pos: Option<Point>,
     last_canvas_pos: Option<CanvasPoint>,
+    last_bounds: Option<Rect>,
     panning: bool,
     pending_node_drag: Option<PendingNodeDrag>,
     node_drag: Option<NodeDrag>,
@@ -110,6 +111,9 @@ struct EdgeDrag {
 #[derive(Debug, Clone)]
 enum ContextMenuTarget {
     Background,
+    BackgroundInsertNodePicker {
+        at: CanvasPoint,
+    },
     Edge(EdgeId),
     EdgeInsertNodePicker(EdgeId),
     ConnectionConvertPicker {
@@ -1038,6 +1042,107 @@ impl NodeGraphCanvas {
         None
     }
 
+    fn build_reroute_create_ops(at: CanvasPoint) -> Vec<GraphOp> {
+        let node_id = GraphNodeId::new();
+        let in_port_id = PortId::new();
+        let out_port_id = PortId::new();
+
+        let node = crate::core::Node {
+            kind: NodeKindKey::new(REROUTE_KIND),
+            kind_version: 1,
+            pos: at,
+            collapsed: false,
+            ports: Vec::new(),
+            data: serde_json::Value::Null,
+        };
+
+        let in_port = crate::core::Port {
+            node: node_id,
+            key: crate::core::PortKey::new("in"),
+            dir: PortDirection::In,
+            kind: crate::core::PortKind::Data,
+            capacity: crate::core::PortCapacity::Single,
+            ty: None,
+            data: serde_json::Value::Null,
+        };
+
+        let out_port = crate::core::Port {
+            node: node_id,
+            key: crate::core::PortKey::new("out"),
+            dir: PortDirection::Out,
+            kind: crate::core::PortKind::Data,
+            capacity: crate::core::PortCapacity::Multi,
+            ty: None,
+            data: serde_json::Value::Null,
+        };
+
+        vec![
+            GraphOp::AddNode { id: node_id, node },
+            GraphOp::AddPort {
+                id: in_port_id,
+                port: in_port,
+            },
+            GraphOp::AddPort {
+                id: out_port_id,
+                port: out_port,
+            },
+            GraphOp::SetNodePorts {
+                id: node_id,
+                from: Vec::new(),
+                to: vec![in_port_id, out_port_id],
+            },
+        ]
+    }
+
+    fn open_insert_node_picker<H: UiHost>(&mut self, host: &mut H, at: CanvasPoint) {
+        let candidates: Vec<InsertNodeCandidate> = {
+            let presenter = &mut *self.presenter;
+            self.graph
+                .read_ref(host, |graph| presenter.list_insertable_nodes(graph))
+                .ok()
+                .unwrap_or_default()
+        };
+
+        let mut menu_candidates: Vec<InsertNodeCandidate> = Vec::new();
+        menu_candidates.push(InsertNodeCandidate {
+            kind: NodeKindKey::new(REROUTE_KIND),
+            label: Arc::<str>::from("Reroute"),
+            enabled: true,
+            template: None,
+            payload: serde_json::Value::Null,
+        });
+        menu_candidates.extend(candidates);
+
+        let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
+        for (ix, c) in menu_candidates.iter().enumerate() {
+            items.push(NodeGraphContextMenuItem {
+                label: c.label.clone(),
+                enabled: c.enabled,
+                action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
+            });
+        }
+
+        let snapshot = self.sync_view_state(host);
+        let bounds = self.interaction.last_bounds.unwrap_or_default();
+        let origin = self.clamp_context_menu_origin(
+            Point::new(Px(at.x), Px(at.y)),
+            items.len(),
+            bounds,
+            &snapshot,
+        );
+        let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
+        self.interaction.context_menu = Some(ContextMenuState {
+            origin,
+            invoked_at: Point::new(Px(at.x), Px(at.y)),
+            target: ContextMenuTarget::BackgroundInsertNodePicker { at },
+            items,
+            candidates: menu_candidates,
+            hovered_item: None,
+            active_item,
+            typeahead: String::new(),
+        });
+    }
+
     fn activate_context_menu_item<H: UiHost>(
         &mut self,
         cx: &mut EventCx<'_, H>,
@@ -1049,6 +1154,46 @@ impl NodeGraphCanvas {
         match (target, item.action) {
             (_, NodeGraphContextMenuAction::Command(command)) => {
                 cx.dispatch_command(command);
+            }
+            (
+                ContextMenuTarget::BackgroundInsertNodePicker { at },
+                NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
+            ) => {
+                let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
+                    return;
+                };
+
+                let outcome = if candidate.kind.0 == REROUTE_KIND {
+                    Some(Ok(Self::build_reroute_create_ops(*at)))
+                } else {
+                    let presenter = &mut *self.presenter;
+                    self.graph
+                        .read_ref(cx.app, |graph| {
+                            presenter.plan_create_node(graph, &candidate, *at)
+                        })
+                        .ok()
+                };
+
+                match outcome {
+                    Some(Ok(ops)) => {
+                        let node_id = Self::first_added_node_id(&ops);
+                        if self.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
+                            if let Some(node_id) = node_id {
+                                self.update_view_state(cx.app, |s| {
+                                    s.selected_edges.clear();
+                                    s.selected_nodes.clear();
+                                    s.selected_nodes.push(node_id);
+                                    s.draw_order.retain(|id| *id != node_id);
+                                    s.draw_order.push(node_id);
+                                });
+                            }
+                        }
+                    }
+                    Some(Err(msg)) => {
+                        self.show_toast(cx.app, cx.window, DiagnosticSeverity::Info, msg)
+                    }
+                    None => {}
+                }
             }
             (
                 ContextMenuTarget::Edge(edge_id),
@@ -1772,6 +1917,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         }
 
         match command.as_str() {
+            CMD_NODE_GRAPH_OPEN_INSERT_NODE => {
+                let at = self.interaction.last_canvas_pos.unwrap_or_default();
+                self.open_insert_node_picker(cx.app, at);
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
             CMD_NODE_GRAPH_UNDO => {
                 let did = self.undo_last(cx.app, cx.window);
                 if did {
@@ -1891,6 +2043,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         let snapshot = self.sync_view_state(cx.app);
+        self.interaction.last_bounds = Some(cx.bounds);
         let zoom = snapshot.zoom;
 
         match event {
@@ -2240,6 +2393,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         let has_selection = !snapshot.selected_nodes.is_empty()
                             || !snapshot.selected_edges.is_empty();
                         let items: Vec<NodeGraphContextMenuItem> = vec![
+                            NodeGraphContextMenuItem {
+                                label: Arc::<str>::from("Insert Node..."),
+                                enabled: true,
+                                action: NodeGraphContextMenuAction::Command(CommandId::from(
+                                    CMD_NODE_GRAPH_OPEN_INSERT_NODE,
+                                )),
+                            },
                             NodeGraphContextMenuItem {
                                 label: Arc::<str>::from("Paste"),
                                 enabled: cx.window.is_some(),
