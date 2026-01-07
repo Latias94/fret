@@ -21,11 +21,11 @@ use crate::rules::{
     ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint, plan_connect_by_inserting_node,
 };
 
-use super::presenter::{
+use crate::ui::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
     NodeGraphContextMenuItem, NodeGraphPresenter,
 };
-use super::style::NodeGraphStyle;
+use crate::ui::style::NodeGraphStyle;
 
 #[derive(Debug, Clone)]
 struct ViewSnapshot {
