@@ -119,9 +119,19 @@ impl CanvasSpatialIndex {
             edges: HashMap::new(),
         };
 
-        for (&port_id, handle) in &geom.ports {
-            let cell = point_to_cell(handle.center, cell_size);
-            out.ports.entry(cell_key(cell)).or_default().push(port_id);
+        // Insert ports in node draw order so that tie-breaking (when distances match) can prefer
+        // the top-most node without relying on map iteration order.
+        for node_id in geom.order.iter().copied() {
+            let Some(node) = graph.nodes.get(&node_id) else {
+                continue;
+            };
+            for port_id in node.ports.iter().copied() {
+                let Some(handle) = geom.ports.get(&port_id) else {
+                    continue;
+                };
+                let cell = point_to_cell(handle.center, cell_size);
+                out.ports.entry(cell_key(cell)).or_default().push(port_id);
+            }
         }
 
         let pad = max_hit_pad_canvas.max(0.0);

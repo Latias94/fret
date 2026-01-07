@@ -21,6 +21,7 @@ pub(crate) struct NodeGeometry {
 /// Geometry for a single port handle.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct PortHandleGeometry {
+    pub(crate) node: NodeId,
     pub(crate) dir: PortDirection,
     pub(crate) center: Point,
     pub(crate) bounds: Rect,
@@ -30,6 +31,7 @@ pub(crate) struct PortHandleGeometry {
 #[derive(Debug, Default, Clone)]
 pub(crate) struct CanvasGeometry {
     pub(crate) order: Vec<NodeId>,
+    pub(crate) node_rank: BTreeMap<NodeId, u32>,
     pub(crate) nodes: BTreeMap<NodeId, NodeGeometry>,
     pub(crate) ports: BTreeMap<PortId, PortHandleGeometry>,
 }
@@ -48,6 +50,14 @@ impl CanvasGeometry {
         }
 
         out.order = node_order(graph, draw_order);
+        out.node_rank = out
+            .order
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(ix, id)| (id, ix as u32))
+            .collect();
+
         for node_id in out.order.iter().copied() {
             let Some(node) = graph.nodes.get(&node_id) else {
                 continue;
@@ -112,6 +122,7 @@ impl CanvasGeometry {
                 out.ports.insert(
                     port_id,
                     PortHandleGeometry {
+                        node: node_id,
                         dir,
                         center,
                         bounds,

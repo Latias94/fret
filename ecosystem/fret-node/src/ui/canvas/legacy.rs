@@ -1224,7 +1224,8 @@ impl NodeGraphCanvas {
         index.query_ports(pos, r, scratch);
 
         let r2 = r * r;
-        let mut best: Option<(PortId, f32)> = None;
+        let mut best: Option<(PortId, f32, u32)> = None;
+        let eps = (1.0e-3 / zoom.max(1.0e-6)).max(1.0e-6);
         for &port_id in scratch.iter() {
             let Some(center) = geom.port_center(port_id) else {
                 continue;
@@ -1235,13 +1236,24 @@ impl NodeGraphCanvas {
             if d2 > r2 {
                 continue;
             }
+            let rank = geom
+                .ports
+                .get(&port_id)
+                .and_then(|h| geom.node_rank.get(&h.node).copied())
+                .unwrap_or(0);
             match best {
-                Some((_id, best_d2)) if best_d2 <= d2 => {}
-                _ => best = Some((port_id, d2)),
+                Some((_id, best_d2, best_rank)) => {
+                    if d2 + eps < best_d2 {
+                        best = Some((port_id, d2, rank));
+                    } else if (d2 - best_d2).abs() <= eps && rank > best_rank {
+                        best = Some((port_id, d2, rank));
+                    }
+                }
+                None => best = Some((port_id, d2, rank)),
             }
         }
 
-        best.map(|(id, _)| id)
+        best.map(|(id, _, _)| id)
     }
 
     fn pick_target_port(
@@ -1276,8 +1288,9 @@ impl NodeGraphCanvas {
                 }
                 let r = radius_screen / zoom;
                 let r2 = r * r;
+                let eps = (1.0e-3 / zoom.max(1.0e-6)).max(1.0e-6);
 
-                let mut best: Option<(PortId, f32)> = None;
+                let mut best: Option<(PortId, f32, bool, u32)> = None;
                 index.query_ports(pos, r, scratch);
                 for &port_id in scratch.iter() {
                     if port_id == from {
@@ -1286,9 +1299,6 @@ impl NodeGraphCanvas {
                     let Some(handle) = geom.ports.get(&port_id) else {
                         continue;
                     };
-                    if handle.dir != desired_dir {
-                        continue;
-                    }
                     let center = handle.center;
                     let dx = center.x.0 - pos.x.0;
                     let dy = center.y.0 - pos.y.0;
@@ -1296,13 +1306,25 @@ impl NodeGraphCanvas {
                     if d2 > r2 {
                         continue;
                     }
+                    let prefer_opposite = handle.dir == desired_dir;
+                    let rank = geom.node_rank.get(&handle.node).copied().unwrap_or(0);
                     match best {
-                        Some((_id, best_d2)) if best_d2 <= d2 => {}
-                        _ => best = Some((port_id, d2)),
+                        Some((_id, best_d2, best_prefer, best_rank)) => {
+                            if d2 + eps < best_d2 {
+                                best = Some((port_id, d2, prefer_opposite, rank));
+                            } else if (d2 - best_d2).abs() <= eps {
+                                if prefer_opposite && !best_prefer {
+                                    best = Some((port_id, d2, prefer_opposite, rank));
+                                } else if prefer_opposite == best_prefer && rank > best_rank {
+                                    best = Some((port_id, d2, prefer_opposite, rank));
+                                }
+                            }
+                        }
+                        None => best = Some((port_id, d2, prefer_opposite, rank)),
                     }
                 }
 
-                best.map(|(id, _)| id)
+                best.map(|(id, _, _, _)| id)
             }
         }
     }
