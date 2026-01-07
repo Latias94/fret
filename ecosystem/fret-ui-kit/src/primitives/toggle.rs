@@ -9,7 +9,9 @@
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
+use fret_runtime::Model;
 use fret_ui::element::PressableA11y;
+use fret_ui::{ElementContext, UiHost};
 
 /// A11y metadata for a toggle-like pressable.
 ///
@@ -22,4 +24,14 @@ pub fn toggle_a11y(label: Option<Arc<str>>, pressed: bool) -> PressableA11y {
         selected: pressed,
         ..Default::default()
     }
+}
+
+/// Returns a pressed-state model that behaves like Radix `useControllableState` (`pressed` /
+/// `defaultPressed`).
+pub fn toggle_use_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled: Option<Model<bool>>,
+    default_pressed: impl FnOnce() -> bool,
+) -> crate::primitives::controllable_state::ControllableModel<bool> {
+    crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_pressed)
 }

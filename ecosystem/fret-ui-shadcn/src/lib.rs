@@ -181,7 +181,7 @@ pub use table::{
 };
 pub use tabs::{Tabs, TabsItem, tabs, tabs_uncontrolled};
 pub use textarea::{Textarea, textarea};
-pub use toggle::{Toggle, ToggleSize, ToggleVariant, toggle};
+pub use toggle::{Toggle, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
 pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,
     toggle_group_multiple_uncontrolled, toggle_group_single, toggle_group_single_uncontrolled,

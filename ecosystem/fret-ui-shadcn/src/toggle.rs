@@ -103,7 +103,8 @@ fn toggle_text_style(theme: &Theme) -> TextStyle {
 
 #[derive(Clone)]
 pub struct Toggle {
-    model: Model<bool>,
+    model: Option<Model<bool>>,
+    default_pressed: bool,
     label: Option<Arc<str>>,
     children: Vec<AnyElement>,
     disabled: bool,
@@ -135,7 +136,25 @@ impl std::fmt::Debug for Toggle {
 impl Toggle {
     pub fn new(model: Model<bool>) -> Self {
         Self {
-            model,
+            model: Some(model),
+            default_pressed: false,
+            label: None,
+            children: Vec::new(),
+            disabled: false,
+            a11y_label: None,
+            on_click: None,
+            variant: ToggleVariant::default(),
+            size: ToggleSize::default(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates an uncontrolled toggle with an initial pressed value (Radix `defaultPressed`).
+    pub fn uncontrolled(default_pressed: bool) -> Self {
+        Self {
+            model: None,
+            default_pressed,
             label: None,
             children: Vec::new(),
             disabled: false,
@@ -160,6 +179,14 @@ impl Toggle {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Sets the uncontrolled initial pressed value (Radix `defaultPressed`).
+    ///
+    /// Note: If a controlled `model` is provided, this value is ignored.
+    pub fn default_pressed(mut self, default_pressed: bool) -> Self {
+        self.default_pressed = default_pressed;
         self
     }
 
@@ -194,7 +221,11 @@ impl Toggle {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let model = self.model;
+        let model =
+            fret_ui_kit::primitives::toggle::toggle_use_model(cx, self.model.clone(), || {
+                self.default_pressed
+            })
+            .model();
         let label = self.label;
         let children = self.children;
         let disabled = self.disabled;
@@ -358,4 +389,156 @@ pub fn toggle<H: UiHost>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
     Toggle::new(model).children(f(cx)).into_element(cx)
+}
+
+pub fn toggle_uncontrolled<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    default_pressed: bool,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+) -> AnyElement {
+    Toggle::uncontrolled(default_pressed)
+        .children(f(cx))
+        .into_element(cx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, Modifiers, PathCommand, Point, Px, Rect, Size, SvgId, SvgService,
+    };
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
+    use fret_runtime::{FrameId, TickId};
+    use fret_ui::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _text: &str,
+            _style: &TextStyle,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    fn render_uncontrolled_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        default_pressed: bool,
+    ) -> fret_core::NodeId {
+        app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "toggle", |cx| {
+                vec![
+                    Toggle::uncontrolled(default_pressed)
+                        .a11y_label("Toggle")
+                        .label("Hello")
+                        .into_element(cx),
+                ]
+            });
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    #[test]
+    fn toggle_uncontrolled_applies_default_pressed_once_and_does_not_reset() {
+        fn is_selected(ui: &UiTree<App>, label: &str) -> bool {
+            ui.semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .find(|n| n.label.as_deref() == Some(label))
+                .is_some_and(|n| n.flags.selected)
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root =
+            render_uncontrolled_frame(&mut ui, &mut app, &mut services, window, bounds, true);
+        assert!(is_selected(&ui, "Toggle"));
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable toggle");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyUp {
+                key: fret_core::KeyCode::Space,
+                modifiers: Modifiers::default(),
+            },
+        );
+
+        let _ = render_uncontrolled_frame(&mut ui, &mut app, &mut services, window, bounds, true);
+        assert!(!is_selected(&ui, "Toggle"));
+
+        // The internal model should not be reset by repeatedly passing the same default value.
+        let _ = render_uncontrolled_frame(&mut ui, &mut app, &mut services, window, bounds, true);
+        assert!(!is_selected(&ui, "Toggle"));
+    }
 }

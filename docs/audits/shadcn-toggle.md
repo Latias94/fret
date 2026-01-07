@@ -19,6 +19,8 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 
 - Partial: Fret exposes a `Toggle` builder instead of a fully composable primitive surface.
 - Pass: Supports controlled state via `Model<bool>`.
+- Pass: Supports uncontrolled initial state via `defaultPressed` (`Toggle::uncontrolled(...)` /
+  `Toggle::default_pressed(...)` / `toggle_uncontrolled(...)`).
 - Pass: Supports `variant` (`default` / `outline`) and `size` (`sm` / `default` / `lg`).
 - Pass: Supports both text labels (`label(...)`) and arbitrary children (`children(...)`).
 
@@ -42,7 +44,7 @@ the `new-york-v4` implementation in `repo-ref/ui`.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib toggle`
+- `cargo nextest run -p fret-ui-shadcn toggle`
 
 ## Follow-ups (recommended)
 
