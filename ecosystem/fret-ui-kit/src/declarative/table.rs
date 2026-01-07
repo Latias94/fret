@@ -159,6 +159,7 @@ enum DisplayRow {
         depth: usize,
     },
     Group {
+        grouping_column: ColumnId,
         row_key: RowKey,
         depth: usize,
         label: Arc<str>,
@@ -412,9 +413,13 @@ pub fn table_virtualized<H: UiHost, TData>(
                 };
 
                 match &row.kind {
-                    GroupedRowKind::Group { .. } => {
+                    GroupedRowKind::Group {
+                        grouping_column, ..
+                    } => {
                         let expanded_here = is_row_expanded(row.key, expanded);
+                        let grouping_column = grouping_column.clone();
                         out.push(DisplayRow::Group {
+                            grouping_column,
                             row_key: row.key,
                             depth: row.depth,
                             label: group_label_for_key(
@@ -908,6 +913,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                         u16::try_from(*depth).unwrap_or(u16::MAX),
                                                     ),
                                                     DisplayRow::Group {
+                                                        grouping_column,
                                                         row_key,
                                                         depth,
                                                         label,
@@ -917,6 +923,23 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                         let depth = *depth;
                                                         let expanded = *expanded;
                                                         let label = label.clone();
+                                                        let grouping_column = grouping_column.clone();
+
+                                                        let label_target: ColumnId = if left_cols
+                                                            .iter()
+                                                            .chain(center_cols.iter())
+                                                            .chain(right_cols.iter())
+                                                            .any(|c| c.id.as_ref() == grouping_column.as_ref())
+                                                        {
+                                                            grouping_column.clone()
+                                                        } else {
+                                                            left_cols
+                                                                .first()
+                                                                .or_else(|| center_cols.first())
+                                                                .or_else(|| right_cols.first())
+                                                                .map(|c| c.id.clone())
+                                                                .unwrap_or_else(|| grouping_column.clone())
+                                                        };
 
                                                         let enabled = true;
                                                         return cx.pressable(
@@ -962,13 +985,12 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                 };
 
                                                                 let indent_step = 12.0_f32;
-                                                                let indent_px = Px(
-                                                                    (depth as f32) * indent_step,
-                                                                );
+                                                                let indent_px =
+                                                                    Px((depth as f32) * indent_step);
                                                                 let glyph: Arc<str> = if expanded {
-                                                                    Arc::from("▼")
+                                                                    Arc::from("v")
                                                                 } else {
-                                                                    Arc::from("▶")
+                                                                    Arc::from(">")
                                                                 };
                                                                 let text: Arc<str> = Arc::from(
                                                                     format!("{glyph} {label}"),
@@ -988,9 +1010,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                         ..Default::default()
                                                                     },
                                                                     |cx| {
-                                                                        let mut wrote_first_cell =
-                                                                            false;
-                                                                        let mut render_group =
+                                                                        let render_group =
                                                                             |cx: &mut ElementContext<
                                                                                 '_,
                                                                                 H,
@@ -1017,12 +1037,15 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                         &props,
                                                                                                     );
 
-                                                                                                    let is_first = !wrote_first_cell;
-                                                                                                    if is_first {
-                                                                                                        wrote_first_cell = true;
-                                                                                                    }
+                                                                                                    let is_label_target =
+                                                                                                        col.id.as_ref()
+                                                                                                            == label_target.as_ref();
+                                                                                                    let is_placeholder = !is_label_target
+                                                                                                        && grouping.iter().any(|id| {
+                                                                                                            id.as_ref() == col.id.as_ref()
+                                                                                                        });
 
-                                                                                                    let padding = if is_first {
+                                                                                                    let padding = if is_label_target {
                                                                                                         Edges {
                                                                                                             left: Px(
                                                                                                                 cell_px.0
@@ -1061,7 +1084,10 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             ..Default::default()
                                                                                                         },
                                                                                                         |cx| {
-                                                                                                            if is_first {
+                                                                                                            if is_placeholder {
+                                                                                                                return Vec::new();
+                                                                                                            }
+                                                                                                            if is_label_target {
                                                                                                                 vec![cx.text(text.clone())]
                                                                                                             } else {
                                                                                                                 Vec::new()
