@@ -7,8 +7,9 @@ use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, ChartEngine, WorkBudget};
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, Modifiers, MouseButton, PathCommand, PathConstraints,
-    PathStyle, Point, PointerEvent, Px, Rect, SceneOp, Size, StrokeStyle,
+    Color, Corners, DrawOrder, Edges, Event, KeyCode, Modifiers, MouseButton, PathCommand,
+    PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp, Size,
+    StrokeStyle,
 };
 use fret_ui::UiHost;
 use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
@@ -67,6 +68,7 @@ pub struct ChartCanvas {
     style: ChartStyle,
     input_map: ChartInputMap,
     last_bounds: Rect,
+    last_pointer_pos: Option<Point>,
     last_marks_rev: delinea::ids::Revision,
     last_scale_factor_bits: u32,
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
@@ -85,6 +87,7 @@ impl ChartCanvas {
             style: ChartStyle::default(),
             input_map: ChartInputMap::default(),
             last_bounds: Rect::default(),
+            last_pointer_pos: None,
             last_marks_rev: delinea::ids::Revision::default(),
             last_scale_factor_bits: 0,
             cached_paths: BTreeMap::default(),
@@ -242,19 +245,46 @@ impl ChartCanvas {
         out
     }
 
-    fn apply_view_window_2d(
-        &mut self,
-        x_axis: delinea::AxisId,
-        y_axis: delinea::AxisId,
-        x: Option<DataWindow>,
-        y: Option<DataWindow>,
-    ) {
-        self.engine.apply_action(Action::SetViewWindow2D {
-            x_axis,
-            y_axis,
-            x,
-            y,
-        });
+    fn set_data_window_x(&mut self, axis: delinea::AxisId, window: Option<DataWindow>) {
+        self.engine
+            .apply_action(Action::SetDataWindowX { axis, window });
+    }
+
+    fn set_data_window_y(&mut self, axis: delinea::AxisId, window: Option<DataWindow>) {
+        self.engine
+            .apply_action(Action::SetDataWindowY { axis, window });
+    }
+
+    fn reset_view(&mut self) {
+        let Some((x_axis, y_axis)) = self.primary_axes() else {
+            return;
+        };
+        if self.axis_is_fixed(x_axis).is_none() {
+            self.set_data_window_x(x_axis, None);
+        }
+        if self.axis_is_fixed(y_axis).is_none() {
+            self.set_data_window_y(y_axis, None);
+        }
+    }
+
+    fn fit_view_to_data(&mut self) {
+        let Some((x_axis, y_axis)) = self.primary_axes() else {
+            return;
+        };
+
+        if self.axis_is_fixed(x_axis).is_none() {
+            let mut w = self.compute_axis_extent(x_axis, true);
+            let (locked_min, locked_max) = self.axis_constraints(x_axis);
+            w = w.apply_constraints(locked_min, locked_max);
+            self.set_data_window_x(x_axis, Some(w));
+        }
+
+        if self.axis_is_fixed(y_axis).is_none() {
+            let mut w = self.compute_axis_extent(y_axis, false);
+            let (locked_min, locked_max) = self.axis_constraints(y_axis);
+            w = w.apply_constraints(locked_min, locked_max);
+            self.set_data_window_y(y_axis, Some(w));
+        }
     }
 
     fn axis_region(bounds: Rect, position: Point) -> AxisRegion {
@@ -407,9 +437,93 @@ impl ChartCanvas {
 impl<H: UiHost> Widget<H> for ChartCanvas {
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         match event {
+            Event::KeyDown { key, modifiers, .. } => {
+                let plain = !modifiers.shift
+                    && !modifiers.ctrl
+                    && !modifiers.alt
+                    && !modifiers.alt_gr
+                    && !modifiers.meta;
+                let lock_mods_ok = !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
+
+                if lock_mods_ok && *key == KeyCode::KeyL {
+                    let Some(pos) = self.last_pointer_pos else {
+                        return;
+                    };
+
+                    let toggle_pan = modifiers.shift && !modifiers.ctrl;
+                    let toggle_zoom = modifiers.ctrl && !modifiers.shift;
+                    let toggle_both = !toggle_pan && !toggle_zoom;
+
+                    match Self::axis_region(cx.bounds, pos) {
+                        AxisRegion::XAxis => {
+                            if toggle_both || toggle_pan {
+                                self.lock_x_pan = !self.lock_x_pan;
+                            }
+                            if toggle_both || toggle_zoom {
+                                self.lock_x_zoom = !self.lock_x_zoom;
+                            }
+                        }
+                        AxisRegion::YAxis => {
+                            if toggle_both || toggle_pan {
+                                self.lock_y_pan = !self.lock_y_pan;
+                            }
+                            if toggle_both || toggle_zoom {
+                                self.lock_y_zoom = !self.lock_y_zoom;
+                            }
+                        }
+                        AxisRegion::Plot => {
+                            if toggle_both || toggle_pan {
+                                self.lock_x_pan = !self.lock_x_pan;
+                                self.lock_y_pan = !self.lock_y_pan;
+                            }
+                            if toggle_both || toggle_zoom {
+                                self.lock_x_zoom = !self.lock_x_zoom;
+                                self.lock_y_zoom = !self.lock_y_zoom;
+                            }
+                        }
+                    }
+
+                    self.pan_drag = None;
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if plain && *key == KeyCode::KeyR {
+                    self.reset_view();
+                    self.pan_drag = None;
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if plain && *key == KeyCode::KeyF {
+                    self.fit_view_to_data();
+                    self.pan_drag = None;
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+            }
             Event::Pointer(PointerEvent::Move {
                 position, buttons, ..
             }) => {
+                self.last_pointer_pos = Some(*position);
                 if cx.captured == Some(cx.node) {
                     if let Some(mut drag) = self.box_zoom_drag
                         && Self::is_button_held(drag.button, *buttons)
@@ -451,12 +565,12 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         next_x = next_x.apply_constraints(x_locked_min, x_locked_max);
                         next_y = next_y.apply_constraints(y_locked_min, y_locked_max);
 
-                        self.apply_view_window_2d(
-                            drag.x_axis,
-                            drag.y_axis,
-                            Some(next_x),
-                            Some(next_y),
-                        );
+                        if !self.lock_x_pan {
+                            self.set_data_window_x(drag.x_axis, Some(next_x));
+                        }
+                        if !self.lock_y_pan {
+                            self.set_data_window_y(drag.y_axis, Some(next_y));
+                        }
 
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
@@ -474,8 +588,49 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 position,
                 button,
                 modifiers,
+                click_count,
+                pointer_type,
                 ..
             }) => {
+                self.last_pointer_pos = Some(*position);
+
+                if *pointer_type == PointerType::Mouse
+                    && *button == MouseButton::Left
+                    && *click_count == 2
+                    && !modifiers.shift
+                    && !modifiers.ctrl
+                    && !modifiers.alt
+                    && !modifiers.alt_gr
+                    && !modifiers.meta
+                {
+                    let Some((x_axis, y_axis)) = self.primary_axes() else {
+                        return;
+                    };
+                    match Self::axis_region(cx.bounds, *position) {
+                        AxisRegion::XAxis => {
+                            if self.axis_is_fixed(x_axis).is_none() {
+                                self.set_data_window_x(x_axis, None);
+                            }
+                        }
+                        AxisRegion::YAxis => {
+                            if self.axis_is_fixed(y_axis).is_none() {
+                                self.set_data_window_y(y_axis, None);
+                            }
+                        }
+                        AxisRegion::Plot => self.reset_view(),
+                    }
+
+                    self.pan_drag = None;
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
                 if let Some(cancel) = self.input_map.box_zoom_cancel
                     && self.box_zoom_drag.is_some()
                     && cancel.matches(*button, *modifiers)
@@ -508,6 +663,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         }
                     }
 
+                    cx.request_focus(cx.node);
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
                     cx.stop_propagation();
@@ -556,6 +712,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         start_y,
                     });
 
+                    cx.request_focus(cx.node);
                     cx.capture_pointer(cx.node);
                     cx.invalidate_self(Invalidation::Paint);
                     cx.request_redraw();
@@ -588,12 +745,17 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     start_y,
                 });
 
+                cx.request_focus(cx.node);
                 cx.capture_pointer(cx.node);
                 cx.stop_propagation();
             }
             Event::Pointer(PointerEvent::Up {
-                button, modifiers, ..
+                position,
+                button,
+                modifiers,
+                ..
             }) => {
+                self.last_pointer_pos = Some(*position);
                 if let Some(drag) = self.box_zoom_drag
                     && drag.button == *button
                 {
@@ -633,7 +795,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                             if self.axis_is_fixed(drag.x_axis).is_none() {
                                 if self.lock_x_zoom {
-                                    x = Some(drag.start_x);
+                                    // no-op: keep existing X window
                                 } else {
                                     let x0 = start_local.x.0.min(end_local.x.0).clamp(0.0, width);
                                     let x1 = start_local.x.0.max(end_local.x.0).clamp(0.0, width);
@@ -649,7 +811,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                             if self.axis_is_fixed(drag.y_axis).is_none() {
                                 if self.lock_y_zoom {
-                                    y = Some(drag.start_y);
+                                    // no-op: keep existing Y window
                                 } else {
                                     let y0 = start_local.y.0.min(end_local.y.0).clamp(0.0, height);
                                     let y1 = start_local.y.0.max(end_local.y.0).clamp(0.0, height);
@@ -673,8 +835,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 }
                             }
 
-                            if x.is_some() || y.is_some() {
-                                self.apply_view_window_2d(drag.x_axis, drag.y_axis, x, y);
+                            if let Some(x) = x {
+                                self.set_data_window_x(drag.x_axis, Some(x));
+                            }
+                            if let Some(y) = y {
+                                self.set_data_window_y(drag.y_axis, Some(y));
                             }
                         }
                     }
@@ -701,6 +866,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 modifiers,
                 ..
             }) => {
+                self.last_pointer_pos = Some(*position);
                 let Some((x_axis, y_axis)) = self.primary_axes() else {
                     return;
                 };
@@ -765,7 +931,12 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     return;
                 }
 
-                self.apply_view_window_2d(x_axis, y_axis, next_x, next_y);
+                if let Some(x) = next_x {
+                    self.set_data_window_x(x_axis, Some(x));
+                }
+                if let Some(y) = next_y {
+                    self.set_data_window_y(y_axis, Some(y));
+                }
 
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();

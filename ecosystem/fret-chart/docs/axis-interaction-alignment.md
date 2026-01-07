@@ -24,6 +24,13 @@ The defaults are intentionally aligned with ImPlot:
   - Hold `Shift`: zoom X only
   - Hold `Ctrl`: zoom Y only
 
+- Reset view: `LMB double-click`
+  - On plot area: resets both axes to auto (clears `DataWindow` overrides)
+  - On X/Y axis band (temporary heuristic): resets the corresponding axis only
+
+- Fit view to data: `F` (focused canvas)
+- Reset view to auto: `R` (focused canvas)
+
 Box zoom selection modifiers (ImPlot style):
 
 - Hold `Alt`: expand selection horizontally to the plot edges (zoom Y only)
@@ -62,12 +69,12 @@ This will be replaced by explicit axis layout regions once we render axes and la
 All UI input is mapped into headless actions:
 
 - Hover: `Action::HoverAt { point: window-local px }`
-- Pan: `Action::SetViewWindow2D { x_axis, y_axis, x: Some(window), y: Some(window) }`
+- Pan: `Action::SetDataWindowX/Y { axis, window: Some(DataWindow) }`
 - Zoom (wheel/box): same as above, with windows computed from pixel-space interaction
+- Reset: `Action::SetDataWindowX/Y { axis, window: None }`
 
 ## Known limitations
 
 - No axis rendering yet (ticks/labels), so axis-region detection for lock toggles is temporary.
 - Box zoom currently uses the widget bounds as the plot area (no padding/margins).
-- No dedicated “reset zoom” / “fit to data” gesture yet.
-
+- Fit/reset requires focus (currently acquired by clicking the canvas).
