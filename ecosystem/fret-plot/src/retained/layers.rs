@@ -4021,7 +4021,7 @@ impl PlotLayer for HistogramPlotLayer {
                     continue;
                 }
                 for s in cached.samples.iter().copied() {
-                    consider_hover_point(&mut best, local, s);
+                    consider_hover_point(&mut best, local, s, threshold2);
                 }
             }
         } else {
@@ -4069,7 +4069,7 @@ impl PlotLayer for HistogramPlotLayer {
                 let transform = transform_for_axis(s.y_axis);
                 if let Some((samples, _bar_width)) = histogram_series_samples(transform, s) {
                     for sp in samples {
-                        consider_hover_point(&mut best, local, sp);
+                        consider_hover_point(&mut best, local, sp, threshold2);
                     }
                 }
             }
@@ -5147,9 +5147,9 @@ impl PlotLayer for AreaPlotLayer {
                 let mut prev: Option<SamplePoint> = None;
                 for sp in cached.samples.iter().copied() {
                     if let Some(p) = prev {
-                        consider_hover_segment(&mut best, local, p, sp, transform);
+                        consider_hover_segment(&mut best, local, p, sp, transform, threshold2);
                     }
-                    consider_hover_point(&mut best, local, sp);
+                    consider_hover_point(&mut best, local, sp, threshold2);
                     prev = Some(sp);
                 }
             }
@@ -5168,9 +5168,9 @@ impl PlotLayer for AreaPlotLayer {
                 let mut prev: Option<SamplePoint> = None;
                 for sp in samples.into_iter() {
                     if let Some(p) = prev {
-                        consider_hover_segment(&mut best, local, p, sp, transform);
+                        consider_hover_segment(&mut best, local, p, sp, transform, threshold2);
                     }
-                    consider_hover_point(&mut best, local, sp);
+                    consider_hover_point(&mut best, local, sp, threshold2);
                     prev = Some(sp);
                 }
             }
@@ -5666,9 +5666,9 @@ impl PlotLayer for ShadedPlotLayer {
                 let mut prev: Option<SamplePoint> = None;
                 for sp in cached.samples.iter().copied() {
                     if let Some(p) = prev {
-                        consider_hover_segment(&mut best, local, p, sp, transform);
+                        consider_hover_segment(&mut best, local, p, sp, transform, threshold2);
                     }
-                    consider_hover_point(&mut best, local, sp);
+                    consider_hover_point(&mut best, local, sp, threshold2);
                     prev = Some(sp);
                 }
             }
@@ -5689,9 +5689,9 @@ impl PlotLayer for ShadedPlotLayer {
                 let mut prev: Option<SamplePoint> = None;
                 for sp in samples.into_iter() {
                     if let Some(p) = prev {
-                        consider_hover_segment(&mut best, local, p, sp, transform);
+                        consider_hover_segment(&mut best, local, p, sp, transform, threshold2);
                     }
-                    consider_hover_point(&mut best, local, sp);
+                    consider_hover_point(&mut best, local, sp, threshold2);
                     prev = Some(sp);
                 }
             }
@@ -5755,11 +5755,19 @@ fn point_segment_closest_px(p: Point, a: Point, b: Point) -> Option<(Point, f32)
     Some((Point::new(Px(qx), Px(qy)), t))
 }
 
-fn consider_hover_point(best: &mut Option<(PlotHover, f32)>, local: Point, s: SamplePoint) {
+fn consider_hover_point(
+    best: &mut Option<(PlotHover, f32)>,
+    local: Point,
+    s: SamplePoint,
+    threshold2: f32,
+) {
     let dx = s.plot_px.x.0 - local.x.0;
     let dy = s.plot_px.y.0 - local.y.0;
     let d2 = dx * dx + dy * dy;
     if !d2.is_finite() {
+        return;
+    }
+    if d2 > threshold2 {
         return;
     }
 
@@ -5782,6 +5790,7 @@ fn consider_hover_segment(
     prev: SamplePoint,
     curr: SamplePoint,
     transform: PlotTransform,
+    threshold2: f32,
 ) {
     if !curr.connects_to_prev {
         return;
@@ -5795,6 +5804,9 @@ fn consider_hover_segment(
     let dy = q.y.0 - local.y.0;
     let d2 = dx * dx + dy * dy;
     if !d2.is_finite() {
+        return;
+    }
+    if d2 > threshold2 {
         return;
     }
 
@@ -5837,14 +5849,21 @@ fn hit_test_polyline_series_data(
         y4_scale,
         scale_factor,
         local,
-        style: _style,
+        style,
         hover_threshold,
         hidden,
         pinned,
     } = args;
 
-    let threshold = hover_threshold.0.max(0.0);
-    let threshold2 = threshold * threshold;
+    let base_threshold = hover_threshold.0.max(0.0);
+    let effective_threshold_for_stroke_width = |stroke_width: Px| -> f32 {
+        let stroke = if stroke_width.0.is_finite() {
+            stroke_width.0.max(0.0)
+        } else {
+            0.0
+        };
+        base_threshold.max(stroke * 2.0 + 2.0)
+    };
 
     let scale_factor_bits = scale_factor.to_bits();
     let viewport_w_bits = plot_size.width.0.to_bits();
@@ -5923,13 +5942,15 @@ fn hit_test_polyline_series_data(
             }
             let transform = transform_for_axis(axis);
             debug_assert_eq!(cached.series_id, series_id);
+            let threshold = effective_threshold_for_stroke_width(cached.stroke_width);
+            let threshold2 = threshold * threshold;
 
             let mut prev: Option<SamplePoint> = None;
             for s in cached.samples.iter().copied() {
                 if let Some(p) = prev {
-                    consider_hover_segment(&mut best, local, p, s, transform);
+                    consider_hover_segment(&mut best, local, p, s, transform, threshold2);
                 }
-                consider_hover_point(&mut best, local, s);
+                consider_hover_point(&mut best, local, s, threshold2);
                 prev = Some(s);
             }
         }
@@ -5943,11 +5964,9 @@ fn hit_test_polyline_series_data(
             {
                 continue;
             }
-            let transform = if axis == YAxis::Right {
-                transform_y2.unwrap_or(transform_y1)
-            } else {
-                transform_y1
-            };
+            let transform = transform_for_axis(axis);
+            let threshold = effective_threshold_for_stroke_width(style.stroke_width);
+            let threshold2 = threshold * threshold;
 
             // Fast path for monotonic-X slice-backed series: only consider a small X window around
             // the cursor instead of scanning all visible samples.
@@ -5985,9 +6004,9 @@ fn hit_test_polyline_series_data(
                             connects_to_prev: prev.is_some(),
                         };
                         if let Some(p) = prev {
-                            consider_hover_segment(&mut best, local, p, s, transform);
+                            consider_hover_segment(&mut best, local, p, s, transform, threshold2);
                         }
-                        consider_hover_point(&mut best, local, s);
+                        consider_hover_point(&mut best, local, s, threshold2);
                         prev = Some(s);
                     }
                     continue;
@@ -5998,15 +6017,15 @@ fn hit_test_polyline_series_data(
             let mut prev: Option<SamplePoint> = None;
             for s in samples.into_iter() {
                 if let Some(p) = prev {
-                    consider_hover_segment(&mut best, local, p, s, transform);
+                    consider_hover_segment(&mut best, local, p, s, transform, threshold2);
                 }
-                consider_hover_point(&mut best, local, s);
+                consider_hover_point(&mut best, local, s, threshold2);
                 prev = Some(s);
             }
         }
     }
 
-    best.and_then(|(hover, d2)| (d2 <= threshold2).then_some(hover))
+    best.map(|(hover, _d2)| hover)
 }
 
 fn hit_test_series_data(
