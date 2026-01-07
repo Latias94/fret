@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret_core::{
-    AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand,
+    AppWindowId, ClipboardToken, Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand,
     PathConstraints, PathStyle, Point, Px, Rect, SceneOp, Size, StrokeStyle, TextBlobId,
     TextConstraints, TextOverflow, TextWrap, Transform2D,
 };
@@ -12,11 +12,14 @@ use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::REROUTE_KIND;
 use crate::core::{
-    CanvasPoint, CanvasSize, EdgeId, Graph, NodeId as GraphNodeId, NodeKindKey, PortDirection,
-    PortId,
+    CanvasPoint, CanvasSize, Edge, EdgeId, Graph, NodeId as GraphNodeId, NodeKindKey,
+    PortDirection, PortId,
 };
 use crate::io::{NodeGraphConnectionMode, NodeGraphInteractionState, NodeGraphViewState};
-use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
+use crate::ops::{
+    GraphFragment, GraphOp, GraphTransaction, IdRemapSeed, IdRemapper, PasteTuning,
+    apply_transaction,
+};
 use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
@@ -52,6 +55,7 @@ struct InteractionState {
     hover_port_convertible: bool,
     context_menu: Option<ContextMenuState>,
     toast: Option<ToastState>,
+    pending_paste: Option<PendingPaste>,
 }
 
 #[derive(Debug, Clone)]
@@ -123,6 +127,12 @@ struct ToastState {
     timer: TimerToken,
     severity: DiagnosticSeverity,
     message: Arc<str>,
+}
+
+#[derive(Debug, Clone)]
+struct PendingPaste {
+    token: ClipboardToken,
+    at: CanvasPoint,
 }
 
 /// Retained node-graph canvas widget (MVP).
@@ -286,13 +296,22 @@ impl NodeGraphCanvas {
         window: Option<AppWindowId>,
         ops: Vec<GraphOp>,
     ) {
+        let _ = self.apply_ops_result(host, window, ops);
+    }
+
+    fn apply_ops_result<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        ops: Vec<GraphOp>,
+    ) -> bool {
         if ops.is_empty() {
-            return;
+            return true;
         }
         let tx = GraphTransaction { label: None, ops };
 
         let Some(mut scratch) = self.graph.read_ref(host, |g| g.clone()).ok() else {
-            return;
+            return false;
         };
 
         let mut diagnostics: Option<Vec<Diagnostic>> = None;
@@ -342,12 +361,259 @@ impl NodeGraphCanvas {
                     self.show_toast(host, window, sev, msg);
                 }
             }
-            return;
+            return false;
         }
 
         let _ = self.graph.update(host, |g, _cx| {
             *g = scratch;
         });
+        true
+    }
+
+    fn screen_to_canvas(bounds: Rect, screen: Point, pan: CanvasPoint, zoom: f32) -> CanvasPoint {
+        let zoom = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+        let sx = screen.x.0 - bounds.origin.x.0;
+        let sy = screen.y.0 - bounds.origin.y.0;
+        CanvasPoint {
+            x: sx / zoom - pan.x,
+            y: sy / zoom - pan.y,
+        }
+    }
+
+    fn copy_selected_nodes_to_clipboard<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        selected_nodes: &[GraphNodeId],
+    ) {
+        if selected_nodes.is_empty() {
+            return;
+        }
+        let nodes: Vec<GraphNodeId> = selected_nodes.to_vec();
+        let text = self
+            .graph
+            .read_ref(host, |graph| {
+                let fragment = GraphFragment::from_nodes(graph, nodes);
+                match serde_json::to_string(&fragment) {
+                    Ok(json) => format!("fret-node.fragment.v1\n{json}"),
+                    Err(_) => String::new(),
+                }
+            })
+            .ok()
+            .unwrap_or_default();
+        if text.is_empty() {
+            return;
+        }
+        host.push_effect(Effect::ClipboardSetText { text });
+    }
+
+    fn request_paste_from_clipboard<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        bounds: Rect,
+        snapshot: &ViewSnapshot,
+    ) {
+        let Some(window) = window else {
+            return;
+        };
+
+        let token = host.next_clipboard_token();
+        let screen = self.interaction.last_pos.unwrap_or_else(|| {
+            Point::new(
+                Px(bounds.origin.x.0 + 0.5 * bounds.size.width.0),
+                Px(bounds.origin.y.0 + 0.5 * bounds.size.height.0),
+            )
+        });
+        let at = Self::screen_to_canvas(bounds, screen, snapshot.pan, snapshot.zoom);
+        self.interaction.pending_paste = Some(PendingPaste { token, at });
+        host.push_effect(Effect::ClipboardGetText { window, token });
+    }
+
+    fn apply_paste_text<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        text: &str,
+        at: CanvasPoint,
+    ) {
+        let payload = text.strip_prefix("fret-node.fragment.v1\n").unwrap_or(text);
+        let fragment: GraphFragment = match serde_json::from_str(payload) {
+            Ok(v) => v,
+            Err(_) => {
+                self.show_toast(
+                    host,
+                    window,
+                    DiagnosticSeverity::Info,
+                    "clipboard does not contain a fret-node fragment",
+                );
+                return;
+            }
+        };
+
+        let mut min_x = f32::INFINITY;
+        let mut min_y = f32::INFINITY;
+        for node in fragment.nodes.values() {
+            min_x = min_x.min(node.pos.x);
+            min_y = min_y.min(node.pos.y);
+        }
+        if !min_x.is_finite() || !min_y.is_finite() {
+            return;
+        }
+
+        let tuning = PasteTuning {
+            offset: CanvasPoint {
+                x: at.x - min_x,
+                y: at.y - min_y,
+            },
+        };
+        let remapper = IdRemapper::new(IdRemapSeed::new_random());
+        let tx = fragment.to_paste_transaction(&remapper, tuning);
+
+        let new_nodes: Vec<GraphNodeId> = tx
+            .ops
+            .iter()
+            .filter_map(|op| match op {
+                GraphOp::AddNode { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+
+        if !self.apply_ops_result(host, window, tx.ops) {
+            return;
+        }
+
+        if !new_nodes.is_empty() {
+            self.update_view_state(host, |s| {
+                s.selected_edges.clear();
+                s.selected_nodes = new_nodes.clone();
+                for id in &new_nodes {
+                    s.draw_order.retain(|x| x != id);
+                    s.draw_order.push(*id);
+                }
+            });
+        }
+    }
+
+    fn duplicate_selection<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        selected_nodes: &[GraphNodeId],
+    ) {
+        if selected_nodes.is_empty() {
+            return;
+        }
+
+        let fragment = self
+            .graph
+            .read_ref(host, |graph| {
+                GraphFragment::from_nodes(graph, selected_nodes.to_vec())
+            })
+            .ok()
+            .unwrap_or_default();
+
+        let tuning = PasteTuning {
+            offset: CanvasPoint { x: 24.0, y: 24.0 },
+        };
+        let remapper = IdRemapper::new(IdRemapSeed::new_random());
+        let tx = fragment.to_paste_transaction(&remapper, tuning);
+
+        let new_nodes: Vec<GraphNodeId> = tx
+            .ops
+            .iter()
+            .filter_map(|op| match op {
+                GraphOp::AddNode { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+
+        if !self.apply_ops_result(host, window, tx.ops) {
+            return;
+        }
+
+        if !new_nodes.is_empty() {
+            self.update_view_state(host, |s| {
+                s.selected_edges.clear();
+                s.selected_nodes = new_nodes.clone();
+                for id in &new_nodes {
+                    s.draw_order.retain(|x| x != id);
+                    s.draw_order.push(*id);
+                }
+            });
+        }
+    }
+
+    fn delete_selection_ops(
+        graph: &Graph,
+        selected_nodes: &[GraphNodeId],
+        selected_edges: &[EdgeId],
+    ) -> Vec<GraphOp> {
+        let mut ops: Vec<GraphOp> = Vec::new();
+        let mut removed_edges: std::collections::BTreeSet<EdgeId> =
+            std::collections::BTreeSet::new();
+
+        let mut nodes: Vec<GraphNodeId> = selected_nodes.to_vec();
+        nodes.sort();
+
+        for node_id in nodes {
+            let Some(node) = graph.nodes.get(&node_id) else {
+                continue;
+            };
+
+            let mut ports: Vec<(PortId, crate::core::Port)> = graph
+                .ports
+                .iter()
+                .filter_map(|(port_id, port)| {
+                    (port.node == node_id).then_some((*port_id, port.clone()))
+                })
+                .collect();
+            ports.sort_by_key(|(id, _)| *id);
+
+            let port_ids: std::collections::BTreeSet<PortId> =
+                ports.iter().map(|(id, _)| *id).collect();
+
+            let mut edges: Vec<(EdgeId, Edge)> = graph
+                .edges
+                .iter()
+                .filter_map(|(edge_id, edge)| {
+                    if port_ids.contains(&edge.from) || port_ids.contains(&edge.to) {
+                        Some((*edge_id, edge.clone()))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            edges.sort_by_key(|(id, _)| *id);
+            edges.retain(|(id, _)| removed_edges.insert(*id));
+
+            ops.push(GraphOp::RemoveNode {
+                id: node_id,
+                node: node.clone(),
+                ports,
+                edges,
+            });
+        }
+
+        let mut edges_sel: Vec<EdgeId> = selected_edges.to_vec();
+        edges_sel.sort();
+        for edge_id in edges_sel {
+            if removed_edges.contains(&edge_id) {
+                continue;
+            }
+            let Some(edge) = graph.edges.get(&edge_id) else {
+                continue;
+            };
+            ops.push(GraphOp::RemoveEdge {
+                id: edge_id,
+                edge: edge.clone(),
+            });
+        }
+
+        ops
     }
 
     fn snap_canvas_point(pos: CanvasPoint, grid: CanvasSize) -> CanvasPoint {
@@ -1451,6 +1717,33 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let zoom = snapshot.zoom;
 
         match event {
+            Event::ClipboardText { token, text } => {
+                let Some(pending) = self.interaction.pending_paste.take() else {
+                    return;
+                };
+                if pending.token != *token {
+                    self.interaction.pending_paste = Some(pending);
+                    return;
+                }
+                self.apply_paste_text(cx.app, cx.window, text, pending.at);
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+            }
+            Event::ClipboardTextUnavailable { token } => {
+                if let Some(pending) = &self.interaction.pending_paste
+                    && pending.token == *token
+                {
+                    self.interaction.pending_paste = None;
+                    self.show_toast(
+                        cx.app,
+                        cx.window,
+                        DiagnosticSeverity::Info,
+                        "clipboard text unavailable",
+                    );
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+            }
             Event::Timer { token } => {
                 if self
                     .interaction
@@ -1463,7 +1756,32 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     cx.invalidate_self(Invalidation::Paint);
                 }
             }
-            Event::KeyDown { key, .. } => {
+            Event::KeyDown { key, modifiers, .. } => {
+                if modifiers.ctrl || modifiers.meta {
+                    match *key {
+                        fret_core::KeyCode::KeyC => {
+                            self.copy_selected_nodes_to_clipboard(cx.app, &snapshot.selected_nodes);
+                            cx.stop_propagation();
+                            return;
+                        }
+                        fret_core::KeyCode::KeyV => {
+                            self.request_paste_from_clipboard(
+                                cx.app, cx.window, cx.bounds, &snapshot,
+                            );
+                            cx.stop_propagation();
+                            return;
+                        }
+                        fret_core::KeyCode::KeyD => {
+                            self.duplicate_selection(cx.app, cx.window, &snapshot.selected_nodes);
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                        _ => {}
+                    }
+                }
+
                 if *key == fret_core::KeyCode::Escape {
                     if self.interaction.context_menu.take().is_some() {
                         cx.stop_propagation();
@@ -1625,7 +1943,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 let selected_edges = snapshot.selected_edges.clone();
-                if selected_edges.is_empty() {
+                let selected_nodes = snapshot.selected_nodes.clone();
+                if selected_edges.is_empty() && selected_nodes.is_empty() {
                     return;
                 }
 
@@ -1633,17 +1952,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     let this = &*self;
                     this.graph
                         .read_ref(cx.app, |graph| {
-                            let mut ops: Vec<GraphOp> = Vec::new();
-                            for id in &selected_edges {
-                                let Some(edge) = graph.edges.get(id) else {
-                                    continue;
-                                };
-                                ops.push(GraphOp::RemoveEdge {
-                                    id: *id,
-                                    edge: edge.clone(),
-                                });
-                            }
-                            ops
+                            Self::delete_selection_ops(graph, &selected_nodes, &selected_edges)
                         })
                         .ok()
                         .unwrap_or_default()
@@ -1652,6 +1961,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 self.apply_ops(cx.app, cx.window, remove_ops);
                 self.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
+                    s.selected_nodes.clear();
                 });
                 cx.stop_propagation();
                 cx.request_redraw();
