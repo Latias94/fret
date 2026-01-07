@@ -35,6 +35,7 @@ struct InteractionState {
     panning: bool,
     node_drag: Option<NodeDrag>,
     wire_drag: Option<WireDrag>,
+    edge_drag: Option<EdgeDrag>,
     hover_edge: Option<EdgeId>,
     context_menu: Option<ContextMenuState>,
 }
@@ -61,6 +62,12 @@ enum WireDragKind {
 struct WireDrag {
     kind: WireDragKind,
     pos: Point,
+}
+
+#[derive(Debug, Clone)]
+struct EdgeDrag {
+    edge: EdgeId,
+    start_pos: Point,
 }
 
 #[derive(Debug, Clone)]
@@ -512,6 +519,47 @@ impl NodeGraphCanvas {
         None
     }
 
+    fn pick_reconnect_endpoint(
+        &self,
+        graph: &Graph,
+        edge_id: EdgeId,
+        pos: Point,
+        zoom: f32,
+    ) -> Option<(EdgeEndpoint, PortId)> {
+        let edge = graph.edges.get(&edge_id)?;
+
+        let from_center = {
+            let from = graph.ports.get(&edge.from)?;
+            self.port_center(graph, from.node, edge.from, zoom)
+        };
+        let to_center = {
+            let to = graph.ports.get(&edge.to)?;
+            self.port_center(graph, to.node, edge.to, zoom)
+        };
+
+        let (from_center, to_center) = match (from_center, to_center) {
+            (Some(a), Some(b)) => (a, b),
+            _ => return None,
+        };
+
+        let d2_from = {
+            let dx = pos.x.0 - from_center.x.0;
+            let dy = pos.y.0 - from_center.y.0;
+            dx * dx + dy * dy
+        };
+        let d2_to = {
+            let dx = pos.x.0 - to_center.x.0;
+            let dy = pos.y.0 - to_center.y.0;
+            dx * dx + dy * dy
+        };
+
+        if d2_from <= d2_to {
+            Some((EdgeEndpoint::From, edge.to))
+        } else {
+            Some((EdgeEndpoint::To, edge.from))
+        }
+    }
+
     fn hit_node(
         &self,
         graph: &Graph,
@@ -837,6 +885,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 match hit {
                     Hit::Port(port) => {
+                        self.interaction.edge_drag = None;
                         let yank = (modifiers.ctrl || modifiers.meta).then(|| {
                             let this = &*self;
                             this.graph
@@ -863,6 +912,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         cx.invalidate_self(Invalidation::Paint);
                     }
                     Hit::Node(node, rect) => {
+                        self.interaction.edge_drag = None;
                         let offset = Point::new(
                             Px(position.x.0 - rect.origin.x.0),
                             Px(position.y.0 - rect.origin.y.0),
@@ -900,10 +950,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 s.selected_edges.push(edge);
                             }
                         });
+                        self.interaction.edge_drag = Some(EdgeDrag {
+                            edge,
+                            start_pos: *position,
+                        });
+                        cx.capture_pointer(cx.node);
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
                     }
                     Hit::Background => {
+                        self.interaction.edge_drag = None;
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
                             s.selected_edges.clear();
@@ -962,6 +1018,45 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     cx.request_redraw();
                     cx.invalidate_self(Invalidation::Paint);
                     return;
+                }
+
+                if let Some(drag) = self.interaction.edge_drag.clone() {
+                    let threshold = (3.0 / zoom).max(0.5 / zoom);
+                    let dx = position.x.0 - drag.start_pos.x.0;
+                    let dy = position.y.0 - drag.start_pos.y.0;
+                    if dx * dx + dy * dy >= threshold * threshold {
+                        let reconnect = {
+                            let this = &*self;
+                            this.graph
+                                .read_ref(cx.app, |graph| {
+                                    this.pick_reconnect_endpoint(
+                                        graph,
+                                        drag.edge,
+                                        drag.start_pos,
+                                        zoom,
+                                    )
+                                })
+                                .ok()
+                                .flatten()
+                        };
+
+                        if let Some((endpoint, fixed)) = reconnect {
+                            self.interaction.edge_drag = None;
+                            self.interaction.hover_edge = None;
+                            self.interaction.wire_drag = Some(WireDrag {
+                                kind: WireDragKind::Reconnect {
+                                    edge: drag.edge,
+                                    endpoint,
+                                    fixed,
+                                },
+                                pos: *position,
+                            });
+
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                    }
                 }
 
                 if let Some(menu) = self.interaction.context_menu.as_mut() {
@@ -1070,6 +1165,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 }
                             }
                         }
+                        cx.release_pointer_capture();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+
+                    if self.interaction.edge_drag.take().is_some() {
                         cx.release_pointer_capture();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
