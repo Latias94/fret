@@ -158,6 +158,7 @@ pub fn minmax_per_pixel_finalize(
     bounds: &DataBounds,
     viewport: Rect,
     out_points: &mut Vec<Point>,
+    out_indices: &mut Vec<u32>,
 ) -> Range<usize> {
     let start = out_points.len();
 
@@ -211,6 +212,7 @@ pub fn minmax_per_pixel_finalize(
                 continue;
             }
             out_points.push(to_px(xi, yi));
+            out_indices.push(i as u32);
         }
     }
 

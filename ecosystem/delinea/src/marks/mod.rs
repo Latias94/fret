@@ -2,6 +2,7 @@ use core::ops::Range;
 
 use fret_core::{Point, Rect};
 
+use crate::ids::SeriesId;
 use crate::ids::{LayerId, MarkId, PaintId, Revision, StringId};
 use crate::paint::StrokeStyleV2;
 use crate::text::TextStyleId;
@@ -30,6 +31,7 @@ pub struct MarkNode {
     pub layer: LayerId,
     pub order: MarkOrderKey,
     pub kind: MarkKind,
+    pub source_series: Option<SeriesId>,
     pub payload: MarkPayloadRef,
 }
 
@@ -76,17 +78,32 @@ pub struct MarkText {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MarkArena {
     pub points: Vec<Point>,
+    pub data_indices: Vec<u32>,
 }
 
 impl MarkArena {
     pub fn clear(&mut self) {
         self.points.clear();
+        self.data_indices.clear();
     }
 
     pub fn extend_points(&mut self, points: impl IntoIterator<Item = Point>) -> Range<usize> {
         let start = self.points.len();
         self.points.extend(points);
         let end = self.points.len();
+        start..end
+    }
+
+    pub fn extend_points_with_indices(
+        &mut self,
+        points: impl IntoIterator<Item = Point>,
+        indices: impl IntoIterator<Item = u32>,
+    ) -> Range<usize> {
+        let start = self.points.len();
+        self.points.extend(points);
+        self.data_indices.extend(indices);
+        let end = self.points.len();
+        debug_assert_eq!(self.data_indices.len(), self.points.len());
         start..end
     }
 }

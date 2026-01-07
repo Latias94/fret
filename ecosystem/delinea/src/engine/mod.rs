@@ -11,7 +11,9 @@ use crate::scheduler::{StepResult, WorkBudget};
 use crate::spec::ChartSpec;
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
+use fret_core::Point;
 
+pub mod hit_test;
 pub mod lod;
 pub mod stages;
 pub mod window;
@@ -25,6 +27,7 @@ pub struct ChartState {
     pub revision: Revision,
     pub link: LinkConfig,
     pub data_window_x: Option<window::DataWindowX>,
+    pub hover_px: Option<Point>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -34,6 +37,16 @@ pub struct ChartOutput {
     pub viewport: Option<Rect>,
     pub marks: MarkTree,
     pub link_events: Vec<LinkEvent>,
+    pub hover: Option<HoverHit>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct HoverHit {
+    pub series: crate::ids::SeriesId,
+    pub data_index: u32,
+    pub point_px: Point,
+    pub dist2_px: f32,
 }
 
 #[derive(Debug)]
@@ -112,6 +125,10 @@ impl ChartEngine {
 
     pub fn apply_action(&mut self, action: Action) {
         match action {
+            Action::HoverAt { point } => {
+                self.state.hover_px = Some(point);
+                self.state.revision.bump();
+            }
             Action::SetDataWindowX { window } => {
                 self.state.data_window_x = window;
                 self.state.revision.bump();
@@ -137,6 +154,7 @@ impl ChartEngine {
         }
 
         self.output.link_events.clear();
+        self.output.hover = None;
 
         self.marks_stage.sync_inputs(&self.spec, &self.datasets);
         if self.marks_stage.is_dirty() {
@@ -162,6 +180,11 @@ impl ChartEngine {
         );
 
         let unfinished = !done;
+
+        if let Some(hover_px) = self.state.hover_px {
+            self.output.hover =
+                hit_test::hover_hit_test(&self.spec, &self.datasets, &self.output.marks, hover_px);
+        }
 
         self.output.revision.bump();
         Ok(StepResult { unfinished })

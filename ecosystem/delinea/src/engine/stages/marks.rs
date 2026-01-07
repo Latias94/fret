@@ -193,6 +193,7 @@ impl MarksStage {
                     &bounds,
                     viewport,
                     &mut marks.arena.points,
+                    &mut marks.arena.data_indices,
                 );
                 let point_count = range.len() as u64;
 
@@ -203,6 +204,7 @@ impl MarksStage {
                     layer: crate::ids::LayerId(1),
                     order: MarkOrderKey(self.series_index as u32),
                     kind: MarkKind::Polyline,
+                    source_series: Some(series.id),
                     payload: MarkPayloadRef::Polyline(MarkPolylineRef {
                         points: range,
                         stroke,
