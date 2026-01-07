@@ -735,56 +735,14 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                 |cx: &mut ElementContext<'_, H>,
                                                  cols: &[&ColumnDef<TData>],
                                                  scroll_x: Option<ScrollHandle>| {
-                                                    let preview_left = if props.enable_column_resizing
-                                                        && props.column_resize_mode
-                                                            == ColumnResizeMode::OnEnd
-                                                    {
-                                                        if let Some(active) = state_value
-                                                            .column_sizing_info
-                                                            .is_resizing_column
-                                                            .as_ref()
-                                                        {
-                                                            let delta = state_value
-                                                                .column_sizing_info
-                                                                .delta_offset
-                                                                .unwrap_or(0.0);
-                                                            let mut x = 0.0_f32;
-                                                            let mut out = None;
-                                                            for col in cols {
-                                                                x += resolve_column_width(
-                                                                    col,
-                                                                    &state_value,
-                                                                    &props,
-                                                                )
-                                                                .0;
-                                                                if col.id.as_ref()
-                                                                    == active.as_ref()
-                                                                {
-                                                                    out = Some(x + delta);
-                                                                    break;
-                                                                }
-                                                            }
-                                                            out
-                                                        } else {
-                                                            None
-                                                        }
-                                                    } else {
-                                                        None
-                                                    };
-
                                                     let row = stack::hstack(
                                                         cx,
                                                         stack::HStackProps::default()
-                                                            .layout(
-                                                                LayoutRefinement::default()
-                                                                    .size_full()
-                                                                    .relative(),
-                                                            )
                                                             .gap_x(Space::N0)
                                                             .justify(Justify::Start)
                                                             .items(Items::Center),
                                                         |cx| {
-                                                            let mut out: Vec<AnyElement> = cols.iter()
+                                                            let out: Vec<AnyElement> = cols.iter()
                                                                 .map(|col| {
                                                                     let sort_state = sort_for_column(
                                                                         &state_value.sorting,
@@ -914,6 +872,49 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                     let resize_mode = props.column_resize_mode;
                                                                                     let resize_direction = props.column_resize_direction;
                                                                                     let grip_color = resize_grip;
+
+                                                                                    if props.enable_column_resizing
+                                                                                        && props.column_resize_mode
+                                                                                            == ColumnResizeMode::OnEnd
+                                                                                        && state_value
+                                                                                            .column_sizing_info
+                                                                                            .is_resizing_column
+                                                                                            .as_ref()
+                                                                                            .is_some_and(|active| {
+                                                                                                active.as_ref()
+                                                                                                    == col_id.as_ref()
+                                                                                            })
+                                                                                    {
+                                                                                        let delta = state_value
+                                                                                            .column_sizing_info
+                                                                                            .delta_offset
+                                                                                            .unwrap_or(0.0);
+                                                                                        pieces.push(cx.container(
+                                                                                            ContainerProps {
+                                                                                                background: Some(
+                                                                                                    resize_preview,
+                                                                                                ),
+                                                                                                layout: LayoutStyle {
+                                                                                                    size:
+                                                                                                        fret_ui::element::SizeStyle {
+                                                                                                            width: Length::Px(Px(2.0)),
+                                                                                                            height: Length::Fill,
+                                                                                                            ..Default::default()
+                                                                                                        },
+                                                                                                    position: fret_ui::element::PositionStyle::Absolute,
+                                                                                                    inset: fret_ui::element::InsetStyle {
+                                                                                                        top: Some(Px(0.0)),
+                                                                                                        right: Some(Px(-delta - 1.0)),
+                                                                                                        bottom: Some(Px(0.0)),
+                                                                                                        left: None,
+                                                                                                    },
+                                                                                                    ..Default::default()
+                                                                                                },
+                                                                                                ..Default::default()
+                                                                                            },
+                                                                                            |_| Vec::new(),
+                                                                                        ));
+                                                                                    }
 
                                                                                     pieces.push(cx.pointer_region(
                                                                                         PointerRegionProps {
@@ -1060,40 +1061,6 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                     })
                                                                 })
                                                                 .collect();
-
-                                                            if let Some(preview_left) = preview_left {
-                                                                out.push(cx.container(
-                                                                    ContainerProps {
-                                                                        background: Some(
-                                                                            resize_preview,
-                                                                        ),
-                                                                        layout: LayoutStyle {
-                                                                            size:
-                                                                                fret_ui::element::SizeStyle {
-                                                                                    width: Length::Px(Px(
-                                                                                        2.0,
-                                                                                    )),
-                                                                                    height:
-                                                                                        Length::Fill,
-                                                                                    ..Default::default()
-                                                                                },
-                                                                            position:
-                                                                                fret_ui::element::PositionStyle::Absolute,
-                                                                            inset: fret_ui::element::InsetStyle {
-                                                                                top: Some(Px(0.0)),
-                                                                                left: Some(Px(
-                                                                                    preview_left - 1.0,
-                                                                                )),
-                                                                                bottom: Some(Px(0.0)),
-                                                                                right: None,
-                                                                            },
-                                                                            ..Default::default()
-                                                                        },
-                                                                        ..Default::default()
-                                                                    },
-                                                                    |_| Vec::new(),
-                                                                ));
-                                                            }
 
                                                             out
                                                         },
