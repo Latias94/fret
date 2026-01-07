@@ -80,7 +80,7 @@ Current behavior is intentionally ImPlot-like:
 
 - Crosshair + tooltip are only shown when the pointer is inside the plot rect and close to a sampled data point.
 - Crosshair position uses the pointer location.
-- Hover marker uses the nearest sampled point (after LOD).
+- Hover marker uses the closest point on the nearest line segment (after LOD), with linear interpolation.
 - Tooltip currently shows `series id`, `x`, `y` and uses the same numeric formatting as axis ticks.
 
 ## Known limitations

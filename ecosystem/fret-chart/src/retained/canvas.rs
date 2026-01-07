@@ -1331,32 +1331,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let x_window = self.current_window_x(x_axis);
             let y_window = self.current_window_y(y_axis);
 
-            let tooltip_values = (|| {
-                let series = self.engine.model().series.get(&hit.series)?;
-                let dataset_id = series.dataset;
-                let x_col = series.x_col;
-                let y_col = series.y_col;
-
-                let table = self
-                    .engine
-                    .datasets_mut()
-                    .datasets
-                    .iter()
-                    .find_map(|(id, t)| (*id == dataset_id).then_some(t))?;
-
-                let idx = hit.data_index as usize;
-                let x = table.column_f64(x_col)?;
-                let y = table.column_f64(y_col)?;
-                if idx >= x.len() || idx >= y.len() {
-                    return None;
-                }
-
-                Some((x[idx], y[idx]))
-            })();
-
-            if let Some((x_value, y_value)) = tooltip_values {
-                let x_label = format_tick_value(x_window, x_value);
-                let y_label = format_tick_value(y_window, y_value);
+            if hit.x_value.is_finite() && hit.y_value.is_finite() {
+                let x_label = format_tick_value(x_window, hit.x_value);
+                let y_label = format_tick_value(y_window, hit.y_value);
                 let label = format!("series: {}  x: {}  y: {}", hit.series.0, x_label, y_label);
 
                 let text_style = TextStyle {
