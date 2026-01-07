@@ -365,6 +365,7 @@ pub struct NavigationMenu {
     default_value: Option<Arc<str>>,
     items: Vec<NavigationMenuItem>,
     disabled: bool,
+    viewport: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     config: radix_navigation_menu::NavigationMenuConfig,
@@ -376,6 +377,7 @@ impl std::fmt::Debug for NavigationMenu {
             .field("model", &"<model>")
             .field("items_len", &self.items.len())
             .field("disabled", &self.disabled)
+            .field("viewport", &self.viewport)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .field("config", &self.config)
@@ -390,6 +392,7 @@ impl NavigationMenu {
             default_value: None,
             items: Vec::new(),
             disabled: false,
+            viewport: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
@@ -402,6 +405,7 @@ impl NavigationMenu {
             default_value: default_value.map(Into::into),
             items: Vec::new(),
             disabled: false,
+            viewport: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
@@ -420,6 +424,16 @@ impl NavigationMenu {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// When `true` (default), content is presented through a shared "viewport" panel with
+    /// size interpolation, matching shadcn/ui composition.
+    ///
+    /// When `false`, content uses its own measured size without viewport interpolation (closer to
+    /// Radix's "no Viewport component mounted" behavior).
+    pub fn viewport(mut self, viewport: bool) -> Self {
+        self.viewport = viewport;
         self
     }
 
@@ -443,6 +457,7 @@ impl NavigationMenu {
         let default_value = self.default_value;
         let items = self.items;
         let menu_disabled = self.disabled;
+        let viewport_enabled = self.viewport;
         let chrome = self.chrome;
         let layout = self.layout;
         let cfg = self.config;
@@ -682,10 +697,10 @@ impl NavigationMenu {
                 .map(|active| active.content.clone())
                 .unwrap_or_default();
 
-            let has_viewport = !viewport.is_empty();
-            let is_open = selected_local.is_some() && has_viewport && open_for_motion;
+            let has_content = !viewport.is_empty();
+            let is_open = selected_local.is_some() && has_content && open_for_motion;
             let overlay_presence = OverlayPresence {
-                present: motion.present && has_viewport,
+                present: motion.present && has_content,
                 interactive: is_open,
             };
 
@@ -721,17 +736,32 @@ impl NavigationMenu {
                     let content_switch = content_switch.clone();
                     let content_switch_slide_px = content_switch_slide_px;
 
-                    let viewport_props = ContainerProps {
-                        layout: LayoutStyle {
-                            overflow: fret_ui::element::Overflow::Clip,
-                            ..Default::default()
-                        },
-                        padding: Edges::all(viewport_pad),
-                        background: Some(viewport_bg),
-                        shadow: None,
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(viewport_border),
-                        corner_radii: Corners::all(viewport_radius),
+                    let viewport_props = if viewport_enabled {
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                overflow: fret_ui::element::Overflow::Clip,
+                                ..Default::default()
+                            },
+                            padding: Edges::all(viewport_pad),
+                            background: Some(viewport_bg),
+                            shadow: None,
+                            border: Edges::all(Px(1.0)),
+                            border_color: Some(viewport_border),
+                            corner_radii: Corners::all(viewport_radius),
+                        }
+                    } else {
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                overflow: fret_ui::element::Overflow::Visible,
+                                ..Default::default()
+                            },
+                            padding: Edges::all(Px(0.0)),
+                            background: None,
+                            shadow: None,
+                            border: Edges::all(Px(0.0)),
+                            border_color: None,
+                            corner_radii: Corners::all(Px(0.0)),
+                        }
                     };
 
                     let content = cx.pressable(
@@ -850,34 +880,40 @@ impl NavigationMenu {
 
                     let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
                     let measured = cx.last_bounds_for_element(content.id).map(|r| r.size);
-                    if let (Some(selected_value), Some(size)) = (selected_local.clone(), measured) {
-                        radix_navigation_menu::navigation_menu_register_viewport_size(
-                            cx,
-                            root_id,
-                            selected_value,
-                            size,
-                        );
-                    }
-                    if let Some(selected_value) = selected_local.clone() {
-                        radix_navigation_menu::navigation_menu_register_viewport_content_id(
-                            cx,
-                            root_id,
-                            selected_value,
-                            content.id,
-                        );
-                    }
-
                     let fallback = measured.unwrap_or(estimated);
-                    let viewport_size =
-                        radix_navigation_menu::navigation_menu_viewport_size_for_transition(
-                            cx,
-                            root_id,
-                            selected_local.clone(),
-                            &values,
-                            transition,
-                            fallback,
-                        );
-                    let content_size = viewport_size.size;
+                    let content_size = if viewport_enabled {
+                        if let (Some(selected_value), Some(size)) =
+                            (selected_local.clone(), measured)
+                        {
+                            radix_navigation_menu::navigation_menu_register_viewport_size(
+                                cx,
+                                root_id,
+                                selected_value,
+                                size,
+                            );
+                        }
+                        if let Some(selected_value) = selected_local.clone() {
+                            radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                cx,
+                                root_id,
+                                selected_value,
+                                content.id,
+                            );
+                        }
+
+                        let viewport_size =
+                            radix_navigation_menu::navigation_menu_viewport_size_for_transition(
+                                cx,
+                                root_id,
+                                selected_local.clone(),
+                                &values,
+                                transition,
+                                fallback,
+                            );
+                        viewport_size.size
+                    } else {
+                        fallback
+                    };
 
                     let layout = popper::popper_content_layout_sized(
                         overlay::outer_bounds_with_window_margin(cx.bounds, window_margin),
@@ -1137,6 +1173,89 @@ mod tests {
                 ];
                 vec![
                     NavigationMenu::new(model.clone())
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha_btn = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha button semantics");
+        let pos = Point::new(
+            Px(alpha_btn.bounds.origin.x.0 + alpha_btn.bounds.size.width.0 * 0.5),
+            Px(alpha_btn.bounds.origin.y.0 + alpha_btn.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Move {
+                position: pos,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        let token = effects
+            .iter()
+            .find_map(|e| match e {
+                fret_runtime::Effect::SetTimer { token, after, .. }
+                    if *after
+                        == radix_navigation_menu::NavigationMenuConfig::default()
+                            .delay_duration =>
+                {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("expected delayed-open timer");
+
+        ui.dispatch_event(&mut app, &mut services, &fret_core::Event::Timer { token });
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+    }
+
+    #[test]
+    fn viewport_disabled_still_opens_after_delay_like_radix() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        bump_frame(&mut app);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-no-viewport",
+            |cx| {
+                let items = vec![
+                    NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
+                    NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
+                ];
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .viewport(false)
                         .items(items)
                         .into_element(cx),
                 ]

@@ -50,7 +50,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Partial: Upstream exports a fully composable component family; Fret now shares the Radix-aligned
   trigger wiring in `fret-ui-kit::primitives::navigation_menu`, but the shadcn surface still models
   some pieces as "spec" structs rather than independent elements.
-- Missing: `viewport=false` behavior. Fret currently always uses a shared viewport overlay.
+- Pass: `viewport=false` behavior is supported via `NavigationMenu::viewport(false)`.
 
 ### Open/close & hover behavior (Radix parity)
 
