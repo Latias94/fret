@@ -1137,6 +1137,7 @@ name = "fret-code-view"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-runtime",
  "fret-syntax",
  "fret-ui",
  "fret-ui-kit",
