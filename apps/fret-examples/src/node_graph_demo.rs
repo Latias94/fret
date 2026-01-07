@@ -27,8 +27,8 @@ use fret_node::ui::presenter::{
 };
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, RegistryNodeGraphPresenter,
-    register_node_graph_commands,
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphInternalsStore,
+    RegistryNodeGraphPresenter, register_node_graph_commands,
 };
 
 #[derive(Clone)]
@@ -38,6 +38,7 @@ struct NodeGraphDemoModels {
 }
 
 const CMD_TOGGLE_WEIRD_LAYOUT: &str = "node_graph_demo.toggle_weird_layout";
+const CMD_LOG_INTERNALS: &str = "node_graph_demo.log_internals";
 const WEIRD_KIND: &str = "demo.weird_layout";
 
 #[derive(Debug)]
@@ -673,6 +674,10 @@ impl NodeGraphDemoDriver {
             .global::<Arc<MeasuredGeometryStore>>()
             .expect("MeasuredGeometryStore global must exist")
             .clone();
+        let internals = app
+            .global::<Arc<NodeGraphInternalsStore>>()
+            .expect("NodeGraphInternalsStore global must exist")
+            .clone();
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -681,6 +686,7 @@ impl NodeGraphDemoDriver {
             MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.clone());
         let canvas = NodeGraphCanvas::new(models.graph, models.view)
             .with_presenter(presenter)
+            .with_internals_store(internals)
             .with_close_command(CommandId::new("node_graph_demo.close"));
         let root = ui.create_node_retained(canvas);
         ui.set_root(root);
@@ -832,6 +838,21 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 app.request_redraw(window);
             }
         }
+
+        if command.as_str() == CMD_LOG_INTERNALS {
+            let Some(internals) = app.global::<Arc<NodeGraphInternalsStore>>().cloned() else {
+                return;
+            };
+            let snap = internals.snapshot();
+            tracing::info!(
+                zoom = snap.transform.zoom,
+                pan_x = snap.transform.pan.x,
+                pan_y = snap.transform.pan.y,
+                nodes = snap.nodes_window.len(),
+                ports = snap.ports_window.len(),
+                "node graph internals snapshot"
+            );
+        }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
@@ -891,6 +912,7 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(NodeGraphDemoModels { graph, view });
     app.set_global(build_demo_registry());
     app.set_global(Arc::new(MeasuredGeometryStore::new()));
+    app.set_global(Arc::new(NodeGraphInternalsStore::new()));
     app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
 
     let config = WinitRunnerConfig {
@@ -964,6 +986,21 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
                 win_ctrl(KeyCode::KeyL),
                 linux_ctrl(KeyCode::KeyL),
                 web_ctrl(KeyCode::KeyL),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_LOG_INTERNALS),
+        CommandMeta::new("Log NodeGraph Internals")
+            .with_category("Demo")
+            .with_keywords(["internals", "handles", "bounds"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd(KeyCode::KeyI),
+                win_ctrl(KeyCode::KeyI),
+                linux_ctrl(KeyCode::KeyI),
+                web_ctrl(KeyCode::KeyI),
             ]),
     );
 }
