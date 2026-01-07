@@ -12,8 +12,8 @@ use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
 use fret_node::ops::GraphOp;
 use fret_node::rules::{
-    ConnectDecision, ConnectPlan, DiagnosticSeverity, DiagnosticTarget, InsertNodeSpec,
-    plan_connect_by_inserting_node, plan_split_edge_by_inserting_node,
+    ConnectDecision, ConnectPlan, DiagnosticSeverity, DiagnosticTarget, InsertNodeTemplate,
+    PortTemplate, plan_connect_by_inserting_node,
 };
 use fret_node::types::TypeDesc;
 use fret_node::ui::{InsertNodeCandidate, NodeGraphCanvas, NodeGraphPresenter};
@@ -169,73 +169,39 @@ fn convert_spec(kind: &NodeKindKey) -> Option<(TypeDesc, TypeDesc, Arc<str>)> {
     }
 }
 
+fn convert_template(kind: &NodeKindKey, from_ty: TypeDesc, to_ty: TypeDesc) -> InsertNodeTemplate {
+    InsertNodeTemplate {
+        kind: kind.clone(),
+        kind_version: 1,
+        collapsed: false,
+        data: serde_json::Value::Null,
+        ports: vec![
+            PortTemplate {
+                key: PortKey::new("in"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: Some(from_ty),
+                data: serde_json::Value::Null,
+            },
+            PortTemplate {
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                ty: Some(to_ty),
+                data: serde_json::Value::Null,
+            },
+        ],
+        input: PortKey::new("in"),
+        output: PortKey::new("out"),
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 struct DemoTypedPresenter;
 
 impl DemoTypedPresenter {
-    fn plan_insert_convert_between(
-        &self,
-        graph: &Graph,
-        edge_id: EdgeId,
-        node_kind: &NodeKindKey,
-        at: CanvasPoint,
-        from_ty: TypeDesc,
-        to_ty: TypeDesc,
-    ) -> ConnectPlan {
-        let Some(edge) = graph.edges.get(&edge_id) else {
-            return ConnectPlan::reject("missing edge");
-        };
-        if edge.kind != EdgeKind::Data {
-            return ConnectPlan::reject("only data edges are supported in demo");
-        }
-
-        let node_id = NodeId::new();
-        let in_port_id = PortId::new();
-        let out_port_id = PortId::new();
-        let new_edge_id = EdgeId::new();
-
-        let node = Node {
-            kind: node_kind.clone(),
-            kind_version: 1,
-            pos: at,
-            collapsed: false,
-            ports: Vec::new(),
-            data: serde_json::Value::Null,
-        };
-
-        let in_port = Port {
-            node: node_id,
-            key: PortKey::new("in"),
-            dir: PortDirection::In,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Single,
-            ty: Some(from_ty),
-            data: serde_json::Value::Null,
-        };
-        let out_port = Port {
-            node: node_id,
-            key: PortKey::new("out"),
-            dir: PortDirection::Out,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Multi,
-            ty: Some(to_ty),
-            data: serde_json::Value::Null,
-        };
-
-        plan_split_edge_by_inserting_node(
-            graph,
-            edge_id,
-            new_edge_id,
-            InsertNodeSpec {
-                node_id,
-                node,
-                ports: vec![(in_port_id, in_port), (out_port_id, out_port)],
-                input: in_port_id,
-                output: out_port_id,
-            },
-        )
-    }
-
     fn plan_new_connection_with_convert(
         &self,
         graph: &Graph,
@@ -260,52 +226,13 @@ impl DemoTypedPresenter {
             _ => CanvasPoint { x: 240.0, y: 120.0 },
         };
 
-        let node_id = NodeId::new();
-        let in_port_id = PortId::new();
-        let out_port_id = PortId::new();
-
-        let node = Node {
-            kind: node_kind.clone(),
-            kind_version: 1,
-            pos: at,
-            collapsed: false,
-            ports: Vec::new(),
-            data: serde_json::Value::Null,
+        let template = convert_template(node_kind, from_ty, to_ty);
+        let spec = match template.instantiate(at) {
+            Ok(spec) => spec,
+            Err(err) => return ConnectPlan::reject(err),
         };
 
-        let in_port = Port {
-            node: node_id,
-            key: PortKey::new("in"),
-            dir: PortDirection::In,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Single,
-            ty: Some(from_ty),
-            data: serde_json::Value::Null,
-        };
-        let out_port = Port {
-            node: node_id,
-            key: PortKey::new("out"),
-            dir: PortDirection::Out,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Multi,
-            ty: Some(to_ty),
-            data: serde_json::Value::Null,
-        };
-
-        plan_connect_by_inserting_node(
-            graph,
-            from,
-            to,
-            EdgeId::new(),
-            EdgeId::new(),
-            InsertNodeSpec {
-                node_id,
-                node,
-                ports: vec![(in_port_id, in_port), (out_port_id, out_port)],
-                input: in_port_id,
-                output: out_port_id,
-            },
-        )
+        plan_connect_by_inserting_node(graph, from, to, EdgeId::new(), EdgeId::new(), spec)
     }
 }
 
@@ -349,29 +276,18 @@ impl NodeGraphPresenter for DemoTypedPresenter {
         let Some(kind) = convert_kind(from_ty, to_ty) else {
             return Vec::new();
         };
-        let label = convert_spec(&kind)
-            .map(|(_, _, label)| label)
-            .unwrap_or_else(|| Arc::<str>::from("Convert"));
+
+        let Some((from_ty, to_ty, label)) = convert_spec(&kind) else {
+            return Vec::new();
+        };
+        let template = convert_template(&kind, from_ty, to_ty);
         vec![InsertNodeCandidate {
             kind,
             label,
             enabled: true,
-            template: None,
+            template: Some(template),
             payload: serde_json::Value::Null,
         }]
-    }
-
-    fn plan_split_edge(
-        &mut self,
-        graph: &Graph,
-        edge: EdgeId,
-        node_kind: &NodeKindKey,
-        at: CanvasPoint,
-    ) -> ConnectPlan {
-        let Some((from_ty, to_ty, _label)) = convert_spec(node_kind) else {
-            return ConnectPlan::reject(format!("unknown node kind: {}", node_kind.0));
-        };
-        self.plan_insert_convert_between(graph, edge, node_kind, at, from_ty, to_ty)
     }
 
     fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
