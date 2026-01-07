@@ -12,7 +12,10 @@ use std::time::Duration;
 use fret_core::PointerType;
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, UiActionHost};
+use fret_ui::elements::ContinuousFrames;
 use fret_ui::{ElementContext, UiHost};
+
+use crate::headless::transition::TransitionTimeline;
 
 /// Radix `delayDuration` default (milliseconds).
 pub const DEFAULT_DELAY_DURATION_MS: u64 = 200;
@@ -359,6 +362,262 @@ pub fn navigation_menu_trigger_pointer_move_action(
     }
 }
 
+/// Matches Radix `data-motion` values used by `NavigationMenuContent` when switching between
+/// values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NavigationMenuContentMotion {
+    None,
+    FromStart,
+    FromEnd,
+    ToStart,
+    ToEnd,
+}
+
+impl NavigationMenuContentMotion {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            NavigationMenuContentMotion::None => "none",
+            NavigationMenuContentMotion::FromStart => "from-start",
+            NavigationMenuContentMotion::FromEnd => "from-end",
+            NavigationMenuContentMotion::ToStart => "to-start",
+            NavigationMenuContentMotion::ToEnd => "to-end",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NavigationMenuContentTransitionOutput {
+    pub from_idx: Option<usize>,
+    pub to_idx: Option<usize>,
+    pub switching: bool,
+    /// Transition progress in `[0, 1]` where `0` is the beginning of the switch and `1` is the end.
+    pub progress: f32,
+    pub animating: bool,
+    pub from_motion: NavigationMenuContentMotion,
+    pub to_motion: NavigationMenuContentMotion,
+}
+
+impl Default for NavigationMenuContentTransitionOutput {
+    fn default() -> Self {
+        Self {
+            from_idx: None,
+            to_idx: None,
+            switching: false,
+            progress: 1.0,
+            animating: false,
+            from_motion: NavigationMenuContentMotion::None,
+            to_motion: NavigationMenuContentMotion::None,
+        }
+    }
+}
+
+fn content_motion(
+    from_idx: usize,
+    to_idx: usize,
+) -> (NavigationMenuContentMotion, NavigationMenuContentMotion) {
+    if from_idx == to_idx {
+        return (
+            NavigationMenuContentMotion::None,
+            NavigationMenuContentMotion::None,
+        );
+    }
+
+    // Radix/shadcn direction semantics (LTR):
+    // - Forward (increasing index): new content slides in from the end (right), old slides out to the start (left).
+    // - Backward: new content slides in from the start (left), old slides out to the end (right).
+    if to_idx > from_idx {
+        (
+            NavigationMenuContentMotion::ToStart,
+            NavigationMenuContentMotion::FromEnd,
+        )
+    } else {
+        (
+            NavigationMenuContentMotion::ToEnd,
+            NavigationMenuContentMotion::FromStart,
+        )
+    }
+}
+
+#[derive(Default)]
+struct ContentTransitionState {
+    last_selected: Option<Arc<str>>,
+    last_selected_idx: Option<usize>,
+    from_idx: Option<usize>,
+    to_idx: Option<usize>,
+    seq: u64,
+}
+
+#[derive(Default)]
+struct ContentTransitionMotionState {
+    seq: u64,
+    last_app_tick: u64,
+    last_frame_tick: u64,
+    tick: u64,
+    timeline: TransitionTimeline,
+    lease: Option<ContinuousFrames>,
+    configured_open_ticks: u64,
+    configured_close_ticks: u64,
+}
+
+/// Drive a Radix-like `data-motion` content transition when switching between two open values.
+///
+/// This is a reusable substrate for shadcn-style recipes: it exposes the direction semantics
+/// (`from-start`/`from-end`/`to-start`/`to-end`) plus a normalized `progress` that callers can map
+/// to transforms/opacity.
+///
+/// Notes:
+/// - This helper is skin-free: it does not prescribe distances or easing beyond the function you
+///   provide.
+/// - It keeps the transition mounted while animating; callers decide how to keep rendering the
+///   "from" content while `animating=true`.
+pub fn navigation_menu_content_transition_with_durations_and_easing<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: fret_ui::elements::GlobalElementId,
+    open: bool,
+    selected: Option<Arc<str>>,
+    values: &[Arc<str>],
+    open_ticks: u64,
+    close_ticks: u64,
+    ease: fn(f32) -> f32,
+) -> NavigationMenuContentTransitionOutput {
+    if !open {
+        cx.with_state_for(id, ContentTransitionState::default, |st| {
+            st.last_selected = None;
+            st.last_selected_idx = None;
+            st.from_idx = None;
+            st.to_idx = None;
+        });
+        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+            st.seq = 0;
+            st.tick = 0;
+            st.timeline = TransitionTimeline::default();
+            st.lease = None;
+        });
+        return NavigationMenuContentTransitionOutput::default();
+    }
+
+    let selected_idx = selected
+        .as_deref()
+        .and_then(|v| values.iter().position(|it| it.as_ref() == v));
+
+    let (seq, from_idx, to_idx) = cx.with_state_for(id, ContentTransitionState::default, |st| {
+        let changed = selected.is_some()
+            && st.last_selected.is_some()
+            && selected != st.last_selected
+            && selected_idx.is_some()
+            && st.last_selected_idx.is_some();
+
+        if changed {
+            st.from_idx = st.last_selected_idx;
+            st.to_idx = selected_idx;
+            st.seq = st.seq.saturating_add(1);
+        }
+
+        st.last_selected = selected.clone();
+        st.last_selected_idx = selected_idx;
+
+        (st.seq, st.from_idx, st.to_idx)
+    });
+
+    let (Some(from_idx), Some(to_idx)) = (from_idx, to_idx) else {
+        return NavigationMenuContentTransitionOutput::default();
+    };
+
+    let app_tick = cx.app.tick_id().0;
+    let frame_tick = cx.frame_id.0;
+
+    let (out, start_lease, stop_lease) =
+        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+            if st.configured_open_ticks != open_ticks || st.configured_close_ticks != close_ticks {
+                st.configured_open_ticks = open_ticks;
+                st.configured_close_ticks = close_ticks;
+                st.timeline.set_durations(open_ticks, close_ticks);
+            }
+
+            if st.seq != seq {
+                st.seq = seq;
+                st.last_app_tick = app_tick;
+                st.last_frame_tick = frame_tick;
+                st.tick = 0;
+                st.timeline = TransitionTimeline::default();
+                st.timeline.set_durations(open_ticks, close_ticks);
+            }
+
+            if st.last_frame_tick != frame_tick {
+                st.last_frame_tick = frame_tick;
+                st.tick = st.tick.saturating_add(1);
+            } else if st.last_app_tick != app_tick {
+                st.last_app_tick = app_tick;
+                st.tick = st.tick.saturating_add(1);
+            } else {
+                st.tick = st.tick.saturating_add(1);
+            }
+
+            let out = st.timeline.update_with_easing(true, st.tick, ease);
+            let start_lease = out.animating && st.lease.is_none();
+            let stop_lease = !out.animating && st.lease.is_some();
+            (out, start_lease, stop_lease)
+        });
+
+    if start_lease {
+        let lease = cx.begin_continuous_frames();
+        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+            st.lease = Some(lease);
+        });
+    } else if stop_lease {
+        cx.with_state_for(id, ContentTransitionMotionState::default, |st| {
+            st.lease = None;
+        });
+
+        cx.with_state_for(id, ContentTransitionState::default, |st| {
+            st.from_idx = None;
+            st.to_idx = None;
+        });
+    }
+
+    if out.animating {
+        cx.request_frame();
+    } else {
+        // If no continuous-frames lease was acquired (e.g. a 1-tick transition), still clear the
+        // switch state immediately.
+        cx.with_state_for(id, ContentTransitionState::default, |st| {
+            st.from_idx = None;
+            st.to_idx = None;
+        });
+    }
+
+    let (from_motion, to_motion) = content_motion(from_idx, to_idx);
+    NavigationMenuContentTransitionOutput {
+        from_idx: Some(from_idx),
+        to_idx: Some(to_idx),
+        switching: true,
+        progress: out.progress,
+        animating: out.animating,
+        from_motion,
+        to_motion,
+    }
+}
+
+/// Convenience wrapper that uses shadcn-style defaults.
+pub fn navigation_menu_content_transition<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: fret_ui::elements::GlobalElementId,
+    open: bool,
+    selected: Option<Arc<str>>,
+    values: &[Arc<str>],
+) -> NavigationMenuContentTransitionOutput {
+    navigation_menu_content_transition_with_durations_and_easing(
+        cx,
+        id,
+        open,
+        selected,
+        values,
+        crate::declarative::overlay_motion::SHADCN_MOTION_TICKS_200,
+        crate::declarative::overlay_motion::SHADCN_MOTION_TICKS_200,
+        crate::declarative::overlay_motion::shadcn_ease,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -514,5 +773,16 @@ mod tests {
             navigation_menu_trigger_pointer_move_action(PointerType::Mouse, false, st),
             NavigationMenuTriggerPointerMoveAction::Ignore
         );
+    }
+
+    #[test]
+    fn content_motion_matches_forward_and_backward_semantics() {
+        let (from, to) = content_motion(0, 1);
+        assert_eq!(from, NavigationMenuContentMotion::ToStart);
+        assert_eq!(to, NavigationMenuContentMotion::FromEnd);
+
+        let (from, to) = content_motion(2, 1);
+        assert_eq!(from, NavigationMenuContentMotion::ToEnd);
+        assert_eq!(to, NavigationMenuContentMotion::FromStart);
     }
 }

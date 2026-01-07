@@ -10,12 +10,10 @@ use fret_ui::element::{
     PointerRegionProps, PressableA11y, PressableProps, SizeStyle, StackProps, TextProps,
     VisualTransformProps,
 };
-use fret_ui::elements::ContinuousFrames;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::headless::transition::TransitionTimeline;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::presence as radix_presence;
@@ -381,26 +379,6 @@ impl NavigationMenu {
                 last_present_selected: Option<Arc<str>>,
             }
 
-            #[derive(Default)]
-            struct ContentSwitchState {
-                last_selected: Option<Arc<str>>,
-                last_selected_idx: Option<usize>,
-                from_selected: Option<Arc<str>>,
-                from_idx: Option<usize>,
-                to_selected: Option<Arc<str>>,
-                to_idx: Option<usize>,
-                seq: u64,
-            }
-
-            #[derive(Default)]
-            struct ContentSwitchMotionState {
-                seq: u64,
-                last_frame_tick: u64,
-                tick: u64,
-                timeline: TransitionTimeline,
-                lease: Option<ContinuousFrames>,
-            }
-
             let open_model = cx.with_state_for(root_id, OpenModelState::default, |st| st.model.clone());
             let open_model = if let Some(model) = open_model {
                 model
@@ -466,40 +444,14 @@ impl NavigationMenu {
                     .filter(|_| !menu_disabled)
             });
 
-            let selected_idx_for_motion =
-                selected.as_deref().and_then(|v| items.iter().position(|it| it.value.as_ref() == v));
-
-            let (switch_seq, switch_from, switch_to, switch_from_idx, switch_to_idx) =
-                cx.with_state_for(root_id, ContentSwitchState::default, |st| {
-                    let changed = selected.is_some()
-                        && open_for_motion
-                        && st.last_selected.is_some()
-                        && selected != st.last_selected;
-
-                    if changed {
-                        st.from_selected = st.last_selected.clone();
-                        st.from_idx = st.last_selected_idx;
-                        st.to_selected = selected.clone();
-                        st.to_idx = selected_idx_for_motion;
-                        st.seq = st.seq.saturating_add(1);
-                    } else if selected.is_none() {
-                        st.from_selected = None;
-                        st.to_selected = None;
-                        st.from_idx = None;
-                        st.to_idx = None;
-                    }
-
-                    st.last_selected = selected.clone();
-                    st.last_selected_idx = selected_idx_for_motion;
-
-                    (
-                        st.seq,
-                        st.from_selected.clone(),
-                        st.to_selected.clone(),
-                        st.from_idx,
-                        st.to_idx,
-                    )
-                });
+            let values: Vec<Arc<str>> = items.iter().map(|it| it.value.clone()).collect();
+            let transition = radix_navigation_menu::navigation_menu_content_transition(
+                cx,
+                root_id,
+                open_for_motion,
+                selected.clone(),
+                &values,
+            );
 
             let value_model_for_timer = value_model.clone();
             let root_state_for_timer = root_state.clone();
@@ -783,78 +735,16 @@ impl NavigationMenu {
             };
 
             let mut content_switch: Option<(f32, bool, Vec<AnyElement>)> = None;
-            if let (
-                Some(from_value),
-                Some(to_value),
-                Some(from_idx),
-                Some(to_idx),
-                Some(selected_value),
-            ) = (
-                switch_from.clone(),
-                switch_to.clone(),
-                switch_from_idx,
-                switch_to_idx,
-                selected.clone(),
-            ) {
-                if motion.present && selected_value.as_ref() == to_value.as_ref() && from_value != to_value {
-                    let open_ticks = overlay_motion::SHADCN_MOTION_TICKS_200;
-                    let close_ticks = overlay_motion::SHADCN_MOTION_TICKS_200;
-                    let frame_tick = cx.frame_id.0;
-
-                    let (out, start_lease, stop_lease) =
-                        cx.with_state_for(root_id, ContentSwitchMotionState::default, |st| {
-                            if st.seq != switch_seq {
-                                st.seq = switch_seq;
-                                st.last_frame_tick = frame_tick;
-                                st.tick = 0;
-                                st.timeline = TransitionTimeline::default();
-                                st.timeline.set_durations(open_ticks, close_ticks);
-                            }
-
-                            if st.last_frame_tick != frame_tick {
-                                st.last_frame_tick = frame_tick;
-                                st.tick = st.tick.saturating_add(1);
-                            } else {
-                                st.tick = st.tick.saturating_add(1);
-                            }
-
-                            let out = st
-                                .timeline
-                                .update_with_easing(true, st.tick, overlay_motion::shadcn_ease);
-                            let start_lease = out.animating && st.lease.is_none();
-                            let stop_lease = !out.animating && st.lease.is_some();
-                            (out, start_lease, stop_lease)
-                        });
-
-                    if start_lease {
-                        let lease = cx.begin_continuous_frames();
-                        cx.with_state_for(root_id, ContentSwitchMotionState::default, |st| {
-                            st.lease = Some(lease);
-                        });
-                    } else if stop_lease {
-                        cx.with_state_for(root_id, ContentSwitchMotionState::default, |st| {
-                            st.lease = None;
-                        });
+            if motion.present && transition.switching && transition.animating {
+                if let (Some(from_idx), Some(to_idx)) = (transition.from_idx, transition.to_idx) {
+                    if from_idx != to_idx {
+                        let forward = to_idx > from_idx;
+                        let from_children = items
+                            .get(from_idx)
+                            .map(|it| it.content.clone())
+                            .unwrap_or_default();
+                        content_switch = Some((transition.progress, forward, from_children));
                     }
-
-                    if out.animating {
-                        cx.request_frame();
-                    } else {
-                        cx.with_state_for(root_id, ContentSwitchState::default, |st| {
-                            st.from_selected = None;
-                            st.to_selected = None;
-                            st.from_idx = None;
-                            st.to_idx = None;
-                        });
-                    }
-
-                    let forward = to_idx >= from_idx;
-                    let from_children = items
-                        .iter()
-                        .find(|it| it.value.as_ref() == from_value.as_ref())
-                        .map(|it| it.content.clone())
-                        .unwrap_or_default();
-                    content_switch = Some((out.progress, forward, from_children));
                 }
             }
 
