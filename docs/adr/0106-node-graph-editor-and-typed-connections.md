@@ -516,6 +516,22 @@ Auto-pan, snapping, and drag thresholds (locked):
   - enable flags per workflow (node drag / connect / focus),
   - speed and edge margin thresholds.
 
+Resizable nodes and node origins (locked):
+
+- The editor supports optional node resize interactions (XyFlow parity: `NodeResizer`) for node kinds
+  that opt into it (frames/comments, domain nodes with variable UI, etc.).
+- We explicitly separate three size concepts:
+  - **persisted size** (user intent / graph semantics): stored only when a node kind declares it,
+  - **measured size** (derived internals): computed from the rendered node subtree each frame or via
+    cached measurement,
+  - **minimum size** (policy): derived from style + port layout + node content constraints.
+- Resize edits are undoable and expressed as deterministic transactions (ops or domain-owned payload
+  updates). Resizing must not mutate derived internals directly.
+- We standardize a `node_origin` concept (XyFlow parity: `nodeOrigin`):
+  - node `pos` is interpreted as the canvas position of an origin point inside the node rect,
+  - default is top-left (`[0, 0]`), but profiles/components may choose other origins,
+  - origin affects selection/hit-testing, fit-view framing, parent/child extents, and resizer math.
+
 Node presentation contract (Viewer-style):
 
 - The node graph widget does not own domain UI. Instead, a presenter/viewer surface is provided
@@ -738,6 +754,25 @@ Contract:
 - Referenced graph interfaces are treated as dynamic ports and must be concretized deterministically.
 - Recursive dependencies must be detected and surfaced as diagnostics, and profiles may forbid them.
 - Copy/paste of subgraph nodes preserves the reference (it does not inline by default).
+
+### 19) Collaboration readiness: deterministic diffs and patchability
+
+Even in single-user editors, graphs end up in Git and require workable diffs/merges.
+
+We require:
+
+- Deterministic serialization shape:
+  - stable ID types (already),
+  - stable map ordering for canonical formats (e.g. `BTreeMap` in the model),
+  - stable normalization for derived structures (e.g. unions, port ordering).
+- A stable patch unit for integration:
+  - `GraphTransaction` is the canonical reversible patch unit and should be usable for:
+    - local undo/redo,
+    - scripted refactors/migrations,
+    - future collaborative edit streams (CRDT/OT is explicitly out of scope for v1).
+- Diff hygiene:
+  - derived internals are never serialized into the graph asset,
+  - editor view state is stored separately and can be excluded from VCS if desired.
 
 ## Consequences
 
