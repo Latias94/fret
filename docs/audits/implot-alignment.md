@@ -35,7 +35,7 @@ token-driven theming and retained rendering/cache.
 | `PlotDigital` | (none) | ❌ | Could be modeled as a step/segment series; clarify UX + sampling. |
 | `PlotImage` | `PlotOverlays::images` (`PlotImage`) | ✅ | Renders `ImageId` as a data-aligned rect via `SceneOp::ImageRegion` (layers: below/above grid). |
 | `PlotText` | `PlotOverlays::text` (`PlotText`) | 🟡 | Implemented as a caller-owned overlay (ADR 0106). No rich text/callouts yet. |
-| `PlotHistogram2D` | (none) | ❌ | Similar to heatmap but derived from samples and binning. |
+| `PlotHistogram2D` | `Histogram2DPlotCanvas` / `Histogram2DPlotModel` | ✅ | Implemented as a grid-backed plot (bins -> quads) with shared colormap + colorbar. |
 | `PlotDummy` | (none) | ❌ | Not needed; can be handled by layout/legend policies if required. |
 
 ## Interactions & UX (ImPlot)

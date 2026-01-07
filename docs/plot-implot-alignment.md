@@ -99,6 +99,7 @@ The default mapping is configurable via `PlotCanvas::input_map(PlotInputMap)`.
 - [x] Shaded band (fill between upper/lower series)
 - [x] Stairs / Step
 - [x] Heatmap (quad-based, portable)
+- [x] 2D histogram (binning into a grid + colormap)
 - [x] Error bars
 - [x] Candlesticks / OHLC
 

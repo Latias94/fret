@@ -29,6 +29,7 @@ hash or query string:
 - `?demo=error_bars_demo` (or `#error_bars_demo`)
 - `?demo=heatmap_demo` (or `#heatmap_demo`)
 - `?demo=histogram_demo` (or `#histogram_demo`)
+- `?demo=histogram2d_demo` (or `#histogram2d_demo`)
 - `?demo=shaded_demo` (or `#shaded_demo`)
 - `?demo=stairs_demo` (or `#stairs_demo`)
 - `?demo=stems_demo` (or `#stems_demo`)
