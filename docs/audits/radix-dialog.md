@@ -31,6 +31,9 @@ Fret does not use React context. Instead, dialog behavior is composed via:
 
 ## Current parity notes
 
+- Pass: Controlled/uncontrolled open modeling is available via
+  `primitives::dialog::dialog_use_open_model(...)` (backed by the shared controllable-state
+  substrate).
 - Pass: Modal focus traversal is scoped to the modal barrier layer (ADR 0068).
 - Pass: Escape dismiss is handled by the shared dismissible root used by modal overlays.
 - Pass: Trigger can stamp Radix-like `expanded` + `controls` relationships via

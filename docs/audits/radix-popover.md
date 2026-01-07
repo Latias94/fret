@@ -32,6 +32,9 @@ Fret does not use React context. Instead, popover behavior is composed via:
 
 ## Current parity notes
 
+- Pass: Controlled/uncontrolled open modeling is available via
+  `primitives::popover::popover_use_open_model(...)` (backed by the shared controllable-state
+  substrate).
 - Pass: `aria-expanded` + `aria-controls` style semantics can be stamped on the trigger via
   `apply_popover_trigger_a11y(...)`.
 - Pass: Content uses a dialog-like semantics role (`SemanticsRole::Dialog`) via

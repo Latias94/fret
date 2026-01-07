@@ -27,6 +27,9 @@ Fret models alert-dialog outcomes as a modal overlay recipe with safety defaults
 
 ## Current parity notes
 
+- Pass: Controlled/uncontrolled open modeling is available via
+  `primitives::alert_dialog::alert_dialog_use_open_model(...)` (backed by the shared
+  controllable-state substrate).
 - Pass: Alert dialog is modal (barrier-backed) and scopes focus traversal (ADR 0068).
 - Pass: Overlay click-to-dismiss is disabled by default in the shadcn recipe (Radix safety outcome).
 - Pass: Initial focus prefers the first registered `Cancel` action when present, via

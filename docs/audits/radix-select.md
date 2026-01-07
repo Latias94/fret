@@ -31,6 +31,9 @@ Fret models Radix Select outcomes by composing:
 
 ## Current parity notes
 
+- Pass: Controlled/uncontrolled open modeling is available via
+  `primitives::select::select_use_open_model(...)` (backed by the shared controllable-state
+  substrate).
 - Pass: Select can be rendered in a modal overlay layer to block underlay interaction, matching the
   Radix "disable outside pointer events" outcome.
 - Pass: Trigger can stamp Radix-like `expanded` + `controls` relationships via
