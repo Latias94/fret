@@ -565,19 +565,14 @@ impl NavigationMenu {
                 interactive: is_open,
             };
 
-            let mut content_switch: Option<(f32, bool, Vec<AnyElement>)> = None;
-            if motion.present && transition.switching && transition.animating {
-                if let (Some(from_idx), Some(to_idx)) = (transition.from_idx, transition.to_idx) {
-                    if from_idx != to_idx {
-                        let forward = to_idx > from_idx;
-                        let from_children = items
-                            .get(from_idx)
-                            .map(|it| it.content.clone())
-                            .unwrap_or_default();
-                        content_switch = Some((transition.progress, forward, from_children));
-                    }
-                }
-            }
+            let content_switch = radix_navigation_menu::navigation_menu_content_switch(transition)
+                .map(|sw| {
+                    let from_children = items
+                        .get(sw.from_idx)
+                        .map(|it| it.content.clone())
+                        .unwrap_or_default();
+                    (sw.progress, sw.forward, from_children)
+                });
 
             if overlay_presence.present {
                 let side_offset = nav_menu_viewport_side_offset(&theme);

@@ -42,6 +42,7 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
     - `navigation_menu_register_viewport_content_id(...)` / `navigation_menu_viewport_content_id(...)`
       (viewport content id registry; Radix "viewport content map" analogue)
     - `navigation_menu_viewport_selected_value(...)` (stable selection while present)
+    - `navigation_menu_content_switch(...)` (selected+previous content switch helper)
 - shadcn recipe layer:
   - `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` (styling + overlay composition)
 

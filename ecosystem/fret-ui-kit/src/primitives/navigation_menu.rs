@@ -1086,6 +1086,46 @@ pub struct NavigationMenuContentTransitionOutput {
     pub to_motion: NavigationMenuContentMotion,
 }
 
+/// A convenience wrapper around [`NavigationMenuContentTransitionOutput`] for recipes that need to
+/// render "from" + "to" layers during a value switch (shadcn-style `data-motion` transitions).
+///
+/// This models Radix's behavior of only animating the selected and the previously selected content,
+/// avoiding unnecessary mounts and interrupted animations outside of that range.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NavigationMenuContentSwitchOutput {
+    pub from_idx: usize,
+    pub to_idx: usize,
+    pub progress: f32,
+    pub animating: bool,
+    pub forward: bool,
+    pub from_motion: NavigationMenuContentMotion,
+    pub to_motion: NavigationMenuContentMotion,
+}
+
+/// Returns a switch output when the content transition is actively animating between two indices.
+pub fn navigation_menu_content_switch(
+    transition: NavigationMenuContentTransitionOutput,
+) -> Option<NavigationMenuContentSwitchOutput> {
+    if !transition.switching || !transition.animating {
+        return None;
+    }
+    let (Some(from_idx), Some(to_idx)) = (transition.from_idx, transition.to_idx) else {
+        return None;
+    };
+    if from_idx == to_idx {
+        return None;
+    }
+    Some(NavigationMenuContentSwitchOutput {
+        from_idx,
+        to_idx,
+        progress: transition.progress.clamp(0.0, 1.0),
+        animating: transition.animating,
+        forward: to_idx > from_idx,
+        from_motion: transition.from_motion,
+        to_motion: transition.to_motion,
+    })
+}
+
 impl Default for NavigationMenuContentTransitionOutput {
     fn default() -> Self {
         Self {
@@ -1473,6 +1513,26 @@ mod tests {
         let (from, to) = content_motion(2, 1);
         assert_eq!(from, NavigationMenuContentMotion::ToEnd);
         assert_eq!(to, NavigationMenuContentMotion::FromStart);
+    }
+
+    #[test]
+    fn content_switch_exposes_from_to_and_direction() {
+        let transition = NavigationMenuContentTransitionOutput {
+            from_idx: Some(0),
+            to_idx: Some(2),
+            switching: true,
+            progress: 0.25,
+            animating: true,
+            from_motion: NavigationMenuContentMotion::ToStart,
+            to_motion: NavigationMenuContentMotion::FromEnd,
+        };
+        let out = navigation_menu_content_switch(transition).expect("switch");
+        assert_eq!(out.from_idx, 0);
+        assert_eq!(out.to_idx, 2);
+        assert!(out.forward);
+        assert_eq!(out.progress, 0.25);
+        assert_eq!(out.from_motion, NavigationMenuContentMotion::ToStart);
+        assert_eq!(out.to_motion, NavigationMenuContentMotion::FromEnd);
     }
 
     fn bounds() -> Rect {
