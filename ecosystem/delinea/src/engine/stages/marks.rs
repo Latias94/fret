@@ -88,7 +88,10 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            if series.kind != crate::spec::SeriesKind::Line {
+            if !matches!(
+                series.kind,
+                crate::spec::SeriesKind::Line | crate::spec::SeriesKind::Area
+            ) {
                 self.series_index += 1;
                 continue;
             }
