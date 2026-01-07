@@ -89,6 +89,52 @@ fn nav_menu_viewport_window_margin(theme: &Theme) -> Px {
         .unwrap_or(Px(8.0))
 }
 
+/// shadcn/ui `NavigationMenuTrigger` (v4).
+///
+/// In the upstream DOM implementation this is an element; in Fret this is a "spec" that provides
+/// trigger children for [`NavigationMenuItem`].
+#[derive(Debug, Clone, Default)]
+pub struct NavigationMenuTrigger {
+    children: Vec<AnyElement>,
+}
+
+impl NavigationMenuTrigger {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self { children }
+    }
+
+    pub fn child(child: AnyElement) -> Self {
+        Self { children: vec![child] }
+    }
+
+    pub fn children(self) -> Vec<AnyElement> {
+        self.children
+    }
+}
+
+/// shadcn/ui `NavigationMenuContent` (v4).
+///
+/// In the upstream DOM implementation this is an element; in Fret this is a "spec" that provides
+/// viewport content for [`NavigationMenuItem`].
+#[derive(Debug, Clone, Default)]
+pub struct NavigationMenuContent {
+    children: Vec<AnyElement>,
+}
+
+impl NavigationMenuContent {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self { children }
+    }
+
+    pub fn child(child: AnyElement) -> Self {
+        Self { children: vec![child] }
+    }
+
+    pub fn children(self) -> Vec<AnyElement> {
+        self.children
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct NavigationMenuItem {
     value: Arc<str>,
@@ -118,14 +164,48 @@ impl NavigationMenuItem {
         self
     }
 
+    pub fn trigger(mut self, trigger: NavigationMenuTrigger) -> Self {
+        self.trigger = Some(trigger.children());
+        self
+    }
+
     pub fn trigger_child(mut self, child: AnyElement) -> Self {
         self.trigger = Some(vec![child]);
+        self
+    }
+
+    pub fn content(mut self, content: NavigationMenuContent) -> Self {
+        self.content = content.children();
         self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
+    }
+}
+
+/// shadcn/ui `NavigationMenuList` (v4).
+///
+/// In the upstream DOM implementation this is a structural wrapper. In Fret it is a named
+/// container for `NavigationMenuItem` specs so recipes read closer to shadcn docs.
+#[derive(Debug, Clone, Default)]
+pub struct NavigationMenuList {
+    items: Vec<NavigationMenuItem>,
+}
+
+impl NavigationMenuList {
+    pub fn new(items: Vec<NavigationMenuItem>) -> Self {
+        Self { items }
+    }
+
+    pub fn items(mut self, items: Vec<NavigationMenuItem>) -> Self {
+        self.items = items;
+        self
+    }
+
+    pub fn into_items(self) -> Vec<NavigationMenuItem> {
+        self.items
     }
 }
 
@@ -180,6 +260,11 @@ impl NavigationMenu {
 
     pub fn items(mut self, items: Vec<NavigationMenuItem>) -> Self {
         self.items = items;
+        self
+    }
+
+    pub fn list(mut self, list: NavigationMenuList) -> Self {
+        self.items = list.into_items();
         self
     }
 
@@ -707,6 +792,13 @@ pub fn navigation_menu<H: UiHost>(
     f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<NavigationMenuItem>,
 ) -> AnyElement {
     NavigationMenu::new(model).items(f(cx)).into_element(cx)
+}
+
+pub fn navigation_menu_list<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<NavigationMenuItem>,
+) -> NavigationMenuList {
+    NavigationMenuList::new(f(cx))
 }
 
 pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
