@@ -1,0 +1,147 @@
+use fret_core::Rect;
+
+use crate::action::Action;
+use crate::data::DatasetStore;
+use crate::ids::{ChartId, Revision};
+use crate::link::{LinkConfig, LinkEvent};
+use crate::marks::MarkTree;
+use crate::scheduler::{StepResult, WorkBudget};
+use crate::spec::ChartSpec;
+use crate::stats::EngineStats;
+use crate::text::TextMeasurer;
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct ChartState {
+    pub revision: Revision,
+    pub link: LinkConfig,
+}
+
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct ChartOutput {
+    pub revision: Revision,
+    pub viewport: Option<Rect>,
+    pub marks: MarkTree,
+    pub link_events: Vec<LinkEvent>,
+}
+
+#[derive(Debug)]
+pub enum EngineError {
+    #[allow(dead_code)]
+    MissingViewport,
+}
+
+impl core::fmt::Display for EngineError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::MissingViewport => write!(f, "missing viewport"),
+        }
+    }
+}
+
+impl std::error::Error for EngineError {}
+
+pub struct ChartEngine {
+    id: ChartId,
+    spec: ChartSpec,
+    datasets: DatasetStore,
+    state: ChartState,
+    output: ChartOutput,
+    stats: EngineStats,
+}
+
+impl ChartEngine {
+    pub fn new(spec: ChartSpec) -> Self {
+        let id = spec.id;
+        Self {
+            id,
+            spec,
+            datasets: DatasetStore::default(),
+            state: ChartState::default(),
+            output: ChartOutput::default(),
+            stats: EngineStats::default(),
+        }
+    }
+
+    pub fn id(&self) -> ChartId {
+        self.id
+    }
+
+    pub fn spec(&self) -> &ChartSpec {
+        &self.spec
+    }
+
+    pub fn spec_mut(&mut self) -> &mut ChartSpec {
+        &mut self.spec
+    }
+
+    pub fn datasets_mut(&mut self) -> &mut DatasetStore {
+        &mut self.datasets
+    }
+
+    pub fn state(&self) -> &ChartState {
+        &self.state
+    }
+
+    pub fn state_mut(&mut self) -> &mut ChartState {
+        &mut self.state
+    }
+
+    pub fn output(&self) -> &ChartOutput {
+        &self.output
+    }
+
+    pub fn stats(&self) -> &EngineStats {
+        &self.stats
+    }
+
+    pub fn apply_action(&mut self, action: Action) {
+        match action {
+            Action::SetLinkGroup { group } => {
+                self.state.link.group = group;
+                self.state.revision.bump();
+            }
+            _ => {
+                self.state.revision.bump();
+            }
+        }
+    }
+
+    pub fn step(
+        &mut self,
+        _measurer: &mut dyn TextMeasurer,
+        mut budget: WorkBudget,
+    ) -> Result<StepResult, EngineError> {
+        self.output.viewport = self.spec.viewport;
+        if self.output.viewport.is_none() {
+            return Err(EngineError::MissingViewport);
+        }
+
+        self.output.link_events.clear();
+
+        let mut unfinished = false;
+
+        if budget.take_marks(1) > 0 {
+            self.stats.stage_data_runs += 1;
+            self.stats.stage_layout_runs += 1;
+            self.stats.stage_visual_runs += 1;
+            self.stats.stage_marks_runs += 1;
+
+            self.output.marks.clear();
+            self.stats.marks_emitted += 1;
+        } else {
+            unfinished = true;
+        }
+
+        if budget.is_exhausted() && unfinished {
+            return Ok(StepResult { unfinished: true });
+        }
+
+        self.output.revision.bump();
+        Ok(StepResult { unfinished })
+    }
+}

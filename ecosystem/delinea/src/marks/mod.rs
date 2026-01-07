@@ -1,0 +1,108 @@
+use core::ops::Range;
+
+use fret_core::{Point, Rect};
+
+use crate::ids::{LayerId, MarkId, PaintId, Revision, StringId};
+use crate::paint::StrokeStyleV2;
+use crate::text::TextStyleId;
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum MarkKind {
+    Group,
+    Polyline,
+    Rect,
+    Text,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct MarkOrderKey(pub u32);
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct MarkNode {
+    pub id: MarkId,
+    pub parent: Option<MarkId>,
+    pub layer: LayerId,
+    pub order: MarkOrderKey,
+    pub kind: MarkKind,
+    pub payload: MarkPayloadRef,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum MarkPayloadRef {
+    Group(MarkGroup),
+    Polyline(MarkPolylineRef),
+    Rect(MarkRect),
+    Text(MarkText),
+}
+
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct MarkGroup {
+    pub clip: Option<Rect>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct MarkPolylineRef {
+    pub points: Range<usize>,
+    pub stroke: Option<(PaintId, StrokeStyleV2)>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct MarkRect {
+    pub rect: Rect,
+    pub fill: Option<PaintId>,
+    pub stroke: Option<(PaintId, StrokeStyleV2)>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct MarkText {
+    pub rect: Rect,
+    pub text: StringId,
+    pub style: TextStyleId,
+    pub fill: Option<PaintId>,
+}
+
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct MarkArena {
+    pub points: Vec<Point>,
+}
+
+impl MarkArena {
+    pub fn clear(&mut self) {
+        self.points.clear();
+    }
+
+    pub fn extend_points(&mut self, points: impl IntoIterator<Item = Point>) -> Range<usize> {
+        let start = self.points.len();
+        self.points.extend(points);
+        let end = self.points.len();
+        start..end
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct MarkTree {
+    pub revision: Revision,
+    pub arena: MarkArena,
+    pub nodes: Vec<MarkNode>,
+}
+
+impl MarkTree {
+    pub fn clear(&mut self) {
+        self.arena.clear();
+        self.nodes.clear();
+        self.revision.bump();
+    }
+}

@@ -1,0 +1,13 @@
+[package]
+name = "delinea"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+serde = { workspace = true, optional = true }
+thiserror = { workspace = true }
+
+[features]
+default = []
+serde = ["dep:serde"]
