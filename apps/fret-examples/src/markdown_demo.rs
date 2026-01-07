@@ -333,7 +333,6 @@ $$
         } else {
             fret_code_view::CodeBlockWrap::ScrollX
         };
-        components.code_block_ui.max_height = Some(Px(360.0));
 
         let on_link_activate = components.on_link_activate.clone();
 
@@ -776,6 +775,7 @@ fn apply_markdown_demo_theme_tokens(app: &mut App) {
         let font_size = theme.metric_required("metric.font.size").0;
         let line_height = theme.metric_required("metric.font.line_height").0;
         let block_height = (line_height * 3.25).max(font_size * 4.0);
+        let code_block_max_height = (line_height * 16.0).max(font_size * 18.0);
 
         let mut cfg = ThemeConfig {
             name: theme.name.clone(),
@@ -793,6 +793,10 @@ fn apply_markdown_demo_theme_tokens(app: &mut App) {
         );
         cfg.metrics
             .insert("fret.markdown.math.block.height".to_string(), block_height);
+        cfg.metrics.insert(
+            "fret.markdown.code_block.max_height".to_string(),
+            code_block_max_height,
+        );
 
         theme.apply_config(&cfg);
     });
