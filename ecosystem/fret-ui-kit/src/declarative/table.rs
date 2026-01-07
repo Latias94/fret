@@ -257,10 +257,16 @@ pub fn table_virtualized<H: UiHost, TData>(
 
     let scroll_x = cx.with_state(ScrollHandle::default, |h| h.clone());
 
+    let grouping = if props.enable_column_grouping {
+        state_value.grouping.as_slice()
+    } else {
+        &[]
+    };
+
     let ordered_columns = order_columns(columns, &state_value.column_order);
     let ordered_columns = order_column_refs_for_grouping(
         ordered_columns.as_slice(),
-        &state_value.grouping,
+        grouping,
         props.grouped_column_mode,
     );
     let visible_columns = ordered_columns
@@ -270,7 +276,7 @@ pub fn table_virtualized<H: UiHost, TData>(
     let (left_cols, center_cols, right_cols) =
         split_pinned_columns(visible_columns.as_slice(), &state_value.column_pinning);
 
-    let sorting_key = if state_value.grouping.is_empty() {
+    let sorting_key = if grouping.is_empty() {
         state_value.sorting.clone()
     } else {
         Vec::new()
@@ -305,7 +311,7 @@ pub fn table_virtualized<H: UiHost, TData>(
     let page_start = state_value.pagination.page_index.saturating_mul(page_size);
     let page_end = page_start.saturating_add(page_size);
 
-    let page_display_rows: Vec<DisplayRow> = if state_value.grouping.is_empty() {
+    let page_display_rows: Vec<DisplayRow> = if grouping.is_empty() {
         let page_rows: &[usize] = if page_size == 0 {
             &[]
         } else {
@@ -324,7 +330,7 @@ pub fn table_virtualized<H: UiHost, TData>(
             items_revision,
             data_len: data.len(),
             columns_fingerprint: columns_fingerprint(columns),
-            grouping: state_value.grouping.clone(),
+            grouping: grouping.to_vec(),
             column_filters: state_value.column_filters.clone(),
             global_filter: state_value.global_filter.clone(),
             expanding: state_value.expanding.clone(),

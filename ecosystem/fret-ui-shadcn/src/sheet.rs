@@ -288,7 +288,7 @@ impl Sheet {
                     )]
                 });
 
-                let mut request = radix_dialog::modal_dialog_request_with_options(
+                let request = radix_dialog::modal_dialog_request_with_options(
                     id,
                     id,
                     open,
@@ -296,7 +296,6 @@ impl Sheet {
                     dialog_options,
                     overlay_children,
                 );
-                request.root_name = Some(overlay_root_name);
                 radix_dialog::request_modal_dialog(cx, request);
             }
 
