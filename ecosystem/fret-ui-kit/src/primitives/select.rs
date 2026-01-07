@@ -39,6 +39,19 @@ pub fn select_root_name(id: GlobalElementId) -> String {
     OverlayController::modal_root_name(id)
 }
 
+/// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+///
+/// This is a convenience helper for authoring Radix-shaped select roots:
+/// - if `controlled_open` is provided, it is used directly
+/// - otherwise an internal model is created (once) using `default_open` (Radix `defaultOpen`)
+pub fn select_use_open_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_open: Option<Model<bool>>,
+    default_open: impl FnOnce() -> bool,
+) -> crate::primitives::controllable_state::ControllableModel<bool> {
+    crate::primitives::open_state::open_use_model(cx, controlled_open, default_open)
+}
+
 /// Stamps Radix-like trigger semantics:
 /// - `role=ComboBox`
 /// - `expanded` mirrors `aria-expanded`
