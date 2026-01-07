@@ -14,7 +14,9 @@
 
 use fret_ui::{ElementContext, UiHost};
 
-pub use crate::headless::presence::{FadePresence, PresenceOutput};
+pub use crate::headless::presence::{
+    FadePresence, PresenceOutput, ScaleFadePresence, ScaleFadePresenceOutput,
+};
 
 /// Drive a fade presence transition using the UI runtime's monotonic frame clock.
 ///
@@ -35,6 +37,36 @@ pub fn fade_presence_with_durations<H: UiHost>(
     close_ticks: u64,
 ) -> PresenceOutput {
     crate::declarative::presence::fade_presence_with_durations(cx, open, open_ticks, close_ticks)
+}
+
+/// Drive a scale+fade presence transition using the UI runtime's monotonic frame clock.
+pub fn scale_fade_presence<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    ticks: u64,
+    from_scale: f32,
+    to_scale: f32,
+) -> ScaleFadePresenceOutput {
+    crate::declarative::presence::scale_fade_presence(cx, open, ticks, from_scale, to_scale)
+}
+
+/// Drive a scale+fade presence transition with separate open/close durations.
+pub fn scale_fade_presence_with_durations<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    from_scale: f32,
+    to_scale: f32,
+) -> ScaleFadePresenceOutput {
+    crate::declarative::presence::scale_fade_presence_with_durations(
+        cx,
+        open,
+        open_ticks,
+        close_ticks,
+        from_scale,
+        to_scale,
+    )
 }
 
 #[cfg(test)]
@@ -137,5 +169,27 @@ mod tests {
                 .any(|e| *e == Effect::RequestAnimationFrame(window))
         );
         assert!(effects.iter().any(|e| *e == Effect::Redraw(window)));
+    }
+
+    #[test]
+    fn scale_fade_presence_requests_redraw_while_animating() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+
+        let out0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "p2", |cx| {
+            scale_fade_presence(cx, true, 3, 0.95, 1.0)
+        });
+        let effects0 = app.flush_effects();
+        assert!(out0.present);
+        assert!(out0.animating);
+        assert!(
+            effects0
+                .iter()
+                .any(|e| *e == Effect::RequestAnimationFrame(window))
+        );
+        assert!(effects0.iter().any(|e| *e == Effect::Redraw(window)));
     }
 }

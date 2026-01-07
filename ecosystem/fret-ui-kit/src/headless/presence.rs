@@ -7,6 +7,14 @@ pub struct PresenceOutput {
     pub animating: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ScaleFadePresenceOutput {
+    pub present: bool,
+    pub opacity: f32,
+    pub scale: f32,
+    pub animating: bool,
+}
+
 /// A tiny "presence" state machine for fade-in/fade-out animations.
 ///
 /// This is a component-layer helper (policy/ergonomics), not a runtime contract. It is
@@ -78,6 +86,91 @@ impl FadePresence {
     }
 }
 
+/// A tiny "presence" state machine for scale+fade animations (e.g. shadcn-like zoom-in/out).
+///
+/// This is a deterministic wrapper over `TransitionTimeline` that maps the eased progress to:
+/// - opacity (`0..1`), and
+/// - scale (`from_scale..to_scale`).
+#[derive(Debug, Clone, Copy)]
+pub struct ScaleFadePresence {
+    timeline: TransitionTimeline,
+    from_scale: f32,
+    to_scale: f32,
+}
+
+impl Default for ScaleFadePresence {
+    fn default() -> Self {
+        Self {
+            timeline: TransitionTimeline::default(),
+            from_scale: 0.95,
+            to_scale: 1.0,
+        }
+    }
+}
+
+impl ScaleFadePresence {
+    pub fn new(from_scale: f32, to_scale: f32) -> Self {
+        Self {
+            timeline: TransitionTimeline::default(),
+            from_scale,
+            to_scale,
+        }
+    }
+
+    pub fn from_scale(&self) -> f32 {
+        self.from_scale
+    }
+
+    pub fn to_scale(&self) -> f32 {
+        self.to_scale
+    }
+
+    pub fn set_scales(&mut self, from_scale: f32, to_scale: f32) {
+        self.from_scale = from_scale;
+        self.to_scale = to_scale;
+    }
+
+    pub fn open_ticks(&self) -> u64 {
+        self.timeline.open_ticks()
+    }
+
+    pub fn close_ticks(&self) -> u64 {
+        self.timeline.close_ticks()
+    }
+
+    pub fn set_open_ticks(&mut self, open_ticks: u64) {
+        self.timeline.set_open_ticks(open_ticks);
+    }
+
+    pub fn set_close_ticks(&mut self, close_ticks: u64) {
+        self.timeline.set_close_ticks(close_ticks);
+    }
+
+    pub fn set_durations(&mut self, open_ticks: u64, close_ticks: u64) {
+        self.timeline.set_durations(open_ticks, close_ticks);
+    }
+
+    pub fn update(&mut self, open: bool, tick: u64) -> ScaleFadePresenceOutput {
+        self.update_with_easing(open, tick, crate::headless::easing::smoothstep)
+    }
+
+    pub fn update_with_easing(
+        &mut self,
+        open: bool,
+        tick: u64,
+        ease: fn(f32) -> f32,
+    ) -> ScaleFadePresenceOutput {
+        let out = self.timeline.update_with_easing(open, tick, ease);
+        let scale = self.from_scale + (self.to_scale - self.from_scale) * out.progress;
+        ScaleFadePresenceOutput {
+            present: out.present,
+            opacity: out.progress,
+            scale,
+            animating: out.animating,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,5 +217,23 @@ mod tests {
         assert!(a3.present);
         assert!(!a3.animating);
         assert!((a3.opacity - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn scale_fade_presence_interpolates_scale_and_opacity() {
+        let mut p = ScaleFadePresence::new(0.8, 1.0);
+        p.set_durations(4, 4);
+
+        let a0 = p.update_with_easing(true, 0, crate::headless::easing::linear);
+        assert!(a0.present);
+        assert!(a0.animating);
+        assert!((a0.opacity - 0.25).abs() < 1e-6);
+        assert!((a0.scale - 0.85).abs() < 1e-6);
+
+        let a3 = p.update_with_easing(true, 3, crate::headless::easing::linear);
+        assert!(a3.present);
+        assert!(!a3.animating);
+        assert!((a3.opacity - 1.0).abs() < 1e-6);
+        assert!((a3.scale - 1.0).abs() < 1e-6);
     }
 }
