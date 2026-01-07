@@ -67,11 +67,15 @@ struct NodeDrag {
 enum WireDragKind {
     New {
         from: PortId,
+        bundle: Vec<PortId>,
     },
     Reconnect {
         edge: EdgeId,
         endpoint: EdgeEndpoint,
         fixed: PortId,
+    },
+    ReconnectMany {
+        edges: Vec<(EdgeId, EdgeEndpoint, PortId)>,
     },
 }
 
@@ -335,6 +339,16 @@ impl NodeGraphCanvas {
         CanvasPoint {
             x: delta_x,
             y: delta_y,
+        }
+    }
+
+    fn wire_drag_suppresses_edge(kind: &WireDragKind, edge_id: EdgeId) -> bool {
+        match kind {
+            WireDragKind::Reconnect { edge, .. } => *edge == edge_id,
+            WireDragKind::ReconnectMany { edges } => {
+                edges.iter().any(|(edge, ..)| *edge == edge_id)
+            }
+            _ => false,
         }
     }
 
@@ -979,29 +993,33 @@ impl NodeGraphCanvas {
         });
     }
 
-    fn yank_edge_from_port(
+    fn yank_edges_from_port(
         &self,
         graph: &Graph,
         port: PortId,
-    ) -> Option<(EdgeId, EdgeEndpoint, PortId)> {
-        let p = graph.ports.get(&port)?;
+    ) -> Vec<(EdgeId, EdgeEndpoint, PortId)> {
+        let Some(p) = graph.ports.get(&port) else {
+            return Vec::new();
+        };
+
+        let mut out: Vec<(EdgeId, EdgeEndpoint, PortId)> = Vec::new();
         match p.dir {
             PortDirection::Out => {
                 for (edge_id, edge) in &graph.edges {
                     if edge.from == port {
-                        return Some((*edge_id, EdgeEndpoint::From, edge.to));
+                        out.push((*edge_id, EdgeEndpoint::From, edge.to));
                     }
                 }
             }
             PortDirection::In => {
                 for (edge_id, edge) in &graph.edges {
                     if edge.to == port {
-                        return Some((*edge_id, EdgeEndpoint::To, edge.from));
+                        out.push((*edge_id, EdgeEndpoint::To, edge.from));
                     }
                 }
             }
         }
-        None
+        out
     }
 
     fn pick_reconnect_endpoint(
@@ -1527,18 +1545,25 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         let yank = (modifiers.ctrl || modifiers.meta).then(|| {
                             let this = &*self;
                             this.graph
-                                .read_ref(cx.app, |graph| this.yank_edge_from_port(graph, port))
+                                .read_ref(cx.app, |graph| this.yank_edges_from_port(graph, port))
                                 .ok()
-                                .flatten()
+                                .unwrap_or_default()
                         });
 
-                        let kind = match yank.flatten() {
-                            Some((edge, endpoint, fixed)) => WireDragKind::Reconnect {
-                                edge,
-                                endpoint,
-                                fixed,
+                        let kind = match yank {
+                            Some(edges) if edges.len() > 1 => WireDragKind::ReconnectMany { edges },
+                            Some(mut edges) if edges.len() == 1 => {
+                                let (edge, endpoint, fixed) = edges.remove(0);
+                                WireDragKind::Reconnect {
+                                    edge,
+                                    endpoint,
+                                    fixed,
+                                }
+                            }
+                            _ => WireDragKind::New {
+                                from: port,
+                                bundle: vec![port],
                             },
-                            None => WireDragKind::New { from: port },
                         };
 
                         self.interaction.wire_drag = Some(WireDrag {
@@ -1623,7 +1648,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
                 }
             }
-            Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
+            Event::Pointer(fret_core::PointerEvent::Move {
+                position,
+                modifiers,
+                ..
+            }) => {
                 let Some(last) = self.interaction.last_pos else {
                     self.interaction.last_pos = Some(*position);
                     return;
@@ -1716,12 +1745,50 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         });
                     }
 
-                    let from_port = match &w.kind {
-                        WireDragKind::New { from } => *from,
-                        WireDragKind::Reconnect { fixed, .. } => *fixed,
-                    };
                     let pos = w.pos;
-                    let new_hover = {
+
+                    if modifiers.shift {
+                        if let WireDragKind::New { from, bundle } = &mut w.kind {
+                            let candidate = {
+                                let this = &*self;
+                                this.graph
+                                    .read_ref(cx.app, |graph| this.hit_port(graph, pos, zoom))
+                                    .ok()
+                                    .flatten()
+                            };
+
+                            if let Some(candidate) = candidate {
+                                let should_add = {
+                                    let this = &*self;
+                                    this.graph
+                                        .read_ref(cx.app, |graph| {
+                                            let Some(from_port) = graph.ports.get(from) else {
+                                                return false;
+                                            };
+                                            let Some(candidate_port) = graph.ports.get(&candidate)
+                                            else {
+                                                return false;
+                                            };
+                                            candidate_port.dir == from_port.dir
+                                                && !bundle.contains(&candidate)
+                                        })
+                                        .ok()
+                                        .unwrap_or(false)
+                                };
+                                if should_add {
+                                    bundle.push(candidate);
+                                }
+                            }
+                        }
+                    }
+
+                    let from_port = match &w.kind {
+                        WireDragKind::New { from, .. } => Some(*from),
+                        WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
+                        WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
+                    };
+
+                    let new_hover = if let Some(from_port) = from_port {
                         let this = &*self;
                         this.graph
                             .read_ref(cx.app, |graph| {
@@ -1729,23 +1796,63 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             })
                             .ok()
                             .flatten()
+                    } else {
+                        None
                     };
+
                     let new_hover_valid = if let Some(target) = new_hover {
                         let presenter = &mut *self.presenter;
                         self.graph
-                            .read_ref(cx.app, |graph| match w.kind {
-                                WireDragKind::New { from } => {
-                                    matches!(
-                                        presenter.plan_connect(graph, from, target).decision,
+                            .read_ref(cx.app, |graph| {
+                                let mut scratch = graph.clone();
+                                match &w.kind {
+                                    WireDragKind::New { from, bundle } => {
+                                        let sources = if bundle.is_empty() {
+                                            std::slice::from_ref(from)
+                                        } else {
+                                            bundle.as_slice()
+                                        };
+                                        let mut any_accept = false;
+                                        for src in sources {
+                                            let plan =
+                                                presenter.plan_connect(&scratch, *src, target);
+                                            if plan.decision != ConnectDecision::Accept {
+                                                continue;
+                                            }
+                                            any_accept = true;
+                                            let tx = GraphTransaction {
+                                                label: None,
+                                                ops: plan.ops.clone(),
+                                            };
+                                            let _ = apply_transaction(&mut scratch, &tx);
+                                        }
+                                        any_accept
+                                    }
+                                    WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
+                                        presenter
+                                            .plan_reconnect_edge(&scratch, *edge, *endpoint, target)
+                                            .decision,
                                         ConnectDecision::Accept
-                                    )
+                                    ),
+                                    WireDragKind::ReconnectMany { edges } => {
+                                        let mut any_accept = false;
+                                        for (edge, endpoint, _fixed) in edges {
+                                            let plan = presenter.plan_reconnect_edge(
+                                                &scratch, *edge, *endpoint, target,
+                                            );
+                                            if plan.decision != ConnectDecision::Accept {
+                                                continue;
+                                            }
+                                            any_accept = true;
+                                            let tx = GraphTransaction {
+                                                label: None,
+                                                ops: plan.ops.clone(),
+                                            };
+                                            let _ = apply_transaction(&mut scratch, &tx);
+                                        }
+                                        any_accept
+                                    }
                                 }
-                                WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
-                                    presenter
-                                        .plan_reconnect_edge(graph, edge, endpoint, target)
-                                        .decision,
-                                    ConnectDecision::Accept
-                                ),
                             })
                             .ok()
                             .unwrap_or(false)
@@ -1865,10 +1972,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                     if let Some(w) = self.interaction.wire_drag.take() {
                         let from_port = match &w.kind {
-                            WireDragKind::New { from } => *from,
-                            WireDragKind::Reconnect { fixed, .. } => *fixed,
+                            WireDragKind::New { from, .. } => Some(*from),
+                            WireDragKind::Reconnect { fixed, .. } => Some(*fixed),
+                            WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
                         };
-                        let target = {
+                        let target = from_port.and_then(|from_port| {
                             let this = &*self;
                             this.graph
                                 .read_ref(cx.app, |graph| {
@@ -1876,12 +1984,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 })
                                 .ok()
                                 .flatten()
-                        };
+                        });
                         self.interaction.hover_port = None;
                         self.interaction.hover_port_valid = false;
 
                         match w.kind {
-                            WireDragKind::New { from } => {
+                            WireDragKind::New { from, bundle } => {
                                 if let Some(target) = target {
                                     enum Outcome {
                                         Apply(Vec<GraphOp>),
@@ -1889,31 +1997,70 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                         Ignore,
                                     }
 
-                                    let outcome = {
+                                    let (outcome, toast) = {
                                         let presenter = &mut *self.presenter;
                                         self.graph
                                             .read_ref(cx.app, |graph| {
-                                                let plan =
-                                                    presenter.plan_connect(graph, from, target);
-                                                match plan.decision {
-                                                    ConnectDecision::Accept => {
-                                                        Outcome::Apply(plan.ops)
-                                                    }
-                                                    ConnectDecision::Reject => {
-                                                        Self::toast_from_diagnostics(
-                                                            &plan.diagnostics,
-                                                        )
-                                                        .map(|(sev, msg)| Outcome::Reject(sev, msg))
-                                                        .unwrap_or(Outcome::Ignore)
+                                                let mut scratch = graph.clone();
+                                                let sources: Vec<PortId> = if bundle.is_empty() {
+                                                    vec![from]
+                                                } else {
+                                                    bundle
+                                                };
+                                                let mut ops_all: Vec<GraphOp> = Vec::new();
+                                                let mut toast: Option<(
+                                                    DiagnosticSeverity,
+                                                    Arc<str>,
+                                                )> = None;
+
+                                                for src in sources {
+                                                    let plan = presenter
+                                                        .plan_connect(&scratch, src, target);
+                                                    match plan.decision {
+                                                        ConnectDecision::Accept => {
+                                                            let tx = GraphTransaction {
+                                                                label: None,
+                                                                ops: plan.ops.clone(),
+                                                            };
+                                                            let _ = apply_transaction(
+                                                                &mut scratch,
+                                                                &tx,
+                                                            );
+                                                            ops_all.extend(plan.ops);
+                                                        }
+                                                        ConnectDecision::Reject => {
+                                                            if toast.is_none() {
+                                                                toast =
+                                                                    Self::toast_from_diagnostics(
+                                                                        &plan.diagnostics,
+                                                                    );
+                                                            }
+                                                        }
                                                     }
                                                 }
+
+                                                let outcome = if ops_all.is_empty() {
+                                                    if let Some((sev, msg)) = toast.clone() {
+                                                        Outcome::Reject(sev, msg)
+                                                    } else {
+                                                        Outcome::Ignore
+                                                    }
+                                                } else {
+                                                    Outcome::Apply(ops_all)
+                                                };
+                                                (outcome, toast)
                                             })
                                             .ok()
-                                            .unwrap_or(Outcome::Ignore)
+                                            .unwrap_or((Outcome::Ignore, None))
                                     };
 
                                     match outcome {
-                                        Outcome::Apply(ops) => self.apply_ops(cx.app, ops),
+                                        Outcome::Apply(ops) => {
+                                            self.apply_ops(cx.app, ops);
+                                            if let Some((sev, msg)) = toast {
+                                                self.show_toast(cx.app, cx.window, sev, msg);
+                                            }
+                                        }
                                         Outcome::Reject(sev, msg) => {
                                             self.show_toast(cx.app, cx.window, sev, msg);
                                         }
@@ -1962,6 +2109,54 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                             self.show_toast(cx.app, cx.window, sev, msg);
                                         }
                                         Outcome::Ignore => {}
+                                    }
+                                }
+                            }
+                            WireDragKind::ReconnectMany { edges } => {
+                                if let Some(target) = target {
+                                    let presenter = &mut *self.presenter;
+                                    let (ops_all, toast) = self
+                                        .graph
+                                        .read_ref(cx.app, |graph| {
+                                            let mut scratch = graph.clone();
+                                            let mut ops_all: Vec<GraphOp> = Vec::new();
+                                            let mut toast: Option<(DiagnosticSeverity, Arc<str>)> =
+                                                None;
+
+                                            for (edge, endpoint, _fixed) in edges {
+                                                let plan = presenter.plan_reconnect_edge(
+                                                    &scratch, edge, endpoint, target,
+                                                );
+                                                match plan.decision {
+                                                    ConnectDecision::Accept => {
+                                                        let tx = GraphTransaction {
+                                                            label: None,
+                                                            ops: plan.ops.clone(),
+                                                        };
+                                                        let _ =
+                                                            apply_transaction(&mut scratch, &tx);
+                                                        ops_all.extend(plan.ops);
+                                                    }
+                                                    ConnectDecision::Reject => {
+                                                        if toast.is_none() {
+                                                            toast = Self::toast_from_diagnostics(
+                                                                &plan.diagnostics,
+                                                            );
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            (ops_all, toast)
+                                        })
+                                        .ok()
+                                        .unwrap_or_default();
+
+                                    if !ops_all.is_empty() {
+                                        self.apply_ops(cx.app, ops_all);
+                                    }
+                                    if let Some((sev, msg)) = toast {
+                                        self.show_toast(cx.app, cx.window, sev, msg);
                                     }
                                 }
                             }
@@ -2110,14 +2305,6 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
             let selected_edges: HashSet<EdgeId> = snapshot.selected_edges.iter().copied().collect();
-            let skip_edge = self
-                .interaction
-                .wire_drag
-                .as_ref()
-                .and_then(|w| match w.kind {
-                    WireDragKind::Reconnect { edge, .. } => Some(edge),
-                    _ => None,
-                });
             let this = &*self;
             let presenter: &dyn NodeGraphPresenter = &*this.presenter;
             this.graph
@@ -2148,7 +2335,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
 
                     for (&edge_id, edge) in &graph.edges {
-                        if skip_edge == Some(edge_id) {
+                        if this
+                            .interaction
+                            .wire_drag
+                            .as_ref()
+                            .is_some_and(|w| Self::wire_drag_suppresses_edge(&w.kind, edge_id))
+                        {
                             continue;
                         }
                         let Some(from) = out.port_centers.get(&edge.from).copied() else {
@@ -2214,25 +2406,22 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         }
 
         if let Some(w) = &self.interaction.wire_drag {
-            let from = match &w.kind {
-                WireDragKind::New { from } => render.port_centers.get(from).copied(),
-                WireDragKind::Reconnect { fixed, .. } => render.port_centers.get(fixed).copied(),
+            let to = hovered_port
+                .filter(|_| hovered_port_valid)
+                .and_then(|port| render.port_centers.get(&port).copied())
+                .unwrap_or(w.pos);
+            let color = if hovered_port.is_some() && !hovered_port_valid {
+                Color {
+                    r: 0.90,
+                    g: 0.35,
+                    b: 0.35,
+                    a: 0.95,
+                }
+            } else {
+                self.style.wire_color_preview
             };
-            if let Some(from) = from {
-                let to = hovered_port
-                    .filter(|_| hovered_port_valid)
-                    .and_then(|port| render.port_centers.get(&port).copied())
-                    .unwrap_or(w.pos);
-                let color = if hovered_port.is_some() && !hovered_port_valid {
-                    Color {
-                        r: 0.90,
-                        g: 0.35,
-                        b: 0.35,
-                        a: 0.95,
-                    }
-                } else {
-                    self.style.wire_color_preview
-                };
+
+            let mut draw_preview = |from: Point| {
                 if let Some(path) = Self::prepare_wire_path(
                     cx.services,
                     from,
@@ -2248,6 +2437,33 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         path,
                         color,
                     });
+                }
+            };
+
+            match &w.kind {
+                WireDragKind::New { from, bundle } => {
+                    let ports = if bundle.is_empty() {
+                        std::slice::from_ref(from)
+                    } else {
+                        bundle.as_slice()
+                    };
+                    for port in ports {
+                        if let Some(from) = render.port_centers.get(port).copied() {
+                            draw_preview(from);
+                        }
+                    }
+                }
+                WireDragKind::Reconnect { fixed, .. } => {
+                    if let Some(from) = render.port_centers.get(fixed).copied() {
+                        draw_preview(from);
+                    }
+                }
+                WireDragKind::ReconnectMany { edges } => {
+                    for (_edge, _endpoint, fixed) in edges {
+                        if let Some(from) = render.port_centers.get(fixed).copied() {
+                            draw_preview(from);
+                        }
+                    }
                 }
             }
         }
