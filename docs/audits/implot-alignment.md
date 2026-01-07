@@ -49,7 +49,7 @@ token-driven theming and retained rendering/cache.
 | Legend interaction (hide, highlight, pin) | 🟡 | Implemented with retained caching; policy differs from ImPlot in details. |
 | Tags (`TagX` / `TagY`) | ✅ | Implemented via `PlotOverlays::{tags_x,tags_y}` (ADR 0106). |
 | Annotations | 🟡 | `PlotOverlays::text` exists; follow-ups include callouts, arrows, and editable anchors. |
-| Drag tools (`DragPoint` / `DragLineX` / `DragLineY` / `DragRect`) | 🟡 | Implemented via `PlotOverlays` + `PlotOutputSnapshot::drag` (demo: `apps/fret-examples/src/drag_demo.rs`). Snapping/modifier constraints still pending. |
+| Drag tools (`DragPoint` / `DragLineX` / `DragLineY` / `DragRect`) | 🟡 | Implemented via `PlotOverlays` + `PlotOutputSnapshot::drag` (demo: `apps/fret-examples/src/drag_demo.rs`). Modifiers: `Shift` constrains inside-drags (point/rect) to X-only or Y-only; `Alt` snaps to nearest axis tick. |
 | Subplots (`BeginSubplots`) | ❌ | Likely a UI-kit/layout concern, not plot core; needs design. |
 | Aligned plots (`BeginAlignedPlots`) | ❌ | Could be implemented by sharing axis layout constraints across canvases. |
 | Colormaps | 🟡 | Heatmap uses a palette; no public “colormap registry + UI” yet. |

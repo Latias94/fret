@@ -245,7 +245,8 @@ pub fn build_app() -> App {
 
 pub fn build_runner_config() -> WinitRunnerConfig {
     WinitRunnerConfig {
-        main_window_title: "fret-demo drag_demo (DragLineX/DragLineY/DragPoint/DragRect)"
+        main_window_title:
+            "fret-demo drag_demo (DragLineX/DragLineY/DragPoint/DragRect; Shift constrain, Alt snap)"
             .to_string(),
         main_window_size: winit::dpi::LogicalSize::new(960.0, 640.0),
         ..Default::default()
