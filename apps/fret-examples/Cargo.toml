@@ -24,7 +24,7 @@ fret-render = { path = "../../crates/fret-render" }
 fret-app = { path = "../../crates/fret-app" }
 fret-ui-app = { path = "../../crates/fret-ui-app" }
 fret-ui = { path = "../../crates/fret-ui" }
-fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-rust"] }
+fret-markdown = { path = "../../ecosystem/fret-markdown" }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 winit.workspace = true
@@ -34,3 +34,4 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 ureq = "2"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
+fret-markdown = { path = "../../ecosystem/fret-markdown", features = ["syntax-rust"] }

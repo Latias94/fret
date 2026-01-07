@@ -45,6 +45,7 @@ This contract is documented in ADR 0099.
 - [x] Selection/query linking across plots (built on top of `LinkedPlotGroup`)
 - [x] Line hover uses nearest segment distance (not just sampled points)
 - [x] Hover hit threshold scales with stroke width (thick strokes are easier to pick)
+- [x] Plot-space images (`PlotImage`) rendered in data coordinates (underlay/overlay relative to the grid)
 - [x] Infinite reference lines (InfLines overlays, caller-owned)
 - [~] Keyboard shortcuts matrix (documented; partially aligned with ImPlot defaults)
 

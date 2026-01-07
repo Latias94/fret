@@ -35,7 +35,8 @@ use super::layers::{
 };
 use super::layout::{PlotLayout, PlotRegion};
 use super::state::{
-    PlotDragOutput, PlotDragPhase, PlotHoverOutput, PlotOutput, PlotOutputSnapshot, PlotState,
+    PlotDragOutput, PlotDragPhase, PlotHoverOutput, PlotImage, PlotImageLayer, PlotOutput,
+    PlotOutputSnapshot, PlotState,
 };
 use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 
@@ -120,6 +121,83 @@ fn log10_decade_exponent(v: f64) -> Option<i32> {
     let rounded = e.round();
     let eps = 1.0e-10_f64;
     ((e - rounded).abs() <= eps).then_some(rounded as i32)
+}
+
+fn paint_plot_images(
+    scene: &mut fret_core::Scene,
+    images: &[PlotImage],
+    layer: PlotImageLayer,
+    transform_y1: PlotTransform,
+    transform_y2: Option<PlotTransform>,
+    transform_y3: Option<PlotTransform>,
+    transform_y4: Option<PlotTransform>,
+) {
+    if images.is_empty() {
+        return;
+    }
+
+    let transform_for_axis = |axis: YAxis| -> Option<PlotTransform> {
+        match axis {
+            YAxis::Left => Some(transform_y1),
+            YAxis::Right => transform_y2,
+            YAxis::Right2 => transform_y3,
+            YAxis::Right3 => transform_y4,
+        }
+    };
+
+    for img in images {
+        if img.layer != layer {
+            continue;
+        }
+
+        let Some(transform) = transform_for_axis(img.axis) else {
+            continue;
+        };
+
+        let rect = img.rect;
+        if !rect.x_min.is_finite()
+            || !rect.x_max.is_finite()
+            || !rect.y_min.is_finite()
+            || !rect.y_max.is_finite()
+        {
+            continue;
+        }
+
+        let a = transform.data_to_px(DataPoint {
+            x: rect.x_min,
+            y: rect.y_min,
+        });
+        let b = transform.data_to_px(DataPoint {
+            x: rect.x_max,
+            y: rect.y_max,
+        });
+        if !a.x.0.is_finite() || !a.y.0.is_finite() || !b.x.0.is_finite() || !b.y.0.is_finite() {
+            continue;
+        }
+
+        let left = a.x.0.min(b.x.0);
+        let right = a.x.0.max(b.x.0);
+        let top = a.y.0.min(b.y.0);
+        let bottom = a.y.0.max(b.y.0);
+        let w = (right - left).max(0.0);
+        let h = (bottom - top).max(0.0);
+        if w <= 0.0 || h <= 0.0 {
+            continue;
+        }
+
+        let opacity = img.opacity.clamp(0.0, 1.0);
+        if opacity <= 0.0 {
+            continue;
+        }
+
+        scene.push(SceneOp::ImageRegion {
+            order: DrawOrder(1),
+            rect: Rect::new(Point::new(Px(left), Px(top)), Size::new(Px(w), Px(h))),
+            image: img.image,
+            uv: img.uv,
+            opacity,
+        });
+    }
 }
 
 fn log10_tick_label_or_empty(v: f64) -> String {
@@ -4228,6 +4306,53 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         cx.scene.push(SceneOp::PushClipRect { rect: layout.plot });
 
         if layout.plot.size.width.0 > 0.0 && layout.plot.size.height.0 > 0.0 {
+            // Plot-space images (caller-owned overlays). These are rendered in plot coordinates and
+            // clipped to the plot viewport.
+            let plot_images = &state.overlays.images;
+            let image_transform_y1 = PlotTransform {
+                viewport: layout.plot,
+                data: view_bounds,
+                x_scale: self.x_scale,
+                y_scale: self.y_scale,
+            };
+            let image_transform_y2 =
+                view_bounds_y2
+                    .filter(|_| self.show_y2_axis)
+                    .map(|b| PlotTransform {
+                        viewport: layout.plot,
+                        data: b,
+                        x_scale: self.x_scale,
+                        y_scale: self.y2_scale,
+                    });
+            let image_transform_y3 =
+                view_bounds_y3
+                    .filter(|_| self.show_y3_axis)
+                    .map(|b| PlotTransform {
+                        viewport: layout.plot,
+                        data: b,
+                        x_scale: self.x_scale,
+                        y_scale: self.y3_scale,
+                    });
+            let image_transform_y4 =
+                view_bounds_y4
+                    .filter(|_| self.show_y4_axis)
+                    .map(|b| PlotTransform {
+                        viewport: layout.plot,
+                        data: b,
+                        x_scale: self.x_scale,
+                        y_scale: self.y4_scale,
+                    });
+
+            paint_plot_images(
+                cx.scene,
+                plot_images,
+                PlotImageLayer::BelowGrid,
+                image_transform_y1,
+                image_transform_y2,
+                image_transform_y3,
+                image_transform_y4,
+            );
+
             // Grid: align to axis ticks so labels and grid are consistent (ImPlot-style).
             let x_ticks = &self.axis_ticks_x;
             let y_ticks = &self.axis_ticks_y;
@@ -4286,6 +4411,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
             }
+
+            paint_plot_images(
+                cx.scene,
+                plot_images,
+                PlotImageLayer::AboveGrid,
+                image_transform_y1,
+                image_transform_y2,
+                image_transform_y3,
+                image_transform_y4,
+            );
 
             let emphasized = self.style.emphasize_hovered_series;
             let dim_alpha = self.style.dimmed_series_alpha;
