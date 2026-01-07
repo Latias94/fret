@@ -118,8 +118,11 @@ impl MarkdownTheme {
         let math_block_padding = metric(theme, "math.block.padding")
             .unwrap_or_else(|| theme.metric_required("metric.padding.md"));
         #[cfg(feature = "mathjax-svg")]
-        let math_block_height = metric(theme, "math.block.height")
-            .unwrap_or_else(|| Px(theme.metric_required("metric.font.line_height").0 * 2.0));
+        let math_block_height = metric(theme, "math.block.height").unwrap_or_else(|| {
+            let font_size = theme.metric_required("metric.font.size").0;
+            let line_height = theme.metric_required("metric.font.line_height").0;
+            Px((line_height * 3.25).max(font_size * 4.0))
+        });
 
         Self {
             link,
