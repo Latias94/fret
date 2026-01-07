@@ -5435,6 +5435,173 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 });
             }
 
+            if self.hover.is_none()
+                && self.style.series_tooltip == SeriesTooltipMode::NearestAtCursor
+                && let Some(cursor_px) = self.cursor_px
+            {
+                let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+                let cursor_data = PlotTransform {
+                    viewport: local_viewport,
+                    data: view_bounds,
+                    x_scale: self.x_scale,
+                    y_scale: self.y_scale,
+                }
+                .px_to_data(cursor_px);
+
+                if cursor_data.x.is_finite() && cursor_data.y.is_finite() {
+                    let hidden = &state.hidden_series;
+                    let readout_args = PlotCursorReadoutArgs {
+                        x: cursor_data.x,
+                        plot_size: layout.plot.size,
+                        view_bounds,
+                        x_scale: self.x_scale,
+                        y_scale: self.y_scale,
+                        scale_factor: cx.scale_factor,
+                        hidden,
+                    };
+                    let readout_rows = self
+                        .model
+                        .read(cx.app, |_app, m| L::cursor_readout(m, readout_args))
+                        .unwrap_or_default();
+
+                    let pinned = state.pinned_series.filter(|id| !hidden.contains(id));
+                    let legend_hover = self.legend_hover.filter(|id| !hidden.contains(id));
+
+                    let mut best: Option<(f64, PlotCursorReadoutRow)> = None;
+                    for row in readout_rows {
+                        if let Some(pinned) = pinned {
+                            if row.series_id != pinned {
+                                continue;
+                            }
+                        } else if let Some(hovered) = legend_hover {
+                            if row.series_id != hovered {
+                                continue;
+                            }
+                        }
+
+                        let Some(y) = row.y.filter(|y| y.is_finite()) else {
+                            continue;
+                        };
+                        let dist = (cursor_data.y - y).abs();
+                        if !dist.is_finite() {
+                            continue;
+                        }
+
+                        if best.as_ref().is_none_or(|(d, _)| dist < *d) {
+                            best = Some((dist, row));
+                        }
+                    }
+
+                    if let Some((_dist, row)) = best
+                        && let Some(y) = row.y.filter(|y| y.is_finite())
+                    {
+                        let local_viewport =
+                            Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
+                        let transform = match row.y_axis {
+                            YAxis::Right if self.show_y2_axis => {
+                                view_bounds_y2.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y2_scale,
+                                })
+                            }
+                            YAxis::Right2 if self.show_y3_axis => {
+                                view_bounds_y3.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y3_scale,
+                                })
+                            }
+                            YAxis::Right3 if self.show_y4_axis => {
+                                view_bounds_y4.map(|b| PlotTransform {
+                                    viewport: local_viewport,
+                                    data: b,
+                                    x_scale: self.x_scale,
+                                    y_scale: self.y4_scale,
+                                })
+                            }
+                            _ => Some(PlotTransform {
+                                viewport: local_viewport,
+                                data: view_bounds,
+                                x_scale: self.x_scale,
+                                y_scale: self.y_scale,
+                            }),
+                        };
+
+                        if let Some(transform) = transform {
+                            let p = transform.data_to_px(DataPoint {
+                                x: cursor_data.x,
+                                y,
+                            });
+                            if p.x.0.is_finite()
+                                && p.y.0.is_finite()
+                                && (0.0..=layout.plot.size.width.0).contains(&p.x.0)
+                                && (0.0..=layout.plot.size.height.0).contains(&p.y.0)
+                            {
+                                let series_color = self
+                                    .model
+                                    .read(cx.app, |_app, m| {
+                                        let meta = L::series_meta(m);
+                                        let series_count = meta.len().max(1);
+                                        let mut series_index = 0usize;
+                                        let mut override_color = None;
+                                        for (i, s) in meta.iter().enumerate() {
+                                            if s.id == row.series_id {
+                                                series_index = i;
+                                                override_color = s.stroke_color;
+                                                break;
+                                            }
+                                        }
+                                        resolve_series_color(
+                                            series_index,
+                                            self.style,
+                                            series_count,
+                                            override_color,
+                                        )
+                                    })
+                                    .unwrap_or(crosshair_color);
+
+                                let hx = Px((layout.plot.origin.x.0 + cursor_px.x.0).round());
+                                let hy = Px((layout.plot.origin.y.0 + p.y.0).round());
+
+                                let outer_size = Px(10.0);
+                                let outer_origin = Point::new(
+                                    Px(hx.0 - outer_size.0 * 0.5),
+                                    Px(hy.0 - outer_size.0 * 0.5),
+                                );
+                                cx.scene.push(SceneOp::Quad {
+                                    order: DrawOrder(4),
+                                    rect: Rect::new(
+                                        outer_origin,
+                                        Size::new(outer_size, outer_size),
+                                    ),
+                                    background: Color::TRANSPARENT,
+                                    border: fret_core::Edges::all(Px(2.0)),
+                                    border_color: series_color,
+                                    corner_radii: fret_core::Corners::all(Px(outer_size.0 * 0.5)),
+                                });
+
+                                let dot_size = Px(6.0);
+                                let dot_origin = Point::new(
+                                    Px(hx.0 - dot_size.0 * 0.5),
+                                    Px(hy.0 - dot_size.0 * 0.5),
+                                );
+                                cx.scene.push(SceneOp::Quad {
+                                    order: DrawOrder(5),
+                                    rect: Rect::new(dot_origin, Size::new(dot_size, dot_size)),
+                                    background: series_color,
+                                    border: fret_core::Edges::all(Px(1.0)),
+                                    border_color: tooltip_border,
+                                    corner_radii: fret_core::Corners::all(Px(dot_size.0 * 0.5)),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
             if let Some(query) = state.query {
                 let local_viewport = Rect::new(Point::new(Px(0.0), Px(0.0)), layout.plot.size);
                 let transform = PlotTransform {
