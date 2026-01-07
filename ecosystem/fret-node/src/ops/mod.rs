@@ -13,6 +13,13 @@ use crate::core::{
 pub use apply::{ApplyError, apply_op, apply_transaction};
 pub use build::GraphOpBuilderExt;
 
+/// Edge endpoint pair (from/to ports).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct EdgeEndpoints {
+    pub from: PortId,
+    pub to: PortId,
+}
+
 /// A reversible edit operation.
 ///
 /// Destructive variants carry the removed data so the operation can be inverted for undo/redo.
@@ -69,6 +76,12 @@ pub enum GraphOp {
         id: EdgeId,
         from: EdgeKind,
         to: EdgeKind,
+    },
+    /// Sets an edge's endpoints (preserving edge identity for reconnection workflows).
+    SetEdgeEndpoints {
+        id: EdgeId,
+        from: EdgeEndpoints,
+        to: EdgeEndpoints,
     },
 
     /// Adds a symbol.

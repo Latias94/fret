@@ -2,7 +2,7 @@ use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
     PortDirection, PortId, PortKey, PortKind,
 };
-use crate::ops::{GraphOpBuilderExt, apply_transaction};
+use crate::ops::{EdgeEndpoints, GraphOp, GraphOpBuilderExt, GraphTransaction, apply_transaction};
 
 fn make_node(kind: &str) -> Node {
     Node {
@@ -103,4 +103,62 @@ fn build_disconnect_port_ops_removes_incident_edges() {
     let tx = crate::ops::GraphTransaction { label: None, ops };
     apply_transaction(&mut graph, &tx).expect("apply");
     assert!(graph.edges.is_empty());
+}
+
+#[test]
+fn set_edge_endpoints_updates_edge_in_place() {
+    let mut graph = Graph::default();
+    let a = NodeId::new();
+    let b = NodeId::new();
+    let c = NodeId::new();
+    graph.nodes.insert(a, make_node("core.a"));
+    graph.nodes.insert(b, make_node("core.b"));
+    graph.nodes.insert(c, make_node("core.c"));
+
+    let out1 = PortId::new();
+    let out2 = PortId::new();
+    let inn = PortId::new();
+    graph
+        .ports
+        .insert(out1, make_port(a, "out1", PortDirection::Out));
+    graph
+        .ports
+        .insert(out2, make_port(c, "out2", PortDirection::Out));
+    graph
+        .ports
+        .insert(inn, make_port(b, "in", PortDirection::In));
+
+    graph.nodes.get_mut(&a).unwrap().ports.push(out1);
+    graph.nodes.get_mut(&b).unwrap().ports.push(inn);
+    graph.nodes.get_mut(&c).unwrap().ports.push(out2);
+
+    let edge_id = EdgeId::new();
+    graph.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out1,
+            to: inn,
+        },
+    );
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::SetEdgeEndpoints {
+            id: edge_id,
+            from: EdgeEndpoints {
+                from: out1,
+                to: inn,
+            },
+            to: EdgeEndpoints {
+                from: out2,
+                to: inn,
+            },
+        }],
+    };
+    apply_transaction(&mut graph, &tx).expect("apply");
+
+    let edge = graph.edges.get(&edge_id).expect("edge");
+    assert_eq!(edge.from, out2);
+    assert_eq!(edge.to, inn);
 }

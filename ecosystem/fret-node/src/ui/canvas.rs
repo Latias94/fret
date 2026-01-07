@@ -7,9 +7,10 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::{UiHost, retained_bridge::*};
 
-use crate::core::{CanvasPoint, Graph, NodeId as GraphNodeId, PortDirection, PortId};
+use crate::core::{CanvasPoint, EdgeId, Graph, NodeId as GraphNodeId, PortDirection, PortId};
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
+use crate::rules::EdgeEndpoint;
 
 use super::presenter::{DefaultNodeGraphPresenter, NodeGraphPresenter};
 use super::style::NodeGraphStyle;
@@ -37,8 +38,20 @@ struct NodeDrag {
 }
 
 #[derive(Debug, Clone)]
+enum WireDragKind {
+    New {
+        from: PortId,
+    },
+    Reconnect {
+        edge: EdgeId,
+        endpoint: EdgeEndpoint,
+        fixed: PortId,
+    },
+}
+
+#[derive(Debug, Clone)]
 struct WireDrag {
-    from: PortId,
+    kind: WireDragKind,
     pos: Point,
 }
 
@@ -241,6 +254,31 @@ impl NodeGraphCanvas {
         None
     }
 
+    fn yank_edge_from_port(
+        &self,
+        graph: &Graph,
+        port: PortId,
+    ) -> Option<(EdgeId, EdgeEndpoint, PortId)> {
+        let p = graph.ports.get(&port)?;
+        match p.dir {
+            PortDirection::Out => {
+                for (edge_id, edge) in &graph.edges {
+                    if edge.from == port {
+                        return Some((*edge_id, EdgeEndpoint::From, edge.to));
+                    }
+                }
+            }
+            PortDirection::In => {
+                for (edge_id, edge) in &graph.edges {
+                    if edge.to == port {
+                        return Some((*edge_id, EdgeEndpoint::To, edge.from));
+                    }
+                }
+            }
+        }
+        None
+    }
+
     fn hit_node(
         &self,
         graph: &Graph,
@@ -362,7 +400,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         match event {
             Event::Pointer(fret_core::PointerEvent::Down {
-                position, button, ..
+                position,
+                button,
+                modifiers,
+                ..
             }) => {
                 self.interaction.last_pos = Some(*position);
 
@@ -406,8 +447,25 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 match hit {
                     Hit::Port(port) => {
+                        let yank = (modifiers.ctrl || modifiers.meta).then(|| {
+                            let this = &*self;
+                            this.graph
+                                .read_ref(cx.app, |graph| this.yank_edge_from_port(graph, port))
+                                .ok()
+                                .flatten()
+                        });
+
+                        let kind = match yank.flatten() {
+                            Some((edge, endpoint, fixed)) => WireDragKind::Reconnect {
+                                edge,
+                                endpoint,
+                                fixed,
+                            },
+                            None => WireDragKind::New { from: port },
+                        };
+
                         self.interaction.wire_drag = Some(WireDrag {
-                            from: port,
+                            kind,
                             pos: *position,
                         });
                         cx.capture_pointer(cx.node);
@@ -525,23 +583,53 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 .flatten()
                         };
 
-                        if let Some(target) = target
-                            && target != w.from
-                        {
-                            let from = w.from;
-                            let plan_ops = {
-                                let presenter = &mut *self.presenter;
-                                self.graph
-                                    .read_ref(cx.app, |graph| {
-                                        let plan = presenter.plan_connect(graph, from, target);
-                                        (plan.decision == crate::rules::ConnectDecision::Accept)
-                                            .then_some(plan.ops)
-                                    })
-                                    .ok()
-                                    .flatten()
-                            };
-                            if let Some(ops) = plan_ops {
-                                self.apply_ops(cx.app, ops);
+                        match w.kind {
+                            WireDragKind::New { from } => {
+                                if let Some(target) = target
+                                    && target != from
+                                {
+                                    let plan_ops = {
+                                        let presenter = &mut *self.presenter;
+                                        self.graph
+                                            .read_ref(cx.app, |graph| {
+                                                let plan =
+                                                    presenter.plan_connect(graph, from, target);
+                                                (plan.decision
+                                                    == crate::rules::ConnectDecision::Accept)
+                                                    .then_some(plan.ops)
+                                            })
+                                            .ok()
+                                            .flatten()
+                                    };
+                                    if let Some(ops) = plan_ops {
+                                        self.apply_ops(cx.app, ops);
+                                    }
+                                }
+                            }
+                            WireDragKind::Reconnect {
+                                edge,
+                                endpoint,
+                                fixed: _,
+                            } => {
+                                if let Some(target) = target {
+                                    let plan_ops = {
+                                        let presenter = &mut *self.presenter;
+                                        self.graph
+                                            .read_ref(cx.app, |graph| {
+                                                let plan = presenter.plan_reconnect_edge(
+                                                    graph, edge, endpoint, target,
+                                                );
+                                                (plan.decision
+                                                    == crate::rules::ConnectDecision::Accept)
+                                                    .then_some(plan.ops)
+                                            })
+                                            .ok()
+                                            .flatten()
+                                    };
+                                    if let Some(ops) = plan_ops {
+                                        self.apply_ops(cx.app, ops);
+                                    }
+                                }
                             }
                         }
                         cx.release_pointer_capture();
@@ -673,6 +761,14 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
+            let skip_edge = self
+                .interaction
+                .wire_drag
+                .as_ref()
+                .and_then(|w| match w.kind {
+                    WireDragKind::Reconnect { edge, .. } => Some(edge),
+                    _ => None,
+                });
             let this = &*self;
             let presenter: &dyn NodeGraphPresenter = &*this.presenter;
             this.graph
@@ -703,6 +799,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
 
                     for (&edge_id, edge) in &graph.edges {
+                        if skip_edge == Some(edge_id) {
+                            continue;
+                        }
                         let Some(from) = out.port_centers.get(&edge.from).copied() else {
                             continue;
                         };
@@ -737,26 +836,30 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             }
         }
 
-        if let Some(w) = &self.interaction.wire_drag
-            && let Some(from) = render.port_centers.get(&w.from).copied()
-        {
-            let to = w.pos;
-            let color = self.style.wire_color_preview;
-            if let Some(path) = Self::prepare_wire_path(
-                cx.services,
-                from,
-                to,
-                zoom,
-                cx.scale_factor,
-                self.style.wire_width,
-            ) {
-                self.wire_paths.push(path);
-                cx.scene.push(SceneOp::Path {
-                    order: DrawOrder(2),
-                    origin: Point::new(Px(0.0), Px(0.0)),
-                    path,
-                    color,
-                });
+        if let Some(w) = &self.interaction.wire_drag {
+            let from = match &w.kind {
+                WireDragKind::New { from } => render.port_centers.get(from).copied(),
+                WireDragKind::Reconnect { fixed, .. } => render.port_centers.get(fixed).copied(),
+            };
+            if let Some(from) = from {
+                let to = w.pos;
+                let color = self.style.wire_color_preview;
+                if let Some(path) = Self::prepare_wire_path(
+                    cx.services,
+                    from,
+                    to,
+                    zoom,
+                    cx.scale_factor,
+                    self.style.wire_width,
+                ) {
+                    self.wire_paths.push(path);
+                    cx.scene.push(SceneOp::Path {
+                        order: DrawOrder(2),
+                        origin: Point::new(Px(0.0), Px(0.0)),
+                        path,
+                        color,
+                    });
+                }
             }
         }
 

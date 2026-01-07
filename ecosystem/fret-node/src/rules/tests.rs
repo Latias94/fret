@@ -1,9 +1,9 @@
 use crate::core::{
-    CanvasPoint, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId,
-    PortKey, PortKind,
+    CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
+    PortDirection, PortId, PortKey, PortKind,
 };
 use crate::ops::{GraphTransaction, apply_transaction};
-use crate::rules::plan_connect;
+use crate::rules::{EdgeEndpoint, plan_connect, plan_reconnect_edge};
 
 fn make_node(kind: &str) -> Node {
     Node {
@@ -127,4 +127,238 @@ fn plan_connect_single_input_disconnects_existing() {
     // Now connect out2 -> inn; should remove old edge and add a new one.
     let plan2 = plan_connect(&graph, out2, inn);
     assert_eq!(plan2.ops.len(), 2);
+}
+
+#[test]
+fn plan_reconnect_preserves_edge_id() {
+    let mut graph = Graph::default();
+
+    let a = NodeId::new();
+    let b = NodeId::new();
+    let c = NodeId::new();
+    graph.nodes.insert(a, make_node("core.a"));
+    graph.nodes.insert(b, make_node("core.b"));
+    graph.nodes.insert(c, make_node("core.c"));
+
+    let out1 = PortId::new();
+    let out2 = PortId::new();
+    let inn = PortId::new();
+    graph.ports.insert(
+        out1,
+        make_port(
+            a,
+            "out1",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        out2,
+        make_port(
+            c,
+            "out2",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        inn,
+        make_port(
+            b,
+            "in",
+            PortDirection::In,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+
+    let edge_id = EdgeId::new();
+    graph.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out1,
+            to: inn,
+        },
+    );
+
+    let plan = plan_reconnect_edge(&graph, edge_id, EdgeEndpoint::From, out2);
+    assert_eq!(plan.decision, crate::rules::ConnectDecision::Accept);
+    assert_eq!(plan.ops.len(), 1);
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: plan.ops,
+    };
+    apply_transaction(&mut graph, &tx).unwrap();
+
+    let edge = graph.edges.get(&edge_id).unwrap();
+    assert_eq!(edge.from, out2);
+    assert_eq!(edge.to, inn);
+}
+
+#[test]
+fn plan_reconnect_single_target_disconnects_other_edges() {
+    let mut graph = Graph::default();
+
+    let a = NodeId::new();
+    let b = NodeId::new();
+    let c = NodeId::new();
+    let d = NodeId::new();
+    graph.nodes.insert(a, make_node("core.a"));
+    graph.nodes.insert(b, make_node("core.b"));
+    graph.nodes.insert(c, make_node("core.c"));
+    graph.nodes.insert(d, make_node("core.d"));
+
+    let out1 = PortId::new();
+    let out2 = PortId::new();
+    let out3 = PortId::new();
+    let inn = PortId::new();
+    graph.ports.insert(
+        out1,
+        make_port(
+            a,
+            "out1",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        out2,
+        make_port(
+            c,
+            "out2",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        out3,
+        make_port(
+            d,
+            "out3",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        inn,
+        make_port(
+            b,
+            "in",
+            PortDirection::In,
+            PortKind::Data,
+            PortCapacity::Single,
+        ),
+    );
+
+    let edge_keep = EdgeId::new();
+    let edge_drop = EdgeId::new();
+    graph.edges.insert(
+        edge_keep,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out1,
+            to: inn,
+        },
+    );
+    graph.edges.insert(
+        edge_drop,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out2,
+            to: inn,
+        },
+    );
+
+    let plan = plan_reconnect_edge(&graph, edge_keep, EdgeEndpoint::From, out3);
+    assert_eq!(plan.decision, crate::rules::ConnectDecision::Accept);
+    assert_eq!(plan.ops.len(), 2, "expected remove + set_endpoints");
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: plan.ops,
+    };
+    apply_transaction(&mut graph, &tx).unwrap();
+
+    assert!(
+        !graph.edges.contains_key(&edge_drop),
+        "expected other edge removed"
+    );
+    let edge = graph.edges.get(&edge_keep).unwrap();
+    assert_eq!(edge.from, out3);
+    assert_eq!(edge.to, inn);
+}
+
+#[test]
+fn plan_reconnect_rejects_duplicate_connection() {
+    let mut graph = Graph::default();
+
+    let a = NodeId::new();
+    let b = NodeId::new();
+    let c = NodeId::new();
+    graph.nodes.insert(a, make_node("core.a"));
+    graph.nodes.insert(b, make_node("core.b"));
+    graph.nodes.insert(c, make_node("core.c"));
+
+    let out1 = PortId::new();
+    let out2 = PortId::new();
+    let inn = PortId::new();
+    graph.ports.insert(
+        out1,
+        make_port(
+            a,
+            "out1",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        out2,
+        make_port(
+            c,
+            "out2",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        inn,
+        make_port(
+            b,
+            "in",
+            PortDirection::In,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+
+    let edge_a = EdgeId::new();
+    let edge_b = EdgeId::new();
+    graph.edges.insert(
+        edge_a,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out1,
+            to: inn,
+        },
+    );
+    graph.edges.insert(
+        edge_b,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out2,
+            to: inn,
+        },
+    );
+
+    let plan = plan_reconnect_edge(&graph, edge_a, EdgeEndpoint::From, out2);
+    assert_eq!(plan.decision, crate::rules::ConnectDecision::Reject);
 }

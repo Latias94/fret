@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::core::{
     Edge, EdgeId, EdgeKind, Graph, NodeId, PortCapacity, PortDirection, PortId, PortKind, SymbolId,
 };
-use crate::ops::GraphOp;
+use crate::ops::{EdgeEndpoints, GraphOp};
 
 /// Diagnostic severity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -61,6 +61,16 @@ pub enum ConnectDecision {
     Accept,
     /// Reject the connection.
     Reject,
+}
+
+/// Which endpoint of an existing edge is being reconnected.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EdgeEndpoint {
+    /// The source endpoint (`edge.from`).
+    From,
+    /// The target endpoint (`edge.to`).
+    To,
 }
 
 /// A rules-driven plan for connecting two ports.
@@ -177,6 +187,125 @@ pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
             kind: edge_kind,
             from: from_id,
             to: to_id,
+        },
+    });
+
+    ConnectPlan {
+        decision: ConnectDecision::Accept,
+        diagnostics: Vec::new(),
+        ops,
+    }
+}
+
+/// Plans reconnecting one endpoint of an existing edge to a new port.
+///
+/// This is used for "yank and reattach" workflows where edge identity should be preserved.
+pub fn plan_reconnect_edge(
+    graph: &Graph,
+    edge_id: EdgeId,
+    endpoint: EdgeEndpoint,
+    new_port: PortId,
+) -> ConnectPlan {
+    let Some(edge) = graph.edges.get(&edge_id) else {
+        return ConnectPlan::reject(format!("missing edge: {edge_id:?}"));
+    };
+
+    let old = EdgeEndpoints {
+        from: edge.from,
+        to: edge.to,
+    };
+
+    let (candidate_from, candidate_to) = match endpoint {
+        EdgeEndpoint::From => (new_port, edge.to),
+        EdgeEndpoint::To => (edge.from, new_port),
+    };
+
+    if candidate_from == old.from && candidate_to == old.to {
+        return ConnectPlan::accept();
+    }
+
+    let Some(from) = graph.ports.get(&candidate_from) else {
+        return ConnectPlan::reject(format!("missing port: {candidate_from:?}"));
+    };
+    let Some(to) = graph.ports.get(&candidate_to) else {
+        return ConnectPlan::reject(format!("missing port: {candidate_to:?}"));
+    };
+
+    if from.dir != PortDirection::Out || to.dir != PortDirection::In {
+        return ConnectPlan::reject("ports must be out -> in for reconnection");
+    }
+
+    if from.node == to.node {
+        return ConnectPlan::reject("cannot connect ports on the same node");
+    }
+
+    if from.kind != to.kind {
+        return ConnectPlan::reject(format!(
+            "port kinds are incompatible: from={:?} to={:?}",
+            from.kind, to.kind
+        ));
+    }
+
+    let expected_edge_kind = match (from.kind, to.kind) {
+        (PortKind::Data, PortKind::Data) => EdgeKind::Data,
+        (PortKind::Exec, PortKind::Exec) => EdgeKind::Exec,
+        _ => {
+            return ConnectPlan::reject("port kinds are incompatible");
+        }
+    };
+
+    if edge.kind != expected_edge_kind {
+        return ConnectPlan::reject(format!(
+            "edge kind is incompatible with ports: edge={:?} expected={:?}",
+            edge.kind, expected_edge_kind
+        ));
+    }
+
+    for (other_id, other) in &graph.edges {
+        if *other_id == edge_id {
+            continue;
+        }
+        if other.kind == edge.kind && other.from == candidate_from && other.to == candidate_to {
+            return ConnectPlan::reject("duplicate connection already exists");
+        }
+    }
+
+    let mut ops: Vec<GraphOp> = Vec::new();
+
+    if from.capacity == PortCapacity::Single {
+        for (other_id, other) in &graph.edges {
+            if *other_id == edge_id {
+                continue;
+            }
+            if other.kind == edge.kind && other.from == candidate_from {
+                ops.push(GraphOp::RemoveEdge {
+                    id: *other_id,
+                    edge: other.clone(),
+                });
+            }
+        }
+    }
+
+    if to.capacity == PortCapacity::Single {
+        for (other_id, other) in &graph.edges {
+            if *other_id == edge_id {
+                continue;
+            }
+            if other.kind == edge.kind && other.to == candidate_to {
+                ops.push(GraphOp::RemoveEdge {
+                    id: *other_id,
+                    edge: other.clone(),
+                });
+            }
+        }
+    }
+
+    ops.push(GraphOp::SetEdgeEndpoints {
+        id: edge_id,
+        from: old,
+        to: EdgeEndpoints {
+            from: candidate_from,
+            to: candidate_to,
         },
     });
 

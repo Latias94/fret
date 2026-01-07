@@ -24,6 +24,7 @@ pub struct NodeGraphStyle {
     pub pin_color_exec: Color,
 
     pub wire_width: f32,
+    pub wire_interaction_width: f32,
     pub wire_color_data: Color,
     pub wire_color_exec: Color,
     pub wire_color_preview: Color,
@@ -96,6 +97,7 @@ impl Default for NodeGraphStyle {
             },
 
             wire_width: 3.0,
+            wire_interaction_width: 14.0,
             wire_color_data: Color {
                 r: 0.20,
                 g: 0.55,

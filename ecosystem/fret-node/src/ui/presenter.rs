@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::Color;
 
 use crate::core::{EdgeId, Graph, NodeId, PortId, PortKind};
-use crate::rules::{ConnectPlan, plan_connect};
+use crate::rules::{ConnectPlan, EdgeEndpoint, plan_connect, plan_reconnect_edge};
 
 use super::style::NodeGraphStyle;
 
@@ -43,6 +43,17 @@ pub trait NodeGraphPresenter {
     /// - accepts it with additional ops (e.g. insert conversion nodes).
     fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
         plan_connect(graph, a, b)
+    }
+
+    /// Reconnection decision point (preserve edge identity when possible).
+    fn plan_reconnect_edge(
+        &mut self,
+        graph: &Graph,
+        edge: EdgeId,
+        endpoint: EdgeEndpoint,
+        new_port: PortId,
+    ) -> ConnectPlan {
+        plan_reconnect_edge(graph, edge, endpoint, new_port)
     }
 }
 

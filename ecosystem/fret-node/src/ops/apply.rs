@@ -165,6 +165,25 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             };
             edge.kind = *to;
         }
+        GraphOp::SetEdgeEndpoints { id, to, .. } => {
+            let Some(edge) = graph.edges.get_mut(id) else {
+                return Err(ApplyError::MissingEdge { id: *id });
+            };
+            if !graph.ports.contains_key(&to.from) {
+                return Err(ApplyError::EdgeMissingPort {
+                    edge: *id,
+                    port: to.from,
+                });
+            }
+            if !graph.ports.contains_key(&to.to) {
+                return Err(ApplyError::EdgeMissingPort {
+                    edge: *id,
+                    port: to.to,
+                });
+            }
+            edge.from = to.from;
+            edge.to = to.to;
+        }
         GraphOp::AddSymbol { id, symbol } => {
             if graph.symbols.contains_key(id) {
                 return Err(ApplyError::SymbolAlreadyExists { id: *id });
