@@ -368,7 +368,6 @@ impl NavigationMenu {
             #[derive(Default)]
             struct SelectionSyncState {
                 last_selected: Option<Arc<str>>,
-                last_present_selected: Option<Arc<str>>,
             }
 
             let open_model =
@@ -389,9 +388,6 @@ impl NavigationMenu {
                 let changed = selected != st.last_selected;
                 if changed {
                     st.last_selected = selected.clone();
-                }
-                if selected.is_some() {
-                    st.last_present_selected = selected.clone();
                 }
                 changed
             });
@@ -420,12 +416,12 @@ impl NavigationMenu {
                 overlay_motion::shadcn_ease,
             );
 
-            let mut selected_local = selected.clone();
-            if selected_local.is_none() && motion.present {
-                selected_local = cx.with_state_for(root_id, SelectionSyncState::default, |st| {
-                    st.last_present_selected.clone()
-                });
-            }
+            let mut selected_local = radix_navigation_menu::navigation_menu_viewport_selected_value(
+                cx,
+                root_id,
+                selected.clone(),
+                motion.present,
+            );
 
             if !open_for_motion && selected.is_some() && !motion.present {
                 let mut host = fret_ui::action::UiActionHostAdapter { app: &mut *cx.app };
@@ -741,6 +737,14 @@ impl NavigationMenu {
                             root_id,
                             selected_value,
                             size,
+                        );
+                    }
+                    if let Some(selected_value) = selected_local.clone() {
+                        radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                            cx,
+                            root_id,
+                            selected_value,
+                            content.id,
                         );
                     }
 

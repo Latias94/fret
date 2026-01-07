@@ -104,6 +104,68 @@ pub fn navigation_menu_trigger_id<H: UiHost>(
 }
 
 #[derive(Default)]
+struct ViewportContentIdRegistry {
+    ids: HashMap<Arc<str>, GlobalElementId>,
+}
+
+/// Registers the viewport content element id for a given value.
+///
+/// This mirrors Radix's internal "viewport content map" concept: each content instance is keyed by
+/// `value` so other parts (viewport sizing, indicator, focus proxies) can look up the last known
+/// element id without reaching into recipe-local state.
+pub fn navigation_menu_register_viewport_content_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    value: Arc<str>,
+    content_id: GlobalElementId,
+) {
+    cx.with_state_for(root_id, ViewportContentIdRegistry::default, |st| {
+        st.ids.insert(value, content_id);
+    });
+}
+
+/// Returns the last registered viewport content element id for a value.
+pub fn navigation_menu_viewport_content_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    value: &str,
+) -> Option<GlobalElementId> {
+    cx.with_state_for(root_id, ViewportContentIdRegistry::default, |st| {
+        st.ids.get(value).copied()
+    })
+}
+
+#[derive(Default)]
+struct ViewportPresentSelectionState {
+    last_present_selected: Option<Arc<str>>,
+}
+
+/// Returns a selection value that is stable while a viewport overlay is present.
+///
+/// Radix keeps the last selected content mounted while closing so that the viewport can animate
+/// out without "snapping" to empty. Recipes pass `present=true` while the viewport overlay remains
+/// mounted (e.g. during close presence animations).
+pub fn navigation_menu_viewport_selected_value<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+    selected: Option<Arc<str>>,
+    present: bool,
+) -> Option<Arc<str>> {
+    cx.with_state_for(root_id, ViewportPresentSelectionState::default, |st| {
+        if selected.is_some() {
+            st.last_present_selected = selected.clone();
+            return selected;
+        }
+
+        if present {
+            return st.last_present_selected.clone();
+        }
+
+        None
+    })
+}
+
+#[derive(Default)]
 struct ViewportSizeRegistry {
     sizes: HashMap<Arc<str>, Size>,
     last_size: Option<Size>,
@@ -1463,6 +1525,38 @@ mod tests {
                 Size::new(Px(10.0), Px(10.0)),
             );
             assert_eq!(out.size, Size::new(Px(150.0), Px(100.0)));
+        });
+    }
+
+    #[test]
+    fn viewport_selected_value_is_stable_while_present() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let root_id = cx.root_id();
+
+            let a: Arc<str> = Arc::from("a");
+            let b: Arc<str> = Arc::from("b");
+
+            assert_eq!(
+                navigation_menu_viewport_selected_value(cx, root_id, Some(a.clone()), false)
+                    .as_deref(),
+                Some("a")
+            );
+            assert_eq!(
+                navigation_menu_viewport_selected_value(cx, root_id, None, true).as_deref(),
+                Some("a")
+            );
+            assert_eq!(
+                navigation_menu_viewport_selected_value(cx, root_id, Some(b.clone()), true)
+                    .as_deref(),
+                Some("b")
+            );
+            assert_eq!(
+                navigation_menu_viewport_selected_value(cx, root_id, None, false).as_deref(),
+                None
+            );
         });
     }
 

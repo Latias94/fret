@@ -39,6 +39,9 @@ Fret does not use React context nor CSS variables. Outcomes are composed via:
     - `navigation_menu_register_viewport_size(...)` / `navigation_menu_viewport_size_for_transition(...)`
       (viewport sizing contract; Radix CSS var equivalent)
     - `navigation_menu_indicator_rect(...)` (indicator placement helper)
+    - `navigation_menu_register_viewport_content_id(...)` / `navigation_menu_viewport_content_id(...)`
+      (viewport content id registry; Radix "viewport content map" analogue)
+    - `navigation_menu_viewport_selected_value(...)` (stable selection while present)
 - shadcn recipe layer:
   - `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` (styling + overlay composition)
 
