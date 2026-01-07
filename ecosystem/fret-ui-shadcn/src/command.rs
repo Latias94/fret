@@ -28,6 +28,8 @@ use fret_ui_kit::headless::cmdk_score;
 use fret_ui_kit::headless::cmdk_selection;
 use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::primitives::active_descendant as active_desc;
+use fret_ui_kit::primitives::controllable_state;
+use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::layout as shadcn_layout;
@@ -1211,6 +1213,20 @@ impl CommandPalette {
         }
     }
 
+    /// Creates a command palette with a controlled/uncontrolled query model (cmdk-style input).
+    ///
+    /// Upstream cmdk/shadcn surfaces typically own this state internally, but exposing a Radix-like
+    /// `value` / `defaultValue` style entry point makes it easier to compose dialogs and recipes.
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        query: Option<Model<String>>,
+        default_query: String,
+        items: Vec<CommandItem>,
+    ) -> Self {
+        let query = controllable_state::use_controllable_model(cx, query, || default_query).model();
+        Self::new(query, items)
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -2033,6 +2049,25 @@ impl CommandDialog {
         }
     }
 
+    /// Creates a command dialog with controlled/uncontrolled models:
+    /// - `open` / `default_open` (Dialog visibility)
+    /// - `query` / `default_query` (cmdk input text)
+    pub fn new_controllable<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        open: Option<Model<bool>>,
+        default_open: bool,
+        query: Option<Model<String>>,
+        default_query: String,
+        items: Vec<CommandItem>,
+    ) -> Self {
+        let open = radix_dialog::DialogRoot::new()
+            .open(open)
+            .default_open(default_open)
+            .open_model(cx);
+        let query = controllable_state::use_controllable_model(cx, query, || default_query).model();
+        Self::new(open, query, items)
+    }
+
     pub fn entries(mut self, entries: Vec<CommandEntry>) -> Self {
         self.entries = entries;
         self
@@ -2108,6 +2143,9 @@ pub fn command<H: UiHost>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::cell::RefCell;
+
     use fret_app::App;
     use fret_core::{
         AppWindowId, Modifiers, MouseButtons, Point, Px, Rect, SemanticsRole, Size, SvgId,
@@ -2116,6 +2154,13 @@ mod tests {
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
     use fret_ui::tree::UiTree;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        )
+    }
 
     #[derive(Default)]
     struct FakeServices;
@@ -2160,6 +2205,61 @@ mod tests {
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn command_palette_new_controllable_prefers_controlled_query_model() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let query = app.models_mut().insert(String::from("hello"));
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
+            let palette = CommandPalette::new_controllable(
+                cx,
+                Some(query.clone()),
+                String::from("ignored"),
+                Vec::new(),
+            );
+            assert_eq!(palette.model, query);
+        });
+    }
+
+    #[test]
+    fn command_palette_new_controllable_applies_default_query() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let model_out: RefCell<Option<Model<String>>> = RefCell::new(None);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
+            let palette =
+                CommandPalette::new_controllable(cx, None, String::from("hello"), Vec::new());
+            *model_out.borrow_mut() = Some(palette.model.clone());
+        });
+
+        let model = model_out.borrow().clone().expect("query model");
+        let value = model.read_ref(&app, |s| s.clone()).expect("read query");
+        assert_eq!(value, "hello");
+    }
+
+    #[test]
+    fn command_dialog_new_controllable_prefers_controlled_models() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let open = app.models_mut().insert(true);
+        let query = app.models_mut().insert(String::from("hello"));
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "cmdk", |cx| {
+            let dialog = CommandDialog::new_controllable(
+                cx,
+                Some(open.clone()),
+                false,
+                Some(query.clone()),
+                String::from("ignored"),
+                Vec::new(),
+            );
+            assert_eq!(dialog.open, open);
+            assert_eq!(dialog.query, query);
+        });
     }
 
     fn render_frame(
