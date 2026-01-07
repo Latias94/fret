@@ -1,12 +1,13 @@
 use std::sync::{Arc, Mutex};
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, KeyCode, Px, SemanticsRole, TextStyle, TextWrap,
+    Color, Corners, Edges, FontId, FontWeight, KeyCode, Point, Px, SemanticsRole, TextStyle,
+    TextWrap, Transform2D,
 };
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
-    PressableA11y, PressableProps, TextProps,
+    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, MainAlign, OpacityProps,
+    PointerRegionProps, PressableA11y, PressableProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -14,11 +15,20 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
+use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::{popper, popper_content};
 use fret_ui_kit::{
-    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, OverlayRequest,
-    Radius, Space,
+    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    OverlayRequest, Radius, Space,
 };
+
+use crate::overlay_motion;
+
+fn shadcn_zoom_transform(origin: Point, scale: f32) -> Transform2D {
+    Transform2D::translation(origin)
+        * Transform2D::scale_uniform(scale)
+        * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
+}
 
 fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
     let px = theme
@@ -89,6 +99,12 @@ fn nav_menu_viewport_window_margin(theme: &Theme) -> Px {
         .unwrap_or(Px(8.0))
 }
 
+fn nav_menu_indicator_size(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.navigation_menu.indicator.size")
+        .unwrap_or(Px(14.0))
+}
+
 /// shadcn/ui `NavigationMenuTrigger` (v4).
 ///
 /// In the upstream DOM implementation this is an element; in Fret this is a "spec" that provides
@@ -104,7 +120,9 @@ impl NavigationMenuTrigger {
     }
 
     pub fn child(child: AnyElement) -> Self {
-        Self { children: vec![child] }
+        Self {
+            children: vec![child],
+        }
     }
 
     pub fn children(self) -> Vec<AnyElement> {
@@ -127,7 +145,9 @@ impl NavigationMenuContent {
     }
 
     pub fn child(child: AnyElement) -> Self {
-        Self { children: vec![child] }
+        Self {
+            children: vec![child],
+        }
     }
 
     pub fn children(self) -> Vec<AnyElement> {
@@ -344,6 +364,12 @@ impl NavigationMenu {
                 model: Option<Model<bool>>,
             }
 
+            #[derive(Default)]
+            struct SelectionSyncState {
+                last_selected: Option<Arc<str>>,
+                last_present_selected: Option<Arc<str>>,
+            }
+
             let open_model = cx.with_state_for(root_id, OpenModelState::default, |st| st.model.clone());
             let open_model = if let Some(model) = open_model {
                 model
@@ -356,10 +382,42 @@ impl NavigationMenu {
             };
 
             let selected: Option<Arc<str>> = cx.watch_model(&value_model).layout().cloned().flatten();
-            let open: bool = cx.watch_model(&open_model).layout().copied().unwrap_or(false);
-            let mut selected_local = selected.clone();
+            let selected_changed = cx.with_state_for(root_id, SelectionSyncState::default, |st| {
+                let changed = selected != st.last_selected;
+                if changed {
+                    st.last_selected = selected.clone();
+                }
+                if selected.is_some() {
+                    st.last_present_selected = selected.clone();
+                }
+                changed
+            });
 
-            if !open && selected_local.is_some() {
+            if selected_changed {
+                let selected = selected.clone();
+                let _ = cx.app.models_mut().update(&open_model, |v| *v = selected.is_some());
+            }
+
+            let open: bool = cx.watch_model(&open_model).layout().copied().unwrap_or(false);
+            let open_for_motion = open && selected.is_some();
+            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
+                cx,
+                open_for_motion,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_TICKS_100,
+                0.95,
+                1.0,
+                overlay_motion::shadcn_ease,
+            );
+
+            let mut selected_local = selected.clone();
+            if selected_local.is_none() && motion.present {
+                selected_local = cx.with_state_for(root_id, SelectionSyncState::default, |st| {
+                    st.last_present_selected.clone()
+                });
+            }
+
+            if !open_for_motion && selected.is_some() && !motion.present {
                 let mut host = fret_ui::action::UiActionHostAdapter { app: &mut *cx.app };
                 let action_cx = fret_ui::action::ActionCx {
                     window: cx.window,
@@ -369,13 +427,6 @@ impl NavigationMenu {
                 st.on_item_dismiss(&mut host, action_cx, &value_model, cfg);
                 selected_local = None;
             }
-
-            let open_should = selected_local.is_some();
-            let _ = cx.app.models_mut().update(&open_model, |v| {
-                if *v != open_should {
-                    *v = open_should;
-                }
-            });
 
             let active_idx = selected_local.as_deref().and_then(|v| {
                 items
@@ -658,9 +709,10 @@ impl NavigationMenu {
                 .map(|active| active.content.clone())
                 .unwrap_or_default();
 
-            let is_open = selected_local.is_some() && !viewport.is_empty();
+            let has_viewport = !viewport.is_empty();
+            let is_open = selected_local.is_some() && has_viewport && open_for_motion;
             let overlay_presence = OverlayPresence {
-                present: is_open,
+                present: motion.present && has_viewport,
                 interactive: is_open,
             };
 
@@ -670,6 +722,8 @@ impl NavigationMenu {
                 let overlay_root_name = OverlayController::popover_root_name(root_id);
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
+                    let opacity = motion.opacity;
+                    let scale = motion.scale;
                     let anchor_id = selected_local.as_deref().and_then(|v| {
                         cx.with_state_for(root_id, TriggerIdRegistry::default, |st| {
                             st.ids.get(v).copied()
@@ -680,9 +734,51 @@ impl NavigationMenu {
                         return Vec::new();
                     };
 
+                    let root_state_for_viewport = root_state.clone();
+                    let value_for_hover = value_for_viewport.clone();
+                    let viewport_children = viewport.clone();
+
+                    let viewport_props = ContainerProps {
+                        layout: LayoutStyle::default(),
+                        padding: Edges::all(viewport_pad),
+                        background: Some(viewport_bg),
+                        shadow: None,
+                        border: Edges::all(Px(1.0)),
+                        border_color: Some(viewport_border),
+                        corner_radii: Corners::all(viewport_radius),
+                    };
+
+                    let content = cx.pressable(
+                        PressableProps {
+                            layout: LayoutStyle::default(),
+                            enabled: true,
+                            focusable: false,
+                            focus_ring: None,
+                            a11y: PressableA11y::default(),
+                        },
+                        move |cx, _st| {
+                            let root_state_for_hover = root_state_for_viewport.clone();
+                            let value_for_hover = value_for_hover.clone();
+                            cx.pressable_on_hover_change(Arc::new(
+                                move |host, action_cx, hovered| {
+                                    let mut root = root_state_for_hover
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner());
+                                    if hovered {
+                                        root.on_content_enter(host);
+                                    } else {
+                                        root.on_content_leave(host, action_cx, &value_for_hover, cfg);
+                                    }
+                                },
+                            ));
+
+                            vec![cx.container(viewport_props, move |_cx| viewport_children.clone())]
+                        },
+                    );
+
                     let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
                     let content_size = cx
-                        .last_bounds_for_element(cx.root_id())
+                        .last_bounds_for_element(content.id)
                         .map(|r| r.size)
                         .unwrap_or(estimated);
 
@@ -699,59 +795,113 @@ impl NavigationMenu {
                     );
                     let placed = layout.rect;
 
-                    let root_state_for_viewport = root_state.clone();
-                    let value_for_hover = value_for_viewport.clone();
-                    let viewport_children = viewport.clone();
+                    let origin = popper::popper_content_transform_origin(&layout, anchor, None);
+                    let zoom = shadcn_zoom_transform(origin, scale);
+                    let transform = zoom;
 
                     let panel = popper_content::popper_wrapper_panel_at(
                         cx,
                         placed,
                         Edges::all(Px(0.0)),
                         fret_ui::element::Overflow::Visible,
+                        move |_cx| vec![content],
+                    );
+
+                    let indicator_size = nav_menu_indicator_size(&theme);
+                    let indicator_half = indicator_size.0 * 0.5;
+                    let anchor_center_x = anchor.origin.x.0 + anchor.size.width.0 * 0.5;
+                    let anchor_center_y = anchor.origin.y.0 + anchor.size.height.0 * 0.5;
+                    let (indicator_x, indicator_y) = match layout.side {
+                        Side::Bottom => (anchor_center_x - indicator_half, placed.origin.y.0 - indicator_half),
+                        Side::Top => (
+                            anchor_center_x - indicator_half,
+                            placed.origin.y.0 + placed.size.height.0 - indicator_half,
+                        ),
+                        Side::Right => (placed.origin.x.0 - indicator_half, anchor_center_y - indicator_half),
+                        Side::Left => (
+                            placed.origin.x.0 + placed.size.width.0 - indicator_half,
+                            anchor_center_y - indicator_half,
+                        ),
+                    };
+
+                    let indicator_rect = fret_core::Rect::new(
+                        Point::new(Px(indicator_x), Px(indicator_y)),
+                        fret_core::Size::new(indicator_size, indicator_size),
+                    );
+
+                    let indicator = popper_content::popper_wrapper_panel_at(
+                        cx,
+                        indicator_rect,
+                        Edges::all(Px(0.0)),
+                        fret_ui::element::Overflow::Visible,
                         move |cx| {
-                            let viewport_props = ContainerProps {
-                                layout: LayoutStyle::default(),
-                                padding: Edges::all(viewport_pad),
-                                background: Some(viewport_bg),
-                                shadow: None,
-                                border: Edges::all(Px(1.0)),
-                                border_color: Some(viewport_border),
-                                corner_radii: Corners::all(viewport_radius),
+                            let mut layout = LayoutStyle::default();
+                            layout.size = SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
                             };
 
-                            vec![cx.pressable(
-                                PressableProps {
-                                    layout: LayoutStyle::default(),
-                                    enabled: true,
-                                    focusable: false,
-                                    focus_ring: None,
-                                    a11y: PressableA11y::default(),
-                                },
-                                move |cx, _st| {
-                                    let root_state_for_hover = root_state_for_viewport.clone();
-                                    let value_for_hover = value_for_hover.clone();
-                                    cx.pressable_on_hover_change(Arc::new(
-                                        move |host, action_cx, hovered| {
-                                            let mut root = root_state_for_hover
-                                                .lock()
-                                                .unwrap_or_else(|e| e.into_inner());
-                                            if hovered {
-                                                root.on_content_enter(host);
-                                            } else {
-                                                root.on_content_leave(host, action_cx, &value_for_hover, cfg);
-                                            }
-                                        },
-                                    ));
+                            let center = Point::new(
+                                Px(indicator_size.0 * 0.5),
+                                Px(indicator_size.0 * 0.5),
+                            );
+                            let rotate = Transform2D::rotation_about_degrees(45.0, center);
 
-                                    vec![cx.container(viewport_props, move |_cx| {
-                                        viewport_children.clone()
-                                    })]
+                            vec![cx.visual_transform_props(
+                                VisualTransformProps {
+                                    layout,
+                                    transform: rotate,
+                                },
+                                move |cx| {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size = SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    };
+                                    vec![cx.container(
+                                        ContainerProps {
+                                            layout,
+                                            padding: Edges::all(Px(0.0)),
+                                            background: Some(viewport_bg),
+                                            shadow: None,
+                                            border: Edges::all(Px(1.0)),
+                                            border_color: Some(viewport_border),
+                                            corner_radii: Corners::all(Px(2.0)),
+                                        },
+                                        |_cx| Vec::new(),
+                                    )]
                                 },
                             )]
                         },
                     );
 
-                    vec![panel]
+                    let mut overlay_layout = LayoutStyle::default();
+                    overlay_layout.size = SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    };
+                    let overlay_layout_for_transform = overlay_layout.clone();
+                    let overlay_content = cx.opacity_props(
+                        OpacityProps {
+                            layout: overlay_layout,
+                            opacity,
+                        },
+                        move |cx| {
+                            let content = cx.visual_transform_props(
+                                VisualTransformProps {
+                                    layout: overlay_layout_for_transform,
+                                    transform,
+                                },
+                                move |_cx| vec![indicator, panel],
+                            );
+                            vec![content]
+                        },
+                    );
+
+                    vec![overlay_content]
                 });
 
                 let mut request = OverlayRequest::dismissible_popover(
