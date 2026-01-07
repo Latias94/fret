@@ -2,6 +2,7 @@
 
 mod apply;
 mod build;
+mod fragment;
 
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +13,7 @@ use crate::core::{
 
 pub use apply::{ApplyError, apply_op, apply_transaction};
 pub use build::GraphOpBuilderExt;
+pub use fragment::{GraphFragment, IdRemapSeed, IdRemapper, PasteTuning};
 
 /// Edge endpoint pair (from/to ports).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

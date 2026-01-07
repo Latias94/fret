@@ -4,9 +4,10 @@ use crate::core::{
 };
 use crate::ops::{GraphTransaction, apply_transaction};
 use crate::rules::{
-    EdgeEndpoint, InsertNodeSpec, plan_connect, plan_connect_by_inserting_node,
+    EdgeEndpoint, InsertNodeSpec, plan_connect, plan_connect_by_inserting_node, plan_connect_typed,
     plan_reconnect_edge, plan_split_edge_by_inserting_node,
 };
+use crate::types::{DefaultTypeCompatibility, TypeDesc};
 
 fn make_node(kind: &str) -> Node {
     Node {
@@ -130,6 +131,92 @@ fn plan_connect_single_input_disconnects_existing() {
     // Now connect out2 -> inn; should remove old edge and add a new one.
     let plan2 = plan_connect(&graph, out2, inn);
     assert_eq!(plan2.ops.len(), 2);
+}
+
+#[test]
+fn plan_connect_typed_rejects_incompatible_data_types() {
+    let mut graph = Graph::default();
+
+    let a = NodeId::new();
+    let b = NodeId::new();
+    graph.nodes.insert(a, make_node("core.a"));
+    graph.nodes.insert(b, make_node("core.b"));
+
+    let out = PortId::new();
+    let inn = PortId::new();
+    let mut out_port = make_port(
+        a,
+        "out",
+        PortDirection::Out,
+        PortKind::Data,
+        PortCapacity::Multi,
+    );
+    out_port.ty = Some(TypeDesc::Int);
+    graph.ports.insert(out, out_port);
+
+    let mut in_port = make_port(
+        b,
+        "in",
+        PortDirection::In,
+        PortKind::Data,
+        PortCapacity::Single,
+    );
+    in_port.ty = Some(TypeDesc::String);
+    graph.ports.insert(inn, in_port);
+
+    let mut compat = DefaultTypeCompatibility::default();
+    let plan = plan_connect_typed(
+        &graph,
+        out,
+        inn,
+        |g, p| g.ports.get(&p).and_then(|p| p.ty.clone()),
+        &mut compat,
+    );
+    assert_eq!(plan.decision, crate::rules::ConnectDecision::Reject);
+    assert!(plan.ops.is_empty());
+}
+
+#[test]
+fn plan_connect_typed_accepts_int_to_float() {
+    let mut graph = Graph::default();
+
+    let a = NodeId::new();
+    let b = NodeId::new();
+    graph.nodes.insert(a, make_node("core.a"));
+    graph.nodes.insert(b, make_node("core.b"));
+
+    let out = PortId::new();
+    let inn = PortId::new();
+    let mut out_port = make_port(
+        a,
+        "out",
+        PortDirection::Out,
+        PortKind::Data,
+        PortCapacity::Multi,
+    );
+    out_port.ty = Some(TypeDesc::Int);
+    graph.ports.insert(out, out_port);
+
+    let mut in_port = make_port(
+        b,
+        "in",
+        PortDirection::In,
+        PortKind::Data,
+        PortCapacity::Single,
+    );
+    in_port.ty = Some(TypeDesc::Float);
+    graph.ports.insert(inn, in_port);
+
+    let mut compat = DefaultTypeCompatibility::default();
+    let plan = plan_connect_typed(
+        &graph,
+        out,
+        inn,
+        |g, p| g.ports.get(&p).and_then(|p| p.ty.clone()),
+        &mut compat,
+    );
+    assert_eq!(plan.decision, crate::rules::ConnectDecision::Accept);
+    assert!(!plan.ops.is_empty());
 }
 
 #[test]

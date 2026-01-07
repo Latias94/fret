@@ -4,6 +4,10 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+mod compat;
+
+pub use compat::{DefaultTypeCompatibility, TypeCompatibility, TypeCompatibilityResult};
+
 /// Stable identifier for a type variable used during unification/inference.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(transparent)]

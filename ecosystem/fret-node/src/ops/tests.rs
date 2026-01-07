@@ -2,7 +2,11 @@ use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
     PortDirection, PortId, PortKey, PortKind,
 };
-use crate::ops::{EdgeEndpoints, GraphOp, GraphOpBuilderExt, GraphTransaction, apply_transaction};
+use crate::ops::{
+    EdgeEndpoints, GraphFragment, GraphOp, GraphOpBuilderExt, GraphTransaction, IdRemapSeed,
+    IdRemapper, PasteTuning, apply_transaction,
+};
+use uuid::Uuid;
 
 fn make_node(kind: &str) -> Node {
     Node {
@@ -161,4 +165,56 @@ fn set_edge_endpoints_updates_edge_in_place() {
     let edge = graph.edges.get(&edge_id).expect("edge");
     assert_eq!(edge.from, out2);
     assert_eq!(edge.to, inn);
+}
+
+#[test]
+fn fragment_paste_transaction_is_deterministic_for_seed() {
+    let mut graph = Graph::default();
+    let a = NodeId::new();
+    let b = NodeId::new();
+    graph.nodes.insert(a, make_node("core.a"));
+    graph.nodes.insert(b, make_node("core.b"));
+
+    let out = PortId::new();
+    let inn = PortId::new();
+    graph
+        .ports
+        .insert(out, make_port(a, "out", PortDirection::Out));
+    graph
+        .ports
+        .insert(inn, make_port(b, "in", PortDirection::In));
+    graph.nodes.get_mut(&a).unwrap().ports.push(out);
+    graph.nodes.get_mut(&b).unwrap().ports.push(inn);
+
+    let edge_id = EdgeId::new();
+    graph.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out,
+            to: inn,
+        },
+    );
+
+    let fragment = GraphFragment::from_nodes(&graph, [a, b]);
+    let remapper = IdRemapper::new(IdRemapSeed(Uuid::nil()));
+    let tuning = PasteTuning {
+        offset: CanvasPoint { x: 10.0, y: 20.0 },
+    };
+
+    let tx1 = fragment.to_paste_transaction(&remapper, tuning);
+    let tx2 = fragment.to_paste_transaction(&remapper, tuning);
+
+    // Deterministic for a given seed and input.
+    assert_eq!(
+        serde_json::to_string(&tx1.ops).unwrap(),
+        serde_json::to_string(&tx2.ops).unwrap()
+    );
+
+    // Apply into a new graph succeeds and preserves counts.
+    let mut dst = Graph::default();
+    apply_transaction(&mut dst, &tx1).unwrap();
+    assert_eq!(dst.nodes.len(), 2);
+    assert_eq!(dst.ports.len(), 2);
+    assert_eq!(dst.edges.len(), 1);
 }

@@ -10,7 +10,7 @@ use crate::core::{
     PortId, PortKey, PortKind, SymbolId,
 };
 use crate::ops::{EdgeEndpoints, GraphOp};
-use crate::types::TypeDesc;
+use crate::types::{TypeCompatibility, TypeCompatibilityResult, TypeDesc};
 
 /// Diagnostic severity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -327,6 +327,68 @@ pub fn plan_connect(graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
         decision: ConnectDecision::Accept,
         diagnostics: Vec::new(),
         ops,
+    }
+}
+
+/// Plans connecting two ports with optional type compatibility checks.
+///
+/// If both ports have a resolved type and the edge kind is `Data`, the `compat` policy is used to
+/// enforce assignability (`from -> to`).
+pub fn plan_connect_typed(
+    graph: &Graph,
+    a: PortId,
+    b: PortId,
+    mut type_of: impl FnMut(&Graph, PortId) -> Option<TypeDesc>,
+    compat: &mut dyn TypeCompatibility,
+) -> ConnectPlan {
+    let base = plan_connect(graph, a, b);
+    if base.decision != ConnectDecision::Accept {
+        return base;
+    }
+
+    let Some(port_a) = graph.ports.get(&a) else {
+        return ConnectPlan::reject(format!("missing port: {a:?}"));
+    };
+    let Some(port_b) = graph.ports.get(&b) else {
+        return ConnectPlan::reject(format!("missing port: {b:?}"));
+    };
+
+    let (from_id, to_id, from, to) = match (port_a.dir, port_b.dir) {
+        (PortDirection::Out, PortDirection::In) => (a, b, port_a, port_b),
+        (PortDirection::In, PortDirection::Out) => (b, a, port_b, port_a),
+        _ => return ConnectPlan::reject("ports must have opposite directions (in/out)"),
+    };
+
+    let edge_kind = match (from.kind, to.kind) {
+        (PortKind::Data, PortKind::Data) => EdgeKind::Data,
+        (PortKind::Exec, PortKind::Exec) => EdgeKind::Exec,
+        _ => return ConnectPlan::reject("port kinds are incompatible"),
+    };
+
+    if edge_kind != EdgeKind::Data {
+        return base;
+    }
+
+    let Some(from_ty) = type_of(graph, from_id) else {
+        return base;
+    };
+    let Some(to_ty) = type_of(graph, to_id) else {
+        return base;
+    };
+
+    match compat.compatible(&from_ty, &to_ty) {
+        TypeCompatibilityResult::Compatible => base,
+        TypeCompatibilityResult::Incompatible { reason } => ConnectPlan {
+            decision: ConnectDecision::Reject,
+            diagnostics: vec![Diagnostic {
+                key: "connect.type_mismatch".to_string(),
+                severity: DiagnosticSeverity::Error,
+                target: DiagnosticTarget::Port { id: to_id },
+                message: format!("type mismatch: {reason} (from={from_ty:?} to={to_ty:?})"),
+                fixes: Vec::new(),
+            }],
+            ops: Vec::new(),
+        },
     }
 }
 

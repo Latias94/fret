@@ -13,6 +13,7 @@ pub const REROUTE_KIND: &str = "fret.reroute";
 pub mod core;
 pub mod io;
 pub mod ops;
+pub mod profile;
 pub mod rules;
 pub mod schema;
 pub mod types;
