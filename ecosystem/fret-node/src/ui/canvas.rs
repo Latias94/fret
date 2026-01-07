@@ -45,6 +45,7 @@ struct InteractionState {
     edge_drag: Option<EdgeDrag>,
     hover_edge: Option<EdgeId>,
     hover_port: Option<PortId>,
+    hover_port_valid: bool,
     context_menu: Option<ContextMenuState>,
     toast: Option<ToastState>,
 }
@@ -1522,6 +1523,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.node_drag = None;
                         self.interaction.edge_drag = None;
                         self.interaction.hover_port = None;
+                        self.interaction.hover_port_valid = false;
                         let yank = (modifiers.ctrl || modifiers.meta).then(|| {
                             let this = &*self;
                             this.graph
@@ -1553,6 +1555,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.wire_drag = None;
                         self.interaction.edge_drag = None;
                         self.interaction.hover_port = None;
+                        self.interaction.hover_port_valid = false;
                         let offset = Point::new(
                             Px(position.x.0 - rect.origin.x.0),
                             Px(position.y.0 - rect.origin.y.0),
@@ -1580,6 +1583,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.node_drag = None;
                         self.interaction.wire_drag = None;
                         self.interaction.hover_port = None;
+                        self.interaction.hover_port_valid = false;
                         let multi = modifiers.ctrl || modifiers.meta;
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
@@ -1609,6 +1613,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.node_drag = None;
                         self.interaction.wire_drag = None;
                         self.interaction.hover_port = None;
+                        self.interaction.hover_port_valid = false;
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
                             s.selected_edges.clear();
@@ -1725,8 +1730,34 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             .ok()
                             .flatten()
                     };
-                    if self.interaction.hover_port != new_hover {
+                    let new_hover_valid = if let Some(target) = new_hover {
+                        let presenter = &mut *self.presenter;
+                        self.graph
+                            .read_ref(cx.app, |graph| match w.kind {
+                                WireDragKind::New { from } => {
+                                    matches!(
+                                        presenter.plan_connect(graph, from, target).decision,
+                                        ConnectDecision::Accept
+                                    )
+                                }
+                                WireDragKind::Reconnect { edge, endpoint, .. } => matches!(
+                                    presenter
+                                        .plan_reconnect_edge(graph, edge, endpoint, target)
+                                        .decision,
+                                    ConnectDecision::Accept
+                                ),
+                            })
+                            .ok()
+                            .unwrap_or(false)
+                    } else {
+                        false
+                    };
+
+                    if self.interaction.hover_port != new_hover
+                        || self.interaction.hover_port_valid != new_hover_valid
+                    {
                         self.interaction.hover_port = new_hover;
+                        self.interaction.hover_port_valid = new_hover_valid;
                     }
 
                     self.interaction.wire_drag = Some(w);
@@ -1847,6 +1878,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 .flatten()
                         };
                         self.interaction.hover_port = None;
+                        self.interaction.hover_port_valid = false;
 
                         match w.kind {
                             WireDragKind::New { from } => {
@@ -2073,6 +2105,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         let hovered_edge = self.interaction.hover_edge;
         let hovered_port = self.interaction.hover_port;
+        let hovered_port_valid = self.interaction.hover_port_valid;
 
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
@@ -2187,9 +2220,19 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             };
             if let Some(from) = from {
                 let to = hovered_port
+                    .filter(|_| hovered_port_valid)
                     .and_then(|port| render.port_centers.get(&port).copied())
                     .unwrap_or(w.pos);
-                let color = self.style.wire_color_preview;
+                let color = if hovered_port.is_some() && !hovered_port_valid {
+                    Color {
+                        r: 0.90,
+                        g: 0.35,
+                        b: 0.35,
+                        a: 0.95,
+                    }
+                } else {
+                    self.style.wire_color_preview
+                };
                 if let Some(path) = Self::prepare_wire_path(
                     cx.services,
                     from,
@@ -2228,6 +2271,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         for (port_id, rect, color) in render.pins {
             if hovered_port == Some(port_id) {
+                let border_color = if hovered_port_valid {
+                    color
+                } else {
+                    Color {
+                        r: 0.90,
+                        g: 0.35,
+                        b: 0.35,
+                        a: 1.0,
+                    }
+                };
                 let pad = 2.0 / zoom;
                 let hover_rect = Rect::new(
                     Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
@@ -2242,7 +2295,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     rect: hover_rect,
                     background: Color::TRANSPARENT,
                     border: Edges::all(Px(2.0 / zoom)),
-                    border_color: color,
+                    border_color,
                     corner_radii: Corners::all(r),
                 });
             }
