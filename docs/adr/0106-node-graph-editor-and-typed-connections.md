@@ -20,6 +20,10 @@ Local upstream references show three complementary strengths:
   rules, graph validation/diagnostics, dynamic slot concretization, unknown-node survival, and migration.
 - `repo-ref/egui-snarl`: small data model + separate UI state + a “viewer” trait that externalizes
   behavior, including multi-connection interactions.
+- `repo-ref/xyflow` (React Flow / Svelte Flow): production-grade interaction and geometry contracts:
+  handle IDs, strict vs loose connection modes, reconnection flows, edge hit slop (`interactionWidth`),
+  parent/child subflows with movement extents, and the separation of user-authored nodes from derived
+  internals (measured sizes, absolute positions, cached handle bounds).
 
 We want a Fret-native node editor that:
 
@@ -286,6 +290,9 @@ All edits flow through `GraphOp`:
 - `GraphOp` is the minimal reversible edit unit.
 - Multi-step operations (dragging, paste, connect with autofix) are grouped into transactions and
   support coalescing (ADR 0024).
+- Reconnection-friendly shape: endpoint moves that should preserve edge identity (and metadata like
+  selection, inspection state, or per-edge UI) should be representable as a dedicated reversible op
+  (e.g. `SetEdgeEndpoints`) rather than only as remove+add.
 
 Rationale:
 
@@ -338,8 +345,11 @@ Baseline UI capabilities (MVP parity targets):
 Planned advanced interaction features (parity with `egui-snarl` / editor expectations):
 
 - multi-connect gestures (bundle connect, yank-reconnect),
+- edge reconnection (yank and reattach one endpoint while preserving edge identity when possible),
 - reroute nodes and wire hit-testing with large-graph performance constraints,
 - node collapse/expand and group dragging,
+- movement constraints: graph-wide translate extents, per-node extents, and optional “expand parent”
+  behaviors for frame-like parent nodes (ReactFlow parity, future extension),
 - deterministic draw order (z-order) and explicit “bring to front” interactions,
 - wire styling hooks for “execution flow” visualization (animated markers / highlight),
 - configurable wire layer (render behind nodes vs above nodes),
@@ -352,6 +362,18 @@ Node layout contract:
 - Nodes have standard regions (header, inputs, body, outputs, footer) to ensure consistent styling,
   hit-testing, and extensibility (inspired by `egui-snarl`).
 - Port placement is configurable (inside frame / on edge / outside) as a style/UX choice.
+- Wire hit-testing uses a larger, configurable interaction width independent of the visual stroke
+  (touch-friendly, ReactFlow parity).
+
+Port geometry contract (handles vs measurement):
+
+- Port anchors are a UI concept used for wire routing and hit-testing.
+- Implementations must support two sources of truth for port anchors:
+  1) **Measured anchors**: derived from the rendered node subtree (cached per frame / invalidated on resize),
+  2) **Declared anchors**: provided by schema/presenter for non-DOM backends or highly optimized nodes.
+- The UI is allowed to cache per-node “handle bounds” or anchor maps in editor view state to avoid
+  per-frame recomputation (ReactFlow’s `internals.handleBounds` pattern), but these caches must be
+  treated as derived data and never as graph semantics.
 
 Node presentation contract (Viewer-style):
 
@@ -486,6 +508,8 @@ Editor view state includes:
 - selection and focused element (optional),
 - per-node UI state (collapsed/open, z-order),
 - custom zoom levels or input scheme overrides (mouse buttons / smooth zoom).
+- optional interaction settings: snap grid, selection mode (partial vs full), connection mode
+  (strict vs loose), and auto-pan tuning for drag/connect.
 
 Persistence:
 
