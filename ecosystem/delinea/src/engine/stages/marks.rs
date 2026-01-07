@@ -134,7 +134,8 @@ impl MarksStage {
                     .get(&series.x_axis)
                     .map(|a| a.range)
                     .unwrap_or_default();
-                let window_for_bounds = axis_locked_window_x(x_axis_range).or(state.data_window_x);
+                let window_for_bounds = axis_locked_window_x(x_axis_range)
+                    .or(state.data_window_x.get(&series.x_axis).copied());
 
                 let done = compute_bounds_step(
                     &mut self.bounds_cursor,
@@ -183,7 +184,7 @@ impl MarksStage {
                 .map(|a| a.range)
                 .unwrap_or_default();
             if axis_locked_window_x(x_axis_range).is_none()
-                && let Some(window) = state.data_window_x
+                && let Some(window) = state.data_window_x.get(&series.x_axis).copied()
             {
                 let mut window = window;
                 window.clamp_non_degenerate();

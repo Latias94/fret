@@ -1,7 +1,7 @@
 use fret_core::Point;
 
 use crate::engine::window::DataWindowX;
-use crate::ids::{LinkGroupId, SeriesId};
+use crate::ids::{AxisId, LinkGroupId, SeriesId};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -9,10 +9,25 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Action {
-    HoverAt { point: Point },
-    Pan { delta_px: Point },
-    Zoom { center_px: Point, log2_scale: f32 },
-    SetDataWindowX { window: Option<DataWindowX> },
-    SetSeriesVisible { series: SeriesId, visible: bool },
-    SetLinkGroup { group: Option<LinkGroupId> },
+    HoverAt {
+        point: Point,
+    },
+    Pan {
+        delta_px: Point,
+    },
+    Zoom {
+        center_px: Point,
+        log2_scale: f32,
+    },
+    SetDataWindowX {
+        axis: AxisId,
+        window: Option<DataWindowX>,
+    },
+    SetSeriesVisible {
+        series: SeriesId,
+        visible: bool,
+    },
+    SetLinkGroup {
+        group: Option<LinkGroupId>,
+    },
 }

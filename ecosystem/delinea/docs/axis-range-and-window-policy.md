@@ -28,14 +28,17 @@ view window updates (e.g. zoom/pan) are ignored for that axis.
 in data space. It is stored in `ChartState` (not in `ChartModel`) because it is
 considered view-state rather than a durable chart option.
 
+In v1 it is stored per X axis (`AxisId -> DataWindowX`) to keep the model ready
+for multiple axes.
+
 ## Precedence rules (v1)
 
 When producing marks (bounds + LOD + projection):
 
 1. If the X axis range is `Fixed`, the engine uses it as the effective X window.
    - Bounds scanning is restricted to the fixed X range.
-   - `ChartState.data_window_x` is ignored for X.
-2. Otherwise, if `ChartState.data_window_x` is present, it becomes the effective X window.
+   - `ChartState.data_window_x[axis]` is ignored for that axis.
+2. Otherwise, if `ChartState.data_window_x[axis]` is present, it becomes the effective X window.
 3. Otherwise, the engine uses the full dataset range.
 
 Y axis `Fixed` range is applied as a clamp on the computed bounds.
@@ -51,11 +54,11 @@ Y axis `Fixed` range is applied as a clamp on the computed bounds.
 The engine only defines semantics. A UI adapter (e.g. `fret-chart`) may map:
 
 - Gestures:
-  - Wheel: zoom X (update `data_window_x`).
-  - Drag: pan X (update `data_window_x`).
+  - Wheel: zoom X (update `data_window_x[axis]`).
+  - Drag: pan X (update `data_window_x[axis]`).
 - Shortcuts:
   - `L`: toggle X axis lock (set `AxisRange::Fixed` to current visible range, or back to `Auto`).
-  - `R`: reset view (clear `data_window_x`, set axis ranges to `Auto`).
+  - `R`: reset view (clear `data_window_x[axis]`, set axis ranges to `Auto`).
 
 The exact mapping is intentionally left to the UI layer.
 
@@ -66,4 +69,3 @@ The exact mapping is intentionally left to the UI layer.
 - Y view windows (`DataWindowY`) and 2D box zoom.
 - Non-linear scales (log/time) and tick generation.
 - 3D: replace `DataWindowX` with generalized camera/view transforms.
-

@@ -12,6 +12,7 @@ use crate::scheduler::{StepResult, WorkBudget};
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
 use fret_core::Point;
+use std::collections::BTreeMap;
 
 pub mod hit_test;
 pub mod lod;
@@ -27,7 +28,7 @@ use serde::{Deserialize, Serialize};
 pub struct ChartState {
     pub revision: Revision,
     pub link: LinkConfig,
-    pub data_window_x: Option<window::DataWindowX>,
+    pub data_window_x: BTreeMap<crate::ids::AxisId, window::DataWindowX>,
     pub hover_px: Option<Point>,
 }
 
@@ -131,8 +132,13 @@ impl ChartEngine {
                 self.state.hover_px = Some(point);
                 self.state.revision.bump();
             }
-            Action::SetDataWindowX { window } => {
-                self.state.data_window_x = window;
+            Action::SetDataWindowX { axis, window } => {
+                if let Some(mut window) = window {
+                    window.clamp_non_degenerate();
+                    self.state.data_window_x.insert(axis, window);
+                } else {
+                    self.state.data_window_x.remove(&axis);
+                }
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
             }
