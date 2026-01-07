@@ -37,6 +37,7 @@ use fret_ui_kit::{
     Space,
 };
 use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -255,61 +256,98 @@ fn select_scroll_with_buttons<H: UiHost>(
                     },
                 },
                 move |cx| {
-                    let active_element = Cell::new(None::<GlobalElementId>);
-                    let active_element_ref = &active_element;
+                    let active_element: Rc<Cell<Option<GlobalElementId>>> =
+                        Rc::new(Cell::new(None::<GlobalElementId>));
 
                     let mut scroll_layout = LayoutStyle::default();
                     scroll_layout.size.width = Length::Fill;
                     scroll_layout.size.height = Length::Fill;
                     scroll_layout.overflow = Overflow::Clip;
 
-                    let scroll = cx.scroll(
-                        ScrollProps {
-                            layout: scroll_layout,
-                            scroll_handle: Some(handle_for_stack.clone()),
-                            ..Default::default()
+                    let wheel_scroll_target = viewport_id_out.get();
+                    let wheel_region = cx.wheel_region(
+                        fret_ui::element::WheelRegionProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Fill;
+                                layout
+                            },
+                            axis: fret_ui::element::ScrollAxis::Y,
+                            // Use the last known scroll viewport id. This is populated after the
+                            // first layout pass; wheel interaction only happens once the overlay is
+                            // visible, so this stays stable in practice.
+                            scroll_target: wheel_scroll_target,
+                            scroll_handle: handle_for_stack.clone(),
                         },
-                        move |cx| {
-                            vec![cx.container(
-                                ContainerProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout
-                                    },
-                                    // new-york-v4: `SelectPrimitive.Viewport` uses `p-1`.
-                                    padding: Edges::all(Px(4.0)),
+                        {
+                            let active_element = active_element.clone();
+                            move |cx| {
+                                let active_element_for_content = active_element.clone();
+                                let active_element_for_autoscroll = active_element.clone();
+                            let scroll = cx.scroll(
+                                ScrollProps {
+                                    layout: scroll_layout,
+                                    scroll_handle: Some(handle_for_stack.clone()),
                                     ..Default::default()
                                 },
-                                move |cx| content(cx, active_element_ref),
-                            )]
+                                move |cx| {
+                                    vec![cx.container(
+                                        ContainerProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Fill;
+                                                layout
+                                            },
+                                            // new-york-v4: `SelectPrimitive.Viewport` uses `p-1`.
+                                            padding: Edges::all(Px(4.0)),
+                                            ..Default::default()
+                                        },
+                                        move |cx| content(cx, active_element_for_content.as_ref()),
+                                    )]
+                                },
+                            );
+                            viewport_id_out.set(Some(scroll.id));
+
+                            // Radix Select only auto-scrolls the active descendant for keyboard-driven
+                            // navigation. Pointer hover changes can update the highlighted row, but must
+                            // not scroll the list (it creates jitter and can re-enable scroll affordances
+                            // at the bounds).
+                            if auto_scroll_active_element
+                                && let Some(active_element) = active_element_for_autoscroll.get()
+                            {
+                                let _ = active_desc::scroll_active_element_into_view_y(
+                                    cx,
+                                    &handle_for_stack,
+                                    scroll.id,
+                                    active_element,
+                                );
+                            }
+
+                            let mut out = Vec::new();
+                            out.push(scroll);
+                            if show_up {
+                                out.push(scroll_button(
+                                    cx,
+                                    ids::ui::CHEVRON_UP,
+                                    "Scroll up",
+                                    -1.0,
+                                ));
+                            }
+                            if show_down {
+                                out.push(scroll_button(
+                                    cx,
+                                    ids::ui::CHEVRON_DOWN,
+                                    "Scroll down",
+                                    1.0,
+                                ));
+                            }
+                            out
+                            }
                         },
                     );
-                    viewport_id_out.set(Some(scroll.id));
 
-                    // Radix Select only auto-scrolls the active descendant for keyboard-driven
-                    // navigation. Pointer hover changes can update the highlighted row, but must
-                    // not scroll the list (it creates jitter and can re-enable scroll affordances
-                    // at the bounds).
-                    if auto_scroll_active_element && let Some(active_element) = active_element.get()
-                    {
-                        let _ = active_desc::scroll_active_element_into_view_y(
-                            cx,
-                            &handle_for_stack,
-                            scroll.id,
-                            active_element,
-                        );
-                    }
-
-                    let mut out = Vec::new();
-                    out.push(scroll);
-                    if show_up {
-                        out.push(scroll_button(cx, ids::ui::CHEVRON_UP, "Scroll up", -1.0));
-                    }
-                    if show_down {
-                        out.push(scroll_button(cx, ids::ui::CHEVRON_DOWN, "Scroll down", 1.0));
-                    }
-                    out
+                    vec![wheel_region]
                 },
             );
 
@@ -3009,6 +3047,98 @@ mod tests {
                 n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll up")
             }),
             "expected scroll up to appear after scrolling down"
+        );
+    }
+
+    #[test]
+    fn select_wheel_over_scroll_button_scrolls() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..60)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Allow the scroll handle to observe overflow and settle.
+        for _ in 0..5 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let scroll_down = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll down"))
+            .expect("scroll down button");
+        let down_bounds = ui
+            .debug_node_bounds(scroll_down.id)
+            .expect("scroll down bounds");
+        let wheel_pos = Point::new(
+            Px(down_bounds.origin.x.0 + down_bounds.size.width.0 * 0.5),
+            Px(down_bounds.origin.y.0 + down_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                position: wheel_pos,
+                delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::Button && n.label.as_deref() == Some("Scroll up")
+            }),
+            "expected wheel scrolling over the scroll button to move the list"
         );
     }
 
