@@ -316,7 +316,7 @@ fn mathjax_worker() -> &'static MathJaxWorker {
             for item in rx {
                 let key = item.key;
                 let latex = key.latex.clone();
-                tracing::info!(
+                tracing::debug!(
                     target: "fret_markdown::math",
                     mode = ?key.mode,
                     latex_len = latex.len(),
@@ -340,7 +340,7 @@ fn mathjax_worker() -> &'static MathJaxWorker {
                             svg
                         };
 
-                        tracing::info!(
+                        tracing::debug!(
                             target: "fret_markdown::math",
                             mode = ?key.mode,
                             latex_len = latex.len(),
@@ -358,7 +358,7 @@ fn mathjax_worker() -> &'static MathJaxWorker {
                         );
                     }
                     Ok(Err(err)) => {
-                        tracing::info!(
+                        tracing::warn!(
                             target: "fret_markdown::math",
                             mode = ?key.mode,
                             latex_len = latex.len(),
@@ -987,7 +987,7 @@ fn markdown_mdstream_pulldown_with<H: UiHost>(
             ));
         }
 
-        tracing::info!(
+        tracing::debug!(
             target: "fret_markdown::mdstream",
             committed = committed.len(),
             pending = pending.is_some(),
@@ -1073,7 +1073,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
         mdstream::BlockKind::Paragraph => {
             if is_display_math_block_text(block.display_or_raw()) {
                 let latex = parse_math_block_body(block.display_or_raw());
-                tracing::info!(
+                tracing::debug!(
                     target: "fret_markdown::math",
                     block_id = ?block.id,
                     latex_len = latex.len(),
@@ -1082,7 +1082,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
                 return render_math_block(cx, theme, markdown_theme, components, latex);
             }
             if let Some(latex) = display_math_only_events(events) {
-                tracing::info!(
+                tracing::debug!(
                     target: "fret_markdown::math",
                     block_id = ?block.id,
                     latex_len = latex.len(),
@@ -1175,7 +1175,7 @@ fn render_mdstream_block_with_events<H: UiHost>(
                             | pulldown_cmark::Event::InlineMath(_)
                     )
                 });
-                tracing::info!(
+                tracing::debug!(
                     target: "fret_markdown::math",
                     block_id = ?block.id,
                     raw = %block.display_or_raw().replace('\n', "\\n"),
