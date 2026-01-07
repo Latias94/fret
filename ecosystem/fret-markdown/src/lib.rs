@@ -3285,7 +3285,7 @@ fn svg_viewbox_aspect_ratio(svg: &str) -> Option<f32> {
 }
 
 fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> {
-    if text.trim().is_empty() {
+    if text.is_empty() {
         return Vec::new();
     }
     if style.code {
@@ -3296,9 +3296,31 @@ fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> 
     }
 
     let mut out: Vec<InlinePiece> = Vec::new();
-    let words: Vec<&str> = text.split_whitespace().filter(|s| !s.is_empty()).collect();
-    for (i, w) in words.iter().enumerate() {
-        let trailing_space = i + 1 < words.len();
+    let mut i = 0usize;
+    while i < text.len() {
+        let ch = text[i..].chars().next().unwrap_or(' ');
+        let is_ws = ch.is_whitespace();
+        let mut j = i + ch.len_utf8();
+        while j < text.len() {
+            let next = text[j..].chars().next().unwrap_or(' ');
+            if next.is_whitespace() != is_ws {
+                break;
+            }
+            j += next.len_utf8();
+        }
+
+        let token = &text[i..j];
+        i = j;
+
+        if is_ws {
+            out.push(InlinePiece {
+                kind: InlinePieceKind::Text(token.to_string()),
+                style: style.clone(),
+            });
+            continue;
+        }
+
+        let w = token;
 
         if style.link.is_none() {
             let mut start = 0usize;
@@ -3351,23 +3373,12 @@ fn split_piece_into_tokens(text: &str, style: &InlineStyle) -> Vec<InlinePiece> 
                         style: style.clone(),
                     });
                 }
-
-                if trailing_space {
-                    out.push(InlinePiece {
-                        kind: InlinePieceKind::Text(" ".to_string()),
-                        style: style.clone(),
-                    });
-                }
                 continue;
             }
         }
 
-        let mut token = w.to_string();
-        if trailing_space {
-            token.push(' ');
-        }
         out.push(InlinePiece {
-            kind: InlinePieceKind::Text(token),
+            kind: InlinePieceKind::Text(w.to_string()),
             style: style.clone(),
         });
     }
