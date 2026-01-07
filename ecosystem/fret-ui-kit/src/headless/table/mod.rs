@@ -11,6 +11,7 @@ mod column_visibility;
 mod faceting;
 mod filtering;
 mod flat_row_order;
+mod grouping;
 mod memo;
 mod options;
 mod pagination;
@@ -45,6 +46,12 @@ pub use filtering::{
     filter_row_model,
 };
 pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_order};
+pub use grouping::{
+    GroupedColumnMode, GroupedRow, GroupedRowIndex, GroupedRowKind, GroupedRowModel, GroupingState,
+    column_can_group, group_row_model, grouped_index, grouped_row_model_from_leaf,
+    is_column_grouped, order_columns_for_grouping, set_grouping, toggle_column_grouping,
+    toggle_column_grouping_value, toggled_column_grouping, toggled_column_grouping_value,
+};
 pub use options::TableOptions;
 pub use pagination::{PaginationState, paginate_row_model};
 pub use row_expanding::{

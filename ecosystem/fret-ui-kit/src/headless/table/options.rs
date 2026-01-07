@@ -34,6 +34,12 @@ pub struct TableOptions {
     pub enable_column_pinning: bool,
     /// Whether to allow column resizing at the table level (TanStack `enableColumnResizing`).
     pub enable_column_resizing: bool,
+    /// Enables/disables grouping for the table (TanStack `enableGrouping`).
+    pub enable_grouping: bool,
+    /// If enabled, grouping is assumed to be done externally (e.g. server-side).
+    ///
+    /// When `true`, `grouped_row_model()` returns `pre_grouped_row_model()`.
+    pub manual_grouping: bool,
     /// Determines when `column_sizing` updates during a resize interaction (TanStack
     /// `columnResizeMode`).
     pub column_resize_mode: ColumnResizeMode,
@@ -54,6 +60,8 @@ impl Default for TableOptions {
             enable_column_ordering: true,
             enable_column_pinning: true,
             enable_column_resizing: true,
+            enable_grouping: true,
+            manual_grouping: false,
             column_resize_mode: ColumnResizeMode::OnEnd,
             column_resize_direction: ColumnResizeDirection::Ltr,
         }

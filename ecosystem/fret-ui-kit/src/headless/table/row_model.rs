@@ -209,6 +209,7 @@ pub struct Table<'a, TData> {
     options: super::TableOptions,
     core_row_model: OnceCell<RowModel<'a, TData>>,
     filtered_row_model: OnceCell<RowModel<'a, TData>>,
+    grouped_row_model: OnceCell<super::GroupedRowModel>,
     sorted_row_model: OnceCell<RowModel<'a, TData>>,
     expanded_row_model: OnceCell<RowModel<'a, TData>>,
     paginated_row_model: OnceCell<RowModel<'a, TData>>,
@@ -240,6 +241,7 @@ impl<'a, TData> Table<'a, TData> {
             options: builder.options,
             core_row_model: OnceCell::new(),
             filtered_row_model: OnceCell::new(),
+            grouped_row_model: OnceCell::new(),
             sorted_row_model: OnceCell::new(),
             expanded_row_model: OnceCell::new(),
             paginated_row_model: OnceCell::new(),
@@ -368,6 +370,61 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn is_some_rows_expanded(&self) -> bool {
         super::is_some_rows_expanded(&self.state.expanding)
+    }
+
+    pub fn grouping(&self) -> &super::GroupingState {
+        &self.state.grouping
+    }
+
+    pub fn column_can_group(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(super::column_can_group(self.options, col))
+    }
+
+    pub fn is_column_grouped(&self, column_id: &str) -> Option<bool> {
+        let col = self.column(column_id)?;
+        Some(super::is_column_grouped(&self.state.grouping, &col.id))
+    }
+
+    pub fn column_grouped_index(&self, column_id: &str) -> Option<usize> {
+        let col = self.column(column_id)?;
+        super::grouped_index(&self.state.grouping, &col.id)
+    }
+
+    pub fn toggled_column_grouping(
+        &self,
+        column_id: &str,
+        grouped: Option<bool>,
+    ) -> Option<super::GroupingState> {
+        let col = self.column(column_id)?;
+        if !super::column_can_group(self.options, col) {
+            return Some(self.state.grouping.clone());
+        }
+        Some(super::toggled_column_grouping_value(
+            &self.state.grouping,
+            &col.id,
+            grouped,
+        ))
+    }
+
+    pub fn pre_grouped_row_model(&self) -> &RowModel<'a, TData> {
+        self.filtered_row_model()
+    }
+
+    pub fn grouped_row_model(&self) -> &super::GroupedRowModel {
+        if self.options.manual_grouping || self.state.grouping.is_empty() {
+            return self
+                .grouped_row_model
+                .get_or_init(|| super::grouped_row_model_from_leaf(self.pre_grouped_row_model()));
+        }
+
+        self.grouped_row_model.get_or_init(|| {
+            super::group_row_model(
+                self.pre_grouped_row_model(),
+                &self.columns,
+                &self.state.grouping,
+            )
+        })
     }
 
     pub fn is_all_rows_expanded(&self) -> bool {

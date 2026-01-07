@@ -19,6 +19,7 @@ pub struct ColumnDef<TData> {
     pub enable_ordering: bool,
     pub enable_pinning: bool,
     pub enable_resizing: bool,
+    pub enable_grouping: bool,
     pub size: f32,
     pub min_size: f32,
     pub max_size: f32,
@@ -44,6 +45,7 @@ impl<TData> ColumnDef<TData> {
             enable_ordering: true,
             enable_pinning: true,
             enable_resizing: true,
+            enable_grouping: true,
             size: 150.0,
             min_size: 20.0,
             max_size: f32::MAX,
@@ -89,6 +91,11 @@ impl<TData> ColumnDef<TData> {
 
     pub fn enable_resizing(mut self, enabled: bool) -> Self {
         self.enable_resizing = enabled;
+        self
+    }
+
+    pub fn enable_grouping(mut self, enabled: bool) -> Self {
+        self.enable_grouping = enabled;
         self
     }
 
