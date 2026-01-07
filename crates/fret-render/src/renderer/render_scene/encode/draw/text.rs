@@ -25,7 +25,7 @@ pub(in super::super) fn encode_text(
 
     let base_x = origin.x.0 * state.scale_factor;
     let base_y = origin.y.0 * state.scale_factor;
-    let premul = color_to_linear_rgba_premul(EncodeState::color_with_opacity(color, group_opacity));
+    let base_color = EncodeState::color_with_opacity(color, group_opacity);
 
     let mut active_kind: Option<TextDrawKind> = None;
     let mut group_first_vertex = state.text_vertices.len() as u32;
@@ -54,6 +54,8 @@ pub(in super::super) fn encode_text(
             group_first_vertex = state.text_vertices.len() as u32;
         }
 
+        let paint_color = g.color.unwrap_or(base_color);
+        let premul = color_to_linear_rgba_premul(paint_color);
         let vertex_color = match kind {
             TextDrawKind::Mask => premul,
             TextDrawKind::Color => [1.0, 1.0, 1.0, premul[3]],
