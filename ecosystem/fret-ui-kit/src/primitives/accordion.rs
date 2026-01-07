@@ -68,6 +68,26 @@ pub fn tab_stop_index_multiple(
     first_open_enabled.or_else(|| crate::headless::roving_focus::first_enabled(disabled))
 }
 
+/// Returns a single-select open item model that behaves like Radix `useControllableState` (`value` /
+/// `defaultValue`).
+pub fn accordion_use_single_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled: Option<Model<Option<Arc<str>>>>,
+    default_value: impl FnOnce() -> Option<Arc<str>>,
+) -> crate::primitives::controllable_state::ControllableModel<Option<Arc<str>>> {
+    crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
+}
+
+/// Returns a multi-select open items model that behaves like Radix `useControllableState` (`value` /
+/// `defaultValue`).
+pub fn accordion_use_multiple_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled: Option<Model<Vec<Arc<str>>>>,
+    default_value: impl FnOnce() -> Vec<Arc<str>>,
+) -> crate::primitives::controllable_state::ControllableModel<Vec<Arc<str>>> {
+    crate::primitives::controllable_state::use_controllable_model(cx, controlled, default_value)
+}
+
 /// A composable, Radix-shaped accordion configuration surface (`AccordionRoot` / `AccordionItem` /
 /// `AccordionTrigger` / `AccordionContent`).
 ///
@@ -106,12 +126,7 @@ impl AccordionRoot {
         controlled: Option<Model<Option<Arc<str>>>>,
         default_value: impl FnOnce() -> Option<Arc<str>>,
     ) -> Self {
-        let model = crate::primitives::controllable_state::use_controllable_model(
-            cx,
-            controlled,
-            default_value,
-        )
-        .model();
+        let model = accordion_use_single_model(cx, controlled, default_value).model();
         Self::single(model)
     }
 
@@ -137,12 +152,7 @@ impl AccordionRoot {
         controlled: Option<Model<Vec<Arc<str>>>>,
         default_value: impl FnOnce() -> Vec<Arc<str>>,
     ) -> Self {
-        let model = crate::primitives::controllable_state::use_controllable_model(
-            cx,
-            controlled,
-            default_value,
-        )
-        .model();
+        let model = accordion_use_multiple_model(cx, controlled, default_value).model();
         Self::multiple(model)
     }
 
@@ -207,6 +217,65 @@ impl AccordionRoot {
                 .iter()
                 .any(|v| v.as_ref() == value),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::cell::Cell;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn accordion_use_single_model_prefers_controlled_and_does_not_call_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(Some(Arc::from("a")));
+        let called = Cell::new(0);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let out = accordion_use_single_model(cx, Some(controlled.clone()), || {
+                called.set(called.get() + 1);
+                None
+            });
+            assert!(out.is_controlled());
+            assert_eq!(out.model(), controlled);
+        });
+
+        assert_eq!(called.get(), 0);
+    }
+
+    #[test]
+    fn accordion_use_multiple_model_prefers_controlled_and_does_not_call_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(vec![Arc::from("a")]);
+        let called = Cell::new(0);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let out = accordion_use_multiple_model(cx, Some(controlled.clone()), || {
+                called.set(called.get() + 1);
+                Vec::new()
+            });
+            assert!(out.is_controlled());
+            assert_eq!(out.model(), controlled);
+        });
+
+        assert_eq!(called.get(), 0);
     }
 }
 

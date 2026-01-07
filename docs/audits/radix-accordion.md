@@ -29,7 +29,8 @@ Fret does not use React context. Instead, accordion behavior is composed via:
 
 - Pass: `single` / `multiple` selection outcomes are supported by shadcn recipes.
 - Pass: Controlled/uncontrolled selection (`value` / `defaultValue`) is supported via
-  `ecosystem/fret-ui-kit/src/primitives/controllable_state.rs`.
+  `accordion_use_single_model(...)` / `accordion_use_multiple_model(...)` (thin helpers), used by
+  `AccordionRoot::{single_controllable,multiple_controllable}`.
 - Pass: `collapsible` behavior in single mode matches Radix (toggle-off only when enabled).
 - Note: Fret uses `RovingFlex` for keyboard navigation rather than a collection of triggers.
 

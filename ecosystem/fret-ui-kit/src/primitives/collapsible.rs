@@ -16,6 +16,16 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 
+/// Returns an open-state model that behaves like Radix `useControllableState` (`open` /
+/// `defaultOpen`).
+pub fn collapsible_use_open_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_open: Option<Model<bool>>,
+    default_open: impl FnOnce() -> bool,
+) -> crate::primitives::controllable_state::ControllableModel<bool> {
+    crate::primitives::open_state::open_use_model(cx, controlled_open, default_open)
+}
+
 /// A Radix-shaped `Collapsible` root configuration surface.
 ///
 /// Upstream supports a controlled/uncontrolled `open` state (`open` + `defaultOpen`). In Fret this
@@ -50,9 +60,7 @@ impl CollapsibleRoot {
         &self,
         cx: &mut ElementContext<'_, H>,
     ) -> crate::primitives::controllable_state::ControllableModel<bool> {
-        crate::primitives::controllable_state::use_controllable_model(cx, self.open.clone(), || {
-            self.default_open
-        })
+        collapsible_use_open_model(cx, self.open.clone(), || self.default_open)
     }
 
     /// Reads the current open value from the derived open model.
@@ -157,4 +165,42 @@ pub fn collapsible_height_wrapper_refinement(
         transition,
         measured_height,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::cell::Cell;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn collapsible_use_open_model_prefers_controlled_and_does_not_call_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        let controlled = app.models_mut().insert(true);
+        let called = Cell::new(0);
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let out = collapsible_use_open_model(cx, Some(controlled.clone()), || {
+                called.set(called.get() + 1);
+                false
+            });
+            assert!(out.is_controlled());
+            assert_eq!(out.model(), controlled);
+        });
+
+        assert_eq!(called.get(), 0);
+    }
 }
