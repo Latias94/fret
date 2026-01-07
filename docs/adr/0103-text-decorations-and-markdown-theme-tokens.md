@@ -111,6 +111,7 @@ Metrics:
 - `markdown.blockquote.padding` (fallback: `metric.padding.sm`)
 - `markdown.table.cell.padding_x` (fallback: `metric.padding.sm`)
 - `markdown.table.cell.padding_y` (fallback: `metric.padding.sm * 0.5`)
+- `markdown.code_block.max_height` (optional; default: unset)
 - `markdown.math.inline.padding_x` (fallback: `markdown.inline_code.padding_x`)
 - `markdown.math.inline.padding_y` (fallback: `markdown.inline_code.padding_y`)
 - `markdown.math.block.padding` (fallback: `metric.padding.md`)
@@ -121,6 +122,9 @@ Notes:
 - Token keys must remain stable once shipped (ADR 0032, ADR 0050).
 - We keep them distinct from `syntax.*` tokens used by `fret-code-view` so code highlighting can be
   themed independently.
+- `markdown.code_block.max_height` (and its canonical `fret.markdown.*` variant) is consumed by the
+  default fenced code block renderer to enable “internal scroll” for tall code blocks, without
+  making Markdown itself a special scrolling surface (ADR 0100).
 
 ### 4) Markdown-to-style mapping (no implementation yet)
 
