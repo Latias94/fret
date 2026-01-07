@@ -2,6 +2,7 @@
 //!
 //! This module is feature-gated behind `fret-ui-kit/table`.
 
+mod aggregation;
 mod column;
 mod column_ordering;
 mod column_pinning;
@@ -22,6 +23,7 @@ mod row_selection;
 mod sorting;
 mod state;
 
+pub use aggregation::{Aggregation, aggregate_u64};
 pub use column::{ColumnDef, ColumnHelper, ColumnId, FilterFn, SortCmpFn, create_column_helper};
 pub use column_ordering::{ColumnOrderState, order_columns};
 pub use column_ordering::{move_column, moved_column, set_column_order, set_column_order_for};

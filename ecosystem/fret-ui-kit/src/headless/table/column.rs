@@ -1,6 +1,8 @@
 use std::cmp::Ordering;
 use std::sync::Arc;
 
+use super::Aggregation;
+
 pub type ColumnId = Arc<str>;
 
 pub type SortCmpFn<TData> = Arc<dyn Fn(&TData, &TData) -> Ordering>;
@@ -14,6 +16,7 @@ pub struct ColumnDef<TData> {
     pub filter_fn: Option<FilterFn<TData>>,
     pub facet_key_fn: Option<FacetKeyFn<TData>>,
     pub facet_str_fn: Option<FacetStrFn<TData>>,
+    pub aggregation: Aggregation,
     pub enable_hiding: bool,
     pub enable_ordering: bool,
     pub enable_pinning: bool,
@@ -32,6 +35,7 @@ impl<TData> Clone for ColumnDef<TData> {
             filter_fn: self.filter_fn.clone(),
             facet_key_fn: self.facet_key_fn.clone(),
             facet_str_fn: self.facet_str_fn.clone(),
+            aggregation: self.aggregation,
             enable_hiding: self.enable_hiding,
             enable_ordering: self.enable_ordering,
             enable_pinning: self.enable_pinning,
@@ -60,6 +64,7 @@ impl<TData> ColumnDef<TData> {
             filter_fn: None,
             facet_key_fn: None,
             facet_str_fn: None,
+            aggregation: Aggregation::None,
             enable_hiding: true,
             enable_ordering: true,
             enable_pinning: true,
@@ -90,6 +95,11 @@ impl<TData> ColumnDef<TData> {
     /// Provide a string view for this column's facet value (borrowed from row data; no allocation).
     pub fn facet_str_by(mut self, f: impl for<'r> Fn(&'r TData) -> &'r str + 'static) -> Self {
         self.facet_str_fn = Some(Arc::new(f));
+        self
+    }
+
+    pub fn aggregate(mut self, aggregation: Aggregation) -> Self {
+        self.aggregation = aggregation;
         self
     }
 

@@ -18,11 +18,11 @@ use crate::declarative::stack;
 use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::headless::table::{
-    ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
+    Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
     FlatRowOrderCache, FlatRowOrderDeps, GroupedColumnMode, GroupedRowKind, Row, RowKey, SortSpec,
-    Table, TableState, begin_column_resize, column_resize_preview_size, column_size,
-    drag_column_resize, end_column_resize, is_column_visible, is_row_expanded, is_row_selected,
-    order_column_refs_for_grouping, order_columns, split_pinned_columns,
+    Table, TableState, begin_column_resize, column_size, drag_column_resize, end_column_resize,
+    is_column_visible, is_row_expanded, is_row_selected, order_column_refs_for_grouping,
+    order_columns, split_pinned_columns,
 };
 
 fn resolve_table_colors(theme: &Theme) -> (Color, Color, Color, Color, Color) {
@@ -100,19 +100,6 @@ fn resolve_column_width<TData>(
     let base = column_size(&state.column_sizing, &col.id).unwrap_or(props.default_column_width.0);
     let base = clamp_column_width(col, props, base);
 
-    if props.enable_column_resizing
-        && props.column_resize_mode == ColumnResizeMode::OnEnd
-        && state
-            .column_sizing_info
-            .is_resizing_column
-            .as_ref()
-            .is_some_and(|active| active.as_ref() == col.id.as_ref())
-    {
-        if let Some(preview) = column_resize_preview_size(&state.column_sizing_info, &col.id) {
-            return clamp_column_width(col, props, preview);
-        }
-    }
-
     base
 }
 
@@ -141,7 +128,7 @@ impl Default for TableViewProps {
             default_column_width: Px(160.0),
             min_column_width: Px(40.0),
             enable_column_resizing: true,
-            column_resize_mode: ColumnResizeMode::OnChange,
+            column_resize_mode: ColumnResizeMode::OnEnd,
             column_resize_direction: ColumnResizeDirection::Ltr,
             enable_column_grouping: true,
             grouped_column_mode: GroupedColumnMode::Reorder,
@@ -164,6 +151,7 @@ enum DisplayRow {
         depth: usize,
         label: Arc<str>,
         expanded: bool,
+        aggregations: Arc<[(ColumnId, Arc<str>)]>,
     },
 }
 
@@ -216,6 +204,15 @@ fn columns_fingerprint<TData>(columns: &[ColumnDef<TData>]) -> u64 {
         h ^= c.facet_key_fn.is_some() as u64;
         h = h.wrapping_mul(0x00000100000001B3);
         h ^= c.facet_str_fn.is_some() as u64;
+        h = h.wrapping_mul(0x00000100000001B3);
+        h ^= match c.aggregation {
+            Aggregation::None => 0,
+            Aggregation::Count => 1,
+            Aggregation::SumU64 => 2,
+            Aggregation::MinU64 => 3,
+            Aggregation::MaxU64 => 4,
+            Aggregation::MeanU64 => 5,
+        };
         h = h.wrapping_mul(0x00000100000001B3);
     }
     h
@@ -354,6 +351,11 @@ pub fn table_virtualized<H: UiHost, TData>(
             let col_by_id: std::collections::HashMap<&str, &ColumnDef<TData>> =
                 columns.iter().map(|c| (c.id.as_ref(), c)).collect();
 
+            let agg_columns: Vec<&ColumnDef<TData>> = columns
+                .iter()
+                .filter(|c| c.aggregation != Aggregation::None)
+                .collect();
+
             let mut options = crate::headless::table::TableOptions::default();
             options.manual_sorting = true;
             options.manual_pagination = true;
@@ -371,6 +373,125 @@ pub fn table_virtualized<H: UiHost, TData>(
                 .build();
 
             let grouped = table.grouped_row_model().clone();
+
+            fn for_each_leaf(
+                model: &crate::headless::table::GroupedRowModel,
+                root: crate::headless::table::GroupedRowIndex,
+                f: &mut impl FnMut(RowKey),
+            ) {
+                let mut stack: Vec<crate::headless::table::GroupedRowIndex> = vec![root];
+                while let Some(index) = stack.pop() {
+                    let Some(row) = model.row(index) else {
+                        continue;
+                    };
+                    match &row.kind {
+                        GroupedRowKind::Group { .. } => {
+                            for &child in &row.sub_rows {
+                                stack.push(child);
+                            }
+                        }
+                        GroupedRowKind::Leaf { row_key } => f(*row_key),
+                    }
+                }
+            }
+
+            fn group_aggregations<TData>(
+                model: &crate::headless::table::GroupedRowModel,
+                group_index: crate::headless::table::GroupedRowIndex,
+                kind: &GroupedRowKind,
+                data: &[TData],
+                row_index_by_key: &std::collections::HashMap<RowKey, usize>,
+                agg_columns: &[&ColumnDef<TData>],
+            ) -> Arc<[(ColumnId, Arc<str>)]> {
+                let GroupedRowKind::Group { leaf_row_count, .. } = kind else {
+                    return Arc::from([]);
+                };
+                if agg_columns.is_empty() {
+                    return Arc::from([]);
+                }
+
+                let mut out: Vec<(ColumnId, Arc<str>)> = Vec::new();
+                out.reserve(agg_columns.len());
+
+                for col in agg_columns {
+                    let value = match col.aggregation {
+                        Aggregation::None => None,
+                        Aggregation::Count => Some(*leaf_row_count as u64),
+                        Aggregation::SumU64 => col.facet_key_fn.as_ref().map_or(None, |facet| {
+                            let mut sum = 0u64;
+                            let mut ok = true;
+                            for_each_leaf(model, group_index, &mut |leaf_key| {
+                                let Some(&i) = row_index_by_key.get(&leaf_key) else {
+                                    return;
+                                };
+                                let v = facet(&data[i]);
+                                sum = match sum.checked_add(v) {
+                                    Some(next) => next,
+                                    None => {
+                                        ok = false;
+                                        sum
+                                    }
+                                };
+                            });
+                            ok.then_some(sum)
+                        }),
+                        Aggregation::MinU64 => col.facet_key_fn.as_ref().map_or(None, |facet| {
+                            let mut min: Option<u64> = None;
+                            for_each_leaf(model, group_index, &mut |leaf_key| {
+                                let Some(&i) = row_index_by_key.get(&leaf_key) else {
+                                    return;
+                                };
+                                let v = facet(&data[i]);
+                                min = Some(min.map(|m| m.min(v)).unwrap_or(v));
+                            });
+                            min
+                        }),
+                        Aggregation::MaxU64 => col.facet_key_fn.as_ref().map_or(None, |facet| {
+                            let mut max: Option<u64> = None;
+                            for_each_leaf(model, group_index, &mut |leaf_key| {
+                                let Some(&i) = row_index_by_key.get(&leaf_key) else {
+                                    return;
+                                };
+                                let v = facet(&data[i]);
+                                max = Some(max.map(|m| m.max(v)).unwrap_or(v));
+                            });
+                            max
+                        }),
+                        Aggregation::MeanU64 => col.facet_key_fn.as_ref().map_or(None, |facet| {
+                            let mut sum = 0u64;
+                            let mut count = 0u64;
+                            let mut ok = true;
+                            for_each_leaf(model, group_index, &mut |leaf_key| {
+                                let Some(&i) = row_index_by_key.get(&leaf_key) else {
+                                    return;
+                                };
+                                let v = facet(&data[i]);
+                                count = count.saturating_add(1);
+                                sum = match sum.checked_add(v) {
+                                    Some(next) => next,
+                                    None => {
+                                        ok = false;
+                                        sum
+                                    }
+                                };
+                            });
+                            if !ok || count == 0 {
+                                None
+                            } else {
+                                Some(sum / count)
+                            }
+                        }),
+                    };
+
+                    let Some(value) = value else {
+                        continue;
+                    };
+
+                    out.push((col.id.clone(), Arc::from(value.to_string())));
+                }
+
+                Arc::from(out.into_boxed_slice())
+            }
 
             fn group_label_for_key<TData>(
                 kind: &GroupedRowKind,
@@ -405,6 +526,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                 data: &[TData],
                 row_index_by_key: &std::collections::HashMap<RowKey, usize>,
                 col_by_id: &std::collections::HashMap<&str, &ColumnDef<TData>>,
+                agg_columns: &[&ColumnDef<TData>],
                 expanded: &ExpandingState,
                 out: &mut Vec<DisplayRow>,
             ) {
@@ -418,6 +540,14 @@ pub fn table_virtualized<H: UiHost, TData>(
                     } => {
                         let expanded_here = is_row_expanded(row.key, expanded);
                         let grouping_column = grouping_column.clone();
+                        let aggregations = group_aggregations(
+                            model,
+                            index,
+                            &row.kind,
+                            data,
+                            row_index_by_key,
+                            agg_columns,
+                        );
                         out.push(DisplayRow::Group {
                             grouping_column,
                             row_key: row.key,
@@ -429,6 +559,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                 col_by_id,
                             ),
                             expanded: expanded_here,
+                            aggregations,
                         });
 
                         if expanded_here {
@@ -439,6 +570,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                     data,
                                     row_index_by_key,
                                     col_by_id,
+                                    agg_columns,
                                     expanded,
                                     out,
                                 );
@@ -466,6 +598,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                     data,
                     &row_index_by_key,
                     &col_by_id,
+                    &agg_columns,
                     &state_value.expanding,
                     &mut visible,
                 );
@@ -688,6 +821,26 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                     let resize_mode = props.column_resize_mode;
                                                                                     let resize_direction = props.column_resize_direction;
                                                                                     let grip_color = border;
+                                                                                    let grip_right = if props.enable_column_resizing
+                                                                                        && props.column_resize_mode
+                                                                                            == ColumnResizeMode::OnEnd
+                                                                                        && state_value
+                                                                                            .column_sizing_info
+                                                                                            .is_resizing_column
+                                                                                            .as_ref()
+                                                                                            .is_some_and(|active| {
+                                                                                                active.as_ref()
+                                                                                                    == col_id.as_ref()
+                                                                                            })
+                                                                                    {
+                                                                                        -5.0
+                                                                                            + state_value
+                                                                                                .column_sizing_info
+                                                                                                .delta_offset
+                                                                                                .unwrap_or(0.0)
+                                                                                    } else {
+                                                                                        -5.0
+                                                                                    };
 
                                                                                     pieces.push(cx.pointer_region(
                                                                                         PointerRegionProps {
@@ -701,7 +854,7 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                     fret_ui::element::PositionStyle::Absolute,
                                                                                                 inset: fret_ui::element::InsetStyle {
                                                                                                     top: Some(Px(0.0)),
-                                                                                                    right: Some(Px(-5.0)),
+                                                                                                    right: Some(Px(grip_right)),
                                                                                                     bottom: Some(Px(0.0)),
                                                                                                     left: None,
                                                                                                 },
@@ -918,12 +1071,14 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                         depth,
                                                         label,
                                                         expanded,
+                                                        aggregations,
                                                     } => {
                                                         let row_key = *row_key;
                                                         let depth = *depth;
                                                         let expanded = *expanded;
                                                         let label = label.clone();
                                                         let grouping_column = grouping_column.clone();
+                                                        let aggregations = aggregations.clone();
 
                                                         let label_target: ColumnId = if left_cols
                                                             .iter()
@@ -1090,7 +1245,17 @@ pub fn table_virtualized<H: UiHost, TData>(
                                                                                                             if is_label_target {
                                                                                                                 vec![cx.text(text.clone())]
                                                                                                             } else {
-                                                                                                                Vec::new()
+                                                                                                                let v = aggregations
+                                                                                                                    .iter()
+                                                                                                                    .find(|entry| {
+                                                                                                                        entry.0.as_ref()
+                                                                                                                            == col
+                                                                                                                                .id
+                                                                                                                                .as_ref()
+                                                                                                                    })
+                                                                                                                    .map(|entry| entry.1.clone());
+                                                                                                                v.map(|v| vec![cx.text(v)])
+                                                                                                                    .unwrap_or_default()
                                                                                                             }
                                                                                                         },
                                                                                                     )
