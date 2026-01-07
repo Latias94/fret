@@ -6,6 +6,7 @@
 mod context_menu;
 mod conversion;
 mod event;
+mod geometry;
 mod legacy;
 mod paint;
 

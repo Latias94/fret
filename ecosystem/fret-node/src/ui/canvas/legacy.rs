@@ -30,6 +30,7 @@ use crate::ui::presenter::{
 use crate::ui::style::NodeGraphStyle;
 
 use super::conversion;
+use super::geometry::CanvasGeometry;
 
 #[derive(Debug, Clone)]
 struct ViewSnapshot {
@@ -729,25 +730,6 @@ impl NodeGraphCanvas {
         out
     }
 
-    fn build_port_centers(
-        &self,
-        graph: &Graph,
-        snapshot: &ViewSnapshot,
-        zoom: f32,
-    ) -> HashMap<PortId, Point> {
-        let mut out: HashMap<PortId, Point> = HashMap::new();
-        let node_order = self.node_order(graph, snapshot);
-        for node in &node_order {
-            let (inputs, outputs) = self.node_ports(graph, *node);
-            for port in inputs.iter().chain(outputs.iter()) {
-                if let Some(center) = self.port_center(graph, *node, *port, zoom) {
-                    out.insert(*port, center);
-                }
-            }
-        }
-        out
-    }
-
     fn node_ports<'a>(&self, graph: &'a Graph, node: GraphNodeId) -> (Vec<PortId>, Vec<PortId>) {
         let Some(n) = graph.nodes.get(&node) else {
             return (Vec::new(), Vec::new());
@@ -814,20 +796,27 @@ impl NodeGraphCanvas {
         Some(Point::new(Px(x), Px(y)))
     }
 
-    fn hit_port(&self, graph: &Graph, pos: Point, zoom: f32) -> Option<PortId> {
+    fn hit_port(
+        &self,
+        graph: &Graph,
+        snapshot: &ViewSnapshot,
+        pos: Point,
+        zoom: f32,
+    ) -> Option<PortId> {
+        let geom = CanvasGeometry::build(graph, &snapshot.draw_order, &self.style, zoom);
+        let port_id = geom.hit_port(pos)?;
+
+        // Preserve the previous circular hit-testing semantics (geometry bounds are AABB).
+        let center = geom.port_center(port_id)?;
         let r = self.style.pin_radius / zoom;
         let r2 = r * r;
-        for (&port_id, port) in &graph.ports {
-            let Some(center) = self.port_center(graph, port.node, port_id, zoom) else {
-                continue;
-            };
-            let dx = center.x.0 - pos.x.0;
-            let dy = center.y.0 - pos.y.0;
-            if dx * dx + dy * dy <= r2 {
-                return Some(port_id);
-            }
+        let dx = center.x.0 - pos.x.0;
+        let dy = center.y.0 - pos.y.0;
+        if dx * dx + dy * dy <= r2 {
+            Some(port_id)
+        } else {
+            None
         }
-        None
     }
 
     fn pick_target_port(
@@ -846,14 +835,14 @@ impl NodeGraphCanvas {
 
         match snapshot.interaction.connection_mode {
             NodeGraphConnectionMode::Strict => {
-                let candidate = self.hit_port(graph, pos, zoom)?;
+                let candidate = self.hit_port(graph, snapshot, pos, zoom)?;
                 let port = graph.ports.get(&candidate)?;
                 (candidate != from && port.dir == desired_dir).then_some(candidate)
             }
             NodeGraphConnectionMode::Loose => {
                 let radius_screen = snapshot.interaction.connection_radius;
                 if !radius_screen.is_finite() || radius_screen <= 0.0 {
-                    let candidate = self.hit_port(graph, pos, zoom)?;
+                    let candidate = self.hit_port(graph, snapshot, pos, zoom)?;
                     let port = graph.ports.get(&candidate)?;
                     return (candidate != from && port.dir == desired_dir).then_some(candidate);
                 }
@@ -861,13 +850,12 @@ impl NodeGraphCanvas {
                 let r2 = r * r;
 
                 let mut best: Option<(PortId, f32)> = None;
-                for (&port_id, port) in &graph.ports {
-                    if port_id == from || port.dir != desired_dir {
+                let geom = CanvasGeometry::build(graph, &snapshot.draw_order, &self.style, zoom);
+                for (&port_id, handle) in &geom.ports {
+                    if port_id == from || handle.dir != desired_dir {
                         continue;
                     }
-                    let Some(center) = self.port_center(graph, port.node, port_id, zoom) else {
-                        continue;
-                    };
+                    let center = handle.center;
                     let dx = center.x.0 - pos.x.0;
                     let dy = center.y.0 - pos.y.0;
                     let d2 = dx * dx + dy * dy;
@@ -896,14 +884,14 @@ impl NodeGraphCanvas {
             (snapshot.interaction.edge_interaction_width / zoom).max(self.style.wire_width / zoom);
         let threshold2 = hit_w * hit_w;
 
-        let port_centers = self.build_port_centers(graph, snapshot, zoom);
+        let geom = CanvasGeometry::build(graph, &snapshot.draw_order, &self.style, zoom);
 
         let mut best: Option<(EdgeId, f32)> = None;
         for (&edge_id, edge) in &graph.edges {
-            let Some(from) = port_centers.get(&edge.from).copied() else {
+            let Some(from) = geom.port_center(edge.from) else {
                 continue;
             };
-            let Some(to) = port_centers.get(&edge.to).copied() else {
+            let Some(to) = geom.port_center(edge.to) else {
                 continue;
             };
 
@@ -2178,7 +2166,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     let this = &*self;
                     this.graph
                         .read_ref(cx.app, |graph| {
-                            if let Some(port) = this.hit_port(graph, *position, zoom) {
+                            if let Some(port) = this.hit_port(graph, &snapshot, *position, zoom) {
                                 return Hit::Port(port);
                             }
                             let order = this.node_order(graph, &snapshot);
@@ -2430,7 +2418,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             let candidate = {
                                 let this = &*self;
                                 this.graph
-                                    .read_ref(cx.app, |graph| this.hit_port(graph, pos, zoom))
+                                    .read_ref(cx.app, |graph| {
+                                        this.hit_port(graph, &snapshot, pos, zoom)
+                                    })
                                     .ok()
                                     .flatten()
                             };
@@ -3120,32 +3110,24 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 .read_ref(cx.app, |graph| {
                     let mut out = RenderData::default();
 
-                    let node_order = this.node_order(graph, &snapshot);
-                    for node in &node_order {
-                        let Some(rect) = this.node_rect(graph, *node, zoom) else {
+                    let geom =
+                        CanvasGeometry::build(graph, &snapshot.draw_order, &this.style, zoom);
+
+                    for node in geom.order.iter().copied() {
+                        let Some(node_geom) = geom.nodes.get(&node) else {
                             continue;
                         };
-                        let is_selected = selected.contains(node);
-                        let title = presenter.node_title(graph, *node);
-                        out.nodes.push((*node, rect, is_selected, title));
+                        let is_selected = selected.contains(&node);
+                        let title = presenter.node_title(graph, node);
+                        out.nodes.push((node, node_geom.rect, is_selected, title));
+                    }
 
-                        let (inputs, outputs) = this.node_ports(graph, *node);
-                        for port in inputs.iter().chain(outputs.iter()) {
-                            if let Some(center) = this.port_center(graph, *node, *port, zoom) {
-                                out.port_centers.insert(*port, center);
-                                if let Some(p) = graph.ports.get(port) {
-                                    out.port_labels
-                                        .insert(*port, (presenter.port_label(graph, *port), p.dir));
-                                }
-                                let color = presenter.port_color(graph, *port, &this.style);
-                                let pin_r = this.style.pin_radius / zoom;
-                                let rect = Rect::new(
-                                    Point::new(Px(center.x.0 - pin_r), Px(center.y.0 - pin_r)),
-                                    Size::new(Px(2.0 * pin_r), Px(2.0 * pin_r)),
-                                );
-                                out.pins.push((*port, rect, color));
-                            }
-                        }
+                    for (&port_id, handle) in &geom.ports {
+                        out.port_centers.insert(port_id, handle.center);
+                        out.port_labels
+                            .insert(port_id, (presenter.port_label(graph, port_id), handle.dir));
+                        let color = presenter.port_color(graph, port_id, &this.style);
+                        out.pins.push((port_id, handle.bounds, color));
                     }
 
                     for (&edge_id, edge) in &graph.edges {
