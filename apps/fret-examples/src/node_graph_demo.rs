@@ -10,6 +10,7 @@ use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::{UiFrameCx, UiTree};
 
 use fret_node::Graph;
+use fret_node::TypeDesc;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
@@ -24,24 +25,52 @@ struct NodeGraphDemoModels {
 fn build_demo_graph() -> Graph {
     let mut graph = Graph::default();
 
-    let node_value = NodeId::new();
+    let node_value_a = NodeId::new();
+    let node_value_b = NodeId::new();
+    let node_merge = NodeId::new();
     let node_add = NodeId::new();
     let node_out = NodeId::new();
 
-    let port_value_out = PortId::new();
+    let port_value_a_out = PortId::new();
+    let port_value_b_out = PortId::new();
+    let port_merge_in0 = PortId::new();
+    let port_merge_in1 = PortId::new();
+    let port_merge_out = PortId::new();
     let port_add_a = PortId::new();
     let port_add_b = PortId::new();
     let port_add_out = PortId::new();
     let port_out_in = PortId::new();
 
     graph.nodes.insert(
-        node_value,
+        node_value_a,
         Node {
-            kind: NodeKindKey::new("demo.value"),
+            kind: NodeKindKey::new("demo.float"),
             kind_version: 1,
             pos: CanvasPoint { x: 40.0, y: 60.0 },
             collapsed: false,
-            ports: vec![port_value_out],
+            ports: vec![port_value_a_out],
+            data: serde_json::Value::Null,
+        },
+    );
+    graph.nodes.insert(
+        node_value_b,
+        Node {
+            kind: NodeKindKey::new("demo.float"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 40.0, y: 170.0 },
+            collapsed: false,
+            ports: vec![port_value_b_out],
+            data: serde_json::Value::Null,
+        },
+    );
+    graph.nodes.insert(
+        node_merge,
+        Node {
+            kind: NodeKindKey::new("fret.variadic_merge"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 300.0, y: 90.0 },
+            collapsed: false,
+            ports: vec![port_merge_in0, port_merge_in1, port_merge_out],
             data: serde_json::Value::Null,
         },
     );
@@ -50,7 +79,7 @@ fn build_demo_graph() -> Graph {
         Node {
             kind: NodeKindKey::new("demo.add"),
             kind_version: 1,
-            pos: CanvasPoint { x: 320.0, y: 80.0 },
+            pos: CanvasPoint { x: 560.0, y: 100.0 },
             collapsed: false,
             ports: vec![port_add_a, port_add_b, port_add_out],
             data: serde_json::Value::Null,
@@ -61,7 +90,7 @@ fn build_demo_graph() -> Graph {
         Node {
             kind: NodeKindKey::new("demo.output"),
             kind_version: 1,
-            pos: CanvasPoint { x: 620.0, y: 120.0 },
+            pos: CanvasPoint { x: 840.0, y: 140.0 },
             collapsed: false,
             ports: vec![port_out_in],
             data: serde_json::Value::Null,
@@ -69,17 +98,67 @@ fn build_demo_graph() -> Graph {
     );
 
     graph.ports.insert(
-        port_value_out,
+        port_value_a_out,
         Port {
-            node: node_value,
-            key: PortKey::new("value"),
+            node: node_value_a,
+            key: PortKey::new("out"),
             dir: PortDirection::Out,
             kind: PortKind::Data,
-            capacity: PortCapacity::Single,
-            ty: None,
+            capacity: PortCapacity::Multi,
+            ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
     );
+    graph.ports.insert(
+        port_value_b_out,
+        Port {
+            node: node_value_b,
+            key: PortKey::new("out"),
+            dir: PortDirection::Out,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Multi,
+            ty: Some(TypeDesc::Float),
+            data: serde_json::Value::Null,
+        },
+    );
+
+    graph.ports.insert(
+        port_merge_in0,
+        Port {
+            node: node_merge,
+            key: PortKey::new("in0"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            ty: Some(TypeDesc::Float),
+            data: serde_json::Value::Null,
+        },
+    );
+    graph.ports.insert(
+        port_merge_in1,
+        Port {
+            node: node_merge,
+            key: PortKey::new("in1"),
+            dir: PortDirection::In,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Single,
+            ty: Some(TypeDesc::Float),
+            data: serde_json::Value::Null,
+        },
+    );
+    graph.ports.insert(
+        port_merge_out,
+        Port {
+            node: node_merge,
+            key: PortKey::new("out"),
+            dir: PortDirection::Out,
+            kind: PortKind::Data,
+            capacity: PortCapacity::Multi,
+            ty: Some(TypeDesc::Float),
+            data: serde_json::Value::Null,
+        },
+    );
+
     graph.ports.insert(
         port_add_a,
         Port {
@@ -88,7 +167,7 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
-            ty: None,
+            ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
     );
@@ -100,7 +179,7 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
-            ty: None,
+            ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
     );
@@ -112,7 +191,7 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::Out,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
-            ty: None,
+            ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
     );
@@ -124,7 +203,7 @@ fn build_demo_graph() -> Graph {
             dir: PortDirection::In,
             kind: PortKind::Data,
             capacity: PortCapacity::Single,
-            ty: None,
+            ty: Some(TypeDesc::Float),
             data: serde_json::Value::Null,
         },
     );
@@ -133,7 +212,15 @@ fn build_demo_graph() -> Graph {
         EdgeId::new(),
         Edge {
             kind: EdgeKind::Data,
-            from: port_value_out,
+            from: port_value_a_out,
+            to: port_merge_in0,
+        },
+    );
+    graph.edges.insert(
+        EdgeId::new(),
+        Edge {
+            kind: EdgeKind::Data,
+            from: port_merge_out,
             to: port_add_a,
         },
     );
