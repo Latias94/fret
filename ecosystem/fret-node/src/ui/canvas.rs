@@ -12,9 +12,10 @@ use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::REROUTE_KIND;
 use crate::core::{
-    CanvasPoint, EdgeId, Graph, NodeId as GraphNodeId, NodeKindKey, PortDirection, PortId,
+    CanvasPoint, CanvasSize, EdgeId, Graph, NodeId as GraphNodeId, NodeKindKey, PortDirection,
+    PortId,
 };
-use crate::io::NodeGraphViewState;
+use crate::io::{NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
@@ -31,18 +32,27 @@ struct ViewSnapshot {
     selected_nodes: Vec<GraphNodeId>,
     selected_edges: Vec<EdgeId>,
     draw_order: Vec<GraphNodeId>,
+    interaction: NodeGraphInteractionState,
 }
 
 #[derive(Debug, Default, Clone)]
 struct InteractionState {
     last_pos: Option<Point>,
     panning: bool,
+    pending_node_drag: Option<PendingNodeDrag>,
     node_drag: Option<NodeDrag>,
     wire_drag: Option<WireDrag>,
     edge_drag: Option<EdgeDrag>,
     hover_edge: Option<EdgeId>,
     context_menu: Option<ContextMenuState>,
     toast: Option<ToastState>,
+}
+
+#[derive(Debug, Clone)]
+struct PendingNodeDrag {
+    node: GraphNodeId,
+    grab_offset: Point,
+    start_pos: Point,
 }
 
 #[derive(Debug, Clone)]
@@ -190,6 +200,7 @@ impl NodeGraphCanvas {
             selected_nodes: Vec::new(),
             selected_edges: Vec::new(),
             draw_order: Vec::new(),
+            interaction: NodeGraphInteractionState::default(),
         };
 
         let _ = self.view_state.read(host, |_host, s| {
@@ -198,6 +209,7 @@ impl NodeGraphCanvas {
             snapshot.selected_nodes = s.selected_nodes.clone();
             snapshot.selected_edges = s.selected_edges.clone();
             snapshot.draw_order = s.draw_order.clone();
+            snapshot.interaction = s.interaction.clone();
         });
 
         let zoom = snapshot.zoom;
@@ -237,6 +249,23 @@ impl NodeGraphCanvas {
                     tracing::warn!("failed to apply node-graph ops: {err}");
                 }
             });
+    }
+
+    fn snap_canvas_point(pos: CanvasPoint, grid: CanvasSize) -> CanvasPoint {
+        fn snap_axis(value: f32, grid: f32) -> f32 {
+            if !value.is_finite() {
+                return value;
+            }
+            if !grid.is_finite() || grid <= 0.0 {
+                return value;
+            }
+            (value / grid).round() * grid
+        }
+
+        CanvasPoint {
+            x: snap_axis(pos.x, grid.width),
+            y: snap_axis(pos.y, grid.height),
+        }
     }
 
     fn node_order(&self, graph: &Graph, snapshot: &ViewSnapshot) -> Vec<GraphNodeId> {
@@ -1228,6 +1257,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 if *button == MouseButton::Middle {
                     self.interaction.hover_edge = None;
+                    self.interaction.pending_node_drag = None;
+                    self.interaction.node_drag = None;
+                    self.interaction.wire_drag = None;
+                    self.interaction.edge_drag = None;
                     self.interaction.panning = true;
                     cx.capture_pointer(cx.node);
                     cx.request_redraw();
@@ -1350,6 +1383,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 match hit {
                     Hit::Port(port) => {
+                        self.interaction.pending_node_drag = None;
+                        self.interaction.node_drag = None;
                         self.interaction.edge_drag = None;
                         let yank = (modifiers.ctrl || modifiers.meta).then(|| {
                             let this = &*self;
@@ -1377,14 +1412,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         cx.invalidate_self(Invalidation::Paint);
                     }
                     Hit::Node(node, rect) => {
+                        self.interaction.pending_node_drag = None;
+                        self.interaction.node_drag = None;
+                        self.interaction.wire_drag = None;
                         self.interaction.edge_drag = None;
                         let offset = Point::new(
                             Px(position.x.0 - rect.origin.x.0),
                             Px(position.y.0 - rect.origin.y.0),
                         );
-                        self.interaction.node_drag = Some(NodeDrag {
+                        self.interaction.pending_node_drag = Some(PendingNodeDrag {
                             node,
                             grab_offset: offset,
+                            start_pos: *position,
                         });
                         cx.capture_pointer(cx.node);
 
@@ -1400,6 +1439,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         cx.invalidate_self(Invalidation::Paint);
                     }
                     Hit::Edge(edge) => {
+                        self.interaction.pending_node_drag = None;
+                        self.interaction.node_drag = None;
+                        self.interaction.wire_drag = None;
                         let multi = modifiers.ctrl || modifiers.meta;
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
@@ -1425,6 +1467,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
                     Hit::Background => {
                         self.interaction.edge_drag = None;
+                        self.interaction.pending_node_drag = None;
+                        self.interaction.node_drag = None;
+                        self.interaction.wire_drag = None;
                         self.update_view_state(cx.app, |s| {
                             s.selected_nodes.clear();
                             s.selected_edges.clear();
@@ -1452,21 +1497,46 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
+                if self.interaction.node_drag.is_none() {
+                    if let Some(pending) = self.interaction.pending_node_drag.clone() {
+                        let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
+                        let threshold_graph = threshold_screen / zoom;
+                        let dx = position.x.0 - pending.start_pos.x.0;
+                        let dy = position.y.0 - pending.start_pos.y.0;
+                        if threshold_graph <= 0.0
+                            || dx * dx + dy * dy >= threshold_graph * threshold_graph
+                        {
+                            self.interaction.pending_node_drag = None;
+                            self.interaction.node_drag = Some(NodeDrag {
+                                node: pending.node,
+                                grab_offset: pending.grab_offset,
+                            });
+                        } else {
+                            return;
+                        }
+                    }
+                }
+
                 if let Some(drag) = &self.interaction.node_drag {
                     let new_pos = Point::new(
                         Px(position.x.0 - drag.grab_offset.x.0),
                         Px(position.y.0 - drag.grab_offset.y.0),
                     );
                     let id = drag.node;
+                    let snap_to_grid = snapshot.interaction.snap_to_grid;
+                    let snap_grid = snapshot.interaction.snap_grid;
                     let _ = self.graph.update(cx.app, |g, _cx| {
                         let Some(node) = g.nodes.get(&id) else {
                             return;
                         };
                         let from = node.pos;
-                        let to = CanvasPoint {
+                        let mut to = CanvasPoint {
                             x: new_pos.x.0,
                             y: new_pos.y.0,
                         };
+                        if snap_to_grid {
+                            to = Self::snap_canvas_point(to, snap_grid);
+                        }
                         let tx = GraphTransaction {
                             label: None,
                             ops: vec![GraphOp::SetNodePos { id, from, to }],
@@ -1570,8 +1640,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 if *button == MouseButton::Left {
-                    if self.interaction.node_drag.is_some() {
+                    if self.interaction.node_drag.is_some()
+                        || self.interaction.pending_node_drag.is_some()
+                    {
                         self.interaction.node_drag = None;
+                        self.interaction.pending_node_drag = None;
                         cx.release_pointer_capture();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
