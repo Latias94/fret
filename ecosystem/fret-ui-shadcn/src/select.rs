@@ -798,6 +798,7 @@ fn select_impl<H: UiHost>(
             font: FontId::default(),
             size: resolved.text_px,
             weight: FontWeight::NORMAL,
+            slant: Default::default(),
             line_height: theme
                 .metric_by_key("font.line_height")
                 .or(Some(theme.metric_required("font.line_height"))),
@@ -1427,6 +1428,7 @@ fn select_impl<H: UiHost>(
                                                                                             font: FontId::default(),
                                                                                             size: label_text_px,
                                                                                             weight: FontWeight::NORMAL,
+                                                                                            slant: Default::default(),
                                                                                             line_height: Some(
                                                                                                 label_line_height,
                                                                                             ),

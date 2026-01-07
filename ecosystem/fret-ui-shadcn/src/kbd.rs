@@ -57,6 +57,7 @@ pub fn kbd<H: UiHost>(cx: &mut ElementContext<'_, H>, text: impl Into<Arc<str>>)
                 font: FontId::default(),
                 size: px,
                 weight: FontWeight::MEDIUM,
+                slant: Default::default(),
                 line_height: Some(line_height),
                 letter_spacing_em: None,
             }),

@@ -137,6 +137,7 @@ impl InputOtp {
             font: FontId::default(),
             size: resolved.text_px,
             weight: FontWeight::MEDIUM,
+            slant: Default::default(),
             line_height: Some(font_line_height),
             letter_spacing_em: None,
         };

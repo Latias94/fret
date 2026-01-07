@@ -461,6 +461,7 @@ impl DropdownMenuShortcut {
                 // new-york-v4: `text-xs`.
                 size: font_size,
                 weight: FontWeight::NORMAL,
+                slant: Default::default(),
                 line_height: Some(font_line_height),
                 // new-york-v4: `tracking-widest`.
                 letter_spacing_em: Some(0.10),
@@ -1125,6 +1126,7 @@ impl DropdownMenu {
                                                         font: fret_core::FontId::default(),
                                                         size: font_size,
                                                         weight: fret_core::FontWeight::NORMAL,
+                                                        slant: Default::default(),
                                                         line_height: Some(font_line_height),
                                                         letter_spacing_em: None,
                                                     };
@@ -1159,6 +1161,7 @@ impl DropdownMenu {
                                                                         font: FontId::default(),
                                                                         size: font_size,
                                                                         weight: FontWeight::MEDIUM,
+                                                                        slant: Default::default(),
                                                                         line_height: Some(
                                                                             font_line_height,
                                                                         ),
@@ -1796,6 +1799,7 @@ impl DropdownMenu {
                                                 font: FontId::default(),
                                                 size: font_size,
                                                 weight: FontWeight::NORMAL,
+                                                slant: Default::default(),
                                                 line_height: Some(font_line_height),
                                                 letter_spacing_em: None,
                                             };
@@ -1883,6 +1887,7 @@ impl DropdownMenu {
                                                                                 font: FontId::default(),
                                                                                 size: font_size,
                                                                                 weight: FontWeight::MEDIUM,
+                                                                                slant: Default::default(),
                                                                                 line_height: Some(font_line_height),
                                                                                 letter_spacing_em: None,
                                                                             }),

@@ -1,4 +1,4 @@
-# ADR 0110: Rich Content Selection and Clipboard (Cross-Block, Markdown-First)
+# ADR 0110: Rich Content Selection and Clipboard (Zed-Aligned, Markdown-First)
 
 Status: Proposed
 
@@ -15,16 +15,16 @@ However, Fret does not yet define the *interaction* and *composition* contract f
 
 - mouse selection (drag to select),
 - word/line/all selection via multi-click,
-- cross-block selection (Markdown, chat transcripts, code blocks),
+- selection that spans multiple rendered lines/blocks within a rich content surface (Markdown, chat transcripts, code blocks),
 - selection painting across line wraps and block boundaries,
 - clipboard extraction behavior (what text is copied).
 
 This is a “hard-to-change” behavior because it affects user expectations, input routing, and future
 editor work.
 
-Zed’s Markdown view is a good reference: it supports document selection, paints selection
-backgrounds, updates during drag with autoscroll, and writes to the clipboard/primary selection on
-platforms that support it.
+Zed’s Markdown view is a good reference: it supports selection over a rendered text stream, paints
+selection backgrounds, updates during drag with autoscroll, and writes to the clipboard/primary
+selection on platforms that support it.
 
 Reference:
 - `repo-ref/zed/crates/markdown/src/markdown.rs:447` (`Selection` + `SelectMode`)
@@ -33,7 +33,7 @@ Reference:
 
 ## Goals
 
-1) Provide **Markdown-first**, cross-block selection suitable for LLM chat transcripts.
+1) Provide **Markdown-first** selection suitable for LLM chat transcripts.
 2) Keep the UI/layout layer independent of shaping (ADR 0006 / ADR 0029).
 3) Define a reusable selection foundation that can later power:
    - read-only rich text views,
@@ -44,20 +44,24 @@ Reference:
 
 ## Decision
 
-### 1) Selection is defined in a document coordinate space (block-aware)
+### 1) Selection is defined in a document coordinate space (source-indexed)
 
-We standardize a block-aware selection coordinate for rich content surfaces:
+We standardize a source-indexed selection coordinate for rich content surfaces:
 
-- `BlockId` (stable under streaming commits; see ADR 0100)
-- `byte_offset` (UTF-8 byte offset within the block’s *rendered text* payload)
+- `source_index` (UTF-8 byte offset into the Markdown source string)
 - `CaretAffinity` at line breaks (ADR 0046)
 
 Selection state:
 
-- `anchor: DocCursor` (fixed)
-- `head: DocCursor` (moves with mouse/keyboard)
+- `anchor: SourceCursor` (fixed)
+- `head: SourceCursor` (moves with mouse/keyboard)
 - `pending: bool` (drag in progress)
 - `mode: SelectMode` (Character / Word / Line / All), aligned with common editor UX
+
+Rationale:
+- This matches Zed’s Markdown behavior: selection state is stored as byte offsets into the original
+  Markdown source, and the renderer maintains mappings from source indices to rendered text indices.
+- For streaming (ADR 0100), append-only updates preserve existing indices; selection remains stable.
 
 ### 2) Rich content surfaces expose a “selection segment” interface
 
@@ -66,14 +70,14 @@ blocks).
 
 Each segment must be able to:
 
-1) Hit-test: `point -> DocCursor`
-2) Paint selection: `DocRange -> Vec<Rect>` (local rects suitable for background highlight)
-3) Extract clipboard text: `DocRange -> String`
+1) Hit-test: `point -> source_index`
+2) Paint selection: `source_range -> Vec<Rect>` (local rects suitable for background highlight)
+3) Extract clipboard text: `source_range -> String`
 
 The concrete API surface is implementation-defined (crate placement TBD), but the behavior must
 follow this contract.
 
-### 3) Cross-block selection is owned by the surface (Markdown-first)
+### 3) Selection is surface-owned (Markdown-first)
 
 For the initial implementation, selection ownership lives in `fret-markdown` (Markdown-first):
 
@@ -82,15 +86,15 @@ For the initial implementation, selection ownership lives in `fret-markdown` (Ma
 - The surface is responsible for painting selection backgrounds and providing clipboard text.
 
 This matches Zed’s shape: a “content view” owns selection state and uses a cached rendered-text
-mapping for hit-testing and painting.
+mapping for hit-testing, painting, and clipboard extraction.
 
 Longer-term, this can be generalized into a `fret-ui`/`fret-ui-kit` primitive once the contract has
 proven stable.
 
-### 4) Injection components are selection boundaries (v1 lock-in)
+### 4) Embedded components are selection boundaries (v1 lock-in)
 
-In v1, selection and clipboard extraction operate only over **rendered text** produced by the
-Markdown renderer.
+In v1, selection and clipboard extraction operate only over the **rendered text stream** produced
+by the Markdown renderer.
 
 Implications:
 
@@ -103,7 +107,7 @@ Implications:
 This aligns with Zed’s Markdown behavior and avoids hard-to-maintain “mixed selection” across
 arbitrary embedded widgets.
 
-### 4) Interaction semantics (mouse)
+### 5) Interaction semantics (mouse)
 
 Baseline behavior (desktop):
 
@@ -124,7 +128,7 @@ Link arbitration:
 - If no selection occurred, click activates the link (host-provided handler; Markdown itself remains
   render-only by default per ADR 0100).
 
-### 5) Clipboard extraction semantics
+### 6) Clipboard extraction semantics
 
 We standardize that clipboard extraction uses **rendered text**, not the raw Markdown source:
 
@@ -148,7 +152,7 @@ Platform-specific:
 
 - Linux/FreeBSD may also set the primary selection on mouse-up (Zed behavior).
 
-### 6) Relationship to Rich Text Runs (ADR 0109)
+### 7) Relationship to Rich Text Runs (ADR 0109)
 
 Rich selection and rich text runs are coupled:
 
@@ -175,3 +179,5 @@ pipeline.
 
 1) Do we need a global selection service (window-level) for consistent keyboard shortcuts and
    context menus, or keep it surface-owned initially?
+2) Do we want selection to include “alt text” for images by default, or treat images strictly as
+   boundaries (Zed-like default)?

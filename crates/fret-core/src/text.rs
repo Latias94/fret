@@ -81,10 +81,19 @@ pub struct TextStyle {
     pub font: FontId,
     pub size: Px,
     pub weight: FontWeight,
+    pub slant: TextSlant,
     /// Optional line height override, in logical px.
     pub line_height: Option<Px>,
     /// Optional tracking (letter spacing) override, in EM.
     pub letter_spacing_em: Option<f32>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum TextSlant {
+    #[default]
+    Normal,
+    Italic,
+    Oblique,
 }
 
 impl Default for TextStyle {
@@ -93,6 +102,7 @@ impl Default for TextStyle {
             font: FontId::default(),
             size: Px(13.0),
             weight: FontWeight::NORMAL,
+            slant: TextSlant::Normal,
             line_height: None,
             letter_spacing_em: None,
         }

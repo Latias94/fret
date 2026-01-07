@@ -297,6 +297,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             font: FontId::default(),
             size: Px((font_size.0 * 0.90).max(10.0)),
             weight: FontWeight::NORMAL,
+            slant: Default::default(),
             line_height: None,
             letter_spacing_em: None,
         };
@@ -721,6 +722,7 @@ impl<L: PlotLayer + 'static> PlotCanvas<L> {
             font: FontId::default(),
             size: Px((font_size.0 * 0.85).max(10.0)),
             weight: FontWeight::NORMAL,
+            slant: Default::default(),
             line_height: None,
             letter_spacing_em: None,
         };

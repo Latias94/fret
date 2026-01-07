@@ -16,7 +16,8 @@ use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::{Color, DrawOrder, SceneOp};
 use fret_core::{
     Event, FontId, FontWeight, KeyCode, MouseButton, PathId, PointerEvent, SemanticsRole,
-    TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextStyle, TextWrap, UiServices,
+    TextBlobId, TextConstraints, TextMetrics, TextOverflow, TextSlant, TextStyle, TextWrap,
+    UiServices,
 };
 use fret_runtime::{Model, TextFontStackKey};
 use fret_ui::Theme;
@@ -4948,6 +4949,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         font: FontId::default(),
                         size: overlay_font_size,
                         weight: FontWeight::NORMAL,
+                        slant: TextSlant::Normal,
                         line_height: None,
                         letter_spacing_em: None,
                     };
@@ -5688,6 +5690,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             font: FontId::default(),
             size: Px((font_size.0 * 0.85).max(9.0)),
             weight: FontWeight::BOLD,
+            slant: TextSlant::Normal,
             line_height: None,
             letter_spacing_em: None,
         };
@@ -5983,6 +5986,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 font: FontId::default(),
                 size: Px((font_size.0 * 0.90).max(10.0)),
                 weight: FontWeight::NORMAL,
+                slant: TextSlant::Normal,
                 line_height: None,
                 letter_spacing_em: None,
             };
@@ -6067,6 +6071,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     font: FontId::default(),
                     size: Px((font_size.0 * 0.90).max(10.0)),
                     weight: FontWeight::NORMAL,
+                    slant: TextSlant::Normal,
                     line_height: None,
                     letter_spacing_em: None,
                 };
@@ -6378,6 +6383,7 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 font: FontId::default(),
                 size: Px((font_size.0 * 0.90).max(10.0)),
                 weight: FontWeight::NORMAL,
+                slant: TextSlant::Normal,
                 line_height: None,
                 letter_spacing_em: None,
             };

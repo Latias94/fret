@@ -200,6 +200,7 @@ impl ContextMenuShortcut {
                 font: fret_core::FontId::default(),
                 size: font_size,
                 weight: fret_core::FontWeight::NORMAL,
+                slant: Default::default(),
                 line_height: Some(font_line_height),
                 letter_spacing_em: Some(0.12),
             }),
@@ -738,6 +739,7 @@ fn context_menu_submenu_panel<H: UiHost>(
         font: fret_core::FontId::default(),
         size: font_size,
         weight: fret_core::FontWeight::NORMAL,
+        slant: Default::default(),
         line_height: Some(font_line_height),
         letter_spacing_em: None,
     };
@@ -790,6 +792,7 @@ fn context_menu_submenu_panel<H: UiHost>(
                                         font: fret_core::FontId::default(),
                                         size: font_size,
                                         weight: fret_core::FontWeight::MEDIUM,
+                                        slant: Default::default(),
                                         line_height: Some(font_line_height),
                                         letter_spacing_em: None,
                                     }),
@@ -1414,6 +1417,7 @@ impl ContextMenu {
                         font: fret_core::FontId::default(),
                         size: font_size,
                         weight: fret_core::FontWeight::NORMAL,
+                        slant: Default::default(),
                         line_height: Some(font_line_height),
                         letter_spacing_em: None,
                     };
@@ -1521,6 +1525,7 @@ impl ContextMenu {
                                                                         font: fret_core::FontId::default(),
                                                                         size: font_size,
                                                                         weight: fret_core::FontWeight::MEDIUM,
+                                                                        slant: Default::default(),
                                                                         line_height: Some(
                                                                             font_line_height,
                                                                         ),

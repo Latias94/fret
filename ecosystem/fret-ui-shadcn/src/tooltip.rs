@@ -96,6 +96,7 @@ fn tooltip_text_style(theme: &Theme) -> TextStyle {
         font: fret_core::FontId::default(),
         size: px,
         weight: fret_core::FontWeight::NORMAL,
+        slant: Default::default(),
         line_height: Some(line_height),
         letter_spacing_em: None,
     }

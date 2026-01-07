@@ -101,6 +101,7 @@ pub fn badge<H: UiHost>(
                 font: FontId::default(),
                 size: text_px,
                 weight: FontWeight::SEMIBOLD,
+                slant: Default::default(),
                 line_height: Some(line_height),
                 letter_spacing_em: None,
             }),

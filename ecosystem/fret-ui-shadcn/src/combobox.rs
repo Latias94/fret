@@ -221,6 +221,7 @@ pub fn combobox<H: UiHost>(
             font: FontId::default(),
             size: size.control_text_px(&theme),
             weight: FontWeight::MEDIUM,
+            slant: Default::default(),
             line_height: theme
                 .metric_by_key("font.line_height")
                 .or(Some(theme.metric_required("font.line_height"))),

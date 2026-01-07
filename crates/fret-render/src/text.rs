@@ -1,11 +1,11 @@
 use cosmic_text::SwashContent;
 use cosmic_text::{
     Attrs, AttrsList, CacheKey, Family, FontSystem, Hinting, Metrics, ShapeBuffer, ShapeLine,
-    Shaping, SwashCache, Weight,
+    Shaping, Style as CosmicStyle, SwashCache, Weight,
 };
 use fret_core::{
     CaretAffinity, HitTestResult, Point, Rect, Size, TextBlobId, TextConstraints, TextMetrics,
-    TextOverflow, TextStyle, TextWrap, geometry::Px,
+    TextOverflow, TextSlant, TextStyle, TextWrap, geometry::Px,
 };
 use slotmap::SlotMap;
 use std::{
@@ -843,6 +843,11 @@ impl TextSystem {
 
         let mut attrs = Attrs::new().family(family_for_font_id(&style.font));
         attrs = attrs.weight(Weight(style.weight.0));
+        attrs = match style.slant {
+            TextSlant::Normal => attrs,
+            TextSlant::Italic => attrs.style(CosmicStyle::Italic),
+            TextSlant::Oblique => attrs.style(CosmicStyle::Oblique),
+        };
         if let Some(letter_spacing_em) = style.letter_spacing_em
             && letter_spacing_em != 0.0
             && letter_spacing_em.is_finite()
@@ -882,6 +887,12 @@ impl TextSystem {
 
             let y_top_px = layout.line_tops_px[i];
 
+            let ascent_px = l.max_ascent.max(0.0);
+            let descent_px = l.max_descent.max(0.0);
+            let padding_top_px = ((line_height_px - ascent_px - descent_px) * 0.5).max(0.0);
+            let line_baseline_px = y_top_px + padding_top_px + ascent_px;
+            let line_offset_px = line_baseline_px - first_ascent_px;
+
             let local_start = layout.local_starts[i];
             let local_end = layout.local_ends[i];
 
@@ -919,11 +930,23 @@ impl TextSystem {
                     continue;
                 }
 
-                let (cache_key, _, _) = CacheKey::new(
+                // Cosmic's glyph cache key bins fractional positions into 1/4px buckets and
+                // returns the integer component (`x`, `y`) that must be used for placement to
+                // match the cached raster.
+                //
+                // If we ignore the returned integer coordinates and place glyph quads at the
+                // original float positions, the cached subpixel variant can mismatch the quad
+                // placement (visible as softer/blurry text under non-integer scale factors).
+                //
+                // We also clamp Y to integer pixels (matching cosmic-text's `LayoutGlyph::physical`
+                // behavior) to keep vertical alignment stable.
+                let pos_x = g.x;
+                let pos_y = (line_offset_px + g.y).trunc();
+                let (cache_key, x, y) = CacheKey::new(
                     g.font_id,
                     g.glyph_id,
                     g.font_size,
-                    (g.x, g.y),
+                    (pos_x, pos_y),
                     g.font_weight,
                     g.cache_key_flags,
                 );
@@ -981,13 +1004,8 @@ impl TextSystem {
                     }
                 };
 
-                let ascent_px = l.max_ascent.max(0.0);
-                let descent_px = l.max_descent.max(0.0);
-                let padding_top_px = ((line_height_px - ascent_px - descent_px) * 0.5).max(0.0);
-                let line_baseline_px = y_top_px + padding_top_px + ascent_px;
-                let line_offset_px = line_baseline_px - first_ascent_px;
-                let x0_px = g.x + image.placement.left as f32;
-                let y0_px = (line_offset_px + g.y) - image.placement.top as f32;
+                let x0_px = x as f32 + image.placement.left as f32;
+                let y0_px = y as f32 - image.placement.top as f32;
                 let w_px = image.placement.width as f32;
                 let h_px = image.placement.height as f32;
 
@@ -1044,6 +1062,11 @@ impl TextSystem {
 
         let mut attrs = Attrs::new().family(family_for_font_id(&style.font));
         attrs = attrs.weight(Weight(style.weight.0));
+        attrs = match style.slant {
+            TextSlant::Normal => attrs,
+            TextSlant::Italic => attrs.style(CosmicStyle::Italic),
+            TextSlant::Oblique => attrs.style(CosmicStyle::Oblique),
+        };
         if let Some(letter_spacing_em) = style.letter_spacing_em
             && letter_spacing_em != 0.0
             && letter_spacing_em.is_finite()

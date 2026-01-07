@@ -165,37 +165,47 @@ pub fn code_block_with<H: UiHost>(
 
     cx.container(props, |cx| {
         vec![cx.hover_region(HoverRegionProps::default(), |cx, hovered| {
-            let mut out = Vec::new();
-            if header_visible {
-                out.push(render_code_block_header(cx, &theme, language));
-            }
-            out.push(decl_scroll::overflow_scroll_x_vstack(
+            let content = stack::vstack(
                 cx,
-                LayoutRefinement::default().w_full(),
-                false,
-                stack::VStackProps::default().gap(Space::N0),
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full()),
                 |cx| {
-                    prepared
-                        .lines
-                        .iter()
-                        .enumerate()
-                        .map(|(i, line)| {
-                            if prepared.show_line_numbers {
-                                render_code_line_with_number(
-                                    cx,
-                                    &theme,
-                                    i + 1,
-                                    prepared.line_number_width,
-                                    line,
-                                )
-                            } else {
-                                render_code_line(cx, &theme, line)
-                            }
-                        })
-                        .collect::<Vec<_>>()
+                    let mut out = Vec::new();
+                    if header_visible {
+                        out.push(render_code_block_header(cx, &theme, language));
+                    }
+                    out.push(decl_scroll::overflow_scroll_x_vstack(
+                        cx,
+                        LayoutRefinement::default().w_full(),
+                        false,
+                        stack::VStackProps::default().gap(Space::N0),
+                        |cx| {
+                            prepared
+                                .lines
+                                .iter()
+                                .enumerate()
+                                .map(|(i, line)| {
+                                    if prepared.show_line_numbers {
+                                        render_code_line_with_number(
+                                            cx,
+                                            &theme,
+                                            i + 1,
+                                            prepared.line_number_width,
+                                            line,
+                                        )
+                                    } else {
+                                        render_code_line(cx, &theme, line)
+                                    }
+                                })
+                                .collect::<Vec<_>>()
+                        },
+                    ));
+                    out
                 },
-            ));
+            );
 
+            let mut out = vec![content];
             let show_copy = options.show_copy_button && (!options.copy_button_on_hover || hovered);
             if show_copy {
                 out.push(render_copy_button_overlay(cx, &theme, code.clone()));
@@ -226,6 +236,7 @@ fn render_code_block_header<H: UiHost>(
                         font: FontId::monospace(),
                         size: theme.metric_required("metric.font.mono_size"),
                         weight: FontWeight::SEMIBOLD,
+                        slant: Default::default(),
                         line_height: Some(theme.metric_required("metric.font.mono_line_height")),
                         letter_spacing_em: None,
                     }),
@@ -380,6 +391,7 @@ fn render_copy_button<H: UiHost>(
                         font: FontId::default(),
                         size: font_size,
                         weight: FontWeight::SEMIBOLD,
+                        slant: Default::default(),
                         line_height: Some(line_height),
                         letter_spacing_em: None,
                     }),
@@ -403,6 +415,7 @@ fn render_code_line_with_number<H: UiHost>(
         font: FontId::monospace(),
         size: theme.metric_required("metric.font.mono_size"),
         weight: FontWeight::NORMAL,
+        slant: Default::default(),
         line_height: Some(theme.metric_required("metric.font.mono_line_height")),
         letter_spacing_em: None,
     };
@@ -432,6 +445,7 @@ fn render_code_line<H: UiHost>(
         font: FontId::monospace(),
         size: theme.metric_required("metric.font.mono_size"),
         weight: FontWeight::NORMAL,
+        slant: Default::default(),
         line_height: Some(theme.metric_required("metric.font.mono_line_height")),
         letter_spacing_em: None,
     };
