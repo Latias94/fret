@@ -15,7 +15,7 @@ use crate::core::{
     CanvasPoint, CanvasSize, EdgeId, Graph, NodeId as GraphNodeId, NodeKindKey, PortDirection,
     PortId,
 };
-use crate::io::{NodeGraphInteractionState, NodeGraphViewState};
+use crate::io::{NodeGraphConnectionMode, NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
@@ -388,6 +388,61 @@ impl NodeGraphCanvas {
         None
     }
 
+    fn pick_target_port(
+        &self,
+        graph: &Graph,
+        snapshot: &ViewSnapshot,
+        from: PortId,
+        pos: Point,
+        zoom: f32,
+    ) -> Option<PortId> {
+        let from_port = graph.ports.get(&from)?;
+        let desired_dir = match from_port.dir {
+            PortDirection::In => PortDirection::Out,
+            PortDirection::Out => PortDirection::In,
+        };
+
+        match snapshot.interaction.connection_mode {
+            NodeGraphConnectionMode::Strict => {
+                let candidate = self.hit_port(graph, pos, zoom)?;
+                let port = graph.ports.get(&candidate)?;
+                (candidate != from && port.dir == desired_dir).then_some(candidate)
+            }
+            NodeGraphConnectionMode::Loose => {
+                let radius_screen = snapshot.interaction.connection_radius;
+                if !radius_screen.is_finite() || radius_screen <= 0.0 {
+                    let candidate = self.hit_port(graph, pos, zoom)?;
+                    let port = graph.ports.get(&candidate)?;
+                    return (candidate != from && port.dir == desired_dir).then_some(candidate);
+                }
+                let r = radius_screen / zoom;
+                let r2 = r * r;
+
+                let mut best: Option<(PortId, f32)> = None;
+                for (&port_id, port) in &graph.ports {
+                    if port_id == from || port.dir != desired_dir {
+                        continue;
+                    }
+                    let Some(center) = self.port_center(graph, port.node, port_id, zoom) else {
+                        continue;
+                    };
+                    let dx = center.x.0 - pos.x.0;
+                    let dy = center.y.0 - pos.y.0;
+                    let d2 = dx * dx + dy * dy;
+                    if d2 > r2 {
+                        continue;
+                    }
+                    match best {
+                        Some((_id, best_d2)) if best_d2 <= d2 => {}
+                        _ => best = Some((port_id, d2)),
+                    }
+                }
+
+                best.map(|(id, _)| id)
+            }
+        }
+    }
+
     fn hit_edge(
         &self,
         graph: &Graph,
@@ -395,7 +450,8 @@ impl NodeGraphCanvas {
         pos: Point,
         zoom: f32,
     ) -> Option<EdgeId> {
-        let hit_w = (self.style.wire_interaction_width / zoom).max(self.style.wire_width / zoom);
+        let hit_w =
+            (snapshot.interaction.edge_interaction_width / zoom).max(self.style.wire_width / zoom);
         let threshold2 = hit_w * hit_w;
 
         let port_centers = self.build_port_centers(graph, snapshot, zoom);
@@ -883,6 +939,7 @@ impl NodeGraphCanvas {
         graph: &Graph,
         edge_id: EdgeId,
         pos: Point,
+        reconnect_radius_screen: f32,
         zoom: f32,
     ) -> Option<(EdgeEndpoint, PortId)> {
         let edge = graph.edges.get(&edge_id)?;
@@ -911,6 +968,15 @@ impl NodeGraphCanvas {
             let dy = pos.y.0 - to_center.y.0;
             dx * dx + dy * dy
         };
+
+        if reconnect_radius_screen.is_finite() && reconnect_radius_screen > 0.0 {
+            let r = reconnect_radius_screen / zoom;
+            let r2 = r * r;
+            let min_d2 = d2_from.min(d2_to);
+            if min_d2 > r2 {
+                return None;
+            }
+        }
 
         if d2_from <= d2_to {
             Some((EdgeEndpoint::From, edge.to))
@@ -1568,6 +1634,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                         graph,
                                         drag.edge,
                                         drag.start_pos,
+                                        snapshot.interaction.reconnect_radius,
                                         zoom,
                                     )
                                 })
@@ -1652,19 +1719,25 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
 
                     if let Some(w) = self.interaction.wire_drag.take() {
+                        let from_port = match &w.kind {
+                            WireDragKind::New { from } => *from,
+                            WireDragKind::Reconnect { fixed, .. } => *fixed,
+                        };
                         let target = {
                             let this = &*self;
                             this.graph
-                                .read_ref(cx.app, |graph| this.hit_port(graph, *position, zoom))
+                                .read_ref(cx.app, |graph| {
+                                    this.pick_target_port(
+                                        graph, &snapshot, from_port, *position, zoom,
+                                    )
+                                })
                                 .ok()
                                 .flatten()
                         };
 
                         match w.kind {
                             WireDragKind::New { from } => {
-                                if let Some(target) = target
-                                    && target != from
-                                {
+                                if let Some(target) = target {
                                     enum Outcome {
                                         Apply(Vec<GraphOp>),
                                         Reject(DiagnosticSeverity, Arc<str>),
@@ -1706,7 +1779,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             WireDragKind::Reconnect {
                                 edge,
                                 endpoint,
-                                fixed: _,
+                                fixed: _fixed,
                             } => {
                                 if let Some(target) = target {
                                     enum Outcome {
