@@ -143,27 +143,43 @@ fn type_name(t: &TypeDesc) -> &'static str {
     }
 }
 
-fn convert_kind(from: &TypeDesc, to: &TypeDesc) -> Option<NodeKindKey> {
+fn convert_kinds(from: &TypeDesc, to: &TypeDesc) -> Vec<NodeKindKey> {
     if is_int(from) && is_float(to) {
-        return Some(NodeKindKey::new("demo.convert.int_to_float"));
+        return vec![
+            NodeKindKey::new("demo.convert.int_to_float.cast"),
+            NodeKindKey::new("demo.convert.int_to_float.exact"),
+        ];
     }
     if is_float(from) && is_int(to) {
-        return Some(NodeKindKey::new("demo.convert.float_to_int"));
+        return vec![
+            NodeKindKey::new("demo.convert.float_to_int.truncate"),
+            NodeKindKey::new("demo.convert.float_to_int.round"),
+        ];
     }
-    None
+    Vec::new()
 }
 
 fn convert_spec(kind: &NodeKindKey) -> Option<(TypeDesc, TypeDesc, Arc<str>)> {
     match kind.0.as_str() {
-        "demo.convert.int_to_float" => Some((
+        "demo.convert.int_to_float.cast" => Some((
             TypeDesc::Int,
             TypeDesc::Float,
-            Arc::<str>::from("Convert Int -> Float"),
+            Arc::<str>::from("Cast Int -> Float"),
         )),
-        "demo.convert.float_to_int" => Some((
+        "demo.convert.int_to_float.exact" => Some((
+            TypeDesc::Int,
+            TypeDesc::Float,
+            Arc::<str>::from("Exact Int -> Float"),
+        )),
+        "demo.convert.float_to_int.truncate" => Some((
             TypeDesc::Float,
             TypeDesc::Int,
-            Arc::<str>::from("Convert Float -> Int"),
+            Arc::<str>::from("Truncate Float -> Int"),
+        )),
+        "demo.convert.float_to_int.round" => Some((
+            TypeDesc::Float,
+            TypeDesc::Int,
+            Arc::<str>::from("Round Float -> Int"),
         )),
         _ => None,
     }
@@ -203,11 +219,20 @@ struct DemoTypedPresenter;
 
 impl NodeGraphPresenter for DemoTypedPresenter {
     fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str> {
-        graph
-            .nodes
-            .get(&node)
-            .map(|n| Arc::<str>::from(n.kind.0.clone()))
-            .unwrap_or_else(|| Arc::<str>::from("<missing node>"))
+        let Some(n) = graph.nodes.get(&node) else {
+            return Arc::<str>::from("<missing node>");
+        };
+
+        if let Some((_from, _to, label)) = convert_spec(&n.kind) {
+            return label;
+        }
+
+        match n.kind.0.as_str() {
+            "demo.const_int" => Arc::<str>::from("Const Int"),
+            "demo.const_float" => Arc::<str>::from("Const Float"),
+            "demo.sink_float" => Arc::<str>::from("Sink (Float)"),
+            _ => Arc::<str>::from(n.kind.0.clone()),
+        }
     }
 
     fn port_label(&self, graph: &Graph, port: PortId) -> Arc<str> {
@@ -238,21 +263,22 @@ impl NodeGraphPresenter for DemoTypedPresenter {
             return Vec::new();
         };
 
-        let Some(kind) = convert_kind(from_ty, to_ty) else {
-            return Vec::new();
-        };
-
-        let Some((from_ty, to_ty, label)) = convert_spec(&kind) else {
-            return Vec::new();
-        };
-        let template = convert_template(&kind, from_ty, to_ty);
-        vec![InsertNodeCandidate {
-            kind,
-            label,
-            enabled: true,
-            template: Some(template),
-            payload: serde_json::Value::Null,
-        }]
+        let kinds = convert_kinds(from_ty, to_ty);
+        let mut out: Vec<InsertNodeCandidate> = Vec::new();
+        for kind in kinds {
+            let Some((from_ty, to_ty, label)) = convert_spec(&kind) else {
+                continue;
+            };
+            let template = convert_template(&kind, from_ty, to_ty);
+            out.push(InsertNodeCandidate {
+                kind,
+                label,
+                enabled: true,
+                template: Some(template),
+                payload: serde_json::Value::Null,
+            });
+        }
+        out
     }
 
     fn plan_connect(&mut self, graph: &Graph, a: PortId, b: PortId) -> ConnectPlan {
@@ -288,9 +314,7 @@ impl NodeGraphPresenter for DemoTypedPresenter {
         let to_ty = to_port.ty.as_ref();
 
         if let (Some(from_ty), Some(to_ty)) = (from_ty, to_ty) {
-            if let Some(kind) = convert_kind(from_ty, to_ty)
-                && convert_spec(&kind).is_some()
-            {
+            if !convert_kinds(from_ty, to_ty).is_empty() {
                 return ConnectPlan {
                     decision: ConnectDecision::Reject,
                     diagnostics: vec![fret_node::rules::Diagnostic {
@@ -385,13 +409,15 @@ impl NodeGraphPresenter for DemoTypedPresenter {
             (Some(a), Some(b)) => (a, b),
             _ => return Vec::new(),
         };
-        let Some(kind) = convert_kind(from_ty, to_ty) else {
-            return Vec::new();
-        };
-        let Some((from_ty, to_ty, _label)) = convert_spec(&kind) else {
-            return Vec::new();
-        };
-        vec![convert_template(&kind, from_ty, to_ty)]
+        let kinds = convert_kinds(from_ty, to_ty);
+        let mut out: Vec<InsertNodeTemplate> = Vec::new();
+        for kind in kinds {
+            let Some((from_ty, to_ty, _label)) = convert_spec(&kind) else {
+                continue;
+            };
+            out.push(convert_template(&kind, from_ty, to_ty));
+        }
+        out
     }
 
     fn conversion_label(
@@ -401,14 +427,14 @@ impl NodeGraphPresenter for DemoTypedPresenter {
         to: PortId,
         template: &InsertNodeTemplate,
     ) -> Arc<str> {
+        if let Some((_from_ty, _to_ty, label)) = convert_spec(&template.kind) {
+            return label;
+        }
+
         let from_ty = graph.ports.get(&from).and_then(|p| p.ty.as_ref());
         let to_ty = graph.ports.get(&to).and_then(|p| p.ty.as_ref());
         if let (Some(from_ty), Some(to_ty)) = (from_ty, to_ty) {
-            return Arc::<str>::from(format!("{} → {}", type_name(from_ty), type_name(to_ty)));
-        }
-
-        if let Some((_from_ty, _to_ty, label)) = convert_spec(&template.kind) {
-            return label;
+            return Arc::<str>::from(format!("{} -> {}", type_name(from_ty), type_name(to_ty)));
         }
 
         Arc::<str>::from(format!("Convert: {}", template.kind.0))
@@ -416,45 +442,13 @@ impl NodeGraphPresenter for DemoTypedPresenter {
 
     fn conversion_insert_position(
         &mut self,
-        graph: &Graph,
-        from: PortId,
-        to: PortId,
+        _graph: &Graph,
+        _from: PortId,
+        _to: PortId,
         default_at: CanvasPoint,
         _template: &InsertNodeTemplate,
     ) -> CanvasPoint {
-        let Some(from_node) = graph.ports.get(&from).map(|p| p.node) else {
-            return default_at;
-        };
-        let Some(to_node) = graph.ports.get(&to).map(|p| p.node) else {
-            return default_at;
-        };
-        let Some(from_pos) = graph.nodes.get(&from_node).map(|n| n.pos) else {
-            return default_at;
-        };
-        let Some(to_pos) = graph.nodes.get(&to_node).map(|n| n.pos) else {
-            return default_at;
-        };
-
-        let mid = CanvasPoint {
-            x: (from_pos.x + to_pos.x) * 0.5,
-            y: (from_pos.y + to_pos.y) * 0.5,
-        };
-
-        let dx = to_pos.x - from_pos.x;
-        let dy = to_pos.y - from_pos.y;
-        let len = (dx * dx + dy * dy).sqrt();
-
-        let (nx, ny) = if len > 0.0001 {
-            (-dy / len, dx / len)
-        } else {
-            (0.0, 1.0)
-        };
-
-        let offset = 32.0;
-        CanvasPoint {
-            x: mid.x + nx * offset,
-            y: mid.y + ny * offset,
-        }
+        default_at
     }
 }
 
