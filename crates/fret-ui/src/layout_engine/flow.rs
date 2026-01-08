@@ -165,6 +165,55 @@ fn build_flow_subtree_impl<H: UiHost>(
                 );
             }
         }
+        Some(ElementInstance::RovingFlex(props)) => {
+            let props = props.flex;
+            let mut style = style_for_item_in_parent(
+                app,
+                window,
+                parent_kind,
+                node,
+                Display::Flex,
+                root_override_size,
+            );
+            style.flex_direction = match props.direction {
+                fret_core::Axis::Horizontal => FlexDirection::Row,
+                fret_core::Axis::Vertical => FlexDirection::Column,
+            };
+            style.flex_wrap = if props.wrap {
+                FlexWrap::Wrap
+            } else {
+                FlexWrap::NoWrap
+            };
+            style.justify_content = Some(taffy_justify(props.justify));
+            style.align_items = Some(taffy_align_items(props.align));
+            style.gap = TaffySize {
+                width: LengthPercentage::length(props.gap.0.max(0.0)),
+                height: LengthPercentage::length(props.gap.0.max(0.0)),
+            };
+            style.padding = TaffyRect {
+                left: LengthPercentage::length(props.padding.left.0.max(0.0)),
+                right: LengthPercentage::length(props.padding.right.0.max(0.0)),
+                top: LengthPercentage::length(props.padding.top.0.max(0.0)),
+                bottom: LengthPercentage::length(props.padding.bottom.0.max(0.0)),
+            };
+
+            let children = tree.children(node).to_vec();
+            engine.set_style(node, style);
+            engine.set_children(node, &children);
+            engine.set_measured(node, false);
+            for child in children {
+                build_flow_subtree(
+                    engine,
+                    app,
+                    tree,
+                    window,
+                    ParentLayoutKind::Flex {
+                        direction: props.direction,
+                    },
+                    child,
+                );
+            }
+        }
         Some(ElementInstance::Grid(props)) => {
             let mut style = style_for_item_in_parent(
                 app,

@@ -893,9 +893,7 @@ impl ElementHostWidget {
             }
             ElementInstance::VirtualList(props) => self.layout_virtual_list_impl(cx, window, props),
             ElementInstance::Flex(props) => self.layout_flex_impl(cx, window, props),
-            ElementInstance::RovingFlex(props) => {
-                self.layout_flex_container(cx, window, props.flex)
-            }
+            ElementInstance::RovingFlex(props) => self.layout_flex_impl(cx, window, props.flex),
             ElementInstance::Grid(props) => self.layout_grid_impl(cx, window, props),
             ElementInstance::Image(props) => {
                 clamp_to_constraints(cx.available, props.layout, cx.available)
