@@ -125,11 +125,11 @@ Normative key for v1:
 
 Where:
 
-- `stream_generation: u64` is a required field on update effects and increments when the stream “resets” (seek,
+- `stream_generation: u64` is a required field on update effects and increments when the stream resets (seek,
   format change, source change). This prevents stale pending updates from an earlier stream from being applied
   after a reset.
 
-`stream_generation=0` is valid and means “no explicit reset semantics”; apps that need robust seek/reset behavior
+`stream_generation=0` is valid and means no explicit reset semantics; apps that need robust seek/reset behavior
 should increment it.
 
 ### 5) Size/format changes: stable `ImageId`, replace underlying storage
