@@ -44,6 +44,7 @@ use crate::ui::{
 use super::conversion;
 use super::geometry::{CanvasGeometry, node_ports};
 use super::spatial::CanvasSpatialIndex;
+use super::workflow;
 
 #[derive(Debug, Clone)]
 struct ViewSnapshot {
@@ -73,6 +74,9 @@ struct InteractionState {
     context_menu: Option<ContextMenuState>,
     toast: Option<ToastState>,
     pending_paste: Option<PendingPaste>,
+
+    sticky_wire: bool,
+    sticky_wire_ignore_next_up: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -121,6 +125,10 @@ struct EdgeDrag {
 enum ContextMenuTarget {
     Background,
     BackgroundInsertNodePicker {
+        at: CanvasPoint,
+    },
+    ConnectionInsertNodePicker {
+        from: PortId,
         at: CanvasPoint,
     },
     Edge(EdgeId),
@@ -1815,6 +1823,63 @@ impl NodeGraphCanvas {
         });
     }
 
+    fn open_connection_insert_node_picker<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        from: PortId,
+        at: CanvasPoint,
+    ) {
+        let candidates: Vec<InsertNodeCandidate> = {
+            let presenter = &mut *self.presenter;
+            self.graph
+                .read_ref(host, |graph| presenter.list_insertable_nodes(graph))
+                .ok()
+                .unwrap_or_default()
+        };
+
+        let mut menu_candidates: Vec<InsertNodeCandidate> = Vec::new();
+        menu_candidates.push(InsertNodeCandidate {
+            kind: NodeKindKey::new(REROUTE_KIND),
+            label: Arc::<str>::from("Reroute"),
+            enabled: true,
+            template: None,
+            payload: serde_json::Value::Null,
+        });
+        menu_candidates.extend(candidates);
+
+        let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
+        for (ix, c) in menu_candidates.iter().enumerate() {
+            items.push(NodeGraphContextMenuItem {
+                label: c.label.clone(),
+                enabled: c.enabled,
+                action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
+            });
+        }
+        if items.is_empty() {
+            return;
+        }
+
+        let snapshot = self.sync_view_state(host);
+        let bounds = self.interaction.last_bounds.unwrap_or_default();
+        let origin = self.clamp_context_menu_origin(
+            Point::new(Px(at.x), Px(at.y)),
+            items.len(),
+            bounds,
+            &snapshot,
+        );
+        let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
+        self.interaction.context_menu = Some(ContextMenuState {
+            origin,
+            invoked_at: Point::new(Px(at.x), Px(at.y)),
+            target: ContextMenuTarget::ConnectionInsertNodePicker { from, at },
+            items,
+            candidates: menu_candidates,
+            hovered_item: None,
+            active_item,
+            typeahead: String::new(),
+        });
+    }
+
     fn open_edge_insert_node_picker<H: UiHost>(
         &mut self,
         host: &mut H,
@@ -1927,6 +1992,91 @@ impl NodeGraphCanvas {
                         self.show_toast(cx.app, cx.window, DiagnosticSeverity::Info, msg)
                     }
                     None => {}
+                }
+            }
+            (
+                ContextMenuTarget::ConnectionInsertNodePicker { from, at },
+                NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
+            ) => {
+                enum Outcome {
+                    Apply(Vec<GraphOp>, Option<GraphNodeId>, Option<PortId>),
+                    Reject(DiagnosticSeverity, Arc<str>),
+                    Ignore,
+                }
+
+                let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
+                    return;
+                };
+
+                let (outcome, toast) = {
+                    let presenter = &mut *self.presenter;
+                    self.graph
+                        .read_ref(cx.app, |graph| {
+                            let insert_ops = if candidate.kind.0 == REROUTE_KIND {
+                                Ok(Self::build_reroute_create_ops(*at))
+                            } else {
+                                presenter.plan_create_node(graph, &candidate, *at)
+                            };
+
+                            let insert_ops = match insert_ops {
+                                Ok(ops) => ops,
+                                Err(msg) => {
+                                    return (Outcome::Reject(DiagnosticSeverity::Info, msg), None);
+                                }
+                            };
+
+                            let planned = workflow::plan_wire_drop_insert(
+                                presenter, graph, *from, insert_ops,
+                            );
+                            let toast = planned.toast.clone();
+                            (
+                                Outcome::Apply(
+                                    planned.ops,
+                                    planned.created_node,
+                                    planned.continue_from,
+                                ),
+                                toast,
+                            )
+                        })
+                        .ok()
+                        .unwrap_or((Outcome::Ignore, None))
+                };
+
+                match outcome {
+                    Outcome::Apply(ops, created_node, continue_from) => {
+                        if self.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
+                            if let Some(node_id) = created_node {
+                                self.update_view_state(cx.app, |s| {
+                                    s.selected_edges.clear();
+                                    s.selected_nodes.clear();
+                                    s.selected_nodes.push(node_id);
+                                    s.draw_order.retain(|id| *id != node_id);
+                                    s.draw_order.push(node_id);
+                                });
+                            }
+                            if let Some((sev, msg)) = toast {
+                                self.show_toast(cx.app, cx.window, sev, msg);
+                            }
+
+                            if let Some(port) = continue_from {
+                                self.interaction.wire_drag = Some(WireDrag {
+                                    kind: WireDragKind::New {
+                                        from: port,
+                                        bundle: Vec::new(),
+                                    },
+                                    pos: invoked_at,
+                                });
+                                self.interaction.sticky_wire = true;
+                                self.interaction.sticky_wire_ignore_next_up = true;
+                                self.interaction.hover_port = None;
+                                self.interaction.hover_port_valid = false;
+                                self.interaction.hover_port_convertible = false;
+                                cx.capture_pointer(cx.node);
+                            }
+                        }
+                    }
+                    Outcome::Reject(sev, msg) => self.show_toast(cx.app, cx.window, sev, msg),
+                    Outcome::Ignore => {}
                 }
             }
             (
@@ -3024,6 +3174,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.panning = false;
                         canceled = true;
                     }
+                    if self.interaction.sticky_wire || self.interaction.sticky_wire_ignore_next_up {
+                        self.interaction.sticky_wire = false;
+                        self.interaction.sticky_wire_ignore_next_up = false;
+                        canceled = true;
+                    }
                     self.interaction.hover_port = None;
                     self.interaction.hover_port_valid = false;
                     self.interaction.hover_port_convertible = false;
@@ -3228,6 +3383,128 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             cx.invalidate_self(Invalidation::Paint);
                             return;
                         }
+                    }
+                }
+
+                if *button == MouseButton::Left
+                    && self.interaction.sticky_wire
+                    && self.interaction.wire_drag.is_some()
+                {
+                    let Some(mut w) = self.interaction.wire_drag.take() else {
+                        self.interaction.sticky_wire = false;
+                        self.interaction.sticky_wire_ignore_next_up = false;
+                        return;
+                    };
+
+                    let from = match &w.kind {
+                        WireDragKind::New { from, .. } => *from,
+                        _ => {
+                            self.interaction.wire_drag = Some(w);
+                            return;
+                        }
+                    };
+
+                    let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
+                    let mut scratch_ports: Vec<PortId> = Vec::new();
+                    let hit_port = self.hit_port(
+                        geom.as_ref(),
+                        index.as_ref(),
+                        *position,
+                        zoom,
+                        &mut scratch_ports,
+                    );
+
+                    if let Some(target) = hit_port {
+                        enum Outcome {
+                            Apply(Vec<GraphOp>),
+                            Reject(DiagnosticSeverity, Arc<str>),
+                            Ignore,
+                        }
+
+                        let outcome = {
+                            let presenter = &mut *self.presenter;
+                            self.graph
+                                .read_ref(cx.app, |graph| {
+                                    let plan = presenter.plan_connect(graph, from, target);
+                                    match plan.decision {
+                                        ConnectDecision::Accept => Outcome::Apply(plan.ops),
+                                        ConnectDecision::Reject => {
+                                            Self::toast_from_diagnostics(&plan.diagnostics)
+                                                .map(|(sev, msg)| Outcome::Reject(sev, msg))
+                                                .unwrap_or(Outcome::Ignore)
+                                        }
+                                    }
+                                })
+                                .ok()
+                                .unwrap_or(Outcome::Ignore)
+                        };
+
+                        match outcome {
+                            Outcome::Apply(ops) => {
+                                self.apply_ops(cx.app, cx.window, ops);
+                                self.interaction.sticky_wire = false;
+                                self.interaction.sticky_wire_ignore_next_up = false;
+                                cx.release_pointer_capture();
+                                cx.stop_propagation();
+                                cx.request_redraw();
+                                cx.invalidate_self(Invalidation::Paint);
+                                return;
+                            }
+                            Outcome::Reject(sev, msg) => {
+                                self.show_toast(cx.app, cx.window, sev, msg);
+                            }
+                            Outcome::Ignore => {}
+                        }
+
+                        w.pos = *position;
+                        self.interaction.wire_drag = Some(w);
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+
+                    let at = self.interaction.last_canvas_pos.unwrap_or_default();
+                    let on_background = {
+                        let this = &*self;
+                        let geom = geom.clone();
+                        let index = index.clone();
+                        this.graph
+                            .read_ref(cx.app, |graph| {
+                                let order = this.node_order(graph, &snapshot);
+                                let on_node =
+                                    this.hit_node(graph, *position, &order, zoom).is_some();
+                                if on_node {
+                                    return false;
+                                }
+                                let mut scratch_edges: Vec<EdgeId> = Vec::new();
+                                let on_edge = this
+                                    .hit_edge(
+                                        graph,
+                                        &snapshot,
+                                        geom.as_ref(),
+                                        index.as_ref(),
+                                        *position,
+                                        zoom,
+                                        &mut scratch_edges,
+                                    )
+                                    .is_some();
+                                !on_edge
+                            })
+                            .ok()
+                            .unwrap_or(false)
+                    };
+
+                    self.interaction.sticky_wire = false;
+                    self.interaction.sticky_wire_ignore_next_up = false;
+                    cx.release_pointer_capture();
+
+                    if on_background {
+                        self.open_connection_insert_node_picker(cx.app, from, at);
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
                     }
                 }
 
@@ -3946,6 +4223,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     zoom,
                 ));
 
+                if *button == MouseButton::Left
+                    && self.interaction.sticky_wire_ignore_next_up
+                    && self.interaction.wire_drag.is_some()
+                {
+                    self.interaction.sticky_wire_ignore_next_up = false;
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                    return;
+                }
+
                 if *button == MouseButton::Middle && self.interaction.panning {
                     self.interaction.panning = false;
                     cx.release_pointer_capture();
@@ -4028,6 +4315,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                         OpenConversionPicker(Vec<InsertNodeCandidate>),
                                     }
 
+                                    let convert_at = Self::screen_to_canvas(
+                                        cx.bounds,
+                                        w.pos,
+                                        snapshot.pan,
+                                        zoom,
+                                    );
                                     let (outcome, toast) = {
                                         let presenter = &mut *self.presenter;
                                         let style = self.style.clone();
@@ -4040,10 +4333,6 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                     bundle
                                                 };
                                                 let allow_convert = sources.len() == 1;
-                                                let convert_at = CanvasPoint {
-                                                    x: w.pos.x.0,
-                                                    y: w.pos.y.0,
-                                                };
                                                 let mut picker: Option<Vec<InsertNodeCandidate>> = None;
                                                 let mut ops_all: Vec<GraphOp> = Vec::new();
                                                 let mut toast: Option<(
@@ -4153,10 +4442,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                 Some(LastConversionContext {
                                                     from,
                                                     to: target,
-                                                    at: CanvasPoint {
-                                                        x: w.pos.x.0,
-                                                        y: w.pos.y.0,
-                                                    },
+                                                    at: convert_at,
                                                     candidates: candidates.clone(),
                                                 });
                                             let mut items: Vec<NodeGraphContextMenuItem> =
@@ -4170,7 +4456,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                             }
 
                                             let origin = self.clamp_context_menu_origin(
-                                                *position,
+                                                Point::new(Px(convert_at.x), Px(convert_at.y)),
                                                 items.len(),
                                                 cx.bounds,
                                                 &snapshot,
@@ -4180,15 +4466,15 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                             self.interaction.context_menu =
                                                 Some(ContextMenuState {
                                                     origin,
-                                                    invoked_at: *position,
+                                                    invoked_at: Point::new(
+                                                        Px(convert_at.x),
+                                                        Px(convert_at.y),
+                                                    ),
                                                     target:
                                                         ContextMenuTarget::ConnectionConvertPicker {
                                                             from,
                                                             to: target,
-                                                            at: CanvasPoint {
-                                                                x: w.pos.x.0,
-                                                                y: w.pos.y.0,
-                                                            },
+                                                            at: convert_at,
                                                         },
                                                     items,
                                                     candidates,
@@ -4202,6 +4488,14 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                         }
                                         Outcome::Ignore => {}
                                     }
+                                } else if bundle.is_empty() {
+                                    let at = Self::screen_to_canvas(
+                                        cx.bounds,
+                                        w.pos,
+                                        snapshot.pan,
+                                        zoom,
+                                    );
+                                    self.open_connection_insert_node_picker(cx.app, from, at);
                                 }
                             }
                             WireDragKind::Reconnect {

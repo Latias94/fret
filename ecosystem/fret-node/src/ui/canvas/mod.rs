@@ -10,5 +10,6 @@ mod geometry;
 mod legacy;
 mod paint;
 mod spatial;
+mod workflow;
 
 pub use legacy::NodeGraphCanvas;
