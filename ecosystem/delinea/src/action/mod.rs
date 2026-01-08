@@ -1,7 +1,8 @@
 use fret_core::Point;
 
 use crate::engine::window::{DataWindowX, DataWindowY};
-use crate::ids::{AxisId, LinkGroupId, SeriesId};
+use crate::ids::{AxisId, DatasetId, LinkGroupId, SeriesId};
+use crate::view::RowRange;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -32,5 +33,9 @@ pub enum Action {
     },
     SetLinkGroup {
         group: Option<LinkGroupId>,
+    },
+    SetDatasetRowRange {
+        dataset: DatasetId,
+        range: Option<RowRange>,
     },
 }

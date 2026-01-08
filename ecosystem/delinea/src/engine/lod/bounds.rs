@@ -58,15 +58,21 @@ pub fn compute_bounds_step(
     accum: &mut BoundsAccum,
     x: &[f64],
     y: &[f64],
+    row_range: core::ops::Range<usize>,
     window_x: Option<DataWindowX>,
     max_points_to_process: usize,
 ) -> Option<bool> {
     let len = x.len().min(y.len());
-    if cursor.next_index >= len {
+    if cursor.next_index == 0 {
+        cursor.next_index = row_range.start.min(len);
+    }
+
+    let end_limit = row_range.end.min(len);
+    if cursor.next_index >= end_limit {
         return Some(true);
     }
 
-    let end = (cursor.next_index + max_points_to_process).min(len);
+    let end = (cursor.next_index + max_points_to_process).min(end_limit);
 
     for i in cursor.next_index..end {
         let xi = x[i];
@@ -87,7 +93,7 @@ pub fn compute_bounds_step(
     }
 
     cursor.next_index = end;
-    Some(cursor.next_index >= len)
+    Some(cursor.next_index >= end_limit)
 }
 
 pub fn finalize_bounds(accum: &BoundsAccum, window_x: Option<DataWindowX>) -> Option<DataBounds> {

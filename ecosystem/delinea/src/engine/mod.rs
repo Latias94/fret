@@ -11,6 +11,7 @@ use crate::marks::MarkTree;
 use crate::scheduler::{StepResult, WorkBudget};
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
+use crate::view::ViewState;
 use fret_core::Point;
 use std::collections::BTreeMap;
 
@@ -34,6 +35,7 @@ pub struct ChartState {
     pub data_window_x: BTreeMap<crate::ids::AxisId, window::DataWindowX>,
     pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
     pub hover_px: Option<Point>,
+    pub dataset_row_ranges: BTreeMap<crate::ids::DatasetId, crate::view::RowRange>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -80,6 +82,7 @@ pub struct ChartEngine {
     state: ChartState,
     output: ChartOutput,
     stats: EngineStats,
+    view: ViewState,
     marks_stage: MarksStage,
     lod_scratch: LodScratch,
 }
@@ -95,6 +98,7 @@ impl ChartEngine {
             state: ChartState::default(),
             output: ChartOutput::default(),
             stats: EngineStats::default(),
+            view: ViewState::default(),
             marks_stage: MarksStage::default(),
             lod_scratch: LodScratch::default(),
         })
@@ -126,6 +130,10 @@ impl ChartEngine {
 
     pub fn output(&self) -> &ChartOutput {
         &self.output
+    }
+
+    pub fn view(&self) -> &ViewState {
+        &self.view
     }
 
     pub fn stats(&self) -> &EngineStats {
@@ -185,6 +193,16 @@ impl ChartEngine {
                 self.state.link.group = group;
                 self.state.revision.bump();
             }
+            Action::SetDatasetRowRange { dataset, range } => {
+                if let Some(mut range) = range {
+                    range.clamp_to_len(usize::MAX);
+                    self.state.dataset_row_ranges.insert(dataset, range);
+                } else {
+                    self.state.dataset_row_ranges.remove(&dataset);
+                }
+                self.state.revision.bump();
+                self.marks_stage.mark_dirty();
+            }
             _ => {
                 self.state.revision.bump();
             }
@@ -216,7 +234,14 @@ impl ChartEngine {
         self.output.link_events.clear();
         self.output.hover = None;
 
-        self.marks_stage.sync_inputs(&self.model, &self.datasets);
+        self.view
+            .sync_inputs(&self.model, &self.datasets, &self.state);
+        // P0: Always rebuild the view when inputs change. This will become incremental when we add
+        // transforms like dataZoom/filter/aggregate.
+        self.view.rebuild(&self.model, &self.datasets, &self.state);
+
+        self.marks_stage
+            .sync_inputs(&self.model, &self.datasets, &self.view);
         if self.marks_stage.is_dirty() {
             self.output.marks.clear();
             self.marks_stage.reset();
@@ -232,6 +257,7 @@ impl ChartEngine {
             &self.model,
             &self.datasets,
             &self.state,
+            &self.view,
             viewport,
             &mut budget,
             &mut self.lod_scratch,

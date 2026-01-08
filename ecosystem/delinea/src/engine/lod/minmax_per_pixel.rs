@@ -92,13 +92,19 @@ pub fn minmax_per_pixel_step(
     y: &[f64],
     bounds: &DataBounds,
     viewport: Rect,
+    row_range: core::ops::Range<usize>,
     max_points_to_process: usize,
 ) -> bool {
     let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
     scratch.ensure_bucket_count(width_px);
 
     let len = x.len().min(y.len());
-    if cursor.next_index >= len {
+    if cursor.next_index == 0 {
+        cursor.next_index = row_range.start.min(len);
+    }
+
+    let end_limit = row_range.end.min(len);
+    if cursor.next_index >= end_limit {
         return true;
     }
 
@@ -108,7 +114,7 @@ pub fn minmax_per_pixel_step(
         return true;
     }
 
-    let end = (cursor.next_index + max_points_to_process).min(len);
+    let end = (cursor.next_index + max_points_to_process).min(end_limit);
     for i in cursor.next_index..end {
         let xi = x[i];
         let yi = y[i];
@@ -160,7 +166,7 @@ pub fn minmax_per_pixel_step(
     }
 
     cursor.next_index = end;
-    cursor.next_index >= len
+    cursor.next_index >= end_limit
 }
 
 pub fn minmax_per_pixel_finalize(

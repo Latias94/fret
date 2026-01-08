@@ -14,6 +14,7 @@ use crate::paint::StrokeStyleV2;
 use crate::scheduler::WorkBudget;
 use crate::spec::AxisRange;
 use crate::stats::EngineStats;
+use crate::view::ViewState;
 
 #[derive(Debug, Default, Clone)]
 pub struct MarksStage {
@@ -26,6 +27,7 @@ pub struct MarksStage {
     last_series_count: usize,
     last_model_marks_rev: crate::ids::Revision,
     last_data_rev: crate::ids::Revision,
+    last_view_rev: crate::ids::Revision,
     bounds: Option<DataBounds>,
 }
 
@@ -38,7 +40,7 @@ impl MarksStage {
         self.dirty = true;
     }
 
-    pub fn sync_inputs(&mut self, model: &ChartModel, datasets: &DatasetStore) {
+    pub fn sync_inputs(&mut self, model: &ChartModel, datasets: &DatasetStore, view: &ViewState) {
         let series_count = model.series_order.len();
         if series_count != self.last_series_count {
             self.dirty = true;
@@ -60,6 +62,11 @@ impl MarksStage {
             self.dirty = true;
         }
         self.last_data_rev = data_rev;
+
+        if view.revision != self.last_view_rev {
+            self.dirty = true;
+        }
+        self.last_view_rev = view.revision;
     }
 
     pub fn reset(&mut self) {
@@ -77,6 +84,7 @@ impl MarksStage {
         model: &ChartModel,
         datasets: &DatasetStore,
         state: &ChartState,
+        view: &ViewState,
         viewport: Rect,
         budget: &mut WorkBudget,
         scratch: &mut LodScratch,
@@ -111,6 +119,7 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
+            let row_range = crate::view::table_row_range(table, view.dataset_view(series.dataset));
 
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 self.series_index += 1;
@@ -191,7 +200,8 @@ impl MarksStage {
                         w.clamp_non_degenerate();
                         (w.min, w.max)
                     } else {
-                        let mut bounds = compute_bounds(x, y0).unwrap_or_default();
+                        let mut bounds =
+                            compute_bounds_in_range(x, y0, row_range.clone()).unwrap_or_default();
                         bounds.clamp_non_degenerate();
                         (bounds.x_min, bounds.x_max)
                     };
@@ -209,9 +219,11 @@ impl MarksStage {
                 } else if series.kind == crate::spec::SeriesKind::Band
                     && let Some(y1) = y1
                 {
-                    let mut bounds0 = compute_bounds(x, y0).unwrap_or_default();
+                    let mut bounds0 =
+                        compute_bounds_in_range(x, y0, row_range.clone()).unwrap_or_default();
                     bounds0.clamp_non_degenerate();
-                    let mut bounds1 = compute_bounds(x, y1).unwrap_or_default();
+                    let mut bounds1 =
+                        compute_bounds_in_range(x, y1, row_range.clone()).unwrap_or_default();
                     bounds1.clamp_non_degenerate();
 
                     let mut combined = DataBounds {
@@ -236,6 +248,7 @@ impl MarksStage {
                         &mut self.bounds_accum,
                         x,
                         y0,
+                        row_range.clone(),
                         window_for_bounds,
                         points_budget,
                     )
@@ -251,13 +264,15 @@ impl MarksStage {
                             &mut self.bounds_accum,
                             x,
                             y0,
+                            row_range.clone(),
                             window_for_bounds,
                             points_budget,
                         )
                         .unwrap_or(true);
                     }
 
-                    let mut bounds = compute_bounds(x, y0).unwrap_or_default();
+                    let mut bounds =
+                        compute_bounds_in_range(x, y0, row_range.clone()).unwrap_or_default();
                     bounds.clamp_non_degenerate();
 
                     let mut windowed = finalize_bounds(&self.bounds_accum, window_for_bounds)
@@ -318,6 +333,7 @@ impl MarksStage {
                     y0,
                     &bounds,
                     viewport,
+                    row_range.clone(),
                     points_budget,
                 );
             }
@@ -444,6 +460,19 @@ impl MarksStage {
 
 fn series_mark_id(series: crate::ids::SeriesId, variant: u64) -> MarkId {
     MarkId((series.0 << 3) | (variant & 0x7))
+}
+
+fn compute_bounds_in_range(
+    x: &[f64],
+    y: &[f64],
+    row_range: core::ops::Range<usize>,
+) -> Option<DataBounds> {
+    if row_range.start >= row_range.end {
+        return None;
+    }
+    let x = x.get(row_range.clone())?;
+    let y = y.get(row_range)?;
+    compute_bounds(x, y)
 }
 
 fn axis_locked_window_x(range: AxisRange) -> Option<DataWindowX> {

@@ -19,6 +19,7 @@ pub mod scheduler;
 pub mod spec;
 pub mod stats;
 pub mod text;
+pub mod view;
 
 pub use action::*;
 pub use engine::*;
@@ -29,3 +30,4 @@ pub use scheduler::*;
 pub use spec::*;
 pub use stats::*;
 pub use text::*;
+pub use view::*;
