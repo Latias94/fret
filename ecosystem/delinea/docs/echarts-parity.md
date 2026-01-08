@@ -29,7 +29,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 | `encode` | `SeriesEncode` | ✅ | `x`, `y`, `y2` (for bands). |
 | `series` | `SeriesSpec` (`SeriesKind`) | 🟨 | Currently `Line`, `Area`, `Band`. |
 | `grid` | `GridSpec` | 🟨 | Single-grid usage is primary; multi-grid is possible but not exercised. |
-| `xAxis/yAxis` | `AxisSpec` + `AxisRange` | 🟨 | `Auto/LockMin/LockMax/Fixed` supported; category axis not yet. |
+| `xAxis/yAxis` | `AxisSpec` + `AxisRange` | 🟨 | `Auto/LockMin/LockMax/Fixed` supported; `Category` axis is the next P0 (ADR 0113). |
 | `axisPointer` | `AxisPointerSpec` | 🟨 | `trigger=Item` and `trigger=Axis` supported (cartesian X). |
 | `tooltip` | `AxisPointerOutput.tooltip` | 🟨 | Headless-generated structured lines; styling/layout in UI. |
 | `legend` | `fret-chart` legend overlay | 🟨 | Basic list + visibility toggles; no paging/scrolling yet. |
@@ -107,5 +107,8 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 
 - ADR 0111: `docs/adr/0111-delinea-headless-chart-engine.md`
 - ADR 0112: `docs/adr/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 0113: `docs/adr/0113-delinea-axis-scales-and-coordinate-mapping.md`
+- ADR 0114: `docs/adr/0114-delinea-marks-identity-and-renderer-contract.md`
+- ADR 0115: `docs/adr/0115-delinea-large-data-and-progressive-rendering.md`
+- ADR 0116: `docs/adr/0116-delinea-interaction-and-hit-testing-contract.md`
 - `ecosystem/delinea/docs/transform-pipeline.md`
-

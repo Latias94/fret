@@ -143,8 +143,12 @@ If we later need richer paint semantics (dashes, joins/caps control, gradients, 
 
 ## Follow-ups
 
+- ADR 0113: axis scales + coordinate mapping (Value/Category v1).
+- ADR 0114: marks output + stable identity + renderer contract.
+- ADR 0115: large data + progressive rendering baseline.
+- ADR 0116: interaction + hit testing contract (axis lock / zoom lock path).
+
 - Implement `DataZoomX` as a transform node rather than ad-hoc view policy (internal-only first).
 - Add `minSpan/maxSpan` and `zoomLock`-like constraints (spec-level) once we have multi-axis + slider UI.
 - Add series-type-specific transforms (stack, aggregate) with derived columns and cached outputs.
 - Evaluate adding `FilterMode::{WeakFilter,Empty}` only after stacking and category axes have a clear contract.
-
