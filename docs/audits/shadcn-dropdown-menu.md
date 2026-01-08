@@ -40,8 +40,9 @@ Key upstream behaviors/surfaces:
 - Pass: Dismissible popover (outside press + Escape) via `window_overlays`.
 - Pass: On open, focus moves to the first focusable descendant (driven by overlay policy), enabling
   keyboard navigation inside the menu.
-- Pass: `DropdownMenu::modal(bool)` is supported (default `true`). When `modal=false`, outside-press
-  dismissal becomes click-through (Radix-style).
+- Pass: `DropdownMenu::modal(bool)` is supported (default `true`).
+  - `modal=true`: blocks underlay pointer interaction while open (Radix `disableOutsidePointerEvents`).
+  - `modal=false`: outside-press dismissal becomes click-through.
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 

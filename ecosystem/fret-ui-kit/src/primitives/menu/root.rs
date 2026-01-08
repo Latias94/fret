@@ -129,8 +129,9 @@ pub fn dismissible_menu_request<H: UiHost>(
 /// Build a shadcn/Radix-aligned menu overlay request with explicit modal behavior.
 ///
 /// In Radix, the `modal` flag controls `disableOutsidePointerEvents`. In Fret we approximate this
-/// behavior by controlling whether outside-press dismissal consumes the pointer event (preventing
-/// click-through on the underlay).
+/// behavior by:
+/// - blocking underlay pointer interaction while open, and
+/// - controlling whether outside-press dismissal is click-through.
 pub fn dismissible_menu_request_with_modal<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     id: GlobalElementId,
@@ -159,7 +160,7 @@ mod tests {
     use fret_app::App;
 
     #[test]
-    fn menu_modal_controls_click_through_on_outside_press() {
+    fn menu_modal_controls_underlay_pointer_blocking_and_click_through() {
         let mut app = App::new();
         let open = app.models_mut().insert(false);
 
@@ -172,6 +173,7 @@ mod tests {
             true,
         );
         assert!(req.consume_outside_pointer_events);
+        assert!(req.disable_outside_pointer_events);
 
         let req = base_menu_overlay_request(
             GlobalElementId(1),
@@ -182,5 +184,6 @@ mod tests {
             false,
         );
         assert!(!req.consume_outside_pointer_events);
+        assert!(!req.disable_outside_pointer_events);
     }
 }

@@ -244,6 +244,18 @@ pub fn render<H: UiHost>(
             open_now = false;
         }
         let on_pointer_move = req.on_pointer_move.clone();
+        let pointer_barrier_root = req.disable_outside_pointer_events.then(|| {
+            let root_name = format!("{}::pointer_barrier", req.root_name);
+            fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                &root_name,
+                |_cx| Vec::new(),
+            )
+        });
 
         let root = declarative::render_dismissible_root_with_hooks(
             ui,
@@ -274,12 +286,19 @@ pub fn render<H: UiHost>(
             let mut created = false;
             let entry = overlays.popovers.entry(key).or_insert_with(|| {
                 created = true;
+                let pointer_barrier_layer = pointer_barrier_root.map(|root| {
+                    // A hit-test-inert, non-visual layer that blocks underlay pointer events while
+                    // the popover is open (Radix `disableOutsidePointerEvents` outcome).
+                    ui.push_overlay_root_ex(root, true, false)
+                });
                 ActivePopover {
                     layer: ui.push_overlay_root_ex(root, false, true),
+                    pointer_barrier_layer,
                     root_name: req.root_name.clone(),
                     trigger: req.trigger,
                     initial_focus: req.initial_focus,
                     consume_outside_pointer_events: req.consume_outside_pointer_events,
+                    disable_outside_pointer_events: req.disable_outside_pointer_events,
                     open: false,
                     restore_focus: None,
                     last_focus: focus_now,
@@ -289,6 +308,16 @@ pub fn render<H: UiHost>(
             entry.trigger = req.trigger;
             entry.initial_focus = req.initial_focus;
             entry.consume_outside_pointer_events = req.consume_outside_pointer_events;
+            entry.disable_outside_pointer_events = req.disable_outside_pointer_events;
+
+            if let Some(barrier_layer) = entry.pointer_barrier_layer {
+                let present = open_now && req.disable_outside_pointer_events;
+                ui.set_layer_visible(barrier_layer, present);
+                ui.set_layer_hit_testable(barrier_layer, false);
+                ui.set_layer_wants_pointer_down_outside_events(barrier_layer, false);
+                ui.set_layer_wants_pointer_move_events(barrier_layer, false);
+                ui.set_layer_wants_timer_events(barrier_layer, false);
+            }
 
             if open_now
                 && let Some(layer_root) = ui.layer_root(entry.layer)
@@ -366,22 +395,34 @@ pub fn render<H: UiHost>(
         }
     }
 
-    let to_hide_popovers: Vec<(UiLayerId, GlobalElementId, bool, Option<NodeId>)> = app
-        .with_global_mut(WindowOverlays::default, |overlays, _app| {
-            let mut out: Vec<(UiLayerId, GlobalElementId, bool, Option<NodeId>)> = Vec::new();
-            for ((w, id), active) in overlays.popovers.iter() {
-                if *w != window || seen_popovers.contains(id) {
-                    continue;
-                }
-                out.push((
-                    active.layer,
-                    active.trigger,
-                    active.consume_outside_pointer_events,
-                    active.restore_focus,
-                ));
+    let to_hide_popovers: Vec<(
+        UiLayerId,
+        Option<UiLayerId>,
+        GlobalElementId,
+        bool,
+        Option<NodeId>,
+    )> = app.with_global_mut(WindowOverlays::default, |overlays, _app| {
+        let mut out: Vec<(
+            UiLayerId,
+            Option<UiLayerId>,
+            GlobalElementId,
+            bool,
+            Option<NodeId>,
+        )> = Vec::new();
+        for ((w, id), active) in overlays.popovers.iter() {
+            if *w != window || seen_popovers.contains(id) {
+                continue;
             }
-            out
-        });
+            out.push((
+                active.layer,
+                active.pointer_barrier_layer,
+                active.trigger,
+                active.consume_outside_pointer_events,
+                active.restore_focus,
+            ));
+        }
+        out
+    });
 
     let to_hide_modals: Vec<(UiLayerId, Option<GlobalElementId>, Option<NodeId>)> = app
         .with_global_mut(WindowOverlays::default, |overlays, _app| {
@@ -397,7 +438,9 @@ pub fn render<H: UiHost>(
                 .collect()
         });
 
-    for (layer, trigger, consume_outside_pointer_events, restore_focus) in to_hide_popovers {
+    for (layer, pointer_barrier_layer, trigger, consume_outside_pointer_events, restore_focus) in
+        to_hide_popovers
+    {
         // Radix-aligned outcome for menu-like overlays (ADR 0069):
         // when the overlay consumes outside pointer-down events (non-click-through), it's safe to
         // always restore focus to the trigger on unmount (like modals).
@@ -407,6 +450,13 @@ pub fn render<H: UiHost>(
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
             ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
             ui.set_layer_consume_pointer_down_outside_events(layer, false);
+            if let Some(layer) = pointer_barrier_layer {
+                ui.set_layer_visible(layer, false);
+                ui.set_layer_hit_testable(layer, false);
+                ui.set_layer_wants_pointer_down_outside_events(layer, false);
+                ui.set_layer_wants_pointer_move_events(layer, false);
+                ui.set_layer_wants_timer_events(layer, false);
+            }
             if let Some(node) = focus_scope_prim::resolve_restore_focus_node(
                 ui,
                 app,
@@ -420,6 +470,13 @@ pub fn render<H: UiHost>(
             OverlayLayer::hide_non_modal_dismissible().apply(ui, layer);
             ui.set_layer_pointer_down_outside_branches(layer, Vec::new());
             ui.set_layer_consume_pointer_down_outside_events(layer, false);
+            if let Some(layer) = pointer_barrier_layer {
+                ui.set_layer_visible(layer, false);
+                ui.set_layer_hit_testable(layer, false);
+                ui.set_layer_wants_pointer_down_outside_events(layer, false);
+                ui.set_layer_wants_pointer_move_events(layer, false);
+                ui.set_layer_wants_timer_events(layer, false);
+            }
         }
     }
 

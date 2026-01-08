@@ -45,8 +45,9 @@ Key upstream behaviors/surfaces:
 - Pass: On open, focus moves to the first focusable descendant in the menu (via overlay policy),
   enabling keyboard navigation.
 - Pass: Selecting an item dispatches the command (if any) and closes the menu.
-- Pass: `ContextMenu::modal(bool)` is supported (default `true`). When `modal=false`, outside-press
-  dismissal becomes click-through (Radix-style).
+- Pass: `ContextMenu::modal(bool)` is supported (default `true`).
+  - `modal=true`: blocks underlay pointer interaction while open (Radix `disableOutsidePointerEvents`).
+  - `modal=false`: outside-press dismissal becomes click-through.
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 

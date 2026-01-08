@@ -75,6 +75,9 @@ pub struct OverlayRequest {
     /// When an outside-press observer is dispatched for this overlay, suppress normal hit-tested
     /// pointer-down dispatch to underlay widgets for the same event.
     pub consume_outside_pointer_events: bool,
+    /// When true, pointer events outside the overlay subtree should not reach underlay widgets
+    /// while the overlay is open (Radix `disableOutsidePointerEvents` outcome).
+    pub disable_outside_pointer_events: bool,
     /// Whether this overlay should close when the OS window loses focus.
     pub close_on_window_focus_lost: bool,
     /// Whether this overlay should close when the OS window is resized (or scale factor changes).
@@ -98,6 +101,10 @@ impl std::fmt::Debug for OverlayRequest {
             .field(
                 "consume_outside_pointer_events",
                 &self.consume_outside_pointer_events,
+            )
+            .field(
+                "disable_outside_pointer_events",
+                &self.disable_outside_pointer_events,
             )
             .field("open", &self.open)
             .field(
@@ -127,6 +134,7 @@ impl OverlayRequest {
             trigger: Some(trigger),
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
@@ -151,6 +159,7 @@ impl OverlayRequest {
     ) -> Self {
         let mut req = Self::dismissible_popover(id, trigger, open, presence, children);
         req.consume_outside_pointer_events = true;
+        req.disable_outside_pointer_events = true;
         req
     }
 
@@ -168,6 +177,7 @@ impl OverlayRequest {
             trigger,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: Some(open),
@@ -191,6 +201,7 @@ impl OverlayRequest {
             trigger: None,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: None,
@@ -210,6 +221,7 @@ impl OverlayRequest {
             trigger: Some(trigger),
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: None,
@@ -232,6 +244,7 @@ impl OverlayRequest {
             trigger: None,
             dismissable_branches: Vec::new(),
             consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
             close_on_window_focus_lost: false,
             close_on_window_resize: false,
             open: None,
@@ -314,6 +327,11 @@ impl OverlayRequest {
         self.consume_outside_pointer_events = consume;
         self
     }
+
+    pub fn disable_outside_pointer_events(mut self, disable: bool) -> Self {
+        self.disable_outside_pointer_events = disable;
+        self
+    }
 }
 
 /// A small, stable facade over `window_overlays` to keep overlay policy wiring out of shadcn code.
@@ -373,6 +391,7 @@ impl OverlayController {
                         trigger,
                         dismissable_branches: request.dismissable_branches,
                         consume_outside_pointer_events: request.consume_outside_pointer_events,
+                        disable_outside_pointer_events: request.disable_outside_pointer_events,
                         close_on_window_focus_lost: request.close_on_window_focus_lost,
                         close_on_window_resize: request.close_on_window_resize,
                         open,

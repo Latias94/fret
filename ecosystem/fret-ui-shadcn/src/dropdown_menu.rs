@@ -3294,8 +3294,8 @@ mod tests {
         assert!(
             hit_path
                 .as_ref()
-                .is_some_and(|path| path.contains(&underlay_node)),
-            "expected hit-testing to target the underlay subtree at this position; hit={hit:?} hit_path={hit_path:?} underlay={underlay_node:?}"
+                .is_none_or(|path| !path.contains(&underlay_node)),
+            "expected modal dropdown-menu to block underlay hit-testing; hit={hit:?} hit_path={hit_path:?} underlay={underlay_node:?}"
         );
         ui.dispatch_event(
             &mut app,
