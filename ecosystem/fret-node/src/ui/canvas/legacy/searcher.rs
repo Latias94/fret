@@ -3,6 +3,125 @@ use fret_ui::UiHost;
 
 use super::NodeGraphCanvas;
 
+pub(super) fn handle_searcher_escape<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+) -> bool {
+    if canvas.interaction.searcher.take().is_some() {
+        cx.stop_propagation();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+    false
+}
+
+pub(super) fn handle_searcher_key_down<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    key: fret_core::KeyCode,
+    modifiers: Modifiers,
+) -> bool {
+    if matches!(
+        key,
+        fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter
+    ) && canvas.interaction.searcher.is_some()
+    {
+        let row_ix = canvas
+            .interaction
+            .searcher
+            .as_ref()
+            .map(|s| s.active_row)
+            .unwrap_or(0);
+        if canvas.try_activate_searcher_row(cx, row_ix) {
+            cx.stop_propagation();
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+            return true;
+        }
+    }
+
+    let Some(searcher) = canvas.interaction.searcher.as_mut() else {
+        return false;
+    };
+
+    match key {
+        fret_core::KeyCode::ArrowDown => {
+            let n = searcher.rows.len();
+            if n > 0 {
+                let mut ix = (searcher.active_row + 1) % n;
+                for _ in 0..n {
+                    if searcher
+                        .rows
+                        .get(ix)
+                        .is_some_and(NodeGraphCanvas::searcher_is_selectable_row)
+                    {
+                        searcher.active_row = ix;
+                        break;
+                    }
+                    ix = (ix + 1) % n;
+                }
+                NodeGraphCanvas::ensure_searcher_active_visible(searcher);
+            }
+            cx.stop_propagation();
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+            return true;
+        }
+        fret_core::KeyCode::ArrowUp => {
+            let n = searcher.rows.len();
+            if n > 0 {
+                let mut ix = if searcher.active_row == 0 {
+                    n - 1
+                } else {
+                    searcher.active_row - 1
+                };
+                for _ in 0..n {
+                    if searcher
+                        .rows
+                        .get(ix)
+                        .is_some_and(NodeGraphCanvas::searcher_is_selectable_row)
+                    {
+                        searcher.active_row = ix;
+                        break;
+                    }
+                    ix = if ix == 0 { n - 1 } else { ix - 1 };
+                }
+                NodeGraphCanvas::ensure_searcher_active_visible(searcher);
+            }
+            cx.stop_propagation();
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+            return true;
+        }
+        fret_core::KeyCode::Backspace => {
+            if !searcher.query.is_empty() {
+                searcher.query.pop();
+                NodeGraphCanvas::rebuild_searcher_rows(searcher);
+                cx.stop_propagation();
+                cx.request_redraw();
+                cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+                return true;
+            }
+        }
+        _ => {}
+    }
+
+    if !modifiers.ctrl
+        && !modifiers.meta
+        && let Some(ch) = fret_core::keycode_to_ascii_lowercase(key)
+    {
+        searcher.query.push(ch);
+        NodeGraphCanvas::rebuild_searcher_rows(searcher);
+        cx.stop_propagation();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
+    false
+}
+
 pub(super) fn handle_searcher_pointer_down<H: UiHost>(
     canvas: &mut NodeGraphCanvas,
     cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
