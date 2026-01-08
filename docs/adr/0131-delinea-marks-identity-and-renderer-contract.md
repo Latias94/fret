@@ -35,6 +35,16 @@ The `delinea` engine outputs a stable set of mark primitives, expressed in **cha
 The UI adapter (`fret-chart`) is responsible for mapping these marks into `SceneOp::{Path,Quad,Text}`
 and applying theme tokens (colors, fonts, corner radii, etc.).
 
+#### v1 mark kinds (minimum)
+
+The engine may extend this list over time, but the intent is to keep the surface small and portable.
+
+- `MarkKind::Group`: grouping + clip only (no renderer-specific transform ops).
+- `MarkKind::Polyline`: line-family strokes (line series, axis pointer lines, grid lines).
+- `MarkKind::Points`: point clouds (scatter series).
+- `MarkKind::Rect`: rect batches (bars, banded backgrounds, selection/brush regions in the future).
+- `MarkKind::Text`: text labels (axis ticks, tooltip strings), with styling resolved by the adapter.
+
 This keeps:
 
 - headless logic deterministic and testable,
@@ -95,6 +105,7 @@ P0:
 
 - Add a dedicated mark output module (if needed) to keep the output surface small and stable.
 - Ensure all existing outputs (axis pointer/tooltip) are keyed by stable series identity.
+- Ensure `Points` marks are stable under large-mode sampling (no per-frame churn).
 
 P1:
 
@@ -104,12 +115,7 @@ P1:
 
 ## References
 
-<<<<<<<< HEAD:docs/archive/delinea-adr-bootstrap/0114-delinea-marks-identity-and-renderer-contract.md
-- ADR 0111: `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/archive/delinea-adr-bootstrap/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
-========
 - ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
 - ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
->>>>>>>> main:docs/adr/0131-delinea-marks-identity-and-renderer-contract.md
 - ADR 0080: `docs/adr/0080-vector-path-contract.md`
 - ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`

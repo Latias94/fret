@@ -50,6 +50,21 @@ Contract:
 - `trigger=axis` produces a value per visible series when sampling is possible, even if no curve
   is within a hit threshold.
 
+#### v1 tooltip defaults (ECharts-aligned)
+
+To match common “charting app” expectations (and avoid surprising “nothing happens” states), v1 defaults are:
+
+- `AxisPointerSpec.trigger = Axis`
+- `AxisPointerSpec.snap = false` (opt-in)
+
+Semantics:
+
+- `trigger=Axis` always shows the axis pointer/crosshair when inside the plot rect.
+- With `snap=true`, the axis pointer may snap to the nearest “meaningful” item when a close-enough hit exists:
+  - line-family: nearest segment, with sampling at the snapped X.
+  - scatter: nearest point (no interpolation).
+- When no hit exists, the pointer uses the raw cursor X for axis sampling (line-family interpolation allowed).
+
 ### 3) Input -> action mapping is explicit and portable
 
 The UI adapter maps platform input (pointer, wheel, keys) into headless actions.
@@ -121,11 +136,6 @@ P1:
 
 ## References
 
-<<<<<<<< HEAD:docs/archive/delinea-adr-bootstrap/0116-delinea-interaction-and-hit-testing-contract.md
-- ADR 0111: `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/archive/delinea-adr-bootstrap/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
-========
 - ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
 - ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
->>>>>>>> main:docs/adr/0133-delinea-interaction-and-hit-testing-contract.md
 - ECharts axisPointer/tooltip concepts: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\echarts.all.ts`

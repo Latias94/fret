@@ -46,6 +46,19 @@ For cartesian line-family charts, the baseline LOD strategy is:
 
 This is deterministic, fast, and allocation-friendly.
 
+#### Scatter baseline (v1)
+
+Scatter series cannot preserve spikes the same way as line strokes. The v1 baseline for large scatter is:
+
+- clip to the visible X window,
+- apply a deterministic, pixel-budgeted sampling strategy,
+- ensure the total emitted point count is bounded by the plot rect width (in pixels).
+
+Current implementation policy (subject to a future spec surface):
+
+- large behavior is automatically enabled when the visible point count is “large enough”.
+- emitted points are bounded to `O(plot_width_px)` (currently `<= 4 * plot_width_px`).
+
 Follow-up (P1):
 
 - optional LTTB sampling for better visual fidelity at moderate sizes,
@@ -100,14 +113,10 @@ P1:
 
 - Add progressive chunking for bar/stack (rects) and scatter (symbols).
 - Add optional spatial indices for unsorted data (grid/KD-tree) behind feature gates.
+- Expose ECharts-aligned knobs (`large`, `largeThreshold`, `progressive`, `progressiveThreshold`) in spec/style.
 
 ## References
 
 - ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`
-<<<<<<<< HEAD:docs/archive/delinea-adr-bootstrap/0115-delinea-large-data-and-progressive-rendering.md
-- ADR 0111: `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/archive/delinea-adr-bootstrap/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
-========
 - ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
 - ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
->>>>>>>> main:docs/adr/0132-delinea-large-data-and-progressive-rendering.md

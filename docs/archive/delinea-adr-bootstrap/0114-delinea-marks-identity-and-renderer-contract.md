@@ -104,12 +104,7 @@ P1:
 
 ## References
 
-<<<<<<<< HEAD:docs/archive/delinea-adr-bootstrap/0114-delinea-marks-identity-and-renderer-contract.md
 - ADR 0111: `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
 - ADR 0112: `docs/archive/delinea-adr-bootstrap/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
-========
-- ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
-- ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
->>>>>>>> main:docs/adr/0131-delinea-marks-identity-and-renderer-contract.md
 - ADR 0080: `docs/adr/0080-vector-path-contract.md`
 - ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`
