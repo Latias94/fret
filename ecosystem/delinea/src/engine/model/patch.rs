@@ -7,7 +7,9 @@ use crate::engine::model::{
 };
 use crate::ids::{AxisId, DatasetId, FieldId, GridId, SeriesId};
 use crate::scale::AxisScale;
-use crate::spec::{AreaBaseline, AxisKind, AxisRange, FieldSpec, SeriesEncode, SeriesKind};
+use crate::spec::{
+    AreaBaseline, AxisKind, AxisPosition, AxisRange, FieldSpec, SeriesEncode, SeriesKind,
+};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -105,7 +107,8 @@ impl ChartPatch {
                         if !model.grids.contains_key(&axis.grid) {
                             return Err(ModelError::MissingReference { kind: "grid" });
                         }
-                        model.axes.insert(axis.id, AxisModel::from(axis));
+                        let model_axis = axis_model_from_patch(axis)?;
+                        model.axes.insert(model_axis.id, model_axis);
                     }
                 }
 
@@ -243,8 +246,17 @@ impl ChartPatch {
                     if !model.grids.contains_key(&axis.grid) {
                         return Err(ModelError::MissingReference { kind: "grid" });
                     }
+                    let position = axis
+                        .position
+                        .unwrap_or_else(|| AxisPosition::default_for_kind(axis.kind));
+                    if !position.is_compatible(axis.kind) {
+                        return Err(ModelError::InvalidSpec {
+                            reason: "axis.position must be compatible with axis.kind",
+                        });
+                    }
                     let Some(existing) = model.axes.get_mut(&axis.id) else {
-                        model.axes.insert(axis.id, AxisModel::from(axis));
+                        let model_axis = axis_model_from_patch(axis)?;
+                        model.axes.insert(model_axis.id, model_axis);
                         report.structure_changed = true;
                         continue;
                     };
@@ -259,6 +271,10 @@ impl ChartPatch {
                         existing.kind = axis.kind;
                         existing.grid = axis.grid;
                         report.structure_changed = true;
+                    }
+
+                    if existing.position != position {
+                        existing.position = position;
                     }
 
                     if let Some(scale) = axis.scale
@@ -580,23 +596,32 @@ pub struct AxisPatch {
     pub name: Option<String>,
     pub kind: AxisKind,
     pub grid: GridId,
+    pub position: Option<AxisPosition>,
     pub scale: Option<AxisScale>,
     pub range: Option<AxisRange>,
 }
 
-impl From<AxisPatch> for AxisModel {
-    fn from(p: AxisPatch) -> Self {
-        let mut range = p.range.unwrap_or_default();
-        range.clamp_non_degenerate();
-        Self {
-            id: p.id,
-            name: p.name.and_then(sanitize_name),
-            kind: p.kind,
-            grid: p.grid,
-            scale: p.scale.unwrap_or_default(),
-            range,
-        }
+fn axis_model_from_patch(p: AxisPatch) -> Result<AxisModel, ModelError> {
+    let position = p
+        .position
+        .unwrap_or_else(|| AxisPosition::default_for_kind(p.kind));
+    if !position.is_compatible(p.kind) {
+        return Err(ModelError::InvalidSpec {
+            reason: "axis.position must be compatible with axis.kind",
+        });
     }
+
+    let mut range = p.range.unwrap_or_default();
+    range.clamp_non_degenerate();
+    Ok(AxisModel {
+        id: p.id,
+        name: p.name.and_then(sanitize_name),
+        kind: p.kind,
+        grid: p.grid,
+        position,
+        scale: p.scale.unwrap_or_default(),
+        range,
+    })
 }
 
 #[derive(Debug, Clone)]

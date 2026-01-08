@@ -73,16 +73,23 @@ struct BoxZoomDrag {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AxisRegion {
     Plot,
-    XAxis,
-    YAxis,
+    XAxis(delinea::AxisId),
+    YAxis(delinea::AxisId),
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
+struct AxisBandLayout {
+    axis: delinea::AxisId,
+    position: delinea::AxisPosition,
+    rect: Rect,
+}
+
+#[derive(Debug, Default, Clone)]
 struct ChartLayout {
     bounds: Rect,
     plot: Rect,
-    x_axis: Rect,
-    y_axis: Rect,
+    x_axes: Vec<AxisBandLayout>,
+    y_axes: Vec<AxisBandLayout>,
 }
 
 pub struct ChartCanvas {
@@ -158,25 +165,114 @@ impl ChartCanvas {
         let axis_band_x = self.style.axis_band_x.0.max(0.0);
         let axis_band_y = self.style.axis_band_y.0.max(0.0);
 
-        let plot_w = (inner.size.width.0 - axis_band_x).max(0.0);
-        let plot_h = (inner.size.height.0 - axis_band_y).max(0.0);
+        let active_grid = self
+            .primary_axes()
+            .and_then(|(x_axis, _)| self.engine.model().axes.get(&x_axis).map(|a| a.grid));
+
+        let mut x_top: Vec<delinea::AxisId> = Vec::new();
+        let mut x_bottom: Vec<delinea::AxisId> = Vec::new();
+        let mut y_left: Vec<delinea::AxisId> = Vec::new();
+        let mut y_right: Vec<delinea::AxisId> = Vec::new();
+
+        if let Some(grid) = active_grid {
+            for (axis_id, axis) in &self.engine.model().axes {
+                if axis.grid != grid {
+                    continue;
+                }
+
+                match (axis.kind, axis.position) {
+                    (delinea::AxisKind::X, delinea::AxisPosition::Top) => x_top.push(*axis_id),
+                    (delinea::AxisKind::X, delinea::AxisPosition::Bottom) => {
+                        x_bottom.push(*axis_id)
+                    }
+                    (delinea::AxisKind::Y, delinea::AxisPosition::Left) => y_left.push(*axis_id),
+                    (delinea::AxisKind::Y, delinea::AxisPosition::Right) => y_right.push(*axis_id),
+                    _ => {}
+                }
+            }
+        }
+
+        let left_total = axis_band_x * (y_left.len() as f32);
+        let right_total = axis_band_x * (y_right.len() as f32);
+        let top_total = axis_band_y * (x_top.len() as f32);
+        let bottom_total = axis_band_y * (x_bottom.len() as f32);
+
+        let plot_w = (inner.size.width.0 - left_total - right_total).max(0.0);
+        let plot_h = (inner.size.height.0 - top_total - bottom_total).max(0.0);
 
         let plot = Rect::new(
-            Point::new(Px(inner.origin.x.0 + axis_band_x), inner.origin.y),
+            Point::new(
+                Px(inner.origin.x.0 + left_total),
+                Px(inner.origin.y.0 + top_total),
+            ),
             Size::new(Px(plot_w), Px(plot_h)),
         );
 
-        let y_axis = Rect::new(inner.origin, Size::new(Px(axis_band_x), Px(plot_h)));
-        let x_axis = Rect::new(
-            Point::new(plot.origin.x, Px(plot.origin.y.0 + plot.size.height.0)),
-            Size::new(Px(plot_w), Px(axis_band_y)),
-        );
+        let mut x_axes: Vec<AxisBandLayout> = Vec::with_capacity(x_top.len() + x_bottom.len());
+        for (i, axis) in x_top.iter().copied().enumerate() {
+            let rect = Rect::new(
+                Point::new(
+                    plot.origin.x,
+                    Px(plot.origin.y.0 - axis_band_y * (i as f32 + 1.0)),
+                ),
+                Size::new(plot.size.width, Px(axis_band_y)),
+            );
+            x_axes.push(AxisBandLayout {
+                axis,
+                position: delinea::AxisPosition::Top,
+                rect,
+            });
+        }
+        for (i, axis) in x_bottom.iter().copied().enumerate() {
+            let rect = Rect::new(
+                Point::new(
+                    plot.origin.x,
+                    Px(plot.origin.y.0 + plot.size.height.0 + axis_band_y * (i as f32)),
+                ),
+                Size::new(plot.size.width, Px(axis_band_y)),
+            );
+            x_axes.push(AxisBandLayout {
+                axis,
+                position: delinea::AxisPosition::Bottom,
+                rect,
+            });
+        }
+
+        let mut y_axes: Vec<AxisBandLayout> = Vec::with_capacity(y_left.len() + y_right.len());
+        for (i, axis) in y_left.iter().copied().enumerate() {
+            let rect = Rect::new(
+                Point::new(
+                    Px(plot.origin.x.0 - axis_band_x * (i as f32 + 1.0)),
+                    plot.origin.y,
+                ),
+                Size::new(Px(axis_band_x), plot.size.height),
+            );
+            y_axes.push(AxisBandLayout {
+                axis,
+                position: delinea::AxisPosition::Left,
+                rect,
+            });
+        }
+        for (i, axis) in y_right.iter().copied().enumerate() {
+            let rect = Rect::new(
+                Point::new(
+                    Px(plot.origin.x.0 + plot.size.width.0 + axis_band_x * (i as f32)),
+                    plot.origin.y,
+                ),
+                Size::new(Px(axis_band_x), plot.size.height),
+            );
+            y_axes.push(AxisBandLayout {
+                axis,
+                position: delinea::AxisPosition::Right,
+                rect,
+            });
+        }
 
         ChartLayout {
             bounds,
             plot,
-            x_axis,
-            y_axis,
+            x_axes,
+            y_axes,
         }
     }
 
@@ -404,12 +500,16 @@ impl ChartCanvas {
         }
     }
 
-    fn axis_region(layout: ChartLayout, position: Point) -> AxisRegion {
-        if layout.x_axis.contains(position) {
-            return AxisRegion::XAxis;
+    fn axis_region(layout: &ChartLayout, position: Point) -> AxisRegion {
+        for axis in &layout.x_axes {
+            if axis.rect.contains(position) {
+                return AxisRegion::XAxis(axis.axis);
+            }
         }
-        if layout.y_axis.contains(position) {
-            return AxisRegion::YAxis;
+        for axis in &layout.y_axes {
+            if axis.rect.contains(position) {
+                return AxisRegion::YAxis(axis.axis);
+            }
         }
         AxisRegion::Plot
     }
@@ -693,53 +793,18 @@ impl ChartCanvas {
     fn draw_axes<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         self.clear_axis_text_cache(cx.services);
 
-        let layout = self.last_layout;
-        if layout.plot.size.width.0 <= 0.0 || layout.plot.size.height.0 <= 0.0 {
+        let plot = self.last_layout.plot;
+        let x_axes = self.last_layout.x_axes.clone();
+        let y_axes = self.last_layout.y_axes.clone();
+        if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
             return;
         }
-
-        let Some((x_axis, y_axis)) = self.primary_axes() else {
-            return;
-        };
-
-        let x_window = self.current_window_x(x_axis);
-        let y_window = self.current_window_y(y_axis);
 
         let axis_order = DrawOrder(self.style.draw_order.0.saturating_add(8_500));
         let label_order = DrawOrder(self.style.draw_order.0.saturating_add(8_501));
 
         let line_w = self.style.axis_line_width.0.max(1.0);
         let tick_len = self.style.axis_tick_length.0.max(0.0);
-
-        // Axis baselines (as thin quads).
-        cx.scene.push(SceneOp::Quad {
-            order: axis_order,
-            rect: Rect::new(
-                Point::new(
-                    layout.plot.origin.x,
-                    Px(layout.plot.origin.y.0 + layout.plot.size.height.0 - line_w * 0.5),
-                ),
-                Size::new(layout.plot.size.width, Px(line_w)),
-            ),
-            background: self.style.axis_line_color,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: Corners::all(Px(0.0)),
-        });
-        cx.scene.push(SceneOp::Quad {
-            order: axis_order,
-            rect: Rect::new(
-                Point::new(
-                    Px(layout.plot.origin.x.0 - line_w * 0.5),
-                    layout.plot.origin.y,
-                ),
-                Size::new(Px(line_w), layout.plot.size.height),
-            ),
-            background: self.style.axis_line_color,
-            border: Edges::all(Px(0.0)),
-            border_color: Color::TRANSPARENT,
-            corner_radii: Corners::all(Px(0.0)),
-        });
 
         let text_style = TextStyle {
             size: Px(12.0),
@@ -753,91 +818,150 @@ impl ChartCanvas {
             scale_factor: cx.scale_factor,
         };
 
-        let x_tick_count = (layout.plot.size.width.0 / 80.0).round().clamp(2.0, 12.0) as usize;
-        let y_tick_count = (layout.plot.size.height.0 / 56.0).round().clamp(2.0, 12.0) as usize;
+        let x_tick_count = (plot.size.width.0 / 80.0).round().clamp(2.0, 12.0) as usize;
+        let y_tick_count = (plot.size.height.0 / 56.0).round().clamp(2.0, 12.0) as usize;
 
-        // X ticks + labels.
-        let model = self.engine.model();
-        let mut last_right = f32::NEG_INFINITY;
-        for value in Self::axis_ticks(model, x_axis, x_window, x_tick_count) {
-            let t = ((value - x_window.min) / x_window.span()).clamp(0.0, 1.0) as f32;
-            let x_px = layout.plot.origin.x.0 + t * layout.plot.size.width.0;
-            let y0 = layout.plot.origin.y.0 + layout.plot.size.height.0;
+        // X axes: baseline + ticks + labels.
+        for band in &x_axes {
+            let window = self.current_window_x(band.axis);
+            let model = self.engine.model();
+            let baseline_y = match band.position {
+                delinea::AxisPosition::Bottom => band.rect.origin.y.0,
+                delinea::AxisPosition::Top => band.rect.origin.y.0 + band.rect.size.height.0,
+                _ => continue,
+            };
 
             cx.scene.push(SceneOp::Quad {
                 order: axis_order,
                 rect: Rect::new(
-                    Point::new(Px(x_px - 0.5 * line_w), Px(y0)),
-                    Size::new(Px(line_w), Px(tick_len)),
+                    Point::new(band.rect.origin.x, Px(baseline_y - line_w * 0.5)),
+                    Size::new(plot.size.width, Px(line_w)),
                 ),
-                background: self.style.axis_tick_color,
+                background: self.style.axis_line_color,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
                 corner_radii: Corners::all(Px(0.0)),
             });
 
-            let label = Self::format_tick(model, x_axis, x_window, value);
-            let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+            let mut last_right = f32::NEG_INFINITY;
+            for value in Self::axis_ticks(model, band.axis, window, x_tick_count) {
+                let t = ((value - window.min) / window.span()).clamp(0.0, 1.0) as f32;
+                let x_px = plot.origin.x.0 + t * plot.size.width.0;
 
-            let label_x = x_px - metrics.size.width.0 * 0.5;
-            let label_y = layout.x_axis.origin.y.0
-                + (layout.x_axis.size.height.0 - metrics.size.height.0) * 0.5;
+                let tick_y = match band.position {
+                    delinea::AxisPosition::Bottom => baseline_y,
+                    delinea::AxisPosition::Top => baseline_y - tick_len,
+                    _ => baseline_y,
+                };
 
-            let gap = 4.0;
-            let right = label_x + metrics.size.width.0;
-            if label_x >= last_right + gap {
-                cx.scene.push(SceneOp::Text {
-                    order: label_order,
-                    origin: Point::new(Px(label_x), Px(label_y)),
-                    text: blob,
-                    color: self.style.axis_label_color,
+                cx.scene.push(SceneOp::Quad {
+                    order: axis_order,
+                    rect: Rect::new(
+                        Point::new(Px(x_px - 0.5 * line_w), Px(tick_y)),
+                        Size::new(Px(line_w), Px(tick_len)),
+                    ),
+                    background: self.style.axis_tick_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
                 });
-                self.axis_text.push(blob);
-                last_right = right;
-            } else {
-                cx.services.text().release(blob);
+
+                let label = Self::format_tick(model, band.axis, window, value);
+                let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+
+                let label_x = x_px - metrics.size.width.0 * 0.5;
+                let label_y =
+                    band.rect.origin.y.0 + (band.rect.size.height.0 - metrics.size.height.0) * 0.5;
+
+                let gap = 4.0;
+                let right = label_x + metrics.size.width.0;
+                if label_x >= last_right + gap {
+                    cx.scene.push(SceneOp::Text {
+                        order: label_order,
+                        origin: Point::new(Px(label_x), Px(label_y)),
+                        text: blob,
+                        color: self.style.axis_label_color,
+                    });
+                    self.axis_text.push(blob);
+                    last_right = right;
+                } else {
+                    cx.services.text().release(blob);
+                }
             }
         }
 
-        // Y ticks + labels.
-        let mut last_bottom = f32::NEG_INFINITY;
-        for value in Self::axis_ticks(model, y_axis, y_window, y_tick_count) {
-            let t = ((value - y_window.min) / y_window.span()).clamp(0.0, 1.0) as f32;
-            let y_px = layout.plot.origin.y.0 + (1.0 - t) * layout.plot.size.height.0;
-            let x0 = layout.plot.origin.x.0;
+        // Y axes: baseline + ticks + labels.
+        for band in &y_axes {
+            let window = self.current_window_y(band.axis);
+            let model = self.engine.model();
+            let baseline_x = match band.position {
+                delinea::AxisPosition::Left => band.rect.origin.x.0 + band.rect.size.width.0,
+                delinea::AxisPosition::Right => band.rect.origin.x.0,
+                _ => continue,
+            };
 
             cx.scene.push(SceneOp::Quad {
                 order: axis_order,
                 rect: Rect::new(
-                    Point::new(Px(x0 - tick_len), Px(y_px - 0.5 * line_w)),
-                    Size::new(Px(tick_len), Px(line_w)),
+                    Point::new(Px(baseline_x - line_w * 0.5), band.rect.origin.y),
+                    Size::new(Px(line_w), plot.size.height),
                 ),
-                background: self.style.axis_tick_color,
+                background: self.style.axis_line_color,
                 border: Edges::all(Px(0.0)),
                 border_color: Color::TRANSPARENT,
                 corner_radii: Corners::all(Px(0.0)),
             });
 
-            let label = Self::format_tick(model, y_axis, y_window, value);
-            let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+            let mut last_bottom = f32::NEG_INFINITY;
+            for value in Self::axis_ticks(model, band.axis, window, y_tick_count) {
+                let t = ((value - window.min) / window.span()).clamp(0.0, 1.0) as f32;
+                let y_px = plot.origin.y.0 + (1.0 - t) * plot.size.height.0;
 
-            let label_x = layout.y_axis.origin.x.0
-                + (layout.y_axis.size.width.0 - metrics.size.width.0 - 4.0).max(0.0);
-            let label_y = y_px - metrics.size.height.0 * 0.5;
+                let (tick_x, tick_w) = match band.position {
+                    delinea::AxisPosition::Left => (baseline_x - tick_len, tick_len),
+                    delinea::AxisPosition::Right => (baseline_x, tick_len),
+                    _ => (baseline_x, tick_len),
+                };
 
-            let gap = 2.0;
-            let bottom = label_y + metrics.size.height.0;
-            if label_y >= last_bottom + gap {
-                cx.scene.push(SceneOp::Text {
-                    order: label_order,
-                    origin: Point::new(Px(label_x), Px(label_y)),
-                    text: blob,
-                    color: self.style.axis_label_color,
+                cx.scene.push(SceneOp::Quad {
+                    order: axis_order,
+                    rect: Rect::new(
+                        Point::new(Px(tick_x), Px(y_px - 0.5 * line_w)),
+                        Size::new(Px(tick_w), Px(line_w)),
+                    ),
+                    background: self.style.axis_tick_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
                 });
-                self.axis_text.push(blob);
-                last_bottom = bottom;
-            } else {
-                cx.services.text().release(blob);
+
+                let label = Self::format_tick(model, band.axis, window, value);
+                let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+
+                let label_x = match band.position {
+                    delinea::AxisPosition::Left => {
+                        band.rect.origin.x.0
+                            + (band.rect.size.width.0 - metrics.size.width.0 - 4.0).max(0.0)
+                    }
+                    delinea::AxisPosition::Right => band.rect.origin.x.0 + 4.0,
+                    _ => band.rect.origin.x.0 + 4.0,
+                };
+                let label_y = y_px - metrics.size.height.0 * 0.5;
+
+                let gap = 2.0;
+                let bottom = label_y + metrics.size.height.0;
+                if label_y >= last_bottom + gap {
+                    cx.scene.push(SceneOp::Text {
+                        order: label_order,
+                        origin: Point::new(Px(label_x), Px(label_y)),
+                        text: blob,
+                        color: self.style.axis_label_color,
+                    });
+                    self.axis_text.push(blob);
+                    last_bottom = bottom;
+                } else {
+                    cx.services.text().release(blob);
+                }
             }
         }
     }
@@ -1130,25 +1254,23 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     let toggle_both = !toggle_pan && !toggle_zoom;
 
                     let layout = self.compute_layout(cx.bounds);
-                    match Self::axis_region(layout, pos) {
-                        AxisRegion::XAxis => {
+                    match Self::axis_region(&layout, pos) {
+                        AxisRegion::XAxis(axis) => {
                             if toggle_both || toggle_pan {
-                                self.engine
-                                    .apply_action(Action::ToggleAxisPanLock { axis: x_axis });
+                                self.engine.apply_action(Action::ToggleAxisPanLock { axis });
                             }
                             if toggle_both || toggle_zoom {
                                 self.engine
-                                    .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
+                                    .apply_action(Action::ToggleAxisZoomLock { axis });
                             }
                         }
-                        AxisRegion::YAxis => {
+                        AxisRegion::YAxis(axis) => {
                             if toggle_both || toggle_pan {
-                                self.engine
-                                    .apply_action(Action::ToggleAxisPanLock { axis: y_axis });
+                                self.engine.apply_action(Action::ToggleAxisPanLock { axis });
                             }
                             if toggle_both || toggle_zoom {
                                 self.engine
-                                    .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
+                                    .apply_action(Action::ToggleAxisZoomLock { axis });
                             }
                         }
                         AxisRegion::Plot => {
@@ -1329,19 +1451,19 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && !modifiers.alt_gr
                     && !modifiers.meta
                 {
-                    let Some((x_axis, y_axis)) = self.primary_axes() else {
+                    let Some((_x_axis, _y_axis)) = self.primary_axes() else {
                         return;
                     };
                     let layout = self.compute_layout(cx.bounds);
-                    match Self::axis_region(layout, *position) {
-                        AxisRegion::XAxis => {
-                            if self.axis_is_fixed(x_axis).is_none() {
-                                self.set_data_window_x(x_axis, None);
+                    match Self::axis_region(&layout, *position) {
+                        AxisRegion::XAxis(axis) => {
+                            if self.axis_is_fixed(axis).is_none() {
+                                self.set_data_window_x(axis, None);
                             }
                         }
-                        AxisRegion::YAxis => {
-                            if self.axis_is_fixed(y_axis).is_none() {
-                                self.set_data_window_y(y_axis, None);
+                        AxisRegion::YAxis(axis) => {
+                            if self.axis_is_fixed(axis).is_none() {
+                                self.set_data_window_y(axis, None);
                             }
                         }
                         AxisRegion::Plot => self.reset_view(),
@@ -1377,18 +1499,16 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     let Some((x_axis, y_axis)) = self.primary_axes() else {
                         return;
                     };
-                    match Self::axis_region(layout, *position) {
-                        AxisRegion::XAxis => {
+                    match Self::axis_region(&layout, *position) {
+                        AxisRegion::XAxis(axis) => {
+                            self.engine.apply_action(Action::ToggleAxisPanLock { axis });
                             self.engine
-                                .apply_action(Action::ToggleAxisPanLock { axis: x_axis });
-                            self.engine
-                                .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
+                                .apply_action(Action::ToggleAxisZoomLock { axis });
                         }
-                        AxisRegion::YAxis => {
+                        AxisRegion::YAxis(axis) => {
+                            self.engine.apply_action(Action::ToggleAxisPanLock { axis });
                             self.engine
-                                .apply_action(Action::ToggleAxisPanLock { axis: y_axis });
-                            self.engine
-                                .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
+                                .apply_action(Action::ToggleAxisZoomLock { axis });
                         }
                         AxisRegion::Plot => {
                             self.engine
@@ -1648,10 +1768,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 // Match ImPlot's default feel: zoom factor ~= 2^(delta_y * 0.0025)
                 let log2_scale = delta_y * 0.0025;
 
+                let region = Self::axis_region(&layout, *position);
                 let in_plot = plot.contains(*position);
-                let in_x_axis = layout.x_axis.contains(*position);
-                let in_y_axis = layout.y_axis.contains(*position);
-                if !in_plot && !in_x_axis && !in_y_axis {
+                let in_axis = matches!(region, AxisRegion::XAxis(_) | AxisRegion::YAxis(_));
+                if !in_plot && !in_axis {
                     return;
                 }
 
@@ -1660,19 +1780,16 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 let center_x = local_x;
                 let center_y_from_bottom = height - local_y;
 
-                let zoom_x = if in_x_axis {
-                    true
-                } else if in_y_axis {
-                    false
-                } else {
-                    !modifiers.ctrl
+                let (x_axis, y_axis) = match region {
+                    AxisRegion::XAxis(axis) => (axis, y_axis),
+                    AxisRegion::YAxis(axis) => (x_axis, axis),
+                    AxisRegion::Plot => (x_axis, y_axis),
                 };
-                let zoom_y = if in_x_axis {
-                    false
-                } else if in_y_axis {
-                    true
-                } else {
-                    !modifiers.shift
+
+                let (zoom_x, zoom_y) = match region {
+                    AxisRegion::XAxis(_) => (true, false),
+                    AxisRegion::YAxis(_) => (false, true),
+                    AxisRegion::Plot => (!modifiers.ctrl, !modifiers.shift),
                 };
 
                 if zoom_x && self.axis_is_fixed(x_axis).is_none() {

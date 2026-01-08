@@ -10,7 +10,8 @@ use thiserror::Error;
 use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, Revision, SeriesId};
 use crate::scale::AxisScale;
 use crate::spec::{
-    AreaBaseline, AxisKind, AxisPointerTrigger, AxisRange, FilterMode, SeriesEncode, SeriesKind,
+    AreaBaseline, AxisKind, AxisPointerTrigger, AxisPosition, AxisRange, FilterMode, SeriesEncode,
+    SeriesKind,
 };
 
 pub use patch::*;
@@ -128,6 +129,14 @@ impl ChartModel {
             if !model.grids.contains_key(&axis.grid) {
                 return Err(ModelError::MissingReference { kind: "grid" });
             }
+            let position = axis
+                .position
+                .unwrap_or_else(|| AxisPosition::default_for_kind(axis.kind));
+            if !position.is_compatible(axis.kind) {
+                return Err(ModelError::InvalidSpec {
+                    reason: "axis.position must be compatible with axis.kind",
+                });
+            }
             model.axes.insert(
                 axis.id,
                 AxisModel {
@@ -135,6 +144,7 @@ impl ChartModel {
                     name: sanitize_name(axis.name),
                     kind: axis.kind,
                     grid: axis.grid,
+                    position,
                     scale: axis.scale,
                     range: {
                         let mut range = axis.range.unwrap_or_default();
@@ -303,6 +313,7 @@ pub struct AxisModel {
     pub name: Option<String>,
     pub kind: AxisKind,
     pub grid: GridId,
+    pub position: AxisPosition,
     pub scale: AxisScale,
     pub range: AxisRange,
 }

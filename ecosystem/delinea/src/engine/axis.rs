@@ -160,6 +160,7 @@ mod tests {
             name: None,
             kind: crate::spec::AxisKind::X,
             grid: crate::ids::GridId::new(1),
+            position: crate::spec::AxisPosition::Bottom,
             scale: AxisScale::Category(crate::scale::CategoryAxisScale {
                 categories: categories.iter().map(|s| (*s).to_string()).collect(),
             }),

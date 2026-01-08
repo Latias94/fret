@@ -47,6 +47,31 @@ pub enum AxisKind {
     Y,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum AxisPosition {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+impl AxisPosition {
+    pub fn default_for_kind(kind: AxisKind) -> Self {
+        match kind {
+            AxisKind::X => AxisPosition::Bottom,
+            AxisKind::Y => AxisPosition::Left,
+        }
+    }
+
+    pub fn is_compatible(self, kind: AxisKind) -> bool {
+        match kind {
+            AxisKind::X => matches!(self, AxisPosition::Top | AxisPosition::Bottom),
+            AxisKind::Y => matches!(self, AxisPosition::Left | AxisPosition::Right),
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum FilterMode {
@@ -126,6 +151,9 @@ pub struct AxisSpec {
     pub name: Option<String>,
     pub kind: AxisKind,
     pub grid: GridId,
+    /// Axis placement in the cartesian grid (presentation-only).
+    /// Defaults: X=Bottom, Y=Left.
+    pub position: Option<AxisPosition>,
     pub scale: AxisScale,
     /// When set, the axis is constrained in data space.
     /// In v1, `Fixed` fully overrides view windows; partial locks override only one bound.
