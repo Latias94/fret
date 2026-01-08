@@ -258,3 +258,91 @@ impl TaffyLayoutEngine {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use slotmap::SlotMap;
+
+    fn fresh_node_ids(count: usize) -> Vec<NodeId> {
+        let mut map: SlotMap<NodeId, ()> = SlotMap::with_key();
+        (0..count).map(|_| map.insert(())).collect()
+    }
+
+    #[test]
+    fn multiple_roots_do_not_couple_layout_results() {
+        let [root_a, root_b, child_a, child_b] = fresh_node_ids(4).try_into().unwrap();
+
+        let mut engine = TaffyLayoutEngine::default();
+        engine.begin_frame(FrameId(1));
+
+        engine.set_children(root_a, &[child_a]);
+        engine.set_children(root_b, &[child_b]);
+
+        engine.set_style(
+            root_a,
+            taffy::Style {
+                display: taffy::style::Display::Block,
+                size: taffy::geometry::Size {
+                    width: taffy::style::Dimension::length(100.0),
+                    height: taffy::style::Dimension::length(10.0),
+                },
+                ..Default::default()
+            },
+        );
+        engine.set_style(
+            root_b,
+            taffy::Style {
+                display: taffy::style::Display::Block,
+                size: taffy::geometry::Size {
+                    width: taffy::style::Dimension::length(200.0),
+                    height: taffy::style::Dimension::length(10.0),
+                },
+                ..Default::default()
+            },
+        );
+
+        let fill = taffy::Style {
+            display: taffy::style::Display::Block,
+            size: taffy::geometry::Size {
+                width: taffy::style::Dimension::percent(1.0),
+                height: taffy::style::Dimension::percent(1.0),
+            },
+            ..Default::default()
+        };
+        engine.set_style(child_a, fill.clone());
+        engine.set_style(child_b, fill);
+
+        let root_a_id = engine.layout_id_for_node(root_a).unwrap();
+        let root_b_id = engine.layout_id_for_node(root_b).unwrap();
+
+        engine.compute_root(
+            root_a_id,
+            LayoutSize::new(
+                AvailableSpace::Definite(Px(100.0)),
+                AvailableSpace::Definite(Px(10.0)),
+            ),
+        );
+
+        let child_a_id = engine.layout_id_for_node(child_a).unwrap();
+        let a_before = engine.layout_rect(child_a_id);
+        assert!((a_before.size.width.0 - 100.0).abs() < 0.01);
+        assert!((a_before.size.height.0 - 10.0).abs() < 0.01);
+
+        engine.compute_root(
+            root_b_id,
+            LayoutSize::new(
+                AvailableSpace::Definite(Px(200.0)),
+                AvailableSpace::Definite(Px(10.0)),
+            ),
+        );
+
+        let child_b_id = engine.layout_id_for_node(child_b).unwrap();
+        let b = engine.layout_rect(child_b_id);
+        assert!((b.size.width.0 - 200.0).abs() < 0.01);
+        assert!((b.size.height.0 - 10.0).abs() < 0.01);
+
+        let a_after = engine.layout_rect(child_a_id);
+        assert_eq!(a_before, a_after);
+    }
+}
