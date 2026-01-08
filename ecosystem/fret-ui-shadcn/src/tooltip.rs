@@ -33,22 +33,6 @@ fn shadcn_zoom_transform(origin: Point, scale: f32) -> Transform2D {
         * Transform2D::translation(Point::new(Px(-origin.x.0), Px(-origin.y.0)))
 }
 
-fn apply_tooltip_described_by(
-    mut trigger: AnyElement,
-    tooltip_element: fret_ui::elements::GlobalElementId,
-) -> AnyElement {
-    match &mut trigger.kind {
-        ElementKind::Pressable(props) => {
-            props.a11y.described_by_element = Some(tooltip_element.0);
-        }
-        ElementKind::Semantics(props) => {
-            props.described_by_element = Some(tooltip_element.0);
-        }
-        _ => {}
-    }
-    trigger
-}
-
 fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> AnyElement {
     match &mut element.kind {
         ElementKind::Text(props) => {
@@ -338,7 +322,7 @@ impl Tooltip {
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
 
-        let trigger = apply_tooltip_described_by(self.trigger, self.content.id);
+        let trigger = radix_tooltip::apply_tooltip_trigger_a11y(self.trigger, self.content.id);
         let content = self.content;
         let trigger_id = trigger.id;
         let content_id = content.id;

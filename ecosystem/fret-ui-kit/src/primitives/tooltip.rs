@@ -16,6 +16,7 @@
 pub use crate::headless::tooltip_delay_group::{TooltipDelayGroupConfig, TooltipDelayGroupState};
 
 use fret_ui::element::AnyElement;
+use fret_ui::element::ElementKind;
 
 pub use crate::tooltip_provider::{
     TooltipProviderConfig, current_config, note_closed, open_delay_ticks,
@@ -29,6 +30,28 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
+
+/// Stamps Radix-like trigger relationships:
+/// - `described_by_element` mirrors `aria-describedby` (by element id).
+///
+/// In Radix Tooltip, the trigger advertises the tooltip content by id. In Fret we model this via
+/// a portable element-id relationship that resolves into `SemanticsNode.described_by` when the
+/// tooltip content is mounted.
+pub fn apply_tooltip_trigger_a11y(
+    mut trigger: AnyElement,
+    tooltip_element: GlobalElementId,
+) -> AnyElement {
+    match &mut trigger.kind {
+        ElementKind::Pressable(props) => {
+            props.a11y.described_by_element = Some(tooltip_element.0);
+        }
+        ElementKind::Semantics(props) => {
+            props.described_by_element = Some(tooltip_element.0);
+        }
+        _ => {}
+    }
+    trigger
+}
 
 /// Stable per-overlay root naming convention for tooltip overlays.
 pub fn tooltip_root_name(id: GlobalElementId) -> String {
@@ -69,6 +92,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
+    use fret_ui::element::{ElementKind, LayoutStyle, PressableProps, SemanticsProps};
 
     #[test]
     fn tooltip_request_sets_default_root_name() {
@@ -85,5 +109,43 @@ mod tests {
                 assert_eq!(req.root_name.as_deref(), Some(expected.as_str()));
             },
         );
+    }
+
+    #[test]
+    fn apply_tooltip_trigger_a11y_sets_described_by_on_pressable() {
+        let window = Default::default();
+        let mut app = App::new();
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let trigger = cx.pressable(
+                PressableProps {
+                    layout: LayoutStyle::default(),
+                    enabled: true,
+                    focusable: true,
+                    ..Default::default()
+                },
+                |_cx, _st| Vec::new(),
+            );
+            let tooltip = GlobalElementId(0xbeef);
+            let trigger = apply_tooltip_trigger_a11y(trigger, tooltip);
+            let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
+                panic!("expected pressable");
+            };
+            assert_eq!(a11y.described_by_element, Some(tooltip.0));
+        });
+    }
+
+    #[test]
+    fn apply_tooltip_trigger_a11y_sets_described_by_on_semantics() {
+        let window = Default::default();
+        let mut app = App::new();
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let trigger = cx.semantics(SemanticsProps::default(), |_cx| Vec::new());
+            let tooltip = GlobalElementId(0xbeef);
+            let trigger = apply_tooltip_trigger_a11y(trigger, tooltip);
+            let ElementKind::Semantics(props) = &trigger.kind else {
+                panic!("expected semantics");
+            };
+            assert_eq!(props.described_by_element, Some(tooltip.0));
+        });
     }
 }
