@@ -75,7 +75,7 @@ impl Renderer {
             self.scene_encoding_cache_key = Some(key);
             encoding
         };
-        let plan = RenderPlan::single_scene(wgpu::LoadOp::Clear(clear.0));
+        let plan = RenderPlan::compile_for_scene(&encoding, clear.0, path_samples);
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
@@ -147,7 +147,7 @@ impl Renderer {
 
         for planned_pass in &plan.passes {
             match planned_pass {
-                RenderPlanPass::Scene(scene_pass) => {
+                RenderPlanPass::SceneDrawRange(scene_pass) => {
                     debug_assert_eq!(scene_pass.segment.0, 0);
                     debug_assert!(matches!(scene_pass.target, PlanTarget::Output));
                     let load = scene_pass.load;
@@ -222,8 +222,8 @@ impl Renderer {
                         let mut pass = begin_main_pass(&mut encoder, target_view, load);
                         let mut active_uniform_offset: Option<u32> = None;
 
-                        let mut i = 0usize;
-                        while i < encoding.ordered_draws.len() {
+                        let mut i = scene_pass.draw_range.start;
+                        while i < scene_pass.draw_range.end {
                             let item = &encoding.ordered_draws[i];
 
                             if let OrderedDraw::Path(first) = item
@@ -688,6 +688,177 @@ impl Renderer {
                             i += 1;
                         }
                     }
+                }
+                RenderPlanPass::PathMsaaBatch(path_pass) => {
+                    debug_assert_eq!(path_pass.segment.0, 0);
+                    debug_assert!(matches!(path_pass.target, PlanTarget::Output));
+
+                    let start = path_pass.draw_range.start;
+                    let end = path_pass.draw_range.end;
+                    if start >= end {
+                        continue;
+                    }
+
+                    let Some(intermediate) = &self.path_intermediate else {
+                        continue;
+                    };
+                    let Some(path_msaa_pipeline) = self.path_msaa_pipeline.as_ref() else {
+                        continue;
+                    };
+                    let Some(composite_pipeline) = self.composite_pipeline.as_ref() else {
+                        continue;
+                    };
+
+                    {
+                        let mut path_pass_rp =
+                            encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                label: Some("fret path intermediate pass"),
+                                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                    view: intermediate
+                                        .msaa_view
+                                        .as_ref()
+                                        .unwrap_or(&intermediate.resolved_view),
+                                    depth_slice: None,
+                                    resolve_target: if intermediate.sample_count > 1 {
+                                        Some(&intermediate.resolved_view)
+                                    } else {
+                                        None
+                                    },
+                                    ops: wgpu::Operations {
+                                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                                        store: if intermediate.sample_count > 1 {
+                                            wgpu::StoreOp::Discard
+                                        } else {
+                                            wgpu::StoreOp::Store
+                                        },
+                                    },
+                                })],
+                                depth_stencil_attachment: None,
+                                timestamp_writes: None,
+                                occlusion_query_set: None,
+                                multiview_mask: None,
+                            });
+
+                        path_pass_rp.set_pipeline(path_msaa_pipeline);
+                        path_pass_rp.set_vertex_buffer(0, path_vertex_buffer.slice(..));
+
+                        let mut active_uniform_offset: Option<u32> = None;
+                        for j in start..end {
+                            let OrderedDraw::Path(draw) = &encoding.ordered_draws[j] else {
+                                unreachable!("PathMsaaBatch pass must reference only Path draws");
+                            };
+                            if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                continue;
+                            }
+                            path_pass_rp.set_scissor_rect(
+                                draw.scissor.x,
+                                draw.scissor.y,
+                                draw.scissor.w,
+                                draw.scissor.h,
+                            );
+                            let uniform_offset =
+                                (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
+                            if active_uniform_offset != Some(uniform_offset) {
+                                path_pass_rp.set_bind_group(
+                                    0,
+                                    &self.uniform_bind_group,
+                                    &[uniform_offset],
+                                );
+                                active_uniform_offset = Some(uniform_offset);
+                            }
+                            path_pass_rp.draw(
+                                draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                0..1,
+                            );
+                        }
+                    }
+
+                    let union = path_pass.union_scissor;
+                    if union.w == 0 || union.h == 0 {
+                        continue;
+                    }
+
+                    let x0 = union.x as f32;
+                    let y0 = union.y as f32;
+                    let x1 = (union.x + union.w) as f32;
+                    let y1 = (union.y + union.h) as f32;
+
+                    let vw = viewport_size.0.max(1) as f32;
+                    let vh = viewport_size.1.max(1) as f32;
+                    let u0 = x0 / vw;
+                    let v0 = y0 / vh;
+                    let u1 = x1 / vw;
+                    let v1 = y1 / vh;
+
+                    let vertices: [ViewportVertex; 6] = [
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [u0, v0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y0],
+                            uv: [u1, v0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [u1, v1],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y0],
+                            uv: [u0, v0],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x1, y1],
+                            uv: [u1, v1],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                        ViewportVertex {
+                            pos_px: [x0, y1],
+                            uv: [u0, v1],
+                            opacity: 1.0,
+                            _pad: [0.0; 3],
+                        },
+                    ];
+                    queue.write_buffer(
+                        &self.path_composite_vertices,
+                        0,
+                        bytemuck::cast_slice(&vertices),
+                    );
+
+                    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("fret renderer pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: target_view,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Load,
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+
+                    pass.set_pipeline(composite_pipeline);
+                    let uniform_offset =
+                        (u64::from(path_pass.batch_uniform_index) * self.uniform_stride) as u32;
+                    pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
+                    pass.set_bind_group(1, &intermediate.bind_group, &[]);
+                    pass.set_vertex_buffer(0, self.path_composite_vertices.slice(..));
+                    pass.set_scissor_rect(union.x, union.y, union.w, union.h);
+                    pass.draw(0..6, 0..1);
                 }
             }
         }
