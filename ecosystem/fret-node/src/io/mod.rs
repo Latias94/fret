@@ -240,6 +240,14 @@ pub struct NodeGraphInteractionState {
     #[serde(default = "default_snap_grid")]
     pub snap_grid: CanvasSize,
 
+    /// Show alignment guides and snap node moves to them.
+    #[serde(default = "default_snaplines")]
+    pub snaplines: bool,
+
+    /// Snaplines threshold in screen pixels.
+    #[serde(default = "default_snaplines_threshold")]
+    pub snaplines_threshold: f32,
+
     /// Drag threshold in screen pixels before a node drag starts.
     #[serde(default = "default_node_drag_threshold")]
     pub node_drag_threshold: f32,
@@ -272,6 +280,14 @@ fn default_snap_grid() -> CanvasSize {
         width: 16.0,
         height: 16.0,
     }
+}
+
+fn default_snaplines() -> bool {
+    true
+}
+
+fn default_snaplines_threshold() -> f32 {
+    8.0
 }
 
 fn default_node_drag_threshold() -> f32 {

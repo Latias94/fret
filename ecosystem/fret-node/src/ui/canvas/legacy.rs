@@ -44,6 +44,7 @@ use crate::ui::{
 use super::conversion;
 use super::geometry::{CanvasGeometry, node_ports};
 use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
+use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::workflow;
 
@@ -78,6 +79,7 @@ struct InteractionState {
     searcher: Option<SearcherState>,
     toast: Option<ToastState>,
     pending_paste: Option<PendingPaste>,
+    snap_guides: Option<SnapGuides>,
 
     sticky_wire: bool,
     sticky_wire_ignore_next_up: bool,
@@ -2653,6 +2655,48 @@ impl NodeGraphCanvas {
         });
     }
 
+    fn paint_snap_guides<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        guides: &SnapGuides,
+        zoom: f32,
+        viewport_origin_x: f32,
+        viewport_origin_y: f32,
+        viewport_w: f32,
+        viewport_h: f32,
+    ) {
+        let w = Px((self.style.snapline_width / zoom).max(0.5 / zoom));
+        let half = 0.5 * w.0;
+
+        if let Some(x) = guides.x {
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(48),
+                rect: Rect::new(
+                    Point::new(Px(x - half), Px(viewport_origin_y)),
+                    Size::new(w, Px(viewport_h)),
+                ),
+                background: self.style.snapline_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
+
+        if let Some(y) = guides.y {
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(48),
+                rect: Rect::new(
+                    Point::new(Px(viewport_origin_x), Px(y - half)),
+                    Size::new(Px(viewport_w), w),
+                ),
+                background: self.style.snapline_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
+    }
+
     fn paint_searcher<H: UiHost>(
         &mut self,
         cx: &mut PaintCx<'_, H>,
@@ -3537,6 +3581,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     if self.interaction.sticky_wire || self.interaction.sticky_wire_ignore_next_up {
                         self.interaction.sticky_wire = false;
                         self.interaction.sticky_wire_ignore_next_up = false;
+                        canceled = true;
+                    }
+                    if self.interaction.snap_guides.take().is_some() {
                         canceled = true;
                     }
                     self.interaction.hover_port = None;
@@ -4541,12 +4588,14 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
                 }
 
-                if let Some(drag) = &self.interaction.node_drag {
+                if let Some(drag) = self.interaction.node_drag.clone() {
                     let auto_pan_delta = (snapshot.interaction.auto_pan.on_node_drag)
                         .then(|| Self::auto_pan_delta(&snapshot, *position, cx.bounds))
                         .unwrap_or_default();
                     let snap_to_grid = snapshot.interaction.snap_to_grid;
                     let snap_grid = snapshot.interaction.snap_grid;
+                    let snaplines = snapshot.interaction.snaplines;
+                    let snaplines_threshold_screen = snapshot.interaction.snaplines_threshold;
 
                     let start_anchor = Point::new(
                         Px(drag.start_pos.x.0 - drag.grab_offset.x.0),
@@ -4577,6 +4626,70 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             x: snapped.x - primary_start.x,
                             y: snapped.y - primary_start.y,
                         };
+                    }
+
+                    if snaplines {
+                        let threshold_canvas = if snaplines_threshold_screen.is_finite()
+                            && snaplines_threshold_screen > 0.0
+                        {
+                            snaplines_threshold_screen / zoom
+                        } else {
+                            0.0
+                        };
+
+                        let (geom, _index) = self.canvas_derived(&*cx.app, &snapshot);
+                        let drag_nodes: HashSet<GraphNodeId> =
+                            drag.nodes.iter().map(|(id, _)| *id).collect();
+
+                        let mut group: Option<Rect> = None;
+                        for (id, start) in &drag.nodes {
+                            let Some(ng) = geom.nodes.get(id) else {
+                                continue;
+                            };
+                            let rect0 =
+                                Rect::new(Point::new(Px(start.x), Px(start.y)), ng.rect.size);
+                            group = Some(match group {
+                                Some(r) => rect_union(r, rect0),
+                                None => rect0,
+                            });
+                        }
+
+                        let mut candidates: Vec<Rect> = Vec::new();
+                        for (id, ng) in geom.nodes.iter() {
+                            if drag_nodes.contains(id) {
+                                continue;
+                            }
+                            candidates.push(ng.rect);
+                        }
+
+                        if let Some(group0) = group {
+                            let moving = Rect::new(
+                                Point::new(
+                                    Px(group0.origin.x.0 + delta.x),
+                                    Px(group0.origin.y.0 + delta.y),
+                                ),
+                                group0.size,
+                            );
+
+                            let snap = super::snaplines::snap_delta_for_rects(
+                                moving,
+                                &candidates,
+                                threshold_canvas,
+                            );
+                            self.interaction.snap_guides = (snap.guides.x.is_some()
+                                || snap.guides.y.is_some())
+                            .then_some(snap.guides);
+
+                            let allow_snap = !modifiers.alt && !modifiers.alt_gr;
+                            if allow_snap {
+                                delta.x += snap.delta_x;
+                                delta.y += snap.delta_y;
+                            }
+                        } else {
+                            self.interaction.snap_guides = None;
+                        }
+                    } else {
+                        self.interaction.snap_guides = None;
                     }
 
                     let _ = self.graph.update(cx.app, |g, _cx| {
@@ -4917,6 +5030,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 if *button == MouseButton::Left {
                     if self.interaction.marquee.take().is_some() {
                         self.interaction.pending_marquee = None;
+                        self.interaction.snap_guides = None;
                         cx.release_pointer_capture();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
@@ -4930,6 +5044,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                 s.selected_edges.clear();
                             });
                         }
+                        self.interaction.snap_guides = None;
                         cx.release_pointer_capture();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
@@ -4966,6 +5081,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             });
                         }
                         self.interaction.pending_node_drag = None;
+                        self.interaction.snap_guides = None;
                         cx.release_pointer_capture();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
@@ -4973,6 +5089,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
 
                     if self.interaction.pending_node_drag.take().is_some() {
+                        self.interaction.snap_guides = None;
                         cx.release_pointer_capture();
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
@@ -5931,6 +6048,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             self.paint_marquee(cx, &marquee, zoom);
         }
 
+        if let Some(guides) = self.interaction.snap_guides {
+            self.paint_snap_guides(
+                cx,
+                &guides,
+                zoom,
+                viewport_origin_x,
+                viewport_origin_y,
+                viewport_w,
+                viewport_h,
+            );
+        }
+
         if let Some(searcher) = self.interaction.searcher.clone() {
             self.paint_searcher(cx, &searcher, zoom);
         }
@@ -6024,6 +6153,28 @@ fn rect_from_points(a: Point, b: Point) -> Rect {
     let min_y = a.y.0.min(b.y.0);
     let max_x = a.x.0.max(b.x.0);
     let max_y = a.y.0.max(b.y.0);
+    Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        Size::new(Px(max_x - min_x), Px(max_y - min_y)),
+    )
+}
+
+fn rect_union(a: Rect, b: Rect) -> Rect {
+    let ax0 = a.origin.x.0;
+    let ay0 = a.origin.y.0;
+    let ax1 = a.origin.x.0 + a.size.width.0;
+    let ay1 = a.origin.y.0 + a.size.height.0;
+
+    let bx0 = b.origin.x.0;
+    let by0 = b.origin.y.0;
+    let bx1 = b.origin.x.0 + b.size.width.0;
+    let by1 = b.origin.y.0 + b.size.height.0;
+
+    let min_x = ax0.min(bx0);
+    let min_y = ay0.min(by0);
+    let max_x = ax1.max(bx1);
+    let max_y = ay1.max(by1);
+
     Rect::new(
         Point::new(Px(min_x), Px(min_y)),
         Size::new(Px(max_x - min_x), Px(max_y - min_y)),

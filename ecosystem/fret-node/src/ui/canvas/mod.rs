@@ -10,6 +10,7 @@ mod geometry;
 mod legacy;
 mod paint;
 mod searcher;
+mod snaplines;
 mod spatial;
 mod workflow;
 

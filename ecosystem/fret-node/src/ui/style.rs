@@ -36,6 +36,9 @@ pub struct NodeGraphStyle {
     pub marquee_border: Color,
     pub marquee_border_width: f32,
 
+    pub snapline_color: Color,
+    pub snapline_width: f32,
+
     pub context_menu_width: f32,
     pub context_menu_padding: f32,
     pub context_menu_item_height: f32,
@@ -151,6 +154,14 @@ impl Default for NodeGraphStyle {
                 a: 0.90,
             },
             marquee_border_width: 1.0,
+
+            snapline_color: Color {
+                r: 0.20,
+                g: 0.55,
+                b: 0.95,
+                a: 0.90,
+            },
+            snapline_width: 1.0,
 
             context_menu_width: 200.0,
             context_menu_padding: 10.0,
