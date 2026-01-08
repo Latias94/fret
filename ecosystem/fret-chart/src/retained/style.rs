@@ -31,6 +31,17 @@ pub struct ChartStyle {
     pub tooltip_text_color: Color,
     pub tooltip_padding: Edges,
     pub tooltip_corner_radius: Px,
+
+    pub legend_background: Color,
+    pub legend_border_color: Color,
+    pub legend_border_width: Px,
+    pub legend_text_color: Color,
+    pub legend_padding: Edges,
+    pub legend_corner_radius: Px,
+    pub legend_item_gap: Px,
+    pub legend_swatch_size: Px,
+    pub legend_swatch_gap: Px,
+    pub legend_hover_background: Color,
     pub draw_order: DrawOrder,
 }
 
@@ -133,6 +144,36 @@ impl Default for ChartStyle {
             },
             tooltip_padding: Edges::symmetric(Px(8.0), Px(6.0)),
             tooltip_corner_radius: Px(6.0),
+            legend_background: Color {
+                r: 0.08,
+                g: 0.08,
+                b: 0.1,
+                a: 0.9,
+            },
+            legend_border_color: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 0.15,
+            },
+            legend_border_width: Px(1.0),
+            legend_text_color: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 0.9,
+            },
+            legend_padding: Edges::symmetric(Px(10.0), Px(8.0)),
+            legend_corner_radius: Px(8.0),
+            legend_item_gap: Px(4.0),
+            legend_swatch_size: Px(10.0),
+            legend_swatch_gap: Px(8.0),
+            legend_hover_background: Color {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 0.06,
+            },
             draw_order: DrawOrder(100),
         }
     }

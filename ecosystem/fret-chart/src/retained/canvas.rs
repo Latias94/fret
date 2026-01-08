@@ -37,8 +37,9 @@ impl TextMeasurer for NullTextMeasurer {
 struct CachedPath {
     stroke: fret_core::PathId,
     fill: Option<fret_core::PathId>,
-    fill_color: Option<Color>,
+    fill_alpha: Option<f32>,
     order: u32,
+    source_series: Option<delinea::SeriesId>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -89,6 +90,9 @@ pub struct ChartCanvas {
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
     axis_text: Vec<TextBlobId>,
     tooltip_text: Vec<TextBlobId>,
+    legend_text: Vec<TextBlobId>,
+    legend_item_rects: Vec<(delinea::SeriesId, Rect)>,
+    legend_hover: Option<delinea::SeriesId>,
     pan_drag: Option<PanDrag>,
     box_zoom_drag: Option<BoxZoomDrag>,
     lock_x_pan: bool,
@@ -113,6 +117,9 @@ impl ChartCanvas {
             cached_paths: BTreeMap::default(),
             axis_text: Vec::default(),
             tooltip_text: Vec::default(),
+            legend_text: Vec::default(),
+            legend_item_rects: Vec::default(),
+            legend_hover: None,
             pan_drag: None,
             box_zoom_drag: None,
             lock_x_pan: false,
@@ -490,6 +497,200 @@ impl ChartCanvas {
         }
     }
 
+    fn clear_legend_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
+        for blob in self.legend_text.drain(..) {
+            services.text().release(blob);
+        }
+        self.legend_item_rects.clear();
+    }
+
+    fn series_color(series: delinea::SeriesId) -> Color {
+        const PALETTE: [Color; 8] = [
+            Color {
+                r: 0.20,
+                g: 0.60,
+                b: 1.00,
+                a: 1.0,
+            },
+            Color {
+                r: 0.96,
+                g: 0.50,
+                b: 0.25,
+                a: 1.0,
+            },
+            Color {
+                r: 0.40,
+                g: 0.85,
+                b: 0.45,
+                a: 1.0,
+            },
+            Color {
+                r: 0.90,
+                g: 0.35,
+                b: 0.60,
+                a: 1.0,
+            },
+            Color {
+                r: 0.65,
+                g: 0.50,
+                b: 0.95,
+                a: 1.0,
+            },
+            Color {
+                r: 0.95,
+                g: 0.85,
+                b: 0.30,
+                a: 1.0,
+            },
+            Color {
+                r: 0.30,
+                g: 0.80,
+                b: 0.85,
+                a: 1.0,
+            },
+            Color {
+                r: 0.85,
+                g: 0.55,
+                b: 0.40,
+                a: 1.0,
+            },
+        ];
+
+        let idx = (series.0 as usize) % PALETTE.len();
+        PALETTE[idx]
+    }
+
+    fn legend_series_at(&self, pos: Point) -> Option<delinea::SeriesId> {
+        self.legend_item_rects
+            .iter()
+            .find_map(|(id, r)| r.contains(pos).then_some(*id))
+    }
+
+    fn draw_legend<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        self.clear_legend_text_cache(cx.services);
+
+        let plot = self.last_layout.plot;
+        if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
+            return;
+        }
+
+        let model = self.engine.model();
+        let series: Vec<_> = model.series_in_order().collect();
+        if series.is_empty() {
+            return;
+        }
+
+        let text_style = TextStyle {
+            size: Px(12.0),
+            weight: FontWeight::NORMAL,
+            ..TextStyle::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+
+        let mut blobs: Vec<(delinea::SeriesId, TextBlobId, fret_core::TextMetrics, bool)> =
+            Vec::with_capacity(series.len());
+
+        let mut max_text_w = 1.0f32;
+        let mut row_h = 1.0f32;
+        for s in &series {
+            let label = s
+                .name
+                .as_deref()
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| format!("Series {}", s.id.0));
+            let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+            max_text_w = max_text_w.max(metrics.size.width.0.max(1.0));
+            row_h = row_h.max(metrics.size.height.0.max(1.0));
+            blobs.push((s.id, blob, metrics, s.visible));
+        }
+
+        let pad = self.style.legend_padding;
+        let sw = self.style.legend_swatch_size.0.max(1.0);
+        let sw_gap = self.style.legend_swatch_gap.0.max(0.0);
+        let gap = self.style.legend_item_gap.0.max(0.0);
+
+        let row_h = row_h.max(sw);
+        let legend_w = (pad.left.0 + sw + sw_gap + max_text_w + pad.right.0).max(1.0);
+        let legend_h = (pad.top.0
+            + (row_h + gap) * (series.len().saturating_sub(1) as f32)
+            + row_h
+            + pad.bottom.0)
+            .max(1.0);
+
+        let margin = 8.0f32;
+        let x0 =
+            (plot.origin.x.0 + plot.size.width.0 - legend_w - margin).max(plot.origin.x.0 + margin);
+        let y0 = (plot.origin.y.0 + margin).max(plot.origin.y.0 + margin);
+        let legend_rect = Rect::new(
+            Point::new(Px(x0), Px(y0)),
+            Size::new(Px(legend_w), Px(legend_h)),
+        );
+
+        let legend_order = DrawOrder(self.style.draw_order.0.saturating_add(8_900));
+        cx.scene.push(SceneOp::Quad {
+            order: legend_order,
+            rect: legend_rect,
+            background: self.style.legend_background,
+            border: Edges::all(self.style.legend_border_width),
+            border_color: self.style.legend_border_color,
+            corner_radii: Corners::all(self.style.legend_corner_radius),
+        });
+
+        let mut y = y0 + pad.top.0;
+        for (i, (series_id, blob, metrics, visible)) in blobs.into_iter().enumerate() {
+            let item_rect = Rect::new(
+                Point::new(Px(x0), Px(y)),
+                Size::new(Px(legend_w), Px(row_h)),
+            );
+            self.legend_item_rects.push((series_id, item_rect));
+
+            if self.legend_hover == Some(series_id) {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(legend_order.0.saturating_add(1 + i as u32 * 3)),
+                    rect: item_rect,
+                    background: self.style.legend_hover_background,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+
+            let mut swatch = Self::series_color(series_id);
+            swatch.a = if visible { 0.9 } else { 0.25 };
+            let sw_x = x0 + pad.left.0;
+            let sw_y = y + 0.5 * (row_h - sw);
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(legend_order.0.saturating_add(2 + i as u32 * 3)),
+                rect: Rect::new(Point::new(Px(sw_x), Px(sw_y)), Size::new(Px(sw), Px(sw))),
+                background: swatch,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(2.0)),
+            });
+
+            let text_x = sw_x + sw + sw_gap;
+            let text_y = y + 0.5 * (row_h - metrics.size.height.0.max(1.0));
+            let mut text_color = self.style.legend_text_color;
+            if !visible {
+                text_color.a *= 0.55;
+            }
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(legend_order.0.saturating_add(3 + i as u32 * 3)),
+                origin: Point::new(Px(text_x), Px(text_y)),
+                text: blob,
+                color: text_color,
+            });
+            self.legend_text.push(blob);
+
+            y += row_h + gap;
+        }
+    }
+
     fn draw_axes<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
         self.clear_axis_text_cache(cx.services);
 
@@ -804,7 +1005,7 @@ impl ChartCanvas {
             } else {
                 None
             };
-            let fill_color = fill.map(|_| self.style.area_fill_color);
+            let fill_alpha = fill.map(|_| self.style.area_fill_color.a);
 
             let mark_id = node.id;
             self.cached_paths.insert(
@@ -812,8 +1013,9 @@ impl ChartCanvas {
                 CachedPath {
                     stroke,
                     fill,
-                    fill_color,
+                    fill_alpha,
                     order: node.order.0,
+                    source_series: node.source_series,
                 },
             );
         }
@@ -873,7 +1075,7 @@ impl ChartCanvas {
 
             if let Some(cached) = self.cached_paths.get_mut(&lower_id) {
                 cached.fill = Some(fill_path);
-                cached.fill_color = Some(self.style.band_fill_color);
+                cached.fill_alpha = Some(self.style.band_fill_color.a);
             } else {
                 cx.services.path().release(fill_path);
             }
@@ -989,6 +1191,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 position, buttons, ..
             }) => {
                 self.last_pointer_pos = Some(*position);
+
+                let prev_hover = self.legend_hover;
+                self.legend_hover = self.legend_series_at(*position);
+                if self.legend_hover != prev_hover {
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
+
                 if cx.captured == Some(cx.node) {
                     if let Some(mut drag) = self.box_zoom_drag
                         && Self::is_button_held(drag.button, *buttons)
@@ -1058,6 +1268,29 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 ..
             }) => {
                 self.last_pointer_pos = Some(*position);
+
+                if *button == MouseButton::Left
+                    && self.pan_drag.is_none()
+                    && self.box_zoom_drag.is_none()
+                    && let Some(series) = self.legend_series_at(*position)
+                {
+                    let visible = self
+                        .engine
+                        .model()
+                        .series
+                        .get(&series)
+                        .map(|s| s.visible)
+                        .unwrap_or(true);
+                    self.engine.apply_action(Action::SetSeriesVisible {
+                        series,
+                        visible: !visible,
+                    });
+                    self.legend_hover = Some(series);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
 
                 if *pointer_type == PointerType::Mouse
                     && *button == MouseButton::Left
@@ -1500,6 +1733,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         self.rebuild_paths_if_needed(cx);
         self.clear_tooltip_text_cache(cx.services);
+        self.clear_legend_text_cache(cx.services);
 
         if let Some(background) = self.style.background {
             cx.scene.push(SceneOp::Quad {
@@ -1522,19 +1756,35 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 .draw_order
                 .0
                 .saturating_add(cached.order.saturating_mul(4));
+
+            let mut stroke_color = self.style.stroke_color;
+            if let Some(series) = cached.source_series {
+                stroke_color = Self::series_color(series);
+                stroke_color.a *= self.style.stroke_color.a;
+            }
+            if let Some(hover) = self.legend_hover
+                && cached.source_series.is_some()
+                && cached.source_series != Some(hover)
+            {
+                stroke_color.a *= 0.25;
+            }
+
             if let Some(fill) = cached.fill {
+                let fill_alpha = cached.fill_alpha.unwrap_or(self.style.area_fill_color.a);
+                let mut fill_color = stroke_color;
+                fill_color.a = fill_alpha;
                 cx.scene.push(SceneOp::Path {
                     order: DrawOrder(base_order),
                     origin: self.last_layout.plot.origin,
                     path: fill,
-                    color: cached.fill_color.unwrap_or(self.style.area_fill_color),
+                    color: fill_color,
                 });
             }
             cx.scene.push(SceneOp::Path {
                 order: DrawOrder(base_order.saturating_add(1)),
                 origin: self.last_layout.plot.origin,
                 path: cached.stroke,
-                color: self.style.stroke_color,
+                color: stroke_color,
             });
         }
 
@@ -1585,11 +1835,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
-        let axis_pointer = interaction_idle
-            .then(|| self.engine.output().axis_pointer.as_ref())
-            .flatten();
+        let axis_pointer = if interaction_idle && self.legend_hover.is_none() {
+            self.engine.output().axis_pointer.clone()
+        } else {
+            None
+        };
 
-        if let Some(axis_pointer) = axis_pointer {
+        if let Some(axis_pointer) = axis_pointer.as_ref() {
             let pos = axis_pointer.crosshair_px;
             let hit = axis_pointer.hit;
             let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(9_000));
@@ -1643,6 +1895,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 corner_radii: Corners::all(Px(0.0)),
             });
         }
+
+        self.draw_legend(cx);
 
         if let Some(drag) = self.box_zoom_drag {
             let rect =
@@ -1773,6 +2027,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         for blob in self.tooltip_text.drain(..) {
             services.text().release(blob);
         }
+        for blob in self.legend_text.drain(..) {
+            services.text().release(blob);
+        }
     }
 }
 
@@ -1843,5 +2100,13 @@ mod tests {
         assert!(!ticks.is_empty());
         assert_eq!(*ticks.first().unwrap(), window.min);
         assert_eq!(*ticks.last().unwrap(), window.max);
+    }
+
+    #[test]
+    fn series_color_is_stable() {
+        let a = ChartCanvas::series_color(delinea::SeriesId::new(1));
+        let b = ChartCanvas::series_color(delinea::SeriesId::new(2));
+        assert_ne!(a, b);
+        assert_eq!(a, ChartCanvas::series_color(delinea::SeriesId::new(1)));
     }
 }
