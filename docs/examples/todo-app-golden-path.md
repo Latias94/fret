@@ -140,10 +140,7 @@ This avoids storing long-lived closures at arbitrary nodes and keeps hot reload 
 This is high-level pseudocode showing the intent; exact component APIs may vary.
 
 ```rust,ignore
-use fret_icons::IconId;
-use fret_ui::AnyElement;
-use fret_ui::ElementContext;
-use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 fn view(cx: &mut ElementContext<'_, fret_app::App>, st: &mut TodoWindowState) -> Vec<AnyElement> {
     let add_icon = IconId::new("lucide.plus");
@@ -156,8 +153,8 @@ fn view(cx: &mut ElementContext<'_, fret_app::App>, st: &mut TodoWindowState) ->
 }
 ```
 
-Note: `fret-ui-shadcn` re-exports common declarative authoring helpers (stack/style/icon) from `fret-ui-kit` so app code
-can stay on `fret-bootstrap` + `fret-ui-shadcn` for the default story.
+Note: `fret-ui-shadcn::prelude` re-exports common declarative authoring helpers (stack/style/icon) from `fret-ui-kit` so
+app code can stay on `fret-bootstrap` + `fret-ui-shadcn` for the default story.
 
 ## Event pipeline (platform → UI)
 
