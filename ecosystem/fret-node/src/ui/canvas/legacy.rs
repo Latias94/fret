@@ -33,7 +33,7 @@ use crate::ui::commands::{
 };
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
-    NodeGraphContextMenuItem, NodeGraphPresenter,
+    NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
 };
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
@@ -209,6 +209,9 @@ pub struct NodeGraphCanvas {
     auto_measured: Arc<MeasuredGeometryStore>,
     auto_measured_key: Option<(u64, u32)>,
 
+    measured_output: Option<Arc<MeasuredGeometryStore>>,
+    measured_output_key: Option<GeometryCacheKey>,
+
     internals: Option<Arc<NodeGraphInternalsStore>>,
     internals_key: Option<InternalsCacheKey>,
 
@@ -333,6 +336,8 @@ impl NodeGraphCanvas {
             close_command: None,
             auto_measured,
             auto_measured_key: None,
+            measured_output: None,
+            measured_output_key: None,
             internals: None,
             internals_key: None,
             cached_pan: CanvasPoint::default(),
@@ -350,6 +355,18 @@ impl NodeGraphCanvas {
             presenter,
             self.auto_measured.clone(),
         ));
+        self
+    }
+
+    /// Configures a store to receive derived measured geometry each frame.
+    ///
+    /// This is an output-only surface (similar to XyFlow "internals"):
+    /// - the graph model stays pure data,
+    /// - derived geometry is published for overlays/tooling,
+    /// - the store is not consulted by this canvas unless you explicitly pass it into a presenter.
+    pub fn with_measured_output_store(mut self, store: Arc<MeasuredGeometryStore>) -> Self {
+        self.measured_output = Some(store);
+        self.measured_output_key = None;
         self
     }
 
@@ -618,6 +635,107 @@ impl NodeGraphCanvas {
         }
 
         store.update(next);
+    }
+
+    fn update_measured_output_store(&mut self, zoom: f32, geom: &CanvasGeometry) {
+        let Some(store) = self.measured_output.as_ref() else {
+            return;
+        };
+        let Some(key) = self.geometry.key else {
+            return;
+        };
+        if self.measured_output_key == Some(key) {
+            return;
+        }
+        self.measured_output_key = Some(key);
+
+        let zoom = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+        let quant = |v: f32| (v / 0.25).round() * 0.25;
+
+        let mut node_sizes: Vec<(GraphNodeId, (f32, f32))> = Vec::with_capacity(geom.nodes.len());
+        for (&node, node_geom) in &geom.nodes {
+            let w = quant(node_geom.rect.size.width.0 * zoom);
+            let h = quant(node_geom.rect.size.height.0 * zoom);
+            node_sizes.push((node, (w, h)));
+        }
+
+        let mut port_anchors: Vec<(PortId, PortAnchorHint)> = Vec::with_capacity(geom.ports.len());
+        for (&port, handle) in &geom.ports {
+            let Some(node_geom) = geom.nodes.get(&handle.node) else {
+                continue;
+            };
+            let ox = node_geom.rect.origin.x.0;
+            let oy = node_geom.rect.origin.y.0;
+
+            let cx = quant((handle.center.x.0 - ox) * zoom);
+            let cy = quant((handle.center.y.0 - oy) * zoom);
+            let bx = quant((handle.bounds.origin.x.0 - ox) * zoom);
+            let by = quant((handle.bounds.origin.y.0 - oy) * zoom);
+            let bw = quant(handle.bounds.size.width.0 * zoom);
+            let bh = quant(handle.bounds.size.height.0 * zoom);
+
+            let center = Point::new(Px(cx), Px(cy));
+            let bounds = Rect::new(Point::new(Px(bx), Px(by)), Size::new(Px(bw), Px(bh)));
+            port_anchors.push((port, PortAnchorHint { center, bounds }));
+        }
+
+        let keep_nodes: std::collections::BTreeSet<GraphNodeId> =
+            node_sizes.iter().map(|(id, _)| *id).collect();
+        let keep_ports: std::collections::BTreeSet<PortId> =
+            port_anchors.iter().map(|(id, _)| *id).collect();
+
+        let _ = store.update_if_changed(|sizes, anchors| {
+            let mut changed = false;
+
+            sizes.retain(|id, _| {
+                let ok = keep_nodes.contains(id);
+                if !ok {
+                    changed = true;
+                }
+                ok
+            });
+            anchors.retain(|id, _| {
+                let ok = keep_ports.contains(id);
+                if !ok {
+                    changed = true;
+                }
+                ok
+            });
+
+            for (node, size) in &node_sizes {
+                let needs = match sizes.get(node) {
+                    Some(old) => (old.0 - size.0).abs() > 0.25 || (old.1 - size.1).abs() > 0.25,
+                    None => true,
+                };
+                if needs {
+                    sizes.insert(*node, *size);
+                    changed = true;
+                }
+            }
+            for (port, hint) in &port_anchors {
+                let needs = match anchors.get(port) {
+                    Some(old) => {
+                        (old.center.x.0 - hint.center.x.0).abs() > 0.25
+                            || (old.center.y.0 - hint.center.y.0).abs() > 0.25
+                            || (old.bounds.origin.x.0 - hint.bounds.origin.x.0).abs() > 0.25
+                            || (old.bounds.origin.y.0 - hint.bounds.origin.y.0).abs() > 0.25
+                            || (old.bounds.size.width.0 - hint.bounds.size.width.0).abs() > 0.25
+                            || (old.bounds.size.height.0 - hint.bounds.size.height.0).abs() > 0.25
+                    }
+                    None => true,
+                };
+                if needs {
+                    anchors.insert(*port, *hint);
+                    changed = true;
+                }
+            }
+
+            changed
+        });
     }
 
     fn update_view_state<H: UiHost>(
@@ -4304,6 +4422,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         };
 
         let geom = self.canvas_geometry(&*cx.app, &snapshot);
+        self.update_measured_output_store(snapshot.zoom, &geom);
         self.update_internals_store(&*cx.app, &snapshot, cx.bounds, &geom);
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
