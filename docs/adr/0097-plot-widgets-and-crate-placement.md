@@ -38,6 +38,7 @@ without changing `fret-core` / `fret-ui` contracts.
 - `SceneOp::Path` (lines/areas/marker outlines)
 - `SceneOp::Quad` (background, simple markers, simple grid lines as segments)
 - `SceneOp::Text` (axes, ticks, labels, tooltips)
+- `SceneOp::Image` / `SceneOp::ImageRegion` (data-aligned textures, icons, plot-space images)
 - transform/clip/layer/opacity stacks
 
 It must not introduce:

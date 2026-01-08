@@ -33,9 +33,9 @@ token-driven theming and retained rendering/cache.
 | `PlotCandlestick` | `CandlestickPlotCanvas` / `CandlestickSeries` | ✅ | Demo: `apps/fret-examples/src/candlestick_demo.rs`. |
 | `PlotPieChart` | (none) | ❌ | Likely belongs to a charting layer, not a cartesian plot core. |
 | `PlotDigital` | (none) | ❌ | Could be modeled as a step/segment series; clarify UX + sampling. |
-| `PlotImage` | (none) | ❌ | Different from `Heatmap`: arbitrary image in plot coordinates. |
+| `PlotImage` | `PlotOverlays::images` (`PlotImage`) | ✅ | Renders `ImageId` as a data-aligned rect via `SceneOp::ImageRegion` (layers: below/above grid). |
 | `PlotText` | `PlotOverlays::text` (`PlotText`) | 🟡 | Implemented as a caller-owned overlay (ADR 0106). No rich text/callouts yet. |
-| `PlotHistogram2D` | (none) | ❌ | Similar to heatmap but derived from samples and binning. |
+| `PlotHistogram2D` | `Histogram2DPlotCanvas` / `Histogram2DPlotModel` | ✅ | Implemented as a grid-backed plot (bins -> quads) with shared colormap + colorbar. |
 | `PlotDummy` | (none) | ❌ | Not needed; can be handled by layout/legend policies if required. |
 
 ## Interactions & UX (ImPlot)
@@ -49,10 +49,10 @@ token-driven theming and retained rendering/cache.
 | Legend interaction (hide, highlight, pin) | 🟡 | Implemented with retained caching; policy differs from ImPlot in details. |
 | Tags (`TagX` / `TagY`) | ✅ | Implemented via `PlotOverlays::{tags_x,tags_y}` (ADR 0106). |
 | Annotations | 🟡 | `PlotOverlays::text` exists; follow-ups include callouts, arrows, and editable anchors. |
-| Drag tools (`DragPoint` / `DragLineX` / `DragLineY` / `DragRect`) | 🟡 | Implemented via `PlotOverlays` + `PlotOutputSnapshot::drag` (demo: `apps/fret-examples/src/drag_demo.rs`). Snapping/modifier constraints still pending. |
+| Drag tools (`DragPoint` / `DragLineX` / `DragLineY` / `DragRect`) | 🟡 | Implemented via `PlotOverlays` + `PlotOutputSnapshot::drag` (demo: `apps/fret-examples/src/drag_demo.rs`). Modifiers: `Shift` constrains inside-drags (point/rect) to X-only or Y-only; `Alt` snaps to nearest axis tick. |
 | Subplots (`BeginSubplots`) | ❌ | Likely a UI-kit/layout concern, not plot core; needs design. |
 | Aligned plots (`BeginAlignedPlots`) | ❌ | Could be implemented by sharing axis layout constraints across canvases. |
-| Colormaps | 🟡 | Heatmap uses a palette; no public “colormap registry + UI” yet. |
+| Colormaps | 🟡 | Heatmap supports `ColorMapId` + an in-plot colorbar; no public registry UI yet. |
 | SymLog axis scale | ❌ | `AxisScale` currently supports `Linear` and `Log10` only. |
 
 ## What We Should Add Next (Proposed Priorities)
@@ -61,7 +61,6 @@ P0 (high leverage for “commercial-grade” plot UX):
 
 - Tags + text annotations (plot-space primitives, rendered as overlays).
 - Drag tools (point/line/rect), with snapping and modifier-driven constraints.
-- Plot-space images (`PlotImage`) for overlays, background layers, and data-aligned textures.
 
 P1 (broad capability expansion):
 

@@ -25,11 +25,35 @@ Wheel zoom is routed based on region:
 
 Axis-only modifiers when the wheel is over the plot region:
 
-- `Shift`: zoom X only
-- `Ctrl`: zoom Y only
+- `Shift`: zoom X only (default; configurable via `PlotInputMap::wheel_zoom_x_only_mod`)
+- `Ctrl`: zoom Y only (default; configurable via `PlotInputMap::wheel_zoom_y_only_mod`)
 
 Note: ImPlot defaults do not include axis-only modifiers for the wheel, but we keep them because
 they are common in editor UIs and work well with axis locks.
+
+### Wheel zoom input mapping (PlotInputMap)
+
+The wheel zoom implementation uses `PlotInputMap` to decide when zoom is allowed and how it is
+constrained when the pointer is over the plot region.
+
+| InputMap field | Default | Effect |
+| --- | --- | --- |
+| `wheel_zoom_mod` | `None` | When set, wheel zoom only activates if the modifier is pressed. |
+| `wheel_zoom_log2_per_px` | `0.0025` | Controls wheel zoom speed (zoom factor is `2^(delta_y * speed)`). |
+| `wheel_zoom_x_only_mod` | `Some(Shift)` | Over plot region: zoom X only (Y zoom factor forced to 1.0). |
+| `wheel_zoom_y_only_mod` | `Some(Ctrl)` | Over plot region: zoom Y only (X zoom factor forced to 1.0). |
+
+Precedence rules (over the plot region):
+
+- If `wheel_zoom_mod` is set and not pressed, wheel zoom is ignored.
+- If `wheel_zoom_x_only_mod` matches, it takes precedence over `wheel_zoom_y_only_mod`.
+- Otherwise if `wheel_zoom_y_only_mod` matches, apply Y-only zoom.
+
+Over axis regions, region routing takes precedence over axis-only modifiers:
+
+- Over the X axis region: always X-only zoom (all Y zoom factors forced to 1.0).
+- Over a Y axis region: always zoom only that Y axis (X zoom factor forced to 1.0 and other Y
+  zoom factors forced to 1.0).
 
 ## Drag pan policy
 
@@ -61,6 +85,9 @@ Axis locks are split into two independent flags:
 
 Locks apply consistently across plot-region and axis-region interactions.
 
+Lock state is stored in `PlotState::axis_locks`, so it can be persisted or shared when the caller
+provides an external `Model<PlotState>`.
+
 ### UI & shortcuts
 
 The goal is to keep locks discoverable without forcing a context menu early:
@@ -69,6 +96,13 @@ The goal is to keep locks discoverable without forcing a context menu early:
 - `L` toggles both pan+zoom lock for the region under the pointer.
 - `Shift+L` toggles pan lock for the region under the pointer.
 - `Ctrl+L` toggles zoom lock for the region under the pointer.
+
+These shortcuts are configurable via `PlotInputMap`:
+
+- `axis_lock_click`
+- `axis_lock_toggle`
+- `axis_pan_lock_toggle`
+- `axis_zoom_lock_toggle`
 
 When `L`-toggling in the plot region, `fret-plot` treats this as a “global lock” toggle and
 applies it to X and all visible Y axes.

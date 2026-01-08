@@ -2,8 +2,9 @@ use std::collections::HashSet;
 
 use crate::cartesian::{DataPoint, DataRect};
 use crate::series::SeriesId;
+use fret_core::ImageId;
 use fret_core::geometry::{Point, Px};
-use fret_core::scene::Color;
+use fret_core::scene::{Color, UvRect};
 
 use super::models::YAxis;
 
@@ -46,6 +47,21 @@ pub enum PlotDragOutput {
         rect: DataRect,
         phase: PlotDragPhase,
     },
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PlotAxisLock {
+    pub pan: bool,
+    pub zoom: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PlotAxisLocks {
+    pub x: PlotAxisLock,
+    pub y: PlotAxisLock,
+    pub y2: PlotAxisLock,
+    pub y3: PlotAxisLock,
+    pub y4: PlotAxisLock,
 }
 
 /// A caller-owned output snapshot for plot interaction state.
@@ -133,6 +149,8 @@ pub struct PlotState {
     pub pinned_series: Option<SeriesId>,
     /// Optional user query selection in data space.
     pub query: Option<DataRect>,
+    /// Axis pan/zoom locks.
+    pub axis_locks: PlotAxisLocks,
     /// Plot overlays owned by the caller (e.g. reference lines).
     pub overlays: PlotOverlays,
 }
@@ -152,6 +170,7 @@ impl Default for PlotState {
             hidden_series: HashSet::new(),
             pinned_series: None,
             query: None,
+            axis_locks: PlotAxisLocks::default(),
             overlays: PlotOverlays::default(),
         }
     }
@@ -217,6 +236,7 @@ impl InfLineY {
 pub struct PlotOverlays {
     pub inf_lines_x: Vec<InfLineX>,
     pub inf_lines_y: Vec<InfLineY>,
+    pub images: Vec<PlotImage>,
     pub drag_lines_x: Vec<DragLineX>,
     pub drag_lines_y: Vec<DragLineY>,
     pub drag_points: Vec<DragPoint>,
@@ -224,6 +244,58 @@ pub struct PlotOverlays {
     pub tags_x: Vec<TagX>,
     pub tags_y: Vec<TagY>,
     pub text: Vec<PlotText>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PlotImageLayer {
+    /// Draw below grid lines and series (grid stays visible).
+    BelowGrid,
+    /// Draw above grid lines but below series.
+    AboveGrid,
+}
+
+impl Default for PlotImageLayer {
+    fn default() -> Self {
+        Self::BelowGrid
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlotImage {
+    pub image: ImageId,
+    pub rect: DataRect,
+    pub axis: YAxis,
+    pub uv: UvRect,
+    pub opacity: f32,
+    pub layer: PlotImageLayer,
+}
+
+impl PlotImage {
+    pub fn new(image: ImageId, rect: DataRect, axis: YAxis) -> Self {
+        Self {
+            image,
+            rect,
+            axis,
+            uv: UvRect::FULL,
+            opacity: 1.0,
+            layer: PlotImageLayer::default(),
+        }
+    }
+
+    pub fn uv(mut self, uv: UvRect) -> Self {
+        self.uv = uv;
+        self
+    }
+
+    pub fn opacity(mut self, opacity: f32) -> Self {
+        self.opacity = opacity;
+        self
+    }
+
+    pub fn layer(mut self, layer: PlotImageLayer) -> Self {
+        self.layer = layer;
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

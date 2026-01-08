@@ -15,7 +15,7 @@ series model:
 For Fret, we want these features while keeping:
 
 - retained, cache-friendly geometry generation (ADR 0099),
-- portable rendering primitives (`SceneOp::{Path,Quad,Text}` only; ADR 0097),
+- portable rendering primitives (`SceneOp::{Path,Quad,Text,ImageRegion}`; ADR 0097),
 - a clean, composable API that can be shared by all 2D plot types.
 
 ## Decision
@@ -39,12 +39,13 @@ P0 supports static, non-interactive overlays:
 
 - `InfLineX { x: f64, color: Option<Color>, width: Px }`
 - `InfLineY { y: f64, axis: YAxis, color: Option<Color>, width: Px }`
+- `PlotImage { image: ImageId, rect: DataRect, axis: YAxis, ... }` (data-aligned RGBA images)
 - `TagX { x: f64, label: Option<String>, show_value: bool, color: Option<Color> }`
 - `TagY { y: f64, axis: YAxis, label: Option<String>, show_value: bool, color: Option<Color> }`
 - `PlotText { x: f64, y: f64, axis: YAxis, text: String, ... }`
 
 Rendering uses the current `PlotTransform` to map data coordinates into the local plot viewport and emits
-`SceneOp::Quad` / `SceneOp::Text` primitives clipped by the plot region.
+`SceneOp::Quad` / `SceneOp::Text` / `SceneOp::ImageRegion` primitives clipped by the plot region.
 
 Theming is token-driven (see `docs/plot-theme-tokens.md`), with optional annotation tokens:
 
