@@ -93,7 +93,12 @@ impl TaffyLayoutEngine {
         if self.solve_generation == 0 {
             return None;
         }
-        if self.node_solved_generation.get(&child).copied() != Some(self.solve_generation) {
+        let parent_gen = self.node_solved_generation.get(&parent).copied()?;
+        let child_gen = self.node_solved_generation.get(&child).copied()?;
+        if parent_gen == 0 || child_gen == 0 || parent_gen != child_gen {
+            return None;
+        }
+        if !self.seen.contains(&parent) || !self.seen.contains(&child) {
             return None;
         }
         if !self
@@ -139,6 +144,7 @@ impl TaffyLayoutEngine {
         if ctx.node == node && ctx.measured == measured {
             return;
         }
+        self.node_solved_generation.remove(&node);
         let _ = self
             .tree
             .set_node_context(id, Some(NodeContext { node, measured }));
@@ -150,6 +156,7 @@ impl TaffyLayoutEngine {
         if self.styles.get(&node) == Some(&style) {
             return;
         }
+        self.node_solved_generation.remove(&node);
         if self.tree.set_style(id, style.clone()).is_ok() {
             self.styles.insert(node, style);
             let _ = self.tree.mark_dirty(id);
@@ -167,6 +174,7 @@ impl TaffyLayoutEngine {
         if prev == children {
             return;
         }
+        self.node_solved_generation.remove(&node);
 
         let mut child_nodes: Vec<TaffyNodeId> = Vec::with_capacity(children.len());
         for &child in children {
@@ -388,5 +396,11 @@ mod tests {
 
         let a_after = engine.layout_rect(child_a_id);
         assert_eq!(a_before, a_after);
+
+        assert_eq!(
+            engine.child_layout_rect_if_solved(root_a, child_a),
+            Some(a_after),
+            "solved subtree rects should remain readable after solving an unrelated root"
+        );
     }
 }
