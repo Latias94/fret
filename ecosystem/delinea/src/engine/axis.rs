@@ -2,6 +2,28 @@ use crate::engine::model::{AxisModel, ChartModel};
 use crate::engine::window::DataWindow;
 use crate::ids::AxisId;
 use crate::scale::AxisScale;
+use fret_core::Rect;
+
+pub fn data_at_px(window: DataWindow, px: f32, origin_px: f32, span_px: f32) -> f64 {
+    let mut window = window;
+    window.clamp_non_degenerate();
+
+    let span = window.span();
+    if !span.is_finite() || span <= 0.0 {
+        return window.min;
+    }
+
+    if !span_px.is_finite() || span_px <= 0.0 {
+        return window.min;
+    }
+
+    let t = ((px - origin_px) / span_px).clamp(0.0, 1.0) as f64;
+    window.min + t * span
+}
+
+pub fn data_at_x_in_rect(window: DataWindow, x_px: f32, rect: Rect) -> f64 {
+    data_at_px(window, x_px, rect.origin.x.0, rect.size.width.0)
+}
 
 pub fn category_domain_window(axis: &AxisModel) -> Option<DataWindow> {
     let AxisScale::Category(scale) = &axis.scale else {

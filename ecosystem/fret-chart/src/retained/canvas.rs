@@ -452,28 +452,6 @@ impl ChartCanvas {
         (start, end)
     }
 
-    fn data_at_x_px(window: DataWindow, x_px: f32, viewport_width_px: f32) -> f64 {
-        let viewport_width_px = viewport_width_px as f64;
-        if !viewport_width_px.is_finite() || viewport_width_px <= 0.0 {
-            return window.min;
-        }
-        let t = ((x_px as f64) / viewport_width_px).clamp(0.0, 1.0);
-        window.min + t * window.span()
-    }
-
-    fn data_at_y_px_from_bottom(
-        window: DataWindow,
-        y_px_from_bottom: f32,
-        viewport_height_px: f32,
-    ) -> f64 {
-        let viewport_height_px = viewport_height_px as f64;
-        if !viewport_height_px.is_finite() || viewport_height_px <= 0.0 {
-            return window.min;
-        }
-        let t = ((y_px_from_bottom as f64) / viewport_height_px).clamp(0.0, 1.0);
-        window.min + t * window.span()
-    }
-
     fn axis_ticks(
         model: &delinea::engine::model::ChartModel,
         axis: delinea::AxisId,
@@ -1531,8 +1509,18 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 } else {
                                     let x0 = start_local.x.0.min(end_local.x.0).clamp(0.0, width);
                                     let x1 = start_local.x.0.max(end_local.x.0).clamp(0.0, width);
-                                    let min = Self::data_at_x_px(drag.start_x, x0, width);
-                                    let max = Self::data_at_x_px(drag.start_x, x1, width);
+                                    let min = delinea::engine::axis::data_at_px(
+                                        drag.start_x,
+                                        x0,
+                                        0.0,
+                                        width,
+                                    );
+                                    let max = delinea::engine::axis::data_at_px(
+                                        drag.start_x,
+                                        x1,
+                                        0.0,
+                                        width,
+                                    );
                                     let mut window = DataWindow { min, max };
                                     window.clamp_non_degenerate();
                                     let (locked_min, locked_max) =
@@ -1549,14 +1537,16 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                     let y1 = start_local.y.0.max(end_local.y.0).clamp(0.0, height);
                                     let y0_from_bottom = height - y1;
                                     let y1_from_bottom = height - y0;
-                                    let min = Self::data_at_y_px_from_bottom(
+                                    let min = delinea::engine::axis::data_at_px(
                                         drag.start_y,
                                         y0_from_bottom,
+                                        0.0,
                                         height,
                                     );
-                                    let max = Self::data_at_y_px_from_bottom(
+                                    let max = delinea::engine::axis::data_at_px(
                                         drag.start_y,
                                         y1_from_bottom,
+                                        0.0,
                                         height,
                                     );
                                     let mut window = DataWindow { min, max };
@@ -2089,15 +2079,15 @@ mod tests {
             min: 10.0,
             max: 20.0,
         };
-        let a = ChartCanvas::data_at_x_px(window, 0.0, 100.0);
-        let b = ChartCanvas::data_at_x_px(window, 50.0, 100.0);
-        let c = ChartCanvas::data_at_x_px(window, 100.0, 100.0);
+        let a = delinea::engine::axis::data_at_px(window, 0.0, 0.0, 100.0);
+        let b = delinea::engine::axis::data_at_px(window, 50.0, 0.0, 100.0);
+        let c = delinea::engine::axis::data_at_px(window, 100.0, 0.0, 100.0);
         assert!(a < b && b < c);
         assert_eq!(a, 10.0);
         assert_eq!(c, 20.0);
 
-        let d = ChartCanvas::data_at_y_px_from_bottom(window, 0.0, 100.0);
-        let e = ChartCanvas::data_at_y_px_from_bottom(window, 100.0, 100.0);
+        let d = delinea::engine::axis::data_at_px(window, 0.0, 0.0, 100.0);
+        let e = delinea::engine::axis::data_at_px(window, 100.0, 0.0, 100.0);
         assert_eq!(d, 10.0);
         assert_eq!(e, 20.0);
     }

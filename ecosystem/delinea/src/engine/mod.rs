@@ -564,7 +564,7 @@ fn compute_axis_axis_pointer_output(
     let x_axis = primary.x_axis;
 
     let x_window = axis_windows.get(&x_axis).copied().unwrap_or_default();
-    let x_value = data_at_x_px(x_window, hover_px.x.0, viewport);
+    let x_value = crate::engine::axis::data_at_x_in_rect(x_window, hover_px.x.0, viewport);
     if !x_value.is_finite() {
         return None;
     }
@@ -748,22 +748,4 @@ fn lower_bound(xs: &[f64], value: f64) -> usize {
         }
     }
     lo
-}
-
-fn data_at_x_px(window: window::DataWindow, x_px: f32, viewport: Rect) -> f64 {
-    let mut window = window;
-    window.clamp_non_degenerate();
-    let span = window.span();
-    if !span.is_finite() || span <= 0.0 {
-        return window.min;
-    }
-
-    let x0 = viewport.origin.x.0;
-    let w = viewport.size.width.0;
-    if !w.is_finite() || w <= 0.0 {
-        return window.min;
-    }
-
-    let t = ((x_px - x0) / w).clamp(0.0, 1.0) as f64;
-    window.min + t * span
 }
