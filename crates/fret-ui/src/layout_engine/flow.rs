@@ -336,6 +336,7 @@ fn passthrough_wrapper_child<H: UiHost>(
         ElementInstance::Container(_)
         | ElementInstance::PointerRegion(_)
         | ElementInstance::HoverRegion(_)
+        | ElementInstance::WheelRegion(_)
         | ElementInstance::Pressable(_)
         | ElementInstance::Opacity(_)
         | ElementInstance::VisualTransform(_)
