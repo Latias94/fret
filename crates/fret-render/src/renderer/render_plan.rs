@@ -8,6 +8,7 @@ pub(super) struct SceneSegmentId(pub(super) usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum PlanTarget {
     Output,
+    Offscreen0,
 }
 
 #[derive(Debug)]
@@ -22,6 +23,14 @@ pub(super) struct SceneDrawRangePass {
 pub(super) enum RenderPlanPass {
     SceneDrawRange(SceneDrawRangePass),
     PathMsaaBatch(PathMsaaBatchPass),
+    FullscreenBlit(FullscreenBlitPass),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct FullscreenBlitPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
 #[derive(Debug, Clone)]
@@ -43,18 +52,28 @@ impl RenderPlan {
         encoding: &SceneEncoding,
         clear: wgpu::Color,
         path_samples: u32,
+        scene_target: PlanTarget,
     ) -> Self {
         let draws = &encoding.ordered_draws;
 
         if path_samples <= 1 {
-            return Self {
+            let mut plan = Self {
                 passes: vec![RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                     segment: SceneSegmentId(0),
-                    target: PlanTarget::Output,
+                    target: scene_target,
                     load: wgpu::LoadOp::Clear(clear),
                     draw_range: 0..draws.len(),
                 })],
             };
+            if scene_target == PlanTarget::Offscreen0 {
+                plan.passes
+                    .push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                        src: PlanTarget::Offscreen0,
+                        dst: PlanTarget::Output,
+                        load: wgpu::LoadOp::Clear(clear),
+                    }));
+            }
+            return plan;
         }
 
         let mut passes: Vec<RenderPlanPass> = Vec::new();
@@ -67,7 +86,7 @@ impl RenderPlan {
                 if is_first_pass {
                     passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                         segment: SceneSegmentId(0),
-                        target: PlanTarget::Output,
+                        target: scene_target,
                         load: wgpu::LoadOp::Clear(clear),
                         draw_range: scene_range_start..cursor,
                     }));
@@ -75,7 +94,7 @@ impl RenderPlan {
                 } else if scene_range_start < cursor {
                     passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                         segment: SceneSegmentId(0),
-                        target: PlanTarget::Output,
+                        target: scene_target,
                         load: wgpu::LoadOp::Load,
                         draw_range: scene_range_start..cursor,
                     }));
@@ -96,7 +115,7 @@ impl RenderPlan {
 
                 passes.push(RenderPlanPass::PathMsaaBatch(PathMsaaBatchPass {
                     segment: SceneSegmentId(0),
-                    target: PlanTarget::Output,
+                    target: scene_target,
                     draw_range: cursor..end,
                     union_scissor: union,
                     batch_uniform_index,
@@ -113,19 +132,28 @@ impl RenderPlan {
         if is_first_pass {
             passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                 segment: SceneSegmentId(0),
-                target: PlanTarget::Output,
+                target: scene_target,
                 load: wgpu::LoadOp::Clear(clear),
                 draw_range: 0..draws.len(),
             }));
         } else if scene_range_start < draws.len() {
             passes.push(RenderPlanPass::SceneDrawRange(SceneDrawRangePass {
                 segment: SceneSegmentId(0),
-                target: PlanTarget::Output,
+                target: scene_target,
                 load: wgpu::LoadOp::Load,
                 draw_range: scene_range_start..draws.len(),
             }));
         }
 
-        Self { passes }
+        let mut plan = Self { passes };
+        if scene_target == PlanTarget::Offscreen0 {
+            plan.passes
+                .push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                    src: PlanTarget::Offscreen0,
+                    dst: PlanTarget::Output,
+                    load: wgpu::LoadOp::Clear(clear),
+                }));
+        }
+        plan
     }
 }

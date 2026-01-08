@@ -1,3 +1,4 @@
+mod blit;
 mod composite;
 mod mask;
 mod path;

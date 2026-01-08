@@ -75,7 +75,17 @@ impl Renderer {
             self.scene_encoding_cache_key = Some(key);
             encoding
         };
-        let plan = RenderPlan::compile_for_scene(&encoding, clear.0, path_samples);
+
+        if self.debug_offscreen_blit_enabled {
+            self.ensure_blit_pipeline(device, format);
+            self.ensure_offscreen_target(device, viewport_size, format);
+        }
+        let scene_target = if self.debug_offscreen_blit_enabled {
+            PlanTarget::Offscreen0
+        } else {
+            PlanTarget::Output
+        };
+        let plan = RenderPlan::compile_for_scene(&encoding, clear.0, path_samples, scene_target);
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
@@ -149,8 +159,17 @@ impl Renderer {
             match planned_pass {
                 RenderPlanPass::SceneDrawRange(scene_pass) => {
                     debug_assert_eq!(scene_pass.segment.0, 0);
-                    debug_assert!(matches!(scene_pass.target, PlanTarget::Output));
                     let load = scene_pass.load;
+                    let pass_target_view = match scene_pass.target {
+                        PlanTarget::Output => target_view,
+                        PlanTarget::Offscreen0 => {
+                            &self
+                                .offscreen_target
+                                .as_ref()
+                                .expect("offscreen target must exist")
+                                .view
+                        }
+                    };
 
                     {
                         enum ActivePipeline {
@@ -160,7 +179,6 @@ impl Renderer {
                             TextMask,
                             TextColor,
                             Mask,
-                            Composite,
                             Path,
                         }
 
@@ -184,15 +202,10 @@ impl Renderer {
                             .mask_pipeline
                             .as_ref()
                             .expect("mask pipeline must exist");
-                        let composite_pipeline = self
-                            .composite_pipeline
-                            .as_ref()
-                            .expect("composite pipeline must exist");
                         let path_pipeline = self
                             .path_pipeline
                             .as_ref()
                             .expect("path pipeline must exist");
-                        let path_msaa_pipeline = self.path_msaa_pipeline.as_ref();
 
                         let mut active_pipeline = ActivePipeline::None;
 
@@ -219,211 +232,12 @@ impl Renderer {
                             })
                         }
 
-                        let mut pass = begin_main_pass(&mut encoder, target_view, load);
+                        let mut pass = begin_main_pass(&mut encoder, pass_target_view, load);
                         let mut active_uniform_offset: Option<u32> = None;
 
                         let mut i = scene_pass.draw_range.start;
                         while i < scene_pass.draw_range.end {
                             let item = &encoding.ordered_draws[i];
-
-                            if let OrderedDraw::Path(first) = item
-                                && path_samples > 1
-                            {
-                                let mut union = first.scissor;
-                                let batch_uniform_index = first.uniform_index;
-                                let mut end = i + 1;
-                                while end < encoding.ordered_draws.len() {
-                                    match &encoding.ordered_draws[end] {
-                                        OrderedDraw::Path(d)
-                                            if d.uniform_index == batch_uniform_index =>
-                                        {
-                                            union = union_scissor(union, d.scissor);
-                                            end += 1;
-                                        }
-                                        _ => break,
-                                    }
-                                }
-
-                                // Render the path batch to an intermediate MSAA target, then composite into the
-                                // main pass to preserve strict op ordering.
-                                drop(pass);
-
-                                let Some(intermediate) = &self.path_intermediate else {
-                                    pass = begin_main_pass(
-                                        &mut encoder,
-                                        target_view,
-                                        wgpu::LoadOp::Load,
-                                    );
-                                    i = end;
-                                    continue;
-                                };
-
-                                {
-                                    let Some(path_msaa_pipeline) = path_msaa_pipeline else {
-                                        pass = begin_main_pass(
-                                            &mut encoder,
-                                            target_view,
-                                            wgpu::LoadOp::Load,
-                                        );
-                                        i = end;
-                                        continue;
-                                    };
-
-                                    let mut path_pass =
-                                        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                            label: Some("fret path intermediate pass"),
-                                            color_attachments: &[Some(
-                                                wgpu::RenderPassColorAttachment {
-                                                    view: intermediate
-                                                        .msaa_view
-                                                        .as_ref()
-                                                        .unwrap_or(&intermediate.resolved_view),
-                                                    depth_slice: None,
-                                                    resolve_target: if intermediate.sample_count > 1
-                                                    {
-                                                        Some(&intermediate.resolved_view)
-                                                    } else {
-                                                        None
-                                                    },
-                                                    ops: wgpu::Operations {
-                                                        load: wgpu::LoadOp::Clear(
-                                                            wgpu::Color::TRANSPARENT,
-                                                        ),
-                                                        store: if intermediate.sample_count > 1 {
-                                                            wgpu::StoreOp::Discard
-                                                        } else {
-                                                            wgpu::StoreOp::Store
-                                                        },
-                                                    },
-                                                },
-                                            )],
-                                            depth_stencil_attachment: None,
-                                            timestamp_writes: None,
-                                            occlusion_query_set: None,
-                                            multiview_mask: None,
-                                        });
-
-                                    path_pass.set_pipeline(path_msaa_pipeline);
-                                    path_pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
-
-                                    let mut active_uniform_offset: Option<u32> = None;
-                                    for j in i..end {
-                                        let OrderedDraw::Path(draw) = &encoding.ordered_draws[j]
-                                        else {
-                                            unreachable!();
-                                        };
-                                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                                            continue;
-                                        }
-                                        path_pass.set_scissor_rect(
-                                            draw.scissor.x,
-                                            draw.scissor.y,
-                                            draw.scissor.w,
-                                            draw.scissor.h,
-                                        );
-                                        let uniform_offset = (u64::from(draw.uniform_index)
-                                            * self.uniform_stride)
-                                            as u32;
-                                        if active_uniform_offset != Some(uniform_offset) {
-                                            path_pass.set_bind_group(
-                                                0,
-                                                &self.uniform_bind_group,
-                                                &[uniform_offset],
-                                            );
-                                            active_uniform_offset = Some(uniform_offset);
-                                        }
-                                        path_pass.draw(
-                                            draw.first_vertex
-                                                ..(draw.first_vertex + draw.vertex_count),
-                                            0..1,
-                                        );
-                                    }
-                                }
-
-                                pass =
-                                    begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Load);
-                                active_pipeline = ActivePipeline::None;
-                                active_uniform_offset = None;
-
-                                if union.w > 0 && union.h > 0 {
-                                    let x0 = union.x as f32;
-                                    let y0 = union.y as f32;
-                                    let x1 = (union.x + union.w) as f32;
-                                    let y1 = (union.y + union.h) as f32;
-
-                                    let vw = viewport_size.0.max(1) as f32;
-                                    let vh = viewport_size.1.max(1) as f32;
-                                    let u0 = x0 / vw;
-                                    let v0 = y0 / vh;
-                                    let u1 = x1 / vw;
-                                    let v1 = y1 / vh;
-
-                                    let vertices: [ViewportVertex; 6] = [
-                                        ViewportVertex {
-                                            pos_px: [x0, y0],
-                                            uv: [u0, v0],
-                                            opacity: 1.0,
-                                            _pad: [0.0; 3],
-                                        },
-                                        ViewportVertex {
-                                            pos_px: [x1, y0],
-                                            uv: [u1, v0],
-                                            opacity: 1.0,
-                                            _pad: [0.0; 3],
-                                        },
-                                        ViewportVertex {
-                                            pos_px: [x1, y1],
-                                            uv: [u1, v1],
-                                            opacity: 1.0,
-                                            _pad: [0.0; 3],
-                                        },
-                                        ViewportVertex {
-                                            pos_px: [x0, y0],
-                                            uv: [u0, v0],
-                                            opacity: 1.0,
-                                            _pad: [0.0; 3],
-                                        },
-                                        ViewportVertex {
-                                            pos_px: [x1, y1],
-                                            uv: [u1, v1],
-                                            opacity: 1.0,
-                                            _pad: [0.0; 3],
-                                        },
-                                        ViewportVertex {
-                                            pos_px: [x0, y1],
-                                            uv: [u0, v1],
-                                            opacity: 1.0,
-                                            _pad: [0.0; 3],
-                                        },
-                                    ];
-                                    queue.write_buffer(
-                                        &self.path_composite_vertices,
-                                        0,
-                                        bytemuck::cast_slice(&vertices),
-                                    );
-
-                                    pass.set_pipeline(composite_pipeline);
-                                    let uniform_offset = (u64::from(batch_uniform_index)
-                                        * self.uniform_stride)
-                                        as u32;
-                                    pass.set_bind_group(
-                                        0,
-                                        &self.uniform_bind_group,
-                                        &[uniform_offset],
-                                    );
-                                    pass.set_bind_group(1, &intermediate.bind_group, &[]);
-                                    pass.set_vertex_buffer(
-                                        0,
-                                        self.path_composite_vertices.slice(..),
-                                    );
-                                    pass.set_scissor_rect(union.x, union.y, union.w, union.h);
-                                    pass.draw(0..6, 0..1);
-                                    active_pipeline = ActivePipeline::Composite;
-                                }
-
-                                i = end;
-                                continue;
-                            }
 
                             match item {
                                 OrderedDraw::Quad(draw) => {
@@ -691,7 +505,16 @@ impl Renderer {
                 }
                 RenderPlanPass::PathMsaaBatch(path_pass) => {
                     debug_assert_eq!(path_pass.segment.0, 0);
-                    debug_assert!(matches!(path_pass.target, PlanTarget::Output));
+                    let pass_target_view = match path_pass.target {
+                        PlanTarget::Output => target_view,
+                        PlanTarget::Offscreen0 => {
+                            &self
+                                .offscreen_target
+                                .as_ref()
+                                .expect("offscreen target must exist")
+                                .view
+                        }
+                    };
 
                     let start = path_pass.draw_range.start;
                     let end = path_pass.draw_range.end;
@@ -837,7 +660,7 @@ impl Renderer {
                     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: Some("fret renderer pass"),
                         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                            view: target_view,
+                            view: pass_target_view,
                             depth_slice: None,
                             resolve_target: None,
                             ops: wgpu::Operations {
@@ -860,6 +683,39 @@ impl Renderer {
                     pass.set_scissor_rect(union.x, union.y, union.w, union.h);
                     pass.draw(0..6, 0..1);
                 }
+                RenderPlanPass::FullscreenBlit(pass) => {
+                    debug_assert!(matches!(pass.src, PlanTarget::Offscreen0));
+                    debug_assert!(matches!(pass.dst, PlanTarget::Output));
+
+                    let blit_pipeline = self
+                        .blit_pipeline
+                        .as_ref()
+                        .expect("blit pipeline must exist");
+                    let offscreen = self
+                        .offscreen_target
+                        .as_ref()
+                        .expect("offscreen target must exist");
+
+                    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("fret blit pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: target_view,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: pass.load,
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+                    pass.set_pipeline(blit_pipeline);
+                    pass.set_bind_group(0, &offscreen.blit_bind_group, &[]);
+                    pass.draw(0..3, 0..1);
+                }
             }
         }
 
@@ -871,5 +727,57 @@ impl Renderer {
         }
         self.scene_encoding_cache = encoding;
         cmd
+    }
+
+    fn ensure_offscreen_target(
+        &mut self,
+        device: &wgpu::Device,
+        viewport_size: (u32, u32),
+        format: wgpu::TextureFormat,
+    ) {
+        if self
+            .offscreen_target
+            .as_ref()
+            .is_some_and(|t| t.size == viewport_size && t.format == format)
+        {
+            return;
+        }
+
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fret offscreen target"),
+            size: wgpu::Extent3d {
+                width: viewport_size.0.max(1),
+                height: viewport_size.1.max(1),
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let layout = self
+            .blit_bind_group_layout
+            .as_ref()
+            .expect("blit bind group layout must exist");
+        let blit_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("fret offscreen blit bind group"),
+            layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(&view),
+            }],
+        });
+
+        self.offscreen_target = Some(OffscreenTarget {
+            size: viewport_size,
+            format,
+            view,
+            blit_bind_group,
+            _texture: texture,
+        });
     }
 }

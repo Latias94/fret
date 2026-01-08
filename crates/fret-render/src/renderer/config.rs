@@ -138,6 +138,14 @@ impl Renderer {
         self.path_msaa_samples = pow2_floor.max(1);
     }
 
+    pub fn debug_offscreen_blit_enabled(&self) -> bool {
+        self.debug_offscreen_blit_enabled
+    }
+
+    pub fn set_debug_offscreen_blit_enabled(&mut self, enabled: bool) {
+        self.debug_offscreen_blit_enabled = enabled;
+    }
+
     pub fn set_text_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
         self.text_system.set_font_families(config)
     }

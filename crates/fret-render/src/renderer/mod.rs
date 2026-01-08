@@ -95,11 +95,16 @@ pub struct Renderer {
     composite_pipeline_format: Option<wgpu::TextureFormat>,
     composite_pipeline: Option<wgpu::RenderPipeline>,
 
+    blit_pipeline_format: Option<wgpu::TextureFormat>,
+    blit_pipeline: Option<wgpu::RenderPipeline>,
+    blit_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
     path_vertex_buffers: Vec<wgpu::Buffer>,
     path_vertex_buffer_index: usize,
     path_vertex_capacity: usize,
 
     path_intermediate: Option<PathIntermediate>,
+    offscreen_target: Option<OffscreenTarget>,
     path_composite_vertices: wgpu::Buffer,
 
     text_system: TextSystem,
@@ -125,6 +130,7 @@ pub struct Renderer {
     svg_perf: SvgPerfStats,
 
     path_msaa_samples: u32,
+    debug_offscreen_blit_enabled: bool,
 
     render_targets: RenderTargetRegistry,
     images: ImageRegistry,
