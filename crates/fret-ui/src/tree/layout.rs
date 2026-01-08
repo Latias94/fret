@@ -1,6 +1,8 @@
 use super::*;
 use std::any::TypeId;
 
+use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
+
 impl<H: UiHost> UiTree<H> {
     pub fn layout_all(
         &mut self,
@@ -60,6 +62,17 @@ impl<H: UiHost> UiTree<H> {
         scale_factor: f32,
     ) -> Size {
         self.layout_node(app, services, root, bounds, scale_factor)
+    }
+
+    pub fn measure_in(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        node: NodeId,
+        constraints: LayoutConstraints,
+        scale_factor: f32,
+    ) -> Size {
+        self.measure_node(app, services, node, constraints, scale_factor)
     }
 
     fn layout_node(
@@ -194,5 +207,85 @@ impl<H: UiHost> UiTree<H> {
         }
 
         size
+    }
+
+    fn measure_node(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        node: NodeId,
+        constraints: LayoutConstraints,
+        scale_factor: f32,
+    ) -> Size {
+        let key = MeasureStackKey {
+            node,
+            known_w_bits: constraints.known.width.map(|px| px.0.to_bits()),
+            known_h_bits: constraints.known.height.map(|px| px.0.to_bits()),
+            avail_w: available_space_key(constraints.available.width),
+            avail_h: available_space_key(constraints.available.height),
+            scale_bits: scale_factor.to_bits(),
+        };
+        if self.measure_stack.contains(&key) {
+            if cfg!(debug_assertions) {
+                panic!("measure_in re-entered for {node:?} under {constraints:?}");
+            }
+            return Size::default();
+        }
+        self.measure_stack.push(key);
+
+        let sf = scale_factor;
+
+        let mut observations = SmallCopyList::<(ModelId, Invalidation), 8>::default();
+        let mut observe_model = |model: ModelId, inv: Invalidation| {
+            observations.push((model, inv));
+        };
+
+        let mut global_observations = SmallCopyList::<(TypeId, Invalidation), 8>::default();
+        let mut observe_global = |id: TypeId, inv: Invalidation| {
+            global_observations.push((id, inv));
+        };
+        observe_global(TypeId::of::<Theme>(), Invalidation::Layout);
+        observe_global(
+            TypeId::of::<fret_runtime::TextFontStackKey>(),
+            Invalidation::Layout,
+        );
+
+        let size = self.with_widget_mut(node, |widget, tree| {
+            let mut children_buf = SmallNodeList::<32>::default();
+            if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
+                children_buf.set(children);
+            }
+            let mut cx = crate::widget::MeasureCx {
+                app,
+                node,
+                window: tree.window,
+                focus: tree.focus,
+                children: children_buf.as_slice(),
+                constraints,
+                scale_factor: sf,
+                services: &mut *services,
+                observe_model: &mut observe_model,
+                observe_global: &mut observe_global,
+                tree,
+            };
+            widget.measure(&mut cx)
+        });
+
+        self.observed_in_layout
+            .record(node, observations.as_slice());
+        self.observed_globals_in_layout
+            .record(node, global_observations.as_slice());
+
+        let popped = self.measure_stack.pop();
+        debug_assert_eq!(popped, Some(key));
+        size
+    }
+}
+
+fn available_space_key(avail: AvailableSpace) -> (u8, u32) {
+    match avail {
+        AvailableSpace::Definite(px) => (0, px.0.to_bits()),
+        AvailableSpace::MinContent => (1, 0),
+        AvailableSpace::MaxContent => (2, 0),
     }
 }

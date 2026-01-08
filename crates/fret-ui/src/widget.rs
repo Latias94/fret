@@ -7,6 +7,8 @@ use fret_runtime::{CommandId, Effect, InputContext, Model, ModelId};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
+use crate::layout_constraints::LayoutConstraints;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Invalidation {
     Layout,
@@ -161,6 +163,45 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     pub fn layout_in(&mut self, child: NodeId, bounds: Rect) -> Size {
         self.tree
             .layout_in(self.app, self.services, child, bounds, self.scale_factor)
+    }
+
+    pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
+        self.tree
+            .measure_in(self.app, self.services, child, constraints, self.scale_factor)
+    }
+}
+
+pub struct MeasureCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub tree: &'a mut crate::tree::UiTree<H>,
+    pub node: NodeId,
+    pub window: Option<AppWindowId>,
+    pub focus: Option<NodeId>,
+    pub children: &'a [NodeId],
+    pub constraints: LayoutConstraints,
+    pub scale_factor: f32,
+    pub services: &'a mut dyn UiServices,
+    pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
+    pub observe_global: &'a mut dyn FnMut(TypeId, Invalidation),
+}
+
+impl<'a, H: UiHost> MeasureCx<'a, H> {
+    pub fn theme(&mut self) -> &Theme {
+        self.observe_global::<Theme>(Invalidation::Layout);
+        Theme::global(&*self.app)
+    }
+
+    pub fn observe_model<T>(&mut self, model: &Model<T>, invalidation: Invalidation) {
+        (self.observe_model)(model.id(), invalidation);
+    }
+
+    pub fn observe_global<T: Any>(&mut self, invalidation: Invalidation) {
+        (self.observe_global)(TypeId::of::<T>(), invalidation);
+    }
+
+    pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
+        self.tree
+            .measure_in(self.app, self.services, child, constraints, self.scale_factor)
     }
 }
 
@@ -455,6 +496,9 @@ pub trait Widget<H: UiHost> {
         _descendant_bounds: Rect,
     ) -> ScrollIntoViewResult {
         ScrollIntoViewResult::NotHandled
+    }
+    fn measure(&mut self, _cx: &mut MeasureCx<'_, H>) -> Size {
+        Size::default()
     }
     fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
         Size::default()

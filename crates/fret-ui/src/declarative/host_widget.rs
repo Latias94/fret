@@ -4,11 +4,13 @@ use super::frame::layout_style_for_node;
 use super::layout_helpers::clamp_to_constraints;
 use super::prelude::*;
 use super::taffy_layout::*;
-use crate::widget::CommandCx;
+use crate::widget::{CommandCx, MeasureCx};
 use fret_runtime::CommandId;
+use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutConstraints, LayoutSize};
 
 mod event;
 mod layout;
+mod measure;
 mod paint;
 mod semantics;
 
@@ -245,23 +247,26 @@ impl ElementHostWidget {
                         return *size;
                     }
 
-                    let max_w = match avail.width {
-                        TaffyAvailableSpace::Definite(w) => Px(w),
-                        _ => Px(1.0e9),
-                    };
-                    let max_h = match avail.height {
-                        TaffyAvailableSpace::Definite(h) => Px(h),
-                        _ => Px(1.0e9),
-                    };
-
-                    let known_w = known.width.map(Px);
-                    let known_h = known.height.map(Px);
-
-                    let w = known_w.unwrap_or(max_w);
-                    let h = known_h.unwrap_or(max_h);
-
-                    let probe = Rect::new(inner_origin, Size::new(w, h));
-                    let s = cx.layout_in(child, probe);
+                    let constraints = LayoutConstraints::new(
+                        LayoutSize::new(known.width.map(Px), known.height.map(Px)),
+                        LayoutSize::new(
+                            match avail.width {
+                                TaffyAvailableSpace::Definite(w) => {
+                                    RuntimeAvailableSpace::Definite(Px(w))
+                                }
+                                TaffyAvailableSpace::MinContent => RuntimeAvailableSpace::MinContent,
+                                TaffyAvailableSpace::MaxContent => RuntimeAvailableSpace::MaxContent,
+                            },
+                            match avail.height {
+                                TaffyAvailableSpace::Definite(h) => {
+                                    RuntimeAvailableSpace::Definite(Px(h))
+                                }
+                                TaffyAvailableSpace::MinContent => RuntimeAvailableSpace::MinContent,
+                                TaffyAvailableSpace::MaxContent => RuntimeAvailableSpace::MaxContent,
+                            },
+                        ),
+                    );
+                    let s = cx.measure_in(child, constraints);
                     let out = taffy::geometry::Size {
                         width: s.width.0,
                         height: s.height.0,
@@ -614,6 +619,10 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         self.semantics_impl(cx);
+    }
+
+    fn measure(&mut self, cx: &mut MeasureCx<'_, H>) -> Size {
+        self.measure_impl(cx)
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {

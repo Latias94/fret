@@ -7,6 +7,7 @@ pub mod focus_visible;
 mod frame_cx;
 pub mod host;
 pub mod input_modality;
+pub mod layout_constraints;
 pub mod overlay_placement;
 pub mod paint;
 #[cfg(feature = "unstable-retained-bridge")]
