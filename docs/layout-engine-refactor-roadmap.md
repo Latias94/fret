@@ -24,8 +24,11 @@ contract source of truth.
 
 ## Current Progress Snapshot
 
-- P0: `AvailableSpace` + non-reentrant `measure_in` land and stabilize. (**In progress**, see `wt-layout-engine2`.)
-- P1+: window-scoped engine and viewport roots. (**Planned**.)
+- P0: `AvailableSpace` + non-reentrant `measure_in`. (**In progress**; implemented in `wt-layout-engine2`, pending merge.)
+- P1: window-scoped engine skeleton behind `fret-ui/layout-engine-v2`. (**In progress**; implemented in `wt-layout-engine2`.)
+- P2: two-phase protocol (request/build vs compute/apply) behind the same feature flag. (**In progress**; implemented in `wt-layout-engine2`.)
+- P3: engine-backed Flex/Grid with leaf-only intrinsic measurement; wrapper-node migration partially complete. (**In progress**.)
+- P4: docking “viewport roots” recording lands; per-viewport independent solve/apply still pending. (**In progress**.)
 
 Update this section by editing this file (avoid scattering progress notes across ADRs).
 
@@ -116,6 +119,8 @@ keeping explicit barrier containers outside Taffy.
 - Docking provides definite viewport rects.
 - Engine computes each viewport root independently.
 - Apply composes viewport-local rects into window-local bounds.
+- Viewport roots are registered by docking barriers and flushed as independent layout passes (to
+  avoid mixing barrier rect production with subtree layout and to preserve overlay anchoring order).
 - Barriers interop contract:
   - scroll uses intrinsic `MaxContent` to measure content extent,
   - virtualization only lays out visible items (+ overscan),
@@ -142,4 +147,3 @@ keeping explicit barrier containers outside Taffy.
 - Feature flag defaults to on (or legacy path removed).
 - `cargo clippy --workspace --all-targets -- -D warnings` passes.
 - `cargo nextest run` (or `cargo test --workspace`) passes on CI targets.
-

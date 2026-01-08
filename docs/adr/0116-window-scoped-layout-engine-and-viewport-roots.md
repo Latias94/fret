@@ -140,6 +140,14 @@ bounds into the retained UI tree.
 This keeps multi-viewport layouts independent while preserving a single window-local coordinate
 space for paint, hit-testing, and overlays.
 
+Implementation note (barrier ordering):
+
+- Docking/splits register viewport roots (node + definite rect) during their own layout pass.
+- The runtime must ensure viewport root subtrees are laid out **after** the docking barrier has
+  produced rects, but **before** overlay roots that may query those bounds for anchored placement
+  (ADR 0011). In practice, this means viewport roots are flushed as independent layout passes
+  between “base root” layout and subsequent overlay root layout.
+
 ### 4) Barriers and interop contracts
 
 Barriers are layout system boundaries (ADR 0035, ADR 0042, ADR 0007):
@@ -223,11 +231,25 @@ Debug surfaces:
 3. Adopt a full CSS engine
    - Rejected: violates typed semantics and increases surface area significantly.
 
+## Open Questions
+
+- Should viewport roots be registered during docking layout (barrier) and consumed by the engine
+  later in the same frame, or should the build/request phase explicitly produce the root list?
+- What is the minimal “wrapper node set” that must be represented in the engine Taffy tree to make
+  per-viewport independent solves meaningful for real shadcn/Radix compositions (Stack/Container,
+  Pressable, padding wrappers, etc.)?
+- How should overlay roots that are anchored to viewport content be handled:
+  - always window-scoped overlay roots that query window-space bounds after apply (ADR 0011), or
+  - optional per-viewport overlay roots that solve in viewport-local space?
+- What is the engine’s default pixel rounding policy (if any) and where is it applied
+  (solver output vs renderer snap rules in ADR 0035)?
+
 ## References
 
 - Non-reentrant measurement + `AvailableSpace`: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
 - Taffy integration boundaries: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative Flex semantics: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
+- Container-owned Taffy performance hardening (near-term): `docs/adr/0076-declarative-layout-performance-hardening.md`
 - Virtualization boundaries: `docs/adr/0042-virtualization-and-large-lists.md`
 - Docking viewports: `docs/adr/0013-docking-ops-and-persistence.md`
 - Engine viewport surfaces: `docs/adr/0007-viewport-surfaces.md`
