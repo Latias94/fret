@@ -107,10 +107,11 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 
 ## References
 
-- ADR 0111: `docs/adr/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/adr/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
-- ADR 0113: `docs/adr/0113-delinea-axis-scales-and-coordinate-mapping.md`
-- ADR 0114: `docs/adr/0114-delinea-marks-identity-and-renderer-contract.md`
-- ADR 0115: `docs/adr/0115-delinea-large-data-and-progressive-rendering.md`
-- ADR 0116: `docs/adr/0116-delinea-interaction-and-hit-testing-contract.md`
+- ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
+- ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 0130: `docs/adr/0130-delinea-axis-scales-and-coordinate-mapping.md`
+- ADR 0131: `docs/adr/0131-delinea-marks-identity-and-renderer-contract.md`
+- ADR 0132: `docs/adr/0132-delinea-large-data-and-progressive-rendering.md`
+- ADR 0133: `docs/adr/0133-delinea-interaction-and-hit-testing-contract.md`
+- ADR 0134: `docs/adr/0134-delinea-multi-axis-and-layout-contract.md`
 - `ecosystem/delinea/docs/transform-pipeline.md`

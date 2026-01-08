@@ -1,4 +1,4 @@
-# ADR 0114: `delinea` Marks + Stable Identity + Renderer Contract (2D Cartesian v1)
+# ADR 0131: `delinea` Marks + Stable Identity + Renderer Contract (2D Cartesian v1)
 
 Status: Proposed
 
@@ -16,8 +16,8 @@ through a UI adapter (`fret-chart`). This ADR defines the contract between them.
 
 ## Relationship to Other ADRs
 
-- ADR 0111: introduces `delinea` and establishes “headless engine + UI adapter”.
-- ADR 0112: transform pipeline and dataZoom ordering.
+- ADR 0128: introduces `delinea` and establishes “headless engine + UI adapter”.
+- ADR 0129: transform pipeline and dataZoom ordering.
 - ADR 0080: vector path contract (portable scene primitives).
 - ADR 0097 / ADR 0099: plot widgets (different API; some math/LOD ideas may be shared later).
 
@@ -98,14 +98,13 @@ P0:
 
 P1:
 
-- Add bar/rect marks (depends on ADR 0113 category semantics).
-- Add multi-grid/multi-axis layout decisions (see ADR 0116).
+- Add bar/rect marks (depends on ADR 0130 category semantics).
+- Add multi-grid/multi-axis layout decisions (see ADR 0134).
 - Evaluate whether `SceneOp::Path` needs dash/join/cap upgrades for chart parity (ADR 0080 follow-up).
 
 ## References
 
-- ADR 0111: `docs/adr/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/adr/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
+- ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
 - ADR 0080: `docs/adr/0080-vector-path-contract.md`
 - ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`
-

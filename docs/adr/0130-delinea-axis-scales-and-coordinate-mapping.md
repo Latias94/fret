@@ -1,10 +1,10 @@
-# ADR 0113: `delinea` Axis Scales + Coordinate Mapping Contract (Value/Category v1)
+# ADR 0130: `delinea` Axis Scales + Coordinate Mapping Contract (Value/Category v1)
 
 Status: Proposed
 
 ## Context
 
-`delinea` is a headless, ECharts-inspired chart engine (ADR 0111). Today we support a narrow set of
+`delinea` is a headless, ECharts-inspired chart engine (ADR 0128). Today we support a narrow set of
 cartesian 2D, line-family charts (`Line/Area/Band`) with a value axis model.
 
 To unlock the next chart taxonomy step (especially `bar`, `stack`, and most ECharts demo-style charts),
@@ -26,8 +26,8 @@ Related context:
 
 ## Relationship to Other ADRs
 
-- ADR 0111: `delinea` headless chart engine.
-- ADR 0112: transform pipeline + dataZoom semantics.
+- ADR 0128: `delinea` headless chart engine.
+- ADR 0129: transform pipeline + dataZoom semantics.
 - ADR 0097 / ADR 0099: ImPlot-like plot widgets (different goals and API surface).
 
 ## Decision
@@ -124,13 +124,12 @@ P0 implementation work implied by this ADR:
 P1 follow-ups:
 
 - Add `Time` and `Log` scales (explicitly; no implicit guessing).
-- Add multi-grid / multi-axis layout contracts (see ADR 0114 / ADR 0116 follow-ups).
+- Add multi-grid / multi-axis layout contracts (see ADR 0131 / ADR 0134 follow-ups).
 
 ## References
 
 - ECharts scales: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\scale\\Interval.ts`,
   `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\scale\\Ordinal.ts`
-- ADR 0111: `docs/adr/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/adr/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
+- ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
 - ADR 0099: `docs/adr/0099-plot-architecture-and-performance.md`
-

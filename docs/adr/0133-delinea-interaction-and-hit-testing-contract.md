@@ -1,4 +1,4 @@
-# ADR 0116: `delinea` Interaction + Hit Testing Contract (AxisPointer/Tooltip/Legend v1)
+# ADR 0133: `delinea` Interaction + Hit Testing Contract (AxisPointer/Tooltip/Legend v1)
 
 Status: Proposed
 
@@ -20,10 +20,10 @@ engine (`delinea`) owns the interaction model, and the UI adapter (`fret-chart`)
 
 ## Relationship to Other ADRs
 
-- ADR 0111: headless engine boundary.
-- ADR 0112: transform pipeline, `dataZoom` ordering, axis pointer baseline.
-- ADR 0113: axis mapping contract (required for correct hit testing and axis-trigger tooltip).
-- ADR 0114: stable identity and marks output contract.
+- ADR 0128: headless engine boundary.
+- ADR 0129: transform pipeline, `dataZoom` ordering, axis pointer baseline.
+- ADR 0130: axis mapping contract (required for correct hit testing and axis-trigger tooltip).
+- ADR 0131: stable identity and marks output contract.
 - ADR 0099: plot input mapping (ImPlot-like); chart interaction is higher-level and dataset-driven.
 
 ## Decision
@@ -121,6 +121,6 @@ P1:
 
 ## References
 
-- ADR 0111: `docs/adr/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/adr/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
+- ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
+- ADR 0129: `docs/adr/0129-delinea-transform-pipeline-and-datazoom-semantics.md`
 - ECharts axisPointer/tooltip concepts: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\echarts.all.ts`

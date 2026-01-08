@@ -1,4 +1,4 @@
-# ADR 0117: `delinea` Multi-Axis + Layout Contract (Cartesian v1)
+# ADR 0134: `delinea` Multi-Axis + Layout Contract (Cartesian v1)
 
 Status: Proposed
 
@@ -17,10 +17,10 @@ drift as new series types are added.
 
 ## Relationship to Other ADRs
 
-- ADR 0111: headless engine boundary.
-- ADR 0113: axis scales + coordinate mapping.
-- ADR 0114: marks identity and renderer contract.
-- ADR 0116: interaction and hit testing contract (axis locks / zoom locks).
+- ADR 0128: headless engine boundary.
+- ADR 0130: axis scales + coordinate mapping.
+- ADR 0131: marks identity and renderer contract.
+- ADR 0133: interaction and hit testing contract (axis locks / zoom locks).
 
 ## Decision
 
@@ -113,6 +113,5 @@ P1:
 ## References
 
 - ECharts axis config concepts: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\coord\\cartesian\\AxisModel.ts`
-- ADR 0111: `docs/adr/0111-delinea-headless-chart-engine.md`
-- ADR 0116: `docs/adr/0116-delinea-interaction-and-hit-testing-contract.md`
-
+- ADR 0128: `docs/adr/0128-delinea-headless-chart-engine.md`
+- ADR 0133: `docs/adr/0133-delinea-interaction-and-hit-testing-contract.md`
