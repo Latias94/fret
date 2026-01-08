@@ -165,3 +165,62 @@ accepted as ADRs, but they help keep early implementation aligned with long-term
   and submission coordinator rules (ADR 0038).
 - Keep the plan linear until real workloads prove a DAG is required. A linear sequence covers most UI effects with
   dramatically lower complexity.
+
+## Current Status
+
+This section is intentionally lightweight and should be updated as work lands.
+
+- **ADRs drafted (Proposed):**
+  - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
+  - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
+  - `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
+- **Implementation status (as of now):**
+  - M0: Not started (design locked by ADRs, pending code work).
+  - M1: Not started.
+  - M2: Not started.
+  - M3: Not started.
+  - M4: Deferred.
+
+## Work Breakdown (Actionable Checklist)
+
+This checklist is a suggested decomposition for implementation. Items may move as constraints become clearer.
+
+### M0: RenderPlan skeleton
+
+- Define `RenderPlan` IR and pass descriptors (DAG-ready inputs/outputs + lifetime).
+- Add an intermediate texture pool abstraction (allocation key, reuse policy).
+- Refactor `Renderer::render_scene(...)` to:
+  - compile `Scene` into a plan,
+  - execute plan passes,
+  - keep the degenerate single-pass behavior identical.
+- Add diagnostics:
+  - per-frame pass list (optional debug dump),
+  - intermediate allocation/reuse counters,
+  - peak intermediate bytes (approximate).
+- Add at least one renderer-only test/harness that ensures ordering invariants across plan execution.
+
+### M1: Fullscreen pass runner
+
+- Add a minimal fullscreen pipeline helper (triangle, bind source + uniforms, write destination).
+- Add ping-pong helpers (A/B swap) and downsample chain helpers (2x/4x).
+- Add a “noop copy” or “identity” postprocess pass to validate plumbing.
+
+### M2: Reference effect (validation)
+
+- Implement exactly one effect path that exercises:
+  - intermediates,
+  - one or more fullscreen passes,
+  - clip/transform correctness at effect boundaries.
+- Add a harness scene that includes:
+  - a `ViewportSurface` behind,
+  - UI overlays in front,
+  - nested clips/transforms,
+  - a forced budget-degradation case (ADR 0120).
+
+### M3: Budgets + observability hardening
+
+- Implement per-window budgets and deterministic degradation order (ADR 0120).
+- Add budget configuration plumbing (source of truth TBD: debug config first, settings later).
+- Add stress harnesses that validate:
+  - peak intermediate bytes remain bounded,
+  - degradations are deterministic across runs.
