@@ -1,0 +1,2281 @@
+use std::collections::BTreeMap;
+use std::ops::Range;
+use std::time::{Duration, Instant};
+
+use delinea::FilterMode;
+use delinea::engine::EngineError;
+use delinea::engine::model::{ChartPatch, ModelError, PatchMode};
+use delinea::engine::window::DataWindow;
+use delinea::marks::{MarkKind, MarkPayloadRef};
+use delinea::text::{TextMeasurer, TextMetrics};
+use delinea::{Action, ChartEngine, WorkBudget};
+use fret_core::{
+    Color, Corners, DrawOrder, Edges, Event, FontWeight, KeyCode, Modifiers, MouseButton,
+    PathCommand, PathConstraints, PathStyle, Point, PointerEvent, PointerType, Px, Rect, SceneOp,
+    Size, StrokeStyle, TextBlobId, TextConstraints, TextOverflow, TextStyle, TextWrap,
+};
+use fret_ui::UiHost;
+use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+
+use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
+use crate::retained::style::ChartStyle;
+
+#[derive(Debug, Default)]
+struct NullTextMeasurer;
+
+impl TextMeasurer for NullTextMeasurer {
+    fn measure(
+        &mut self,
+        _text: delinea::ids::StringId,
+        _style: delinea::text::TextStyleId,
+    ) -> TextMetrics {
+        TextMetrics::default()
+    }
+}
+
+#[derive(Debug)]
+struct CachedPath {
+    stroke: fret_core::PathId,
+    fill: Option<fret_core::PathId>,
+    fill_alpha: Option<f32>,
+    order: u32,
+    source_series: Option<delinea::SeriesId>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CachedRect {
+    rect: Rect,
+    order: u32,
+    source_series: Option<delinea::SeriesId>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PanDrag {
+    x_axis: delinea::AxisId,
+    y_axis: delinea::AxisId,
+    start_pos: Point,
+    start_x: DataWindow,
+    start_y: DataWindow,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct BoxZoomDrag {
+    x_axis: delinea::AxisId,
+    y_axis: delinea::AxisId,
+    button: MouseButton,
+    required_mods: ModifiersMask,
+    start_pos: Point,
+    current_pos: Point,
+    start_x: DataWindow,
+    start_y: DataWindow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AxisRegion {
+    Plot,
+    XAxis(delinea::AxisId),
+    YAxis(delinea::AxisId),
+}
+
+#[derive(Debug, Clone, Copy)]
+struct AxisBandLayout {
+    axis: delinea::AxisId,
+    position: delinea::AxisPosition,
+    rect: Rect,
+}
+
+#[derive(Debug, Default, Clone)]
+struct ChartLayout {
+    bounds: Rect,
+    plot: Rect,
+    x_axes: Vec<AxisBandLayout>,
+    y_axes: Vec<AxisBandLayout>,
+}
+
+pub struct ChartCanvas {
+    engine: ChartEngine,
+    style: ChartStyle,
+    input_map: ChartInputMap,
+    last_bounds: Rect,
+    last_layout: ChartLayout,
+    last_pointer_pos: Option<Point>,
+    last_marks_rev: delinea::ids::Revision,
+    last_scale_factor_bits: u32,
+    cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
+    cached_rects: Vec<CachedRect>,
+    axis_text: Vec<TextBlobId>,
+    tooltip_text: Vec<TextBlobId>,
+    legend_text: Vec<TextBlobId>,
+    legend_item_rects: Vec<(delinea::SeriesId, Rect)>,
+    legend_hover: Option<delinea::SeriesId>,
+    pan_drag: Option<PanDrag>,
+    box_zoom_drag: Option<BoxZoomDrag>,
+}
+
+impl ChartCanvas {
+    pub fn new(spec: delinea::ChartSpec) -> Result<Self, ModelError> {
+        let mut spec = spec;
+        spec.axis_pointer.get_or_insert_with(Default::default);
+        Ok(Self {
+            engine: ChartEngine::new(spec)?,
+            style: ChartStyle::default(),
+            input_map: ChartInputMap::default(),
+            last_bounds: Rect::default(),
+            last_layout: ChartLayout::default(),
+            last_pointer_pos: None,
+            last_marks_rev: delinea::ids::Revision::default(),
+            last_scale_factor_bits: 0,
+            cached_paths: BTreeMap::default(),
+            cached_rects: Vec::default(),
+            axis_text: Vec::default(),
+            tooltip_text: Vec::default(),
+            legend_text: Vec::default(),
+            legend_item_rects: Vec::default(),
+            legend_hover: None,
+            pan_drag: None,
+            box_zoom_drag: None,
+        })
+    }
+
+    pub fn engine(&self) -> &ChartEngine {
+        &self.engine
+    }
+
+    pub fn engine_mut(&mut self) -> &mut ChartEngine {
+        &mut self.engine
+    }
+
+    pub fn set_style(&mut self, style: ChartStyle) {
+        self.style = style;
+    }
+
+    pub fn set_input_map(&mut self, map: ChartInputMap) {
+        self.input_map = map;
+    }
+
+    fn compute_layout(&self, bounds: Rect) -> ChartLayout {
+        let mut inner = bounds;
+        inner.origin.x.0 += self.style.padding.left.0;
+        inner.origin.y.0 += self.style.padding.top.0;
+        inner.size.width.0 =
+            (inner.size.width.0 - self.style.padding.left.0 - self.style.padding.right.0).max(0.0);
+        inner.size.height.0 =
+            (inner.size.height.0 - self.style.padding.top.0 - self.style.padding.bottom.0).max(0.0);
+
+        let axis_band_x = self.style.axis_band_x.0.max(0.0);
+        let axis_band_y = self.style.axis_band_y.0.max(0.0);
+
+        let active_grid = self
+            .primary_axes()
+            .and_then(|(x_axis, _)| self.engine.model().axes.get(&x_axis).map(|a| a.grid));
+
+        let mut x_top: Vec<delinea::AxisId> = Vec::new();
+        let mut x_bottom: Vec<delinea::AxisId> = Vec::new();
+        let mut y_left: Vec<delinea::AxisId> = Vec::new();
+        let mut y_right: Vec<delinea::AxisId> = Vec::new();
+
+        if let Some(grid) = active_grid {
+            for (axis_id, axis) in &self.engine.model().axes {
+                if axis.grid != grid {
+                    continue;
+                }
+
+                match (axis.kind, axis.position) {
+                    (delinea::AxisKind::X, delinea::AxisPosition::Top) => x_top.push(*axis_id),
+                    (delinea::AxisKind::X, delinea::AxisPosition::Bottom) => {
+                        x_bottom.push(*axis_id)
+                    }
+                    (delinea::AxisKind::Y, delinea::AxisPosition::Left) => y_left.push(*axis_id),
+                    (delinea::AxisKind::Y, delinea::AxisPosition::Right) => y_right.push(*axis_id),
+                    _ => {}
+                }
+            }
+        }
+
+        let left_total = axis_band_x * (y_left.len() as f32);
+        let right_total = axis_band_x * (y_right.len() as f32);
+        let top_total = axis_band_y * (x_top.len() as f32);
+        let bottom_total = axis_band_y * (x_bottom.len() as f32);
+
+        let plot_w = (inner.size.width.0 - left_total - right_total).max(0.0);
+        let plot_h = (inner.size.height.0 - top_total - bottom_total).max(0.0);
+
+        let plot = Rect::new(
+            Point::new(
+                Px(inner.origin.x.0 + left_total),
+                Px(inner.origin.y.0 + top_total),
+            ),
+            Size::new(Px(plot_w), Px(plot_h)),
+        );
+
+        let mut x_axes: Vec<AxisBandLayout> = Vec::with_capacity(x_top.len() + x_bottom.len());
+        for (i, axis) in x_top.iter().copied().enumerate() {
+            let rect = Rect::new(
+                Point::new(
+                    plot.origin.x,
+                    Px(plot.origin.y.0 - axis_band_y * (i as f32 + 1.0)),
+                ),
+                Size::new(plot.size.width, Px(axis_band_y)),
+            );
+            x_axes.push(AxisBandLayout {
+                axis,
+                position: delinea::AxisPosition::Top,
+                rect,
+            });
+        }
+        for (i, axis) in x_bottom.iter().copied().enumerate() {
+            let rect = Rect::new(
+                Point::new(
+                    plot.origin.x,
+                    Px(plot.origin.y.0 + plot.size.height.0 + axis_band_y * (i as f32)),
+                ),
+                Size::new(plot.size.width, Px(axis_band_y)),
+            );
+            x_axes.push(AxisBandLayout {
+                axis,
+                position: delinea::AxisPosition::Bottom,
+                rect,
+            });
+        }
+
+        let mut y_axes: Vec<AxisBandLayout> = Vec::with_capacity(y_left.len() + y_right.len());
+        for (i, axis) in y_left.iter().copied().enumerate() {
+            let rect = Rect::new(
+                Point::new(
+                    Px(plot.origin.x.0 - axis_band_x * (i as f32 + 1.0)),
+                    plot.origin.y,
+                ),
+                Size::new(Px(axis_band_x), plot.size.height),
+            );
+            y_axes.push(AxisBandLayout {
+                axis,
+                position: delinea::AxisPosition::Left,
+                rect,
+            });
+        }
+        for (i, axis) in y_right.iter().copied().enumerate() {
+            let rect = Rect::new(
+                Point::new(
+                    Px(plot.origin.x.0 + plot.size.width.0 + axis_band_x * (i as f32)),
+                    plot.origin.y,
+                ),
+                Size::new(Px(axis_band_x), plot.size.height),
+            );
+            y_axes.push(AxisBandLayout {
+                axis,
+                position: delinea::AxisPosition::Right,
+                rect,
+            });
+        }
+
+        ChartLayout {
+            bounds,
+            plot,
+            x_axes,
+            y_axes,
+        }
+    }
+
+    pub fn create_node<H: UiHost>(ui: &mut fret_ui::UiTree<H>, canvas: Self) -> fret_core::NodeId {
+        use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+        ui.create_node_retained(canvas)
+    }
+
+    fn sync_viewport(&mut self, viewport: Rect) {
+        if self.engine.model().viewport == Some(viewport) {
+            return;
+        }
+        let _ = self.engine.apply_patch(
+            ChartPatch {
+                viewport: Some(Some(viewport)),
+                ..ChartPatch::default()
+            },
+            PatchMode::Merge,
+        );
+    }
+
+    fn primary_axes(&self) -> Option<(delinea::AxisId, delinea::AxisId)> {
+        let series_id = *self.engine.model().series_order.first()?;
+        let series = self.engine.model().series.get(&series_id)?;
+        Some((series.x_axis, series.y_axis))
+    }
+
+    fn axis_range(&self, axis: delinea::AxisId) -> delinea::AxisRange {
+        self.engine
+            .model()
+            .axes
+            .get(&axis)
+            .map(|a| a.range)
+            .unwrap_or_default()
+    }
+
+    fn axis_is_fixed(&self, axis: delinea::AxisId) -> Option<DataWindow> {
+        match self.axis_range(axis) {
+            delinea::AxisRange::Fixed { min, max } => {
+                let mut w = DataWindow { min, max };
+                w.clamp_non_degenerate();
+                Some(w)
+            }
+            _ => None,
+        }
+    }
+
+    fn axis_constraints(&self, axis: delinea::AxisId) -> (Option<f64>, Option<f64>) {
+        match self.axis_range(axis) {
+            delinea::AxisRange::Auto => (None, None),
+            delinea::AxisRange::LockMin { min } => (Some(min), None),
+            delinea::AxisRange::LockMax { max } => (None, Some(max)),
+            delinea::AxisRange::Fixed { min, max } => (Some(min), Some(max)),
+        }
+    }
+
+    fn current_window_x(&mut self, axis: delinea::AxisId) -> DataWindow {
+        if let Some(fixed) = self.axis_is_fixed(axis) {
+            return fixed;
+        }
+
+        if let Some(zoom) = self.engine.state().data_zoom_x.get(&axis).copied()
+            && let Some(window) = zoom.window
+        {
+            return window;
+        }
+
+        let mut window = self.compute_axis_extent(axis, true);
+        let (locked_min, locked_max) = self.axis_constraints(axis);
+        window = window.apply_constraints(locked_min, locked_max);
+        window
+    }
+
+    fn current_window_y(&mut self, axis: delinea::AxisId) -> DataWindow {
+        if let Some(fixed) = self.axis_is_fixed(axis) {
+            return fixed;
+        }
+
+        if let Some(window) = self.engine.state().data_window_y.get(&axis).copied() {
+            return window;
+        }
+
+        let mut window = self.compute_axis_extent(axis, false);
+        let (locked_min, locked_max) = self.axis_constraints(axis);
+        window = window.apply_constraints(locked_min, locked_max);
+        window
+    }
+
+    fn compute_axis_extent(&mut self, axis: delinea::AxisId, is_x: bool) -> DataWindow {
+        if let Some(window) = self.engine.output().axis_windows.get(&axis).copied() {
+            return window;
+        }
+
+        let mut min = f64::INFINITY;
+        let mut max = f64::NEG_INFINITY;
+
+        let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
+        let model = self.engine.model();
+        if let Some(axis_model) = model.axes.get(&axis) {
+            if let delinea::AxisScale::Category(scale) = &axis_model.scale
+                && !scale.categories.is_empty()
+            {
+                return DataWindow {
+                    min: -0.5,
+                    max: scale.categories.len() as f64 - 0.5,
+                };
+            }
+        }
+        for series in model.series.values() {
+            let axis_id = if is_x { series.x_axis } else { series.y_axis };
+            if axis_id != axis {
+                continue;
+            }
+
+            let Some(dataset) = model.datasets.get(&series.dataset) else {
+                continue;
+            };
+
+            if is_x {
+                let Some(col) = dataset.fields.get(&series.encode.x).copied() else {
+                    continue;
+                };
+                series_cols.push((series.dataset, col));
+                continue;
+            }
+
+            if let Some(col) = dataset.fields.get(&series.encode.y).copied() {
+                series_cols.push((series.dataset, col));
+            }
+            if series.kind == delinea::SeriesKind::Band
+                && let Some(y2) = series.encode.y2
+                && let Some(col) = dataset.fields.get(&y2).copied()
+            {
+                series_cols.push((series.dataset, col));
+            }
+        }
+
+        let store = self.engine.datasets_mut();
+        for (dataset_id, col) in series_cols {
+            let Some(table) = store.dataset_mut(dataset_id) else {
+                continue;
+            };
+            let Some(values) = table.column_f64(col) else {
+                continue;
+            };
+
+            for &v in values {
+                if !v.is_finite() {
+                    continue;
+                }
+                min = min.min(v);
+                max = max.max(v);
+            }
+        }
+
+        let mut out = if min.is_finite() && max.is_finite() && max > min {
+            DataWindow { min, max }
+        } else {
+            DataWindow { min: 0.0, max: 1.0 }
+        };
+        out.clamp_non_degenerate();
+        out
+    }
+
+    fn set_data_window_x(&mut self, axis: delinea::AxisId, window: Option<DataWindow>) {
+        self.engine
+            .apply_action(Action::SetDataWindowX { axis, window });
+    }
+
+    fn set_data_window_x_filter_mode(&mut self, axis: delinea::AxisId, mode: Option<FilterMode>) {
+        self.engine
+            .apply_action(Action::SetDataWindowXFilterMode { axis, mode });
+    }
+
+    fn toggle_data_window_x_filter_mode(&mut self, axis: delinea::AxisId) {
+        let current = self
+            .engine
+            .state()
+            .data_zoom_x
+            .get(&axis)
+            .copied()
+            .unwrap_or_default()
+            .filter_mode;
+
+        match current {
+            FilterMode::Filter => self.set_data_window_x_filter_mode(axis, Some(FilterMode::None)),
+            FilterMode::None => self.set_data_window_x_filter_mode(axis, None),
+        }
+    }
+
+    fn set_data_window_y(&mut self, axis: delinea::AxisId, window: Option<DataWindow>) {
+        self.engine
+            .apply_action(Action::SetDataWindowY { axis, window });
+    }
+
+    fn reset_view(&mut self) {
+        let Some((x_axis, y_axis)) = self.primary_axes() else {
+            return;
+        };
+        if self.axis_is_fixed(x_axis).is_none() {
+            self.set_data_window_x(x_axis, None);
+        }
+        if self.axis_is_fixed(y_axis).is_none() {
+            self.set_data_window_y(y_axis, None);
+        }
+    }
+
+    fn fit_view_to_data(&mut self) {
+        let Some((x_axis, y_axis)) = self.primary_axes() else {
+            return;
+        };
+
+        if self.axis_is_fixed(x_axis).is_none() {
+            let mut w = self.compute_axis_extent(x_axis, true);
+            let (locked_min, locked_max) = self.axis_constraints(x_axis);
+            w = w.apply_constraints(locked_min, locked_max);
+            self.set_data_window_x(x_axis, Some(w));
+        }
+
+        if self.axis_is_fixed(y_axis).is_none() {
+            let mut w = self.compute_axis_extent(y_axis, false);
+            let (locked_min, locked_max) = self.axis_constraints(y_axis);
+            w = w.apply_constraints(locked_min, locked_max);
+            self.set_data_window_y(y_axis, Some(w));
+        }
+    }
+
+    fn axis_region(layout: &ChartLayout, position: Point) -> AxisRegion {
+        for axis in &layout.x_axes {
+            if axis.rect.contains(position) {
+                return AxisRegion::XAxis(axis.axis);
+            }
+        }
+        for axis in &layout.y_axes {
+            if axis.rect.contains(position) {
+                return AxisRegion::YAxis(axis.axis);
+            }
+        }
+        AxisRegion::Plot
+    }
+
+    fn is_button_held(button: MouseButton, buttons: fret_core::MouseButtons) -> bool {
+        match button {
+            MouseButton::Left => buttons.left,
+            MouseButton::Right => buttons.right,
+            MouseButton::Middle => buttons.middle,
+            _ => false,
+        }
+    }
+
+    fn apply_box_select_modifiers(
+        plot_size: Size,
+        start: Point,
+        end: Point,
+        modifiers: Modifiers,
+        expand_x: Option<ModifierKey>,
+        expand_y: Option<ModifierKey>,
+        required: ModifiersMask,
+    ) -> (Point, Point) {
+        let mut start = start;
+        let mut end = end;
+
+        // Matches ImPlot's default selection modifiers:
+        // - Alt: expand selection horizontally to plot edge.
+        // - Shift: expand selection vertically to plot edge.
+        //
+        // Note: when a modifier is required to start the drag gesture (e.g. Shift+LMB alternative),
+        // treat it as part of the gesture chord and do not implicitly apply edge expansion.
+        if expand_x.is_some_and(|k| k.is_pressed(modifiers) && !k.is_required_by(required)) {
+            start.x = Px(0.0);
+            end.x = plot_size.width;
+        }
+        if expand_y.is_some_and(|k| k.is_pressed(modifiers) && !k.is_required_by(required)) {
+            start.y = Px(0.0);
+            end.y = plot_size.height;
+        }
+
+        (start, end)
+    }
+
+    fn axis_ticks(
+        model: &delinea::engine::model::ChartModel,
+        axis: delinea::AxisId,
+        window: DataWindow,
+        count: usize,
+    ) -> Vec<f64> {
+        delinea::engine::axis::axis_ticks_for(model, axis, window, count)
+    }
+
+    fn format_tick(
+        model: &delinea::engine::model::ChartModel,
+        axis: delinea::AxisId,
+        window: DataWindow,
+        value: f64,
+    ) -> String {
+        delinea::engine::axis::format_value_for(model, axis, window, value)
+    }
+
+    fn y_local_for_data_value(window: DataWindow, value: f64, plot_height_px: f32) -> f32 {
+        let mut window = window;
+        window.clamp_non_degenerate();
+
+        let span = window.span();
+        if !span.is_finite() || span <= 0.0 || !value.is_finite() {
+            return plot_height_px;
+        }
+
+        let t = ((value - window.min) / span).clamp(0.0, 1.0) as f32;
+        plot_height_px * (1.0 - t)
+    }
+
+    fn clear_axis_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
+        for blob in self.axis_text.drain(..) {
+            services.text().release(blob);
+        }
+    }
+
+    fn clear_tooltip_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
+        for blob in self.tooltip_text.drain(..) {
+            services.text().release(blob);
+        }
+    }
+
+    fn clear_legend_text_cache(&mut self, services: &mut dyn fret_core::UiServices) {
+        for blob in self.legend_text.drain(..) {
+            services.text().release(blob);
+        }
+        self.legend_item_rects.clear();
+    }
+
+    fn series_color(series: delinea::SeriesId) -> Color {
+        const PALETTE: [Color; 8] = [
+            Color {
+                r: 0.20,
+                g: 0.60,
+                b: 1.00,
+                a: 1.0,
+            },
+            Color {
+                r: 0.96,
+                g: 0.50,
+                b: 0.25,
+                a: 1.0,
+            },
+            Color {
+                r: 0.40,
+                g: 0.85,
+                b: 0.45,
+                a: 1.0,
+            },
+            Color {
+                r: 0.90,
+                g: 0.35,
+                b: 0.60,
+                a: 1.0,
+            },
+            Color {
+                r: 0.65,
+                g: 0.50,
+                b: 0.95,
+                a: 1.0,
+            },
+            Color {
+                r: 0.95,
+                g: 0.85,
+                b: 0.30,
+                a: 1.0,
+            },
+            Color {
+                r: 0.30,
+                g: 0.80,
+                b: 0.85,
+                a: 1.0,
+            },
+            Color {
+                r: 0.85,
+                g: 0.55,
+                b: 0.40,
+                a: 1.0,
+            },
+        ];
+
+        let idx = (series.0 as usize) % PALETTE.len();
+        PALETTE[idx]
+    }
+
+    fn legend_series_at(&self, pos: Point) -> Option<delinea::SeriesId> {
+        self.legend_item_rects
+            .iter()
+            .find_map(|(id, r)| r.contains(pos).then_some(*id))
+    }
+
+    fn draw_legend<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        self.clear_legend_text_cache(cx.services);
+
+        let plot = self.last_layout.plot;
+        if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
+            return;
+        }
+
+        let model = self.engine.model();
+        let series: Vec<_> = model.series_in_order().collect();
+        if series.is_empty() {
+            return;
+        }
+
+        let text_style = TextStyle {
+            size: Px(12.0),
+            weight: FontWeight::NORMAL,
+            ..TextStyle::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+
+        let mut blobs: Vec<(delinea::SeriesId, TextBlobId, fret_core::TextMetrics, bool)> =
+            Vec::with_capacity(series.len());
+
+        let mut max_text_w = 1.0f32;
+        let mut row_h = 1.0f32;
+        for s in &series {
+            let label = s
+                .name
+                .as_deref()
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| format!("Series {}", s.id.0));
+            let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+            max_text_w = max_text_w.max(metrics.size.width.0.max(1.0));
+            row_h = row_h.max(metrics.size.height.0.max(1.0));
+            blobs.push((s.id, blob, metrics, s.visible));
+        }
+
+        let pad = self.style.legend_padding;
+        let sw = self.style.legend_swatch_size.0.max(1.0);
+        let sw_gap = self.style.legend_swatch_gap.0.max(0.0);
+        let gap = self.style.legend_item_gap.0.max(0.0);
+
+        let row_h = row_h.max(sw);
+        let legend_w = (pad.left.0 + sw + sw_gap + max_text_w + pad.right.0).max(1.0);
+        let legend_h = (pad.top.0
+            + (row_h + gap) * (series.len().saturating_sub(1) as f32)
+            + row_h
+            + pad.bottom.0)
+            .max(1.0);
+
+        let margin = 8.0f32;
+        let x0 =
+            (plot.origin.x.0 + plot.size.width.0 - legend_w - margin).max(plot.origin.x.0 + margin);
+        let y0 = (plot.origin.y.0 + margin).max(plot.origin.y.0 + margin);
+        let legend_rect = Rect::new(
+            Point::new(Px(x0), Px(y0)),
+            Size::new(Px(legend_w), Px(legend_h)),
+        );
+
+        let legend_order = DrawOrder(self.style.draw_order.0.saturating_add(8_900));
+        cx.scene.push(SceneOp::Quad {
+            order: legend_order,
+            rect: legend_rect,
+            background: self.style.legend_background,
+            border: Edges::all(self.style.legend_border_width),
+            border_color: self.style.legend_border_color,
+            corner_radii: Corners::all(self.style.legend_corner_radius),
+        });
+
+        let mut y = y0 + pad.top.0;
+        for (i, (series_id, blob, metrics, visible)) in blobs.into_iter().enumerate() {
+            let item_rect = Rect::new(
+                Point::new(Px(x0), Px(y)),
+                Size::new(Px(legend_w), Px(row_h)),
+            );
+            self.legend_item_rects.push((series_id, item_rect));
+
+            if self.legend_hover == Some(series_id) {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(legend_order.0.saturating_add(1 + i as u32 * 3)),
+                    rect: item_rect,
+                    background: self.style.legend_hover_background,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+
+            let mut swatch = Self::series_color(series_id);
+            swatch.a = if visible { 0.9 } else { 0.25 };
+            let sw_x = x0 + pad.left.0;
+            let sw_y = y + 0.5 * (row_h - sw);
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(legend_order.0.saturating_add(2 + i as u32 * 3)),
+                rect: Rect::new(Point::new(Px(sw_x), Px(sw_y)), Size::new(Px(sw), Px(sw))),
+                background: swatch,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(2.0)),
+            });
+
+            let text_x = sw_x + sw + sw_gap;
+            let text_y = y + 0.5 * (row_h - metrics.size.height.0.max(1.0));
+            let mut text_color = self.style.legend_text_color;
+            if !visible {
+                text_color.a *= 0.55;
+            }
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(legend_order.0.saturating_add(3 + i as u32 * 3)),
+                origin: Point::new(Px(text_x), Px(text_y)),
+                text: blob,
+                color: text_color,
+            });
+            self.legend_text.push(blob);
+
+            y += row_h + gap;
+        }
+    }
+
+    fn draw_axes<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        self.clear_axis_text_cache(cx.services);
+
+        let plot = self.last_layout.plot;
+        let x_axes = self.last_layout.x_axes.clone();
+        let y_axes = self.last_layout.y_axes.clone();
+        if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
+            return;
+        }
+
+        let axis_order = DrawOrder(self.style.draw_order.0.saturating_add(8_500));
+        let label_order = DrawOrder(self.style.draw_order.0.saturating_add(8_501));
+
+        let line_w = self.style.axis_line_width.0.max(1.0);
+        let tick_len = self.style.axis_tick_length.0.max(0.0);
+
+        let text_style = TextStyle {
+            size: Px(12.0),
+            weight: FontWeight::NORMAL,
+            ..TextStyle::default()
+        };
+        let constraints = TextConstraints {
+            max_width: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+
+        let x_tick_count = (plot.size.width.0 / 80.0).round().clamp(2.0, 12.0) as usize;
+        let y_tick_count = (plot.size.height.0 / 56.0).round().clamp(2.0, 12.0) as usize;
+
+        // X axes: baseline + ticks + labels.
+        for band in &x_axes {
+            let window = self.current_window_x(band.axis);
+            let model = self.engine.model();
+            let baseline_y = match band.position {
+                delinea::AxisPosition::Bottom => band.rect.origin.y.0,
+                delinea::AxisPosition::Top => band.rect.origin.y.0 + band.rect.size.height.0,
+                _ => continue,
+            };
+
+            cx.scene.push(SceneOp::Quad {
+                order: axis_order,
+                rect: Rect::new(
+                    Point::new(band.rect.origin.x, Px(baseline_y - line_w * 0.5)),
+                    Size::new(plot.size.width, Px(line_w)),
+                ),
+                background: self.style.axis_line_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+
+            let mut last_right = f32::NEG_INFINITY;
+            for value in Self::axis_ticks(model, band.axis, window, x_tick_count) {
+                let t = ((value - window.min) / window.span()).clamp(0.0, 1.0) as f32;
+                let x_px = plot.origin.x.0 + t * plot.size.width.0;
+
+                let tick_y = match band.position {
+                    delinea::AxisPosition::Bottom => baseline_y,
+                    delinea::AxisPosition::Top => baseline_y - tick_len,
+                    _ => baseline_y,
+                };
+
+                cx.scene.push(SceneOp::Quad {
+                    order: axis_order,
+                    rect: Rect::new(
+                        Point::new(Px(x_px - 0.5 * line_w), Px(tick_y)),
+                        Size::new(Px(line_w), Px(tick_len)),
+                    ),
+                    background: self.style.axis_tick_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+
+                let label = Self::format_tick(model, band.axis, window, value);
+                let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+
+                let label_x = x_px - metrics.size.width.0 * 0.5;
+                let label_y =
+                    band.rect.origin.y.0 + (band.rect.size.height.0 - metrics.size.height.0) * 0.5;
+
+                let gap = 4.0;
+                let right = label_x + metrics.size.width.0;
+                if label_x >= last_right + gap {
+                    cx.scene.push(SceneOp::Text {
+                        order: label_order,
+                        origin: Point::new(Px(label_x), Px(label_y)),
+                        text: blob,
+                        color: self.style.axis_label_color,
+                    });
+                    self.axis_text.push(blob);
+                    last_right = right;
+                } else {
+                    cx.services.text().release(blob);
+                }
+            }
+        }
+
+        // Y axes: baseline + ticks + labels.
+        for band in &y_axes {
+            let window = self.current_window_y(band.axis);
+            let model = self.engine.model();
+            let baseline_x = match band.position {
+                delinea::AxisPosition::Left => band.rect.origin.x.0 + band.rect.size.width.0,
+                delinea::AxisPosition::Right => band.rect.origin.x.0,
+                _ => continue,
+            };
+
+            cx.scene.push(SceneOp::Quad {
+                order: axis_order,
+                rect: Rect::new(
+                    Point::new(Px(baseline_x - line_w * 0.5), band.rect.origin.y),
+                    Size::new(Px(line_w), plot.size.height),
+                ),
+                background: self.style.axis_line_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+
+            let mut last_bottom = f32::NEG_INFINITY;
+            for value in Self::axis_ticks(model, band.axis, window, y_tick_count) {
+                let t = ((value - window.min) / window.span()).clamp(0.0, 1.0) as f32;
+                let y_px = plot.origin.y.0 + (1.0 - t) * plot.size.height.0;
+
+                let (tick_x, tick_w) = match band.position {
+                    delinea::AxisPosition::Left => (baseline_x - tick_len, tick_len),
+                    delinea::AxisPosition::Right => (baseline_x, tick_len),
+                    _ => (baseline_x, tick_len),
+                };
+
+                cx.scene.push(SceneOp::Quad {
+                    order: axis_order,
+                    rect: Rect::new(
+                        Point::new(Px(tick_x), Px(y_px - 0.5 * line_w)),
+                        Size::new(Px(tick_w), Px(line_w)),
+                    ),
+                    background: self.style.axis_tick_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+
+                let label = Self::format_tick(model, band.axis, window, value);
+                let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+
+                let label_x = match band.position {
+                    delinea::AxisPosition::Left => {
+                        band.rect.origin.x.0
+                            + (band.rect.size.width.0 - metrics.size.width.0 - 4.0).max(0.0)
+                    }
+                    delinea::AxisPosition::Right => band.rect.origin.x.0 + 4.0,
+                    _ => band.rect.origin.x.0 + 4.0,
+                };
+                let label_y = y_px - metrics.size.height.0 * 0.5;
+
+                let gap = 2.0;
+                let bottom = label_y + metrics.size.height.0;
+                if label_y >= last_bottom + gap {
+                    cx.scene.push(SceneOp::Text {
+                        order: label_order,
+                        origin: Point::new(Px(label_x), Px(label_y)),
+                        text: blob,
+                        color: self.style.axis_label_color,
+                    });
+                    self.axis_text.push(blob);
+                    last_bottom = bottom;
+                } else {
+                    cx.services.text().release(blob);
+                }
+            }
+        }
+    }
+
+    fn rebuild_paths_if_needed<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
+        let marks_rev = self.engine.output().marks.revision;
+        let scale_factor_bits = cx.scale_factor.to_bits();
+
+        if marks_rev == self.last_marks_rev && scale_factor_bits == self.last_scale_factor_bits {
+            return;
+        }
+        self.last_marks_rev = marks_rev;
+        self.last_scale_factor_bits = scale_factor_bits;
+
+        for cached in self.cached_paths.values() {
+            if let Some(fill) = cached.fill {
+                cx.services.path().release(fill);
+            }
+            cx.services.path().release(cached.stroke);
+        }
+        self.cached_paths.clear();
+        self.cached_rects.clear();
+
+        let plot_h = self.last_layout.plot.size.height.0;
+        let area_series: Vec<(delinea::SeriesId, delinea::AxisId, delinea::AreaBaseline)> = self
+            .engine
+            .model()
+            .series_in_order()
+            .filter(|s| s.kind == delinea::SeriesKind::Area && s.visible)
+            .map(|s| (s.id, s.y_axis, s.area_baseline))
+            .collect();
+
+        let mut area_baseline_y_local: BTreeMap<delinea::SeriesId, f32> = BTreeMap::new();
+        for (series_id, y_axis, baseline) in area_series {
+            let y = match baseline {
+                delinea::AreaBaseline::AxisMin => plot_h,
+                delinea::AreaBaseline::Zero => {
+                    let y_window = self.current_window_y(y_axis);
+                    Self::y_local_for_data_value(y_window, 0.0, plot_h)
+                }
+                delinea::AreaBaseline::Value(value) => {
+                    let y_window = self.current_window_y(y_axis);
+                    Self::y_local_for_data_value(y_window, value, plot_h)
+                }
+            };
+            area_baseline_y_local.insert(series_id, y);
+        }
+
+        let marks = &self.engine.output().marks;
+        let origin = self.last_layout.plot.origin;
+        let model = self.engine.model();
+
+        let mut band_ranges: BTreeMap<
+            delinea::SeriesId,
+            (Option<Range<usize>>, Option<Range<usize>>),
+        > = BTreeMap::new();
+        let mut band_mark_ids: BTreeMap<
+            delinea::SeriesId,
+            (Option<delinea::ids::MarkId>, Option<delinea::ids::MarkId>),
+        > = BTreeMap::new();
+
+        for node in &marks.nodes {
+            if node.kind != MarkKind::Polyline {
+                continue;
+            }
+
+            let MarkPayloadRef::Polyline(poly) = &node.payload else {
+                continue;
+            };
+
+            let series_kind = node
+                .source_series
+                .and_then(|id| model.series.get(&id).map(|s| s.kind));
+
+            if series_kind == Some(delinea::SeriesKind::Band)
+                && let Some(series_id) = node.source_series
+            {
+                let variant = (node.id.0 & 0x7) as u8;
+                let entry = band_ranges.entry(series_id).or_default();
+                let ids = band_mark_ids.entry(series_id).or_default();
+                match variant {
+                    1 => {
+                        entry.0 = Some(poly.points.clone());
+                        ids.0 = Some(node.id);
+                    }
+                    2 => {
+                        entry.1 = Some(poly.points.clone());
+                        ids.1 = Some(node.id);
+                    }
+                    _ => {}
+                }
+            }
+
+            let baseline_y_local = node
+                .source_series
+                .and_then(|id| area_baseline_y_local.get(&id).copied());
+
+            let start = poly.points.start;
+            let end = poly.points.end;
+            if end <= start || end > marks.arena.points.len() {
+                continue;
+            }
+
+            let mut commands: Vec<PathCommand> =
+                Vec::with_capacity((end - start).saturating_add(1));
+            for (i, p) in marks.arena.points[start..end].iter().enumerate() {
+                let local = fret_core::Point::new(Px(p.x.0 - origin.x.0), Px(p.y.0 - origin.y.0));
+                if i == 0 {
+                    commands.push(PathCommand::MoveTo(local));
+                } else {
+                    commands.push(PathCommand::LineTo(local));
+                }
+            }
+
+            if commands.len() < 2 {
+                continue;
+            }
+
+            let stroke_width = poly
+                .stroke
+                .as_ref()
+                .map(|(_, s)| s.width)
+                .unwrap_or(self.style.stroke_width);
+
+            let (stroke, _metrics) = cx.services.path().prepare(
+                &commands,
+                PathStyle::Stroke(StrokeStyle {
+                    width: stroke_width,
+                }),
+                PathConstraints {
+                    scale_factor: cx.scale_factor,
+                },
+            );
+
+            let fill = if let Some(baseline_y_local) = baseline_y_local {
+                let mut fill_commands: Vec<PathCommand> = Vec::with_capacity(commands.len() + 4);
+                fill_commands.extend_from_slice(&commands);
+
+                if let (Some(first), Some(last)) = (
+                    marks.arena.points.get(start),
+                    marks.arena.points.get(end.saturating_sub(1)),
+                ) {
+                    let last_x_local = last.x.0 - origin.x.0;
+                    let first_x_local = first.x.0 - origin.x.0;
+                    fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
+                        Px(last_x_local),
+                        Px(baseline_y_local),
+                    )));
+                    fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
+                        Px(first_x_local),
+                        Px(baseline_y_local),
+                    )));
+                    fill_commands.push(PathCommand::Close);
+
+                    let (fill, _metrics) = cx.services.path().prepare(
+                        &fill_commands,
+                        PathStyle::Fill(fret_core::FillStyle::default()),
+                        PathConstraints {
+                            scale_factor: cx.scale_factor,
+                        },
+                    );
+                    Some(fill)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            let fill_alpha = fill.map(|_| self.style.area_fill_color.a);
+
+            let mark_id = node.id;
+            self.cached_paths.insert(
+                mark_id,
+                CachedPath {
+                    stroke,
+                    fill,
+                    fill_alpha,
+                    order: node.order.0,
+                    source_series: node.source_series,
+                },
+            );
+        }
+
+        for (series_id, (lower, upper)) in band_ranges {
+            let (Some(lower_range), Some(upper_range)) = (lower, upper) else {
+                continue;
+            };
+            let Some((Some(lower_id), Some(_upper_id))) = band_mark_ids.get(&series_id).copied()
+            else {
+                continue;
+            };
+
+            if upper_range.end <= upper_range.start || lower_range.end <= lower_range.start {
+                continue;
+            }
+            if upper_range.end > marks.arena.points.len()
+                || lower_range.end > marks.arena.points.len()
+            {
+                continue;
+            }
+
+            let upper_points = &marks.arena.points[upper_range.start..upper_range.end];
+            let lower_points = &marks.arena.points[lower_range.start..lower_range.end];
+            if upper_points.len() < 2 || lower_points.len() < 2 {
+                continue;
+            }
+
+            let mut fill_commands: Vec<PathCommand> =
+                Vec::with_capacity(upper_points.len() + lower_points.len() + 1);
+            let first = upper_points[0];
+            fill_commands.push(PathCommand::MoveTo(fret_core::Point::new(
+                Px(first.x.0 - origin.x.0),
+                Px(first.y.0 - origin.y.0),
+            )));
+            for p in &upper_points[1..] {
+                fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
+                    Px(p.x.0 - origin.x.0),
+                    Px(p.y.0 - origin.y.0),
+                )));
+            }
+            for p in lower_points.iter().rev() {
+                fill_commands.push(PathCommand::LineTo(fret_core::Point::new(
+                    Px(p.x.0 - origin.x.0),
+                    Px(p.y.0 - origin.y.0),
+                )));
+            }
+            fill_commands.push(PathCommand::Close);
+
+            let (fill_path, _metrics) = cx.services.path().prepare(
+                &fill_commands,
+                PathStyle::Fill(fret_core::FillStyle::default()),
+                PathConstraints {
+                    scale_factor: cx.scale_factor,
+                },
+            );
+
+            if let Some(cached) = self.cached_paths.get_mut(&lower_id) {
+                cached.fill = Some(fill_path);
+                cached.fill_alpha = Some(self.style.band_fill_color.a);
+            } else {
+                cx.services.path().release(fill_path);
+            }
+        }
+
+        for node in &marks.nodes {
+            if node.kind != MarkKind::Rect {
+                continue;
+            }
+            let MarkPayloadRef::Rect(rects) = &node.payload else {
+                continue;
+            };
+            let start = rects.rects.start;
+            let end = rects.rects.end;
+            if end <= start || end > marks.arena.rects.len() {
+                continue;
+            }
+            self.cached_rects.reserve(end - start);
+            for rect in &marks.arena.rects[start..end] {
+                self.cached_rects.push(CachedRect {
+                    rect: *rect,
+                    order: node.order.0,
+                    source_series: node.source_series,
+                });
+            }
+        }
+    }
+}
+
+impl<H: UiHost> Widget<H> for ChartCanvas {
+    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        match event {
+            Event::KeyDown { key, modifiers, .. } => {
+                let plain = !modifiers.shift
+                    && !modifiers.ctrl
+                    && !modifiers.alt
+                    && !modifiers.alt_gr
+                    && !modifiers.meta;
+                let lock_mods_ok = !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
+
+                if lock_mods_ok && *key == KeyCode::KeyL {
+                    let Some(pos) = self.last_pointer_pos else {
+                        return;
+                    };
+                    let Some((x_axis, y_axis)) = self.primary_axes() else {
+                        return;
+                    };
+
+                    let toggle_pan = modifiers.shift && !modifiers.ctrl;
+                    let toggle_zoom = modifiers.ctrl && !modifiers.shift;
+                    let toggle_both = !toggle_pan && !toggle_zoom;
+
+                    let layout = self.compute_layout(cx.bounds);
+                    match Self::axis_region(&layout, pos) {
+                        AxisRegion::XAxis(axis) => {
+                            if toggle_both || toggle_pan {
+                                self.engine.apply_action(Action::ToggleAxisPanLock { axis });
+                            }
+                            if toggle_both || toggle_zoom {
+                                self.engine
+                                    .apply_action(Action::ToggleAxisZoomLock { axis });
+                            }
+                        }
+                        AxisRegion::YAxis(axis) => {
+                            if toggle_both || toggle_pan {
+                                self.engine.apply_action(Action::ToggleAxisPanLock { axis });
+                            }
+                            if toggle_both || toggle_zoom {
+                                self.engine
+                                    .apply_action(Action::ToggleAxisZoomLock { axis });
+                            }
+                        }
+                        AxisRegion::Plot => {
+                            if toggle_both || toggle_pan {
+                                self.engine
+                                    .apply_action(Action::ToggleAxisPanLock { axis: x_axis });
+                                self.engine
+                                    .apply_action(Action::ToggleAxisPanLock { axis: y_axis });
+                            }
+                            if toggle_both || toggle_zoom {
+                                self.engine
+                                    .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
+                                self.engine
+                                    .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
+                            }
+                        }
+                    }
+
+                    self.pan_drag = None;
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if plain && *key == KeyCode::KeyR {
+                    self.reset_view();
+                    self.pan_drag = None;
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if plain && *key == KeyCode::KeyF {
+                    self.fit_view_to_data();
+                    self.pan_drag = None;
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if plain && *key == KeyCode::KeyM {
+                    let Some((x_axis, _y_axis)) = self.primary_axes() else {
+                        return;
+                    };
+
+                    self.toggle_data_window_x_filter_mode(x_axis);
+                    self.pan_drag = None;
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+            }
+            Event::Pointer(PointerEvent::Move {
+                position, buttons, ..
+            }) => {
+                self.last_pointer_pos = Some(*position);
+
+                let prev_hover = self.legend_hover;
+                self.legend_hover = self.legend_series_at(*position);
+                if self.legend_hover != prev_hover {
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
+
+                if cx.captured == Some(cx.node) {
+                    if let Some(mut drag) = self.box_zoom_drag
+                        && Self::is_button_held(drag.button, *buttons)
+                    {
+                        drag.current_pos = *position;
+                        self.box_zoom_drag = Some(drag);
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+
+                    if let Some(drag) = self.pan_drag
+                        && buttons.left
+                    {
+                        let layout = self.compute_layout(cx.bounds);
+                        let width = layout.plot.size.width.0;
+                        let height = layout.plot.size.height.0;
+                        if width <= 0.0 || height <= 0.0 {
+                            return;
+                        }
+
+                        let dx = position.x.0 - drag.start_pos.x.0;
+                        let dy = position.y.0 - drag.start_pos.y.0;
+
+                        if self.axis_is_fixed(drag.x_axis).is_none() {
+                            self.engine.apply_action(Action::PanDataWindowXFromBase {
+                                axis: drag.x_axis,
+                                base: drag.start_x,
+                                delta_px: dx,
+                                viewport_span_px: width,
+                            });
+                        }
+                        if self.axis_is_fixed(drag.y_axis).is_none() {
+                            self.engine.apply_action(Action::PanDataWindowYFromBase {
+                                axis: drag.y_axis,
+                                base: drag.start_y,
+                                delta_px: -dy,
+                                viewport_span_px: height,
+                            });
+                        }
+
+                        cx.invalidate_self(Invalidation::Paint);
+                        cx.request_redraw();
+                        cx.stop_propagation();
+                        return;
+                    }
+                }
+
+                self.engine
+                    .apply_action(Action::HoverAt { point: *position });
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+            }
+            Event::Pointer(PointerEvent::Down {
+                position,
+                button,
+                modifiers,
+                click_count,
+                pointer_type,
+                ..
+            }) => {
+                self.last_pointer_pos = Some(*position);
+
+                if *button == MouseButton::Left
+                    && self.pan_drag.is_none()
+                    && self.box_zoom_drag.is_none()
+                    && let Some(series) = self.legend_series_at(*position)
+                {
+                    let visible = self
+                        .engine
+                        .model()
+                        .series
+                        .get(&series)
+                        .map(|s| s.visible)
+                        .unwrap_or(true);
+                    self.engine.apply_action(Action::SetSeriesVisible {
+                        series,
+                        visible: !visible,
+                    });
+                    self.legend_hover = Some(series);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if *pointer_type == PointerType::Mouse
+                    && *button == MouseButton::Left
+                    && *click_count == 2
+                    && !modifiers.shift
+                    && !modifiers.ctrl
+                    && !modifiers.alt
+                    && !modifiers.alt_gr
+                    && !modifiers.meta
+                {
+                    let Some((_x_axis, _y_axis)) = self.primary_axes() else {
+                        return;
+                    };
+                    let layout = self.compute_layout(cx.bounds);
+                    match Self::axis_region(&layout, *position) {
+                        AxisRegion::XAxis(axis) => {
+                            if self.axis_is_fixed(axis).is_none() {
+                                self.set_data_window_x(axis, None);
+                            }
+                        }
+                        AxisRegion::YAxis(axis) => {
+                            if self.axis_is_fixed(axis).is_none() {
+                                self.set_data_window_y(axis, None);
+                            }
+                        }
+                        AxisRegion::Plot => self.reset_view(),
+                    }
+
+                    self.pan_drag = None;
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if let Some(cancel) = self.input_map.box_zoom_cancel
+                    && self.box_zoom_drag.is_some()
+                    && cancel.matches(*button, *modifiers)
+                {
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if self.input_map.axis_lock_toggle.matches(*button, *modifiers) {
+                    let layout = self.compute_layout(cx.bounds);
+                    let Some((x_axis, y_axis)) = self.primary_axes() else {
+                        return;
+                    };
+                    match Self::axis_region(&layout, *position) {
+                        AxisRegion::XAxis(axis) => {
+                            self.engine.apply_action(Action::ToggleAxisPanLock { axis });
+                            self.engine
+                                .apply_action(Action::ToggleAxisZoomLock { axis });
+                        }
+                        AxisRegion::YAxis(axis) => {
+                            self.engine.apply_action(Action::ToggleAxisPanLock { axis });
+                            self.engine
+                                .apply_action(Action::ToggleAxisZoomLock { axis });
+                        }
+                        AxisRegion::Plot => {
+                            self.engine
+                                .apply_action(Action::ToggleAxisPanLock { axis: x_axis });
+                            self.engine
+                                .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
+                            self.engine
+                                .apply_action(Action::ToggleAxisPanLock { axis: y_axis });
+                            self.engine
+                                .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
+                        }
+                    }
+
+                    cx.request_focus(cx.node);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if self.pan_drag.is_some() || self.box_zoom_drag.is_some() {
+                    return;
+                }
+
+                let start_box_primary = self.input_map.box_zoom.matches(*button, *modifiers);
+                let start_box_alt = self
+                    .input_map
+                    .box_zoom_alt
+                    .is_some_and(|chord| chord.matches(*button, *modifiers));
+                if start_box_primary || start_box_alt {
+                    let layout = self.compute_layout(cx.bounds);
+                    if !layout.plot.contains(*position) {
+                        return;
+                    }
+
+                    let Some((x_axis, y_axis)) = self.primary_axes() else {
+                        return;
+                    };
+
+                    if self.axis_is_fixed(x_axis).is_some() || self.axis_is_fixed(y_axis).is_some()
+                    {
+                        return;
+                    }
+
+                    let required_mods = if start_box_primary {
+                        self.input_map.box_zoom.modifiers
+                    } else {
+                        self.input_map
+                            .box_zoom_alt
+                            .unwrap_or(self.input_map.box_zoom)
+                            .modifiers
+                    };
+
+                    let start_x = self.current_window_x(x_axis);
+                    let start_y = self.current_window_y(y_axis);
+
+                    self.box_zoom_drag = Some(BoxZoomDrag {
+                        x_axis,
+                        y_axis,
+                        button: *button,
+                        required_mods,
+                        start_pos: *position,
+                        current_pos: *position,
+                        start_x,
+                        start_y,
+                    });
+
+                    cx.request_focus(cx.node);
+                    cx.capture_pointer(cx.node);
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if !self.input_map.pan.matches(*button, *modifiers) {
+                    return;
+                }
+
+                let layout = self.compute_layout(cx.bounds);
+                if !layout.plot.contains(*position) {
+                    return;
+                }
+
+                let Some((x_axis, y_axis)) = self.primary_axes() else {
+                    return;
+                };
+                if self.axis_is_fixed(x_axis).is_some() || self.axis_is_fixed(y_axis).is_some() {
+                    return;
+                }
+
+                let x_pan_locked = self
+                    .engine
+                    .state()
+                    .axis_locks
+                    .get(&x_axis)
+                    .copied()
+                    .unwrap_or_default()
+                    .pan_locked;
+                let y_pan_locked = self
+                    .engine
+                    .state()
+                    .axis_locks
+                    .get(&y_axis)
+                    .copied()
+                    .unwrap_or_default()
+                    .pan_locked;
+                if x_pan_locked && y_pan_locked {
+                    return;
+                }
+
+                let start_x = self.current_window_x(x_axis);
+                let start_y = self.current_window_y(y_axis);
+
+                self.pan_drag = Some(PanDrag {
+                    x_axis,
+                    y_axis,
+                    start_pos: *position,
+                    start_x,
+                    start_y,
+                });
+
+                cx.request_focus(cx.node);
+                cx.capture_pointer(cx.node);
+                cx.stop_propagation();
+            }
+            Event::Pointer(PointerEvent::Up {
+                position,
+                button,
+                modifiers,
+                ..
+            }) => {
+                self.last_pointer_pos = Some(*position);
+                if let Some(drag) = self.box_zoom_drag
+                    && drag.button == *button
+                {
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+
+                    let layout = self.compute_layout(cx.bounds);
+                    let plot = layout.plot;
+                    let width = plot.size.width.0;
+                    let height = plot.size.height.0;
+                    if width > 0.0 && height > 0.0 {
+                        let start_local = Point::new(
+                            Px(drag.start_pos.x.0 - plot.origin.x.0),
+                            Px(drag.start_pos.y.0 - plot.origin.y.0),
+                        );
+                        let end_local = Point::new(
+                            Px(drag.current_pos.x.0 - plot.origin.x.0),
+                            Px(drag.current_pos.y.0 - plot.origin.y.0),
+                        );
+
+                        let (start_local, end_local) = Self::apply_box_select_modifiers(
+                            plot.size,
+                            start_local,
+                            end_local,
+                            *modifiers,
+                            self.input_map.box_zoom_expand_x,
+                            self.input_map.box_zoom_expand_y,
+                            drag.required_mods,
+                        );
+
+                        let w = (start_local.x.0 - end_local.x.0).abs();
+                        let h = (start_local.y.0 - end_local.y.0).abs();
+                        if w >= 4.0 && h >= 4.0 {
+                            if self.axis_is_fixed(drag.x_axis).is_none() {
+                                let x0 = start_local.x.0.min(end_local.x.0).clamp(0.0, width);
+                                let x1 = start_local.x.0.max(end_local.x.0).clamp(0.0, width);
+                                let min =
+                                    delinea::engine::axis::data_at_px(drag.start_x, x0, 0.0, width);
+                                let max =
+                                    delinea::engine::axis::data_at_px(drag.start_x, x1, 0.0, width);
+                                let mut window = DataWindow { min, max };
+                                window.clamp_non_degenerate();
+                                self.engine.apply_action(Action::SetDataWindowXFromZoom {
+                                    axis: drag.x_axis,
+                                    window,
+                                });
+                            }
+
+                            if self.axis_is_fixed(drag.y_axis).is_none() {
+                                let y0 = start_local.y.0.min(end_local.y.0).clamp(0.0, height);
+                                let y1 = start_local.y.0.max(end_local.y.0).clamp(0.0, height);
+                                let y0_from_bottom = height - y1;
+                                let y1_from_bottom = height - y0;
+                                let min = delinea::engine::axis::data_at_px(
+                                    drag.start_y,
+                                    y0_from_bottom,
+                                    0.0,
+                                    height,
+                                );
+                                let max = delinea::engine::axis::data_at_px(
+                                    drag.start_y,
+                                    y1_from_bottom,
+                                    0.0,
+                                    height,
+                                );
+                                let mut window = DataWindow { min, max };
+                                window.clamp_non_degenerate();
+                                self.engine.apply_action(Action::SetDataWindowYFromZoom {
+                                    axis: drag.y_axis,
+                                    window,
+                                });
+                            }
+                        }
+                    }
+
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if self.pan_drag.is_some() && *button == MouseButton::Left {
+                    self.pan_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                }
+            }
+            Event::Pointer(PointerEvent::Wheel {
+                position,
+                delta,
+                modifiers,
+                ..
+            }) => {
+                self.last_pointer_pos = Some(*position);
+                let Some((x_axis, y_axis)) = self.primary_axes() else {
+                    return;
+                };
+
+                let layout = self.compute_layout(cx.bounds);
+                let plot = layout.plot;
+                let width = plot.size.width.0;
+                let height = plot.size.height.0;
+                if width <= 0.0 || height <= 0.0 {
+                    return;
+                }
+
+                let delta_y = delta.y.0;
+                if !delta_y.is_finite() {
+                    return;
+                }
+
+                if let Some(required) = self.input_map.wheel_zoom_mod
+                    && !required.is_pressed(*modifiers)
+                {
+                    return;
+                }
+
+                // Match ImPlot's default feel: zoom factor ~= 2^(delta_y * 0.0025)
+                let log2_scale = delta_y * 0.0025;
+
+                let region = Self::axis_region(&layout, *position);
+                let in_plot = plot.contains(*position);
+                let in_axis = matches!(region, AxisRegion::XAxis(_) | AxisRegion::YAxis(_));
+                if !in_plot && !in_axis {
+                    return;
+                }
+
+                let local_x = (position.x.0 - plot.origin.x.0).clamp(0.0, width);
+                let local_y = (position.y.0 - plot.origin.y.0).clamp(0.0, height);
+                let center_x = local_x;
+                let center_y_from_bottom = height - local_y;
+
+                let (x_axis, y_axis) = match region {
+                    AxisRegion::XAxis(axis) => (axis, y_axis),
+                    AxisRegion::YAxis(axis) => (x_axis, axis),
+                    AxisRegion::Plot => (x_axis, y_axis),
+                };
+
+                let (zoom_x, zoom_y) = match region {
+                    AxisRegion::XAxis(_) => (true, false),
+                    AxisRegion::YAxis(_) => (false, true),
+                    AxisRegion::Plot => (!modifiers.ctrl, !modifiers.shift),
+                };
+
+                if zoom_x && self.axis_is_fixed(x_axis).is_none() {
+                    let w = self.current_window_x(x_axis);
+                    self.engine.apply_action(Action::ZoomDataWindowXFromBase {
+                        axis: x_axis,
+                        base: w,
+                        center_px: center_x,
+                        log2_scale,
+                        viewport_span_px: width,
+                    });
+                }
+                if zoom_y && self.axis_is_fixed(y_axis).is_none() {
+                    let w = self.current_window_y(y_axis);
+                    self.engine.apply_action(Action::ZoomDataWindowYFromBase {
+                        axis: y_axis,
+                        base: w,
+                        center_px: center_y_from_bottom,
+                        log2_scale,
+                        viewport_span_px: height,
+                    });
+                }
+
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
+                cx.stop_propagation();
+            }
+            _ => {}
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> fret_core::Size {
+        self.last_bounds = cx.bounds;
+        self.last_layout = self.compute_layout(cx.bounds);
+        self.sync_viewport(self.last_layout.plot);
+        cx.available
+    }
+
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        if self.last_bounds != cx.bounds
+            || self.last_layout.plot.size.width.0 <= 0.0
+            || self.last_layout.plot.size.height.0 <= 0.0
+        {
+            self.last_bounds = cx.bounds;
+            self.last_layout = self.compute_layout(cx.bounds);
+            self.sync_viewport(self.last_layout.plot);
+        }
+
+        let mut measurer = NullTextMeasurer::default();
+
+        // P0: run the engine synchronously, but allow multiple internal steps per paint so that
+        // medium-sized datasets can produce the first set of marks without relying on external
+        // redraw triggers.
+        let start = Instant::now();
+        let mut unfinished = true;
+        let mut steps_ran = 0u32;
+        while unfinished && steps_ran < 8 && start.elapsed() < Duration::from_millis(4) {
+            let budget = if self.cached_paths.is_empty() && self.cached_rects.is_empty() {
+                WorkBudget::new(262_144, 0, 32)
+            } else {
+                WorkBudget::new(32_768, 0, 8)
+            };
+
+            let step = self.engine.step(&mut measurer, budget);
+            match step {
+                Ok(step) => {
+                    unfinished = step.unfinished;
+                }
+                Err(EngineError::MissingViewport) => {
+                    unfinished = false;
+                }
+            }
+            steps_ran = steps_ran.saturating_add(1);
+        }
+
+        if unfinished && let Some(window) = cx.window {
+            cx.app.request_redraw(window);
+        }
+
+        self.rebuild_paths_if_needed(cx);
+        self.clear_tooltip_text_cache(cx.services);
+        self.clear_legend_text_cache(cx.services);
+
+        if let Some(background) = self.style.background {
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(self.style.draw_order.0.saturating_sub(1)),
+                rect: self.last_layout.bounds,
+                background,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
+
+        cx.scene.push(SceneOp::PushClipRect {
+            rect: self.last_layout.plot,
+        });
+
+        for cached in &self.cached_rects {
+            let base_order = self
+                .style
+                .draw_order
+                .0
+                .saturating_add(cached.order.saturating_mul(4));
+
+            let mut fill_color = self.style.stroke_color;
+            if let Some(series) = cached.source_series {
+                fill_color = Self::series_color(series);
+                fill_color.a *= self.style.stroke_color.a;
+            }
+            if let Some(hover) = self.legend_hover
+                && cached.source_series.is_some()
+                && cached.source_series != Some(hover)
+            {
+                fill_color.a *= 0.25;
+            }
+            fill_color.a *= self.style.bar_fill_alpha;
+
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(base_order),
+                rect: cached.rect,
+                background: fill_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
+
+        for cached in self.cached_paths.values() {
+            let base_order = self
+                .style
+                .draw_order
+                .0
+                .saturating_add(cached.order.saturating_mul(4));
+
+            let mut stroke_color = self.style.stroke_color;
+            if let Some(series) = cached.source_series {
+                stroke_color = Self::series_color(series);
+                stroke_color.a *= self.style.stroke_color.a;
+            }
+            if let Some(hover) = self.legend_hover
+                && cached.source_series.is_some()
+                && cached.source_series != Some(hover)
+            {
+                stroke_color.a *= 0.25;
+            }
+
+            if let Some(fill) = cached.fill {
+                let fill_alpha = cached.fill_alpha.unwrap_or(self.style.area_fill_color.a);
+                let mut fill_color = stroke_color;
+                fill_color.a = fill_alpha;
+                cx.scene.push(SceneOp::Path {
+                    order: DrawOrder(base_order),
+                    origin: self.last_layout.plot.origin,
+                    path: fill,
+                    color: fill_color,
+                });
+            }
+            cx.scene.push(SceneOp::Path {
+                order: DrawOrder(base_order.saturating_add(1)),
+                origin: self.last_layout.plot.origin,
+                path: cached.stroke,
+                color: stroke_color,
+            });
+        }
+
+        if let Some((x_axis, _y_axis)) = self.primary_axes()
+            && self
+                .engine
+                .state()
+                .data_zoom_x
+                .get(&x_axis)
+                .copied()
+                .unwrap_or_default()
+                .window
+                .is_some()
+            && self
+                .engine
+                .state()
+                .data_zoom_x
+                .get(&x_axis)
+                .copied()
+                .unwrap_or_default()
+                .filter_mode
+                == FilterMode::None
+        {
+            let label = "Y bounds: global (M)";
+            let text_style = TextStyle {
+                size: Px(11.0),
+                weight: FontWeight::NORMAL,
+                ..TextStyle::default()
+            };
+            let constraints = TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor,
+            };
+            let (blob, _metrics) = cx.services.text().prepare(label, &text_style, constraints);
+
+            let plot = self.last_layout.plot;
+            let pad = 6.0f32;
+            let order = DrawOrder(self.style.draw_order.0.saturating_add(9_050));
+            cx.scene.push(SceneOp::Text {
+                order,
+                origin: Point::new(Px(plot.origin.x.0 + pad), Px(plot.origin.y.0 + pad)),
+                text: blob,
+                color: self.style.axis_tick_color,
+            });
+            self.tooltip_text.push(blob);
+        }
+
+        let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
+        let axis_pointer = if interaction_idle && self.legend_hover.is_none() {
+            self.engine.output().axis_pointer.clone()
+        } else {
+            None
+        };
+
+        if let Some(axis_pointer) = axis_pointer.as_ref() {
+            let pos = axis_pointer.crosshair_px;
+            let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(9_000));
+            let point_order = DrawOrder(self.style.draw_order.0.saturating_add(9_001));
+
+            let plot = self.last_layout.plot;
+            let crosshair_w = self.style.crosshair_width.0.max(1.0);
+
+            let x = pos
+                .x
+                .0
+                .clamp(plot.origin.x.0, plot.origin.x.0 + plot.size.width.0);
+            let y = pos
+                .y
+                .0
+                .clamp(plot.origin.y.0, plot.origin.y.0 + plot.size.height.0);
+
+            cx.scene.push(SceneOp::Quad {
+                order: overlay_order,
+                rect: Rect::new(
+                    Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
+                    Size::new(Px(crosshair_w), plot.size.height),
+                ),
+                background: self.style.crosshair_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+            cx.scene.push(SceneOp::Quad {
+                order: overlay_order,
+                rect: Rect::new(
+                    Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
+                    Size::new(plot.size.width, Px(crosshair_w)),
+                ),
+                background: self.style.crosshair_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+
+            if let Some(hit) = axis_pointer.hit {
+                let r = self.style.hover_point_size.0.max(1.0);
+                cx.scene.push(SceneOp::Quad {
+                    order: point_order,
+                    rect: Rect::new(
+                        Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
+                        Size::new(Px(2.0 * r), Px(2.0 * r)),
+                    ),
+                    background: self.style.hover_point_color,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+        }
+
+        self.draw_legend(cx);
+
+        if let Some(drag) = self.box_zoom_drag {
+            let rect =
+                rect_from_points_clamped(self.last_layout.plot, drag.start_pos, drag.current_pos);
+            if rect.size.width.0 >= 1.0 && rect.size.height.0 >= 1.0 {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(self.style.draw_order.0.saturating_add(8_800)),
+                    rect,
+                    background: self.style.selection_fill,
+                    border: Edges::all(self.style.selection_stroke_width),
+                    border_color: self.style.selection_stroke,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
+        }
+
+        cx.scene.push(SceneOp::PopClip);
+
+        if let Some(axis_pointer) = axis_pointer {
+            let tooltip_lines = &axis_pointer.tooltip.lines;
+            if tooltip_lines.is_empty() {
+                self.draw_axes(cx);
+                return;
+            }
+
+            let text_style = TextStyle {
+                size: Px(12.0),
+                weight: FontWeight::NORMAL,
+                ..TextStyle::default()
+            };
+            let constraints = TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor,
+            };
+            let mut line_blobs = Vec::with_capacity(tooltip_lines.len());
+            let mut line_metrics = Vec::with_capacity(tooltip_lines.len());
+            for line in tooltip_lines {
+                let text = format!("{}: {}", line.label, line.value);
+                let (blob, metrics) = cx.services.text().prepare(&text, &text_style, constraints);
+                line_blobs.push(blob);
+                line_metrics.push(metrics);
+            }
+
+            let pad = self.style.tooltip_padding;
+            let mut w = 1.0f32;
+            let mut h = 0.0f32;
+            for metrics in &line_metrics {
+                w = w.max(metrics.size.width.0);
+                h += metrics.size.height.0.max(1.0);
+            }
+            w = (w + pad.left.0 + pad.right.0).max(1.0);
+            h = (h + pad.top.0 + pad.bottom.0).max(1.0);
+
+            let bounds = self.last_layout.bounds;
+            let x0 = bounds.origin.x.0;
+            let y0 = bounds.origin.y.0;
+            let x1 = x0 + bounds.size.width.0;
+            let y1 = y0 + bounds.size.height.0;
+
+            let anchor = axis_pointer
+                .hit
+                .map(|h| h.point_px)
+                .unwrap_or(axis_pointer.crosshair_px);
+
+            let offset = 10.0f32;
+            let mut tip_x = anchor.x.0 + offset;
+            let mut tip_y = anchor.y.0 - h - offset;
+
+            if tip_x + w > x1 {
+                tip_x = anchor.x.0 - w - offset;
+            }
+            if tip_y < y0 {
+                tip_y = anchor.y.0 + offset;
+            }
+
+            if w < bounds.size.width.0 {
+                tip_x = tip_x.clamp(x0, x1 - w);
+            } else {
+                tip_x = x0;
+            }
+            if h < bounds.size.height.0 {
+                tip_y = tip_y.clamp(y0, y1 - h);
+            } else {
+                tip_y = y0;
+            }
+
+            let tooltip_order = DrawOrder(self.style.draw_order.0.saturating_add(9_100));
+            cx.scene.push(SceneOp::Quad {
+                order: tooltip_order,
+                rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
+                background: self.style.tooltip_background,
+                border: Edges::all(self.style.tooltip_border_width),
+                border_color: self.style.tooltip_border_color,
+                corner_radii: Corners::all(self.style.tooltip_corner_radius),
+            });
+
+            let mut y = tip_y + pad.top.0;
+            for (i, (blob, metrics)) in line_blobs.into_iter().zip(line_metrics).enumerate() {
+                let order = DrawOrder(tooltip_order.0.saturating_add(1 + i as u32));
+                cx.scene.push(SceneOp::Text {
+                    order,
+                    origin: Point::new(Px(tip_x + pad.left.0), Px(y)),
+                    text: blob,
+                    color: self.style.tooltip_text_color,
+                });
+                y += metrics.size.height.0.max(1.0);
+                self.tooltip_text.push(blob);
+            }
+        }
+
+        self.draw_axes(cx);
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        for cached in self.cached_paths.values() {
+            if let Some(fill) = cached.fill {
+                services.path().release(fill);
+            }
+            services.path().release(cached.stroke);
+        }
+        self.cached_paths.clear();
+
+        for blob in self.axis_text.drain(..) {
+            services.text().release(blob);
+        }
+        for blob in self.tooltip_text.drain(..) {
+            services.text().release(blob);
+        }
+        for blob in self.legend_text.drain(..) {
+            services.text().release(blob);
+        }
+    }
+}
+
+fn rect_from_points_clamped(bounds: Rect, a: Point, b: Point) -> Rect {
+    let x0 =
+        a.x.0
+            .min(b.x.0)
+            .clamp(bounds.origin.x.0, bounds.origin.x.0 + bounds.size.width.0);
+    let x1 =
+        a.x.0
+            .max(b.x.0)
+            .clamp(bounds.origin.x.0, bounds.origin.x.0 + bounds.size.width.0);
+    let y0 =
+        a.y.0
+            .min(b.y.0)
+            .clamp(bounds.origin.y.0, bounds.origin.y.0 + bounds.size.height.0);
+    let y1 =
+        a.y.0
+            .max(b.y.0)
+            .clamp(bounds.origin.y.0, bounds.origin.y.0 + bounds.size.height.0);
+
+    Rect::new(
+        Point::new(Px(x0), Px(y0)),
+        Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn data_mapping_is_monotonic() {
+        let window = DataWindow {
+            min: 10.0,
+            max: 20.0,
+        };
+        let a = delinea::engine::axis::data_at_px(window, 0.0, 0.0, 100.0);
+        let b = delinea::engine::axis::data_at_px(window, 50.0, 0.0, 100.0);
+        let c = delinea::engine::axis::data_at_px(window, 100.0, 0.0, 100.0);
+        assert!(a < b && b < c);
+        assert_eq!(a, 10.0);
+        assert_eq!(c, 20.0);
+
+        let d = delinea::engine::axis::data_at_px(window, 0.0, 0.0, 100.0);
+        let e = delinea::engine::axis::data_at_px(window, 100.0, 0.0, 100.0);
+        assert_eq!(d, 10.0);
+        assert_eq!(e, 20.0);
+    }
+
+    #[test]
+    fn rect_from_points_is_clamped_to_bounds() {
+        let bounds = Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(100.0), Px(200.0)),
+        );
+        let a = Point::new(Px(0.0), Px(0.0));
+        let b = Point::new(Px(999.0), Px(999.0));
+        let rect = rect_from_points_clamped(bounds, a, b);
+        assert_eq!(rect.origin, bounds.origin);
+        assert_eq!(rect.size, bounds.size);
+    }
+
+    #[test]
+    fn nice_ticks_include_endpoints() {
+        let window = DataWindow { min: 0.2, max: 9.7 };
+        let ticks = delinea::format::nice_ticks(window, 5);
+        assert!(!ticks.is_empty());
+        assert_eq!(*ticks.first().unwrap(), window.min);
+        assert_eq!(*ticks.last().unwrap(), window.max);
+    }
+
+    #[test]
+    fn series_color_is_stable() {
+        let a = ChartCanvas::series_color(delinea::SeriesId::new(1));
+        let b = ChartCanvas::series_color(delinea::SeriesId::new(2));
+        assert_ne!(a, b);
+        assert_eq!(a, ChartCanvas::series_color(delinea::SeriesId::new(1)));
+    }
+}

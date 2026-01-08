@@ -19,6 +19,7 @@ Then open the URL printed by Trunk (usually `http://127.0.0.1:8080`).
 By default, the web runner starts the components gallery. To launch a specific demo, use a URL
 hash or query string:
 
+- `?demo=chart_demo` (or `#chart_demo`)
 - `?demo=plot_demo` (or `#plot_demo`)
 - `?demo=bars_demo` (or `#bars_demo`)
 - `?demo=grouped_bars_demo` (or `#grouped_bars_demo`)

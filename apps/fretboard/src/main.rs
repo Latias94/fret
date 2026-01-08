@@ -755,6 +755,7 @@ fn generate_hotpatch_build_id() -> u64 {
 fn web_demos() -> &'static [&'static str] {
     &[
         "components_gallery",
+        "chart_demo",
         "plot_demo",
         "bars_demo",
         "grouped_bars_demo",
