@@ -28,11 +28,7 @@ pub fn hover_hit_test(
         let Some(series) = model.series.get(&series_id) else {
             continue;
         };
-        if !matches!(
-            series.kind,
-            SeriesKind::Line | SeriesKind::Area | SeriesKind::Band
-        ) || !series.visible
-        {
+        if !series.visible {
             continue;
         }
 

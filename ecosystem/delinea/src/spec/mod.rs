@@ -149,8 +149,6 @@ impl Default for DataZoomXSpec {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum SeriesKind {
     Line,
-    Bar,
-    Scatter,
     Area,
     /// A filled band between `encode.y` (low) and `encode.y2` (high).
     Band,
