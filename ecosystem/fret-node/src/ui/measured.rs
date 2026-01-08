@@ -124,6 +124,10 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for MeasuredNodeGraphPresenter<P>
         self.inner.port_label(graph, port)
     }
 
+    fn node_body_label(&self, graph: &Graph, node: NodeId) -> Option<Arc<str>> {
+        self.inner.node_body_label(graph, node)
+    }
+
     fn port_color(&self, graph: &Graph, port: PortId, style: &NodeGraphStyle) -> fret_core::Color {
         self.inner.port_color(graph, port, style)
     }
@@ -313,6 +317,10 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for FallbackMeasuredNodeGraphPres
 
     fn port_label(&self, graph: &Graph, port: PortId) -> Arc<str> {
         self.inner.port_label(graph, port)
+    }
+
+    fn node_body_label(&self, graph: &Graph, node: NodeId) -> Option<Arc<str>> {
+        self.inner.node_body_label(graph, node)
     }
 
     fn port_color(&self, graph: &Graph, port: PortId, style: &NodeGraphStyle) -> fret_core::Color {
