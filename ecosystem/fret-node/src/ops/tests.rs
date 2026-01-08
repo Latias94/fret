@@ -110,6 +110,35 @@ fn build_disconnect_port_ops_removes_incident_edges() {
 }
 
 #[test]
+fn set_node_data_roundtrips_through_invert_transaction() {
+    let mut graph = Graph::default();
+    let node = NodeId::new();
+    graph.nodes.insert(node, make_node("demo.const"));
+
+    let tx = GraphTransaction {
+        label: Some("Set value".to_string()),
+        ops: vec![GraphOp::SetNodeData {
+            id: node,
+            from: serde_json::Value::Null,
+            to: serde_json::json!({ "value": 1.25 }),
+        }],
+    };
+
+    apply_transaction(&mut graph, &tx).expect("apply");
+    assert_eq!(
+        graph.nodes.get(&node).unwrap().data,
+        serde_json::json!({ "value": 1.25 })
+    );
+
+    let inverse = invert_transaction(&tx);
+    apply_transaction(&mut graph, &inverse).expect("apply inverse");
+    assert_eq!(
+        graph.nodes.get(&node).unwrap().data,
+        serde_json::Value::Null
+    );
+}
+
+#[test]
 fn set_edge_endpoints_updates_edge_in_place() {
     let mut graph = Graph::default();
     let a = NodeId::new();

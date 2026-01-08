@@ -114,6 +114,12 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             }
             node.ports = to.clone();
         }
+        GraphOp::SetNodeData { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.data = to.clone();
+        }
         GraphOp::AddPort { id, port } => {
             if graph.ports.contains_key(id) {
                 return Err(ApplyError::PortAlreadyExists { id: *id });

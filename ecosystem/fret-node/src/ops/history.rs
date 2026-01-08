@@ -171,6 +171,11 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
             from: to.clone(),
             to: from.clone(),
         }],
+        GraphOp::SetNodeData { id, from, to } => vec![GraphOp::SetNodeData {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
 
         GraphOp::AddPort { id, port } => vec![GraphOp::RemovePort {
             id: *id,

@@ -58,6 +58,15 @@ pub enum GraphOp {
         from: Vec<PortId>,
         to: Vec<PortId>,
     },
+    /// Sets a node's domain-owned data payload.
+    ///
+    /// This is the primary edit op for node parameters and is intentionally untyped at the model
+    /// layer: typing and validation live in profiles/rules.
+    SetNodeData {
+        id: NodeId,
+        from: serde_json::Value,
+        to: serde_json::Value,
+    },
 
     /// Adds a port.
     AddPort { id: PortId, port: Port },
