@@ -6,8 +6,8 @@ use crate::declarative::taffy_layout::*;
 use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutSize};
 
 #[cfg(feature = "layout-engine-v2")]
-use super::engine_flow::{
-    ParentLayoutKind, configure_flow_subtree, layout_children_from_engine_if_solved,
+use crate::layout_engine::{
+    ParentLayoutKind, build_flow_subtree, layout_children_from_engine_if_solved,
 };
 
 #[cfg(not(feature = "layout-engine-v2"))]
@@ -465,9 +465,10 @@ impl ElementHostWidget {
         engine.set_style(cx.node, root_style);
         engine.set_children(cx.node, cx.children);
         for &child in cx.children {
-            configure_flow_subtree(
+            build_flow_subtree(
                 &mut engine,
-                cx,
+                cx.app,
+                &*cx.tree,
                 window,
                 ParentLayoutKind::Flex {
                     direction: props.direction,

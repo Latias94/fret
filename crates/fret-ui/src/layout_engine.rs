@@ -6,6 +6,12 @@ use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 
+mod flow;
+pub(crate) use flow::{
+    ParentLayoutKind, build_flow_subtree, build_viewport_flow_subtree,
+    layout_children_from_engine_if_solved,
+};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct NodeContext {
     node: NodeId,

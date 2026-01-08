@@ -1,6 +1,6 @@
 use super::prelude::*;
 
-pub(super) fn taffy_dimension(length: Length) -> Dimension {
+pub(crate) fn taffy_dimension(length: Length) -> Dimension {
     match length {
         Length::Auto => Dimension::auto(),
         Length::Fill => Dimension::percent(1.0),
@@ -8,7 +8,7 @@ pub(super) fn taffy_dimension(length: Length) -> Dimension {
     }
 }
 
-pub(super) fn taffy_position(position: crate::element::PositionStyle) -> TaffyPosition {
+pub(crate) fn taffy_position(position: crate::element::PositionStyle) -> TaffyPosition {
     match position {
         crate::element::PositionStyle::Static | crate::element::PositionStyle::Relative => {
             TaffyPosition::Relative
@@ -24,7 +24,7 @@ fn taffy_lpa(px: Option<Px>) -> LengthPercentageAuto {
     }
 }
 
-pub(super) fn taffy_rect_lpa_from_inset(
+pub(crate) fn taffy_rect_lpa_from_inset(
     position: crate::element::PositionStyle,
     inset: crate::element::InsetStyle,
 ) -> TaffyRect<LengthPercentageAuto> {
@@ -51,7 +51,7 @@ fn taffy_lpa_margin_edge(edge: crate::element::MarginEdge) -> LengthPercentageAu
     }
 }
 
-pub(super) fn taffy_rect_lpa_from_margin_edges(
+pub(crate) fn taffy_rect_lpa_from_margin_edges(
     margin: crate::element::MarginEdges,
 ) -> TaffyRect<LengthPercentageAuto> {
     TaffyRect {
@@ -62,7 +62,7 @@ pub(super) fn taffy_rect_lpa_from_margin_edges(
     }
 }
 
-pub(super) fn taffy_grid_line(line: crate::element::GridLine) -> TaffyLine<GridPlacement> {
+pub(crate) fn taffy_grid_line(line: crate::element::GridLine) -> TaffyLine<GridPlacement> {
     let start = line
         .start
         .map(taffy::style_helpers::line::<GridPlacement>)
@@ -74,7 +74,7 @@ pub(super) fn taffy_grid_line(line: crate::element::GridLine) -> TaffyLine<GridP
     TaffyLine { start, end }
 }
 
-pub(super) fn taffy_align_items(align: CrossAlign) -> TaffyAlignItems {
+pub(crate) fn taffy_align_items(align: CrossAlign) -> TaffyAlignItems {
     match align {
         CrossAlign::Start => TaffyAlignItems::FlexStart,
         CrossAlign::Center => TaffyAlignItems::Center,
@@ -83,7 +83,7 @@ pub(super) fn taffy_align_items(align: CrossAlign) -> TaffyAlignItems {
     }
 }
 
-pub(super) fn taffy_align_self(align: CrossAlign) -> TaffyAlignSelf {
+pub(crate) fn taffy_align_self(align: CrossAlign) -> TaffyAlignSelf {
     match align {
         CrossAlign::Start => TaffyAlignSelf::FlexStart,
         CrossAlign::Center => TaffyAlignSelf::Center,
@@ -92,7 +92,7 @@ pub(super) fn taffy_align_self(align: CrossAlign) -> TaffyAlignSelf {
     }
 }
 
-pub(super) fn taffy_justify(justify: MainAlign) -> JustifyContent {
+pub(crate) fn taffy_justify(justify: MainAlign) -> JustifyContent {
     match justify {
         MainAlign::Start => JustifyContent::FlexStart,
         MainAlign::Center => JustifyContent::Center,
@@ -124,7 +124,7 @@ pub(super) struct TaffyMeasureKey {
     pub(super) avail_h: (u8, u32),
 }
 
-pub(super) fn taffy_available_space_key(avail: TaffyAvailableSpace) -> (u8, u32) {
+pub(crate) fn taffy_available_space_key(avail: TaffyAvailableSpace) -> (u8, u32) {
     match avail {
         TaffyAvailableSpace::Definite(v) => (0, v.to_bits()),
         TaffyAvailableSpace::MinContent => (1, 0),

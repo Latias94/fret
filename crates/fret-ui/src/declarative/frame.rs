@@ -182,7 +182,7 @@ pub(crate) fn element_id_map_for_window<H: UiHost>(
     })
 }
 
-pub(super) fn layout_style_for_node<H: UiHost>(
+pub(crate) fn layout_style_for_node<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
     node: NodeId,
