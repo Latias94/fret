@@ -596,6 +596,13 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).map(|n| n.bounds)
     }
 
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn layout_engine_local_rect(&self, node: NodeId) -> Option<Rect> {
+        self.layout_engine
+            .layout_id_for_node(node)
+            .map(|id| self.layout_engine.layout_rect(id))
+    }
+
     pub fn debug_node_path(&self, node: NodeId) -> Vec<NodeId> {
         let mut out: Vec<NodeId> = Vec::new();
         let mut current = Some(node);

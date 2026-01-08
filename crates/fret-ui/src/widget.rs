@@ -165,6 +165,26 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
             .layout_in(self.app, self.services, child, bounds, self.scale_factor)
     }
 
+    pub fn layout_engine_child_bounds(&mut self, child: NodeId) -> Option<Rect> {
+        #[cfg(feature = "layout-engine-v2")]
+        {
+            let local = self.tree.layout_engine_local_rect(child)?;
+            Some(Rect::new(
+                Point::new(
+                    fret_core::Px(self.bounds.origin.x.0 + local.origin.x.0),
+                    fret_core::Px(self.bounds.origin.y.0 + local.origin.y.0),
+                ),
+                local.size,
+            ))
+        }
+
+        #[cfg(not(feature = "layout-engine-v2"))]
+        {
+            let _ = child;
+            None
+        }
+    }
+
     pub fn layout_viewport_root(&mut self, child: NodeId, bounds: Rect) -> Size {
         #[cfg(feature = "layout-engine-v2")]
         {
