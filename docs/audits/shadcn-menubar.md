@@ -29,7 +29,8 @@ Key upstream behaviors/surfaces:
 
 - Pass: Click-to-open per menu trigger.
 - Pass: Hover switches the open menu when a menu is already active.
-- Pass: Outside press + Escape dismiss via menu policy (non-click-through).
+- Pass: Outside press + Escape dismiss via menu policy; outside-press dismissal is click-through
+  (Radix Menubar uses `Menu.modal=false`).
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 

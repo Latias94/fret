@@ -18,6 +18,21 @@ use crate::primitives::dismissable_layer;
 use crate::primitives::menu::sub;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
+fn base_menu_overlay_request(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    children: Vec<AnyElement>,
+    modal: bool,
+) -> OverlayRequest {
+    if modal {
+        OverlayRequest::dismissible_menu(id, trigger, open, presence, children)
+    } else {
+        OverlayRequest::dismissible_popover(id, trigger, open, presence, children)
+    }
+}
+
 /// A stable per-overlay root name for menu-like popovers.
 ///
 /// This is the root naming convention used by shadcn menu wrappers (DropdownMenu, ContextMenu,
@@ -97,11 +112,75 @@ pub fn dismissible_menu_request<H: UiHost>(
     content_focus: Option<GlobalElementId>,
     dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
 ) -> OverlayRequest {
-    let mut request = OverlayRequest::dismissible_menu(id, trigger, open, presence, children);
+    dismissible_menu_request_with_modal(
+        cx,
+        id,
+        trigger,
+        open,
+        presence,
+        children,
+        root_name,
+        content_focus,
+        dismissible_on_pointer_move,
+        true,
+    )
+}
+
+/// Build a shadcn/Radix-aligned menu overlay request with explicit modal behavior.
+///
+/// In Radix, the `modal` flag controls `disableOutsidePointerEvents`. In Fret we approximate this
+/// behavior by controlling whether outside-press dismissal consumes the pointer event (preventing
+/// click-through on the underlay).
+pub fn dismissible_menu_request_with_modal<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    children: Vec<AnyElement>,
+    root_name: String,
+    content_focus: Option<GlobalElementId>,
+    dismissible_on_pointer_move: Option<OnDismissiblePointerMove>,
+    modal: bool,
+) -> OverlayRequest {
+    let mut request = base_menu_overlay_request(id, trigger, open, presence, children, modal);
     request.root_name = Some(root_name);
     request.dismissible_on_pointer_move = dismissible_on_pointer_move;
     if !fret_ui::input_modality::is_keyboard(cx.app, Some(cx.window)) {
         request.initial_focus = content_focus;
     }
     request
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+
+    #[test]
+    fn menu_modal_controls_click_through_on_outside_press() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let req = base_menu_overlay_request(
+            GlobalElementId(1),
+            GlobalElementId(2),
+            open.clone(),
+            OverlayPresence::hidden(),
+            Vec::new(),
+            true,
+        );
+        assert!(req.consume_outside_pointer_events);
+
+        let req = base_menu_overlay_request(
+            GlobalElementId(1),
+            GlobalElementId(2),
+            open,
+            OverlayPresence::hidden(),
+            Vec::new(),
+            false,
+        );
+        assert!(!req.consume_outside_pointer_events);
+    }
 }

@@ -2612,7 +2612,7 @@ impl MenubarMenuEntries {
                         (children, Some(dismissible_on_pointer_move))
                     });
 
-                    let request = menu::root::dismissible_menu_request(
+                    let request = menu::root::dismissible_menu_request_with_modal(
                         cx,
                         trigger_id,
                         trigger_id,
@@ -2622,6 +2622,7 @@ impl MenubarMenuEntries {
                         overlay_root_name,
                         content_focus_id.get(),
                         dismissible_on_pointer_move,
+                        false,
                     );
                     OverlayController::request(cx, request);
                 }

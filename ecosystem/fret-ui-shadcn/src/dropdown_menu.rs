@@ -737,11 +737,12 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
 /// shadcn/ui `Dropdown Menu` (v4).
 ///
-/// This is a dismissible popover overlay (non-modal) backed by the component-layer overlay
-/// manager (`fret-ui-kit/overlay_controller.rs`).
+/// This is a dismissible popover overlay backed by the component-layer overlay manager
+/// (`fret-ui-kit/overlay_controller.rs`).
 #[derive(Clone)]
 pub struct DropdownMenu {
     open: Model<bool>,
+    modal: bool,
     align: DropdownMenuAlign,
     side: DropdownMenuSide,
     side_offset: Px,
@@ -771,6 +772,7 @@ impl DropdownMenu {
     pub fn new(open: Model<bool>) -> Self {
         Self {
             open,
+            modal: true,
             align: DropdownMenuAlign::default(),
             side: DropdownMenuSide::default(),
             side_offset: Px(4.0),
@@ -786,6 +788,12 @@ impl DropdownMenu {
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Controls whether outside-press dismissal should be click-through (Radix `modal={false}`).
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = modal;
         self
     }
 
@@ -890,6 +898,7 @@ impl DropdownMenu {
                 let side_offset = self.side_offset;
                 let window_margin = self.window_margin;
                 let open = self.open;
+                let modal = self.modal;
                 let open_for_overlay = open.clone();
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                 let min_width = self.min_width;
@@ -2390,7 +2399,7 @@ impl DropdownMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
-                let request = menu::root::dismissible_menu_request(
+                let request = menu::root::dismissible_menu_request_with_modal(
                     cx,
                     trigger_id,
                     trigger_id,
@@ -2400,6 +2409,7 @@ impl DropdownMenu {
                     overlay_root_name,
                     content_focus_id.get(),
                     dismissible_on_pointer_move,
+                    modal,
                 );
                 OverlayController::request(cx, request);
             }

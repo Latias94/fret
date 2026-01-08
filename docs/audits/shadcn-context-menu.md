@@ -41,10 +41,12 @@ Key upstream behaviors/surfaces:
 
 ### Dismissal & focus
 
-- Pass: Non-modal dismissible menu via `window_overlays` (outside press + Escape; non-click-through).
+- Pass: Dismissible menu via `window_overlays` (outside press + Escape).
 - Pass: On open, focus moves to the first focusable descendant in the menu (via overlay policy),
   enabling keyboard navigation.
 - Pass: Selecting an item dispatches the command (if any) and closes the menu.
+- Pass: `ContextMenu::modal(bool)` is supported (default `true`). When `modal=false`, outside-press
+  dismissal becomes click-through (Radix-style).
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
@@ -62,7 +64,7 @@ Key upstream behaviors/surfaces:
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- A shared convention for leading icons (consumer-provided today).
+_None tracked at this time._
 
 ## Implemented surfaces (notable)
 
