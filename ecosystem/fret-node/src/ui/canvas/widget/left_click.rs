@@ -65,43 +65,31 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                         return Hit::Edge(edge);
                     }
 
-                    let mut best_resize: Option<(GroupId, f32, crate::core::CanvasRect)> = None;
-                    for (group_id, group) in &graph.groups {
+                    let order =
+                        super::super::geometry::group_order(graph, &snapshot.group_draw_order);
+                    for group_id in order.iter().rev() {
+                        let Some(group) = graph.groups.get(group_id) else {
+                            continue;
+                        };
                         let rect = super::group_resize::group_rect_to_px(group.rect);
                         let handle = this.resize_handle_rect(rect, zoom);
-                        if !super::group_resize::group_resize_handle_hit(
-                            handle, position, zoom, 6.0,
-                        ) {
-                            continue;
+                        if super::group_resize::group_resize_handle_hit(handle, position, zoom, 6.0)
+                        {
+                            return Hit::GroupResize(*group_id, group.rect);
                         }
-                        let area =
-                            (group.rect.size.width.max(0.0)) * (group.rect.size.height.max(0.0));
-                        match best_resize {
-                            Some((_id, best_area, _rect)) if best_area <= area => {}
-                            _ => best_resize = Some((*group_id, area, group.rect)),
-                        }
-                    }
-                    if let Some((id, _area, rect)) = best_resize {
-                        return Hit::GroupResize(id, rect);
                     }
 
                     let header_h = this.style.node_header_height;
-                    let mut best: Option<(GroupId, f32, crate::core::CanvasRect)> = None;
-                    for (group_id, group) in &graph.groups {
+                    for group_id in order.iter().rev() {
+                        let Some(group) = graph.groups.get(group_id) else {
+                            continue;
+                        };
                         if !super::pending_group_drag::group_header_hit(
                             group.rect, header_h, zoom, position,
                         ) {
                             continue;
                         }
-                        let area =
-                            (group.rect.size.width.max(0.0)) * (group.rect.size.height.max(0.0));
-                        match best {
-                            Some((_id, best_area, _rect)) if best_area <= area => {}
-                            _ => best = Some((*group_id, area, group.rect)),
-                        }
-                    }
-                    if let Some((id, _area, rect)) = best {
-                        return Hit::GroupHeader(id, rect);
+                        return Hit::GroupHeader(*group_id, group.rect);
                     }
                     return Hit::Background;
                 };
@@ -186,6 +174,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
 
             canvas.update_view_state(cx.app, |s| {
                 s.selected_edges.clear();
+                s.selected_groups.clear();
                 if !s.selected_nodes.iter().any(|id| *id == node) {
                     s.selected_nodes.clear();
                     s.selected_nodes.push(node);
@@ -239,6 +228,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
 
             canvas.update_view_state(cx.app, |s| {
                 s.selected_edges.clear();
+                s.selected_groups.clear();
                 if multi_mod {
                     if let Some(ix) = s.selected_nodes.iter().position(|id| *id == node) {
                         s.selected_nodes.remove(ix);
@@ -285,6 +275,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             let multi = modifiers.ctrl || modifiers.meta;
             canvas.update_view_state(cx.app, |s| {
                 s.selected_nodes.clear();
+                s.selected_groups.clear();
                 if multi {
                     if let Some(ix) = s.selected_edges.iter().position(|id| *id == edge) {
                         s.selected_edges.remove(ix);
@@ -319,6 +310,24 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
 
+            let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
+            canvas.update_view_state(cx.app, |s| {
+                s.selected_nodes.clear();
+                s.selected_edges.clear();
+                if multi_mod {
+                    if let Some(ix) = s.selected_groups.iter().position(|id| *id == group) {
+                        s.selected_groups.remove(ix);
+                    } else {
+                        s.selected_groups.push(group);
+                    }
+                } else if !s.selected_groups.iter().any(|id| *id == group) {
+                    s.selected_groups.clear();
+                    s.selected_groups.push(group);
+                }
+                s.group_draw_order.retain(|id| *id != group);
+                s.group_draw_order.push(group);
+            });
+
             canvas.interaction.pending_group_resize = Some(PendingGroupResize {
                 group,
                 start_pos: position,
@@ -342,6 +351,24 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.hover_port = None;
             canvas.interaction.hover_port_valid = false;
             canvas.interaction.hover_port_convertible = false;
+
+            let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
+            canvas.update_view_state(cx.app, |s| {
+                s.selected_nodes.clear();
+                s.selected_edges.clear();
+                if multi_mod {
+                    if let Some(ix) = s.selected_groups.iter().position(|id| *id == group) {
+                        s.selected_groups.remove(ix);
+                    } else {
+                        s.selected_groups.push(group);
+                    }
+                } else if !s.selected_groups.iter().any(|id| *id == group) {
+                    s.selected_groups.clear();
+                    s.selected_groups.push(group);
+                }
+                s.group_draw_order.retain(|id| *id != group);
+                s.group_draw_order.push(group);
+            });
 
             canvas.interaction.pending_group_drag = Some(PendingGroupDrag {
                 group,

@@ -8,7 +8,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use fret_core::{Point, Px, Rect, Size};
 
-use crate::core::{Graph, NodeId, PortDirection, PortId};
+use crate::core::{Graph, GroupId, NodeId, PortDirection, PortId};
 use crate::ui::presenter::{NodeGraphPresenter, PortAnchorHint};
 use crate::ui::style::NodeGraphStyle;
 
@@ -160,6 +160,25 @@ pub(crate) fn node_order(graph: &Graph, draw_order: &[NodeId]) -> Vec<NodeId> {
     out
 }
 
+pub(crate) fn group_order(graph: &Graph, draw_order: &[GroupId]) -> Vec<GroupId> {
+    let mut seen: BTreeSet<GroupId> = BTreeSet::new();
+    let mut out: Vec<GroupId> = Vec::new();
+
+    for id in draw_order {
+        if graph.groups.contains_key(id) && seen.insert(*id) {
+            out.push(*id);
+        }
+    }
+
+    for id in graph.groups.keys() {
+        if seen.insert(*id) {
+            out.push(*id);
+        }
+    }
+
+    out
+}
+
 pub(crate) fn node_ports(graph: &Graph, node: NodeId) -> (Vec<PortId>, Vec<PortId>) {
     let Some(n) = graph.nodes.get(&node) else {
         return (Vec::new(), Vec::new());
@@ -178,6 +197,42 @@ pub(crate) fn node_ports(graph: &Graph, node: NodeId) -> (Vec<PortId>, Vec<PortI
     }
 
     (inputs, outputs)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::core::{CanvasPoint, CanvasRect, CanvasSize, Graph, Group, GroupId};
+
+    #[test]
+    fn group_order_prefers_draw_order_then_appends_rest() {
+        let mut graph = Graph::default();
+
+        let g1 = GroupId::new();
+        let g2 = GroupId::new();
+        let g3 = GroupId::new();
+
+        let group = |title: &str| Group {
+            title: title.to_string(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 10.0,
+                    height: 10.0,
+                },
+            },
+            color: None,
+        };
+
+        graph.groups.insert(g1, group("g1"));
+        graph.groups.insert(g2, group("g2"));
+        graph.groups.insert(g3, group("g3"));
+
+        let order = super::group_order(&graph, &[g2, g1]);
+        assert_eq!(order.len(), 3);
+        assert_eq!(order[0], g2);
+        assert_eq!(order[1], g1);
+        assert!(order.contains(&g3));
+    }
 }
 
 fn node_size_default_px(

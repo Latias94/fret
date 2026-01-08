@@ -4,7 +4,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::core::{CanvasSize, EdgeId, Graph, GraphId, NodeId};
+use crate::core::{CanvasSize, EdgeId, Graph, GraphId, GroupId, NodeId};
 
 /// Graph file format version (v1).
 pub const GRAPH_FILE_VERSION: u32 = 1;
@@ -147,9 +147,15 @@ pub struct NodeGraphViewState {
     /// Selected edges (optional).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub selected_edges: Vec<EdgeId>,
+    /// Selected groups (optional).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub selected_groups: Vec<GroupId>,
     /// Explicit draw order (optional).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub draw_order: Vec<NodeId>,
+    /// Explicit group draw order (optional).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub group_draw_order: Vec<GroupId>,
 
     /// Optional interaction tuning (snap, connection mode, auto-pan, etc.).
     #[serde(default, skip_serializing_if = "NodeGraphInteractionState::is_default")]

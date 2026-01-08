@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::{ClipboardToken, Point, Rect};
 use fret_runtime::TimerToken;
 
-use crate::core::{CanvasPoint, EdgeId, NodeId as GraphNodeId, NodeKindKey, PortId};
+use crate::core::{CanvasPoint, EdgeId, GroupId, NodeId as GraphNodeId, NodeKindKey, PortId};
 use crate::rules::{DiagnosticSeverity, EdgeEndpoint};
 use crate::ui::presenter::{InsertNodeCandidate, NodeGraphContextMenuItem};
 
@@ -16,7 +16,9 @@ pub(crate) struct ViewSnapshot {
     pub(crate) zoom: f32,
     pub(crate) selected_nodes: Vec<GraphNodeId>,
     pub(crate) selected_edges: Vec<EdgeId>,
+    pub(crate) selected_groups: Vec<GroupId>,
     pub(crate) draw_order: Vec<GraphNodeId>,
+    pub(crate) group_draw_order: Vec<GroupId>,
     pub(crate) interaction: crate::io::NodeGraphInteractionState,
 }
 

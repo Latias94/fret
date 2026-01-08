@@ -18,8 +18,8 @@ use crate::core::{
 };
 use crate::io::{NodeGraphConnectionMode, NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::{
-    GraphFragment, GraphHistory, GraphOp, GraphTransaction, IdRemapSeed, IdRemapper, PasteTuning,
-    apply_transaction,
+    GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction, IdRemapSeed,
+    IdRemapper, PasteTuning, apply_transaction,
 };
 use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
@@ -64,6 +64,7 @@ mod sticky_wire;
 mod wire_drag;
 
 use super::conversion;
+use super::geometry::group_order;
 use super::geometry::{CanvasGeometry, node_ports};
 use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
@@ -318,7 +319,9 @@ impl NodeGraphCanvas {
             zoom: self.cached_zoom,
             selected_nodes: Vec::new(),
             selected_edges: Vec::new(),
+            selected_groups: Vec::new(),
             draw_order: Vec::new(),
+            group_draw_order: Vec::new(),
             interaction: NodeGraphInteractionState::default(),
         };
 
@@ -327,7 +330,9 @@ impl NodeGraphCanvas {
             snapshot.zoom = s.zoom;
             snapshot.selected_nodes = s.selected_nodes.clone();
             snapshot.selected_edges = s.selected_edges.clone();
+            snapshot.selected_groups = s.selected_groups.clone();
             snapshot.draw_order = s.draw_order.clone();
+            snapshot.group_draw_order = s.group_draw_order.clone();
             snapshot.interaction = s.interaction.clone();
         });
 
@@ -798,6 +803,7 @@ impl NodeGraphCanvas {
                 self.update_view_state(host, |s| {
                     s.selected_edges.clear();
                     s.selected_nodes.clear();
+                    s.selected_groups.clear();
                 });
                 true
             }
@@ -821,6 +827,7 @@ impl NodeGraphCanvas {
                 self.update_view_state(host, |s| {
                     s.selected_edges.clear();
                     s.selected_nodes.clear();
+                    s.selected_groups.clear();
                 });
                 true
             }
@@ -945,6 +952,7 @@ impl NodeGraphCanvas {
         if !new_nodes.is_empty() {
             self.update_view_state(host, |s| {
                 s.selected_edges.clear();
+                s.selected_groups.clear();
                 s.selected_nodes = new_nodes.clone();
                 for id in &new_nodes {
                     s.draw_order.retain(|x| x != id);
@@ -994,6 +1002,7 @@ impl NodeGraphCanvas {
         if !new_nodes.is_empty() {
             self.update_view_state(host, |s| {
                 s.selected_edges.clear();
+                s.selected_groups.clear();
                 s.selected_nodes = new_nodes.clone();
                 for id in &new_nodes {
                     s.draw_order.retain(|x| x != id);
@@ -1007,10 +1016,19 @@ impl NodeGraphCanvas {
         graph: &Graph,
         selected_nodes: &[GraphNodeId],
         selected_edges: &[EdgeId],
+        selected_groups: &[crate::core::GroupId],
     ) -> Vec<GraphOp> {
         let mut ops: Vec<GraphOp> = Vec::new();
         let mut removed_edges: std::collections::BTreeSet<EdgeId> =
             std::collections::BTreeSet::new();
+
+        let mut groups: Vec<crate::core::GroupId> = selected_groups.to_vec();
+        groups.sort();
+        for group_id in groups {
+            if let Some(op) = graph.build_remove_group_op(group_id) {
+                ops.push(op);
+            }
+        }
 
         let mut nodes: Vec<GraphNodeId> = selected_nodes.to_vec();
         nodes.sort();
@@ -1620,11 +1638,21 @@ impl NodeGraphCanvas {
             rect: crate::core::CanvasRect { origin, size },
             color: None,
         };
+        let group_id = crate::core::GroupId::new();
         let ops = vec![GraphOp::AddGroup {
-            id: crate::core::GroupId::new(),
+            id: group_id,
             group,
         }];
-        let _ = self.commit_ops(host, window, Some("Create Group"), ops);
+        if self.commit_ops(host, window, Some("Create Group"), ops) {
+            self.update_view_state(host, |s| {
+                s.selected_nodes.clear();
+                s.selected_edges.clear();
+                s.selected_groups.clear();
+                s.selected_groups.push(group_id);
+                s.group_draw_order.retain(|id| *id != group_id);
+                s.group_draw_order.push(group_id);
+            });
+        }
     }
 
     fn record_recent_kind(&mut self, kind: &NodeKindKey) {
@@ -1929,6 +1957,7 @@ impl NodeGraphCanvas {
                             if let Some(node_id) = node_id {
                                 self.update_view_state(cx.app, |s| {
                                     s.selected_edges.clear();
+                                    s.selected_groups.clear();
                                     s.selected_nodes.clear();
                                     s.selected_nodes.push(node_id);
                                     s.draw_order.retain(|id| *id != node_id);
@@ -1998,6 +2027,7 @@ impl NodeGraphCanvas {
                             if let Some(node_id) = created_node {
                                 self.update_view_state(cx.app, |s| {
                                     s.selected_edges.clear();
+                                    s.selected_groups.clear();
                                     s.selected_nodes.clear();
                                     s.selected_nodes.push(node_id);
                                     s.draw_order.retain(|id| *id != node_id);
@@ -2102,6 +2132,7 @@ impl NodeGraphCanvas {
                         if let Some(node_id) = node_id {
                             self.update_view_state(cx.app, |s| {
                                 s.selected_edges.clear();
+                                s.selected_groups.clear();
                                 s.selected_nodes.clear();
                                 s.selected_nodes.push(node_id);
                                 s.draw_order.retain(|id| *id != node_id);
@@ -2208,6 +2239,7 @@ impl NodeGraphCanvas {
                         if let Some(node_id) = node_id {
                             self.update_view_state(cx.app, |s| {
                                 s.selected_edges.clear();
+                                s.selected_groups.clear();
                                 s.selected_nodes.clear();
                                 s.selected_nodes.push(node_id);
                                 s.draw_order.retain(|id| *id != node_id);
@@ -2269,6 +2301,7 @@ impl NodeGraphCanvas {
                         if let Some(node_id) = node_id {
                             self.update_view_state(cx.app, |s| {
                                 s.selected_edges.clear();
+                                s.selected_groups.clear();
                                 s.selected_nodes.clear();
                                 s.selected_nodes.push(node_id);
                                 s.draw_order.retain(|id| *id != node_id);
@@ -3082,6 +3115,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     .unwrap_or_default();
                 self.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
+                    s.selected_groups.clear();
                     s.selected_nodes = nodes;
                 });
                 cx.request_redraw();
@@ -3097,10 +3131,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 let selected_nodes = snapshot.selected_nodes.clone();
                 let selected_edges = snapshot.selected_edges.clone();
+                let selected_groups = snapshot.selected_groups.clone();
                 let remove_ops = self
                     .graph
                     .read_ref(cx.app, |graph| {
-                        Self::delete_selection_ops(graph, &selected_nodes, &selected_edges)
+                        Self::delete_selection_ops(
+                            graph,
+                            &selected_nodes,
+                            &selected_edges,
+                            &selected_groups,
+                        )
                     })
                     .ok()
                     .unwrap_or_default();
@@ -3108,6 +3148,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 self.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
                     s.selected_nodes.clear();
+                    s.selected_groups.clear();
                 });
 
                 cx.request_redraw();
@@ -3128,14 +3169,23 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             CMD_NODE_GRAPH_DELETE_SELECTION => {
                 let selected_edges = snapshot.selected_edges.clone();
                 let selected_nodes = snapshot.selected_nodes.clone();
-                if selected_edges.is_empty() && selected_nodes.is_empty() {
+                let selected_groups = snapshot.selected_groups.clone();
+                if selected_edges.is_empty()
+                    && selected_nodes.is_empty()
+                    && selected_groups.is_empty()
+                {
                     return true;
                 }
 
                 let remove_ops = self
                     .graph
                     .read_ref(cx.app, |graph| {
-                        Self::delete_selection_ops(graph, &selected_nodes, &selected_edges)
+                        Self::delete_selection_ops(
+                            graph,
+                            &selected_nodes,
+                            &selected_edges,
+                            &selected_groups,
+                        )
                     })
                     .ok()
                     .unwrap_or_default();
@@ -3144,6 +3194,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 self.update_view_state(cx.app, |s| {
                     s.selected_edges.clear();
                     s.selected_nodes.clear();
+                    s.selected_groups.clear();
                 });
                 cx.request_redraw();
                 cx.invalidate_self(Invalidation::Paint);
@@ -3605,7 +3656,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         #[derive(Debug, Default)]
         struct RenderData {
-            groups: Vec<(Rect, Arc<str>)>,
+            groups: Vec<(Rect, Arc<str>, bool)>,
             edges: Vec<(EdgeId, Point, Point, Color, bool, bool)>,
             nodes: Vec<(GraphNodeId, Rect, bool, Arc<str>, Option<Arc<str>>, usize)>,
             pins: Vec<(PortId, Rect, Color)>,
@@ -3642,6 +3693,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let render = {
             let selected: HashSet<GraphNodeId> = snapshot.selected_nodes.iter().copied().collect();
             let selected_edges: HashSet<EdgeId> = snapshot.selected_edges.iter().copied().collect();
+            let selected_groups: HashSet<crate::core::GroupId> =
+                snapshot.selected_groups.iter().copied().collect();
             let this = &*self;
             let geom = geom.clone();
             let presenter: &dyn NodeGraphPresenter = &*this.presenter;
@@ -3655,13 +3708,20 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     let pin_r = this.style.pin_radius;
                     let label_overhead = 2.0 * node_pad + 2.0 * (pin_r + pin_gap);
 
-                    for (_group_id, group) in &graph.groups {
+                    let order = group_order(graph, &snapshot.group_draw_order);
+                    for group_id in order {
+                        let Some(group) = graph.groups.get(&group_id) else {
+                            continue;
+                        };
                         let rect = Rect::new(
                             Point::new(Px(group.rect.origin.x), Px(group.rect.origin.y)),
                             Size::new(Px(group.rect.size.width), Px(group.rect.size.height)),
                         );
-                        out.groups
-                            .push((rect, Arc::<str>::from(group.title.clone())));
+                        out.groups.push((
+                            rect,
+                            Arc::<str>::from(group.title.clone()),
+                            selected_groups.contains(&group_id),
+                        ));
                     }
 
                     for node in geom.order.iter().copied() {
@@ -3745,13 +3805,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
             let group_pad = 10.0 / zoom;
             let group_corner = Px(10.0 / zoom);
-            for (rect, title) in &render.groups {
+            for (rect, title, selected) in &render.groups {
+                let border_color = if *selected {
+                    self.style.node_border_selected
+                } else {
+                    self.style.group_border
+                };
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(1),
                     rect: *rect,
                     background: self.style.group_background,
                     border: Edges::all(Px(1.0 / zoom)),
-                    border_color: self.style.group_border,
+                    border_color,
                     corner_radii: Corners::all(group_corner),
                 });
 

@@ -177,6 +177,7 @@ pub(super) fn handle_left_up<H: UiHost>(
             canvas.update_view_state(cx.app, |s| {
                 s.selected_nodes.clear();
                 s.selected_edges.clear();
+                s.selected_groups.clear();
             });
         }
         canvas.interaction.snap_guides = None;

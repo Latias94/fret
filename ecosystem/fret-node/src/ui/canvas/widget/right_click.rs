@@ -163,6 +163,7 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost>(
 
     canvas.update_view_state(cx.app, |s| {
         s.selected_nodes.clear();
+        s.selected_groups.clear();
         if !s.selected_edges.iter().any(|id| *id == edge) {
             s.selected_edges.clear();
             s.selected_edges.push(edge);
