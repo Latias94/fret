@@ -4,8 +4,8 @@ use fret_ui::UiHost;
 use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
 
 use super::super::state::{
-    EdgeDrag, PendingGroupDrag, PendingNodeDrag, PendingNodeResize, ViewSnapshot, WireDrag,
-    WireDragKind,
+    EdgeDrag, PendingGroupDrag, PendingGroupResize, PendingNodeDrag, PendingNodeResize,
+    ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::NodeGraphCanvas;
 
@@ -25,6 +25,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
         Resize(GraphNodeId, Rect),
         Node(GraphNodeId, Rect),
         Edge(EdgeId),
+        GroupResize(GroupId, crate::core::CanvasRect),
         GroupHeader(GroupId, crate::core::CanvasRect),
         Background,
     }
@@ -63,6 +64,27 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                     ) {
                         return Hit::Edge(edge);
                     }
+
+                    let mut best_resize: Option<(GroupId, f32, crate::core::CanvasRect)> = None;
+                    for (group_id, group) in &graph.groups {
+                        let rect = super::group_resize::group_rect_to_px(group.rect);
+                        let handle = this.resize_handle_rect(rect, zoom);
+                        if !super::group_resize::group_resize_handle_hit(
+                            handle, position, zoom, 6.0,
+                        ) {
+                            continue;
+                        }
+                        let area =
+                            (group.rect.size.width.max(0.0)) * (group.rect.size.height.max(0.0));
+                        match best_resize {
+                            Some((_id, best_area, _rect)) if best_area <= area => {}
+                            _ => best_resize = Some((*group_id, area, group.rect)),
+                        }
+                    }
+                    if let Some((id, _area, rect)) = best_resize {
+                        return Hit::GroupResize(id, rect);
+                    }
+
                     let header_h = this.style.node_header_height;
                     let mut best: Option<(GroupId, f32, crate::core::CanvasRect)> = None;
                     for (group_id, group) in &graph.groups {
@@ -101,6 +123,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
         Hit::Port(port) => {
             canvas.interaction.pending_group_drag = None;
             canvas.interaction.group_drag = None;
+            canvas.interaction.pending_group_resize = None;
+            canvas.interaction.group_resize = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.edge_drag = None;
@@ -146,6 +170,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
         Hit::Resize(node, rect) => {
             canvas.interaction.pending_group_drag = None;
             canvas.interaction.group_drag = None;
+            canvas.interaction.pending_group_resize = None;
+            canvas.interaction.group_resize = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
@@ -191,6 +217,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
         Hit::Node(node, rect) => {
             canvas.interaction.pending_group_drag = None;
             canvas.interaction.group_drag = None;
+            canvas.interaction.pending_group_resize = None;
+            canvas.interaction.group_resize = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
@@ -244,6 +272,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
         Hit::Edge(edge) => {
             canvas.interaction.pending_group_drag = None;
             canvas.interaction.group_drag = None;
+            canvas.interaction.pending_group_resize = None;
+            canvas.interaction.group_resize = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
@@ -274,6 +304,32 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             cx.request_redraw();
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
         }
+        Hit::GroupResize(group, rect) => {
+            canvas.interaction.pending_group_drag = None;
+            canvas.interaction.group_drag = None;
+            canvas.interaction.pending_node_drag = None;
+            canvas.interaction.node_drag = None;
+            canvas.interaction.pending_node_resize = None;
+            canvas.interaction.node_resize = None;
+            canvas.interaction.wire_drag = None;
+            canvas.interaction.edge_drag = None;
+            canvas.interaction.pending_marquee = None;
+            canvas.interaction.marquee = None;
+            canvas.interaction.hover_port = None;
+            canvas.interaction.hover_port_valid = false;
+            canvas.interaction.hover_port_convertible = false;
+
+            canvas.interaction.pending_group_resize = Some(PendingGroupResize {
+                group,
+                start_pos: position,
+                start_rect: rect,
+            });
+            canvas.interaction.group_resize = None;
+
+            cx.capture_pointer(cx.node);
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        }
         Hit::GroupHeader(group, rect) => {
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
@@ -293,6 +349,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                 start_rect: rect,
             });
             canvas.interaction.group_drag = None;
+            canvas.interaction.pending_group_resize = None;
+            canvas.interaction.group_resize = None;
 
             cx.capture_pointer(cx.node);
             cx.request_redraw();
@@ -302,6 +360,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             canvas.interaction.edge_drag = None;
             canvas.interaction.pending_group_drag = None;
             canvas.interaction.group_drag = None;
+            canvas.interaction.pending_group_resize = None;
+            canvas.interaction.group_resize = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;

@@ -46,6 +46,7 @@ mod context_menu;
 mod cursor;
 mod edge_drag;
 mod group_drag;
+mod group_resize;
 mod hover;
 mod left_click;
 mod marquee;
@@ -54,6 +55,7 @@ mod node_resize;
 mod pan_zoom;
 mod pending_drag;
 mod pending_group_drag;
+mod pending_group_resize;
 mod pending_resize;
 mod pointer_up;
 mod right_click;
@@ -3340,6 +3342,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 if *button == MouseButton::Middle {
                     self.interaction.hover_edge = None;
+                    self.interaction.pending_group_drag = None;
+                    self.interaction.group_drag = None;
+                    self.interaction.pending_group_resize = None;
+                    self.interaction.group_resize = None;
                     self.interaction.pending_node_drag = None;
                     self.interaction.node_drag = None;
                     self.interaction.pending_node_resize = None;
@@ -3410,6 +3416,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 if group_drag::handle_group_drag_move(
+                    self, cx, &snapshot, *position, *modifiers, zoom,
+                ) {
+                    return;
+                }
+
+                if pending_group_resize::handle_pending_group_resize_move(
+                    self, cx, &snapshot, *position, zoom,
+                ) {
+                    return;
+                }
+
+                if group_resize::handle_group_resize_move(
                     self, cx, &snapshot, *position, *modifiers, zoom,
                 ) {
                     return;

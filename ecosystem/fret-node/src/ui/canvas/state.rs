@@ -33,6 +33,8 @@ pub(crate) struct InteractionState {
     pub(crate) node_drag: Option<NodeDrag>,
     pub(crate) pending_group_drag: Option<PendingGroupDrag>,
     pub(crate) group_drag: Option<GroupDrag>,
+    pub(crate) pending_group_resize: Option<PendingGroupResize>,
+    pub(crate) group_resize: Option<GroupResize>,
     pub(crate) pending_node_resize: Option<PendingNodeResize>,
     pub(crate) node_resize: Option<NodeResize>,
     pub(crate) wire_drag: Option<WireDrag>,
@@ -96,6 +98,20 @@ pub(crate) struct GroupDrag {
     pub(crate) start_pos: Point,
     pub(crate) start_rect: crate::core::CanvasRect,
     pub(crate) nodes: Vec<(GraphNodeId, CanvasPoint)>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PendingGroupResize {
+    pub(crate) group: crate::core::GroupId,
+    pub(crate) start_pos: Point,
+    pub(crate) start_rect: crate::core::CanvasRect,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct GroupResize {
+    pub(crate) group: crate::core::GroupId,
+    pub(crate) start_pos: Point,
+    pub(crate) start_rect: crate::core::CanvasRect,
 }
 
 #[derive(Debug, Clone)]

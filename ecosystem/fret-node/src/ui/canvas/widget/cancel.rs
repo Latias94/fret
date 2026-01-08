@@ -25,6 +25,12 @@ pub(super) fn handle_escape_cancel<H: UiHost>(
     if canvas.interaction.pending_group_drag.take().is_some() {
         canceled = true;
     }
+    if canvas.interaction.group_resize.take().is_some() {
+        canceled = true;
+    }
+    if canvas.interaction.pending_group_resize.take().is_some() {
+        canceled = true;
+    }
     if canvas.interaction.node_resize.take().is_some() {
         canceled = true;
     }

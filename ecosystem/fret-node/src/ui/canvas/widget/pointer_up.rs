@@ -75,6 +75,34 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         return true;
     }
 
+    if let Some(resize) = canvas.interaction.group_resize.take() {
+        canvas.interaction.pending_group_resize = None;
+
+        let end = canvas
+            .graph
+            .read_ref(cx.app, |g| g.groups.get(&resize.group).map(|gr| gr.rect))
+            .ok()
+            .flatten();
+
+        if let Some(end) = end
+            && end != resize.start_rect
+        {
+            canvas.history.record(crate::ops::GraphTransaction {
+                label: Some("Resize Group".to_string()),
+                ops: vec![GraphOp::SetGroupRect {
+                    id: resize.group,
+                    from: resize.start_rect,
+                    to: end,
+                }],
+            });
+        }
+
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
     if let Some(drag) = canvas.interaction.group_drag.take() {
         canvas.interaction.pending_group_drag = None;
 
@@ -244,6 +272,13 @@ pub(super) fn handle_pointer_up<H: UiHost>(
     }
 
     if canvas.interaction.pending_group_drag.take().is_some() {
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
+    if canvas.interaction.pending_group_resize.take().is_some() {
         cx.release_pointer_capture();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
