@@ -63,6 +63,7 @@ pub struct ChartModel {
     pub axes: BTreeMap<AxisId, AxisModel>,
     pub data_zoom_x: BTreeMap<DataZoomId, DataZoomXModel>,
     pub data_zoom_x_by_axis: BTreeMap<AxisId, DataZoomId>,
+    pub axis_pointer: Option<AxisPointerModel>,
 
     pub series_order: Vec<SeriesId>,
     pub series: BTreeMap<SeriesId, SeriesModel>,
@@ -80,6 +81,7 @@ impl ChartModel {
             axes: BTreeMap::default(),
             data_zoom_x: BTreeMap::default(),
             data_zoom_x_by_axis: BTreeMap::default(),
+            axis_pointer: None,
             series_order: Vec::default(),
             series: BTreeMap::default(),
             revs: ModelRevisions::default(),
@@ -173,6 +175,17 @@ impl ChartModel {
                 },
             );
         }
+
+        model.axis_pointer = spec.axis_pointer.map(|mut p| {
+            p.trigger_distance_px = sanitize_px(p.trigger_distance_px, 12.0);
+            p.throttle_px = sanitize_px(p.throttle_px, 0.75);
+            AxisPointerModel {
+                enabled: p.enabled,
+                snap: p.snap,
+                trigger_distance_px: p.trigger_distance_px,
+                throttle_px: p.throttle_px,
+            }
+        });
 
         let mut series_ids: BTreeSet<SeriesId> = BTreeSet::new();
         for series in spec.series {
@@ -280,6 +293,14 @@ pub struct DataZoomXModel {
     pub filter_mode: FilterMode,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct AxisPointerModel {
+    pub enabled: bool,
+    pub snap: bool,
+    pub trigger_distance_px: f32,
+    pub throttle_px: f32,
+}
+
 #[derive(Debug, Clone)]
 pub struct SeriesModel {
     pub id: SeriesId,
@@ -290,4 +311,12 @@ pub struct SeriesModel {
     pub y_axis: AxisId,
     pub visible: bool,
     pub area_baseline: AreaBaseline,
+}
+
+fn sanitize_px(v: f32, default: f32) -> f32 {
+    if v.is_finite() && v >= 0.0 {
+        v
+    } else {
+        default
+    }
 }

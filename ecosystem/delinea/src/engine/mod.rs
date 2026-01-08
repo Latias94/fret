@@ -54,6 +54,14 @@ pub struct ChartOutput {
     pub marks: MarkTree,
     pub link_events: Vec<LinkEvent>,
     pub hover: Option<HoverHit>,
+    pub axis_pointer: Option<AxisPointerOutput>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct AxisPointerOutput {
+    pub crosshair_px: Point,
+    pub hit: HoverHit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -93,6 +101,14 @@ pub struct ChartEngine {
     view: ViewState,
     marks_stage: MarksStage,
     lod_scratch: LodScratch,
+    axis_pointer_cache: AxisPointerCache,
+}
+
+#[derive(Debug, Default, Clone)]
+struct AxisPointerCache {
+    last_hover_px: Option<Point>,
+    last_marks_rev: Revision,
+    hit: Option<HoverHit>,
 }
 
 impl ChartEngine {
@@ -124,6 +140,7 @@ impl ChartEngine {
             view: ViewState::default(),
             marks_stage: MarksStage::default(),
             lod_scratch: LodScratch::default(),
+            axis_pointer_cache: AxisPointerCache::default(),
         })
     }
 
@@ -167,7 +184,6 @@ impl ChartEngine {
         match action {
             Action::HoverAt { point } => {
                 self.state.hover_px = Some(point);
-                self.state.revision.bump();
             }
             Action::SetDataWindowX { axis, window } => {
                 let default_mode = self
@@ -313,6 +329,7 @@ impl ChartEngine {
 
         self.output.link_events.clear();
         self.output.hover = None;
+        self.output.axis_pointer = None;
 
         let view_changed = self
             .view
@@ -348,12 +365,71 @@ impl ChartEngine {
 
         let unfinished = !done;
 
-        if let Some(hover_px) = self.state.hover_px {
-            self.output.hover =
-                hit_test::hover_hit_test(&self.model, &self.datasets, &self.output.marks, hover_px);
+        let hover_px = self.state.hover_px;
+        let marks_rev = self.output.marks.revision;
+        if self.axis_pointer_cache.last_marks_rev != marks_rev {
+            self.axis_pointer_cache.last_marks_rev = marks_rev;
+            self.axis_pointer_cache.last_hover_px = None;
+            self.axis_pointer_cache.hit = None;
+        }
+
+        let axis_pointer = self.model.axis_pointer.filter(|p| p.enabled);
+
+        if let Some(hover_px) = hover_px {
+            let should_recompute = axis_pointer.is_some_and(|p| {
+                should_recompute_hover(
+                    self.axis_pointer_cache.last_hover_px,
+                    hover_px,
+                    p.throttle_px,
+                )
+            });
+            if should_recompute {
+                self.axis_pointer_cache.last_hover_px = Some(hover_px);
+                self.axis_pointer_cache.hit = hit_test::hover_hit_test(
+                    &self.model,
+                    &self.datasets,
+                    &self.output.marks,
+                    hover_px,
+                );
+            }
+        } else {
+            self.axis_pointer_cache.last_hover_px = None;
+            self.axis_pointer_cache.hit = None;
+        }
+
+        self.output.hover = self.axis_pointer_cache.hit;
+
+        if let (Some(p), Some(hover_px), Some(hit)) = (axis_pointer, hover_px, self.output.hover) {
+            let viewport = self.output.viewport.unwrap_or_default();
+            if rect_contains_point(viewport, hover_px) {
+                let trigger2 = p.trigger_distance_px.max(0.0) * p.trigger_distance_px.max(0.0);
+                if hit.dist2_px <= trigger2 {
+                    let crosshair_px = if p.snap { hit.point_px } else { hover_px };
+                    self.output.axis_pointer = Some(AxisPointerOutput { crosshair_px, hit });
+                }
+            }
         }
 
         self.output.revision.bump();
         Ok(StepResult { unfinished })
     }
+}
+
+fn rect_contains_point(rect: Rect, point: Point) -> bool {
+    let x0 = rect.origin.x.0;
+    let y0 = rect.origin.y.0;
+    let x1 = x0 + rect.size.width.0;
+    let y1 = y0 + rect.size.height.0;
+    point.x.0 >= x0 && point.x.0 <= x1 && point.y.0 >= y0 && point.y.0 <= y1
+}
+
+fn should_recompute_hover(prev: Option<Point>, next: Point, throttle_px: f32) -> bool {
+    let Some(prev) = prev else {
+        return true;
+    };
+    let dx = next.x.0 - prev.x.0;
+    let dy = next.y.0 - prev.y.0;
+    let dist2 = dx * dx + dy * dy;
+    let t = throttle_px.max(0.0);
+    dist2 >= t * t
 }

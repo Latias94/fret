@@ -14,6 +14,7 @@ pub struct ChartSpec {
     pub grids: Vec<GridSpec>,
     pub axes: Vec<AxisSpec>,
     pub data_zoom_x: Vec<DataZoomXSpec>,
+    pub axis_pointer: Option<AxisPointerSpec>,
     pub series: Vec<SeriesSpec>,
 }
 
@@ -141,6 +142,29 @@ impl Default for DataZoomXSpec {
             id: DataZoomId::new(0),
             axis: AxisId::new(0),
             filter_mode: FilterMode::Filter,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct AxisPointerSpec {
+    pub enabled: bool,
+    /// When true, crosshair snaps to the nearest hit point (P0: single series hit).
+    pub snap: bool,
+    /// Maximum distance (in pixels) to activate the pointer/tooltip.
+    pub trigger_distance_px: f32,
+    /// Minimum pointer movement (in pixels) to recompute hit testing.
+    pub throttle_px: f32,
+}
+
+impl Default for AxisPointerSpec {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            snap: false,
+            trigger_distance_px: 12.0,
+            throttle_px: 0.75,
         }
     }
 }

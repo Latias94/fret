@@ -99,6 +99,8 @@ pub struct ChartCanvas {
 
 impl ChartCanvas {
     pub fn new(spec: delinea::ChartSpec) -> Result<Self, ModelError> {
+        let mut spec = spec;
+        spec.axis_pointer.get_or_insert_with(Default::default);
         Ok(Self {
             engine: ChartEngine::new(spec)?,
             style: ChartStyle::default(),
@@ -1578,16 +1580,14 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             self.tooltip_text.push(blob);
         }
 
-        let pointer_pos = self.last_pointer_pos;
-        let hover_hit = self.engine.output().hover;
-
         let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
-        let hover_radius_px = self.style.hover_point_size.0.max(4.0) * 3.0;
-        let hover_active = interaction_idle
-            && pointer_pos.is_some_and(|pos| self.last_layout.plot.contains(pos))
-            && hover_hit.is_some_and(|hit| hit.dist2_px <= hover_radius_px * hover_radius_px);
+        let axis_pointer = interaction_idle
+            .then_some(self.engine.output().axis_pointer)
+            .flatten();
 
-        if hover_active && let (Some(pos), Some(hit)) = (pointer_pos, hover_hit) {
+        if let Some(axis_pointer) = axis_pointer {
+            let pos = axis_pointer.crosshair_px;
+            let hit = axis_pointer.hit;
             let overlay_order = DrawOrder(self.style.draw_order.0.saturating_add(9_000));
             let point_order = DrawOrder(self.style.draw_order.0.saturating_add(9_001));
 
@@ -1657,10 +1657,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         cx.scene.push(SceneOp::PopClip);
 
-        if hover_active
-            && let Some(hit) = hover_hit
+        if let Some(axis_pointer) = axis_pointer
             && let Some((x_axis, y_axis)) = self.primary_axes()
         {
+            let hit = axis_pointer.hit;
             let x_window = self.current_window_x(x_axis);
             let y_window = self.current_window_y(y_axis);
 

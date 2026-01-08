@@ -240,6 +240,7 @@ mod tests {
                 },
             ],
             data_zoom_x: vec![],
+            axis_pointer: None,
             series: vec![SeriesSpec {
                 id: series_id,
                 kind: SeriesKind::Line,

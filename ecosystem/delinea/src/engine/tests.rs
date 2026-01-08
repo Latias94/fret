@@ -6,12 +6,12 @@ use crate::engine::ChartEngine;
 use crate::engine::window::DataWindow;
 use crate::scheduler::WorkBudget;
 use crate::spec::{
-    AxisKind, AxisRange, AxisSpec, ChartSpec, DataZoomXSpec, DatasetSpec, FieldSpec, FilterMode,
-    GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
+    AxisKind, AxisPointerSpec, AxisRange, AxisSpec, ChartSpec, DataZoomXSpec, DatasetSpec,
+    FieldSpec, FilterMode, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
 };
 use crate::text::{TextMeasurer, TextMetrics};
 use crate::transform::RowRange;
-use fret_core::{Px, Rect, Size};
+use fret_core::{Point, Px, Rect, Size};
 
 fn basic_spec() -> ChartSpec {
     let dataset_id = crate::ids::DatasetId::new(1);
@@ -51,6 +51,7 @@ fn basic_spec() -> ChartSpec {
             },
         ],
         data_zoom_x: vec![],
+        axis_pointer: None,
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
             kind: SeriesKind::Line,
@@ -175,6 +176,7 @@ fn band_emits_two_polylines() {
             },
         ],
         data_zoom_x: vec![],
+        axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Band,
@@ -279,6 +281,7 @@ fn row_range_limits_mark_indices() {
             },
         ],
         data_zoom_x: vec![],
+        axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -373,6 +376,7 @@ fn x_window_limits_mark_indices() {
             },
         ],
         data_zoom_x: vec![],
+        axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -473,6 +477,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
             },
         ],
         data_zoom_x: vec![],
+        axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -570,6 +575,7 @@ fn set_series_visible_hides_marks() {
             },
         ],
         data_zoom_x: vec![],
+        axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -680,6 +686,7 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
             },
         ],
         data_zoom_x: vec![],
+        axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -793,6 +800,7 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
             },
         ],
         data_zoom_x: vec![],
+        axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -929,6 +937,7 @@ fn data_window_filter_mode_resets_to_spec_default() {
             axis: x_axis,
             filter_mode: FilterMode::None,
         }],
+        axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -1029,6 +1038,7 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
             axis: x_axis,
             filter_mode: FilterMode::None,
         }],
+        axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -1080,4 +1090,182 @@ fn span_px_y(points: &[fret_core::Point]) -> f32 {
         .fold(f32::NEG_INFINITY, |a, b| a.max(b));
 
     (max - min).abs()
+}
+
+#[test]
+fn hover_does_not_rebuild_marks() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                kind: AxisKind::X,
+                grid: grid_id,
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        axis_pointer: Some(AxisPointerSpec::default()),
+        series: vec![SeriesSpec {
+            id: series_id,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    engine.datasets_mut().datasets.push((dataset_id, table));
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+        .unwrap();
+    assert!(!step.unfinished);
+    let marks_rev = engine.output().marks.revision;
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(10.0), Px(10.0)),
+    });
+
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 8))
+        .unwrap();
+    assert!(!step.unfinished);
+    assert_eq!(engine.output().marks.revision, marks_rev);
+}
+
+#[test]
+fn axis_pointer_is_emitted_when_hit_is_close_enough() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                kind: AxisKind::X,
+                grid: grid_id,
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        axis_pointer: Some(AxisPointerSpec {
+            enabled: true,
+            snap: false,
+            trigger_distance_px: 50.0,
+            throttle_px: 0.0,
+        }),
+        series: vec![SeriesSpec {
+            id: series_id,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    table.push_column(Column::F64(vec![0.0, 1.0]));
+    engine.datasets_mut().datasets.push((dataset_id, table));
+
+    let mut measurer = NullTextMeasurer::default();
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    engine.apply_action(Action::HoverAt {
+        point: Point::new(Px(0.0), Px(100.0)),
+    });
+
+    let step = engine
+        .step(&mut measurer, WorkBudget::new(32_768, 0, 8))
+        .unwrap();
+    assert!(!step.unfinished);
+
+    let axis_pointer = engine.output().axis_pointer;
+    assert!(axis_pointer.is_some());
+    let axis_pointer = axis_pointer.unwrap();
+    assert_eq!(axis_pointer.crosshair_px, Point::new(Px(0.0), Px(100.0)));
 }
