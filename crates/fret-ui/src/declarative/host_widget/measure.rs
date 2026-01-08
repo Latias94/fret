@@ -3,6 +3,14 @@ use super::super::prelude::*;
 use super::ElementHostWidget;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::widget::MeasureCx;
+use fret_core::{TextStyle, TextWrap};
+
+fn default_text_style(theme: crate::ThemeSnapshot) -> TextStyle {
+    let mut style = TextStyle::default();
+    style.size = theme.metrics.font_size;
+    style.line_height = Some(theme.metrics.font_line_height);
+    style
+}
 
 fn available_px_or_zero(constraints: LayoutConstraints) -> Size {
     let w = constraints
@@ -232,7 +240,7 @@ impl ElementHostWidget {
 
     fn measure_text<H: UiHost>(&mut self, cx: &mut MeasureCx<'_, H>, props: TextProps) -> Size {
         let theme = cx.theme().snapshot();
-        let style = props.style.unwrap_or_else(|| theme.text_body.clone());
+        let style = props.style.unwrap_or_else(|| default_text_style(theme));
         let max_width = cx
             .constraints
             .known
@@ -254,7 +262,7 @@ impl ElementHostWidget {
         props: crate::element::StyledTextProps,
     ) -> Size {
         let theme = cx.theme().snapshot();
-        let style = props.style.unwrap_or_else(|| theme.text_body.clone());
+        let style = props.style.unwrap_or_else(|| default_text_style(theme));
         let max_width = cx
             .constraints
             .known
@@ -269,7 +277,7 @@ impl ElementHostWidget {
         let metrics = cx
             .services
             .text()
-            .measure_rich(props.rich.clone(), &style, constraints);
+            .measure_rich(&props.rich, &style, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
@@ -279,7 +287,7 @@ impl ElementHostWidget {
         props: crate::element::SelectableTextProps,
     ) -> Size {
         let theme = cx.theme().snapshot();
-        let style = props.style.unwrap_or_else(|| theme.text_body.clone());
+        let style = props.style.unwrap_or_else(|| default_text_style(theme));
         let max_width = cx
             .constraints
             .known
@@ -294,7 +302,7 @@ impl ElementHostWidget {
         let metrics = cx
             .services
             .text()
-            .measure_rich(props.rich.clone(), &style, constraints);
+            .measure_rich(&props.rich, &style, constraints);
         clamp_to_constraints_in_measure(metrics.size, props.layout, cx.constraints)
     }
 
@@ -346,7 +354,7 @@ impl ElementHostWidget {
         };
         let metrics = cx.services.text().measure("M", &props.text_style, constraints);
         let border_h = props.chrome.border.top.0.max(0.0) + props.chrome.border.bottom.0.max(0.0);
-        let pad_h = props.chrome.padding.top.0.max(0.0) + props.chrome.padding.bottom.0.max(0.0);
+        let pad_h = props.chrome.padding_y.0.max(0.0) * 2.0;
         let min_h = props.min_height.0.max(0.0);
         let h = Px((metrics.size.height.0 + pad_h + border_h).max(min_h));
 
@@ -390,7 +398,7 @@ impl ElementHostWidget {
         window: AppWindowId,
         props: crate::element::VirtualListProps,
     ) -> Size {
-        let mut metrics = crate::elements::with_element_state(
+        let metrics = crate::elements::with_element_state(
             &mut *cx.app,
             window,
             self.element,
