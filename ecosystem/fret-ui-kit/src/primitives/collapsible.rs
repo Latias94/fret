@@ -10,11 +10,12 @@ use std::sync::Arc;
 
 use fret_core::{Px, SemanticsRole, Size};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ElementKind, PressableA11y, SemanticsProps};
+use fret_ui::element::{AnyElement, PressableA11y, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
+use crate::primitives::trigger_a11y;
 
 /// Returns an open-state model that behaves like Radix `useControllableState` (`open` /
 /// `defaultOpen`).
@@ -100,19 +101,10 @@ pub fn collapsible_trigger_a11y(label: Option<Arc<str>>, open: bool) -> Pressabl
 /// portable element-id relationship that resolves into `SemanticsNode.controls` when the content
 /// is mounted.
 pub fn apply_collapsible_trigger_controls(
-    mut trigger: AnyElement,
+    trigger: AnyElement,
     content_element: GlobalElementId,
 ) -> AnyElement {
-    match &mut trigger.kind {
-        ElementKind::Pressable(props) => {
-            props.a11y.controls_element = Some(content_element.0);
-        }
-        ElementKind::Semantics(props) => {
-            props.controls_element = Some(content_element.0);
-        }
-        _ => {}
-    }
-    trigger
+    trigger_a11y::apply_trigger_controls(trigger, Some(content_element))
 }
 
 /// Read the last cached open height for a collapsible content subtree.

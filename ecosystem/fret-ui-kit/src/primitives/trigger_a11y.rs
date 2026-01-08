@@ -14,6 +14,40 @@ use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, ElementKind, PressableProps};
 use fret_ui::elements::GlobalElementId;
 
+/// Apply `controls_element` relationship to a trigger node.
+pub fn apply_trigger_controls(
+    mut trigger: AnyElement,
+    controls: Option<GlobalElementId>,
+) -> AnyElement {
+    match &mut trigger.kind {
+        ElementKind::Pressable(PressableProps { a11y, .. }) => {
+            a11y.controls_element = controls.map(|id| id.0);
+        }
+        ElementKind::Semantics(props) => {
+            props.controls_element = controls.map(|id| id.0);
+        }
+        _ => {}
+    }
+    trigger
+}
+
+/// Apply `described_by_element` relationship to a trigger node.
+pub fn apply_trigger_described_by(
+    mut trigger: AnyElement,
+    described_by: Option<GlobalElementId>,
+) -> AnyElement {
+    match &mut trigger.kind {
+        ElementKind::Pressable(PressableProps { a11y, .. }) => {
+            a11y.described_by_element = described_by.map(|id| id.0);
+        }
+        ElementKind::Semantics(props) => {
+            props.described_by_element = described_by.map(|id| id.0);
+        }
+        _ => {}
+    }
+    trigger
+}
+
 /// Apply `expanded` and `controls_element` relationships to a trigger node.
 pub fn apply_trigger_controls_expanded(
     mut trigger: AnyElement,

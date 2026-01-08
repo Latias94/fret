@@ -11,14 +11,15 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ElementKind, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps,
-    RovingFocusProps, SemanticsProps, StackProps,
+    AnyElement, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
+    SemanticsProps, StackProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::declarative::action_hooks::ActionHooksExt as _;
+use crate::primitives::trigger_a11y;
 
 /// Matches Radix Accordion `type` outcome.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,19 +45,10 @@ pub fn accordion_trigger_a11y(label: Arc<str>, open: bool) -> PressableA11y {
 /// portable element-id relationship that resolves into `SemanticsNode.controls` when the content
 /// is mounted.
 pub fn apply_accordion_trigger_controls(
-    mut trigger: AnyElement,
+    trigger: AnyElement,
     content_element: GlobalElementId,
 ) -> AnyElement {
-    match &mut trigger.kind {
-        ElementKind::Pressable(props) => {
-            props.a11y.controls_element = Some(content_element.0);
-        }
-        ElementKind::Semantics(props) => {
-            props.controls_element = Some(content_element.0);
-        }
-        _ => {}
-    }
-    trigger
+    trigger_a11y::apply_trigger_controls(trigger, Some(content_element))
 }
 
 /// Derive the "tab stop" index for a single-select accordion:
