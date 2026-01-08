@@ -66,7 +66,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ### Motion parity (new-york)
 
-- Partial: Viewport overlay uses fade + zoom (shadcn taxonomy) with shadcn-aligned easing.
+- Pass: Viewport overlay uses fade + zoom with shadcn-aligned easing, matching upstream's
+  `zoom-in-90` on open and `zoom-out-95` on close (best-effort, tick driven).
 - Pass: Directional content switching matches shadcn's `data-motion` semantics via
   `navigation_menu_content_transition(...)` + `navigation_menu_content_switch(...)`.
 

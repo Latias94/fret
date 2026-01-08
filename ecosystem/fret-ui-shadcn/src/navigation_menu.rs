@@ -13,9 +13,11 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
-use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::{popper, popper_content};
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space};
+use fret_ui_kit::{
+    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius,
+    Space,
+};
 
 use crate::overlay_motion;
 
@@ -612,15 +614,27 @@ impl NavigationMenu {
                 .copied()
                 .unwrap_or(false);
             let open_for_motion = open && selected.is_some();
-            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
+            let motion = OverlayController::transition_with_durations_and_easing(
                 cx,
                 open_for_motion,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
-                0.95,
-                1.0,
                 overlay_motion::shadcn_ease,
             );
+            let opacity = motion.progress;
+            let scale = if viewport_enabled {
+                // shadcn new-york:
+                // - Viewport: `zoom-in-90` on open, `zoom-out-95` on close.
+                if open_for_motion {
+                    0.9 + 0.1 * opacity
+                } else {
+                    0.95 + 0.05 * opacity
+                }
+            } else {
+                // When `viewport=false`, content behaves like a popover-ish surface with
+                // `zoom-in-95` / `zoom-out-95`.
+                0.95 + 0.05 * opacity
+            };
 
             let mut selected_local = radix_navigation_menu::navigation_menu_viewport_selected_value(
                 cx,
@@ -872,8 +886,8 @@ impl NavigationMenu {
                     indicator_size,
                 };
 
-                let opacity = motion.opacity;
-                let scale = motion.scale;
+                let opacity = opacity;
+                let scale = scale;
                 let selected_value_for_content_id = selected_local.clone();
                 let selected_for_overlay = selected_local.clone();
                 radix_navigation_menu::navigation_menu_request_viewport_overlay(
