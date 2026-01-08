@@ -19,6 +19,7 @@ fn run() -> Result<(), String> {
 
     match cmd.as_str() {
         "help" | "-h" | "--help" => help(),
+        "init" => init_cmd(args.collect()),
         "hotpatch" => hotpatch_cmd(args.collect()),
         "list" => match args.next().as_deref() {
             Some("native-demos") => list_native_demos(),
@@ -42,6 +43,7 @@ fn help() -> Result<(), String> {
 
 Usage:
   fretboard help
+  fretboard init todo [--path <path>] [--name <name>] [--ui-assets]
   fretboard hotpatch poke [--path <path>]
   fretboard hotpatch path [--path <path>]
   fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]
@@ -53,6 +55,7 @@ Usage:
   fretboard dev web [--port <port>] [--demo <demo> | --choose]
 
 Examples:
+  fretboard init todo --name my-todo
   fretboard dev native --bin components_gallery
   fretboard dev native --bin todo_demo
   fretboard dev native --bin assets_demo
@@ -78,6 +81,451 @@ fn workspace_root() -> Result<PathBuf, String> {
         }
     }
     Err("failed to locate workspace root (Cargo.toml not found in ancestors)".to_string())
+}
+
+fn init_cmd(args: Vec<String>) -> Result<(), String> {
+    let mut it = args.into_iter();
+    let Some(template) = it.next() else {
+        return Err("missing init template (try: init todo)".to_string());
+    };
+
+    match template.as_str() {
+        "todo" => init_todo(it.collect()),
+        other => Err(format!("unknown init template: {other}")),
+    }
+}
+
+fn init_todo(args: Vec<String>) -> Result<(), String> {
+    let root = workspace_root()?;
+
+    let mut out_path: Option<PathBuf> = None;
+    let mut name: Option<String> = None;
+    let mut ui_assets = false;
+
+    let mut it = args.into_iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--path" => {
+                let raw = it
+                    .next()
+                    .ok_or_else(|| "--path requires a value".to_string())?;
+                out_path = Some(PathBuf::from(raw));
+            }
+            "--name" => {
+                name = Some(
+                    it.next()
+                        .ok_or_else(|| "--name requires a value".to_string())?,
+                );
+            }
+            "--ui-assets" => ui_assets = true,
+            "--help" | "-h" => return help(),
+            other => return Err(format!("unknown argument for init todo: {other}")),
+        }
+    }
+
+    let package_name = sanitize_package_name(name.as_deref().unwrap_or("todo-app"))?;
+
+    let out_dir = out_path.unwrap_or_else(|| root.join("local").join(&package_name));
+    ensure_dir_is_new_or_empty(&out_dir)?;
+
+    let cargo_toml = todo_template_cargo_toml(&package_name, ui_assets);
+    write_new_file(&out_dir.join("Cargo.toml"), &cargo_toml)?;
+
+    let src_dir = out_dir.join("src");
+    std::fs::create_dir_all(&src_dir).map_err(|e| e.to_string())?;
+    write_new_file(
+        &src_dir.join("main.rs"),
+        &todo_template_main_rs(&package_name, ui_assets),
+    )?;
+
+    println!("Initialized todo template at: {}", out_dir.display());
+    println!("Next:");
+    println!(
+        "  cargo run --manifest-path {}",
+        out_dir.join("Cargo.toml").display()
+    );
+    Ok(())
+}
+
+fn sanitize_package_name(raw: &str) -> Result<String, String> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return Err("package name cannot be empty".to_string());
+    }
+
+    let mut out = String::with_capacity(raw.len());
+    for c in raw.chars() {
+        let c = if c.is_ascii_whitespace() { '-' } else { c };
+        if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+            out.push(c.to_ascii_lowercase());
+        } else {
+            return Err(format!(
+                "invalid package name: `{raw}` (unsupported character: `{c}`)"
+            ));
+        }
+    }
+
+    Ok(out)
+}
+
+fn ensure_dir_is_new_or_empty(path: &Path) -> Result<(), String> {
+    if path.exists() {
+        let mut entries = std::fs::read_dir(path).map_err(|e| e.to_string())?;
+        if entries.next().is_some() {
+            return Err(format!(
+                "output directory is not empty: {} (choose another --path)",
+                path.display()
+            ));
+        }
+        return Ok(());
+    }
+
+    std::fs::create_dir_all(path).map_err(|e| e.to_string())
+}
+
+fn write_new_file(path: &Path, contents: &str) -> Result<(), String> {
+    if path.exists() {
+        return Err(format!(
+            "refusing to overwrite existing file: {}",
+            path.display()
+        ));
+    }
+    std::fs::write(path, contents).map_err(|e| e.to_string())
+}
+
+fn todo_template_cargo_toml(package_name: &str, ui_assets: bool) -> String {
+    let ui_assets_features = if ui_assets { ", \"ui-assets\"" } else { "" };
+    let ui_assets_deps = if ui_assets {
+        "\nfret-ui-assets = { path = \"../../ecosystem/fret-ui-assets\" }\n"
+    } else {
+        ""
+    };
+
+    format!(
+        r#"[package]
+name = "{package_name}"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+fret-app = {{ path = "../../crates/fret-app" }}
+fret-bootstrap = {{ path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs"{ui_assets_features}] }}
+fret-ui-shadcn = {{ path = "../../ecosystem/fret-ui-shadcn" }}
+fret-icons-lucide = {{ path = "../../ecosystem/fret-icons-lucide" }}
+{ui_assets_deps}
+[workspace]
+"#
+    )
+}
+
+fn todo_template_main_rs(_package_name: &str, ui_assets: bool) -> String {
+    let ui_assets_builder = if ui_assets {
+        "\n        .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)"
+    } else {
+        ""
+    };
+
+    const TEMPLATE: &str = r#"use std::sync::Arc;
+
+use fret_app::{App, CommandId};
+use fret_bootstrap::ui_app_with_hooks;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+const CMD_ADD: &str = "todo.add";
+const CMD_CLEAR_DONE: &str = "todo.clear_done";
+const CMD_REMOVE_PREFIX: &str = "todo.remove.";
+
+#[derive(Clone)]
+struct TodoItem {
+    id: u64,
+    done: Model<bool>,
+    text: Arc<str>,
+}
+
+struct TodoState {
+    todos: Model<Vec<TodoItem>>,
+    draft: Model<String>,
+    next_id: u64,
+}
+
+fn main() -> anyhow::Result<()> {
+    ui_app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))
+        .with_default_settings_json()?__UI_ASSETS_BUILDER__
+        .init_app(|app| {
+            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+                app,
+                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+                shadcn::shadcn_themes::ShadcnColorScheme::Light,
+            );
+        })
+        .register_icon_pack(fret_icons_lucide::register_icons)
+        .preload_icon_svgs_on_gpu_ready()
+        .run()
+        .map_err(anyhow::Error::from)
+}
+
+fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
+    let done_1 = app.models_mut().insert(false);
+    let done_2 = app.models_mut().insert(true);
+    let todos = app.models_mut().insert(vec![
+        TodoItem {
+            id: 1,
+            done: done_1,
+            text: Arc::from("Try the shadcn theme"),
+        },
+        TodoItem {
+            id: 2,
+            done: done_2,
+            text: Arc::from("Build a tiny todo app"),
+        },
+    ]);
+
+    TodoState {
+        todos,
+        draft: app.models_mut().insert(String::new()),
+        next_id: 3,
+    }
+}
+
+fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement> {
+    cx.observe_model(&st.todos, Invalidation::Layout);
+    cx.observe_model(&st.draft, Invalidation::Layout);
+
+    let theme = Theme::global(&*cx.app).clone();
+    let draft_value = cx
+        .app
+        .models()
+        .read(&st.draft, |s| s.clone())
+        .ok()
+        .unwrap_or_default();
+
+    let add_enabled = !draft_value.trim().is_empty();
+    let add_btn = shadcn::Button::new("")
+        .size(shadcn::ButtonSize::Icon)
+        .disabled(!add_enabled)
+        .on_click(CMD_ADD)
+        .children(vec![icon::icon(cx, IconId::new("lucide.plus"))])
+        .into_element(cx);
+
+    let input = shadcn::Input::new(st.draft.clone())
+        .placeholder("Add a task…")
+        .submit_command(CommandId::new(CMD_ADD))
+        .into_element(cx);
+
+    let input_row = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2)
+            .items_center(),
+        |_cx| vec![input, add_btn],
+    );
+
+    let todos = cx
+        .app
+        .models()
+        .read(&st.todos, |v| v.clone())
+        .ok()
+        .unwrap_or_default();
+
+    let rows = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3),
+        |cx| {
+            todos
+                .iter()
+                .map(|t| cx.keyed(t.id, |cx| todo_row(cx, &theme, t)))
+                .collect()
+        },
+    );
+
+    let chrome = ChromeRefinement::default()
+        .bg(ColorRef::Color(theme.color_required("background")))
+        .rounded(Radius::Lg)
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_required("border")));
+
+    let card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Todo").into_element(cx),
+            shadcn::CardDescription::new("A minimal Fret + shadcn template.").into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N4),
+                |_cx| vec![input_row, rows],
+            ),
+        ])
+        .into_element(cx),
+    ])
+    .refine_style(chrome)
+    .refine_layout(LayoutRefinement::default().w_full().max_w(MetricRef::Px(Px(520.0))))
+    .into_element(cx);
+
+    let page = cx.container(
+        decl_style::container_props(
+            &theme,
+            ChromeRefinement::default()
+                .bg(ColorRef::Color(theme.color_required("muted")))
+                .p(Space::N6),
+            LayoutRefinement::default().w_full().h_full(),
+        ),
+        |cx| {
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .justify_center()
+                    .items_center(),
+                |_cx| vec![card],
+            )]
+        },
+    );
+
+    vec![page]
+}
+
+fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) -> AnyElement {
+    cx.observe_model(&item.done, Invalidation::Layout);
+    let done = cx
+        .app
+        .models()
+        .read(&item.done, |v| *v)
+        .ok()
+        .unwrap_or(false);
+
+    let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
+    let remove_cmd = CommandId::new(format!("{}{}", CMD_REMOVE_PREFIX, item.id));
+    let remove_btn = shadcn::Button::new("")
+        .size(shadcn::ButtonSize::Icon)
+        .variant(shadcn::ButtonVariant::Ghost)
+        .on_click(remove_cmd)
+        .children(vec![icon::icon(cx, IconId::new("lucide.trash-2"))])
+        .into_element(cx);
+
+    let props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default()
+            .border_1()
+            .border_color(ColorRef::Color(theme.color_required("border")))
+            .rounded(Radius::Md)
+            .p(Space::N3),
+        LayoutRefinement::default().w_full(),
+    );
+
+    cx.container(props, |cx| {
+        vec![stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_between()
+                .items_center(),
+            |cx| {
+                let label = cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: item.text.clone(),
+                    style: None,
+                    color: Some(theme.color_required(if done {
+                        "muted-foreground"
+                    } else {
+                        "foreground"
+                    })),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                });
+
+                vec![
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().flex_1().min_w_0())
+                            .gap(Space::N3)
+                            .items_center(),
+                        |_cx| vec![checkbox.clone(), label],
+                    ),
+                    remove_btn.clone(),
+                ]
+            },
+        )]
+    })
+}
+
+fn on_command(
+    app: &mut App,
+    _services: &mut dyn UiServices,
+    _window: AppWindowId,
+    _ui: &mut UiTree<App>,
+    state: &mut TodoState,
+    cmd: &CommandId,
+) {
+    match cmd.as_str() {
+        CMD_ADD => {
+            let draft = app
+                .models()
+                .read(&state.draft, |s| s.clone())
+                .ok()
+                .unwrap_or_default();
+            let text = draft.trim();
+            if text.is_empty() {
+                return;
+            }
+
+            let id = state.next_id;
+            state.next_id += 1;
+            let done = app.models_mut().insert(false);
+            let item = TodoItem {
+                id,
+                done,
+                text: Arc::from(text),
+            };
+
+            let _ = app.models_mut().update(&state.todos, |todos| {
+                todos.insert(0, item);
+            });
+            let _ = app.models_mut().update(&state.draft, |s| {
+                s.clear();
+            });
+        }
+        CMD_CLEAR_DONE => {
+            let snapshot = app
+                .models()
+                .read(&state.todos, |v| v.clone())
+                .ok()
+                .unwrap_or_default();
+
+            let mut keep: Vec<TodoItem> = Vec::new();
+            for t in snapshot {
+                let done = app.models().read(&t.done, |v| *v).ok().unwrap_or(false);
+                if !done {
+                    keep.push(t);
+                }
+            }
+
+            let _ = app.models_mut().update(&state.todos, |todos| {
+                *todos = keep;
+            });
+        }
+        other => {
+            if let Some(id) = other.strip_prefix(CMD_REMOVE_PREFIX) {
+                if let Ok(id) = id.parse::<u64>() {
+                    let _ = app.models_mut().update(&state.todos, |todos| {
+                        todos.retain(|t| t.id != id);
+                    });
+                }
+            }
+        }
+    }
+}
+"#;
+
+    TEMPLATE.replace("__UI_ASSETS_BUILDER__", ui_assets_builder)
 }
 
 fn list_native_demos() -> Result<(), String> {

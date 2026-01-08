@@ -24,6 +24,15 @@ Related ADRs:
 - `fret-ui-assets` (optional): UI render asset caches (images / SVGs)
 - `fret-icons-lucide` (icon pack data)
 
+## Quick start (template)
+
+If you are working inside this repository, you can generate a runnable todo template:
+
+```bash
+fretboard init todo --name my-todo
+cargo run --manifest-path local/my-todo/Cargo.toml
+```
+
 Notes:
 
 - `fret-bootstrap` features:
