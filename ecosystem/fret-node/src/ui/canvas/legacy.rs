@@ -47,6 +47,7 @@ mod edge_drag;
 mod marquee;
 mod node_drag;
 mod pointer_up;
+mod right_click;
 mod searcher;
 mod sticky_wire;
 mod wire_drag;
@@ -3404,152 +3405,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if *button == MouseButton::Right {
-                    let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
-                    let hit_edge = {
-                        let this = &*self;
-                        let geom = geom.clone();
-                        let index = index.clone();
-                        this.graph
-                            .read_ref(cx.app, |graph| {
-                                let mut scratch: Vec<EdgeId> = Vec::new();
-                                this.hit_edge(
-                                    graph,
-                                    &snapshot,
-                                    geom.as_ref(),
-                                    index.as_ref(),
-                                    *position,
-                                    zoom,
-                                    &mut scratch,
-                                )
-                            })
-                            .ok()
-                            .flatten()
-                    };
-
-                    let Some(edge) = hit_edge else {
-                        let has_selection = !snapshot.selected_nodes.is_empty()
-                            || !snapshot.selected_edges.is_empty();
-                        let items: Vec<NodeGraphContextMenuItem> = vec![
-                            NodeGraphContextMenuItem {
-                                label: Arc::<str>::from("Insert Node..."),
-                                enabled: true,
-                                action: NodeGraphContextMenuAction::Command(CommandId::from(
-                                    CMD_NODE_GRAPH_OPEN_INSERT_NODE,
-                                )),
-                            },
-                            NodeGraphContextMenuItem {
-                                label: Arc::<str>::from("Paste"),
-                                enabled: cx.window.is_some(),
-                                action: NodeGraphContextMenuAction::Command(CommandId::from(
-                                    CMD_NODE_GRAPH_PASTE,
-                                )),
-                            },
-                            NodeGraphContextMenuItem {
-                                label: Arc::<str>::from("Select All"),
-                                enabled: true,
-                                action: NodeGraphContextMenuAction::Command(CommandId::from(
-                                    CMD_NODE_GRAPH_SELECT_ALL,
-                                )),
-                            },
-                            NodeGraphContextMenuItem {
-                                label: Arc::<str>::from("Delete Selection"),
-                                enabled: has_selection,
-                                action: NodeGraphContextMenuAction::Command(CommandId::from(
-                                    CMD_NODE_GRAPH_DELETE_SELECTION,
-                                )),
-                            },
-                        ];
-
-                        let origin = self.clamp_context_menu_origin(
-                            *position,
-                            items.len(),
-                            cx.bounds,
-                            &snapshot,
-                        );
-                        let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-                        self.interaction.context_menu = Some(ContextMenuState {
-                            origin,
-                            invoked_at: *position,
-                            target: ContextMenuTarget::Background,
-                            items,
-                            candidates: Vec::new(),
-                            hovered_item: None,
-                            active_item,
-                            typeahead: String::new(),
-                        });
-                        cx.request_focus(cx.node);
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                        return;
-                    };
-
-                    let items = {
-                        let presenter = &mut *self.presenter;
-                        let style = &self.style;
-                        self.graph
-                            .read_ref(cx.app, |graph| {
-                                let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
-                                presenter.fill_edge_context_menu(graph, edge, style, &mut items);
-                                items.push(NodeGraphContextMenuItem {
-                                    label: Arc::<str>::from("Insert Node..."),
-                                    enabled: true,
-                                    action: NodeGraphContextMenuAction::Command(CommandId::from(
-                                        CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
-                                    )),
-                                });
-                                items.push(NodeGraphContextMenuItem {
-                                    label: Arc::<str>::from("Insert Reroute"),
-                                    enabled: true,
-                                    action: NodeGraphContextMenuAction::Command(CommandId::from(
-                                        CMD_NODE_GRAPH_INSERT_REROUTE,
-                                    )),
-                                });
-                                items.push(NodeGraphContextMenuItem {
-                                    label: Arc::<str>::from("Delete"),
-                                    enabled: true,
-                                    action: NodeGraphContextMenuAction::Command(CommandId::from(
-                                        CMD_NODE_GRAPH_DELETE_SELECTION,
-                                    )),
-                                });
-                                items
-                            })
-                            .ok()
-                            .unwrap_or_default()
-                    };
-
-                    let origin = self.clamp_context_menu_origin(
-                        *position,
-                        items.len(),
-                        cx.bounds,
-                        &snapshot,
-                    );
-                    let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-                    self.interaction.context_menu = Some(ContextMenuState {
-                        origin,
-                        invoked_at: *position,
-                        target: ContextMenuTarget::Edge(edge),
-                        items,
-                        candidates: Vec::new(),
-                        hovered_item: None,
-                        active_item,
-                        typeahead: String::new(),
-                    });
-                    self.interaction.hover_edge = None;
-                    cx.request_focus(cx.node);
-
-                    self.update_view_state(cx.app, |s| {
-                        s.selected_nodes.clear();
-                        if !s.selected_edges.iter().any(|id| *id == edge) {
-                            s.selected_edges.clear();
-                            s.selected_edges.push(edge);
-                        }
-                    });
-
-                    cx.stop_propagation();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                if *button == MouseButton::Right
+                    && right_click::handle_right_click_pointer_down(
+                        self, cx, &snapshot, *position, zoom,
+                    )
+                {
                     return;
                 }
 
