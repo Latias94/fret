@@ -103,7 +103,7 @@ pub struct Node {
     /// Optional group container id (subflow / parent frame).
     ///
     /// This is an editor-structure concept (XyFlow `parentId` mental model) and is intentionally
-    /// orthogonal to semantic subgraphs (see ADR 0106).
+    /// orthogonal to semantic subgraphs (see ADR 0135).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent: Option<GroupId>,
 

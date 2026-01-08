@@ -1,4 +1,4 @@
-# ADR 0106: Node Graph Editor and Typed Connections (`fret-node`)
+# ADR 0135: Node Graph Editor and Typed Connections (`fret-node`)
 
 Status: Proposed  
 Date: 2026-01-06

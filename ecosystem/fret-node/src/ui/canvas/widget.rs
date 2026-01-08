@@ -1165,7 +1165,7 @@ impl NodeGraphCanvas {
     }
 
     // NOTE: Node bounds and port anchors must come from derived geometry (`CanvasGeometry`),
-    // not ad-hoc layout guesses. See ADR 0106.
+    // not ad-hoc layout guesses. See ADR 0135.
 
     fn hit_port(
         &self,
