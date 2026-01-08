@@ -931,13 +931,7 @@ fn select_impl<H: UiHost>(
                 enabled,
                 focusable: enabled,
                 focus_ring: Some(ring),
-                a11y: PressableA11y {
-                    role: Some(SemanticsRole::ComboBox),
-                    label: a11y_label.clone(),
-                    expanded: Some(is_open),
-                    controls_element: None,
-                    ..Default::default()
-                },
+                a11y: radix_select::select_trigger_a11y(a11y_label.clone(), is_open, None),
                 ..Default::default()
             };
 

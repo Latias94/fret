@@ -22,7 +22,7 @@ use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
     ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
 };
-use fret_ui::element::{AnyElement, LayoutStyle};
+use fret_ui::element::{AnyElement, LayoutStyle, PressableA11y};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -147,6 +147,21 @@ pub fn apply_select_trigger_a11y(
         Some(expanded),
         listbox_element,
     )
+}
+
+/// A11y metadata for a Radix-style select trigger pressable.
+pub fn select_trigger_a11y(
+    label: Option<Arc<str>>,
+    expanded: bool,
+    listbox_element: Option<GlobalElementId>,
+) -> PressableA11y {
+    PressableA11y {
+        role: Some(fret_core::SemanticsRole::ComboBox),
+        label,
+        expanded: Some(expanded),
+        controls_element: listbox_element.map(|id| id.0),
+        ..Default::default()
+    }
 }
 
 /// Radix Select trigger "open keys" (`OPEN_KEYS`).
