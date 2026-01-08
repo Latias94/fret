@@ -32,6 +32,7 @@ define_id!(DatasetId);
 define_id!(FieldId);
 define_id!(TransformId);
 define_id!(LinkGroupId);
+define_id!(DataZoomId);
 
 define_id!(LayerId);
 define_id!(MarkId);

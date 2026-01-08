@@ -1,16 +1,5 @@
 use crate::engine::window::DataWindow;
-use crate::spec::AxisRange;
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum FilterMode {
-    #[default]
-    Filter,
-    None,
-}
+use crate::spec::{AxisRange, FilterMode};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct AxisFilter1D {

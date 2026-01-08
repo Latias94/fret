@@ -243,6 +243,7 @@ mod tests {
                     range: None,
                 },
             ],
+            data_zoom_x: vec![],
             series: vec![SeriesSpec {
                 id: series_id,
                 kind: SeriesKind::Line,

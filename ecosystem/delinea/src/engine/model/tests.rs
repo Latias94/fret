@@ -45,6 +45,7 @@ fn basic_spec() -> ChartSpec {
                 range: None,
             },
         ],
+        data_zoom_x: vec![],
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
             kind: SeriesKind::Line,

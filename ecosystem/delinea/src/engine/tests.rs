@@ -50,6 +50,7 @@ fn basic_spec() -> ChartSpec {
                 range: None,
             },
         ],
+        data_zoom_x: vec![],
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
             kind: SeriesKind::Line,
@@ -173,6 +174,7 @@ fn band_emits_two_polylines() {
                 range: None,
             },
         ],
+        data_zoom_x: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Band,
@@ -276,6 +278,7 @@ fn row_range_limits_mark_indices() {
                 range: None,
             },
         ],
+        data_zoom_x: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -369,6 +372,7 @@ fn x_window_limits_mark_indices() {
                 range: None,
             },
         ],
+        data_zoom_x: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -468,6 +472,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
                 range: None,
             },
         ],
+        data_zoom_x: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -564,6 +569,7 @@ fn set_series_visible_hides_marks() {
                 range: None,
             },
         ],
+        data_zoom_x: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -673,6 +679,7 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
                 range: None,
             },
         ],
+        data_zoom_x: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -785,6 +792,7 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
                 range: None,
             },
         ],
+        data_zoom_x: vec![],
         series: vec![SeriesSpec {
             id: series_id,
             kind: SeriesKind::Line,
@@ -830,7 +838,7 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
         if filter_mode_none {
             engine.apply_action(Action::SetDataWindowXFilterMode {
                 axis: x_axis,
-                mode: Some(crate::engine::window_policy::FilterMode::None),
+                mode: Some(crate::spec::FilterMode::None),
             });
         }
         engine

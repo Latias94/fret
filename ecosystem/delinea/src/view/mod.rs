@@ -1,8 +1,8 @@
 use crate::data::{DataTable, DatasetStore};
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
-use crate::engine::window_policy::FilterMode;
 use crate::ids::{AxisId, DatasetId, Revision, SeriesId};
+use crate::spec::FilterMode;
 use crate::transform::{RowSelection, SeriesXPolicy, series_x_policy};
 
 #[cfg(feature = "serde")]

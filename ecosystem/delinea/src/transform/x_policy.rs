@@ -1,8 +1,7 @@
 use crate::engine::window::DataWindowX;
-use crate::engine::window_policy::{
-    AxisFilter1D, FilterMode, axis_filter_1d, axis_mapping_window_1d,
-};
+use crate::engine::window_policy::{AxisFilter1D, axis_filter_1d, axis_mapping_window_1d};
 use crate::spec::AxisRange;
+use crate::spec::FilterMode;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct SeriesXPolicy {

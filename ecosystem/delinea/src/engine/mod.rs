@@ -43,7 +43,7 @@ pub struct ChartState {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DataZoomXState {
     pub window: Option<window::DataWindowX>,
-    pub filter_mode: crate::engine::window_policy::FilterMode,
+    pub filter_mode: crate::spec::FilterMode,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -99,11 +99,26 @@ impl ChartEngine {
     pub fn new(spec: crate::spec::ChartSpec) -> Result<Self, ModelError> {
         let id = spec.id;
         let model = ChartModel::from_spec(spec)?;
+        let mut state = ChartState::default();
+        for (axis, zoom_id) in &model.data_zoom_x_by_axis {
+            let filter_mode = model
+                .data_zoom_x
+                .get(zoom_id)
+                .map(|z| z.filter_mode)
+                .unwrap_or_default();
+            state.data_zoom_x.insert(
+                *axis,
+                DataZoomXState {
+                    window: None,
+                    filter_mode,
+                },
+            );
+        }
         Ok(Self {
             id,
             model,
             datasets: DatasetStore::default(),
-            state: ChartState::default(),
+            state,
             output: ChartOutput::default(),
             stats: EngineStats::default(),
             view: ViewState::default(),
@@ -177,7 +192,14 @@ impl ChartEngine {
             }
             Action::SetDataWindowXFilterMode { axis, mode } => {
                 let entry = self.state.data_zoom_x.entry(axis).or_default();
-                entry.filter_mode = mode.unwrap_or_default();
+                let default_mode = self
+                    .model
+                    .data_zoom_x_by_axis
+                    .get(&axis)
+                    .and_then(|id| self.model.data_zoom_x.get(id))
+                    .map(|z| z.filter_mode)
+                    .unwrap_or_default();
+                entry.filter_mode = mode.unwrap_or(default_mode);
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
             }

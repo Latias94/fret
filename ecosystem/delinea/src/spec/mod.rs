@@ -1,6 +1,6 @@
 use fret_core::Rect;
 
-use crate::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
+use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,7 @@ pub struct ChartSpec {
     pub datasets: Vec<DatasetSpec>,
     pub grids: Vec<GridSpec>,
     pub axes: Vec<AxisSpec>,
+    pub data_zoom_x: Vec<DataZoomXSpec>,
     pub series: Vec<SeriesSpec>,
 }
 
@@ -42,6 +43,14 @@ pub struct GridSpec {
 pub enum AxisKind {
     X,
     Y,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum FilterMode {
+    #[default]
+    Filter,
+    None,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -116,6 +125,24 @@ pub struct AxisSpec {
     /// When set, the axis is constrained in data space.
     /// In v1, `Fixed` fully overrides view windows; partial locks override only one bound.
     pub range: Option<AxisRange>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DataZoomXSpec {
+    pub id: DataZoomId,
+    pub axis: AxisId,
+    pub filter_mode: FilterMode,
+}
+
+impl Default for DataZoomXSpec {
+    fn default() -> Self {
+        Self {
+            id: DataZoomId::new(0),
+            axis: AxisId::new(0),
+            filter_mode: FilterMode::Filter,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

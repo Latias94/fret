@@ -1,8 +1,8 @@
 use fret_core::Point;
 
 use crate::engine::window::{DataWindowX, DataWindowY};
-use crate::engine::window_policy::FilterMode;
 use crate::ids::{AxisId, DatasetId, LinkGroupId, SeriesId};
+use crate::spec::FilterMode;
 use crate::view::RowRange;
 
 #[cfg(feature = "serde")]

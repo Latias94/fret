@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 use std::ops::Range;
 use std::time::{Duration, Instant};
 
+use delinea::FilterMode;
 use delinea::engine::EngineError;
 use delinea::engine::model::{ChartPatch, ModelError, PatchMode};
 use delinea::engine::window::DataWindow;
-use delinea::engine::window_policy::FilterMode;
 use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, ChartEngine, WorkBudget};

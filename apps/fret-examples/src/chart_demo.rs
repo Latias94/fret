@@ -77,6 +77,7 @@ impl ChartDemoDriver {
                     range: Some(AxisRange::Auto),
                 },
             ],
+            data_zoom_x: vec![],
             series: vec![SeriesSpec {
                 id: series_id,
                 kind: SeriesKind::Band,

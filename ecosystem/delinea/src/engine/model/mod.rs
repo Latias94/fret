@@ -7,8 +7,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use fret_core::Rect;
 use thiserror::Error;
 
-use crate::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, Revision, SeriesId};
-use crate::spec::{AreaBaseline, AxisKind, AxisRange, SeriesEncode, SeriesKind};
+use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, Revision, SeriesId};
+use crate::spec::{AreaBaseline, AxisKind, AxisRange, FilterMode, SeriesEncode, SeriesKind};
 
 pub use patch::*;
 
@@ -61,6 +61,8 @@ pub struct ChartModel {
     pub datasets: BTreeMap<DatasetId, DatasetModel>,
     pub grids: BTreeMap<GridId, GridModel>,
     pub axes: BTreeMap<AxisId, AxisModel>,
+    pub data_zoom_x: BTreeMap<DataZoomId, DataZoomXModel>,
+    pub data_zoom_x_by_axis: BTreeMap<AxisId, DataZoomId>,
 
     pub series_order: Vec<SeriesId>,
     pub series: BTreeMap<SeriesId, SeriesModel>,
@@ -76,6 +78,8 @@ impl ChartModel {
             datasets: BTreeMap::default(),
             grids: BTreeMap::default(),
             axes: BTreeMap::default(),
+            data_zoom_x: BTreeMap::default(),
+            data_zoom_x_by_axis: BTreeMap::default(),
             series_order: Vec::default(),
             series: BTreeMap::default(),
             revs: ModelRevisions::default(),
@@ -130,6 +134,42 @@ impl ChartModel {
                         range.clamp_non_degenerate();
                         range
                     },
+                },
+            );
+        }
+
+        let mut zoom_ids: BTreeSet<DataZoomId> = BTreeSet::new();
+        for zoom in spec.data_zoom_x {
+            if !zoom_ids.insert(zoom.id) {
+                return Err(ModelError::DuplicateId {
+                    kind: "data_zoom_x",
+                });
+            }
+            let Some(axis) = model.axes.get(&zoom.axis) else {
+                return Err(ModelError::MissingReference {
+                    kind: "data_zoom_x.axis",
+                });
+            };
+            if axis.kind != AxisKind::X {
+                return Err(ModelError::InvalidSpec {
+                    reason: "data_zoom_x.axis must reference an X axis",
+                });
+            }
+            if model
+                .data_zoom_x_by_axis
+                .insert(zoom.axis, zoom.id)
+                .is_some()
+            {
+                return Err(ModelError::InvalidSpec {
+                    reason: "multiple data_zoom_x specs reference the same axis",
+                });
+            }
+            model.data_zoom_x.insert(
+                zoom.id,
+                DataZoomXModel {
+                    id: zoom.id,
+                    axis: zoom.axis,
+                    filter_mode: zoom.filter_mode,
                 },
             );
         }
@@ -231,6 +271,13 @@ pub struct AxisModel {
     pub kind: AxisKind,
     pub grid: GridId,
     pub range: AxisRange,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct DataZoomXModel {
+    pub id: DataZoomId,
+    pub axis: AxisId,
+    pub filter_mode: FilterMode,
 }
 
 #[derive(Debug, Clone)]
