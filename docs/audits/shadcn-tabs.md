@@ -20,8 +20,8 @@ examples in `repo-ref/ui`.
 
 ### Composition surface
 
-- Partial: Fret exposes a `Tabs` builder with `TabsItem` entries (label + content) rather than a
-  fully composable `TabsList` / `TabsTrigger` / `TabsContent` surface like Radix/shadcn.
+- Pass: Exposes a composable `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent` surface (Radix-shaped),
+  while keeping the legacy `Tabs` + `TabsItem` builder for convenience.
 - Pass: Supports a controlled selection model via `Model<Option<Arc<str>>>`.
 - Pass: Supports uncontrolled `defaultValue` (internal selection model).
 - Pass: Supports Radix `TabsContent forceMount` semantics via `Tabs::force_mount_content(true)`
