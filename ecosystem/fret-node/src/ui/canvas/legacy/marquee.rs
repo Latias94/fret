@@ -5,8 +5,8 @@ use fret_ui::UiHost;
 
 use crate::core::NodeId as GraphNodeId;
 
-use super::NodeGraphCanvas;
 use super::super::state::{MarqueeDrag, MarqueeMode, PendingMarqueeDrag, ViewSnapshot};
+use super::NodeGraphCanvas;
 
 fn nodes_in_marquee(
     graph: &crate::core::Graph,
