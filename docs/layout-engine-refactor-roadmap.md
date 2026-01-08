@@ -1,4 +1,4 @@
-# Layout Engine Refactor Roadmap (P1–P3)
+# Layout Engine Refactor Roadmap (P1-P3)
 
 This document tracks the incremental refactor from container-owned "Taffy islands" to a
 window-scoped layout engine with multiple independent viewport roots (multi-viewport docking).
@@ -48,13 +48,13 @@ GPUI reference (implementation, not contract):
 
 ## Current Progress Snapshot
 
-- P1: `AvailableSpace` + non-reentrant `measure_in`. (**In progress**; implemented in `wt-layout-engine2`, pending merge.)
-- P2: window-scoped engine skeleton behind `fret-ui/layout-engine-v2`. (**In progress**; implemented in `wt-layout-engine2`.)
-- P3: multi-viewport roots + engine-backed flow migration. (**Planned**; partially prototyped in `wt-layout-engine2`.)
+- P1: `AvailableSpace` + non-reentrant `measure_in`. (**Done**; merged.)
+- P2: window-scoped engine skeleton behind `fret-ui/layout-engine-v2`. (**In progress**; iterating in `wt-layout-engine2`.)
+- P3: multi-viewport roots + engine-backed flow migration. (**In progress**; viewport-root plumbing + conformance tests landed; more migration remains.)
 
 Update this section by editing this file (avoid scattering progress notes across ADRs).
 
-## P1 — Constraint-Correct Intrinsic Measurement (ADR 0115)
+## P1: Constraint-Correct Intrinsic Measurement (ADR 0115)
 
 Goal: stop semantic drift and recursion hazards by making `AvailableSpace` explicit and making
 measurement leaf-only.
@@ -71,7 +71,7 @@ Acceptance:
 - `cargo test -p fret-ui` passes.
 - A minimal regression composition for "Auto main axis + flex-1/fill" does not stack overflow.
 
-## P2 — Window-Scoped Layout Engine Skeleton + Two-Phase Protocol (ADR 0116)
+## P2: Window-Scoped Layout Engine Skeleton + Two-Phase Protocol (ADR 0116)
 
 Goal: introduce a per-window `TaffyLayoutEngine` without changing behavior by default, and enforce
 the separation between "build/request" and "compute/apply".
@@ -95,7 +95,7 @@ Acceptance:
 - With feature off: no behavior change; tests pass.
 - With feature on: empty graphs and small trees solve; tests pass.
 
-## P3 — Multi-Viewport Roots + Flow Migration (End-State Convergence)
+## P3: Multi-Viewport Roots + Flow Migration (End-State Convergence)
 
 Goal: evolve "taffy islands" so that layout-style-only descendants become nodes in the same Taffy
 tree, while docking-defined viewports are independent roots and explicit barriers remain outside.
@@ -113,3 +113,11 @@ Acceptance:
 
 - Conformance test: no cross-viewport coupling for percent/flex distribution.
 - Docking demos behave consistently across DPI scales (bounds stable within rounding policy).
+
+## Open Decisions (Track Here)
+
+1. **"Contents-like" wrappers**: which primitives can opt in, validation rules, and how this interacts with ADR 0117 (no Slot/`asChild` prop merging).
+2. **Root solve orchestration**: which roots we precompute (viewport only vs additional layer roots) and the required ordering relative to overlay roots (ADR 0011, ADR 0064).
+3. **Engine cache keys + invalidation**: exact environment keys for measurement caching (scale factor, theme revision, font stack key, model revisions).
+4. **Rounding policy**: whether/where to enable engine-level pixel rounding, and how it composes with hit-testing and paint.
+5. **"Not all containers use Taffy" boundary**: list-like/virtualized surfaces and other perf-critical containers that should remain specialized algorithms, and the conformance tests that keep them interoperable.
