@@ -3,7 +3,9 @@ use crate::declarative::frame::layout_style_for_node;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 use crate::declarative::taffy_layout::*;
-use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutConstraints, LayoutSize};
+use crate::layout_constraints::{
+    AvailableSpace as RuntimeAvailableSpace, LayoutConstraints, LayoutSize,
+};
 
 impl ElementHostWidget {
     pub(super) fn layout_grid_impl<H: UiHost>(
@@ -161,15 +163,23 @@ impl ElementHostWidget {
                                 TaffyAvailableSpace::Definite(w) => {
                                     RuntimeAvailableSpace::Definite(Px(w))
                                 }
-                                TaffyAvailableSpace::MinContent => RuntimeAvailableSpace::MinContent,
-                                TaffyAvailableSpace::MaxContent => RuntimeAvailableSpace::MaxContent,
+                                TaffyAvailableSpace::MinContent => {
+                                    RuntimeAvailableSpace::MinContent
+                                }
+                                TaffyAvailableSpace::MaxContent => {
+                                    RuntimeAvailableSpace::MaxContent
+                                }
                             },
                             match avail.height {
                                 TaffyAvailableSpace::Definite(h) => {
                                     RuntimeAvailableSpace::Definite(Px(h))
                                 }
-                                TaffyAvailableSpace::MinContent => RuntimeAvailableSpace::MinContent,
-                                TaffyAvailableSpace::MaxContent => RuntimeAvailableSpace::MaxContent,
+                                TaffyAvailableSpace::MinContent => {
+                                    RuntimeAvailableSpace::MinContent
+                                }
+                                TaffyAvailableSpace::MaxContent => {
+                                    RuntimeAvailableSpace::MaxContent
+                                }
                             },
                         ),
                     );

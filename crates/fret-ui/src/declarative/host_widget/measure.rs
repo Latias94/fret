@@ -140,7 +140,10 @@ impl ElementHostWidget {
             return Size::new(Px(0.0), Px(0.0));
         };
 
-        let is_flex = matches!(&instance, ElementInstance::Flex(_) | ElementInstance::RovingFlex(_));
+        let is_flex = matches!(
+            &instance,
+            ElementInstance::Flex(_) | ElementInstance::RovingFlex(_)
+        );
         let is_grid = matches!(&instance, ElementInstance::Grid(_));
         if !is_flex {
             self.flex_cache = None;
@@ -150,35 +153,69 @@ impl ElementHostWidget {
         }
 
         match instance {
-            ElementInstance::InteractivityGate(props) if !props.present => Size::new(Px(0.0), Px(0.0)),
+            ElementInstance::InteractivityGate(props) if !props.present => {
+                Size::new(Px(0.0), Px(0.0))
+            }
             ElementInstance::Container(props) => self.measure_container(cx, window, props),
-            ElementInstance::Pressable(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::Opacity(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::VisualTransform(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::Semantics(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::FocusScope(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::InteractivityGate(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::PointerRegion(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::HoverRegion(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::WheelRegion(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::DismissibleLayer(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::Anchored(props) => self.measure_passthrough_box(cx, window, props.layout),
+            ElementInstance::Pressable(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::Opacity(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::VisualTransform(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::Semantics(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::FocusScope(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::InteractivityGate(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::PointerRegion(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::HoverRegion(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::WheelRegion(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::DismissibleLayer(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
+            ElementInstance::Anchored(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::Stack(props) => self.measure_passthrough_box(cx, window, props.layout),
-            ElementInstance::Spacer(props) => {
-                clamp_to_constraints_in_measure(Size::new(Px(0.0), Px(0.0)), props.layout, cx.constraints)
-            }
-            ElementInstance::Spinner(props) => {
-                clamp_to_constraints_in_measure(Size::new(Px(16.0), Px(16.0)), props.layout, cx.constraints)
-            }
-            ElementInstance::Image(props) => {
-                clamp_to_constraints_in_measure(Size::new(Px(0.0), Px(0.0)), props.layout, cx.constraints)
-            }
-            ElementInstance::SvgIcon(props) => {
-                clamp_to_constraints_in_measure(Size::new(Px(0.0), Px(0.0)), props.layout, cx.constraints)
-            }
-            ElementInstance::Scrollbar(props) => {
-                clamp_to_constraints_in_measure(Size::new(Px(0.0), Px(0.0)), props.layout, cx.constraints)
-            }
+            ElementInstance::Spacer(props) => clamp_to_constraints_in_measure(
+                Size::new(Px(0.0), Px(0.0)),
+                props.layout,
+                cx.constraints,
+            ),
+            ElementInstance::Spinner(props) => clamp_to_constraints_in_measure(
+                Size::new(Px(16.0), Px(16.0)),
+                props.layout,
+                cx.constraints,
+            ),
+            ElementInstance::Image(props) => clamp_to_constraints_in_measure(
+                Size::new(Px(0.0), Px(0.0)),
+                props.layout,
+                cx.constraints,
+            ),
+            ElementInstance::SvgIcon(props) => clamp_to_constraints_in_measure(
+                Size::new(Px(0.0), Px(0.0)),
+                props.layout,
+                cx.constraints,
+            ),
+            ElementInstance::Scrollbar(props) => clamp_to_constraints_in_measure(
+                Size::new(Px(0.0), Px(0.0)),
+                props.layout,
+                cx.constraints,
+            ),
             ElementInstance::Scroll(props) => self.measure_scroll(cx, window, props),
             ElementInstance::VirtualList(props) => self.measure_virtual_list(cx, window, props),
             ElementInstance::Text(props) => self.measure_text(cx, props),
@@ -186,9 +223,11 @@ impl ElementHostWidget {
             ElementInstance::SelectableText(props) => self.measure_selectable_text(cx, props),
             ElementInstance::TextInput(props) => self.measure_text_input(cx, props),
             ElementInstance::TextArea(props) => self.measure_text_area(cx, props),
-            ElementInstance::ResizablePanelGroup(props) => {
-                clamp_to_constraints_in_measure(Size::new(Px(0.0), Px(0.0)), props.layout, cx.constraints)
-            }
+            ElementInstance::ResizablePanelGroup(props) => clamp_to_constraints_in_measure(
+                Size::new(Px(0.0), Px(0.0)),
+                props.layout,
+                cx.constraints,
+            ),
             ElementInstance::Flex(props) => self.measure_flex(cx, window, props),
             ElementInstance::RovingFlex(props) => self.measure_flex(cx, window, props.flex),
             ElementInstance::Grid(props) => self.measure_grid(cx, window, props),
@@ -322,7 +361,10 @@ impl ElementHostWidget {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.services.text().measure("M", &props.text_style, constraints);
+        let metrics = cx
+            .services
+            .text()
+            .measure("M", &props.text_style, constraints);
         let border_h = props.chrome.border.top.0.max(0.0) + props.chrome.border.bottom.0.max(0.0);
         let pad_h = props.chrome.padding.top.0.max(0.0) + props.chrome.padding.bottom.0.max(0.0);
         let h = Px((metrics.size.height.0 + pad_h + border_h).max(0.0));
@@ -352,7 +394,10 @@ impl ElementHostWidget {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics = cx.services.text().measure("M", &props.text_style, constraints);
+        let metrics = cx
+            .services
+            .text()
+            .measure("M", &props.text_style, constraints);
         let border_h = props.chrome.border.top.0.max(0.0) + props.chrome.border.bottom.0.max(0.0);
         let pad_h = props.chrome.padding_y.0.max(0.0) * 2.0;
         let min_h = props.min_height.0.max(0.0);
@@ -435,7 +480,11 @@ impl ElementHostWidget {
             },
         };
 
-        clamp_to_constraints_in_measure(Size::new(desired_w, desired_h), props.layout, cx.constraints)
+        clamp_to_constraints_in_measure(
+            Size::new(desired_w, desired_h),
+            props.layout,
+            cx.constraints,
+        )
     }
 
     fn measure_flex<H: UiHost>(
@@ -478,7 +527,9 @@ impl ElementHostWidget {
                     Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0)),
                     Length::Fill => match inner_available.width {
                         AvailableSpace::Definite(px) => Dimension::length(px.0.max(0.0)),
-                        AvailableSpace::MinContent | AvailableSpace::MaxContent => Dimension::auto(),
+                        AvailableSpace::MinContent | AvailableSpace::MaxContent => {
+                            Dimension::auto()
+                        }
                     },
                     Length::Auto => Dimension::auto(),
                 },
@@ -486,7 +537,9 @@ impl ElementHostWidget {
                     Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
                     Length::Fill => match inner_available.height {
                         AvailableSpace::Definite(px) => Dimension::length(px.0.max(0.0)),
-                        AvailableSpace::MinContent | AvailableSpace::MaxContent => Dimension::auto(),
+                        AvailableSpace::MinContent | AvailableSpace::MaxContent => {
+                            Dimension::auto()
+                        }
                     },
                     Length::Auto => Dimension::auto(),
                 },
@@ -505,8 +558,12 @@ impl ElementHostWidget {
         };
 
         let main_axis_definite = match props.direction {
-            fret_core::Axis::Horizontal => matches!(inner_available.width, AvailableSpace::Definite(_)),
-            fret_core::Axis::Vertical => matches!(inner_available.height, AvailableSpace::Definite(_)),
+            fret_core::Axis::Horizontal => {
+                matches!(inner_available.width, AvailableSpace::Definite(_))
+            }
+            fret_core::Axis::Vertical => {
+                matches!(inner_available.height, AvailableSpace::Definite(_))
+            }
         };
 
         let cache = self
@@ -612,7 +669,9 @@ impl ElementHostWidget {
                         known_w: known.width.map(|v| v.to_bits()),
                         known_h: known.height.map(|v| v.to_bits()),
                         avail_w: super::super::taffy_layout::taffy_available_space_key(avail.width),
-                        avail_h: super::super::taffy_layout::taffy_available_space_key(avail.height),
+                        avail_h: super::super::taffy_layout::taffy_available_space_key(
+                            avail.height,
+                        ),
                     };
                     if let Some(size) = measure_cache.get(&key) {
                         return *size;
@@ -680,7 +739,9 @@ impl ElementHostWidget {
                     Length::Px(px) => Dimension::length((px.0 - pad_w).max(0.0)),
                     Length::Fill => match inner_available.width {
                         AvailableSpace::Definite(px) => Dimension::length(px.0.max(0.0)),
-                        AvailableSpace::MinContent | AvailableSpace::MaxContent => Dimension::auto(),
+                        AvailableSpace::MinContent | AvailableSpace::MaxContent => {
+                            Dimension::auto()
+                        }
                     },
                     Length::Auto => Dimension::auto(),
                 },
@@ -688,7 +749,9 @@ impl ElementHostWidget {
                     Length::Px(px) => Dimension::length((px.0 - pad_h).max(0.0)),
                     Length::Fill => match inner_available.height {
                         AvailableSpace::Definite(px) => Dimension::length(px.0.max(0.0)),
-                        AvailableSpace::MinContent | AvailableSpace::MaxContent => Dimension::auto(),
+                        AvailableSpace::MinContent | AvailableSpace::MaxContent => {
+                            Dimension::auto()
+                        }
                     },
                     Length::Auto => Dimension::auto(),
                 },
@@ -792,7 +855,9 @@ impl ElementHostWidget {
                         known_w: known.width.map(|v| v.to_bits()),
                         known_h: known.height.map(|v| v.to_bits()),
                         avail_w: super::super::taffy_layout::taffy_available_space_key(avail.width),
-                        avail_h: super::super::taffy_layout::taffy_available_space_key(avail.height),
+                        avail_h: super::super::taffy_layout::taffy_available_space_key(
+                            avail.height,
+                        ),
                     };
                     if let Some(size) = measure_cache.get(&key) {
                         return *size;

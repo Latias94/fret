@@ -166,8 +166,13 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     }
 
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
-        self.tree
-            .measure_in(self.app, self.services, child, constraints, self.scale_factor)
+        self.tree.measure_in(
+            self.app,
+            self.services,
+            child,
+            constraints,
+            self.scale_factor,
+        )
     }
 }
 
@@ -200,8 +205,13 @@ impl<'a, H: UiHost> MeasureCx<'a, H> {
     }
 
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
-        self.tree
-            .measure_in(self.app, self.services, child, constraints, self.scale_factor)
+        self.tree.measure_in(
+            self.app,
+            self.services,
+            child,
+            constraints,
+            self.scale_factor,
+        )
     }
 }
 

@@ -4,9 +4,11 @@ use super::frame::layout_style_for_node;
 use super::layout_helpers::clamp_to_constraints;
 use super::prelude::*;
 use super::taffy_layout::*;
+use crate::layout_constraints::{
+    AvailableSpace as RuntimeAvailableSpace, LayoutConstraints, LayoutSize,
+};
 use crate::widget::{CommandCx, MeasureCx};
 use fret_runtime::CommandId;
-use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutConstraints, LayoutSize};
 
 mod event;
 mod layout;
@@ -254,15 +256,23 @@ impl ElementHostWidget {
                                 TaffyAvailableSpace::Definite(w) => {
                                     RuntimeAvailableSpace::Definite(Px(w))
                                 }
-                                TaffyAvailableSpace::MinContent => RuntimeAvailableSpace::MinContent,
-                                TaffyAvailableSpace::MaxContent => RuntimeAvailableSpace::MaxContent,
+                                TaffyAvailableSpace::MinContent => {
+                                    RuntimeAvailableSpace::MinContent
+                                }
+                                TaffyAvailableSpace::MaxContent => {
+                                    RuntimeAvailableSpace::MaxContent
+                                }
                             },
                             match avail.height {
                                 TaffyAvailableSpace::Definite(h) => {
                                     RuntimeAvailableSpace::Definite(Px(h))
                                 }
-                                TaffyAvailableSpace::MinContent => RuntimeAvailableSpace::MinContent,
-                                TaffyAvailableSpace::MaxContent => RuntimeAvailableSpace::MaxContent,
+                                TaffyAvailableSpace::MinContent => {
+                                    RuntimeAvailableSpace::MinContent
+                                }
+                                TaffyAvailableSpace::MaxContent => {
+                                    RuntimeAvailableSpace::MaxContent
+                                }
                             },
                         ),
                     );

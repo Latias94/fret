@@ -571,8 +571,7 @@ impl ElementHostWidget {
                         let mut step_y = Px(0.0);
                         if scroll_y {
                             if pointer_pos.y.0 < top.0 + EDGE_MARGIN.0 {
-                                let t = ((top.0 + EDGE_MARGIN.0 - pointer_pos.y.0)
-                                    / EDGE_MARGIN.0)
+                                let t = ((top.0 + EDGE_MARGIN.0 - pointer_pos.y.0) / EDGE_MARGIN.0)
                                     .clamp(0.0, 1.0);
                                 step_y = Px(-MAX_STEP.0 * t);
                             } else if pointer_pos.y.0 > bottom.0 - EDGE_MARGIN.0 {
@@ -593,8 +592,8 @@ impl ElementHostWidget {
                             Px(prev.y.0 + step_y.0),
                         ));
                         let next = handle.offset();
-                        let did_scroll =
-                            (next.y.0 - prev.y.0).abs() > 0.01 || (next.x.0 - prev.x.0).abs() > 0.01;
+                        let did_scroll = (next.y.0 - prev.y.0).abs() > 0.01
+                            || (next.x.0 - prev.x.0).abs() > 0.01;
 
                         if did_scroll {
                             if let Some(handle_key) = handle_key {

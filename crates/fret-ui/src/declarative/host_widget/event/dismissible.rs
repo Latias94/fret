@@ -31,7 +31,12 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                     token,
                     ..
                 } if window == self.window => {
-                    crate::elements::record_timer_target(&mut *self.app, window, token, self.element);
+                    crate::elements::record_timer_target(
+                        &mut *self.app,
+                        window,
+                        token,
+                        self.element,
+                    );
                 }
                 Effect::CancelTimer { token } => {
                     crate::elements::clear_timer_target(&mut *self.app, self.window, token);
