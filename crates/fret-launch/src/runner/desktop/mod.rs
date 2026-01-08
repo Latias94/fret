@@ -11,7 +11,7 @@ use std::{
 };
 
 #[cfg(feature = "hotpatch-subsecond")]
-use std::{path::PathBuf, time::SystemTime};
+mod hotpatch;
 
 use fret_app::{App, CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 use fret_core::{
@@ -65,46 +65,7 @@ pub enum RunnerUserEvent {
 }
 
 #[cfg(feature = "hotpatch-subsecond")]
-#[derive(Debug)]
-struct HotpatchTrigger {
-    path: PathBuf,
-    poll_interval: Duration,
-    next_poll_at: Instant,
-    last_marker: Option<String>,
-}
-
-#[cfg(feature = "hotpatch-subsecond")]
-fn hotpatch_trigger_from_env(now: Instant) -> Option<HotpatchTrigger> {
-    if std::env::var_os("FRET_HOTPATCH").is_none_or(|v| v.is_empty()) {
-        return None;
-    }
-
-    let path = std::env::var_os("FRET_HOTPATCH_TRIGGER_PATH")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(".fret/hotpatch.touch"));
-
-    let poll_interval = std::env::var("FRET_HOTPATCH_POLL_MS")
-        .ok()
-        .and_then(|s| s.parse::<u64>().ok())
-        .map(Duration::from_millis)
-        .unwrap_or_else(|| Duration::from_millis(200));
-
-    let last_marker = std::fs::read_to_string(&path)
-        .ok()
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .or_else(|| {
-            let mtime: SystemTime = std::fs::metadata(&path).ok()?.modified().ok()?;
-            Some(format!("{:?}", mtime))
-        });
-
-    Some(HotpatchTrigger {
-        path,
-        poll_interval,
-        next_poll_at: now + poll_interval,
-        last_marker,
-    })
-}
+use hotpatch::{HotpatchRequestKind, HotpatchTrigger, hotpatch_trigger_from_env};
 
 pub fn run_app<D: WinitAppDriver + 'static>(
     config: WinitRunnerConfig,
@@ -907,6 +868,8 @@ pub struct WinitRunner<D: WinitAppDriver> {
 
     #[cfg(feature = "hotpatch-subsecond")]
     hotpatch: Option<HotpatchTrigger>,
+    #[cfg(feature = "hotpatch-subsecond")]
+    hot_reload_generation: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -1190,6 +1153,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             external_drop: NativeExternalDrop::default(),
             #[cfg(feature = "hotpatch-subsecond")]
             hotpatch: hotpatch_trigger_from_env(now),
+            #[cfg(feature = "hotpatch-subsecond")]
+            hot_reload_generation: 0,
         }
     }
 
@@ -1332,6 +1297,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     ///
     /// Without a proxy, the runner falls back to synchronous delivery for platform effects.
     pub fn set_event_loop_proxy(&mut self, proxy: EventLoopProxy) {
+        #[cfg(feature = "hotpatch-subsecond")]
+        if let Some(hotpatch) = self.hotpatch.as_ref() {
+            hotpatch.set_event_loop_proxy(proxy.clone());
+        }
         self.event_loop_proxy = Some(proxy);
     }
 
@@ -1408,7 +1377,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 return false;
             }
 
-            self.hot_reload_all_windows();
+            self.hot_reload_all_windows("key chord (Ctrl+Shift+R)");
             return true;
         }
 
@@ -1419,8 +1388,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     #[cfg(feature = "hotpatch-subsecond")]
-    fn hot_reload_all_windows(&mut self) {
-        tracing::info!("hotpatch: hot reload requested (Ctrl+Shift+R)");
+    fn hot_reload_all_windows(&mut self, reason: &'static str) {
+        self.hot_reload_generation = self.hot_reload_generation.saturating_add(1);
+        let generation = self.hot_reload_generation;
+        tracing::info!(%reason, generation, "hotpatch: hot reload requested");
+        hotpatch::hotpatch_diag_log(&format!(
+            "runner: hot_reload_all_windows begin reason={reason} generation={generation}"
+        ));
 
         // Cancel any in-flight drag to avoid leaving the runner in an inconsistent state.
         self.app.cancel_drag();
@@ -1432,6 +1406,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
 
         // Collect first: we need to re-enter `self` mutably when mutating window states.
         let windows: Vec<fret_core::AppWindowId> = self.windows.keys().collect();
+        tracing::debug!(
+            generation,
+            windows = windows.len(),
+            "hotpatch: scheduling window resets"
+        );
+        hotpatch::hotpatch_diag_log(&format!(
+            "runner: scheduling window resets generation={generation} windows={}",
+            windows.len()
+        ));
 
         for window in windows {
             let Some(state) = self.windows.get_mut(window) else {
@@ -1441,10 +1424,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
             self.driver
                 .hot_reload_window(&mut self.app, services, window, &mut state.user);
+            tracing::debug!(generation, ?window, "hotpatch: window reset complete");
+            hotpatch::hotpatch_diag_log(&format!(
+                "runner: window reset complete generation={generation} window={window:?}"
+            ));
 
             state.last_accessibility_snapshot = None;
             state.window.request_redraw();
         }
+        hotpatch::hotpatch_diag_log(&format!(
+            "runner: hot_reload_all_windows end generation={generation}"
+        ));
     }
 
     fn poll_hotpatch_trigger(&mut self, now: Instant) -> bool {
@@ -1453,37 +1443,25 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let Some(trigger) = self.hotpatch.as_mut() else {
                 return false;
             };
-            if now < trigger.next_poll_at {
-                return false;
-            }
-            trigger.next_poll_at = now + trigger.poll_interval;
 
-            let marker = std::fs::read_to_string(&trigger.path)
-                .ok()
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .or_else(|| {
-                    let mtime = std::fs::metadata(&trigger.path)
-                        .ok()
-                        .and_then(|m| m.modified().ok())?;
-                    Some(format!("{:?}", mtime))
-                });
-
-            let Some(marker) = marker else {
+            let Some(request) = trigger.poll(now) else {
                 return false;
             };
 
-            if trigger
-                .last_marker
-                .as_ref()
-                .is_some_and(|prev| prev == &marker)
-            {
-                return false;
+            match request.kind {
+                HotpatchRequestKind::SubsecondPatchApplied => {
+                    hotpatch::hotpatch_diag_log("runner: observed SubsecondPatchApplied");
+                    self.hot_reload_all_windows("subsecond patch applied");
+                }
+                HotpatchRequestKind::TriggerFileChanged => {
+                    if let Some(path) = request.trigger_path.as_ref() {
+                        tracing::info!(path = %path.display(), "hotpatch: trigger file changed");
+                    }
+                    hotpatch::hotpatch_diag_log("runner: observed TriggerFileChanged");
+                    self.hot_reload_all_windows("trigger file changed");
+                }
             }
-            trigger.last_marker = Some(marker);
 
-            tracing::info!(path = %trigger.path.display(), "hotpatch: trigger changed");
-            self.hot_reload_all_windows();
             true
         }
 

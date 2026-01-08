@@ -399,6 +399,7 @@ pub struct UiTree<H: UiHost> {
     observed_in_paint: ObservationIndex,
     observed_globals_in_layout: GlobalObservationIndex,
     observed_globals_in_paint: GlobalObservationIndex,
+    measure_stack: Vec<MeasureStackKey>,
 
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
@@ -432,6 +433,7 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_in_paint: ObservationIndex::default(),
             observed_globals_in_layout: GlobalObservationIndex::default(),
             observed_globals_in_paint: GlobalObservationIndex::default(),
+            measure_stack: Vec::new(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
             paint_cache_policy: PaintCachePolicy::Auto,
@@ -441,6 +443,16 @@ impl<H: UiHost> Default for UiTree<H> {
             semantics_requested: false,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct MeasureStackKey {
+    node: NodeId,
+    known_w_bits: Option<u32>,
+    known_h_bits: Option<u32>,
+    avail_w: (u8, u32),
+    avail_h: (u8, u32),
+    scale_bits: u32,
 }
 
 impl<H: UiHost> UiTree<H> {
@@ -1417,11 +1429,7 @@ impl<H: UiHost> UiTree<H> {
                     if !derive {
                         continue;
                     }
-                    if !nodes[controller_idx]
-                        .controls
-                        .iter()
-                        .any(|id| *id == controlled)
-                    {
+                    if !nodes[controller_idx].controls.contains(&controlled) {
                         nodes[controller_idx].controls.push(controlled);
                     }
                 }

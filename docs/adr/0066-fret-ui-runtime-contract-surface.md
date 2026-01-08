@@ -30,8 +30,8 @@ must name at least one authoritative upstream reference.
   - Pinned local reference: Radix UI Primitives (upstream: <https://github.com/radix-ui/primitives>; see `docs/repo-ref.md`), `repo-ref/ui`
 - **Placement algorithms** (flip/shift/size/offset/arrow): Floating UI
   - Pinned local reference: `repo-ref/floating-ui`
-- **Virtualization contract vocabulary** (items/range/measurement/scroll-to): TanStack Virtual
-  - Pinned local reference: `repo-ref/virtual`
+- **Virtualization contract vocabulary** (items/range/measurement/scroll-to): virtualizer (Rust)
+  - Pinned local reference: `repo-ref/virtualizer`
 - **Declarative layout solver**: Taffy (implementation engine)
   - Semantics target: CSS Flexbox/Grid + Tailwind layout primitives vocabulary
   - Pinned local reference for Tailwind semantics: `repo-ref/tailwindcss`
@@ -83,7 +83,7 @@ This is the minimum contract set `fret-ui-kit` can depend on long-term.
 | Frame scheduling | one-shot frame requests + RAF requests + refcounted continuous leases | event-driven by default; continuous frames are explicit and scoped; coalesced per window per tick | GPUI/Zed `Window::refresh()` mental model | ADR 0034 |
 | Layout vocabulary | `LayoutStyle` + Flex/Grid semantics (Taffy-backed) | CSS/Tailwind-like defaults; no per-component hidden defaults in runtime | CSS + Tailwind semantics, Taffy engine | ADR 0057, ADR 0062, ADR 0035 |
 | Scroll contract | scroll handles + strategies | scroll-to behavior is deterministic; components can build scrollbars/policies | GPUI handle patterns | ADR 0042 |
-| Virtualization contract | variable-size metrics + visible range computation + scroll-to-item | supports measured heights, stable keys, overscan; deterministic | TanStack Virtual (primary), GPUI (engineering ref) | ADR 0070 |
+| Virtualization contract | variable-size metrics + visible range computation + scroll-to-item | supports measured heights, stable keys, overscan; deterministic | virtualizer (primary), GPUI (engineering ref) | ADR 0070 |
 | Text input/IME engine contract | IME plumbing hooks, editing engine state/commands, caret geometry | caret/selection geometry query stable; IME preedit/commit deterministic | platform IME + APG text expectations | ADR 0012, ADR 0044, ADR 0045, ADR 0046 |
 | Semantics tree | semantics tree mechanism + overlay root semantics boundaries | modal barrier hides/inerts background semantics; deterministic snapshot | WAI-ARIA + platform bridges | ADR 0033 |
 
@@ -130,9 +130,9 @@ The placement solver is a pure algorithm surface (ADR 0064). It must support, at
 
 Reference: Floating UI (`repo-ref/floating-ui`).
 
-#### 3.3 Virtualization contract (Stable; TanStack Virtual alignment)
+#### 3.3 Virtualization contract (Stable; virtualizer alignment)
 
-We treat TanStack Virtual as the primary **contract vocabulary** reference (not as a DOM
+We treat `virtualizer` as the primary **contract vocabulary** reference (not as a UI
 implementation target).
 
 **Concept mapping (TanStack → Fret):**
@@ -151,8 +151,7 @@ implementation target).
 
 Primary reference:
 
-- TanStack Virtual API docs: `repo-ref/virtual/docs/api/virtualizer.md`
-- VirtualItem shape: `repo-ref/virtual/docs/api/virtual-item.md`
+- virtualizer README: `repo-ref/virtualizer/README.md`
 
 Engineering reference:
 
@@ -262,10 +261,10 @@ When a modal barrier is installed for a window:
 
 Whether click-outside closes is strictly a component policy decision (Radix/shadcn target).
 
-### Gate D — Virtualization P0/P1 boundary (TanStack Virtual alignment)
+### Gate D — Virtualization P0/P1 boundary (virtualizer alignment)
 
 - P0 (Stable): `scrollMargin`, `rangeExtractor`, `getItemKey`, `overscan` support, and `VirtualItem`
-  geometry output compatible with TanStack Virtual’s vocabulary.
+  geometry output compatible with `virtualizer`’s vocabulary.
 - P1 (defer): masonry/lanes and any multi-lane virtualization contract.
 - P1 (defer): `initialMeasurementsCache`-style seeding of measurements (allowed later, not locked now).
 

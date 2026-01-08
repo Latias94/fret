@@ -11,3 +11,8 @@ documentation.workspace = true
 
 [dependencies]
 fret-asset-cache = { path = "../fret-asset-cache" }
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+
+[dev-dependencies]
+slotmap.workspace = true

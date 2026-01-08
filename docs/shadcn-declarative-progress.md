@@ -24,11 +24,11 @@ This repo intentionally splits responsibilities across three layers (similar to 
 - `fret-ui-kit` (**design-system + infra**, Tailwind-ish): token-driven styling (`Theme` keys + refinements), reusable declarative helpers (`scroll`, `text_field`, etc), and headless state machines (`roving_focus`, hover intent, menu navigation).
 - `fret-ui-shadcn` (**taxonomy + recipes**): shadcn/ui v4 naming surface and component composition; no retained widgets, no renderer/platform deps.
 
-App/editor-specific composition belongs in `fret-app-kit` / `fret-editor` (e.g. app toolbars, menu bars, command palette wiring).
+App/editor-specific composition belongs in `fret-editor` and ecosystem app layers (`fret-bootstrap` / `fret-app-kit`) (e.g. app toolbars, menu bars, command palette wiring).
 
 ### Interaction Policy (Action Hooks)
 
-Cross-cutting interaction policies (toggle models, close overlays, selection writes, “dismiss on escape/outside press”, etc.) are *component-owned*:
+Cross-cutting interaction policies (toggle models, close overlays, selection writes, "dismiss on escape/outside press", etc.) are *component-owned*:
 
 - `fret-ui` provides hook plumbing (`on_activate`, `on_dismiss_request`) as a mechanism-only substrate (ADR 0074).
 - `fret-ui-kit` and `fret-ui-shadcn` register handlers to implement policies for each component.
@@ -56,7 +56,7 @@ The upstream reference in `repo-ref/ui` defines 54 `registry:ui` components (`re
 Status below uses Rust module naming (hyphenated names normalized to `_`).
 
 Audit column is a lightweight review marker for shadcn parity against `repo-ref/ui` docs/examples:
-`Unreviewed` → `In review` → `Pass` (or `Defer`/`Skip` when applicable).
+`Unreviewed` -> `In review` -> `Pass` (or `Defer`/`Skip` when applicable).
 
 | Registry name | Rust module | Status | Audit | Notes |
 | --- | --- | --- | --- | --- |
@@ -81,7 +81,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | drawer | `drawer` | Present | Unreviewed | `sheet` facade (defaults to bottom); overlay policy |
 | dropdown-menu | `dropdown_menu` | Present | In review | Menu navigation + typeahead + dismissible popover infra (ADR 0074); now includes `Label`/`Group`/`Shortcut` + destructive items; audit: `docs/audits/shadcn-dropdown-menu.md` |
 | empty | `empty` | Present | Unreviewed |  |
-| field | `field` | Present | Unreviewed | Repo-specific “form field” primitives |
+| field | `field` | Present | Unreviewed | Repo-specific "form field" primitives |
 | form | `form` | Present | Unreviewed |  |
 | hover-card | `hover_card` | Present | In review | Hover intent + anchored placement; supports custom anchor via `HoverCard::anchor_element(...)`; audit: `docs/audits/shadcn-hover-card.md` |
 | input | `input` | Present | Unreviewed |  |
@@ -128,8 +128,8 @@ These are shadcn-style surfaces referenced by docs/demos but not part of the `re
 | typography | `typography` | Skip | Unreviewed | Upstream typography page is docs-only and not shipped as a component |
 
 Notes:
-- “Present” means a declarative module exists and compiles; it may still be below the “Definition of Done” parity bar (keyboard/APG, a11y checklist, tests).
-- Most “Missing” entries were previously implemented as retained widgets and intentionally deleted under the declarative-only boundary. They should come back as declarative components backed by `fret-ui-kit` infra + `fret-ui` mechanisms.
+- "Present" means a declarative module exists and compiles; it may still be below the "Definition of Done" parity bar (keyboard/APG, a11y checklist, tests).
+- Most "Missing" entries were previously implemented as retained widgets and intentionally deleted under the declarative-only boundary. They should come back as declarative components backed by `fret-ui-kit` infra + `fret-ui` mechanisms.
 - `data_table` is not a `registry:ui` item upstream; treat it as an extension and keep it feature-gated.
 
 ## Recommended Order (Near-term)
@@ -154,7 +154,7 @@ Notes:
 
 ## Infrastructure Backlog (components-ui / runtime)
 
-The goal is to keep `fret-ui-shadcn` mostly “composition + styling”, and put reusable mechanisms/state in `fret-ui` / `fret-ui-kit`.
+The goal is to keep `fret-ui-shadcn` mostly "composition + styling", and put reusable mechanisms/state in `fret-ui` / `fret-ui-kit`.
 
 **Overlay stack (highest leverage)**
 - `fret-ui` (mechanism): multi-root rendering per window, overlay layer install/uninstall, outside-press observers, modal barrier semantics, focus restore primitives.
@@ -165,7 +165,7 @@ The goal is to keep `fret-ui-shadcn` mostly “composition + styling”, and put
 
 **Declarative primitives (Tailwind-ish building blocks)**
 - `separator`, `scroll_area`, `textarea` (wrapper over runtime `TextArea`), `slider`, `resizable` panels/splitters.
-- Input “slots” patterns: `input_group` (leading/trailing icons, clear buttons), `input_otp` helpers.
+- Input "slots" patterns: `input_group` (leading/trailing icons, clear buttons), `input_otp` helpers.
 
 **Notifications**
 - `sonner`/toast: global service API + per-window overlay root + timers + action dispatch.
@@ -195,7 +195,7 @@ Intended new building blocks (names tentative):
 
 Cross-cutting a11y constraint to keep in mind:
 
-- Roving-focus “items” often should be *not* in Tab traversal, but still AT-focusable/activatable; ensure semantics focusability is not accidentally tied to Tab-stop (see `Pressable` semantics behavior).
+- Roving-focus "items" often should be *not* in Tab traversal, but still AT-focusable/activatable; ensure semantics focusability is not accidentally tied to Tab-stop (see `Pressable` semantics behavior).
 
 ## Reference: gpui-component Layering (Upstream Inspiration)
 
@@ -204,7 +204,7 @@ Cross-cutting a11y constraint to keep in mind:
 - GPUI provides mechanisms like `DismissEvent`, `anchored(...)` placement, focus handles, and deferred overlays.
 - gpui-component implements policy and styling at the component layer (`Popover::overlay_closable`, tooltip styling, input popovers, etc).
 
-This matches Fret’s intended split: `fret-ui` as mechanism; `fret-ui-kit`/`fret-ui-shadcn` as policy + composition.
+This matches Fret's intended split: `fret-ui` as mechanism; `fret-ui-kit`/`fret-ui-shadcn` as policy + composition.
 
 ## Tracking Table (Update as work proceeds)
 

@@ -19,4 +19,3 @@ pub fn use_direction(
 ) -> LayoutDirection {
     local.or(inherited).unwrap_or_default()
 }
-

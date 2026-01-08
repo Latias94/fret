@@ -1201,16 +1201,11 @@ impl Default for ScrollbarStyle {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ScrollbarAxis {
+    #[default]
     Vertical,
     Horizontal,
-}
-
-impl Default for ScrollbarAxis {
-    fn default() -> Self {
-        Self::Vertical
-    }
 }
 
 /// A mechanism-only scrollbar primitive.

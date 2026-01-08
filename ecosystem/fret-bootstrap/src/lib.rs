@@ -86,6 +86,129 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self.with_settings_json(".fret/settings.json")
     }
 
+    /// Configure budgets for UI render asset caches (`ImageAssetCache` / `SvgAssetCache`).
+    ///
+    /// This is an ecosystem-level convenience; it does not change the core "resource handles" boundary (ADR 0004).
+    #[cfg(feature = "ui-assets")]
+    pub fn with_ui_assets_budgets(
+        mut self,
+        image_budget_bytes: u64,
+        image_max_ready_entries: usize,
+        svg_budget_bytes: u64,
+        svg_max_ready_entries: usize,
+    ) -> Self {
+        self.inner = self.inner.init_app(move |app| {
+            use fret_ui_assets::image_asset_cache::ImageAssetCache;
+            use fret_ui_assets::svg_asset_cache::SvgAssetCache;
+
+            app.with_global_mut(ImageAssetCache::default, |cache, _app| {
+                cache.set_budget_bytes(image_budget_bytes);
+                cache.set_max_ready_entries(image_max_ready_entries);
+            });
+
+            app.with_global_mut(SvgAssetCache::default, |cache, _app| {
+                cache.set_budget_bytes(svg_budget_bytes);
+                cache.set_max_ready_entries(svg_max_ready_entries);
+            });
+        });
+
+        self
+    }
+
+    /// Enable the `fret-launch` dev hotpatch trigger by setting environment variables.
+    ///
+    /// This is intended for local developer workflows; production apps should not rely on it.
+    ///
+    /// # Safety
+    ///
+    /// `std::env::set_var` is unsafe on Rust 2024 because mutating the process environment while
+    /// other threads may read it can cause undefined behavior on some platforms.
+    /// Call this early during startup, before any other threads are spawned.
+    #[cfg(feature = "hotpatch-subsecond")]
+    pub unsafe fn enable_hotpatch_env(
+        self,
+        trigger_path: impl AsRef<Path>,
+        poll_interval_ms: u64,
+    ) -> Self {
+        let trigger_path = trigger_path.as_ref();
+
+        // Safety: the caller must ensure no other threads concurrently read/write the process
+        // environment while these variables are being set.
+        unsafe {
+            std::env::set_var("FRET_HOTPATCH", "1");
+            std::env::set_var("FRET_HOTPATCH_TRIGGER_PATH", trigger_path.as_os_str());
+            std::env::set_var("FRET_HOTPATCH_POLL_MS", poll_interval_ms.to_string());
+        }
+
+        self
+    }
+
+    /// Enable the `fret-launch` dev hotpatch trigger using a file-based polling marker.
+    ///
+    /// This is a clearer name for `enable_hotpatch_env`.
+    ///
+    /// # Safety
+    ///
+    /// See `enable_hotpatch_env`.
+    #[cfg(feature = "hotpatch-subsecond")]
+    pub unsafe fn enable_hotpatch_file_trigger_env(
+        self,
+        trigger_path: impl AsRef<Path>,
+        poll_interval_ms: u64,
+    ) -> Self {
+        unsafe { self.enable_hotpatch_env(trigger_path, poll_interval_ms) }
+    }
+
+    /// Enable Subsecond hotpatch by connecting to a devserver websocket.
+    ///
+    /// The runner will listen for Dioxus-style devserver messages and apply incoming Subsecond
+    /// jump tables. Once a patch is applied, the runner schedules a safe hot-reload reset on the
+    /// next event-loop turn.
+    ///
+    /// # Safety
+    ///
+    /// `std::env::set_var` is unsafe on Rust 2024 because mutating the process environment while
+    /// other threads may read it can cause undefined behavior on some platforms.
+    /// Call this early during startup, before any other threads are spawned.
+    #[cfg(feature = "hotpatch-subsecond")]
+    pub unsafe fn enable_hotpatch_subsecond_devserver_env(
+        self,
+        devserver_ws_endpoint: impl AsRef<str>,
+    ) -> Self {
+        let endpoint = devserver_ws_endpoint.as_ref();
+
+        unsafe {
+            std::env::set_var("FRET_HOTPATCH", "1");
+            std::env::set_var("FRET_HOTPATCH_DEVSERVER_WS", endpoint);
+        }
+
+        self
+    }
+
+    /// Same as `enable_hotpatch_subsecond_devserver_env`, but additionally sets a build-id filter.
+    ///
+    /// When `build_id` is set, the runner will ignore devserver patches whose `for_build_id` does
+    /// not match, which helps avoid cross-process confusion in multi-app workflows.
+    ///
+    /// # Safety
+    ///
+    /// See `enable_hotpatch_subsecond_devserver_env`.
+    #[cfg(feature = "hotpatch-subsecond")]
+    pub unsafe fn enable_hotpatch_subsecond_devserver_env_with_build_id(
+        self,
+        devserver_ws_endpoint: impl AsRef<str>,
+        build_id: u64,
+    ) -> Self {
+        let builder =
+            unsafe { self.enable_hotpatch_subsecond_devserver_env(devserver_ws_endpoint) };
+
+        unsafe {
+            std::env::set_var("FRET_HOTPATCH_BUILD_ID", build_id.to_string());
+        }
+
+        builder
+    }
+
     /// Register an icon pack (e.g. `fret_icons_lucide::register_icons`) into the global `IconRegistry`.
     pub fn register_icon_pack(mut self, register: fn(&mut IconRegistry)) -> Self {
         self.inner = self.inner.init_app(move |app| {
@@ -149,3 +272,6 @@ impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder
         Self { inner }
     }
 }
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+pub mod ui_app_driver;

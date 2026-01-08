@@ -4,8 +4,8 @@ Status: Proposed
 
 ## Context
 
-Fret’s declarative flow layout uses `taffy` as an internal algorithm (ADR 0035, ADR 0057). Today,
-parts of the runtime behave like “container-owned Taffy islands” and measure some subtrees by
+Fret's declarative flow layout uses `taffy` as an internal algorithm (ADR 0035, ADR 0057). Today,
+parts of the runtime behave like "container-owned Taffy islands" and measure some subtrees by
 re-entering layout. ADR 0115 introduces `AvailableSpace` (Definite/MinContent/MaxContent) and a
 non-reentrant intrinsic measurement path to remove constraint-phase semantic drift and recursion
 hazards.
@@ -13,7 +13,7 @@ hazards.
 Fret also targets editor-class composition: multi-root layers (ADR 0011), multi-viewport docking,
 explicit virtualization containers (ADR 0042), and scroll/viewports as first-class layout systems.
 To scale these surfaces without repeatedly reworking the layout plumbing, we need to lock down the
-end-state “window-scoped” integration shape:
+end-state "window-scoped" integration shape:
 
 - A window owns a canonical layout engine and Taffy tree for declarative flow layout.
 - Docking defines multiple viewports (each with definite bounds) and each viewport is an
@@ -21,8 +21,8 @@ end-state “window-scoped” integration shape:
 - Layout barriers (docking/scroll/virtualization/viewport surfaces) remain explicit and do not get
   forced into Taffy, but they must interoperate with the engine via stable, non-reentrant contracts.
 
-This ADR is intentionally aligned with Zed/GPUI’s approach (`repo-ref/zed/crates/gpui/src/window.rs`,
-`repo-ref/zed/crates/gpui/src/taffy.rs`) while remaining compatible with Fret’s existing layering
+This ADR is intentionally aligned with Zed/GPUI's approach (`repo-ref/zed/crates/gpui/src/window.rs`,
+`repo-ref/zed/crates/gpui/src/taffy.rs`) while remaining compatible with Fret's existing layering
 and retained UI tree contracts.
 
 ## Goals
@@ -30,8 +30,8 @@ and retained UI tree contracts.
 1. **Single engine per window**: a window-scoped `TaffyLayoutEngine` owns the canonical Taffy tree
    for declarative flow layout.
 2. **Multiple viewport roots**: docking-driven viewports are independent layout roots; constraints
-   and “free space” must not couple across a viewport boundary.
-3. **Two-phase protocol**: separate “request/build” (graph construction) from “compute/apply”
+   and "free space" must not couple across a viewport boundary.
+3. **Two-phase protocol**: separate "request/build" (graph construction) from "compute/apply"
    (solver + bounds writeback) to keep measurement pure and avoid re-entrancy.
 4. **Stable identity + incremental updates**: stable `NodeId -> LayoutId` mapping across frames,
    enabling `mark_dirty` updates instead of full rebuilds.
@@ -53,14 +53,14 @@ This ADR is intended to refine and extend existing accepted contracts, not contr
 
 - ADR 0035 (hybrid layout) remains the boundary: Taffy is still an internal algorithm for declarative
   flow layout, and docking/splits/scroll/virtualization remain explicit systems.
-- ADR 0005 (layout writes bounds) remains true: the engine’s “apply” step is part of layout and
+- ADR 0005 (layout writes bounds) remains true: the engine's "apply" step is part of layout and
   writes authoritative bounds into the retained UI tree before paint/hit-test.
 - ADR 0076 (persistent container-owned Taffy trees) remains a valid near-term implementation
   strategy; this ADR proposes a later evolution that generalizes the same persistence/incremental
   update principles into a single window-scoped engine. If ADR 0116 is accepted, it should be
-  treated as superseding ADR 0076’s “container-owned TaffyTree” as the preferred end-state shape.
-- Terminology: “viewport” in this ADR refers to docking-defined layout roots (multi-viewport UI).
-  “ViewportSurface” refers to engine integration surfaces (ADR 0007).
+  treated as superseding ADR 0076's "container-owned TaffyTree" as the preferred end-state shape.
+- Terminology: "viewport" in this ADR refers to docking-defined layout roots (multi-viewport UI).
+  "ViewportSurface" refers to engine integration surfaces (ADR 0007).
 
 ## Decision
 
@@ -68,7 +68,7 @@ This ADR is intended to refine and extend existing accepted contracts, not contr
    Taffy tree for declarative flow layout.
 2. Docking-driven viewports are treated as independent layout roots:
    - Docking computes **definite** viewport rects.
-   - The engine computes layout for each viewport root against that viewport’s definite available
+   - The engine computes layout for each viewport root against that viewport's definite available
      space.
    - Percent/fill resolution and flex free-space distribution must not cross viewport boundaries.
 3. Layout uses a strict two-phase protocol:
@@ -84,7 +84,7 @@ This ADR is intended to refine and extend existing accepted contracts, not contr
 6. Wrapper handling:
    - By default, typed wrappers with `LayoutStyle` (opacity, semantics, focus scope, interactivity
      gate, paint-only transforms) are represented as layout boxes in the Taffy tree.
-   - An explicit “contents-like” opt-in mode may be introduced to avoid additional boxes for
+   - An explicit "contents-like" opt-in mode may be introduced to avoid additional boxes for
      Radix-aligned `asChild` composition, subject to strict validation (single-child, no geometry-
      affecting layout properties).
 7. Measurement cycle policy:
@@ -170,7 +170,7 @@ Default policy (subject to conformance tests):
 The engine updates incrementally:
 
 - If a `NodeId` disappears, its layout node is removed.
-- If a node’s `LayoutStyle` changes, the engine updates the Taffy style and `mark_dirty`s that node.
+- If a node's `LayoutStyle` changes, the engine updates the Taffy style and `mark_dirty`s that node.
 - If children change, the engine updates edges and marks the node dirty.
 - Root-level dirtiness is tracked per viewport root to bound solve costs.
 
@@ -208,16 +208,16 @@ Debug surfaces:
 3. Integrate docking viewports by treating each viewport as an independent root and adding
    conformance tests for non-coupling across viewports.
 4. Migrate wrapper nodes into the engine as stable nodes; optionally introduce a validated
-   “contents-like” mode for Radix-aligned `asChild` composition.
+   "contents-like" mode for Radix-aligned `asChild` composition.
 5. Migrate additional declarative primitives into the engine, leaving only explicit barriers and
    performance-critical containers outside Taffy.
 
 ## Alternatives Considered
 
-1. Keep per-container “Taffy islands”
+1. Keep per-container "Taffy islands"
    - Rejected as an end-state: increases repeated solves and makes constraint semantics harder to
      centralize for multi-viewport and barrier interop.
-2. A single global “synthetic root” for the whole window including viewports
+2. A single global "synthetic root" for the whole window including viewports
    - Not preferred: easy to accidentally couple viewports through percent/flex semantics.
    - Might still be useful as a debug visualization tool (not the default runtime model).
 3. Adopt a full CSS engine
@@ -226,6 +226,7 @@ Debug surfaces:
 ## References
 
 - Non-reentrant measurement + `AvailableSpace`: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
+- Refactor roadmap (living doc): `docs/layout-engine-refactor-roadmap.md`
 - Taffy integration boundaries: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative Flex semantics: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
 - Virtualization boundaries: `docs/adr/0042-virtualization-and-large-lists.md`

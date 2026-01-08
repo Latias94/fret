@@ -13,12 +13,12 @@ publish = false
 [features]
 alloc-profile = []
 mathjax-svg = ["fret-markdown/mathjax-svg"]
-hotpatch = ["fret-launch/hotpatch-subsecond"]
+hotpatch = ["fret-launch/hotpatch-subsecond", "fret-bootstrap/hotpatch-subsecond"]
 
 [dependencies]
 anyhow.workspace = true
 fret-icons = { path = "../../ecosystem/fret-icons" }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "ui-app-driver"] }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["preload-icon-svgs", "ui-app-driver", "ui-assets"] }
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets" }
 fret-ui-docking = { path = "../../ecosystem/fret-ui-docking" }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }

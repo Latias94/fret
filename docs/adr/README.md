@@ -228,6 +228,9 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0009-renderer-ordering-and-batching.md`
 - `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
 - `docs/adr/0089-renderer-architecture-v2-scene-compiler.md`
+- `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
+- `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
+- `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - `docs/adr/0096-renderer-perf-snapshot-and-stress-harness.md`
 
 ## Platform (`fret-platform`)

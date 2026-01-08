@@ -25,8 +25,8 @@ use crate::declarative::ModelWatchExt;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::primitives::dialog as dialog_prim;
-use crate::primitives::trigger_a11y;
 pub use crate::primitives::popper::{Align, LayoutDirection, Side};
+use crate::primitives::trigger_a11y;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PopoverVariant {

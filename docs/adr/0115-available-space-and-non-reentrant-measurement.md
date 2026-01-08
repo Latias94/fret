@@ -4,17 +4,17 @@ Status: Proposed
 
 ## Context
 
-Fret targets a “Tailwind-like primitives + shadcn-like recipes” component ecosystem without relying
+Fret targets a "Tailwind-like primitives + shadcn-like recipes" component ecosystem without relying
 on DOM/CSS (ADR 0057, ADR 0062, `docs/tailwind-semantics-alignment.md`). Declarative Flex/Grid are
 implemented via `taffy` as an internal algorithm (ADR 0035), and performance hardening has already
 landed for persistent container-owned `TaffyTree`s and per-solve measurement memoization (ADR 0076).
 
 However, the current Taffy integration in `crates/fret-ui` measures child subtrees by *re-entering*
-layout (`LayoutCx::layout_in`) inside Taffy’s measure callback. When Taffy supplies
+layout (`LayoutCx::layout_in`) inside Taffy's measure callback. When Taffy supplies
 `AvailableSpace::{MinContent, MaxContent}`, the runtime approximates these as a huge definite bound
 (e.g. `1e9`) and proceeds with a normal layout pass. In certain compositions this creates:
 
-- **Incorrect semantics**: “fill”/percent sizing and `flex-1` are interpreted as if a large definite
+- **Incorrect semantics**: "fill"/percent sizing and `flex-1` are interpreted as if a large definite
   free space exists during an intrinsic measurement phase.
 - **Runaway recursion / stack overflow**: invalid or ambiguous compositions (e.g. `flex-1` under a
   parent without a definite main-axis size) can trigger extremely deep recursive re-layout.
@@ -23,9 +23,9 @@ layout (`LayoutCx::layout_in`) inside Taffy’s measure callback. When Taffy sup
   regression test.
 
 This is a correctness and stability issue: we want Tailwind-like semantics that are predictable and
-that converge, without requiring every recipe author to understand Taffy’s constraint phases.
+that converge, without requiring every recipe author to understand Taffy's constraint phases.
 
-Zed/GPUI provides a useful reference for a non-DOM runtime that still achieves “CSS-like” layout
+Zed/GPUI provides a useful reference for a non-DOM runtime that still achieves "CSS-like" layout
 semantics with Taffy: it keeps `AvailableSpace` as a first-class concept (Definite/Min/Max), and it
 does not re-enter layout from the measure callback; instead, measured nodes provide an intrinsic
 size function that is evaluated by Taffy during solve.
@@ -38,6 +38,7 @@ References:
 - Tailwind semantics mapping: `docs/tailwind-semantics-alignment.md`
 - Regression tracker for the observed stack overflow: `docs/todo-tracker.md` (P0 shadcn Components / Layout Correctness)
 - GPUI Taffy engine reference: `repo-ref/zed/crates/gpui/src/taffy.rs`
+- Refactor roadmap (living doc): `docs/layout-engine-refactor-roadmap.md`
 
 ## Goals
 
@@ -56,32 +57,45 @@ References:
 - A global `z-index` primitive (see ADR 0062).
 - Forcing docking, virtualization, or editor-specific layout containers into Taffy.
 
+## Compatibility Notes
+
+This ADR refines existing accepted contracts; it does not contradict them:
+
+- ADR 0035 (hybrid layout) remains the boundary: `taffy` is still an internal algorithm for specific
+  declarative containers, and docking/scroll/virtualization remain explicit layout systems.
+- ADR 0076 (persistent container-owned Taffy trees) remains a valid near-term implementation shape.
+  This ADR specifically tightens the constraint semantics (`AvailableSpace`) and forbids re-entrant
+  layout from solver-time measurement, regardless of whether the Taffy tree is container-owned or
+  window-scoped.
+- ADR 0116 describes a compatible end-state evolution (window-scoped engine + viewport roots) that
+  builds on the same measurement and constraint rules defined here.
+
 ## Decision
 
-We introduce an explicit “available space” constraint model and a non-reentrant measurement path
+We introduce an explicit "available space" constraint model and a non-reentrant measurement path
 for declarative layout:
 
 1. Add a runtime `AvailableSpace` type (`Definite`, `MinContent`, `MaxContent`) and pass it through
    layout/measurement APIs.
-2. Introduce a `measure` API that computes an element’s **intrinsic size** under a constraint tuple
+2. Introduce a `measure` API that computes an element's **intrinsic size** under a constraint tuple
    without performing a full layout pass for the subtree.
 3. Refactor declarative Flex/Grid (and any other Taffy-backed containers) to call `measure(...)`
    from the Taffy measure callback instead of calling back into `layout_in(...)`.
 4. Codify Tailwind-like semantics under intrinsic constraints:
    - `Length::Fill` (Tailwind `w-full`/`h-full`) behaves like percent sizing and only resolves to a
      definite value when the parent axis is **definite**; under Min/MaxContent it behaves as `auto`.
-   - Flex “free space distribution” (`flex-grow` / `flex-1`) only applies when the container’s
+   - Flex "free space distribution" (`flex-grow` / `flex-1`) only applies when the container's
      main-axis available space is **definite**; under Min/MaxContent it must not create feedback
-     loops by “inventing” free space.
+     loops by "inventing" free space.
 5. Adopt a window-scoped Taffy layout engine for declarative flow layout:
-   - Build or update a Taffy tree during the frame’s declarative build/prepaint phase.
+   - Build or update a Taffy tree during the frame's declarative build/prepaint phase.
    - Compute layout once per root and apply bounds to the retained UI tree after solve.
 6. Treat docking-driven viewports as independent layout roots:
    - Docking computes **definite** viewport rects.
-   - Each viewport’s UI root is laid out against its own definite available space.
-   - No “free space” coupling or percentage resolution across viewport boundaries.
+   - Each viewport's UI root is laid out against its own definite available space.
+   - No "free space" coupling or percentage resolution across viewport boundaries.
 7. Add engine-level guardrails:
-   - Preserve `MinContent`/`MaxContent` semantics end-to-end (no “huge definite probe bounds”).
+   - Preserve `MinContent`/`MaxContent` semantics end-to-end (no "huge definite probe bounds").
    - Prevent measurement re-entrancy (debug assertion / cycle guard) and use stacksafe execution for
      deep trees.
 8. Standardize a two-phase layout protocol:
@@ -102,11 +116,11 @@ for declarative layout:
      mounted child subtree under definite rects, but they must not rely on re-entrant layout during
      solver measurement.
 
-This aligns Fret’s typed Tailwind-like semantics with the constraint-phase reality of Taffy, and
+This aligns Fret's typed Tailwind-like semantics with the constraint-phase reality of Taffy, and
 removes the primary cause of runaway recursion.
 
 Note: ADR 0076 currently locks a container-owned persistent TaffyTree strategy for Flex/Grid as an
-accepted performance hardening step. The “window-scoped layout engine” bullets above describe a
+accepted performance hardening step. The "window-scoped layout engine" bullets above describe a
 potential end-state that generalizes those same persistence/incremental-update principles; if that
 end-state is adopted, ADR 0116 is intended to capture the concrete window/viewport integration
 shape.
@@ -144,21 +158,21 @@ Rules:
 
 For Taffy-backed containers (Flex/Grid), the measure callback becomes:
 
-- Convert Taffy’s `(known_dimensions, available_space)` into `LayoutConstraints`.
+- Convert Taffy's `(known_dimensions, available_space)` into `LayoutConstraints`.
 - Call `measure_in(child, constraints)` for children.
 - Return the measured size to Taffy.
 
 After computing layout, the container assigns bounds via `layout_in(child, rect)` (as today), but
 those `layout_in` calls occur *after* the solve and are provided definite bounds from the solver.
 
-This preserves ADR 0005’s “layout writes bounds” contract while removing re-entrant layout during
+This preserves ADR 0005's "layout writes bounds" contract while removing re-entrant layout during
 solve.
 
 ### 4) Fill/percent semantics under intrinsic constraints
 
-Fret’s `Length::Fill` currently maps to `Dimension::percent(1.0)` for Taffy. To avoid “invented”
-space under Min/MaxContent, the runtime must ensure that percent sizing does not behave as “fill
-the (huge) probe bounds”.
+Fret's `Length::Fill` currently maps to `Dimension::percent(1.0)` for Taffy. To avoid "invented"
+space under Min/MaxContent, the runtime must ensure that percent sizing does not behave as "fill
+the (huge) probe bounds".
 
 Proposed rule (Tailwind/CSS-aligned contract):
 
@@ -209,7 +223,7 @@ Adopt a per-window Taffy engine similar to GPUI:
   `AvailableSpace::{Definite, MinContent, MaxContent}` (no approximation to large definite bounds).
 - After solve, the runtime applies computed bounds back into the retained UI tree via definite rects.
 
-This model centralizes constraint semantics and enables “taffy-by-default” for declarative flow
+This model centralizes constraint semantics and enables "taffy-by-default" for declarative flow
 subtrees while still allowing explicit containers to opt out for performance or control.
 
 ### 8) Multi-viewport docking integration
@@ -251,7 +265,7 @@ overhead bounded for large trees.
 
 Barriers define boundaries between layout systems. For each barrier kind, the runtime codifies:
 
-- Which axes must be definite to resolve “fill/percent/free-space distribution”.
+- Which axes must be definite to resolve "fill/percent/free-space distribution".
 - Which intrinsic measurement queries are performed (`MinContent` vs `MaxContent`), and what they
   are used for (e.g. scroll content extent).
 - How definite rects are produced for child subtrees (e.g. viewport rect, scroll viewport rect,
@@ -269,17 +283,17 @@ Initial default policy (subject to conformance tests):
    plumbing (no behavior change yet).
 2. Add `measure_in` and implement it for leaf primitives used by `Flex`/`Grid` measurement (text,
    images, basic containers).
-3. Refactor Taffy containers to use `measure_in` inside measure callbacks and delete the “huge
-   probe bounds” fallback.
+3. Refactor Taffy containers to use `measure_in` inside measure callbacks and delete the "huge
+   probe bounds" fallback.
 4. Implement and lock the `Fill`/percent and `flex-grow` constraint-phase rules with tests.
-5. Expand intrinsic measurement coverage and/or widen the “taffy island” to include more of the
+5. Expand intrinsic measurement coverage and/or widen the "taffy island" to include more of the
    declarative flow subtree, reducing cross-subtree measurement costs.
 6. Introduce a window-scoped layout engine and migrate Flex/Grid to request nodes into the shared
-   engine (removing per-container “island” Taffy trees where possible).
+   engine (removing per-container "island" Taffy trees where possible).
 7. Integrate multi-viewport docking by treating each viewport as an independent layout root and add
    a conformance test ensuring no cross-viewport coupling.
 8. Migrate geometry-transparent wrappers and other typed primitives into the engine as stable nodes,
-   introducing an explicit “contents-like” opt-in mode for wrappers that must not introduce boxes.
+   introducing an explicit "contents-like" opt-in mode for wrappers that must not introduce boxes.
 
 ## Impacted Areas (Expected)
 
@@ -294,7 +308,7 @@ Mechanism/runtime (`crates/fret-ui`):
 
 Component layer (follow-up, not required for the mechanism refactor):
 
-- Remove remaining “defensive defaults” that were only needed to avoid runtime recursion, once the
+- Remove remaining "defensive defaults" that were only needed to avoid runtime recursion, once the
   new semantics are locked (e.g. optional `flex-1` recipes that are now safe under the correct
   constraints contract).
 
@@ -307,17 +321,17 @@ Component layer (follow-up, not required for the mechanism refactor):
 3. **Adopt a full CSS engine**
    - Rejected: violates the typed, mechanism-only runtime goals (ADR 0066) and adds large semantic
      surface area.
-4. **“Taffy everywhere” globally across all containers**
+4. **"Taffy everywhere" globally across all containers**
    - Rejected: conflicts with editor-friendly explicit layout systems (ADR 0035) and virtualization
      constraints (ADR 0042).
-   - Note: a “taffy-by-default for declarative flow subtrees” approach may still be an end-state
+   - Note: a "taffy-by-default for declarative flow subtrees" approach may still be an end-state
      for general UI composition, while preserving explicit barriers for docking/scroll/virtualization.
 
 ## Open Questions
 
 - What is the minimal set of leaf primitives that must implement `measure_in` to avoid regressions
   (text, images, svg, intrinsic controls)?
-- Do we need a runtime-side “layout validation” pass for obviously invalid compositions (e.g.
+- Do we need a runtime-side "layout validation" pass for obviously invalid compositions (e.g.
   `fill remaining space` under a non-definite parent), or is it sufficient to converge to a safe
   semantic fallback?
 - How should intrinsic measurement interact with caching keys (font stack keys, DPI scale, model
@@ -329,5 +343,12 @@ Component layer (follow-up, not required for the mechanism refactor):
 - What is the precise release-mode policy for measurement cycles if they occur (return zero, return
   min constraints, clamp, or hard error)?
 - Should we introduce an explicit “contents-like” mode (CSS `display: contents`) for wrappers to
-  avoid additional layout boxes when doing Radix-aligned `asChild` composition, and if so what
-  validation restrictions apply (e.g. single-child, no padding/margin/overflow/position)?
+  avoid additional layout boxes for some Radix-aligned compositions (often expressed as `asChild`
+  in DOM land), and if so what validation restrictions apply (e.g. single-child, no
+  padding/margin/overflow/position)?
+  - Note: this is strictly about layout box introduction/removal. It must not imply a general
+    Slot/`asChild` prop-merging mechanism; see ADR 0117.
+
+## References
+
+- Trigger composition without Slot/`asChild`: `docs/adr/0117-trigger-composition-and-no-slot-aschild.md`

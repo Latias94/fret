@@ -5,8 +5,6 @@ use std::time::Duration;
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Edges, Event, Px, Rect, UiServices};
-#[cfg(not(target_arch = "wasm32"))]
-use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
@@ -509,17 +507,7 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let mut app = build_app();
-    let mut config = build_runner_config();
-
-    if let Some(settings) = fret_app::SettingsFileV1::load_json_if_exists(".fret/settings.json")
-        .context("load .fret/settings.json")?
-    {
-        app.set_global(settings.docking_interaction_settings());
-        config.text_font_families.ui_sans = settings.fonts.ui_sans;
-        config.text_font_families.ui_serif = settings.fonts.ui_serif;
-        config.text_font_families.ui_mono = settings.fonts.ui_mono;
-    }
-
-    run_app(config, app, SonnerDemoDriver::default()).map_err(anyhow::Error::from)
+    let app = build_app();
+    let config = build_runner_config();
+    crate::run_native_demo(config, app, SonnerDemoDriver::default()).context("run sonner_demo app")
 }

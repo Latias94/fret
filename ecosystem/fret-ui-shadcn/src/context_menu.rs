@@ -19,8 +19,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::context_menu as radix_context_menu;
-use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::context_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
@@ -1285,7 +1284,7 @@ impl ContextMenu {
             });
 
             let id = cx.root_id();
-            let overlay_root_name = OverlayController::popover_root_name(id);
+            let overlay_root_name = menu::context_menu_root_name(id);
             let content_id_for_trigger =
                 menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
             let trigger = trigger(cx);
@@ -1299,7 +1298,7 @@ impl ContextMenu {
             menu::trigger::wire_open_on_shift_f10(cx, trigger_id, self.open.clone());
 
             let open = self.open;
-            let pointer_policy = radix_context_menu::context_menu_pointer_down_policy(open.clone());
+            let pointer_policy = menu::context_menu_pointer_down_policy(open.clone());
 
             let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
                 cx.pointer_region_on_pointer_down(pointer_policy);

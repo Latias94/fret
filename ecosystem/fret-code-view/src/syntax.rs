@@ -17,10 +17,11 @@ pub(crate) fn syntax_color(theme: &Theme, highlight: &str) -> Option<Color> {
         // These are still treated as editor-ish baseline tokens until a dedicated SyntaxTheme
         // subsystem lands.
         "string" => Some(theme.color_required("color.viewport.gizmo.y")),
-        "number" | "boolean" | "constant" => Some(theme.color_required("color.viewport.rotate_gizmo")),
+        "number" | "boolean" | "constant" => {
+            Some(theme.color_required("color.viewport.rotate_gizmo"))
+        }
         "type" | "constructor" => Some(theme.color_required("color.viewport.marker")),
         "function" => Some(theme.color_required("color.viewport.drag_line.orbit")),
         _ => None,
     }
 }
-

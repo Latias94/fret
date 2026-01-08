@@ -21,7 +21,7 @@ require virtualization to be performant and consistent:
 To avoid “virtual list drift” across components, the runtime must provide a deterministic,
 testable virtualization substrate aligned with an industry-standard vocabulary.
 
-In the DOM ecosystem, TanStack Virtual defines the de-facto contract vocabulary:
+In the UI ecosystem, TanStack Virtual originally defined the de-facto contract vocabulary. In Fret, we standardize on the Rust `virtualizer` engine and port the vocabulary and outcomes.
 
 - item count, estimate size, measured size,
 - item offsets and total size,
@@ -77,6 +77,6 @@ declarative elements): any component may use the same metrics/range API.
 
 ## References
 
-- TanStack Virtual (vocabulary and outcomes): `repo-ref/virtual`
+- virtualizer (Rust): `repo-ref/virtualizer` (primary)
 - GPUI patterns (engineering reference): `repo-ref/gpui-component`
 - Runtime contract surface: `docs/adr/0066-fret-ui-runtime-contract-surface.md`

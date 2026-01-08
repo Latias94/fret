@@ -63,4 +63,3 @@ pub fn toolbar_roving_group_apg<H: UiHost>(
 ) -> AnyElement {
     roving_focus_group::roving_focus_group_apg(cx, props, TypeaheadPolicy::None, children)
 }
-

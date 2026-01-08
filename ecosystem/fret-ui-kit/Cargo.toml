@@ -34,3 +34,5 @@ table = []
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
+serde.workspace = true
+serde_json.workspace = true

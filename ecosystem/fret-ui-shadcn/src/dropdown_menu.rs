@@ -22,7 +22,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
@@ -885,7 +885,7 @@ impl DropdownMenu {
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
             menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, self.open.clone());
-            let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+            let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
             let content_id_for_trigger =
                 menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
             let trigger =
@@ -3791,7 +3791,7 @@ mod tests {
         );
         assert_eq!(trigger_id3, trigger_id, "expected trigger id to be stable");
 
-        let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+        let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
         let submenu_models = fret_ui::elements::with_element_cx(
             &mut app,
             window,

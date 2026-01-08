@@ -13,8 +13,16 @@ publish = false
 [features]
 alloc-profile = ["fret-examples/alloc-profile"]
 mathjax-svg = ["fret-examples/mathjax-svg"]
-hotpatch = ["fret-examples/hotpatch"]
+hotpatch = ["fret-examples/hotpatch", "fret-bootstrap/hotpatch-subsecond"]
 
 [dependencies]
 anyhow.workspace = true
 fret-examples = { path = "../fret-examples" }
+fret-app = { path = "../../crates/fret-app" }
+fret-core = { path = "../../crates/fret-core" }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver"] }
+fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }

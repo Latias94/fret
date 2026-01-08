@@ -428,24 +428,25 @@ impl ElementHostWidget {
                     crate::element::SelectableTextState::default,
                     |state| (state.dragging, state.last_pointer_pos),
                 );
-                if focused && dragging {
-                    if let Some(pointer_pos) = last_pointer_pos {
-                        let local = fret_core::Point::new(
-                            fret_core::Px(pointer_pos.x.0 - cx.bounds.origin.x.0),
-                            fret_core::Px(pointer_pos.y.0 - cx.bounds.origin.y.0),
-                        );
-                        let hit = cx.services.hit_test_point(blob, local);
-                        crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::SelectableTextState::default,
-                            |state| {
-                                state.caret = hit.index;
-                                state.affinity = hit.affinity;
-                            },
-                        );
-                    }
+                if focused
+                    && dragging
+                    && let Some(pointer_pos) = last_pointer_pos
+                {
+                    let local = fret_core::Point::new(
+                        fret_core::Px(pointer_pos.x.0 - cx.bounds.origin.x.0),
+                        fret_core::Px(pointer_pos.y.0 - cx.bounds.origin.y.0),
+                    );
+                    let hit = cx.services.hit_test_point(blob, local);
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::SelectableTextState::default,
+                        |state| {
+                            state.caret = hit.index;
+                            state.affinity = hit.affinity;
+                        },
+                    );
                 }
                 if focused {
                     let (anchor, caret) = crate::elements::with_element_state(
@@ -571,8 +572,7 @@ impl ElementHostWidget {
                         let mut step_y = Px(0.0);
                         if scroll_y {
                             if pointer_pos.y.0 < top.0 + EDGE_MARGIN.0 {
-                                let t = ((top.0 + EDGE_MARGIN.0 - pointer_pos.y.0)
-                                    / EDGE_MARGIN.0)
+                                let t = ((top.0 + EDGE_MARGIN.0 - pointer_pos.y.0) / EDGE_MARGIN.0)
                                     .clamp(0.0, 1.0);
                                 step_y = Px(-MAX_STEP.0 * t);
                             } else if pointer_pos.y.0 > bottom.0 - EDGE_MARGIN.0 {
@@ -593,8 +593,8 @@ impl ElementHostWidget {
                             Px(prev.y.0 + step_y.0),
                         ));
                         let next = handle.offset();
-                        let did_scroll =
-                            (next.y.0 - prev.y.0).abs() > 0.01 || (next.x.0 - prev.x.0).abs() > 0.01;
+                        let did_scroll = (next.y.0 - prev.y.0).abs() > 0.01
+                            || (next.x.0 - prev.x.0).abs() > 0.01;
 
                         if did_scroll {
                             if let Some(handle_key) = handle_key {

@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_launch::{
-    WinitAppBuilder, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    WinitWindowContext,
 };
 use fret_runtime::{
     BindingV1, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Model, PlatformCapabilities,
@@ -298,23 +298,12 @@ pub fn run() -> anyhow::Result<()> {
         .expect("valid keymap"),
     });
 
-    let mut config = WinitRunnerConfig {
+    let config = WinitRunnerConfig {
         main_window_title: "fret-demo ime_smoke_demo".to_string(),
         main_window_size: winit::dpi::LogicalSize::new(900.0, 720.0),
         ..Default::default()
     };
 
-    if let Some(settings) = fret_app::SettingsFileV1::load_json_if_exists(".fret/settings.json")
-        .context("load .fret/settings.json")?
-    {
-        app.set_global(settings.docking_interaction_settings());
-        config.text_font_families = settings.fonts;
-    }
-
     let driver = ImeSmokeDriver::default();
-
-    WinitAppBuilder::new(app, driver)
-        .with_config(config)
-        .run()
-        .map_err(anyhow::Error::from)
+    crate::run_native_demo(config, app, driver).context("run ime_smoke_demo app")
 }

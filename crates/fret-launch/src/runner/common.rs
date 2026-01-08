@@ -660,19 +660,48 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
 
     fn init(&mut self, app: &mut App, main_window: fret_core::AppWindowId) {
         if let Some(init) = self.hooks.init {
-            init(&mut self.driver_state, app, main_window);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(init);
+                hot.call((&mut self.driver_state, app, main_window));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                init(&mut self.driver_state, app, main_window);
+            }
         }
     }
 
     fn gpu_ready(&mut self, app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
         if let Some(gpu_ready) = self.hooks.gpu_ready {
-            gpu_ready(&mut self.driver_state, app, context, renderer);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(gpu_ready);
+                hot.call((&mut self.driver_state, app, context, renderer));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                gpu_ready(&mut self.driver_state, app, context, renderer);
+            }
         }
     }
 
     fn hot_reload_global(&mut self, app: &mut App, services: &mut dyn UiServices) {
         if let Some(f) = self.hooks.hot_reload_global {
-            f(&mut self.driver_state, WinitGlobalContext { app, services });
+            let cx = WinitGlobalContext { app, services };
+
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, cx));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, cx);
+            }
         }
     }
 
@@ -684,15 +713,23 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         state: &mut Self::WindowState,
     ) {
         if let Some(f) = self.hooks.hot_reload_window {
-            f(
-                &mut self.driver_state,
-                WinitHotReloadContext {
-                    app,
-                    services,
-                    window,
-                    state,
-                },
-            );
+            let cx = WinitHotReloadContext {
+                app,
+                services,
+                window,
+                state,
+            };
+
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, cx));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, cx);
+            }
         }
     }
 
@@ -706,15 +743,32 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         scale_factor: f32,
     ) {
         if let Some(f) = self.hooks.gpu_frame_prepare {
-            f(
-                &mut self.driver_state,
-                app,
-                window,
-                state,
-                context,
-                renderer,
-                scale_factor,
-            );
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((
+                    &mut self.driver_state,
+                    app,
+                    window,
+                    state,
+                    context,
+                    renderer,
+                    scale_factor,
+                ));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(
+                    &mut self.driver_state,
+                    app,
+                    window,
+                    state,
+                    context,
+                    renderer,
+                    scale_factor,
+                );
+            }
         }
     }
 
@@ -730,30 +784,67 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         frame_id: FrameId,
     ) -> EngineFrameUpdate {
         if let Some(f) = self.hooks.record_engine_frame {
-            return f(
-                &mut self.driver_state,
-                app,
-                window,
-                state,
-                context,
-                renderer,
-                scale_factor,
-                tick_id,
-                frame_id,
-            );
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                return hot.call((
+                    &mut self.driver_state,
+                    app,
+                    window,
+                    state,
+                    context,
+                    renderer,
+                    scale_factor,
+                    tick_id,
+                    frame_id,
+                ));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                return f(
+                    &mut self.driver_state,
+                    app,
+                    window,
+                    state,
+                    context,
+                    renderer,
+                    scale_factor,
+                    tick_id,
+                    frame_id,
+                );
+            }
         }
         EngineFrameUpdate::default()
     }
 
     fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
         if let Some(f) = self.hooks.viewport_input {
-            f(&mut self.driver_state, app, event);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, app, event));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, app, event);
+            }
         }
     }
 
     fn dock_op(&mut self, app: &mut App, op: fret_core::DockOp) {
         if let Some(f) = self.hooks.dock_op {
-            f(&mut self.driver_state, app, op);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, app, op));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, app, op);
+            }
         }
     }
 
@@ -763,7 +854,16 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         command: fret_app::CommandId,
     ) {
         if let Some(f) = self.hooks.handle_command {
-            f(&mut self.driver_state, context, command);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, context, command));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, context, command);
+            }
         }
     }
 
@@ -773,7 +873,16 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         command: fret_app::CommandId,
     ) {
         if let Some(f) = self.hooks.handle_global_command {
-            f(&mut self.driver_state, context, command);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, context, command));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, context, command);
+            }
         }
     }
 
@@ -783,7 +892,16 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         changed: &[fret_app::ModelId],
     ) {
         if let Some(f) = self.hooks.handle_model_changes {
-            f(&mut self.driver_state, context, changed);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, context, changed));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, context, changed);
+            }
         }
     }
 
@@ -793,7 +911,16 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         changed: &[std::any::TypeId],
     ) {
         if let Some(f) = self.hooks.handle_global_changes {
-            f(&mut self.driver_state, context, changed);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, context, changed));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, context, changed);
+            }
         }
     }
 
@@ -802,15 +929,44 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         app: &mut App,
         window: fret_core::AppWindowId,
     ) -> Self::WindowState {
-        (self.create_window_state)(&mut self.driver_state, app, window)
+        #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+        {
+            let mut hot = subsecond::HotFn::current(self.create_window_state);
+            return hot.call((&mut self.driver_state, app, window));
+        }
+
+        #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+        {
+            (self.create_window_state)(&mut self.driver_state, app, window)
+        }
     }
 
     fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        (self.handle_event)(&mut self.driver_state, context, event)
+        #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+        {
+            let mut hot = subsecond::HotFn::current(self.handle_event);
+            hot.call((&mut self.driver_state, context, event));
+            return;
+        }
+
+        #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+        {
+            (self.handle_event)(&mut self.driver_state, context, event)
+        }
     }
 
     fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        (self.render)(&mut self.driver_state, context)
+        #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+        {
+            let mut hot = subsecond::HotFn::current(self.render);
+            hot.call((&mut self.driver_state, context));
+            return;
+        }
+
+        #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+        {
+            (self.render)(&mut self.driver_state, context)
+        }
     }
 
     fn window_create_spec(
@@ -819,7 +975,16 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         request: &fret_app::CreateWindowRequest,
     ) -> Option<WindowCreateSpec> {
         if let Some(f) = self.hooks.window_create_spec {
-            return f(&mut self.driver_state, app, request);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                return hot.call((&mut self.driver_state, app, request));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                return f(&mut self.driver_state, app, request);
+            }
         }
         None
     }
@@ -831,13 +996,31 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         new_window: fret_core::AppWindowId,
     ) {
         if let Some(f) = self.hooks.window_created {
-            f(&mut self.driver_state, app, request, new_window);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, app, request, new_window));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, app, request, new_window);
+            }
         }
     }
 
     fn before_close_window(&mut self, app: &mut App, window: fret_core::AppWindowId) -> bool {
         if let Some(f) = self.hooks.before_close_window {
-            return f(&mut self.driver_state, app, window);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                return hot.call((&mut self.driver_state, app, window));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                return f(&mut self.driver_state, app, window);
+            }
         }
         true
     }
@@ -849,7 +1032,16 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         state: &mut Self::WindowState,
     ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
         if let Some(f) = self.hooks.accessibility_snapshot {
-            return f(&mut self.driver_state, app, window, state);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                return hot.call((&mut self.driver_state, app, window, state));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                return f(&mut self.driver_state, app, window, state);
+            }
         }
         None
     }
@@ -862,7 +1054,16 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         target: fret_core::NodeId,
     ) {
         if let Some(f) = self.hooks.accessibility_focus {
-            f(&mut self.driver_state, app, window, state, target);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, app, window, state, target));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, app, window, state, target);
+            }
         }
     }
 
@@ -875,7 +1076,16 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         target: fret_core::NodeId,
     ) {
         if let Some(f) = self.hooks.accessibility_invoke {
-            f(&mut self.driver_state, app, services, window, state, target);
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((&mut self.driver_state, app, services, window, state, target));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(&mut self.driver_state, app, services, window, state, target);
+            }
         }
     }
 
@@ -889,15 +1099,32 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         value: &str,
     ) {
         if let Some(f) = self.hooks.accessibility_set_value_text {
-            f(
-                &mut self.driver_state,
-                app,
-                services,
-                window,
-                state,
-                target,
-                value,
-            );
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((
+                    &mut self.driver_state,
+                    app,
+                    services,
+                    window,
+                    state,
+                    target,
+                    value,
+                ));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(
+                    &mut self.driver_state,
+                    app,
+                    services,
+                    window,
+                    state,
+                    target,
+                    value,
+                );
+            }
         }
     }
 
@@ -911,15 +1138,32 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         value: f64,
     ) {
         if let Some(f) = self.hooks.accessibility_set_value_numeric {
-            f(
-                &mut self.driver_state,
-                app,
-                services,
-                window,
-                state,
-                target,
-                value,
-            );
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((
+                    &mut self.driver_state,
+                    app,
+                    services,
+                    window,
+                    state,
+                    target,
+                    value,
+                ));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(
+                    &mut self.driver_state,
+                    app,
+                    services,
+                    window,
+                    state,
+                    target,
+                    value,
+                );
+            }
         }
     }
 
@@ -934,16 +1178,34 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         focus: u32,
     ) {
         if let Some(f) = self.hooks.accessibility_set_text_selection {
-            f(
-                &mut self.driver_state,
-                app,
-                services,
-                window,
-                state,
-                target,
-                anchor,
-                focus,
-            );
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((
+                    &mut self.driver_state,
+                    app,
+                    services,
+                    window,
+                    state,
+                    target,
+                    anchor,
+                    focus,
+                ));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(
+                    &mut self.driver_state,
+                    app,
+                    services,
+                    window,
+                    state,
+                    target,
+                    anchor,
+                    focus,
+                );
+            }
         }
     }
 
@@ -957,15 +1219,32 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         value: &str,
     ) {
         if let Some(f) = self.hooks.accessibility_replace_selected_text {
-            f(
-                &mut self.driver_state,
-                app,
-                services,
-                window,
-                state,
-                target,
-                value,
-            );
+            #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
+            {
+                let mut hot = subsecond::HotFn::current(f);
+                hot.call((
+                    &mut self.driver_state,
+                    app,
+                    services,
+                    window,
+                    state,
+                    target,
+                    value,
+                ));
+            }
+
+            #[cfg(not(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32"))))]
+            {
+                f(
+                    &mut self.driver_state,
+                    app,
+                    services,
+                    window,
+                    state,
+                    target,
+                    value,
+                );
+            }
         }
     }
 }

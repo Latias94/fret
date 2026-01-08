@@ -23,7 +23,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::menubar as menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::presence as radix_presence;
@@ -1018,7 +1018,7 @@ impl MenubarMenuEntries {
                 };
                 let opacity = motion.opacity;
                 let scale = motion.scale;
-                let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+                let overlay_root_name = menu::menubar_root_name(trigger_id);
                 let content_id_for_trigger =
                     menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
                 let submenu_cfg = menu::sub::MenuSubmenuConfig::default();

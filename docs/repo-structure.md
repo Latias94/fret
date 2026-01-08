@@ -5,8 +5,8 @@ This document describes the **intended** repository layout from a contributor/us
 Primary goal:
 
 - Make it obvious what is **core framework** vs what is **ecosystem / likely-to-move**.
-- Keep the core workspace approachable (Bevy-like “few top-level buckets”, minimal hierarchy).
-- Preserve ADR 0037’s long-term direction: components can move to a separate `fret-components` repository later.
+- Keep the core workspace approachable (Bevy-like "few top-level buckets", minimal hierarchy).
+- Preserve ADR 0037's long-term direction: components can move to a separate `fret-components` repository later.
 
 ## Top-Level Buckets
 
@@ -27,7 +27,7 @@ Notes:
 
 ## `crates/` (Core Framework)
 
-`crates/` should contain the crates that define “what Fret is”:
+`crates/` should contain the crates that define "what Fret is":
 
 - Contracts / portable core:
   - `fret-core`
@@ -63,8 +63,10 @@ Common examples:
   - `fret-ui-kit` (was `fret-ui-kit`)
   - `fret-ui-docking` (was `fret-ui-docking`)
   - `fret-ui-shadcn` (was `fret-ui-shadcn`)
-- “App kit” / default app policies:
+- "App kit" / default app policies:
   - `fret-app-kit` (was `fret-app-kit`)
+  - `fret-bootstrap` (opinionated startup glue over `fret-launch`)
+  - `fret-ui-assets` (UI render asset caches; re-export surface over `fret-asset-cache`)
 - Icons:
   - `fret-icons` (primitives/registry; was `fret-icons`)
   - `fret-icons-lucide` (icon set)
@@ -76,7 +78,7 @@ Long-term intent:
 
 ## Naming Guidelines (User Cognition)
 
-Prefer names that encode **layer** and avoid ambiguous “sounds-like-core” labels.
+Prefer names that encode **layer** and avoid ambiguous "sounds-like-core" labels.
 
 - Use `fret-ui-*` for **UI components / policy-heavy layers** built on `fret-ui`.
   - Example: `fret-ui-docking` (explicitly UI-layer docking behavior)
@@ -93,7 +95,7 @@ The workspace should include both buckets:
 - `ecosystem/*`
 - `apps/*`
 
-This keeps demos and layering checks consistent while still communicating “core vs ecosystem” through the folder name.
+This keeps demos and layering checks consistent while still communicating "core vs ecosystem" through the folder name.
 
 ## `apps/` (Runnable Harnesses)
 
@@ -104,6 +106,7 @@ Current apps:
 - `fret-examples`: shared harness code (components gallery, docking demos, smoke tests).
 - `fret-demo`: native harness shells (thin wrappers over `fret-examples`).
 - `fret-demo-web`: wasm harness shell (Trunk + `#[wasm_bindgen(start)]`, thin wrapper over `fret-examples`).
+- `fretboard`: dev CLI for running native/web demos with consistent flags.
 
 ## Extraction Policy (When to Move `ecosystem/` Out)
 

@@ -1,7 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
-use fret_app_kit::tree::AppTreeRowRenderer;
 #[cfg(not(target_arch = "wasm32"))]
 use fret_bootstrap::BootstrapBuilder;
 use fret_core::{
@@ -276,7 +275,11 @@ impl ComponentsGalleryDriver {
                                 wrap: false,
                             },
                             |cx| {
-                                let mut renderer = AppTreeRowRenderer;
+                                let mut renderer = |cx: &mut fret_ui::ElementContext<'_, App>,
+                                                    entry: &fret_ui_kit::TreeEntry,
+                                                    _state: fret_ui_kit::TreeRowState| {
+                                    vec![cx.text(entry.label.as_ref())]
+                                };
                                 vec![
                                     cx.text(title),
                                     cx.text(subtitle),

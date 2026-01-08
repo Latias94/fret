@@ -3,6 +3,8 @@
 //! This module provides a stable, Radix-named surface for composing toggle behavior in recipes.
 //! It intentionally models outcomes rather than React/DOM APIs.
 //!
+//! This file is part of the stable primitives surface (do not move without an ADR update).
+//!
 //! Upstream reference:
 //! - `repo-ref/primitives/packages/react/toggle/src/toggle.tsx`
 

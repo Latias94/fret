@@ -333,7 +333,11 @@ pub(super) fn handle_pressable<H: UiHost>(
                                 );
                             }
                             Effect::CancelTimer { token } => {
-                                crate::elements::clear_timer_target(&mut *self.app, self.window, token);
+                                crate::elements::clear_timer_target(
+                                    &mut *self.app,
+                                    self.window,
+                                    token,
+                                );
                             }
                             _ => {}
                         }

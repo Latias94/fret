@@ -34,6 +34,13 @@ We want the "clean state" end goal:
 
 We adopt **Scheme C** as the long-term implementation strategy for declarative Flex/Grid layout:
 
+Note: ADR 0115 refines the measurement surface by introducing an explicit `AvailableSpace`
+(Definite/MinContent/MaxContent) model and a non-reentrant intrinsic measurement path.
+ADR 0116 proposes a later evolution that generalizes these persistence/incremental-update principles
+into a window-scoped layout engine + viewport roots model for multi-viewport docking.
+ADR 0076 remains the accepted near-term performance hardening strategy and the current implementation
+shape for `crates/fret-ui`.
+
 ### C1) Persistent container-owned Taffy trees (stable identity)
 
 Each `Flex` / `Grid` container owns a persistent `TaffyTree` in element/widget state (ADR 0035),

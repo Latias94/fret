@@ -19,6 +19,3 @@ fret-ui-kit = { path = "../fret-ui-kit" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 anyhow.workspace = true
 tracing.workspace = true
-
-[dev-dependencies]
-slotmap.workspace = true

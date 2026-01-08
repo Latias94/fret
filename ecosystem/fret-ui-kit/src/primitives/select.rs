@@ -28,12 +28,12 @@ use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::headless::roving_focus;
-use crate::primitives::trigger_a11y;
 pub use crate::headless::select_item_aligned::{
     SELECT_ITEM_ALIGNED_CONTENT_MARGIN, SelectItemAlignedInputs, SelectItemAlignedOutputs,
     select_item_aligned_position,
 };
 use crate::headless::typeahead;
+use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Stable per-overlay root naming convention for select overlays.
