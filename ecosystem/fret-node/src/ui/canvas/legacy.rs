@@ -41,6 +41,7 @@ use crate::ui::{
     NodeGraphEditQueue, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
 };
 
+mod marquee;
 mod node_drag;
 
 use super::conversion;
@@ -50,9 +51,8 @@ use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::state::{
     ContextMenuState, ContextMenuTarget, EdgeDrag, GeometryCache, GeometryCacheKey,
-    InteractionState, InternalsCacheKey, LastConversionContext, MarqueeDrag, MarqueeMode, NodeDrag,
-    PendingMarqueeDrag, PendingNodeDrag, PendingPaste, SearcherState, ToastState, ViewSnapshot,
-    WireDrag, WireDragKind,
+    InteractionState, InternalsCacheKey, LastConversionContext, MarqueeDrag, NodeDrag,
+    PendingNodeDrag, PendingPaste, SearcherState, ToastState, ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::workflow;
 
@@ -1663,42 +1663,6 @@ impl NodeGraphCanvas {
         if self.interaction.recent_kinds.len() > MAX_RECENT {
             self.interaction.recent_kinds.truncate(MAX_RECENT);
         }
-    }
-
-    fn nodes_in_marquee(
-        graph: &Graph,
-        geom: &CanvasGeometry,
-        a: Point,
-        b: Point,
-    ) -> Vec<GraphNodeId> {
-        let rect = rect_from_points(a, b);
-        geom.nodes
-            .iter()
-            .filter_map(|(id, ng)| {
-                graph
-                    .nodes
-                    .contains_key(id)
-                    .then_some(*id)
-                    .filter(|_| rects_intersect(rect, ng.rect))
-            })
-            .collect()
-    }
-
-    fn union_nodes(a: &[GraphNodeId], b: &[GraphNodeId]) -> Vec<GraphNodeId> {
-        let mut out: Vec<GraphNodeId> = Vec::with_capacity(a.len() + b.len());
-        out.extend_from_slice(a);
-        out.extend_from_slice(b);
-        out
-    }
-
-    fn toggle_nodes(base: &[GraphNodeId], delta: &[GraphNodeId]) -> Vec<GraphNodeId> {
-        let mut set: std::collections::HashSet<GraphNodeId> = base.iter().copied().collect();
-        for id in delta.iter().copied() {
-            if !set.insert(id) {
-                set.remove(&id);
-            }
-        }
-        set.into_iter().collect()
     }
 
     fn searcher_is_selectable_row(row: &SearcherRow) -> bool {
@@ -4210,21 +4174,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.hover_port = None;
                         self.interaction.hover_port_valid = false;
                         self.interaction.hover_port_convertible = false;
-                        let mode = if modifiers.shift {
-                            MarqueeMode::Add
-                        } else if modifiers.ctrl || modifiers.meta {
-                            MarqueeMode::Toggle
-                        } else {
-                            MarqueeMode::Replace
-                        };
-                        self.interaction.pending_marquee = Some(PendingMarqueeDrag {
-                            start_pos: *position,
-                            base_nodes: snapshot.selected_nodes.clone(),
-                            mode,
-                        });
-                        cx.capture_pointer(cx.node);
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                        marquee::begin_background_marquee(
+                            self, cx, &snapshot, *position, *modifiers,
+                        );
                     }
                 }
             }
@@ -4274,94 +4226,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if let Some(mut marquee) = self.interaction.marquee.take() {
-                    marquee.pos = *position;
-                    let (geom, _index) = self.canvas_derived(&*cx.app, &snapshot);
-                    let selection = self
-                        .graph
-                        .read_ref(cx.app, |graph| {
-                            Self::nodes_in_marquee(
-                                graph,
-                                geom.as_ref(),
-                                marquee.start_pos,
-                                marquee.pos,
-                            )
-                        })
-                        .ok()
-                        .unwrap_or_default();
-
-                    let mut selected: Vec<GraphNodeId> = match marquee.mode {
-                        MarqueeMode::Replace => selection,
-                        MarqueeMode::Add => Self::union_nodes(&marquee.base_nodes, &selection),
-                        MarqueeMode::Toggle => Self::toggle_nodes(&marquee.base_nodes, &selection),
-                    };
-                    selected.sort();
-                    selected.dedup();
-
-                    self.interaction.marquee = Some(marquee);
-                    self.update_view_state(cx.app, |s| {
-                        s.selected_edges.clear();
-                        s.selected_nodes = selected;
-                    });
-
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                if marquee::handle_marquee_move(self, cx, &snapshot, *position, *modifiers, zoom) {
                     return;
-                }
-
-                if self.interaction.node_drag.is_none() {
-                    if let Some(pending) = self.interaction.pending_marquee.clone() {
-                        let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
-                        let threshold_graph = threshold_screen / zoom;
-                        let dx = position.x.0 - pending.start_pos.x.0;
-                        let dy = position.y.0 - pending.start_pos.y.0;
-                        if threshold_graph <= 0.0
-                            || dx * dx + dy * dy >= threshold_graph * threshold_graph
-                        {
-                            self.interaction.pending_marquee = None;
-                            let marquee = MarqueeDrag {
-                                start_pos: pending.start_pos,
-                                pos: *position,
-                                base_nodes: pending.base_nodes.clone(),
-                                mode: pending.mode,
-                            };
-                            self.interaction.marquee = Some(marquee.clone());
-
-                            let (geom, _index) = self.canvas_derived(&*cx.app, &snapshot);
-                            let selection = self
-                                .graph
-                                .read_ref(cx.app, |graph| {
-                                    Self::nodes_in_marquee(
-                                        graph,
-                                        geom.as_ref(),
-                                        marquee.start_pos,
-                                        marquee.pos,
-                                    )
-                                })
-                                .ok()
-                                .unwrap_or_default();
-
-                            let mut selected: Vec<GraphNodeId> = match marquee.mode {
-                                MarqueeMode::Replace => selection,
-                                MarqueeMode::Add => {
-                                    Self::union_nodes(&marquee.base_nodes, &selection)
-                                }
-                                MarqueeMode::Toggle => {
-                                    Self::toggle_nodes(&marquee.base_nodes, &selection)
-                                }
-                            };
-                            selected.sort();
-                            selected.dedup();
-
-                            self.update_view_state(cx.app, |s| {
-                                s.selected_edges.clear();
-                                s.selected_nodes = selected;
-                            });
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
-                            return;
-                        }
-                    }
                 }
 
                 if self.interaction.node_drag.is_none() {
@@ -4712,26 +4578,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 if *button == MouseButton::Left {
-                    if self.interaction.marquee.take().is_some() {
-                        self.interaction.pending_marquee = None;
-                        self.interaction.snap_guides = None;
-                        cx.release_pointer_capture();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                        return;
-                    }
-
-                    if let Some(pending) = self.interaction.pending_marquee.take() {
-                        if matches!(pending.mode, MarqueeMode::Replace) {
-                            self.update_view_state(cx.app, |s| {
-                                s.selected_nodes.clear();
-                                s.selected_edges.clear();
-                            });
-                        }
-                        self.interaction.snap_guides = None;
-                        cx.release_pointer_capture();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                    if marquee::handle_left_up(self, cx) {
                         return;
                     }
 
