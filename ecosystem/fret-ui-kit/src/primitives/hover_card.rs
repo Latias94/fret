@@ -12,6 +12,7 @@ use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::declarative::ModelWatchExt;
 use crate::{OverlayController, OverlayRequest};
 
 /// Stamps Radix-like trigger relationships:
@@ -39,6 +40,56 @@ pub fn apply_hover_card_trigger_a11y(
 /// Stable per-overlay root naming convention for hover cards.
 pub fn hover_card_root_name(id: GlobalElementId) -> String {
     OverlayController::hover_overlay_root_name(id)
+}
+
+/// A Radix-shaped `HoverCard` root configuration surface (open state only).
+///
+/// Radix HoverCard supports a controlled/uncontrolled `open` state (`open` + `defaultOpen`). In
+/// Fret, hover-card recipes often derive open state from hover intent, but this root helper keeps
+/// a Radix-shaped option available for non-hover use cases and for strict parity tests.
+#[derive(Debug, Clone, Default)]
+pub struct HoverCardRoot {
+    open: Option<Model<bool>>,
+    default_open: bool,
+}
+
+impl HoverCardRoot {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the controlled `open` model (`Some`) or selects uncontrolled mode (`None`).
+    pub fn open(mut self, open: Option<Model<bool>>) -> Self {
+        self.open = open;
+        self
+    }
+
+    /// Sets the uncontrolled initial open value (Radix `defaultOpen`).
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
+    }
+
+    /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+    pub fn use_open_model<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> crate::primitives::controllable_state::ControllableModel<bool> {
+        hover_card_use_open_model(cx, self.open.clone(), || self.default_open)
+    }
+
+    pub fn open_model<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Model<bool> {
+        self.use_open_model(cx).model()
+    }
+
+    /// Reads the current open value from the derived open model.
+    pub fn is_open<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
+        let open_model = self.open_model(cx);
+        cx.watch_model(&open_model)
+            .layout()
+            .copied()
+            .unwrap_or(false)
+    }
 }
 
 /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
@@ -91,6 +142,20 @@ mod tests {
 
     use fret_app::App;
     use fret_ui::element::{ElementKind, LayoutStyle, PressableProps, SemanticsProps};
+
+    #[test]
+    fn hover_card_root_open_model_uses_controlled_model() {
+        let window = Default::default();
+        let mut app = App::new();
+
+        let controlled = app.models_mut().insert(true);
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let root = HoverCardRoot::new()
+                .open(Some(controlled.clone()))
+                .default_open(false);
+            assert_eq!(root.open_model(cx), controlled);
+        });
+    }
 
     #[test]
     fn hover_card_request_sets_default_root_name() {

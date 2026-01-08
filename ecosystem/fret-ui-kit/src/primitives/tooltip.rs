@@ -29,6 +29,7 @@ use fret_runtime::Model;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::declarative::ModelWatchExt;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 /// Stamps Radix-like trigger relationships:
@@ -56,6 +57,56 @@ pub fn apply_tooltip_trigger_a11y(
 /// Stable per-overlay root naming convention for tooltip overlays.
 pub fn tooltip_root_name(id: GlobalElementId) -> String {
     OverlayController::tooltip_root_name(id)
+}
+
+/// A Radix-shaped `Tooltip` root configuration surface (open state only).
+///
+/// Radix Tooltip supports a controlled/uncontrolled `open` state (`open` + `defaultOpen`). In
+/// Fret, this root helper standardizes how recipes derive the open model before applying hover
+/// intent or provider delay-group policy.
+#[derive(Debug, Clone, Default)]
+pub struct TooltipRoot {
+    open: Option<Model<bool>>,
+    default_open: bool,
+}
+
+impl TooltipRoot {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the controlled `open` model (`Some`) or selects uncontrolled mode (`None`).
+    pub fn open(mut self, open: Option<Model<bool>>) -> Self {
+        self.open = open;
+        self
+    }
+
+    /// Sets the uncontrolled initial open value (Radix `defaultOpen`).
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
+        self
+    }
+
+    /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
+    pub fn use_open_model<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+    ) -> crate::primitives::controllable_state::ControllableModel<bool> {
+        tooltip_use_open_model(cx, self.open.clone(), || self.default_open)
+    }
+
+    pub fn open_model<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> Model<bool> {
+        self.use_open_model(cx).model()
+    }
+
+    /// Reads the current open value from the derived open model.
+    pub fn is_open<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> bool {
+        let open_model = self.open_model(cx);
+        cx.watch_model(&open_model)
+            .layout()
+            .copied()
+            .unwrap_or(false)
+    }
 }
 
 /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
@@ -93,6 +144,20 @@ mod tests {
 
     use fret_app::App;
     use fret_ui::element::{ElementKind, LayoutStyle, PressableProps, SemanticsProps};
+
+    #[test]
+    fn tooltip_root_open_model_uses_controlled_model() {
+        let window = Default::default();
+        let mut app = App::new();
+
+        let controlled = app.models_mut().insert(true);
+        fret_ui::elements::with_element_cx(&mut app, window, Default::default(), "test", |cx| {
+            let root = TooltipRoot::new()
+                .open(Some(controlled.clone()))
+                .default_open(false);
+            assert_eq!(root.open_model(cx), controlled);
+        });
+    }
 
     #[test]
     fn tooltip_request_sets_default_root_name() {
