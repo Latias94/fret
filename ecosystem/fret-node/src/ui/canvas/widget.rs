@@ -27,9 +27,11 @@ use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint
 use crate::ui::commands::{
     CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_CUT,
     CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FRAME_SELECTION,
-    CMD_NODE_GRAPH_INSERT_REROUTE, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
-    CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
-    CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
+    CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT, CMD_NODE_GRAPH_GROUP_RENAME,
+    CMD_NODE_GRAPH_GROUP_SEND_TO_BACK, CMD_NODE_GRAPH_INSERT_REROUTE,
+    CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER, CMD_NODE_GRAPH_OPEN_INSERT_NODE,
+    CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE, CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO,
+    CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
 };
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
@@ -46,6 +48,7 @@ mod context_menu;
 mod cursor;
 mod edge_drag;
 mod group_drag;
+mod group_rename;
 mod group_resize;
 mod hover;
 mod left_click;
@@ -70,9 +73,9 @@ use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::state::{
-    ContextMenuState, ContextMenuTarget, GeometryCache, GeometryCacheKey, InteractionState,
-    InternalsCacheKey, MarqueeDrag, PendingPaste, SearcherState, ToastState, ViewSnapshot,
-    WireDrag, WireDragKind,
+    ContextMenuState, ContextMenuTarget, GeometryCache, GeometryCacheKey, GroupRenameState,
+    InteractionState, InternalsCacheKey, MarqueeDrag, PendingPaste, SearcherState, ToastState,
+    ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::workflow;
 
@@ -1655,6 +1658,35 @@ impl NodeGraphCanvas {
         }
     }
 
+    fn begin_group_rename<H: UiHost>(&mut self, host: &mut H, snapshot: &ViewSnapshot) {
+        let Some(group_id) = snapshot.selected_groups.last().copied() else {
+            return;
+        };
+
+        let Some(title) = self
+            .graph
+            .read_ref(host, |g| g.groups.get(&group_id).map(|gg| gg.title.clone()))
+            .ok()
+            .flatten()
+        else {
+            return;
+        };
+
+        let invoked_at = self
+            .interaction
+            .last_pos
+            .unwrap_or_else(|| Point::new(Px(0.0), Px(0.0)));
+        let bounds = self.interaction.last_bounds.unwrap_or_default();
+        let origin = self.clamp_context_menu_origin(invoked_at, 1, bounds, snapshot);
+
+        self.interaction.group_rename = Some(GroupRenameState {
+            group: group_id,
+            origin,
+            original: title.clone(),
+            text: title,
+        });
+    }
+
     fn record_recent_kind(&mut self, kind: &NodeKindKey) {
         const MAX_RECENT: usize = 20;
 
@@ -1928,6 +1960,18 @@ impl NodeGraphCanvas {
     ) {
         match (target, item.action) {
             (_, NodeGraphContextMenuAction::Command(command)) => {
+                self.interaction.context_menu = None;
+                if let ContextMenuTarget::Group(group_id) = target {
+                    let group_id = *group_id;
+                    self.update_view_state(cx.app, |s| {
+                        s.selected_nodes.clear();
+                        s.selected_edges.clear();
+                        if !s.selected_groups.iter().any(|id| *id == group_id) {
+                            s.selected_groups.clear();
+                            s.selected_groups.push(group_id);
+                        }
+                    });
+                }
                 cx.dispatch_command(command);
             }
             (
@@ -2413,6 +2457,69 @@ impl NodeGraphCanvas {
                 color,
             });
         }
+    }
+
+    fn paint_group_rename<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        rename: &GroupRenameState,
+        zoom: f32,
+    ) {
+        let rect = context_menu_rect_at(&self.style, rename.origin, 1, zoom);
+        let border_w = Px(1.0 / zoom);
+        let radius = Px(self.style.context_menu_corner_radius / zoom);
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(60),
+            rect,
+            background: self.style.context_menu_background,
+            border: Edges::all(border_w),
+            border_color: self.style.context_menu_border,
+            corner_radii: Corners::all(radius),
+        });
+
+        let pad = self.style.context_menu_padding / zoom;
+        let item_h = self.style.context_menu_item_height / zoom;
+        let inner_x = rect.origin.x.0 + pad;
+        let inner_y = rect.origin.y.0 + pad;
+        let inner_w = (rect.size.width.0 - 2.0 * pad).max(0.0);
+
+        let item_rect = Rect::new(
+            Point::new(Px(inner_x), Px(inner_y)),
+            Size::new(Px(inner_w), Px(item_h)),
+        );
+
+        let mut text_style = self.style.context_menu_text_style.clone();
+        text_style.size = Px(text_style.size.0 / zoom);
+        if let Some(lh) = text_style.line_height.as_mut() {
+            lh.0 /= zoom;
+        }
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(inner_w)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor * zoom,
+        };
+
+        let label = format!("Rename: {}|", rename.text);
+        let (blob, metrics) = cx
+            .services
+            .text()
+            .prepare(label.as_str(), &text_style, constraints);
+        self.text_blobs.push(blob);
+
+        let text_x = item_rect.origin.x;
+        let inner_y =
+            item_rect.origin.y.0 + (item_rect.size.height.0 - metrics.size.height.0) * 0.5;
+        let text_y = Px(inner_y + metrics.baseline.0);
+
+        cx.scene.push(SceneOp::Text {
+            order: DrawOrder(62),
+            origin: Point::new(text_x, text_y),
+            text: blob,
+            color: self.style.context_menu_text,
+        });
     }
 
     fn paint_marquee<H: UiHost>(
@@ -2964,6 +3071,68 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 cx.invalidate_self(Invalidation::Paint);
                 true
             }
+            CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT => {
+                self.interaction.context_menu = None;
+                self.interaction.searcher = None;
+                let groups = snapshot.selected_groups.clone();
+                if groups.is_empty() {
+                    return true;
+                }
+                self.update_view_state(cx.app, |s| {
+                    let mut selected_in_order: Vec<crate::core::GroupId> = Vec::new();
+                    for id in &s.group_draw_order {
+                        if groups.contains(id) {
+                            selected_in_order.push(*id);
+                        }
+                    }
+                    for id in &groups {
+                        if !selected_in_order.contains(id) {
+                            selected_in_order.push(*id);
+                        }
+                    }
+                    s.group_draw_order.retain(|id| !groups.contains(id));
+                    s.group_draw_order.extend(selected_in_order);
+                });
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_GROUP_SEND_TO_BACK => {
+                self.interaction.context_menu = None;
+                self.interaction.searcher = None;
+                let groups = snapshot.selected_groups.clone();
+                if groups.is_empty() {
+                    return true;
+                }
+                self.update_view_state(cx.app, |s| {
+                    let mut selected_in_order: Vec<crate::core::GroupId> = Vec::new();
+                    for id in &s.group_draw_order {
+                        if groups.contains(id) {
+                            selected_in_order.push(*id);
+                        }
+                    }
+                    for id in &groups {
+                        if !selected_in_order.contains(id) {
+                            selected_in_order.push(*id);
+                        }
+                    }
+                    s.group_draw_order.retain(|id| !groups.contains(id));
+                    let mut next = selected_in_order;
+                    next.extend_from_slice(&s.group_draw_order);
+                    s.group_draw_order = next;
+                });
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
+            CMD_NODE_GRAPH_GROUP_RENAME => {
+                self.interaction.context_menu = None;
+                self.interaction.searcher = None;
+                self.begin_group_rename(cx.app, &snapshot);
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
             CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE => {
                 if snapshot.selected_edges.len() != 1 {
                     return true;
@@ -3274,7 +3443,16 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     cx.invalidate_self(Invalidation::Paint);
                 }
             }
+            Event::TextInput(text) => {
+                if group_rename::handle_group_rename_text_input(self, cx, text) {
+                    return;
+                }
+            }
             Event::KeyDown { key, modifiers, .. } => {
+                if group_rename::handle_group_rename_key_down(self, cx, *key, *modifiers) {
+                    return;
+                }
+
                 if modifiers.ctrl || modifiers.meta {
                     match *key {
                         fret_core::KeyCode::KeyA => {
@@ -3322,7 +3500,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 if *key == fret_core::KeyCode::Escape {
-                    if searcher::handle_searcher_escape(self, cx)
+                    if group_rename::handle_group_rename_escape(self, cx)
+                        || searcher::handle_searcher_escape(self, cx)
                         || context_menu::handle_context_menu_escape(self, cx)
                     {
                         return;
@@ -3361,6 +3540,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     snapshot.pan,
                     zoom,
                 ));
+
+                if self.interaction.group_rename.take().is_some() {
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
 
                 if searcher::handle_searcher_pointer_down(self, cx, *position, *button, zoom) {
                     return;
@@ -4240,6 +4424,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         if let Some(menu) = self.interaction.context_menu.clone() {
             self.paint_context_menu(cx, &menu, zoom);
+        }
+
+        if let Some(rename) = self.interaction.group_rename.clone() {
+            self.paint_group_rename(cx, &rename, zoom);
         }
 
         if let Some(toast) = self.interaction.toast.clone() {

@@ -25,6 +25,9 @@ pub const CMD_NODE_GRAPH_SELECT_ALL: &str = "node_graph.select_all";
 pub const CMD_NODE_GRAPH_DELETE_SELECTION: &str = "node_graph.delete_selection";
 pub const CMD_NODE_GRAPH_FRAME_SELECTION: &str = "node_graph.frame_selection";
 pub const CMD_NODE_GRAPH_CREATE_GROUP: &str = "node_graph.create_group";
+pub const CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT: &str = "node_graph.group.bring_to_front";
+pub const CMD_NODE_GRAPH_GROUP_SEND_TO_BACK: &str = "node_graph.group.send_to_back";
+pub const CMD_NODE_GRAPH_GROUP_RENAME: &str = "node_graph.group.rename";
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
     DefaultKeybinding {
@@ -141,6 +144,33 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Create Group")
             .with_category("Node Graph")
             .with_keywords(["group", "frame", "container"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT),
+        CommandMeta::new("Bring Group to Front")
+            .with_category("Node Graph")
+            .with_keywords(["group", "bring", "front", "z", "order"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_GROUP_SEND_TO_BACK),
+        CommandMeta::new("Send Group to Back")
+            .with_category("Node Graph")
+            .with_keywords(["group", "send", "back", "z", "order"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_GROUP_RENAME),
+        CommandMeta::new("Rename Group…")
+            .with_category("Node Graph")
+            .with_keywords(["group", "rename", "title"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
     );

@@ -269,6 +269,11 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
             from: *to,
             to: *from,
         }],
+        GraphOp::SetGroupTitle { id, from, to } => vec![GraphOp::SetGroupTitle {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
 
         GraphOp::AddStickyNote { id, note } => vec![GraphOp::RemoveStickyNote {
             id: *id,

@@ -262,6 +262,42 @@ fn set_node_size_roundtrips_through_invert_transaction() {
 }
 
 #[test]
+fn set_group_title_roundtrips_through_invert_transaction() {
+    let mut graph = Graph::default();
+    let group_id = GroupId::new();
+    graph.groups.insert(
+        group_id,
+        Group {
+            title: "Group".to_string(),
+            rect: crate::core::CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: crate::core::CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            },
+            color: None,
+        },
+    );
+
+    let tx = GraphTransaction {
+        label: Some("Rename Group".to_string()),
+        ops: vec![GraphOp::SetGroupTitle {
+            id: group_id,
+            from: "Group".to_string(),
+            to: "My Group".to_string(),
+        }],
+    };
+
+    apply_transaction(&mut graph, &tx).expect("apply");
+    assert_eq!(graph.groups.get(&group_id).unwrap().title, "My Group");
+
+    let undo = invert_transaction(&tx);
+    apply_transaction(&mut graph, &undo).expect("undo apply");
+    assert_eq!(graph.groups.get(&group_id).unwrap().title, "Group");
+}
+
+#[test]
 fn set_node_data_roundtrips_through_invert_transaction() {
     let mut graph = Graph::default();
     let node = NodeId::new();
