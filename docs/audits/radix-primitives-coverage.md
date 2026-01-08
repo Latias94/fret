@@ -35,6 +35,7 @@ a small `controllable_state` helper because it is a common contract shared by ma
 - `context-menu` -> `ecosystem/fret-ui-kit/src/primitives/context_menu.rs` (facade over `menu`)
 - `dialog` -> `ecosystem/fret-ui-kit/src/primitives/dialog.rs`
 - `dismissable-layer` -> `ecosystem/fret-ui-kit/src/primitives/dismissable_layer.rs`
+- `direction` -> `ecosystem/fret-ui-kit/src/primitives/direction.rs`
 - `dropdown-menu` -> `ecosystem/fret-ui-kit/src/primitives/dropdown_menu.rs` (facade over `menu`)
 - `focus-scope` -> `ecosystem/fret-ui-kit/src/primitives/focus_scope.rs`
 - `hover-card` -> `ecosystem/fret-ui-kit/src/primitives/hover_card.rs`
