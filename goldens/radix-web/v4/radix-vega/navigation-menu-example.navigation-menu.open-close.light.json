@@ -1,0 +1,2503 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "navigation-menu-example",
+  "primitive": "navigation-menu",
+  "scenario": "open-close",
+  "url": "http://localhost:4020/preview/radix/navigation-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/navigation-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "nav",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-label": "Main",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "ul",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_e_-content-radix-_r_f_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Getting started"
+                                                }
+                                              ],
+                                              "text": "Getting started"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_e_-content-radix-_r_h_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Components"
+                                                }
+                                              ],
+                                              "text": "Components"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "a",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    2,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [],
+                                                  "text": "Documentation"
+                                                }
+                                              ],
+                                              "text": "Documentation"
+                                            }
+                                          ],
+                                          "text": "Getting started Components Documentation"
+                                        }
+                                      ],
+                                      "text": "Getting started Components Documentation"
+                                    }
+                                  ],
+                                  "text": "Getting started Components Documentation"
+                                }
+                              ],
+                              "text": "Getting started Components Documentation"
+                            }
+                          ],
+                          "text": "With ViewportGetting started Components Documentation"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "nav",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-label": "Main",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "ul",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "a",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [],
+                                                  "text": "Documentation"
+                                                }
+                                              ],
+                                              "text": "Documentation"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_k_-content-radix-_r_m_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "List"
+                                                }
+                                              ],
+                                              "text": "List"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    2,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_k_-content-radix-_r_o_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        2,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Simple List"
+                                                }
+                                              ],
+                                              "text": "Simple List"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                3
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    3,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_k_-content-radix-_r_q_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        3,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "With Icon"
+                                                }
+                                              ],
+                                              "text": "With Icon"
+                                            }
+                                          ],
+                                          "text": "DocumentationList Simple List With Icon"
+                                        }
+                                      ],
+                                      "text": "DocumentationList Simple List With Icon"
+                                    }
+                                  ],
+                                  "text": "DocumentationList Simple List With Icon"
+                                }
+                              ],
+                              "text": "DocumentationList Simple List With Icon"
+                            }
+                          ],
+                          "text": "Without ViewportDocumentationList Simple List With Icon"
+                        }
+                      ],
+                      "text": "With ViewportGetting started Components DocumentationWithout ViewportDocumentationList Simple List With Icon"
+                    }
+                  ],
+                  "text": "With ViewportGetting started Components DocumentationWithout ViewportDocumentationList Simple List With Icon"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "navigation-menu-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "With Viewport"
+            },
+            {
+              "role": "button",
+              "name": "Getting started"
+            },
+            {
+              "role": "button",
+              "name": "Components"
+            },
+            {
+              "role": "link",
+              "name": "Documentation"
+            },
+            {
+              "role": "StaticText",
+              "name": "Without Viewport"
+            },
+            {
+              "role": "link",
+              "name": "Documentation"
+            },
+            {
+              "role": "button",
+              "name": "List"
+            },
+            {
+              "role": "button",
+              "name": "Simple List"
+            },
+            {
+              "role": "button",
+              "name": "With Icon"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "navigation-menu-trigger"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "attrs": {
+            "data-state": "open",
+            "aria-expanded": "true",
+            "aria-controls": "radix-_r_e_-content-radix-_r_f_",
+            "data-radix-collection-item": ""
+          },
+          "text": "Getting started"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "nav",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-label": "Main",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "ul",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "open",
+                                                    "aria-expanded": "true",
+                                                    "aria-controls": "radix-_r_e_-content-radix-_r_f_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Getting started"
+                                                },
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-hidden": "true",
+                                                    "tabindex": "0"
+                                                  },
+                                                  "children": []
+                                                },
+                                                {
+                                                  "tag": "span",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    2
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-owns": "radix-_r_e_-content-radix-_r_f_"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "Getting started"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_e_-content-radix-_r_h_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Components"
+                                                }
+                                              ],
+                                              "text": "Components"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "a",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    2,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [],
+                                                  "text": "Documentation"
+                                                }
+                                              ],
+                                              "text": "Documentation"
+                                            }
+                                          ],
+                                          "text": "Getting started Components Documentation"
+                                        }
+                                      ],
+                                      "text": "Getting started Components Documentation"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-state": "open",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "aria-labelledby": "radix-_r_e_-trigger-radix-_r_f_",
+                                                "data-orientation": "horizontal"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "ul",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "li",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {},
+                                                      "children": [
+                                                        {
+                                                          "tag": "a",
+                                                          "path": [
+                                                            2,
+                                                            3,
+                                                            0,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            0
+                                                          ],
+                                                          "attrs": {
+                                                            "data-radix-collection-item": ""
+                                                          },
+                                                          "children": [],
+                                                          "text": "IntroductionRe-usable components built with Tailwind CSS."
+                                                        }
+                                                      ],
+                                                      "text": "IntroductionRe-usable components built with Tailwind CSS."
+                                                    },
+                                                    {
+                                                      "tag": "li",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        1
+                                                      ],
+                                                      "attrs": {},
+                                                      "children": [
+                                                        {
+                                                          "tag": "a",
+                                                          "path": [
+                                                            2,
+                                                            3,
+                                                            0,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            1,
+                                                            0
+                                                          ],
+                                                          "attrs": {
+                                                            "data-radix-collection-item": ""
+                                                          },
+                                                          "children": [],
+                                                          "text": "InstallationHow to install dependencies and structure your app."
+                                                        }
+                                                      ],
+                                                      "text": "InstallationHow to install dependencies and structure your app."
+                                                    },
+                                                    {
+                                                      "tag": "li",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        2
+                                                      ],
+                                                      "attrs": {},
+                                                      "children": [
+                                                        {
+                                                          "tag": "a",
+                                                          "path": [
+                                                            2,
+                                                            3,
+                                                            0,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            2,
+                                                            0
+                                                          ],
+                                                          "attrs": {
+                                                            "data-radix-collection-item": ""
+                                                          },
+                                                          "children": [],
+                                                          "text": "TypographyStyles for headings, paragraphs, lists...etc"
+                                                        }
+                                                      ],
+                                                      "text": "TypographyStyles for headings, paragraphs, lists...etc"
+                                                    }
+                                                  ],
+                                                  "text": "IntroductionRe-usable components built with Tailwind CSS.InstallationHow to install dependencies and structure your app.…"
+                                                }
+                                              ],
+                                              "text": "IntroductionRe-usable components built with Tailwind CSS.InstallationHow to install dependencies and structure your app.…"
+                                            }
+                                          ],
+                                          "text": "IntroductionRe-usable components built with Tailwind CSS.InstallationHow to install dependencies and structure your app.…"
+                                        }
+                                      ],
+                                      "text": "IntroductionRe-usable components built with Tailwind CSS.InstallationHow to install dependencies and structure your app.…"
+                                    }
+                                  ],
+                                  "text": "Getting started Components DocumentationIntroductionRe-usable components built with Tailwind CSS.InstallationHow to inst…"
+                                }
+                              ],
+                              "text": "Getting started Components DocumentationIntroductionRe-usable components built with Tailwind CSS.InstallationHow to inst…"
+                            }
+                          ],
+                          "text": "With ViewportGetting started Components DocumentationIntroductionRe-usable components built with Tailwind CSS.Installati…"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "nav",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-label": "Main",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "ul",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "a",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [],
+                                                  "text": "Documentation"
+                                                }
+                                              ],
+                                              "text": "Documentation"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_k_-content-radix-_r_m_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "List"
+                                                }
+                                              ],
+                                              "text": "List"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    2,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_k_-content-radix-_r_o_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        2,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Simple List"
+                                                }
+                                              ],
+                                              "text": "Simple List"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                3
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    3,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_k_-content-radix-_r_q_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        3,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "With Icon"
+                                                }
+                                              ],
+                                              "text": "With Icon"
+                                            }
+                                          ],
+                                          "text": "DocumentationList Simple List With Icon"
+                                        }
+                                      ],
+                                      "text": "DocumentationList Simple List With Icon"
+                                    }
+                                  ],
+                                  "text": "DocumentationList Simple List With Icon"
+                                }
+                              ],
+                              "text": "DocumentationList Simple List With Icon"
+                            }
+                          ],
+                          "text": "Without ViewportDocumentationList Simple List With Icon"
+                        }
+                      ],
+                      "text": "With ViewportGetting started Components DocumentationIntroductionRe-usable components built with Tailwind CSS.Installati…"
+                    }
+                  ],
+                  "text": "With ViewportGetting started Components DocumentationIntroductionRe-usable components built with Tailwind CSS.Installati…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "navigation-menu-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "With Viewport"
+            },
+            {
+              "role": "button",
+              "name": "Getting started",
+              "expanded": true,
+              "focused": true
+            },
+            {
+              "role": "link",
+              "name": "Introduction Re-usable components built with Tailwind CSS."
+            },
+            {
+              "role": "link",
+              "name": "Installation How to install dependencies and structure your app."
+            },
+            {
+              "role": "link",
+              "name": "Typography Styles for headings, paragraphs, lists...etc"
+            },
+            {
+              "role": "button",
+              "name": "Components"
+            },
+            {
+              "role": "link",
+              "name": "Documentation"
+            },
+            {
+              "role": "StaticText",
+              "name": "Without Viewport"
+            },
+            {
+              "role": "link",
+              "name": "Documentation"
+            },
+            {
+              "role": "button",
+              "name": "List"
+            },
+            {
+              "role": "button",
+              "name": "Simple List"
+            },
+            {
+              "role": "button",
+              "name": "With Icon"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "press",
+        "key": "Escape"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "attrs": {
+            "data-state": "closed",
+            "aria-expanded": "false",
+            "aria-controls": "radix-_r_e_-content-radix-_r_f_",
+            "data-radix-collection-item": ""
+          },
+          "text": "Getting started"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "nav",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-label": "Main",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "ul",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_e_-content-radix-_r_f_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Getting started"
+                                                }
+                                              ],
+                                              "text": "Getting started"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_e_-content-radix-_r_h_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Components"
+                                                }
+                                              ],
+                                              "text": "Components"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "a",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    2,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [],
+                                                  "text": "Documentation"
+                                                }
+                                              ],
+                                              "text": "Documentation"
+                                            }
+                                          ],
+                                          "text": "Getting started Components Documentation"
+                                        }
+                                      ],
+                                      "text": "Getting started Components Documentation"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-state": "closed",
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "aria-labelledby": "radix-_r_e_-trigger-radix-_r_f_",
+                                                "data-orientation": "horizontal"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "ul",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {},
+                                                  "children": [
+                                                    {
+                                                      "tag": "li",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {},
+                                                      "children": [
+                                                        {
+                                                          "tag": "a",
+                                                          "path": [
+                                                            2,
+                                                            3,
+                                                            0,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            0
+                                                          ],
+                                                          "attrs": {
+                                                            "data-radix-collection-item": "",
+                                                            "tabindex": "-1"
+                                                          },
+                                                          "children": [],
+                                                          "text": "IntroductionRe-usable components built with Tailwind CSS."
+                                                        }
+                                                      ],
+                                                      "text": "IntroductionRe-usable components built with Tailwind CSS."
+                                                    },
+                                                    {
+                                                      "tag": "li",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        1
+                                                      ],
+                                                      "attrs": {},
+                                                      "children": [
+                                                        {
+                                                          "tag": "a",
+                                                          "path": [
+                                                            2,
+                                                            3,
+                                                            0,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            1,
+                                                            0
+                                                          ],
+                                                          "attrs": {
+                                                            "data-radix-collection-item": "",
+                                                            "tabindex": "-1"
+                                                          },
+                                                          "children": [],
+                                                          "text": "InstallationHow to install dependencies and structure your app."
+                                                        }
+                                                      ],
+                                                      "text": "InstallationHow to install dependencies and structure your app."
+                                                    },
+                                                    {
+                                                      "tag": "li",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        2
+                                                      ],
+                                                      "attrs": {},
+                                                      "children": [
+                                                        {
+                                                          "tag": "a",
+                                                          "path": [
+                                                            2,
+                                                            3,
+                                                            0,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            1,
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            2,
+                                                            0
+                                                          ],
+                                                          "attrs": {
+                                                            "data-radix-collection-item": "",
+                                                            "tabindex": "-1"
+                                                          },
+                                                          "children": [],
+                                                          "text": "TypographyStyles for headings, paragraphs, lists...etc"
+                                                        }
+                                                      ],
+                                                      "text": "TypographyStyles for headings, paragraphs, lists...etc"
+                                                    }
+                                                  ],
+                                                  "text": "IntroductionRe-usable components built with Tailwind CSS.InstallationHow to install dependencies and structure your app.…"
+                                                }
+                                              ],
+                                              "text": "IntroductionRe-usable components built with Tailwind CSS.InstallationHow to install dependencies and structure your app.…"
+                                            }
+                                          ],
+                                          "text": "IntroductionRe-usable components built with Tailwind CSS.InstallationHow to install dependencies and structure your app.…"
+                                        }
+                                      ],
+                                      "text": "IntroductionRe-usable components built with Tailwind CSS.InstallationHow to install dependencies and structure your app.…"
+                                    }
+                                  ],
+                                  "text": "Getting started Components DocumentationIntroductionRe-usable components built with Tailwind CSS.InstallationHow to inst…"
+                                }
+                              ],
+                              "text": "Getting started Components DocumentationIntroductionRe-usable components built with Tailwind CSS.InstallationHow to inst…"
+                            }
+                          ],
+                          "text": "With ViewportGetting started Components DocumentationIntroductionRe-usable components built with Tailwind CSS.Installati…"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "nav",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-label": "Main",
+                                    "data-orientation": "horizontal"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "ul",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "a",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [],
+                                                  "text": "Documentation"
+                                                }
+                                              ],
+                                              "text": "Documentation"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_k_-content-radix-_r_m_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "List"
+                                                }
+                                              ],
+                                              "text": "List"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    2,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_k_-content-radix-_r_o_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        2,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Simple List"
+                                                }
+                                              ],
+                                              "text": "Simple List"
+                                            },
+                                            {
+                                              "tag": "li",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                3
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    3,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed",
+                                                    "aria-expanded": "false",
+                                                    "aria-controls": "radix-_r_k_-content-radix-_r_q_",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "svg",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        3,
+                                                        0,
+                                                        0
+                                                      ],
+                                                      "attrs": {
+                                                        "aria-hidden": "true"
+                                                      },
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "With Icon"
+                                                }
+                                              ],
+                                              "text": "With Icon"
+                                            }
+                                          ],
+                                          "text": "DocumentationList Simple List With Icon"
+                                        }
+                                      ],
+                                      "text": "DocumentationList Simple List With Icon"
+                                    }
+                                  ],
+                                  "text": "DocumentationList Simple List With Icon"
+                                }
+                              ],
+                              "text": "DocumentationList Simple List With Icon"
+                            }
+                          ],
+                          "text": "Without ViewportDocumentationList Simple List With Icon"
+                        }
+                      ],
+                      "text": "With ViewportGetting started Components DocumentationIntroductionRe-usable components built with Tailwind CSS.Installati…"
+                    }
+                  ],
+                  "text": "With ViewportGetting started Components DocumentationIntroductionRe-usable components built with Tailwind CSS.Installati…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "navigation-menu-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "With Viewport"
+            },
+            {
+              "role": "button",
+              "name": "Getting started",
+              "focused": true
+            },
+            {
+              "role": "button",
+              "name": "Components"
+            },
+            {
+              "role": "link",
+              "name": "Documentation"
+            },
+            {
+              "role": "link",
+              "name": "Introduction Re-usable components built with Tailwind CSS."
+            },
+            {
+              "role": "link",
+              "name": "Installation How to install dependencies and structure your app."
+            },
+            {
+              "role": "link",
+              "name": "Typography Styles for headings, paragraphs, lists...etc"
+            },
+            {
+              "role": "StaticText",
+              "name": "Without Viewport"
+            },
+            {
+              "role": "link",
+              "name": "Documentation"
+            },
+            {
+              "role": "button",
+              "name": "List"
+            },
+            {
+              "role": "button",
+              "name": "Simple List"
+            },
+            {
+              "role": "button",
+              "name": "With Icon"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

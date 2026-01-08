@@ -210,6 +210,7 @@ async function snapshotDom(page: puppeteer.Page): Promise<{
     const interestingAttrs = new Set([
       "role",
       "tabindex",
+      "data-slot",
       "data-state",
       "data-disabled",
       "data-highlighted",
@@ -347,6 +348,22 @@ async function clickFirstByText(
   throw new Error(`no element for ${selector} containing text: ${containsText}`)
 }
 
+async function clickFirst(page: puppeteer.Page, selector: string) {
+  const handle = await page.$(selector)
+  if (!handle) throw new Error(`missing element: ${selector}`)
+  await handle.click()
+}
+
+async function press(page: puppeteer.Page, key: string) {
+  await page.keyboard.press(key)
+}
+
+async function pressChord(page: puppeteer.Page, keys: string[]) {
+  for (const key of keys) {
+    await press(page, key)
+  }
+}
+
 async function clickUntilRoleAppears(
   page: puppeteer.Page,
   selector: string,
@@ -356,7 +373,11 @@ async function clickUntilRoleAppears(
   const handles = await page.$$(selector)
   const perTryTimeout = Math.min(1500, timeoutMs)
   for (const handle of handles) {
-    await handle.click()
+    try {
+      await handle.click()
+    } catch {
+      continue
+    }
     try {
       await waitForRole(page, role, true, perTryTimeout)
       return
@@ -372,9 +393,91 @@ async function clickUntilRoleAppears(
   throw new Error(`no click target for ${selector} that opens role=${role}`)
 }
 
+async function hoverUntilRoleAppears(
+  page: puppeteer.Page,
+  selector: string,
+  role: string,
+  timeoutMs: number
+) {
+  const handles = await page.$$(selector)
+  const perTryTimeout = Math.min(1500, timeoutMs)
+  for (const handle of handles) {
+    try {
+      await handle.hover()
+    } catch {
+      continue
+    }
+    try {
+      await waitForRole(page, role, true, perTryTimeout)
+      return
+    } catch {
+      try {
+        await page.mouse.move(0, 0)
+        await sleep(50)
+      } catch {
+        // ignore
+      }
+    }
+  }
+  throw new Error(`no hover target for ${selector} that opens role=${role}`)
+}
+
+async function rightClickUntilRoleAppears(
+  page: puppeteer.Page,
+  selector: string,
+  role: string,
+  timeoutMs: number
+) {
+  const handles = await page.$$(selector)
+  const perTryTimeout = Math.min(1500, timeoutMs)
+  for (const handle of handles) {
+    let box: puppeteer.BoundingBox | null = null
+    try {
+      box = await handle.boundingBox()
+    } catch {
+      box = null
+    }
+    try {
+      if (box) {
+        await page.mouse.click(box.x + 5, box.y + 5, { button: "right" as any })
+      } else {
+        await page.click("body", { button: "right" as any })
+      }
+    } catch {
+      continue
+    }
+    try {
+      await waitForRole(page, role, true, perTryTimeout)
+      return
+    } catch {
+      try {
+        await page.keyboard.press("Escape")
+        await sleep(50)
+      } catch {
+        // ignore
+      }
+    }
+  }
+  throw new Error(`no right-click target for ${selector} that opens role=${role}`)
+}
+
 async function waitForRole(page: puppeteer.Page, role: string, present: boolean, timeoutMs: number) {
   const expr = `(() => {
     const found = !!document.querySelector('[role=\"${role}\"]');
+    return ${present ? "found" : "!found"};
+  })()`
+  await page.waitForFunction(expr, { timeout: timeoutMs })
+}
+
+async function waitForSelectorPresent(
+  page: puppeteer.Page,
+  selector: string,
+  present: boolean,
+  timeoutMs: number
+) {
+  const sel = JSON.stringify(selector)
+  const expr = `(() => {
+    const found = !!document.querySelector(${sel});
     return ${present ? "found" : "!found"};
   })()`
   await page.waitForFunction(expr, { timeout: timeoutMs })
@@ -387,6 +490,20 @@ function previewUrl(baseUrl: string, item: string, config: Record<string, string
 
 const scenarios: Scenario[] = [
   {
+    primitive: "accordion",
+    scenario: "toggle-first",
+    item: "accordion-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      await clickFirst(ctx.page, "[data-state], button")
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "accordion-trigger" })
+      await clickFirst(ctx.page, "[data-state], button")
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "accordion-trigger" })
+    },
+  },
+  {
     primitive: "dialog",
     scenario: "open-close",
     item: "dialog-example",
@@ -397,7 +514,21 @@ const scenarios: Scenario[] = [
       await sleep(50)
       await pushStep(ctx, { kind: "click", target: "dialog-trigger" })
 
-      await ctx.page.keyboard.press("Escape")
+      await press(ctx.page, "Escape")
+      await waitForRole(ctx.page, "dialog", false, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "press", key: "Escape" })
+    },
+  },
+  {
+    primitive: "popover",
+    scenario: "open-close",
+    item: "popover-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      await clickUntilRoleAppears(ctx.page, "button", "dialog", ctx.timeoutMs)
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "popover-trigger" })
+      await press(ctx.page, "Escape")
       await waitForRole(ctx.page, "dialog", false, Math.min(15000, ctx.timeoutMs))
       await pushStep(ctx, { kind: "press", key: "Escape" })
     },
@@ -419,11 +550,32 @@ const scenarios: Scenario[] = [
       await waitForRole(ctx.page, "menu", true, Math.min(15000, ctx.timeoutMs))
       await pushStep(ctx, { kind: "click", target: "dropdown-trigger" })
 
-      await ctx.page.keyboard.press("ArrowDown")
-      await ctx.page.keyboard.press("Enter")
+      await pressChord(ctx.page, ["ArrowDown", "Enter"])
       await sleep(50)
       await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
       await pushStep(ctx, { kind: "press", key: "ArrowDown,Enter" })
+    },
+  },
+  {
+    primitive: "context-menu",
+    scenario: "context-open-close",
+    item: "context-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      await rightClickUntilRoleAppears(
+        ctx.page,
+        "button, a, [role], [data-state], div",
+        "menu",
+        ctx.timeoutMs
+      )
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "contextmenu:rightclick" })
+
+      await press(ctx.page, "Escape")
+      await sleep(50)
+      await waitForRole(ctx.page, "menu", false, Math.min(15000, ctx.timeoutMs))
+      await pushStep(ctx, { kind: "press", key: "Escape" })
     },
   },
   {
@@ -443,12 +595,194 @@ const scenarios: Scenario[] = [
       await waitForRole(ctx.page, "listbox", true, Math.min(15000, ctx.timeoutMs))
       await pushStep(ctx, { kind: "click", target: "select-trigger" })
 
-      await ctx.page.keyboard.press("ArrowDown")
-      await ctx.page.keyboard.press("ArrowDown")
-      await ctx.page.keyboard.press("Enter")
+      await pressChord(ctx.page, ["ArrowDown", "ArrowDown", "Enter"])
       await sleep(50)
       await waitForRole(ctx.page, "listbox", false, Math.min(15000, ctx.timeoutMs))
       await pushStep(ctx, { kind: "press", key: "ArrowDown,ArrowDown,Enter" })
+    },
+  },
+  {
+    primitive: "tabs",
+    scenario: "click-second-tab",
+    item: "tabs-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      const tabs = await ctx.page.$$('[role="tab"]')
+      if (tabs.length < 2) throw new Error("expected >=2 role=tab")
+      await tabs[1]!.click()
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "tab[1]" })
+    },
+  },
+  {
+    primitive: "checkbox",
+    scenario: "toggle",
+    item: "checkbox-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      await clickFirst(ctx.page, '[role="checkbox"], input[type="checkbox"], button')
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "checkbox" })
+    },
+  },
+  {
+    primitive: "switch",
+    scenario: "toggle",
+    item: "switch-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      await clickFirst(ctx.page, '[role="switch"], button')
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "switch" })
+    },
+  },
+  {
+    primitive: "radio-group",
+    scenario: "select-second",
+    item: "radio-group-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      const radios = await ctx.page.$$('[role="radio"], input[type="radio"]')
+      if (radios.length < 2) throw new Error("expected >=2 role=radio")
+      await radios[1]!.click()
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "radio[1]" })
+    },
+  },
+  {
+    primitive: "slider",
+    scenario: "arrow-right",
+    item: "slider-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      await clickFirst(ctx.page, '[role="slider"], input[type="range"]')
+      await sleep(50)
+      await pressChord(ctx.page, ["ArrowRight", "ArrowRight"])
+      await sleep(50)
+      await pushStep(ctx, { kind: "press", key: "ArrowRight,ArrowRight" })
+    },
+  },
+  {
+    primitive: "toggle",
+    scenario: "toggle",
+    item: "toggle-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      await clickFirst(ctx.page, '[aria-pressed], button')
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "toggle" })
+    },
+  },
+  {
+    primitive: "toggle-group",
+    scenario: "select-second",
+    item: "toggle-group-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      const items = await ctx.page.$$('[aria-pressed], [role="radio"], button')
+      if (items.length < 2) throw new Error("expected >=2 toggles")
+      await items[1]!.click()
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "toggle-group[1]" })
+    },
+  },
+  {
+    primitive: "scroll-area",
+    scenario: "scroll",
+    item: "scroll-area-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      await ctx.page.evaluate(() => {
+        const el =
+          (document.querySelector("[data-radix-scroll-area-viewport]") as HTMLElement | null) ||
+          (document.querySelector('[data-state][style*=\"overflow\"]') as HTMLElement | null)
+        if (el) el.scrollTop = 80
+      })
+      await sleep(50)
+      await pushStep(ctx, { kind: "press", key: "scrollTop=80" })
+    },
+  },
+  {
+    primitive: "collapsible",
+    scenario: "toggle",
+    item: "collapsible-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      await clickFirst(ctx.page, "button")
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "collapsible-trigger" })
+    },
+  },
+  {
+    primitive: "hover-card",
+    scenario: "hover",
+    item: "hover-card-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      const trigger =
+        (await ctx.page.$("a")) ||
+        (await ctx.page.$("button")) ||
+        (await ctx.page.$("[data-state]"))
+      if (!trigger) throw new Error("missing hover-card trigger")
+      await trigger.hover()
+      await sleep(200)
+      await pushStep(ctx, { kind: "hover", target: "hover-card-trigger" })
+      await ctx.page.mouse.move(0, 0)
+      await sleep(200)
+      await pushStep(ctx, { kind: "hover", target: "mouse-away" })
+    },
+  },
+  {
+    primitive: "navigation-menu",
+    scenario: "open-close",
+    item: "navigation-menu-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+
+      // Radix NavigationMenu isn't a dialog/menu; prefer aria-expanded.
+      const trigger =
+        (await ctx.page.$('[aria-expanded="false"]')) ||
+        (await ctx.page.$("[aria-expanded]")) ||
+        (await ctx.page.$("button")) ||
+        (await ctx.page.$("a"))
+      if (!trigger) throw new Error("missing navigation-menu trigger")
+      await trigger.click()
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "navigation-menu-trigger" })
+      await press(ctx.page, "Escape")
+      await sleep(50)
+      await pushStep(ctx, { kind: "press", key: "Escape" })
+    },
+  },
+  {
+    primitive: "menubar",
+    scenario: "open-navigate-close",
+    item: "menubar-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      const items = await ctx.page.$$('[role="menubar"] [role="menuitem"], [role="menuitem"]')
+      if (items.length === 0) throw new Error("missing role=menuitem")
+      await items[0]!.click()
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "menubar-item[0]" })
+      await pressChord(ctx.page, ["ArrowDown", "Escape"])
+      await sleep(50)
+      await pushStep(ctx, { kind: "press", key: "ArrowDown,Escape" })
+    },
+  },
+  {
+    primitive: "alert-dialog",
+    scenario: "open-cancel",
+    item: "alert-dialog-example",
+    async run(ctx) {
+      await pushStep(ctx, { kind: "load", url: ctx.url })
+      await clickUntilRoleAppears(ctx.page, "button", "alertdialog", ctx.timeoutMs)
+      await sleep(50)
+      await pushStep(ctx, { kind: "click", target: "alert-dialog-trigger" })
+      await press(ctx.page, "Escape")
+      await sleep(50)
+      await pushStep(ctx, { kind: "press", key: "Escape" })
     },
   },
   {
@@ -458,21 +792,36 @@ const scenarios: Scenario[] = [
     async run(ctx) {
       await pushStep(ctx, { kind: "load", url: ctx.url })
 
-      const trigger =
-        (await ctx.page.$('[aria-describedby]')) ||
-        (await ctx.page.$('[data-state]')) ||
-        (await ctx.page.$('button')) ||
-        (await ctx.page.$('a'))
-      if (!trigger) throw new Error("missing tooltip trigger")
-      await trigger.hover()
+      const triggerSelector =
+        '[data-slot="tooltip-trigger"], button, a, [aria-describedby], [data-state]'
+      await hoverUntilRoleAppears(ctx.page, triggerSelector, "tooltip", ctx.timeoutMs).catch(
+        async () => {
+          // Some Radix Tooltip variants may not render role=tooltip; fall back to shadcn data-slot.
+          await ctx.page.hover('[data-slot="tooltip-trigger"]')
+          await waitForSelectorPresent(
+            ctx.page,
+            '[data-slot="tooltip-content"], [data-slot="tooltip-arrow"]',
+            true,
+            Math.min(15000, ctx.timeoutMs)
+          )
+        }
+      )
       await sleep(150)
-      await waitForRole(ctx.page, "tooltip", true, Math.min(15000, ctx.timeoutMs))
       await pushStep(ctx, { kind: "hover", target: "tooltip-trigger" })
 
-      await ctx.page.mouse.move(0, 0)
+      await press(ctx.page, "Escape")
       await sleep(150)
-      await waitForRole(ctx.page, "tooltip", false, Math.min(15000, ctx.timeoutMs))
-      await pushStep(ctx, { kind: "hover", target: "mouse-away" })
+      await waitForRole(ctx.page, "tooltip", false, Math.min(15000, ctx.timeoutMs)).catch(
+        async () => {
+          await waitForSelectorPresent(
+            ctx.page,
+            '[data-slot="tooltip-content"], [data-slot="tooltip-arrow"]',
+            false,
+            Math.min(15000, ctx.timeoutMs)
+          )
+        }
+      )
+      await pushStep(ctx, { kind: "press", key: "Escape" })
     },
   },
 ]
@@ -516,53 +865,26 @@ const timeoutMs =
       "60000"
   ) || 60000
 
-const theme =
-  (typeof flags.theme === "string" ? flags.theme : undefined) ??
-  (process.env.THEME as Theme | undefined) ??
-  "light"
-
-const config = {
-  base: "radix",
-  style:
-    (typeof flags.style === "string" ? flags.style : undefined) ??
-    process.env.STYLE ??
-    "vega",
-  baseColor:
-    (typeof flags.baseColor === "string" ? flags.baseColor : undefined) ??
-    process.env.BASE_COLOR ??
-    "neutral",
-  theme:
-    (typeof flags.dsTheme === "string" ? flags.dsTheme : undefined) ??
-    process.env.DS_THEME ??
-    "neutral",
-  radius:
-    (typeof flags.radius === "string" ? flags.radius : undefined) ??
-    process.env.RADIUS ??
-    "default",
-  font:
-    (typeof flags.font === "string" ? flags.font : undefined) ??
-    process.env.FONT ??
-    "inter",
-  iconLibrary:
-    (typeof flags.iconLibrary === "string" ? flags.iconLibrary : undefined) ??
-    process.env.ICON_LIBRARY ??
-    "lucide",
-  menuAccent:
-    (typeof flags.menuAccent === "string" ? flags.menuAccent : undefined) ??
-    process.env.MENU_ACCENT ??
-    "subtle",
-  menuColor:
-    (typeof flags.menuColor === "string" ? flags.menuColor : undefined) ??
-    process.env.MENU_COLOR ??
-    "default",
-}
+const theme: Theme =
+  ((typeof flags.theme === "string" ? flags.theme : undefined) ??
+    (process.env.THEME as Theme | undefined) ??
+    "light") === "dark"
+    ? "dark"
+    : "light"
 
 function selectedScenarios(): Scenario[] {
   if (!all) {
     const wanted = new Set(names)
     if (wanted.size === 0) {
       return scenarios.filter((s) =>
-        ["dialog-example", "select-example", "dropdown-menu-example"].includes(s.item)
+        [
+          "dialog-example",
+          "popover-example",
+          "dropdown-menu-example",
+          "select-example",
+          "tabs-example",
+          "tooltip-example",
+        ].includes(s.item)
       )
     }
     return scenarios.filter((s) => wanted.has(s.item) || wanted.has(s.primitive))
@@ -570,10 +892,89 @@ function selectedScenarios(): Scenario[] {
   return scenarios
 }
 
+async function loadDefaultDesignSystemConfig(repoRoot: string) {
+  const configPath = path.join(
+    repoRoot,
+    "repo-ref",
+    "ui",
+    "apps",
+    "v4",
+    "registry",
+    "config.ts"
+  )
+  if (!fs.existsSync(configPath)) return null
+  try {
+    const mod = await import(pathToFileURL(configPath).href)
+    return (mod as any).DEFAULT_CONFIG ?? null
+  } catch {
+    return null
+  }
+}
+
 async function main() {
   const puppeteer = await loadPuppeteer()
   ensureDir(outDir)
   const executablePath = resolveBrowserExecutablePath()
+
+  const upstreamDefault = await loadDefaultDesignSystemConfig(repoRoot)
+  const defaultConfig =
+    upstreamDefault && typeof upstreamDefault === "object"
+      ? upstreamDefault
+      : {
+          base: "radix",
+          style: "vega",
+          baseColor: "neutral",
+          theme: "neutral",
+          radius: "default",
+          font: "inter",
+          iconLibrary: "lucide",
+          menuAccent: "subtle",
+          menuColor: "default",
+        }
+
+  const config = {
+    base: "radix",
+    style:
+      (typeof flags.style === "string" ? flags.style : undefined) ??
+      process.env.STYLE ??
+      defaultConfig.style ??
+      "vega",
+    baseColor:
+      (typeof flags.baseColor === "string" ? flags.baseColor : undefined) ??
+      process.env.BASE_COLOR ??
+      defaultConfig.baseColor ??
+      "neutral",
+    theme:
+      (typeof flags.dsTheme === "string" ? flags.dsTheme : undefined) ??
+      process.env.DS_THEME ??
+      defaultConfig.theme ??
+      "neutral",
+    radius:
+      (typeof flags.radius === "string" ? flags.radius : undefined) ??
+      process.env.RADIUS ??
+      defaultConfig.radius ??
+      "default",
+    font:
+      (typeof flags.font === "string" ? flags.font : undefined) ??
+      process.env.FONT ??
+      defaultConfig.font ??
+      "inter",
+    iconLibrary:
+      (typeof flags.iconLibrary === "string" ? flags.iconLibrary : undefined) ??
+      process.env.ICON_LIBRARY ??
+      defaultConfig.iconLibrary ??
+      "lucide",
+    menuAccent:
+      (typeof flags.menuAccent === "string" ? flags.menuAccent : undefined) ??
+      process.env.MENU_ACCENT ??
+      defaultConfig.menuAccent ??
+      "subtle",
+    menuColor:
+      (typeof flags.menuColor === "string" ? flags.menuColor : undefined) ??
+      process.env.MENU_COLOR ??
+      defaultConfig.menuColor ??
+      "default",
+  }
 
   const selected = selectedScenarios()
   console.log("?? radix web behavior goldens")

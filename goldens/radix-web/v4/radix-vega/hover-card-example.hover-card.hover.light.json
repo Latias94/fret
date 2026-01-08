@@ -1,0 +1,887 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "hover-card-example",
+  "primitive": "hover-card",
+  "scenario": "hover",
+  "url": "http://localhost:4020/preview/radix/hover-card-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/hover-card-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "top"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "right"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "bottom"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "left"
+                                    }
+                                  ],
+                                  "text": "toprightbottomleft"
+                                }
+                              ],
+                              "text": "toprightbottomleft"
+                            }
+                          ],
+                          "text": "Sidestoprightbottomleft"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_3_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "SidestoprightbottomleftIn DialogOpen Dialog"
+                    }
+                  ],
+                  "text": "SidestoprightbottomleftIn DialogOpen Dialog"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "hover-card-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Sides"
+            },
+            {
+              "role": "button",
+              "name": "Top"
+            },
+            {
+              "role": "button",
+              "name": "Right"
+            },
+            {
+              "role": "button",
+              "name": "Bottom"
+            },
+            {
+              "role": "button",
+              "name": "Left"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "hover",
+        "target": "hover-card-trigger"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-state": "open"
+                                      },
+                                      "children": [],
+                                      "text": "top"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "right"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "bottom"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "left"
+                                    }
+                                  ],
+                                  "text": "toprightbottomleft"
+                                }
+                              ],
+                              "text": "toprightbottomleft"
+                            }
+                          ],
+                          "text": "Sidestoprightbottomleft"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_3_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "SidestoprightbottomleftIn DialogOpen Dialog"
+                    }
+                  ],
+                  "text": "SidestoprightbottomleftIn DialogOpen Dialog"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                36
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    36,
+                    0
+                  ],
+                  "attrs": {
+                    "data-side": "top",
+                    "data-align": "center",
+                    "data-state": "open"
+                  },
+                  "children": [],
+                  "text": "Hover CardThis hover card appears on the top side of the trigger."
+                }
+              ],
+              "text": "Hover CardThis hover card appears on the top side of the trigger."
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "hover-card-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Sides"
+            },
+            {
+              "role": "button",
+              "name": "Top"
+            },
+            {
+              "role": "button",
+              "name": "Right"
+            },
+            {
+              "role": "button",
+              "name": "Bottom"
+            },
+            {
+              "role": "button",
+              "name": "Left"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            },
+            {
+              "role": "heading",
+              "name": "Hover Card",
+              "level": 4
+            },
+            {
+              "role": "StaticText",
+              "name": "This hover card appears on the "
+            },
+            {
+              "role": "StaticText",
+              "name": "top"
+            },
+            {
+              "role": "StaticText",
+              "name": " side of the trigger."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "hover",
+        "target": "mouse-away"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "top"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "right"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "bottom"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "left"
+                                    }
+                                  ],
+                                  "text": "toprightbottomleft"
+                                }
+                              ],
+                              "text": "toprightbottomleft"
+                            }
+                          ],
+                          "text": "Sidestoprightbottomleft"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_3_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "SidestoprightbottomleftIn DialogOpen Dialog"
+                    }
+                  ],
+                  "text": "SidestoprightbottomleftIn DialogOpen Dialog"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                36
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    36,
+                    0
+                  ],
+                  "attrs": {
+                    "data-side": "top",
+                    "data-align": "center",
+                    "data-state": "closed"
+                  },
+                  "children": [],
+                  "text": "Hover CardThis hover card appears on the top side of the trigger."
+                }
+              ],
+              "text": "Hover CardThis hover card appears on the top side of the trigger."
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "hover-card-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Sides"
+            },
+            {
+              "role": "button",
+              "name": "Top"
+            },
+            {
+              "role": "button",
+              "name": "Right"
+            },
+            {
+              "role": "button",
+              "name": "Bottom"
+            },
+            {
+              "role": "button",
+              "name": "Left"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            },
+            {
+              "role": "heading",
+              "name": "Hover Card",
+              "level": 4
+            },
+            {
+              "role": "StaticText",
+              "name": "This hover card appears on the "
+            },
+            {
+              "role": "StaticText",
+              "name": "top"
+            },
+            {
+              "role": "StaticText",
+              "name": " side of the trigger."
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

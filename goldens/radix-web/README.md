@@ -16,3 +16,6 @@ Generator script:
 Run it via the shadcn app toolchain (so it can reuse `puppeteer` from `repo-ref/ui`):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/radix-web/scripts/extract-behavior.mts --all --update --baseUrl=http://localhost:4020`
+
+By default the extractor runs in `light` mode (and writes `*.light.json`). If you ever need `dark`,
+pass `--theme=dark`.

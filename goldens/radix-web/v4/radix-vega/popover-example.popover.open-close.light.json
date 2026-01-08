@@ -1,0 +1,1202 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "popover-example",
+  "primitive": "popover",
+  "scenario": "open-close",
+  "url": "http://localhost:4020/preview/radix/popover-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/popover-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_8_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Popover"
+                                }
+                              ],
+                              "text": "Open Popover"
+                            }
+                          ],
+                          "text": "BasicOpen Popover"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_9_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Popover"
+                                }
+                              ],
+                              "text": "Open Popover"
+                            }
+                          ],
+                          "text": "With FormOpen Popover"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_a_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Start"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_b_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Center"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_c_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "End"
+                                    }
+                                  ],
+                                  "text": "StartCenterEnd"
+                                }
+                              ],
+                              "text": "StartCenterEnd"
+                            }
+                          ],
+                          "text": "AlignmentsStartCenterEnd"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_d_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicOpen PopoverWith FormOpen PopoverAlignmentsStartCenterEndIn DialogOpen Dialog"
+                    }
+                  ],
+                  "text": "BasicOpen PopoverWith FormOpen PopoverAlignmentsStartCenterEndIn DialogOpen Dialog"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "popover-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Open Popover",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Form"
+            },
+            {
+              "role": "button",
+              "name": "Open Popover",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "Alignments"
+            },
+            {
+              "role": "button",
+              "name": "Start",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "button",
+              "name": "Center",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "button",
+              "name": "End",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "popover-trigger"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "div",
+          "path": [
+            43,
+            0
+          ],
+          "attrs": {
+            "data-side": "bottom",
+            "data-align": "start",
+            "data-state": "open",
+            "role": "dialog",
+            "tabindex": "-1"
+          },
+          "text": "DimensionsSet the dimensions for the layer."
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "span",
+              "path": [
+                0
+              ],
+              "attrs": {
+                "tabindex": "0"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                3
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    3,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        3,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "true",
+                                    "aria-controls": "radix-_r_8_",
+                                    "data-state": "open"
+                                  },
+                                  "children": [],
+                                  "text": "Open Popover"
+                                }
+                              ],
+                              "text": "Open Popover"
+                            }
+                          ],
+                          "text": "BasicOpen Popover"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_9_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Popover"
+                                }
+                              ],
+                              "text": "Open Popover"
+                            }
+                          ],
+                          "text": "With FormOpen Popover"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_a_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Start"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_b_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Center"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_c_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "End"
+                                    }
+                                  ],
+                                  "text": "StartCenterEnd"
+                                }
+                              ],
+                              "text": "StartCenterEnd"
+                            }
+                          ],
+                          "text": "AlignmentsStartCenterEnd"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_d_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicOpen PopoverWith FormOpen PopoverAlignmentsStartCenterEndIn DialogOpen Dialog"
+                    }
+                  ],
+                  "text": "BasicOpen PopoverWith FormOpen PopoverAlignmentsStartCenterEndIn DialogOpen Dialog"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                4
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                43
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    43,
+                    0
+                  ],
+                  "attrs": {
+                    "data-side": "bottom",
+                    "data-align": "start",
+                    "data-state": "open",
+                    "role": "dialog",
+                    "tabindex": "-1"
+                  },
+                  "children": [],
+                  "text": "DimensionsSet the dimensions for the layer."
+                }
+              ],
+              "text": "DimensionsSet the dimensions for the layer."
+            },
+            {
+              "tag": "span",
+              "path": [
+                44
+              ],
+              "attrs": {
+                "tabindex": "0"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "popover-example - shadcn/ui",
+          "children": [
+            {
+              "role": "generic",
+              "name": ""
+            },
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Open Popover",
+              "expanded": true,
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Form"
+            },
+            {
+              "role": "button",
+              "name": "Open Popover",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "Alignments"
+            },
+            {
+              "role": "button",
+              "name": "Start",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "button",
+              "name": "Center",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "button",
+              "name": "End",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            },
+            {
+              "role": "dialog",
+              "name": "",
+              "focused": true,
+              "children": [
+                {
+                  "role": "StaticText",
+                  "name": "Dimensions"
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Set the dimensions for the layer."
+                }
+              ]
+            },
+            {
+              "role": "generic",
+              "name": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "press",
+        "key": "Escape"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0
+          ],
+          "attrs": {
+            "aria-haspopup": "dialog",
+            "aria-expanded": "false",
+            "aria-controls": "radix-_r_8_",
+            "data-state": "closed"
+          },
+          "text": "Open Popover"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_8_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Popover"
+                                }
+                              ],
+                              "text": "Open Popover"
+                            }
+                          ],
+                          "text": "BasicOpen Popover"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_9_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Popover"
+                                }
+                              ],
+                              "text": "Open Popover"
+                            }
+                          ],
+                          "text": "With FormOpen Popover"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_a_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Start"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_b_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Center"
+                                    },
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_c_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "End"
+                                    }
+                                  ],
+                                  "text": "StartCenterEnd"
+                                }
+                              ],
+                              "text": "StartCenterEnd"
+                            }
+                          ],
+                          "text": "AlignmentsStartCenterEnd"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_d_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicOpen PopoverWith FormOpen PopoverAlignmentsStartCenterEndIn DialogOpen Dialog"
+                    }
+                  ],
+                  "text": "BasicOpen PopoverWith FormOpen PopoverAlignmentsStartCenterEndIn DialogOpen Dialog"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "popover-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "button",
+              "name": "Open Popover",
+              "focused": true,
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Form"
+            },
+            {
+              "role": "button",
+              "name": "Open Popover",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "Alignments"
+            },
+            {
+              "role": "button",
+              "name": "Start",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "button",
+              "name": "Center",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "button",
+              "name": "End",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
