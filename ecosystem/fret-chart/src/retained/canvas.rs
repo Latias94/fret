@@ -1529,6 +1529,43 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             });
         }
 
+        if let Some((x_axis, _y_axis)) = self.primary_axes()
+            && self.engine.state().data_window_x.get(&x_axis).is_some()
+            && self
+                .engine
+                .state()
+                .data_window_x_filter_mode
+                .get(&x_axis)
+                .copied()
+                .unwrap_or_default()
+                == FilterMode::None
+        {
+            let label = "Y bounds: global (M)";
+            let text_style = TextStyle {
+                size: Px(11.0),
+                weight: FontWeight::NORMAL,
+                ..TextStyle::default()
+            };
+            let constraints = TextConstraints {
+                max_width: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                scale_factor: cx.scale_factor,
+            };
+            let (blob, _metrics) = cx.services.text().prepare(label, &text_style, constraints);
+
+            let plot = self.last_layout.plot;
+            let pad = 6.0f32;
+            let order = DrawOrder(self.style.draw_order.0.saturating_add(9_050));
+            cx.scene.push(SceneOp::Text {
+                order,
+                origin: Point::new(Px(plot.origin.x.0 + pad), Px(plot.origin.y.0 + pad)),
+                text: blob,
+                color: self.style.axis_tick_color,
+            });
+            self.tooltip_text.push(blob);
+        }
+
         let pointer_pos = self.last_pointer_pos;
         let hover_hit = self.engine.output().hover;
 
