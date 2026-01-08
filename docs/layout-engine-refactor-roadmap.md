@@ -116,7 +116,7 @@ Acceptance:
 
 ## Open Decisions (Track Here)
 
-1. **"Contents-like" wrappers**: which primitives can opt in, validation rules, and how this interacts with ADR 0117 (no Slot/`asChild` prop merging).
+1. **"Contents-like" wrappers**: **Decision (v1)**: no general-purpose contents-like / `Slot/asChild` prop merging (ADR 0117). Prefer GPUI-aligned single-root components; if needed later, add a restricted, validated "layout-transparent wrapper" opt-in (layout-only, no prop merging).
 2. **Root solve orchestration**: which roots we precompute (viewport only vs additional layer roots) and the required ordering relative to overlay roots (ADR 0011, ADR 0064).
 3. **Engine cache keys + invalidation**: exact environment keys for measurement caching (scale factor, theme revision, font stack key, model revisions).
 4. **Rounding policy**: whether/where to enable engine-level pixel rounding, and how it composes with hit-testing and paint.

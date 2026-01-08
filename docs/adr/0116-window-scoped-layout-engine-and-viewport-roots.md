@@ -84,11 +84,19 @@ This ADR is intended to refine and extend existing accepted contracts, not contr
 6. Wrapper handling:
    - By default, typed wrappers with `LayoutStyle` (opacity, semantics, focus scope, interactivity
      gate, paint-only transforms) are represented as layout boxes in the Taffy tree.
-   - An explicit "contents-like" opt-in mode may be introduced to avoid additional boxes for
-     Radix-aligned `asChild` composition, subject to strict validation (single-child, no geometry-
-     affecting layout properties).
-     - Note: this is strictly about layout box introduction/removal. It must not imply a general
-       Slot/`asChild` prop-merging mechanism; see ADR 0117.
+   - Fret does **not** provide a general-purpose "display: contents" or Radix-style `Slot/asChild`
+     prop-merging mechanism (ADR 0117). We do not attempt to arbitrarily "retarget" interaction,
+     semantics, or layout props onto an unknown child element.
+   - Instead, authoring should follow a GPUI-aligned shape:
+     - choose a single typed root that owns layout + hit-testing + interactivity + a11y (most
+       commonly `Pressable` / `Semantics` / `Container`),
+     - treat "slots" as content slots, not "element substitution" slots.
+   - If a real need emerges to avoid extra layout boxes in *very specific* compositions, we may
+     introduce a **restricted** "layout-transparent wrapper" opt-in:
+     - strictly about layout box introduction/removal (no prop merging),
+     - validated constraints (single-child, `position: static`, and no geometry-affecting layout
+       properties like padding/margin/size/min/max/overflow/transform/flex/grid),
+     - debug/test builds must fail fast when validation is violated.
 7. Measurement cycle policy:
    - Debug/test builds treat re-entrancy/cycles as a bug (panic/assert with diagnostic data).
    - Release builds must not crash; they use a safe fallback policy (exact fallback defined in ADR
@@ -238,7 +246,8 @@ Debug surfaces:
 - Viewport roots are registered by docking barriers once their definite rects are known, stored in
   a per-frame root list, and consumed during compute/apply.
 - Wrapper nodes: any node with layout-affecting properties is represented in the engine tree;
-  skipping boxes requires an explicit validated contents-like opt-in (see ADR 0117).
+  skipping boxes is not supported by default; any future "layout-transparent wrapper" must be an
+  explicit validated opt-in and must not imply Slot/`asChild` prop merging (ADR 0117).
 - Overlays: default to window-scoped overlay roots that position via post-apply bounds queries (ADR
   0011); add per-viewport overlay roots only for concrete perf/correctness needs.
 - Root solve order: solve roots in window root z-order, but viewport roots never participate in a
@@ -261,3 +270,4 @@ Debug surfaces:
 - Frame lifecycle: `docs/adr/0015-frame-lifecycle-and-submission-order.md`
 - Refactor progress tracker: `docs/layout-engine-refactor-roadmap.md`
 - GPUI reference: `repo-ref/zed/crates/gpui/src/window.rs`, `repo-ref/zed/crates/gpui/src/taffy.rs`
+  (see also `repo-ref/zed/crates/gpui/src/elements/div.rs`, `repo-ref/zed/crates/ui/src/components/tab.rs`)
