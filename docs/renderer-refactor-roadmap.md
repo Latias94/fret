@@ -11,6 +11,11 @@ Primary ADR:
 - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
 - Effect semantics ADR: `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
 - Budgets + degradation ADR: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
+- Streaming image/video ingestion ADR: `docs/adr/0121-streaming-images-and-video-surfaces.md`
+- Offscreen capture/readback ADR: `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`
+- Streaming upload budgets ADR: `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
+- Renderer capabilities ADR: `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
+- Extensibility ADR: `docs/adr/0125-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
 
 ## Goals
 
@@ -137,6 +142,23 @@ These should be written once the M0 substrate is in place, before scaling effect
 
 4) **WebGPU/mobile constraints**
    - Required feature set, fallbacks, and performance expectations.
+
+## Adjacent Scenarios (Design Targets)
+
+These scenarios are not separate goals; they are the reason the substrate ADRs exist.
+
+- **GameView / engine viewport**
+  - Path: `RenderTargetId` + `SceneOp::ViewportSurface` (ADR 0007 / ADR 0038).
+- **Video playback UI / scrubbing / thumbnails**
+  - Path: streaming `ImageId` updates with backpressure (ADR 0121 / ADR 0123).
+- **Remote desktop / cloud editor previews**
+  - Same as video ingestion, plus partial updates/stride support (ADR 0121).
+- **Screenshots / recording / golden tests**
+  - Path: offscreen render + readback via effects/events (ADR 0122).
+- **User/plugin GPU-heavy panels**
+  - Path: external pipelines render to `RenderTargetId` (ADR 0125 tier A).
+- **Portable stylized UI effects**
+  - Path: effect layers + renderer-enforced budgets/degradation (ADR 0119 / ADR 0120).
 
 ## P0 Recommendations (Default Positions)
 

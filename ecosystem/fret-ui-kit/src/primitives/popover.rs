@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, SemanticsProps};
+use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -259,6 +259,27 @@ pub fn popover_request_with_anchor(
         request.dismissable_branches.push(anchor);
     }
     request
+}
+
+/// Layout used for a Radix-like popover modal barrier element.
+///
+/// This is a re-export of the shared modal barrier layout from `primitives::dialog`.
+pub fn popover_modal_barrier_layout() -> LayoutStyle {
+    dialog_prim::modal_barrier_layout()
+}
+
+/// Builds a full-window modal barrier for Radix-like popover overlays.
+///
+/// This is a thin wrapper over `primitives::dialog::modal_barrier` so non-shadcn users can reuse
+/// the same "hide others + block outside pointer events" outcome without depending on dialog
+/// primitives.
+pub fn popover_modal_barrier<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    dismiss_on_press: bool,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    dialog_prim::modal_barrier(cx, open, dismiss_on_press, children)
 }
 
 /// Convenience helper to assemble modal popover overlay children in a Radix-like order: barrier

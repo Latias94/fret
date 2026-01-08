@@ -23,6 +23,21 @@ ADR or adding a new ADR) before scaling feature surface area.
 
 ### P0 (Lock before scaling the UI kit)
 
+- **Renderer v3: postprocessing substrate + effect semantics**
+  - Drafts: `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`,
+    `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
+  - Decide: public effect ops shape, ordering/clip/transform rules, and integration with the renderer plan.
+
+- **Renderer budgets (intermediates + streaming uploads)**
+  - Drafts: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`,
+    `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
+  - Decide: accounting scopes, deterministic degradation rules, and observability requirements.
+
+- **Streaming surfaces + capture**
+  - Drafts: `docs/adr/0121-streaming-images-and-video-surfaces.md`,
+    `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`
+  - Decide: minimal pixel-format/metadata vocabulary, coalescing keys, and capability-gated fast paths.
+
 - **Font discovery + user font loading + stable IDs**
   - Update: `docs/adr/0029-text-pipeline-and-atlas-strategy.md`, `docs/adr/0014-settings-and-configuration-files.md`
   - Decide: persistence format (store family + features + fallbacks, never numeric `FontId`), and invalidation/revision semantics when font DB changes.
@@ -231,6 +246,11 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
 - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
 - `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
+- `docs/adr/0121-streaming-images-and-video-surfaces.md`
+- `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`
+- `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
+- `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
+- `docs/adr/0125-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
 - `docs/adr/0096-renderer-perf-snapshot-and-stress-harness.md`
 
 ## Platform (`fret-platform`)

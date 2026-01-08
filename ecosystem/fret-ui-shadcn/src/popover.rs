@@ -15,7 +15,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -287,16 +286,14 @@ impl Popover {
                 let dialog_id_for_trigger = dialog_id_for_trigger.clone();
                 let modal = self.modal;
                 let open_for_barrier = self.open.clone();
-                let barrier_options =
-                    radix_dialog::DialogOptions::default().dismiss_on_overlay_press(true);
                 let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                     let anchor = overlay::anchor_bounds_for_element(cx, anchor_id);
                     let Some(anchor) = anchor else {
                         if modal {
-                            return vec![radix_dialog::modal_barrier(
+                            return vec![radix_popover::popover_modal_barrier(
                                 cx,
                                 open_for_barrier.clone(),
-                                barrier_options.dismiss_on_overlay_press,
+                                true,
                                 Vec::new(),
                             )];
                         }
@@ -427,10 +424,9 @@ impl Popover {
                     );
 
                     if modal {
-                        radix_dialog::modal_dialog_layer_children(
+                        radix_popover::popover_modal_layer_children(
                             cx,
                             open_for_barrier.clone(),
-                            barrier_options,
                             Vec::new(),
                             overlay_content,
                         )
