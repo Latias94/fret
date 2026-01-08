@@ -149,6 +149,38 @@ fn remove_group_detaches_child_nodes_and_inverts() {
 }
 
 #[test]
+fn set_node_size_roundtrips_through_invert_transaction() {
+    let mut graph = Graph::default();
+    let node_id = NodeId::new();
+    graph.nodes.insert(node_id, make_node("core.a"));
+
+    let tx = GraphTransaction {
+        label: Some("Resize".to_string()),
+        ops: vec![GraphOp::SetNodeSize {
+            id: node_id,
+            from: None,
+            to: Some(crate::core::CanvasSize {
+                width: 333.0,
+                height: 222.0,
+            }),
+        }],
+    };
+
+    apply_transaction(&mut graph, &tx).expect("apply");
+    assert_eq!(
+        graph.nodes.get(&node_id).unwrap().size,
+        Some(crate::core::CanvasSize {
+            width: 333.0,
+            height: 222.0,
+        })
+    );
+
+    let undo = invert_transaction(&tx);
+    apply_transaction(&mut graph, &undo).expect("undo apply");
+    assert_eq!(graph.nodes.get(&node_id).unwrap().size, None);
+}
+
+#[test]
 fn set_node_data_roundtrips_through_invert_transaction() {
     let mut graph = Graph::default();
     let node = NodeId::new();

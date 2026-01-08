@@ -932,6 +932,7 @@ Node explicit size semantics (locked):
 - `Node.size` is interpreted as a **semantic size in logical px at zoom=1**.
   - Geometry conversion divides by `zoom` so the node remains readable under semantic zoom.
   - When `None`, the editor derives size from measured geometry or style defaults.
+- The node resize interaction (NodeResizer) writes `Node.size` via `GraphOp::SetNodeSize`.
 
 ## Consequences
 

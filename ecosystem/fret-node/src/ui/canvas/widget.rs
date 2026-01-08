@@ -49,8 +49,10 @@ mod hover;
 mod left_click;
 mod marquee;
 mod node_drag;
+mod node_resize;
 mod pan_zoom;
 mod pending_drag;
+mod pending_resize;
 mod pointer_up;
 mod right_click;
 mod searcher;
@@ -297,6 +299,13 @@ impl NodeGraphCanvas {
             && pos.y.0 >= rect.origin.y.0
             && pos.x.0 <= rect.origin.x.0 + rect.size.width.0
             && pos.y.0 <= rect.origin.y.0 + rect.size.height.0
+    }
+
+    fn resize_handle_rect(&self, node_rect: Rect, zoom: f32) -> Rect {
+        let size = (self.style.resize_handle_size / zoom).max(1.0 / zoom.max(1.0e-6));
+        let x = node_rect.origin.x.0 + node_rect.size.width.0 - size;
+        let y = node_rect.origin.y.0 + node_rect.size.height.0 - size;
+        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(size), Px(size)))
     }
 
     fn sync_view_state<H: UiHost>(&mut self, host: &mut H) -> ViewSnapshot {
@@ -1153,90 +1162,8 @@ impl NodeGraphCanvas {
         }
     }
 
-    fn node_order(&self, graph: &Graph, snapshot: &ViewSnapshot) -> Vec<GraphNodeId> {
-        let mut seen: HashSet<GraphNodeId> = HashSet::new();
-        let mut out: Vec<GraphNodeId> = Vec::new();
-
-        for id in &snapshot.draw_order {
-            if graph.nodes.contains_key(id) && seen.insert(*id) {
-                out.push(*id);
-            }
-        }
-
-        for id in graph.nodes.keys() {
-            if seen.insert(*id) {
-                out.push(*id);
-            }
-        }
-
-        out
-    }
-
-    fn node_ports<'a>(&self, graph: &'a Graph, node: GraphNodeId) -> (Vec<PortId>, Vec<PortId>) {
-        let Some(n) = graph.nodes.get(&node) else {
-            return (Vec::new(), Vec::new());
-        };
-        let mut inputs: Vec<PortId> = Vec::new();
-        let mut outputs: Vec<PortId> = Vec::new();
-        for port_id in &n.ports {
-            let Some(p) = graph.ports.get(port_id) else {
-                continue;
-            };
-            match p.dir {
-                PortDirection::In => inputs.push(*port_id),
-                PortDirection::Out => outputs.push(*port_id),
-            }
-        }
-        (inputs, outputs)
-    }
-
-    fn node_height(&self, inputs: usize, outputs: usize, zoom: f32) -> f32 {
-        let rows = inputs.max(outputs) as f32;
-        let base = self.style.node_header_height + 2.0 * self.style.node_padding;
-        let pin_area = rows * self.style.pin_row_height;
-        (base + pin_area) / zoom
-    }
-
-    fn node_rect(&self, graph: &Graph, node: GraphNodeId, zoom: f32) -> Option<Rect> {
-        let n = graph.nodes.get(&node)?;
-        let (inputs, outputs) = self.node_ports(graph, node);
-        let w = self.style.node_width / zoom;
-        let h = self.node_height(inputs.len(), outputs.len(), zoom);
-        Some(Rect::new(
-            Point::new(Px(n.pos.x), Px(n.pos.y)),
-            Size::new(Px(w), Px(h)),
-        ))
-    }
-
-    fn port_center(
-        &self,
-        graph: &Graph,
-        node: GraphNodeId,
-        port: PortId,
-        zoom: f32,
-    ) -> Option<Point> {
-        let rect = self.node_rect(graph, node, zoom)?;
-        let (inputs, outputs) = self.node_ports(graph, node);
-        let Some(p) = graph.ports.get(&port) else {
-            return None;
-        };
-
-        let row = match p.dir {
-            PortDirection::In => inputs.iter().position(|id| *id == port)?,
-            PortDirection::Out => outputs.iter().position(|id| *id == port)?,
-        } as f32;
-
-        let x = match p.dir {
-            PortDirection::In => rect.origin.x.0,
-            PortDirection::Out => rect.origin.x.0 + rect.size.width.0,
-        };
-
-        let y = rect.origin.y.0
-            + (self.style.node_header_height + self.style.node_padding) / zoom
-            + (row + 0.5) * (self.style.pin_row_height / zoom);
-
-        Some(Point::new(Px(x), Px(y)))
-    }
+    // NOTE: Node bounds and port anchors must come from derived geometry (`CanvasGeometry`),
+    // not ad-hoc layout guesses. See ADR 0106.
 
     fn hit_port(
         &self,
@@ -2856,6 +2783,7 @@ impl NodeGraphCanvas {
     fn pick_reconnect_endpoint(
         &self,
         graph: &Graph,
+        geom: &CanvasGeometry,
         edge_id: EdgeId,
         pos: Point,
         reconnect_radius_screen: f32,
@@ -2863,14 +2791,8 @@ impl NodeGraphCanvas {
     ) -> Option<(EdgeEndpoint, PortId)> {
         let edge = graph.edges.get(&edge_id)?;
 
-        let from_center = {
-            let from = graph.ports.get(&edge.from)?;
-            self.port_center(graph, from.node, edge.from, zoom)
-        };
-        let to_center = {
-            let to = graph.ports.get(&edge.to)?;
-            self.port_center(graph, to.node, edge.to, zoom)
-        };
+        let from_center = geom.port_center(edge.from);
+        let to_center = geom.port_center(edge.to);
 
         let (from_center, to_center) = match (from_center, to_center) {
             (Some(a), Some(b)) => (a, b),
@@ -2902,24 +2824,6 @@ impl NodeGraphCanvas {
         } else {
             Some((EdgeEndpoint::To, edge.from))
         }
-    }
-
-    fn hit_node(
-        &self,
-        graph: &Graph,
-        pos: Point,
-        node_order: &[GraphNodeId],
-        zoom: f32,
-    ) -> Option<GraphNodeId> {
-        for node in node_order.iter().rev() {
-            let Some(rect) = self.node_rect(graph, *node, zoom) else {
-                continue;
-            };
-            if rect.contains(pos) {
-                return Some(*node);
-            }
-        }
-        None
     }
 
     fn prepare_wire_path(
@@ -3436,6 +3340,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     self.interaction.hover_edge = None;
                     self.interaction.pending_node_drag = None;
                     self.interaction.node_drag = None;
+                    self.interaction.pending_node_resize = None;
+                    self.interaction.node_resize = None;
                     self.interaction.wire_drag = None;
                     self.interaction.edge_drag = None;
                     self.interaction.panning = true;
@@ -3485,7 +3391,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     zoom,
                 ));
 
-                cursor::update_close_button_cursor(self, cx, &snapshot, *position, zoom);
+                cursor::update_cursors(self, cx, &snapshot, *position, zoom);
 
                 if pan_zoom::handle_panning_move(self, cx, delta) {
                     return;
@@ -3497,6 +3403,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
                 if pending_drag::handle_pending_node_drag_move(self, cx, &snapshot, *position, zoom)
                 {
+                    return;
+                }
+
+                if pending_resize::handle_pending_node_resize_move(
+                    self, cx, &snapshot, *position, zoom,
+                ) {
+                    return;
+                }
+
+                if node_resize::handle_node_resize_move(
+                    self, cx, &snapshot, *position, *modifiers, zoom,
+                ) {
                     return;
                 }
 
@@ -3968,6 +3886,18 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 border_color,
                 corner_radii: Corners::all(corner),
             });
+
+            if *is_selected {
+                let handle = self.resize_handle_rect(rect, zoom);
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(5),
+                    rect: handle,
+                    background: self.style.resize_handle_background,
+                    border: Edges::all(Px(1.0 / zoom)),
+                    border_color: self.style.resize_handle_border,
+                    corner_radii: Corners::all(Px(2.0 / zoom)),
+                });
+            }
 
             if !title.is_empty() {
                 let max_w = (rect.size.width.0 - 2.0 * title_pad).max(0.0);

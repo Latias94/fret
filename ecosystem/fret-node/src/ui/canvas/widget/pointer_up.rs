@@ -49,6 +49,32 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         return true;
     }
 
+    if let Some(resize) = canvas.interaction.node_resize.take() {
+        canvas.interaction.pending_node_resize = None;
+
+        let end = canvas
+            .graph
+            .read_ref(cx.app, |g| g.nodes.get(&resize.node).and_then(|n| n.size))
+            .ok()
+            .flatten();
+
+        if resize.start_size_opt != end {
+            canvas.history.record(crate::ops::GraphTransaction {
+                label: Some("Resize Node".to_string()),
+                ops: vec![GraphOp::SetNodeSize {
+                    id: resize.node,
+                    from: resize.start_size_opt,
+                    to: end,
+                }],
+            });
+        }
+
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
     if let Some(drag) = canvas.interaction.node_drag.take() {
         let geom = canvas.canvas_geometry(&*cx.app, snapshot);
         let parent_changes: Vec<(crate::core::NodeId, Option<GroupId>, Option<GroupId>)> = canvas
@@ -166,7 +192,15 @@ pub(super) fn handle_pointer_up<H: UiHost>(
     }
 
     if canvas.interaction.pending_node_drag.take().is_some() {
+        canvas.interaction.pending_node_resize = None;
         canvas.interaction.snap_guides = None;
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
+    if canvas.interaction.pending_node_resize.take().is_some() {
         cx.release_pointer_capture();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

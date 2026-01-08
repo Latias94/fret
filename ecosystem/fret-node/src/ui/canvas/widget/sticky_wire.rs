@@ -107,8 +107,11 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost>(
         let index = index.clone();
         this.graph
             .read_ref(cx.app, |graph| {
-                let order = this.node_order(graph, snapshot);
-                let on_node = this.hit_node(graph, position, &order, zoom).is_some();
+                let on_node = geom.order.iter().rev().any(|id| {
+                    geom.nodes
+                        .get(id)
+                        .is_some_and(|ng| ng.rect.contains(position))
+                });
                 if on_node {
                     return false;
                 }

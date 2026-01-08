@@ -23,6 +23,10 @@ pub struct NodeGraphStyle {
     pub group_background: Color,
     pub group_border: Color,
 
+    pub resize_handle_size: f32,
+    pub resize_handle_background: Color,
+    pub resize_handle_border: Color,
+
     pub pin_color_data: Color,
     pub pin_color_exec: Color,
 
@@ -117,6 +121,20 @@ impl Default for NodeGraphStyle {
                 r: 0.24,
                 g: 0.25,
                 b: 0.26,
+                a: 0.90,
+            },
+
+            resize_handle_size: 12.0,
+            resize_handle_background: Color {
+                r: 0.14,
+                g: 0.15,
+                b: 0.16,
+                a: 0.95,
+            },
+            resize_handle_border: Color {
+                r: 0.60,
+                g: 0.62,
+                b: 0.64,
                 a: 0.90,
             },
 

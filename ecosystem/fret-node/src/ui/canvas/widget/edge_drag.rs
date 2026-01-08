@@ -22,21 +22,21 @@ pub(super) fn handle_edge_drag_move<H: UiHost>(
         return false;
     }
 
-    let reconnect = {
-        let this = &*canvas;
-        this.graph
-            .read_ref(cx.app, |graph| {
-                this.pick_reconnect_endpoint(
-                    graph,
-                    drag.edge,
-                    drag.start_pos,
-                    snapshot.interaction.reconnect_radius,
-                    zoom,
-                )
-            })
-            .ok()
-            .flatten()
-    };
+    let geom = canvas.canvas_geometry(&*cx.app, snapshot);
+    let reconnect = canvas
+        .graph
+        .read_ref(cx.app, |graph| {
+            canvas.pick_reconnect_endpoint(
+                graph,
+                geom.as_ref(),
+                drag.edge,
+                drag.start_pos,
+                snapshot.interaction.reconnect_radius,
+                zoom,
+            )
+        })
+        .ok()
+        .flatten();
 
     let Some((endpoint, fixed)) = reconnect else {
         return false;
