@@ -409,6 +409,18 @@ impl ElementHostWidget {
                     return Size::new(Px(0.0), Px(0.0));
                 }
 
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
+
                 // Pass-through wrapper (layout like Opacity/VisualTransform), but with separate
                 // presence/interactivity gating handled via host widget flags.
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);

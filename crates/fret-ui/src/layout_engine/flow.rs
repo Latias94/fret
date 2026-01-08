@@ -332,6 +332,7 @@ fn passthrough_wrapper_child<H: UiHost>(
 
     let instance = element_record_for_node(app, window, node).map(|r| r.instance)?;
     match instance {
+        ElementInstance::InteractivityGate(gate) if gate.present => Some(child),
         ElementInstance::Container(_)
         | ElementInstance::Pressable(_)
         | ElementInstance::Opacity(_)
