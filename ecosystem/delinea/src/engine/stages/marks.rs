@@ -9,7 +9,9 @@ use crate::engine::lod::{
 use crate::engine::model::ChartModel;
 use crate::engine::window::{DataWindow, DataWindowX, DataWindowY};
 use crate::ids::MarkId;
-use crate::marks::{MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkTree};
+use crate::marks::{
+    MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkRectRef, MarkTree,
+};
 use crate::paint::StrokeStyleV2;
 use crate::scheduler::WorkBudget;
 use crate::spec::AxisRange;
@@ -24,6 +26,9 @@ pub struct MarksStage {
     cursor: MinMaxPerPixelCursor,
     bounds_cursor: BoundsCursor,
     bounds_accum: BoundsAccum,
+    bar_next_index: usize,
+    bar_rects_start: usize,
+    bar_node_index: Option<usize>,
     finalized: bool,
     dirty: bool,
     last_series_count: usize,
@@ -72,6 +77,9 @@ impl MarksStage {
         self.cursor = MinMaxPerPixelCursor::default();
         self.bounds_cursor = BoundsCursor::default();
         self.bounds_accum.reset();
+        self.bar_next_index = 0;
+        self.bar_rects_start = 0;
+        self.bar_node_index = None;
         self.finalized = false;
         self.dirty = false;
         self.bounds = None;
@@ -170,12 +178,15 @@ impl MarksStage {
             if self.cursor.next_index == 0
                 && self.bounds.is_none()
                 && self.bounds_cursor.next_index == 0
+                && self.bar_next_index == 0
             {
                 scratch.reset_buckets();
                 self.finalized = false;
                 self.bounds = None;
                 self.bounds_cursor = BoundsCursor::default();
                 self.bounds_accum.reset();
+                self.bar_rects_start = 0;
+                self.bar_node_index = None;
             }
 
             if self.bounds.is_none() {
@@ -224,10 +235,135 @@ impl MarksStage {
             let Some(mut bounds) = self.bounds else {
                 self.series_index += 1;
                 self.cursor.next_index = 0;
+                self.bar_next_index = 0;
+                self.bar_rects_start = 0;
+                self.bar_node_index = None;
                 self.bounds = None;
                 continue;
             };
             bounds.clamp_non_degenerate();
+
+            if series.kind == crate::spec::SeriesKind::Bar {
+                let x_axis = model.axes.get(&series.x_axis);
+                let x_window = x_axis.and_then(crate::engine::axis::category_domain_window);
+                let x_window = view_x_mapping_window.or(x_window).unwrap_or(DataWindow {
+                    min: bounds.x_min,
+                    max: bounds.x_max,
+                });
+                let mut x_window = x_window;
+                x_window.clamp_non_degenerate();
+
+                let y_window = DataWindow {
+                    min: bounds.y_min,
+                    max: bounds.y_max,
+                };
+                let mut y_window = y_window;
+                y_window.clamp_non_degenerate();
+
+                if self.bar_node_index.is_none() {
+                    if budget.take_marks(1) == 0 {
+                        return false;
+                    }
+
+                    self.bar_next_index = row_range.start;
+                    self.bar_rects_start = marks.arena.rects.len();
+                    let range = self.bar_rects_start..self.bar_rects_start;
+                    let base_order = self.series_index as u32;
+                    marks.nodes.push(MarkNode {
+                        id: series_mark_id(series.id, 0),
+                        parent: None,
+                        layer: crate::ids::LayerId(1),
+                        order: MarkOrderKey(base_order.saturating_mul(2)),
+                        kind: MarkKind::Rect,
+                        source_series: Some(series.id),
+                        payload: MarkPayloadRef::Rect(MarkRectRef {
+                            rects: range,
+                            fill: Some(crate::ids::PaintId(0)),
+                            stroke: None,
+                        }),
+                    });
+                    self.bar_node_index = Some(marks.nodes.len() - 1);
+                    marks.revision.bump();
+                    stats.marks_emitted += 1;
+                }
+
+                let row_end = row_range.end;
+                while self.bar_next_index < row_end {
+                    let points_budget = budget.take_points(4096) as usize;
+                    if points_budget == 0 {
+                        return false;
+                    }
+
+                    let chunk_end = (self.bar_next_index + points_budget).min(row_end);
+                    let baseline_data = 0.0f64;
+
+                    let x_span = x_window.span();
+                    let band_px = (viewport.size.width.0 as f64 / x_span.max(1.0)).max(1.0) as f32;
+                    let bar_w = band_px * 0.8;
+
+                    let mut rects = Vec::new();
+                    let mut indices = Vec::new();
+                    rects.reserve(chunk_end - self.bar_next_index);
+                    indices.reserve(chunk_end - self.bar_next_index);
+
+                    for i in self.bar_next_index..chunk_end {
+                        let xi = x.get(i).copied().unwrap_or(f64::NAN);
+                        let yi = y0.get(i).copied().unwrap_or(f64::NAN);
+                        if !xi.is_finite() || !yi.is_finite() {
+                            continue;
+                        }
+                        if !view_x_filter.contains(xi) {
+                            continue;
+                        }
+
+                        let tx = ((xi - x_window.min) / x_window.span()).clamp(0.0, 1.0);
+                        let ty = ((yi - y_window.min) / y_window.span()).clamp(0.0, 1.0);
+                        let ty0 =
+                            ((baseline_data - y_window.min) / y_window.span()).clamp(0.0, 1.0);
+
+                        let px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                        let px_y =
+                            viewport.origin.y.0 + (1.0 - (ty as f32)) * viewport.size.height.0;
+                        let px_y0 =
+                            viewport.origin.y.0 + (1.0 - (ty0 as f32)) * viewport.size.height.0;
+
+                        let top = px_y.min(px_y0);
+                        let bottom = px_y.max(px_y0);
+                        let h = (bottom - top).max(1.0);
+
+                        rects.push(Rect::new(
+                            Point::new(Px(px_x - 0.5 * bar_w), Px(top)),
+                            fret_core::Size::new(Px(bar_w), Px(h)),
+                        ));
+                        indices.push(i as u32);
+                    }
+
+                    if !rects.is_empty() {
+                        let range = marks.arena.extend_rects_with_indices(rects, indices);
+                        if let Some(node_index) = self.bar_node_index
+                            && let Some(node) = marks.nodes.get_mut(node_index)
+                        {
+                            let MarkPayloadRef::Rect(r) = &mut node.payload else {
+                                return false;
+                            };
+                            r.rects.end = range.end;
+                        }
+                        marks.revision.bump();
+                        stats.points_emitted += (range.end - range.start) as u64;
+                    }
+
+                    self.bar_next_index = chunk_end;
+                }
+
+                self.series_index += 1;
+                self.cursor.next_index = 0;
+                self.bar_next_index = 0;
+                self.bar_rects_start = 0;
+                self.bar_node_index = None;
+                self.bounds = None;
+                scratch.clear();
+                continue;
+            }
 
             let mut finished_scan = false;
             while !finished_scan {
@@ -370,6 +506,9 @@ impl MarksStage {
 
             self.series_index += 1;
             self.cursor.next_index = 0;
+            self.bar_next_index = 0;
+            self.bar_rects_start = 0;
+            self.bar_node_index = None;
             self.bounds = None;
             scratch.clear();
         }

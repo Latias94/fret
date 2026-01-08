@@ -78,6 +78,14 @@ fn band_requires_y2_col() {
 }
 
 #[test]
+fn bar_requires_category_x_axis() {
+    let mut spec = basic_spec();
+    spec.series[0].kind = SeriesKind::Bar;
+    let err = ChartModel::from_spec(spec).unwrap_err();
+    assert!(matches!(err, ModelError::InvalidSpec { .. }));
+}
+
+#[test]
 fn from_spec_validates_references() {
     let mut spec = basic_spec();
     spec.series[0].dataset = crate::ids::DatasetId::new(999);

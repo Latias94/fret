@@ -192,6 +192,7 @@ pub enum SeriesKind {
     Area,
     /// A filled band between `encode.y` (low) and `encode.y2` (high).
     Band,
+    Bar,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -43,6 +43,13 @@ struct CachedPath {
 }
 
 #[derive(Debug, Clone, Copy)]
+struct CachedRect {
+    rect: Rect,
+    order: u32,
+    source_series: Option<delinea::SeriesId>,
+}
+
+#[derive(Debug, Clone, Copy)]
 struct PanDrag {
     x_axis: delinea::AxisId,
     y_axis: delinea::AxisId,
@@ -88,6 +95,7 @@ pub struct ChartCanvas {
     last_marks_rev: delinea::ids::Revision,
     last_scale_factor_bits: u32,
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
+    cached_rects: Vec<CachedRect>,
     axis_text: Vec<TextBlobId>,
     tooltip_text: Vec<TextBlobId>,
     legend_text: Vec<TextBlobId>,
@@ -115,6 +123,7 @@ impl ChartCanvas {
             last_marks_rev: delinea::ids::Revision::default(),
             last_scale_factor_bits: 0,
             cached_paths: BTreeMap::default(),
+            cached_rects: Vec::default(),
             axis_text: Vec::default(),
             tooltip_text: Vec::default(),
             legend_text: Vec::default(),
@@ -858,6 +867,7 @@ impl ChartCanvas {
             cx.services.path().release(cached.stroke);
         }
         self.cached_paths.clear();
+        self.cached_rects.clear();
 
         let plot_h = self.last_layout.plot.size.height.0;
         let area_series: Vec<(delinea::SeriesId, delinea::AxisId, delinea::AreaBaseline)> = self
@@ -1077,6 +1087,28 @@ impl ChartCanvas {
                 cached.fill_alpha = Some(self.style.band_fill_color.a);
             } else {
                 cx.services.path().release(fill_path);
+            }
+        }
+
+        for node in &marks.nodes {
+            if node.kind != MarkKind::Rect {
+                continue;
+            }
+            let MarkPayloadRef::Rect(rects) = &node.payload else {
+                continue;
+            };
+            let start = rects.rects.start;
+            let end = rects.rects.end;
+            if end <= start || end > marks.arena.rects.len() {
+                continue;
+            }
+            self.cached_rects.reserve(end - start);
+            for rect in &marks.arena.rects[start..end] {
+                self.cached_rects.push(CachedRect {
+                    rect: *rect,
+                    order: node.order.0,
+                    source_series: node.source_series,
+                });
             }
         }
     }
@@ -1720,7 +1752,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         let mut unfinished = true;
         let mut steps_ran = 0u32;
         while unfinished && steps_ran < 8 && start.elapsed() < Duration::from_millis(4) {
-            let budget = if self.cached_paths.is_empty() {
+            let budget = if self.cached_paths.is_empty() && self.cached_rects.is_empty() {
                 WorkBudget::new(262_144, 0, 32)
             } else {
                 WorkBudget::new(32_768, 0, 8)
@@ -1760,6 +1792,36 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         cx.scene.push(SceneOp::PushClipRect {
             rect: self.last_layout.plot,
         });
+
+        for cached in &self.cached_rects {
+            let base_order = self
+                .style
+                .draw_order
+                .0
+                .saturating_add(cached.order.saturating_mul(4));
+
+            let mut fill_color = self.style.stroke_color;
+            if let Some(series) = cached.source_series {
+                fill_color = Self::series_color(series);
+                fill_color.a *= self.style.stroke_color.a;
+            }
+            if let Some(hover) = self.legend_hover
+                && cached.source_series.is_some()
+                && cached.source_series != Some(hover)
+            {
+                fill_color.a *= 0.25;
+            }
+            fill_color.a *= self.style.bar_fill_alpha;
+
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(base_order),
+                rect: cached.rect,
+                background: fill_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(0.0)),
+            });
+        }
 
         for cached in self.cached_paths.values() {
             let base_order = self

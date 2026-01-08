@@ -203,6 +203,18 @@ impl ChartModel {
                     reason: "series.kind=Band requires encode.y2",
                 });
             }
+            if series.kind == SeriesKind::Bar {
+                let Some(x_axis) = model.axes.get(&series.x_axis) else {
+                    return Err(ModelError::MissingReference {
+                        kind: "axis.x_axis",
+                    });
+                };
+                if !matches!(x_axis.scale, crate::scale::AxisScale::Category(_)) {
+                    return Err(ModelError::InvalidSpec {
+                        reason: "series.kind=Bar requires a Category x axis",
+                    });
+                }
+            }
             if !model.datasets.contains_key(&series.dataset) {
                 return Err(ModelError::MissingReference { kind: "dataset" });
             }

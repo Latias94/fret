@@ -40,7 +40,7 @@ pub struct MarkNode {
 pub enum MarkPayloadRef {
     Group(MarkGroup),
     Polyline(MarkPolylineRef),
-    Rect(MarkRect),
+    Rect(MarkRectRef),
     Text(MarkText),
 }
 
@@ -59,8 +59,8 @@ pub struct MarkPolylineRef {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct MarkRect {
-    pub rect: Rect,
+pub struct MarkRectRef {
+    pub rects: Range<usize>,
     pub fill: Option<PaintId>,
     pub stroke: Option<(PaintId, StrokeStyleV2)>,
 }
@@ -79,12 +79,16 @@ pub struct MarkText {
 pub struct MarkArena {
     pub points: Vec<Point>,
     pub data_indices: Vec<u32>,
+    pub rects: Vec<Rect>,
+    pub rect_data_indices: Vec<u32>,
 }
 
 impl MarkArena {
     pub fn clear(&mut self) {
         self.points.clear();
         self.data_indices.clear();
+        self.rects.clear();
+        self.rect_data_indices.clear();
     }
 
     pub fn extend_points(&mut self, points: impl IntoIterator<Item = Point>) -> Range<usize> {
@@ -104,6 +108,19 @@ impl MarkArena {
         self.data_indices.extend(indices);
         let end = self.points.len();
         debug_assert_eq!(self.data_indices.len(), self.points.len());
+        start..end
+    }
+
+    pub fn extend_rects_with_indices(
+        &mut self,
+        rects: impl IntoIterator<Item = Rect>,
+        indices: impl IntoIterator<Item = u32>,
+    ) -> Range<usize> {
+        let start = self.rects.len();
+        self.rects.extend(rects);
+        self.rect_data_indices.extend(indices);
+        let end = self.rects.len();
+        debug_assert_eq!(self.rect_data_indices.len(), self.rects.len());
         start..end
     }
 }
