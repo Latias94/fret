@@ -44,9 +44,11 @@ use crate::ui::{
 mod cancel;
 mod context_menu;
 mod edge_drag;
+mod hover;
 mod left_click;
 mod marquee;
 mod node_drag;
+mod pending_drag;
 mod pointer_up;
 mod right_click;
 mod searcher;
@@ -60,8 +62,8 @@ use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::state::{
     ContextMenuState, ContextMenuTarget, GeometryCache, GeometryCacheKey, InteractionState,
-    InternalsCacheKey, MarqueeDrag, NodeDrag, PendingPaste, SearcherState, ToastState,
-    ViewSnapshot, WireDrag, WireDragKind,
+    InternalsCacheKey, MarqueeDrag, PendingPaste, SearcherState, ToastState, ViewSnapshot,
+    WireDrag, WireDragKind,
 };
 use super::workflow;
 
@@ -3472,38 +3474,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if self.interaction.node_drag.is_none() {
-                    if let Some(pending) = self.interaction.pending_node_drag.clone() {
-                        let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
-                        let threshold_graph = threshold_screen / zoom;
-                        let dx = position.x.0 - pending.start_pos.x.0;
-                        let dy = position.y.0 - pending.start_pos.y.0;
-                        if threshold_graph <= 0.0
-                            || dx * dx + dy * dy >= threshold_graph * threshold_graph
-                        {
-                            self.interaction.pending_node_drag = None;
-                            let start_nodes = self
-                                .graph
-                                .read_ref(cx.app, |g| {
-                                    pending
-                                        .nodes
-                                        .iter()
-                                        .copied()
-                                        .filter_map(|id| g.nodes.get(&id).map(|n| (id, n.pos)))
-                                        .collect::<Vec<_>>()
-                                })
-                                .ok()
-                                .unwrap_or_default();
-                            self.interaction.node_drag = Some(NodeDrag {
-                                primary: pending.primary,
-                                nodes: start_nodes,
-                                grab_offset: pending.grab_offset,
-                                start_pos: pending.start_pos,
-                            });
-                        } else {
-                            return;
-                        }
-                    }
+                if pending_drag::handle_pending_node_drag_move(self, cx, &snapshot, *position, zoom)
+                {
+                    return;
                 }
 
                 if node_drag::handle_node_drag_move(
@@ -3530,32 +3503,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                let new_hover = {
-                    let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
-                    let this = &*self;
-                    let index = index.clone();
-                    this.graph
-                        .read_ref(cx.app, |graph| {
-                            let mut scratch: Vec<EdgeId> = Vec::new();
-                            this.hit_edge(
-                                graph,
-                                &snapshot,
-                                geom.as_ref(),
-                                index.as_ref(),
-                                *position,
-                                zoom,
-                                &mut scratch,
-                            )
-                        })
-                        .ok()
-                        .flatten()
-                };
-
-                if self.interaction.hover_edge != new_hover {
-                    self.interaction.hover_edge = new_hover;
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
-                }
+                hover::update_hover_edge(self, cx, &snapshot, *position, zoom);
             }
             Event::Pointer(fret_core::PointerEvent::Up {
                 position, button, ..
