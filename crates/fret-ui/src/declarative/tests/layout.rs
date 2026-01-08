@@ -487,6 +487,100 @@ fn layout_viewport_root_defers_child_layout_until_after_parent() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn viewport_roots_do_not_couple_fill_layout() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root_a = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-fill-a",
+        |cx| {
+            let flex = crate::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            vec![cx.flex(flex, |cx| {
+                vec![cx.spacer(crate::element::SpacerProps::default())]
+            })]
+        },
+    );
+    let root_b = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-fill-b",
+        |cx| {
+            let flex = crate::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            vec![cx.flex(flex, |cx| {
+                vec![cx.spacer(crate::element::SpacerProps::default())]
+            })]
+        },
+    );
+
+    let viewport_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let viewport_b = Rect::new(
+        Point::new(Px(120.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(TwoViewportRects::new(viewport_a, viewport_b));
+    ui.set_children(parent, vec![root_a, root_b]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex_a = ui.children(root_a)[0];
+    let spacer_a = ui.children(flex_a)[0];
+    let a = ui
+        .debug_node_bounds(spacer_a)
+        .expect("viewport a spacer bounds");
+    assert!((a.size.width.0 - viewport_a.size.width.0).abs() < 0.01);
+    assert!((a.size.height.0 - viewport_a.size.height.0).abs() < 0.01);
+
+    let flex_b = ui.children(root_b)[0];
+    let spacer_b = ui.children(flex_b)[0];
+    let b = ui
+        .debug_node_bounds(spacer_b)
+        .expect("viewport b spacer bounds");
+    assert!((b.size.width.0 - viewport_b.size.width.0).abs() < 0.01);
+    assert!((b.size.height.0 - viewport_b.size.height.0).abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn wrapper_chain_padding_is_applied_via_engine_rects() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
