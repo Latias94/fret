@@ -1,9 +1,17 @@
 use super::super::ElementHostWidget;
-use crate::declarative::frame::{ElementInstance, element_record_for_node, layout_style_for_node};
+use crate::declarative::frame::layout_style_for_node;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 use crate::declarative::taffy_layout::*;
 use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutSize};
+
+#[cfg(feature = "layout-engine-v2")]
+use super::engine_flow::{
+    ParentLayoutKind, configure_flow_subtree, layout_children_from_engine_if_solved,
+};
+
+#[cfg(not(feature = "layout-engine-v2"))]
+use crate::declarative::frame::{ElementInstance, element_record_for_node};
 
 #[cfg(not(feature = "layout-engine-v2"))]
 use crate::layout_constraints::LayoutConstraints;
@@ -377,116 +385,16 @@ impl ElementHostWidget {
 
 #[cfg(feature = "layout-engine-v2")]
 impl ElementHostWidget {
-    fn taffy_style_for_flow_child(
-        app: &mut impl UiHost,
-        window: AppWindowId,
-        node: NodeId,
-        flex_direction: fret_core::Axis,
-        display: Display,
-    ) -> TaffyStyle {
-        let layout_style = layout_style_for_node(app, window, node);
-        let spacer_min = element_record_for_node(app, window, node).and_then(|r| {
-            if let ElementInstance::Spacer(p) = r.instance {
-                Some(p.min)
-            } else {
-                None
-            }
-        });
-
-        let mut min_w = layout_style.size.min_width.map(|p| p.0);
-        let mut min_h = layout_style.size.min_height.map(|p| p.0);
-        if let Some(min) = spacer_min {
-            let min = min.0.max(0.0);
-            match flex_direction {
-                fret_core::Axis::Horizontal => {
-                    min_w = Some(min_w.unwrap_or(0.0).max(min));
-                }
-                fret_core::Axis::Vertical => {
-                    min_h = Some(min_h.unwrap_or(0.0).max(min));
-                }
-            }
-        }
-
-        TaffyStyle {
-            display,
-            position: taffy_position(layout_style.position),
-            inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
-            size: TaffySize {
-                width: taffy_dimension(layout_style.size.width),
-                height: taffy_dimension(layout_style.size.height),
-            },
-            aspect_ratio: layout_style.aspect_ratio,
-            min_size: TaffySize {
-                width: min_w.map(Dimension::length).unwrap_or_else(Dimension::auto),
-                height: min_h.map(Dimension::length).unwrap_or_else(Dimension::auto),
-            },
-            max_size: TaffySize {
-                width: layout_style
-                    .size
-                    .max_width
-                    .map(|p| Dimension::length(p.0))
-                    .unwrap_or_else(Dimension::auto),
-                height: layout_style
-                    .size
-                    .max_height
-                    .map(|p| Dimension::length(p.0))
-                    .unwrap_or_else(Dimension::auto),
-            },
-            margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-            flex_grow: layout_style.flex.grow,
-            flex_shrink: layout_style.flex.shrink,
-            flex_basis: taffy_dimension(layout_style.flex.basis),
-            align_self: layout_style.flex.align_self.map(taffy_align_self),
-            ..Default::default()
-        }
-    }
-
-    fn engine_expand_passthrough_wrapper_flex<H: UiHost>(
-        cx: &mut LayoutCx<'_, H>,
-        window: AppWindowId,
-        node: NodeId,
-    ) -> Option<NodeId> {
-        let layout_style = layout_style_for_node(cx.app, window, node);
-        if layout_style.position != crate::element::PositionStyle::Static {
-            return None;
-        }
-        if layout_style.inset.left.is_some()
-            || layout_style.inset.right.is_some()
-            || layout_style.inset.top.is_some()
-            || layout_style.inset.bottom.is_some()
-        {
-            return None;
-        }
-
-        let children = cx.tree.children(node);
-        if children.len() != 1 {
-            return None;
-        }
-        let child = children[0];
-        let child_style = layout_style_for_node(cx.app, window, child);
-        if child_style.position != crate::element::PositionStyle::Static {
-            return None;
-        }
-
-        let instance = element_record_for_node(cx.app, window, node).map(|r| r.instance)?;
-        match instance {
-            ElementInstance::Container(_)
-            | ElementInstance::Pressable(_)
-            | ElementInstance::Opacity(_)
-            | ElementInstance::VisualTransform(_)
-            | ElementInstance::Semantics(_)
-            | ElementInstance::FocusScope(_)
-            | ElementInstance::Stack(_) => Some(child),
-            _ => None,
-        }
-    }
-
     fn layout_flex_impl_engine<H: UiHost>(
         &mut self,
         cx: &mut LayoutCx<'_, H>,
         window: AppWindowId,
         props: FlexProps,
     ) -> Size {
+        if let Some(size) = layout_children_from_engine_if_solved(cx) {
+            return size;
+        }
+
         let pad_left = props.padding.left.0.max(0.0);
         let pad_right = props.padding.right.0.max(0.0);
         let pad_top = props.padding.top.0.max(0.0);
@@ -552,74 +460,20 @@ impl ElementHostWidget {
             RuntimeAvailableSpace::Definite(inner_avail.height),
         );
 
-        let mut child_styles: Vec<(NodeId, TaffyStyle)> = Vec::with_capacity(cx.children.len());
-        let mut expanded: Vec<(NodeId, NodeId)> = Vec::new();
-        for &child in cx.children {
-            let Some(grandchild) = Self::engine_expand_passthrough_wrapper_flex(cx, window, child)
-            else {
-                let child_style = Self::taffy_style_for_flow_child(
-                    cx.app,
-                    window,
-                    child,
-                    props.direction,
-                    Display::Block,
-                );
-                child_styles.push((child, child_style));
-                continue;
-            };
-
-            let mut wrapper_style = Self::taffy_style_for_flow_child(
-                cx.app,
-                window,
-                child,
-                props.direction,
-                Display::Flex,
-            );
-            wrapper_style.flex_direction = FlexDirection::Column;
-            wrapper_style.align_items = Some(TaffyAlignItems::Stretch);
-            wrapper_style.justify_content = Some(JustifyContent::FlexStart);
-
-            if let Some(props) = element_record_for_node(cx.app, window, child).and_then(|r| {
-                if let ElementInstance::Container(p) = r.instance {
-                    Some(p)
-                } else {
-                    None
-                }
-            }) {
-                wrapper_style.padding = taffy::geometry::Rect {
-                    left: LengthPercentage::length(props.padding.left.0.max(0.0)),
-                    right: LengthPercentage::length(props.padding.right.0.max(0.0)),
-                    top: LengthPercentage::length(props.padding.top.0.max(0.0)),
-                    bottom: LengthPercentage::length(props.padding.bottom.0.max(0.0)),
-                };
-            }
-
-            child_styles.push((child, wrapper_style));
-            expanded.push((child, grandchild));
-        }
-
         let mut engine = cx.tree.take_layout_engine();
         let root_id = engine.request_layout_node(cx.node);
         engine.set_style(cx.node, root_style);
         engine.set_children(cx.node, cx.children);
-        for (child, child_style) in &child_styles {
-            engine.set_style(*child, child_style.clone());
-            engine.set_children(*child, &[]);
-            engine.set_measured(*child, true);
-        }
-        for (wrapper, grandchild) in &expanded {
-            engine.set_children(*wrapper, &[*grandchild]);
-            engine.set_measured(*wrapper, false);
-            let leaf_style = Self::taffy_style_for_flow_child(
-                cx.app,
+        for &child in cx.children {
+            configure_flow_subtree(
+                &mut engine,
+                cx,
                 window,
-                *grandchild,
-                props.direction,
-                Display::Block,
+                ParentLayoutKind::Flex {
+                    direction: props.direction,
+                },
+                child,
             );
-            engine.set_style(*grandchild, leaf_style);
-            engine.set_children(*grandchild, &[]);
-            engine.set_measured(*grandchild, true);
         }
 
         let sf = cx.scale_factor;

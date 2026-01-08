@@ -485,6 +485,170 @@ fn layout_viewport_root_defers_child_layout_until_after_parent() {
     assert!((child_bounds.size.width.0 - viewport.size.width.0).abs() < 0.01);
 }
 
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn wrapper_chain_padding_is_applied_via_engine_rects() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let flex = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            align: CrossAlign::Start,
+            ..Default::default()
+        };
+
+        let outer = crate::element::ContainerProps {
+            padding: fret_core::Edges {
+                left: Px(8.0),
+                right: Px(4.0),
+                top: Px(6.0),
+                bottom: Px(2.0),
+            },
+            ..Default::default()
+        };
+
+        vec![cx.flex(flex, |cx| {
+            vec![cx.container(outer, |cx| {
+                vec![cx.opacity(1.0, |cx| {
+                    vec![
+                        cx.semantics(crate::element::SemanticsProps::default(), |cx| {
+                            let inner = crate::element::ContainerProps {
+                                layout: crate::element::LayoutStyle {
+                                    size: crate::element::SizeStyle {
+                                        width: Length::Px(Px(10.0)),
+                                        height: Length::Px(Px(10.0)),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            };
+                            vec![cx.container(inner, |_cx| Vec::new())]
+                        }),
+                    ]
+                })]
+            })]
+        })]
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "wrapper-chain-padding",
+        build_root,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex_node = ui.children(root)[0];
+    let outer_container = ui.children(flex_node)[0];
+    let opacity = ui.children(outer_container)[0];
+    let semantics = ui.children(opacity)[0];
+    let inner_container = ui.children(semantics)[0];
+
+    let outer_bounds = ui
+        .debug_node_bounds(outer_container)
+        .expect("outer container bounds");
+    let inner_bounds = ui
+        .debug_node_bounds(inner_container)
+        .expect("inner container bounds");
+
+    assert!((inner_bounds.origin.x.0 - (outer_bounds.origin.x.0 + 8.0)).abs() < 0.01);
+    assert!((inner_bounds.origin.y.0 - (outer_bounds.origin.y.0 + 6.0)).abs() < 0.01);
+    assert!((inner_bounds.size.width.0 - 10.0).abs() < 0.01);
+    assert!((inner_bounds.size.height.0 - 10.0).abs() < 0.01);
+
+    assert!((outer_bounds.size.width.0 - (10.0 + 8.0 + 4.0)).abs() < 0.01);
+    assert!((outer_bounds.size.height.0 - (10.0 + 6.0 + 2.0)).abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn nested_flow_is_solved_once_per_island() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(120.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        let outer = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Vertical,
+            ..Default::default()
+        };
+
+        let inner = crate::element::FlexProps {
+            layout: crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Auto,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            direction: fret_core::Axis::Horizontal,
+            gap: Px(4.0),
+            ..Default::default()
+        };
+
+        vec![cx.flex(outer, |cx| {
+            vec![cx.flex(inner, |cx| vec![cx.text("hello")])]
+        })]
+    }
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "nested-flow-solve-count",
+        build_root,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let engine = ui.take_layout_engine();
+    assert_eq!(
+        engine.solve_count(),
+        1,
+        "expected nested flex subtree to be solved once as a single flow island"
+    );
+    ui.put_layout_engine(engine);
+}
+
 #[test]
 fn pressable_disabled_is_not_focusable() {
     let mut app = TestHost::new();

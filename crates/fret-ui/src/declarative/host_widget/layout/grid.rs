@@ -1,9 +1,16 @@
 use super::super::ElementHostWidget;
-use crate::declarative::frame::{ElementInstance, element_record_for_node, layout_style_for_node};
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 use crate::declarative::taffy_layout::*;
 use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutSize};
+
+#[cfg(feature = "layout-engine-v2")]
+use super::engine_flow::{
+    ParentLayoutKind, configure_flow_subtree, layout_children_from_engine_if_solved,
+};
+
+#[cfg(not(feature = "layout-engine-v2"))]
+use crate::declarative::frame::layout_style_for_node;
 
 #[cfg(not(feature = "layout-engine-v2"))]
 use crate::layout_constraints::LayoutConstraints;
@@ -241,98 +248,16 @@ impl ElementHostWidget {
 
 #[cfg(feature = "layout-engine-v2")]
 impl ElementHostWidget {
-    fn taffy_style_for_grid_child(
-        app: &mut impl UiHost,
-        window: AppWindowId,
-        node: NodeId,
-    ) -> TaffyStyle {
-        let layout_style = layout_style_for_node(app, window, node);
-        TaffyStyle {
-            display: Display::Block,
-            position: taffy_position(layout_style.position),
-            inset: taffy_rect_lpa_from_inset(layout_style.position, layout_style.inset),
-            size: TaffySize {
-                width: taffy_dimension(layout_style.size.width),
-                height: taffy_dimension(layout_style.size.height),
-            },
-            aspect_ratio: layout_style.aspect_ratio,
-            min_size: TaffySize {
-                width: layout_style
-                    .size
-                    .min_width
-                    .map(|p| Dimension::length(p.0))
-                    .unwrap_or_else(Dimension::auto),
-                height: layout_style
-                    .size
-                    .min_height
-                    .map(|p| Dimension::length(p.0))
-                    .unwrap_or_else(Dimension::auto),
-            },
-            max_size: TaffySize {
-                width: layout_style
-                    .size
-                    .max_width
-                    .map(|p| Dimension::length(p.0))
-                    .unwrap_or_else(Dimension::auto),
-                height: layout_style
-                    .size
-                    .max_height
-                    .map(|p| Dimension::length(p.0))
-                    .unwrap_or_else(Dimension::auto),
-            },
-            margin: taffy_rect_lpa_from_margin_edges(layout_style.margin),
-            grid_column: taffy_grid_line(layout_style.grid.column),
-            grid_row: taffy_grid_line(layout_style.grid.row),
-            ..Default::default()
-        }
-    }
-
-    fn engine_expand_passthrough_wrapper_grid<H: UiHost>(
-        cx: &mut LayoutCx<'_, H>,
-        window: AppWindowId,
-        node: NodeId,
-    ) -> Option<NodeId> {
-        let layout_style = layout_style_for_node(cx.app, window, node);
-        if layout_style.position != crate::element::PositionStyle::Static {
-            return None;
-        }
-        if layout_style.inset.left.is_some()
-            || layout_style.inset.right.is_some()
-            || layout_style.inset.top.is_some()
-            || layout_style.inset.bottom.is_some()
-        {
-            return None;
-        }
-
-        let children = cx.tree.children(node);
-        if children.len() != 1 {
-            return None;
-        }
-        let child = children[0];
-        let child_style = layout_style_for_node(cx.app, window, child);
-        if child_style.position != crate::element::PositionStyle::Static {
-            return None;
-        }
-
-        let instance = element_record_for_node(cx.app, window, node).map(|r| r.instance)?;
-        match instance {
-            ElementInstance::Container(_)
-            | ElementInstance::Pressable(_)
-            | ElementInstance::Opacity(_)
-            | ElementInstance::VisualTransform(_)
-            | ElementInstance::Semantics(_)
-            | ElementInstance::FocusScope(_)
-            | ElementInstance::Stack(_) => Some(child),
-            _ => None,
-        }
-    }
-
     fn layout_grid_impl_engine<H: UiHost>(
         &mut self,
         cx: &mut LayoutCx<'_, H>,
         window: AppWindowId,
         props: crate::element::GridProps,
     ) -> Size {
+        if let Some(size) = layout_children_from_engine_if_solved(cx) {
+            return size;
+        }
+
         let pad_left = props.padding.left.0.max(0.0);
         let pad_right = props.padding.right.0.max(0.0);
         let pad_top = props.padding.top.0.max(0.0);
@@ -401,50 +326,8 @@ impl ElementHostWidget {
             engine.set_style(cx.node, root_style);
             engine.set_children(cx.node, cx.children);
 
-            let mut expanded: Vec<(NodeId, NodeId)> = Vec::new();
             for &child in cx.children {
-                let Some(grandchild) =
-                    Self::engine_expand_passthrough_wrapper_grid(cx, window, child)
-                else {
-                    let child_style = Self::taffy_style_for_grid_child(cx.app, window, child);
-                    engine.set_style(child, child_style);
-                    engine.set_children(child, &[]);
-                    engine.set_measured(child, true);
-                    continue;
-                };
-
-                let mut wrapper_style = Self::taffy_style_for_grid_child(cx.app, window, child);
-                wrapper_style.display = Display::Flex;
-                wrapper_style.flex_direction = FlexDirection::Column;
-                wrapper_style.align_items = Some(TaffyAlignItems::Stretch);
-                wrapper_style.justify_content = Some(JustifyContent::FlexStart);
-
-                if let Some(props) = element_record_for_node(cx.app, window, child).and_then(|r| {
-                    if let ElementInstance::Container(p) = r.instance {
-                        Some(p)
-                    } else {
-                        None
-                    }
-                }) {
-                    wrapper_style.padding = taffy::geometry::Rect {
-                        left: LengthPercentage::length(props.padding.left.0.max(0.0)),
-                        right: LengthPercentage::length(props.padding.right.0.max(0.0)),
-                        top: LengthPercentage::length(props.padding.top.0.max(0.0)),
-                        bottom: LengthPercentage::length(props.padding.bottom.0.max(0.0)),
-                    };
-                }
-
-                engine.set_style(child, wrapper_style);
-                engine.set_children(child, &[grandchild]);
-                engine.set_measured(child, false);
-                expanded.push((child, grandchild));
-            }
-
-            for (_wrapper, grandchild) in &expanded {
-                let leaf_style = Self::taffy_style_for_grid_child(cx.app, window, *grandchild);
-                engine.set_style(*grandchild, leaf_style);
-                engine.set_children(*grandchild, &[]);
-                engine.set_measured(*grandchild, true);
+                configure_flow_subtree(&mut engine, cx, window, ParentLayoutKind::Grid, child);
             }
 
             let sf = cx.scale_factor;
