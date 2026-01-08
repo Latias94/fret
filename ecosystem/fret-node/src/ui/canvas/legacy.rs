@@ -46,6 +46,7 @@ mod context_menu;
 mod edge_drag;
 mod marquee;
 mod node_drag;
+mod pointer_up;
 mod searcher;
 mod sticky_wire;
 mod wire_drag;
@@ -3882,89 +3883,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             Event::Pointer(fret_core::PointerEvent::Up {
                 position, button, ..
             }) => {
-                self.interaction.last_pos = Some(*position);
-                self.interaction.last_canvas_pos = Some(Self::screen_to_canvas(
-                    cx.bounds,
-                    *position,
-                    snapshot.pan,
-                    zoom,
-                ));
-
-                if *button == MouseButton::Left
-                    && self.interaction.sticky_wire_ignore_next_up
-                    && self.interaction.wire_drag.is_some()
-                {
-                    self.interaction.sticky_wire_ignore_next_up = false;
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                if pointer_up::handle_pointer_up(self, cx, &snapshot, *position, *button, zoom) {
                     return;
-                }
-
-                if *button == MouseButton::Middle && self.interaction.panning {
-                    self.interaction.panning = false;
-                    cx.release_pointer_capture();
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
-                    return;
-                }
-
-                if *button == MouseButton::Left {
-                    if marquee::handle_left_up(self, cx) {
-                        return;
-                    }
-
-                    if let Some(drag) = self.interaction.node_drag.take() {
-                        let ops = self
-                            .graph
-                            .read_ref(cx.app, |g| {
-                                drag.nodes
-                                    .iter()
-                                    .filter_map(|(id, start)| {
-                                        let end = g.nodes.get(id).map(|n| n.pos)?;
-                                        (end != *start).then_some(GraphOp::SetNodePos {
-                                            id: *id,
-                                            from: *start,
-                                            to: end,
-                                        })
-                                    })
-                                    .collect::<Vec<_>>()
-                            })
-                            .ok()
-                            .unwrap_or_default();
-                        if !ops.is_empty() {
-                            let label = if ops.len() == 1 {
-                                "Move Node"
-                            } else {
-                                "Move Nodes"
-                            };
-                            self.history.record(GraphTransaction {
-                                label: Some(label.to_string()),
-                                ops,
-                            });
-                        }
-                        self.interaction.pending_node_drag = None;
-                        self.interaction.snap_guides = None;
-                        cx.release_pointer_capture();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                        return;
-                    }
-
-                    if self.interaction.pending_node_drag.take().is_some() {
-                        self.interaction.snap_guides = None;
-                        cx.release_pointer_capture();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                        return;
-                    }
-
-                    if wire_drag::handle_wire_left_up(self, cx, &snapshot, zoom) {
-                        return;
-                    }
-
-                    if edge_drag::handle_edge_left_up(self, cx) {
-                        return;
-                    }
                 }
             }
             Event::Pointer(fret_core::PointerEvent::Wheel {
