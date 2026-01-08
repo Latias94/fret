@@ -17,6 +17,7 @@ mod util;
 
 mod buffers;
 mod config;
+mod intermediate_pool;
 mod pipelines;
 mod render_plan;
 mod render_scene;
@@ -27,6 +28,7 @@ mod svg;
 #[cfg(test)]
 mod tests;
 
+use intermediate_pool::*;
 use path::*;
 use render_plan::*;
 use types::*;
@@ -104,7 +106,6 @@ pub struct Renderer {
     path_vertex_capacity: usize,
 
     path_intermediate: Option<PathIntermediate>,
-    offscreen_target: Option<OffscreenTarget>,
     path_composite_vertices: wgpu::Buffer,
 
     text_system: TextSystem,
@@ -131,6 +132,7 @@ pub struct Renderer {
 
     path_msaa_samples: u32,
     debug_offscreen_blit_enabled: bool,
+    intermediate_pool: IntermediatePool,
 
     render_targets: RenderTargetRegistry,
     images: ImageRegistry,

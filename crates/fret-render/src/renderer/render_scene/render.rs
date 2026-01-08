@@ -78,7 +78,6 @@ impl Renderer {
 
         if self.debug_offscreen_blit_enabled {
             self.ensure_blit_pipeline(device, format);
-            self.ensure_offscreen_target(device, viewport_size, format);
         }
         let scene_target = if self.debug_offscreen_blit_enabled {
             PlanTarget::Offscreen0
@@ -86,6 +85,12 @@ impl Renderer {
             PlanTarget::Output
         };
         let plan = RenderPlan::compile_for_scene(&encoding, clear.0, path_samples, scene_target);
+
+        let mut offscreen = if self.debug_offscreen_blit_enabled {
+            Some(self.acquire_offscreen_target(device, viewport_size, format))
+        } else {
+            None
+        };
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
@@ -163,8 +168,7 @@ impl Renderer {
                     let pass_target_view = match scene_pass.target {
                         PlanTarget::Output => target_view,
                         PlanTarget::Offscreen0 => {
-                            &self
-                                .offscreen_target
+                            &offscreen
                                 .as_ref()
                                 .expect("offscreen target must exist")
                                 .view
@@ -508,8 +512,7 @@ impl Renderer {
                     let pass_target_view = match path_pass.target {
                         PlanTarget::Output => target_view,
                         PlanTarget::Offscreen0 => {
-                            &self
-                                .offscreen_target
+                            &offscreen
                                 .as_ref()
                                 .expect("offscreen target must exist")
                                 .view
@@ -691,10 +694,7 @@ impl Renderer {
                         .blit_pipeline
                         .as_ref()
                         .expect("blit pipeline must exist");
-                    let offscreen = self
-                        .offscreen_target
-                        .as_ref()
-                        .expect("offscreen target must exist");
+                    let offscreen = offscreen.as_ref().expect("offscreen target must exist");
 
                     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: Some("fret blit pass"),
@@ -721,6 +721,10 @@ impl Renderer {
 
         let cmd = encoder.finish();
 
+        if let Some(offscreen) = offscreen.take() {
+            self.intermediate_pool.release(offscreen.texture);
+        }
+
         // Keep the most recent encoding for potential reuse on the next frame.
         if cache_hit {
             self.scene_encoding_cache_key = Some(key);
@@ -729,35 +733,24 @@ impl Renderer {
         cmd
     }
 
-    fn ensure_offscreen_target(
+    fn acquire_offscreen_target(
         &mut self,
         device: &wgpu::Device,
         viewport_size: (u32, u32),
         format: wgpu::TextureFormat,
-    ) {
-        if self
-            .offscreen_target
-            .as_ref()
-            .is_some_and(|t| t.size == viewport_size && t.format == format)
-        {
-            return;
-        }
-
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("fret offscreen target"),
-            size: wgpu::Extent3d {
-                width: viewport_size.0.max(1),
-                height: viewport_size.1.max(1),
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
+    ) -> OffscreenTarget {
+        let usage = wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING;
+        let texture = self.intermediate_pool.acquire_texture(
+            device,
+            "fret offscreen target",
+            viewport_size,
             format,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        });
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+            usage,
+            1,
+        );
+        let view = texture
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
         let layout = self
             .blit_bind_group_layout
@@ -772,12 +765,16 @@ impl Renderer {
             }],
         });
 
-        self.offscreen_target = Some(OffscreenTarget {
-            size: viewport_size,
-            format,
+        OffscreenTarget {
+            texture,
             view,
             blit_bind_group,
-            _texture: texture,
-        });
+        }
     }
+}
+
+struct OffscreenTarget {
+    texture: PooledTexture,
+    view: wgpu::TextureView,
+    blit_bind_group: wgpu::BindGroup,
 }

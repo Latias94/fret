@@ -242,14 +242,6 @@ pub(super) struct PathIntermediate {
     pub(super) bind_group: wgpu::BindGroup,
 }
 
-pub(super) struct OffscreenTarget {
-    pub(super) size: (u32, u32),
-    pub(super) format: wgpu::TextureFormat,
-    pub(super) view: wgpu::TextureView,
-    pub(super) blit_bind_group: wgpu::BindGroup,
-    pub(super) _texture: wgpu::Texture,
-}
-
 pub(super) enum OrderedDraw {
     Quad(DrawCall),
     Viewport(ViewportDraw),
