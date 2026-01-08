@@ -11,9 +11,6 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) {
-        #[cfg(feature = "layout-engine-v2")]
-        self.layout_engine.begin_frame();
-
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
             self.debug_stats.frame_id = app.frame_id();
@@ -27,6 +24,54 @@ impl<H: UiHost> UiTree<H> {
             .visible_layers_in_paint_order()
             .map(|layer| self.layers[layer].root)
             .collect();
+
+        #[cfg(feature = "layout-engine-v2")]
+        {
+            self.layout_engine.begin_frame(app.frame_id());
+
+            let window = self.window;
+            if window.is_some() {
+                let engine = &mut self.layout_engine;
+                let nodes = &self.nodes;
+
+                let mut stack: Vec<NodeId> = Vec::new();
+                for &root in &roots {
+                    stack.push(root);
+                }
+
+                let mut edges: Vec<(NodeId, Vec<NodeId>)> = Vec::new();
+                let mut visited: std::collections::HashSet<NodeId> =
+                    std::collections::HashSet::new();
+                while let Some(node) = stack.pop() {
+                    if !visited.insert(node) {
+                        continue;
+                    }
+                    let children = nodes
+                        .get(node)
+                        .map(|n| n.children.clone())
+                        .unwrap_or_default();
+                    for &child in &children {
+                        stack.push(child);
+                    }
+                    edges.push((node, children));
+                }
+
+                for (node, children) in &edges {
+                    engine.request_layout_node(*node);
+                    engine.set_children(*node, children);
+                }
+
+                let available = crate::layout_constraints::LayoutSize::new(
+                    AvailableSpace::Definite(bounds.size.width),
+                    AvailableSpace::Definite(bounds.size.height),
+                );
+                for &root in &roots {
+                    if let Some(id) = engine.layout_id_for_node(root) {
+                        engine.compute_root(id, available);
+                    }
+                }
+            }
+        }
         for root in roots {
             let _ = self.layout_in(app, services, root, bounds, scale_factor);
         }
