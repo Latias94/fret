@@ -41,6 +41,7 @@ Proposed variant (shape is normative; naming may be adjusted to match code style
   - `window: Option<AppWindowId>,`
   - `token: ImageUpdateToken,`
   - `image: ImageId,`
+  - `stream_generation: u64,`
   - `width: u32, height: u32,`
   - `update_rect_px: Option<RectPx>,`
   - `bytes_per_row: u32,`
@@ -61,6 +62,7 @@ Notes:
 v1 reserves explicit variants for common decoder outputs so we can add efficient paths without redesign:
 
 - `Effect::ImageUpdateNv12 { ... }`
+  - `stream_generation: u64`
   - Y plane: `y_bytes_per_row`, `y_plane: Vec<u8>`
   - UV plane: `uv_bytes_per_row`, `uv_plane: Vec<u8>`
   - `update_rect_px: Option<RectPx>` (applies to luma; chroma rect derived by subsampling rules)
@@ -68,6 +70,7 @@ v1 reserves explicit variants for common decoder outputs so we can add efficient
   - `alpha_mode: AlphaMode` (typically opaque)
 
 - `Effect::ImageUpdateI420 { ... }`
+  - `stream_generation: u64`
   - Y/U/V planes and per-plane stride
   - same metadata fields
 
@@ -122,10 +125,12 @@ Normative key for v1:
 
 Where:
 
-- `stream_generation: u64` is provided by the app and increments when the stream “resets” (seek, format change,
-  source change). This prevents stale pending updates from an earlier stream from being applied after a reset.
+- `stream_generation: u64` is a required field on update effects and increments when the stream “resets” (seek,
+  format change, source change). This prevents stale pending updates from an earlier stream from being applied
+  after a reset.
 
-If `stream_generation` is omitted in implementation v1, it must be treated as `0` with documented consequences.
+`stream_generation=0` is valid and means “no explicit reset semantics”; apps that need robust seek/reset behavior
+should increment it.
 
 ### 5) Size/format changes: stable `ImageId`, replace underlying storage
 
@@ -162,4 +167,3 @@ This must be capability-gated to avoid flooding the event loop in normal playbac
 - Streaming surfaces overview: `docs/adr/0121-streaming-images-and-video-surfaces.md`
 - Upload budgets/backpressure: `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
 - Color/compositing: `docs/adr/0040-color-management-and-compositing-contracts.md`
-

@@ -244,7 +244,7 @@ This checklist is a suggested decomposition for implementation. Items may move a
 ### M3: Budgets + observability hardening
 
 - Implement per-window budgets and deterministic degradation order (ADR 0120).
-- Add budget configuration plumbing (source of truth TBD: debug config first, settings later).
+- Add budget configuration plumbing (start with debug/config overrides; later integrate with settings).
 - Add stress harnesses that validate:
   - peak intermediate bytes remain bounded,
   - degradations are deterministic across runs.

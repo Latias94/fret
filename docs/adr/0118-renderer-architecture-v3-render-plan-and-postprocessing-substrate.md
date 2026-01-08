@@ -66,7 +66,8 @@ Design intent:
 
 `fret-render` will maintain an internal intermediate texture pool that supports:
 
-- allocation by `(size, format, usage, sample_count, view_count)` (exact key TBD),
+- allocation keyed by the effective `wgpu::TextureDescriptor` (excluding `label`), i.e.
+  `(extent_2d_px, format, usage, sample_count, mip_level_count=1, dimension=2D, array_layers)` (v1: `array_layers=1`),
 - reuse across frames to avoid per-frame `wgpu::Device::create_texture` churn,
 - eviction / budget enforcement (future work; required before enabling heavy effects by default).
 

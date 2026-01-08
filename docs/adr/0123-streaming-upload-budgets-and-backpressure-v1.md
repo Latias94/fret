@@ -22,7 +22,7 @@ We need deterministic guardrails that keep the UI responsive while preserving co
 
 The runner/renderer enforces upload budgets per window:
 
-- max bytes uploaded per rendered frame (or per second; exact unit TBD),
+- max bytes uploaded per rendered frame (normative for v1),
 - max staging bytes retained for pending updates.
 
 Optionally, apps may configure per-stream caps for fairness (implementation-defined in v1).
@@ -36,7 +36,7 @@ Note:
 
 v1 requirements:
 
-- Coalesce updates per streaming image (`ImageId`) (ADR 0121).
+- Coalesce updates per streaming image generation `(ImageId, stream_generation)` (ADR 0126 / ADR 0121).
 - Bound pending staging memory:
   - if exceeded, drop older pending updates first,
   - keep the most recent update when possible (latest-wins).

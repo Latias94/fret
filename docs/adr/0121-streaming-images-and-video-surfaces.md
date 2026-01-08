@@ -81,7 +81,7 @@ Streaming frames can arrive faster than the UI render cadence and must not creat
 
 Contract (v1):
 
-- Frame updates are **coalescible** by `(ImageId, stream_generation)` (exact key TBD).
+- Frame updates are **coalescible** by `(ImageId, stream_generation)` (locked by ADR 0126).
 - The renderer/runner may drop intermediate frames and keep only the most recent pending update per image.
 - If an update is dropped, the UI must remain correct (it only affects visual freshness, not state).
 
@@ -186,16 +186,16 @@ This section describes a likely implementation placement consistent with ADR 009
 ### `ImageId` streaming path (decoder-owned)
 
 - **Effect definitions** (`crates/fret-runtime`):
-  - add `Effect` variants for streaming updates (names TBD), e.g.:
-    - `ImageUpdateRgba8 { image: ImageId, width, height, bytes_per_row, bytes, color_info }`
-    - `ImageUpdateNv12 { image: ImageId, ... }`
-    - `ImageUpdateI420 { image: ImageId, ... }`
-  - define these updates as coalescible (latest-wins).
+  - add `Effect` variants for streaming updates (see ADR 0126), e.g.:
+    - `Effect::ImageUpdateRgba8 { image: ImageId, stream_generation: u64, ... }`
+    - `Effect::ImageUpdateNv12 { image: ImageId, stream_generation: u64, ... }`
+    - `Effect::ImageUpdateI420 { image: ImageId, stream_generation: u64, ... }`
+  - define these updates as coalescible (latest-wins) by `(ImageId, stream_generation)` (ADR 0126).
 - **App runtime** (`crates/fret-app`):
   - remains the owner of effect queues and tick/frame scheduling (ADR 0001 / ADR 0034).
 - **Runner** (`crates/fret-launch`, and web runner equivalents):
   - drains image update effects,
-  - coalesces updates per `ImageId`,
+  - coalesces updates per `(ImageId, stream_generation)` (ADR 0126),
   - uploads to GPU via renderer APIs,
   - requests redraw for the relevant window when appropriate.
 - **Renderer** (`crates/fret-render`):
@@ -216,11 +216,9 @@ Wasm notes:
 
 ## Follow-up Work
 
-- Add a dedicated ADR (or extend existing ones) to lock the exact `Effect` variants and data shapes for:
-  - `ImageUpdateRgba8`,
-  - `ImageUpdateNv12` / `ImageUpdateI420`,
-  - optional shared-buffer/zero-copy ingestion.
-- Add a budget policy for streaming upload bandwidth and staging memory (separate from intermediate pool budgets in ADR 0120).
+- Lock the streaming update data model and metadata vocabulary (done: ADR 0126).
+- Add a budget policy for streaming upload bandwidth and staging memory (done: ADR 0123).
+- Add optional shared-buffer/zero-copy ingestion paths (capability-gated; see ADR 0124 / ADR 0125).
 
 ## References
 

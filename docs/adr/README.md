@@ -24,17 +24,17 @@ ADR or adding a new ADR) before scaling feature surface area.
 ### P0 (Lock before scaling the UI kit)
 
 - **Renderer v3: postprocessing substrate + effect semantics**
-  - Drafts: `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`,
+  - Proposed: `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`,
     `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
   - Decide: public effect ops shape, ordering/clip/transform rules, and integration with the renderer plan.
 
 - **Renderer budgets (intermediates + streaming uploads)**
-  - Drafts: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`,
+  - Proposed: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`,
     `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
   - Decide: accounting scopes, deterministic degradation rules, and observability requirements.
 
 - **Streaming surfaces + capture**
-  - Drafts: `docs/adr/0121-streaming-images-and-video-surfaces.md`,
+  - Proposed: `docs/adr/0121-streaming-images-and-video-surfaces.md`,
     `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`
   - Decide: minimal pixel-format/metadata vocabulary, coalescing keys, and capability-gated fast paths.
 

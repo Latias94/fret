@@ -80,7 +80,7 @@ Frame capture requests are potentially expensive (GPU→CPU readback).
 
 v1 requirements:
 
-- requests must be coalescible by `(window, token)` (exact coalescing rules TBD),
+- requests must be coalescible by `(window, token)` with latest-wins semantics (ADR 0127),
 - the runner must enforce bounded in-flight captures per window,
 - if the system is overloaded, requests may be delayed or failed deterministically.
 

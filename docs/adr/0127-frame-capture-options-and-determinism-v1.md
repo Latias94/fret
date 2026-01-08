@@ -102,6 +102,22 @@ Capture readback is expensive; v1 requires:
 - deterministic failure or delay behavior,
 - observability counters in debug/perf snapshots.
 
+#### 3.1) Coalescing key and semantics (latest-wins per token)
+
+Capture requests must be coalescible (ADR 0122) with a stable, portable key.
+
+Normative key for v1:
+
+- Coalesce by `(window, token)`
+
+Semantics:
+
+- If multiple `FrameCaptureRequest` effects arrive with the same key before a capture is executed, the runner may
+  replace older pending requests with the newest one (latest-wins).
+- If a request is already in-flight and a newer request with the same key arrives, the runner may drop the older
+  result and only emit the newest result (still tagged by `token`).
+- Apps that require a result for every request must use unique tokens per request (no coalescing).
+
 ### 4) Relationship to budgets and degradations
 
 By default, capture reflects the **actual composed output**, including any budget-driven degradations (ADR 0120 / ADR 0123).
@@ -131,4 +147,3 @@ The contract remains:
 - Budgets/degradation: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`,
   `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
 - Capabilities: `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
-
