@@ -15,7 +15,7 @@ pub fn row_range_for_x_filter(values: &[f64], base: RowRange, filter: AxisFilter
     base
 }
 
-fn row_range_for_x_window(values: &[f64], base: RowRange, window: DataWindowX) -> RowRange {
+pub fn row_range_for_x_window(values: &[f64], base: RowRange, window: DataWindowX) -> RowRange {
     let mut base = base;
     base.clamp_to_len(values.len());
     if base.is_empty() {

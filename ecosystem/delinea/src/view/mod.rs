@@ -1,6 +1,7 @@
 use crate::data::{DataTable, DatasetStore};
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
+use crate::engine::window_policy::FilterMode;
 use crate::ids::{AxisId, DatasetId, Revision, SeriesId};
 use crate::transform::{RowSelection, SeriesXPolicy, series_x_policy};
 
@@ -151,9 +152,20 @@ impl ViewState {
                 .map(|a| a.range)
                 .unwrap_or_default();
             let state_window = state.data_window_x.get(&series.x_axis).copied();
-            let x_policy = series_x_policy(x_axis_range, state_window);
-            let row_range =
-                crate::transform::row_range_for_x_filter(x, base_range, x_policy.filter);
+            let filter_mode = state
+                .data_window_x_filter_mode
+                .get(&series.x_axis)
+                .copied()
+                .unwrap_or_default();
+            let x_policy = series_x_policy(x_axis_range, state_window, filter_mode);
+
+            let row_range = if filter_mode == FilterMode::Filter
+                && let Some(window) = x_policy.mapping_window
+            {
+                crate::transform::row_range_for_x_window(x, base_range, window)
+            } else {
+                base_range
+            };
 
             self.series.push(SeriesView {
                 series: *series_id,

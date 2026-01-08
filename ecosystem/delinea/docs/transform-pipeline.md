@@ -34,15 +34,24 @@ Semantics:
 Given:
 
 - `base_range`: the dataset-local row range (or full dataset),
-- `x_filter`: the allowed X constraint,
+- `mapping window`: the X window used for coordinate mapping (`AxisRange::Fixed` or `data_window_x`),
+- `x_filter`: the X constraint used for bounds filtering,
 
-we derive a continuous `RowRange` for the series:
+we derive a continuous `RowRange` (stored as `RowSelection::Range`) for the series:
 
 - `transform/x_slice.rs`:
-  - `row_range_for_x_filter(x_values, base_range, x_filter)` → `RowRange`
+  - `row_range_for_x_window(x_values, base_range, window)` → `RowRange`
 
 When the X column is probably monotonic, we use binary search (`partition_point`) for O(log n)
 slicing. Otherwise we fall back to a linear scan to find the first/last matching row.
+
+### Filter mode (P0)
+
+We also support a minimal filter mode toggle for `data_window_x`:
+
+- `FilterMode::Filter` (default): row slicing uses the mapping window, and bounds/LOD are filtered to the window.
+- `FilterMode::None`: row slicing does not apply the window (only dataset row constraints do), and bounds are global.
+  This is more expensive, but can be useful when users want zoomed X without re-scaling Y.
 
 ## Why this is not a full transform system yet
 
@@ -69,4 +78,3 @@ However, many ECharts transforms are not representable as a single range:
 3. Move `dataZoom` / `filterMode` into a transform node rather than hard-coding it into view logic.
 
 The intent is to keep the engine deterministic and testable while staying performant on large datasets.
-

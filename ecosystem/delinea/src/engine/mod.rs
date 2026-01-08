@@ -35,6 +35,8 @@ pub struct ChartState {
     pub link: LinkConfig,
     pub data_window_x: BTreeMap<crate::ids::AxisId, window::DataWindowX>,
     pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
+    pub data_window_x_filter_mode:
+        BTreeMap<crate::ids::AxisId, crate::engine::window_policy::FilterMode>,
     pub hover_px: Option<Point>,
     pub dataset_row_ranges: BTreeMap<crate::ids::DatasetId, crate::view::RowRange>,
 }
@@ -163,6 +165,15 @@ impl ChartEngine {
                     self.state.data_window_y.insert(axis, window);
                 } else {
                     self.state.data_window_y.remove(&axis);
+                }
+                self.state.revision.bump();
+                self.marks_stage.mark_dirty();
+            }
+            Action::SetDataWindowXFilterMode { axis, mode } => {
+                if let Some(mode) = mode {
+                    self.state.data_window_x_filter_mode.insert(axis, mode);
+                } else {
+                    self.state.data_window_x_filter_mode.remove(&axis);
                 }
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();

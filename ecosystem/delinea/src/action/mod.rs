@@ -1,6 +1,7 @@
 use fret_core::Point;
 
 use crate::engine::window::{DataWindowX, DataWindowY};
+use crate::engine::window_policy::FilterMode;
 use crate::ids::{AxisId, DatasetId, LinkGroupId, SeriesId};
 use crate::view::RowRange;
 
@@ -20,6 +21,10 @@ pub enum Action {
     SetDataWindowY {
         axis: AxisId,
         window: Option<DataWindowY>,
+    },
+    SetDataWindowXFilterMode {
+        axis: AxisId,
+        mode: Option<FilterMode>,
     },
     SetViewWindow2D {
         x_axis: AxisId,

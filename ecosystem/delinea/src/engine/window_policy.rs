@@ -1,6 +1,17 @@
 use crate::engine::window::DataWindow;
 use crate::spec::AxisRange;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum FilterMode {
+    #[default]
+    Filter,
+    None,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct AxisFilter1D {
     pub min: Option<f64>,
@@ -32,7 +43,11 @@ impl AxisFilter1D {
     }
 }
 
-pub fn axis_filter_1d(range: AxisRange, state_window: Option<DataWindow>) -> AxisFilter1D {
+pub fn axis_filter_1d(
+    range: AxisRange,
+    state_window: Option<DataWindow>,
+    filter_mode: FilterMode,
+) -> AxisFilter1D {
     let mut out = AxisFilter1D::default();
 
     match range {
@@ -41,7 +56,9 @@ pub fn axis_filter_1d(range: AxisRange, state_window: Option<DataWindow>) -> Axi
             out.max = Some(max);
         }
         AxisRange::Auto | AxisRange::LockMin { .. } | AxisRange::LockMax { .. } => {
-            if let Some(mut w) = state_window {
+            if filter_mode == FilterMode::Filter
+                && let Some(mut w) = state_window
+            {
                 w.clamp_non_degenerate();
                 out.min = Some(w.min);
                 out.max = Some(w.max);
@@ -70,7 +87,7 @@ pub fn axis_mapping_window_1d(
     range: AxisRange,
     state_window: Option<DataWindow>,
 ) -> Option<DataWindow> {
-    let filter = axis_filter_1d(range, state_window);
+    let filter = axis_filter_1d(range, state_window, FilterMode::Filter);
 
     match range {
         AxisRange::Fixed { .. } => filter.as_window(),
