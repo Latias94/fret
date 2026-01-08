@@ -27,9 +27,9 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 | `option` | `ChartSpec` | 🟨 | We support a subset focused on cartesian 2D line-family charts. |
 | `dataset` | `DatasetSpec` + `DatasetStore` | 🟨 | Field-to-column mapping is explicit via `FieldId` and `SeriesEncode`. |
 | `encode` | `SeriesEncode` | ✅ | `x`, `y`, `y2` (for bands). |
-| `series` | `SeriesSpec` (`SeriesKind`) | 🟨 | Currently `Line`, `Area`, `Band`. |
+| `series` | `SeriesSpec` (`SeriesKind`) | 🟨 | Currently `Line`, `Area`, `Band`, `Bar`. |
 | `grid` | `GridSpec` | 🟨 | Single-grid usage is primary; multi-grid is possible but not exercised. |
-| `xAxis/yAxis` | `AxisSpec` + `AxisRange` | 🟨 | `Auto/LockMin/LockMax/Fixed` supported; `Category` axis is the next P0 (ADR 0113). |
+| `xAxis/yAxis` | `AxisSpec` + `AxisScale` + `AxisRange` | 🟨 | `Value/Category` scales; `Auto/LockMin/LockMax/Fixed` constraints. |
 | `axisPointer` | `AxisPointerSpec` | 🟨 | `trigger=Item` and `trigger=Axis` supported (cartesian X). |
 | `tooltip` | `AxisPointerOutput.tooltip` | 🟨 | Headless-generated structured lines; styling/layout in UI. |
 | `legend` | `fret-chart` legend overlay | 🟨 | Basic list + visibility toggles; no paging/scrolling yet. |
@@ -42,9 +42,10 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 |---|---:|---|
 | `line` | ✅ | `SeriesKind::Line` |
 | `area` (line with areaStyle) | ✅ | `SeriesKind::Area` + `AreaBaseline` |
+| `band` (custom, common in finance) | ✅ | `SeriesKind::Band` (`encode.y` + `encode.y2`) |
 | `line` + `stack` | ❌ | Needs stacking transform + baseline rules. |
 | `scatter` | ❌ | Needs point marks + hit test + style. |
-| `bar` | ❌ | Needs rect marks + category axis + layout. |
+| `bar` | ✅ | `SeriesKind::Bar` (requires Category X axis in v1). |
 | `candlestick` | ❌ | Needs OHLC encode + mark layout. |
 | `heatmap` | ❌ | Needs 2D binning + texture/mesh strategy. |
 | `boxplot` | ❌ | Needs statistical transforms + marks. |
@@ -98,10 +99,11 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 ## Known Gaps (High Priority Candidates)
 
 1. Multi-axis / multiple y-axes (layout + mapping + label policy).
-2. Category axis (required for bar/stacked charts and many ECharts examples).
+2. Stacking transforms (stacked bars/areas) and derived columns.
 3. Scatter/point marks and richer hit testing.
-4. Styling/theming surface (colors, line styles, per-series overrides, legends/tooltip formatters).
-5. `dataZoom` slider UI + Y-axis zoom (and 2D brush/selection).
+4. Time/log scales + tick formatting policies.
+5. Styling/theming surface (colors, line styles, per-series overrides, legends/tooltip formatters).
+6. `dataZoom` slider UI + Y-axis zoom (and 2D brush/selection).
 
 ## References
 
