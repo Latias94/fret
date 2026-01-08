@@ -855,6 +855,61 @@ We require:
   - derived internals are never serialized into the graph asset,
   - editor view state is stored separately and can be excluded from VCS if desired.
 
+### 20) Editor interaction contract checklist (implementation-oriented)
+
+This section is intentionally implementation-oriented and exists to prevent "death by missing small
+details" when we claim parity with mature editors (XyFlow / ImGui Node Editor / ShaderGraph / Snarl).
+It is a checklist of **hard-to-change interaction contracts**. We expect to implement these
+incrementally, but we want to lock the semantics early to avoid later rewrites.
+
+MVP (v1) must provide:
+
+- **Two-phase connect handshake** (ImGui `BeginCreate/QueryNewLink/AcceptNewItem` mental model):
+  - during drag: expose a stable "in-progress connection" preview (from, to, candidate, validity),
+  - on release: emit a single "commit decision point" that either applies a `GraphTransaction` or
+    cancels without side effects.
+- **Reconnect as first-class** (XyFlow `reconnectEdge` mental model):
+  - reconnection is distinct from new connection creation,
+  - reconnection preserves `EdgeId` when the domain allows it (see rules `ConnectPlan`),
+  - reconnection supports both “single edge” and “yank many” flows (Snarl multi-connection).
+- **Connection modes** (XyFlow `ConnectionMode`):
+  - `Strict`: source->target only,
+  - `Loose`: allow same-side connections, resolved by closest compatible port within a configurable
+    screen-space radius.
+- **Edge interaction width** (XyFlow `interactionWidth`):
+  - edge hit-testing must use a separate "interaction width" (screen-space) independent of visual
+    stroke width to keep selection usable at all zoom levels.
+- **Auto-pan while connecting**:
+  - while dragging a wire near viewport edges, pan the canvas (speed and threshold are style knobs).
+- **Viewport helpers**:
+  - `fit_view` / `frame_selection` must exist and be deterministic given derived geometry.
+- **Derived geometry is authoritative for hit-testing**:
+  - node bounds, port anchors, and edge paths must come from the measured geometry store or
+    presenter-provided fallback, never from ad-hoc per-frame layout guesses.
+
+Soon (parity targets we should design for now):
+
+- **Parent/child (subflow) constraints** (XyFlow `parentId` + `nodeExtent` mental model):
+  - define whether we model this as `Group` bounds, a "frame node kind", or both,
+  - enforce movement extents and prevent overlap across unrelated parents.
+- **Node resizing** (XyFlow `NodeResizer` mental model):
+  - decide where "explicit size" lives (graph vs extension vs view-state) and how it composes with
+    parent extents and snapping.
+- **Edge markers and routing policies**:
+  - arrowheads/markers must not be an afterthought (ties into execution graphs),
+  - routing must be swappable (bezier, step, orthogonal, custom).
+- **Minimap / overview navigation**:
+  - consumes derived geometry and writes only view-state.
+- **Z-order policy**:
+  - define how edges layer relative to nodes and parent frames (XyFlow elevates some edges above
+    parents; Fret must define this for group/subflow parity).
+
+Notes:
+
+- Items above are contracts; the *visual* design (theme tokens) is intentionally orthogonal.
+- Features like "conversion node insertion" and "domain-specific auto nodes" remain profile-level
+  policy and must not leak into the substrate.
+
 ## Consequences
 
 Pros:
@@ -891,6 +946,9 @@ XyFlow (`@xyflow/system`) concept map:
 - Pan/zoom (`XYPanZoom`) → `NodeGraphCanvasTransform` + view-state stored pan/zoom.
 - Dragging (`XYDrag`) → node/selection drag interactions in the canvas state machine.
 - Handles/connections (`XYHandle`) → port anchor resolution + connection/reconnection flows.
+- Connection mode (`ConnectionMode`) → `NodeGraphConnectionMode` (strict/loose).
+- Edge hit slop (`EdgeBase.interactionWidth`) → `NodeGraphStyle::wire_interaction_width` (screen-space).
+- Edge updates (`reconnectEdge`) → `ConnectPlan::Reconnect` + `GraphTransaction` apply.
 - Derived internals (`internals.handleBounds`, `positionAbsolute`, `measured`) → `CanvasGeometry` /
   `MeasuredGeometryStore` / `NodeGraphInternalsStore` (output-only, never serialized into the graph asset).
 - Minimap (`XYMiniMap`) → optional overlay widget consuming derived geometry (see “Minimap and overview navigation”).
@@ -923,3 +981,5 @@ Unity ShaderGraph concept map:
   `SnarlViewer::current_transform`) to support “UI scaling” modes where text remains readable at extreme zoom.
 - How to connect `crates/fret-ui`’s post-layout measurement (node bounds / handle bounds) to the measured-geometry
   injection surface without introducing frame-order hazards or accidental coupling to a specific layout engine.
+- Whether edge hit-testing should be strictly "interaction-width only", or additionally allow a
+  per-edge override (XyFlow allows per-edge `interactionWidth`).
