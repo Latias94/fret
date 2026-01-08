@@ -223,8 +223,9 @@ pub mod prelude {
     };
     pub use crate::{decl_style, icon, stack};
 
+    pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
     pub use fret_icons::IconId;
     pub use fret_runtime::Model;
     pub use fret_ui::element::{AnyElement, TextProps};
-    pub use fret_ui::{ElementContext, Theme, UiHost};
+    pub use fret_ui::{ElementContext, Invalidation, Theme, UiHost, UiTree};
 }
