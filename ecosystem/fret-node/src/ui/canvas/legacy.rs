@@ -41,6 +41,7 @@ use crate::ui::{
     NodeGraphEditQueue, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
 };
 
+mod cancel;
 mod context_menu;
 mod edge_drag;
 mod marquee;
@@ -3324,49 +3325,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     {
                         return;
                     }
-
-                    let mut canceled = false;
-                    if self.interaction.wire_drag.take().is_some() {
-                        canceled = true;
-                    }
-                    if self.interaction.edge_drag.take().is_some() {
-                        canceled = true;
-                    }
-                    if self.interaction.node_drag.take().is_some() {
-                        canceled = true;
-                    }
-                    if self.interaction.pending_node_drag.take().is_some() {
-                        canceled = true;
-                    }
-                    if self.interaction.marquee.take().is_some() {
-                        canceled = true;
-                    }
-                    if self.interaction.pending_marquee.take().is_some() {
-                        canceled = true;
-                    }
-                    if self.interaction.panning {
-                        self.interaction.panning = false;
-                        canceled = true;
-                    }
-                    if self.interaction.sticky_wire || self.interaction.sticky_wire_ignore_next_up {
-                        self.interaction.sticky_wire = false;
-                        self.interaction.sticky_wire_ignore_next_up = false;
-                        canceled = true;
-                    }
-                    if self.interaction.snap_guides.take().is_some() {
-                        canceled = true;
-                    }
-                    self.interaction.hover_port = None;
-                    self.interaction.hover_port_valid = false;
-                    self.interaction.hover_port_convertible = false;
-                    self.interaction.hover_edge = None;
-
-                    if canceled {
-                        cx.release_pointer_capture();
-                        cx.stop_propagation();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
+                    cancel::handle_escape_cancel(self, cx);
                     return;
                 }
 
