@@ -199,11 +199,20 @@ This section is intentionally lightweight and should be updated as work lands.
   - `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
   - `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - **Implementation status (as of now):**
-  - M0: Not started (design locked by ADRs, pending code work).
-  - M1: Not started.
+  - M0: In progress (landed in `refactor/renderer-v3`):
+    - `RenderPlan` skeleton exists and `render_scene` executes a compiled plan.
+    - Path MSAA multi-pass is represented as explicit plan passes (no ad-hoc drop/re-begin main pass).
+  - M1: In progress (landed in `refactor/renderer-v3`):
+    - A renderer-only offscreen target + identity fullscreen blit pass can run end-to-end (debug-gated).
   - M2: Not started.
   - M3: Not started.
   - M4: Deferred.
+
+Recent landing points (branch-local):
+
+- `f47f0ec`: minimal `RenderPlan` skeleton.
+- `045a69c`: Path MSAA is an explicit `RenderPlan` pass.
+- `f32a62f`: Offscreen target + fullscreen identity blit pass + GPU equality test.
 
 ## Work Breakdown (Actionable Checklist)
 
