@@ -6,10 +6,11 @@ use crate::widget::MeasureCx;
 use fret_core::{TextStyle, TextWrap};
 
 fn default_text_style(theme: crate::ThemeSnapshot) -> TextStyle {
-    let mut style = TextStyle::default();
-    style.size = theme.metrics.font_size;
-    style.line_height = Some(theme.metrics.font_line_height);
-    style
+    TextStyle {
+        size: theme.metrics.font_size,
+        line_height: Some(theme.metrics.font_line_height),
+        ..Default::default()
+    }
 }
 
 fn available_px_or_zero(constraints: LayoutConstraints) -> Size {

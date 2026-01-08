@@ -163,8 +163,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
                 // is whitespace but the previous is a word char, prefer selecting the previous word.
                 if char_at(text, idx).is_some_and(|c| c.is_whitespace()) && idx > 0 {
                     let prev = crate::text_edit::utf8::prev_char_boundary(text, idx);
-                    if char_at(text, prev).is_some_and(|c| crate::text_edit::utf8::is_word_char(c))
-                    {
+                    if char_at(text, prev).is_some_and(crate::text_edit::utf8::is_word_char) {
                         idx = prev;
                     }
                 }
@@ -291,7 +290,7 @@ pub(super) fn handle_selectable_text<H: UiHost>(
             let hit = this
                 .text_cache
                 .blob
-                .and_then(|blob| Some(cx.services.hit_test_point(blob, local)));
+                .map(|blob| cx.services.hit_test_point(blob, local));
 
             if let Some(hit) = hit {
                 crate::elements::with_element_state(

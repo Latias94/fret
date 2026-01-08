@@ -17,7 +17,7 @@ impl ElementHostWidget {
     ) -> Size {
         #[cfg(feature = "layout-engine-v2")]
         {
-            return self.layout_flex_impl_engine(cx, window, props);
+            self.layout_flex_impl_engine(cx, window, props)
         }
 
         #[cfg(not(feature = "layout-engine-v2"))]

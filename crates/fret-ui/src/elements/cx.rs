@@ -1402,24 +1402,24 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
                     if key_cache == crate::element::VirtualListKeyCacheMode::AllKeys {
                         let has_deferred_scroll = scroll_handle.deferred_scroll_to_item().is_some();
-                        if !has_deferred_scroll && let Some((key, offset_in_viewport)) = prev_anchor
+                        if !has_deferred_scroll
+                            && let Some((key, offset_in_viewport)) = prev_anchor
+                            && let Some(index) = state.keys.iter().position(|&k| k == key)
                         {
-                            if let Some(index) = state.keys.iter().position(|&k| k == key) {
-                                let start = state.metrics.offset_for_index(index);
-                                let desired = Px(start.0 + offset_in_viewport.0);
-                                let prev = scroll_handle.offset();
-                                let clamped = state.metrics.clamp_offset(desired, viewport);
-                                match axis {
-                                    fret_core::Axis::Vertical => {
-                                        scroll_handle
-                                            .set_offset(fret_core::Point::new(prev.x, clamped));
-                                        state.offset_y = clamped;
-                                    }
-                                    fret_core::Axis::Horizontal => {
-                                        scroll_handle
-                                            .set_offset(fret_core::Point::new(clamped, prev.y));
-                                        state.offset_x = clamped;
-                                    }
+                            let start = state.metrics.offset_for_index(index);
+                            let desired = Px(start.0 + offset_in_viewport.0);
+                            let prev = scroll_handle.offset();
+                            let clamped = state.metrics.clamp_offset(desired, viewport);
+                            match axis {
+                                fret_core::Axis::Vertical => {
+                                    scroll_handle
+                                        .set_offset(fret_core::Point::new(prev.x, clamped));
+                                    state.offset_y = clamped;
+                                }
+                                fret_core::Axis::Horizontal => {
+                                    scroll_handle
+                                        .set_offset(fret_core::Point::new(clamped, prev.y));
+                                    state.offset_x = clamped;
                                 }
                             }
                         }

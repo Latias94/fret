@@ -1459,11 +1459,7 @@ impl<H: UiHost> UiTree<H> {
                     if !derive {
                         continue;
                     }
-                    if !nodes[controller_idx]
-                        .controls
-                        .iter()
-                        .any(|id| *id == controlled)
-                    {
+                    if !nodes[controller_idx].controls.contains(&controlled) {
                         nodes[controller_idx].controls.push(controlled);
                     }
                 }

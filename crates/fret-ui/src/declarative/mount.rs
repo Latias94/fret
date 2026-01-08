@@ -360,6 +360,7 @@ fn render_dismissible_root_impl<
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn mount_element<H: UiHost>(
     ui: &mut UiTree<H>,
     _window: AppWindowId,

@@ -428,24 +428,25 @@ impl ElementHostWidget {
                     crate::element::SelectableTextState::default,
                     |state| (state.dragging, state.last_pointer_pos),
                 );
-                if focused && dragging {
-                    if let Some(pointer_pos) = last_pointer_pos {
-                        let local = fret_core::Point::new(
-                            fret_core::Px(pointer_pos.x.0 - cx.bounds.origin.x.0),
-                            fret_core::Px(pointer_pos.y.0 - cx.bounds.origin.y.0),
-                        );
-                        let hit = cx.services.hit_test_point(blob, local);
-                        crate::elements::with_element_state(
-                            &mut *cx.app,
-                            window,
-                            self.element,
-                            crate::element::SelectableTextState::default,
-                            |state| {
-                                state.caret = hit.index;
-                                state.affinity = hit.affinity;
-                            },
-                        );
-                    }
+                if focused
+                    && dragging
+                    && let Some(pointer_pos) = last_pointer_pos
+                {
+                    let local = fret_core::Point::new(
+                        fret_core::Px(pointer_pos.x.0 - cx.bounds.origin.x.0),
+                        fret_core::Px(pointer_pos.y.0 - cx.bounds.origin.y.0),
+                    );
+                    let hit = cx.services.hit_test_point(blob, local);
+                    crate::elements::with_element_state(
+                        &mut *cx.app,
+                        window,
+                        self.element,
+                        crate::element::SelectableTextState::default,
+                        |state| {
+                            state.caret = hit.index;
+                            state.affinity = hit.affinity;
+                        },
+                    );
                 }
                 if focused {
                     let (anchor, caret) = crate::elements::with_element_state(
