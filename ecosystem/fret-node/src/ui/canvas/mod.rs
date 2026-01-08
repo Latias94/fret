@@ -9,6 +9,7 @@ mod event;
 mod geometry;
 mod legacy;
 mod paint;
+mod searcher;
 mod spatial;
 mod workflow;
 

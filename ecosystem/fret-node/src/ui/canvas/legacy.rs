@@ -43,6 +43,7 @@ use crate::ui::{
 
 use super::conversion;
 use super::geometry::{CanvasGeometry, node_ports};
+use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::spatial::CanvasSpatialIndex;
 use super::workflow;
 
@@ -72,11 +73,28 @@ struct InteractionState {
     hover_port_valid: bool,
     hover_port_convertible: bool,
     context_menu: Option<ContextMenuState>,
+    searcher: Option<SearcherState>,
     toast: Option<ToastState>,
     pending_paste: Option<PendingPaste>,
 
     sticky_wire: bool,
     sticky_wire_ignore_next_up: bool,
+
+    recent_kinds: Vec<NodeKindKey>,
+}
+
+#[derive(Debug, Clone)]
+struct SearcherState {
+    origin: Point,
+    invoked_at: Point,
+    target: ContextMenuTarget,
+    query: String,
+    candidates: Vec<InsertNodeCandidate>,
+    recent_kinds: Vec<NodeKindKey>,
+    rows: Vec<SearcherRow>,
+    hovered_row: Option<usize>,
+    active_row: usize,
+    scroll: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -1557,6 +1575,31 @@ impl NodeGraphCanvas {
         )
     }
 
+    fn clamp_searcher_origin(
+        &self,
+        desired: Point,
+        visible_rows: usize,
+        bounds: Rect,
+        snapshot: &ViewSnapshot,
+    ) -> Point {
+        let rect = searcher_rect_at(&self.style, desired, visible_rows, snapshot.zoom);
+
+        let viewport_w = bounds.size.width.0 / snapshot.zoom;
+        let viewport_h = bounds.size.height.0 / snapshot.zoom;
+        let viewport_origin_x = -snapshot.pan.x;
+        let viewport_origin_y = -snapshot.pan.y;
+
+        let min_x = viewport_origin_x;
+        let min_y = viewport_origin_y;
+        let max_x = viewport_origin_x + (viewport_w - rect.size.width.0).max(0.0);
+        let max_y = viewport_origin_y + (viewport_h - rect.size.height.0).max(0.0);
+
+        Point::new(
+            Px(desired.x.0.clamp(min_x, max_x)),
+            Px(desired.y.0.clamp(min_y, max_y)),
+        )
+    }
+
     fn node_default_size_for_ports(&self, inputs: usize, outputs: usize) -> (f32, f32) {
         let rows = inputs.max(outputs) as f32;
         let base = self.style.node_header_height + 2.0 * self.style.node_padding;
@@ -1774,6 +1817,108 @@ impl NodeGraphCanvas {
         ]
     }
 
+    fn record_recent_kind(&mut self, kind: &NodeKindKey) {
+        const MAX_RECENT: usize = 20;
+
+        self.interaction.recent_kinds.retain(|k| k != kind);
+        self.interaction.recent_kinds.insert(0, kind.clone());
+        if self.interaction.recent_kinds.len() > MAX_RECENT {
+            self.interaction.recent_kinds.truncate(MAX_RECENT);
+        }
+    }
+
+    fn searcher_is_selectable_row(row: &SearcherRow) -> bool {
+        matches!(row.kind, SearcherRowKind::Candidate { .. }) && row.enabled
+    }
+
+    fn searcher_first_selectable_row(rows: &[SearcherRow]) -> usize {
+        rows.iter()
+            .position(Self::searcher_is_selectable_row)
+            .unwrap_or(0)
+    }
+
+    fn rebuild_searcher_rows(searcher: &mut SearcherState) {
+        let rows = match &searcher.target {
+            ContextMenuTarget::ConnectionConvertPicker { .. } => {
+                super::searcher::build_rows_flat(&searcher.candidates, &searcher.query)
+            }
+            _ => super::searcher::build_rows(
+                &searcher.candidates,
+                &searcher.query,
+                &searcher.recent_kinds,
+            ),
+        };
+
+        searcher.rows = rows;
+        searcher.scroll = searcher.scroll.min(
+            searcher
+                .rows
+                .len()
+                .saturating_sub(SEARCHER_MAX_VISIBLE_ROWS),
+        );
+        searcher.active_row = Self::searcher_first_selectable_row(&searcher.rows)
+            .min(searcher.rows.len().saturating_sub(1));
+        Self::ensure_searcher_active_visible(searcher);
+    }
+
+    fn ensure_searcher_active_visible(searcher: &mut SearcherState) {
+        let n = searcher.rows.len();
+        if n == 0 {
+            searcher.active_row = 0;
+            searcher.scroll = 0;
+            return;
+        }
+
+        let visible = SEARCHER_MAX_VISIBLE_ROWS.min(n);
+        let max_scroll = n.saturating_sub(visible);
+        searcher.scroll = searcher.scroll.min(max_scroll);
+
+        if searcher.active_row < searcher.scroll {
+            searcher.scroll = searcher.active_row;
+        } else if searcher.active_row >= searcher.scroll + visible {
+            searcher.scroll = (searcher.active_row + 1).saturating_sub(visible);
+        }
+        searcher.scroll = searcher.scroll.min(max_scroll);
+    }
+
+    fn try_activate_searcher_row<H: UiHost>(
+        &mut self,
+        cx: &mut EventCx<'_, H>,
+        row_ix: usize,
+    ) -> bool {
+        let Some(searcher) = self.interaction.searcher.take() else {
+            return false;
+        };
+
+        let Some(row) = searcher.rows.get(row_ix).cloned() else {
+            self.interaction.searcher = Some(searcher);
+            return false;
+        };
+
+        let SearcherRowKind::Candidate { candidate_ix } = row.kind else {
+            self.interaction.searcher = Some(searcher);
+            return false;
+        };
+        if !row.enabled {
+            self.interaction.searcher = Some(searcher);
+            return false;
+        }
+
+        let item = NodeGraphContextMenuItem {
+            label: row.label,
+            enabled: true,
+            action: NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
+        };
+        self.activate_context_menu_item(
+            cx,
+            &searcher.target,
+            searcher.invoked_at,
+            item,
+            &searcher.candidates,
+        );
+        true
+    }
+
     fn open_insert_node_picker<H: UiHost>(&mut self, host: &mut H, at: CanvasPoint) {
         let candidates: Vec<InsertNodeCandidate> = {
             let presenter = &mut *self.presenter;
@@ -1793,33 +1938,30 @@ impl NodeGraphCanvas {
         });
         menu_candidates.extend(candidates);
 
-        let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
-        for (ix, c) in menu_candidates.iter().enumerate() {
-            items.push(NodeGraphContextMenuItem {
-                label: c.label.clone(),
-                enabled: c.enabled,
-                action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
-            });
-        }
-
         let snapshot = self.sync_view_state(host);
         let bounds = self.interaction.last_bounds.unwrap_or_default();
-        let origin = self.clamp_context_menu_origin(
-            Point::new(Px(at.x), Px(at.y)),
-            items.len(),
-            bounds,
-            &snapshot,
-        );
-        let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-        self.interaction.context_menu = Some(ContextMenuState {
+        let rows =
+            super::searcher::build_rows(&menu_candidates, "", &self.interaction.recent_kinds);
+        let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
+        let origin =
+            self.clamp_searcher_origin(Point::new(Px(at.x), Px(at.y)), visible, bounds, &snapshot);
+        let active_row = rows
+            .iter()
+            .position(|r| matches!(r.kind, SearcherRowKind::Candidate { .. }) && r.enabled)
+            .unwrap_or(0);
+
+        self.interaction.context_menu = None;
+        self.interaction.searcher = Some(SearcherState {
             origin,
             invoked_at: Point::new(Px(at.x), Px(at.y)),
             target: ContextMenuTarget::BackgroundInsertNodePicker { at },
-            items,
+            query: String::new(),
             candidates: menu_candidates,
-            hovered_item: None,
-            active_item,
-            typeahead: String::new(),
+            recent_kinds: self.interaction.recent_kinds.clone(),
+            rows,
+            hovered_row: None,
+            active_row,
+            scroll: 0,
         });
     }
 
@@ -1847,36 +1989,30 @@ impl NodeGraphCanvas {
         });
         menu_candidates.extend(candidates);
 
-        let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
-        for (ix, c) in menu_candidates.iter().enumerate() {
-            items.push(NodeGraphContextMenuItem {
-                label: c.label.clone(),
-                enabled: c.enabled,
-                action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
-            });
-        }
-        if items.is_empty() {
-            return;
-        }
-
         let snapshot = self.sync_view_state(host);
         let bounds = self.interaction.last_bounds.unwrap_or_default();
-        let origin = self.clamp_context_menu_origin(
-            Point::new(Px(at.x), Px(at.y)),
-            items.len(),
-            bounds,
-            &snapshot,
-        );
-        let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-        self.interaction.context_menu = Some(ContextMenuState {
+        let rows =
+            super::searcher::build_rows(&menu_candidates, "", &self.interaction.recent_kinds);
+        let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
+        let origin =
+            self.clamp_searcher_origin(Point::new(Px(at.x), Px(at.y)), visible, bounds, &snapshot);
+        let active_row = rows
+            .iter()
+            .position(|r| matches!(r.kind, SearcherRowKind::Candidate { .. }) && r.enabled)
+            .unwrap_or(0);
+
+        self.interaction.context_menu = None;
+        self.interaction.searcher = Some(SearcherState {
             origin,
             invoked_at: Point::new(Px(at.x), Px(at.y)),
             target: ContextMenuTarget::ConnectionInsertNodePicker { from, at },
-            items,
+            query: String::new(),
             candidates: menu_candidates,
-            hovered_item: None,
-            active_item,
-            typeahead: String::new(),
+            recent_kinds: self.interaction.recent_kinds.clone(),
+            rows,
+            hovered_row: None,
+            active_row,
+            scroll: 0,
         });
     }
 
@@ -1907,16 +2043,10 @@ impl NodeGraphCanvas {
         });
         menu_candidates.extend(candidates);
 
-        let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
-        for (ix, c) in menu_candidates.iter().enumerate() {
-            items.push(NodeGraphContextMenuItem {
-                label: c.label.clone(),
-                enabled: c.enabled,
-                action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
-            });
-        }
+        let rows =
+            super::searcher::build_rows(&menu_candidates, "", &self.interaction.recent_kinds);
 
-        if items.is_empty() {
+        if rows.is_empty() {
             self.show_toast(
                 host,
                 window,
@@ -1928,17 +2058,25 @@ impl NodeGraphCanvas {
 
         let snapshot = self.sync_view_state(host);
         let bounds = self.interaction.last_bounds.unwrap_or_default();
-        let origin = self.clamp_context_menu_origin(invoked_at, items.len(), bounds, &snapshot);
-        let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-        self.interaction.context_menu = Some(ContextMenuState {
+        let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
+        let origin = self.clamp_searcher_origin(invoked_at, visible, bounds, &snapshot);
+        let active_row = rows
+            .iter()
+            .position(|r| matches!(r.kind, SearcherRowKind::Candidate { .. }) && r.enabled)
+            .unwrap_or(0);
+
+        self.interaction.context_menu = None;
+        self.interaction.searcher = Some(SearcherState {
             origin,
             invoked_at,
             target: ContextMenuTarget::EdgeInsertNodePicker(edge),
-            items,
+            query: String::new(),
             candidates: menu_candidates,
-            hovered_item: None,
-            active_item,
-            typeahead: String::new(),
+            recent_kinds: self.interaction.recent_kinds.clone(),
+            rows,
+            hovered_row: None,
+            active_row,
+            scroll: 0,
         });
     }
 
@@ -1961,6 +2099,7 @@ impl NodeGraphCanvas {
                 let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
+                self.record_recent_kind(&candidate.kind);
 
                 let outcome = if candidate.kind.0 == REROUTE_KIND {
                     Some(Ok(Self::build_reroute_create_ops(*at)))
@@ -2007,6 +2146,7 @@ impl NodeGraphCanvas {
                 let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
+                self.record_recent_kind(&candidate.kind);
 
                 let (outcome, toast) = {
                     let presenter = &mut *self.presenter;
@@ -2210,6 +2350,7 @@ impl NodeGraphCanvas {
                 let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
+                self.record_recent_kind(&candidate.kind);
 
                 let outcome = {
                     let at = if candidate.kind.0 == REROUTE_KIND {
@@ -2281,6 +2422,7 @@ impl NodeGraphCanvas {
                 let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
+                self.record_recent_kind(&candidate.kind);
 
                 let zoom = self.cached_zoom;
                 let style = self.style.clone();
@@ -2423,6 +2565,132 @@ impl NodeGraphCanvas {
 
             cx.scene.push(SceneOp::Text {
                 order: DrawOrder(52),
+                origin: Point::new(text_x, text_y),
+                text: blob,
+                color,
+            });
+        }
+    }
+
+    fn paint_searcher<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        searcher: &SearcherState,
+        zoom: f32,
+    ) {
+        let visible_rows = searcher_visible_rows(searcher);
+        let rect = searcher_rect_at(&self.style, searcher.origin, visible_rows, zoom);
+        let border_w = Px(1.0 / zoom);
+        let radius = Px(self.style.context_menu_corner_radius / zoom);
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(55),
+            rect,
+            background: self.style.context_menu_background,
+            border: Edges::all(border_w),
+            border_color: self.style.context_menu_border,
+            corner_radii: Corners::all(radius),
+        });
+
+        let pad = self.style.context_menu_padding / zoom;
+        let item_h = self.style.context_menu_item_height / zoom;
+        let inner_x = rect.origin.x.0 + pad;
+        let inner_y = rect.origin.y.0 + pad;
+        let inner_w = (rect.size.width.0 - 2.0 * pad).max(0.0);
+
+        let mut text_style = self.style.context_menu_text_style.clone();
+        text_style.size = Px(text_style.size.0 / zoom);
+        if let Some(lh) = text_style.line_height.as_mut() {
+            lh.0 /= zoom;
+        }
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(inner_w)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor * zoom,
+        };
+
+        let query_rect = Rect::new(
+            Point::new(Px(inner_x), Px(inner_y)),
+            Size::new(Px(inner_w), Px(item_h)),
+        );
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(56),
+            rect: query_rect,
+            background: self.style.context_menu_hover_background,
+            border: Edges::all(Px(0.0)),
+            border_color: Color::TRANSPARENT,
+            corner_radii: Corners::all(Px(4.0 / zoom)),
+        });
+
+        let query_text = if searcher.query.is_empty() {
+            Arc::<str>::from("Search...")
+        } else {
+            Arc::<str>::from(format!("Search: {}", searcher.query))
+        };
+        let (blob, metrics) =
+            cx.services
+                .text()
+                .prepare(query_text.as_ref(), &text_style, constraints);
+        self.text_blobs.push(blob);
+        let text_x = query_rect.origin.x;
+        let text_y = Px(query_rect.origin.y.0
+            + (query_rect.size.height.0 - metrics.size.height.0) * 0.5
+            + metrics.baseline.0);
+        let query_color = if searcher.query.is_empty() {
+            self.style.context_menu_text_disabled
+        } else {
+            self.style.context_menu_text
+        };
+        cx.scene.push(SceneOp::Text {
+            order: DrawOrder(57),
+            origin: Point::new(text_x, text_y),
+            text: blob,
+            color: query_color,
+        });
+
+        let list_y0 = inner_y + item_h + pad;
+        let start = searcher.scroll.min(searcher.rows.len());
+        let end = (start + visible_rows).min(searcher.rows.len());
+        for (slot, row_ix) in (start..end).enumerate() {
+            let row = &searcher.rows[row_ix];
+            let item_rect = Rect::new(
+                Point::new(Px(inner_x), Px(list_y0 + slot as f32 * item_h)),
+                Size::new(Px(inner_w), Px(item_h)),
+            );
+
+            let is_active = searcher.active_row == row_ix;
+            let is_hovered = searcher.hovered_row == Some(row_ix);
+            if (is_hovered || is_active) && Self::searcher_is_selectable_row(row) {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(56),
+                    rect: item_rect,
+                    background: self.style.context_menu_hover_background,
+                    border: Edges::all(Px(0.0)),
+                    border_color: Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(4.0 / zoom)),
+                });
+            }
+
+            let (blob, metrics) =
+                cx.services
+                    .text()
+                    .prepare(row.label.as_ref(), &text_style, constraints);
+            self.text_blobs.push(blob);
+
+            let text_x = item_rect.origin.x;
+            let text_y = Px(item_rect.origin.y.0
+                + (item_rect.size.height.0 - metrics.size.height.0) * 0.5
+                + metrics.baseline.0);
+            let color = if row.enabled {
+                self.style.context_menu_text
+            } else {
+                self.style.context_menu_text_disabled
+            };
+
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(57),
                 origin: Point::new(text_x, text_y),
                 text: blob,
                 color,
@@ -2889,24 +3157,20 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return true;
                 };
 
-                let mut items: Vec<NodeGraphContextMenuItem> = Vec::new();
-                for (ix, c) in ctx0.candidates.iter().enumerate() {
-                    items.push(NodeGraphContextMenuItem {
-                        label: c.label.clone(),
-                        enabled: c.enabled,
-                        action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
-                    });
-                }
-
+                let rows = super::searcher::build_rows_flat(&ctx0.candidates, "");
+                let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
                 let bounds = self.interaction.last_bounds.unwrap_or_default();
-                let origin = self.clamp_context_menu_origin(
+                let origin = self.clamp_searcher_origin(
                     Point::new(Px(ctx0.at.x), Px(ctx0.at.y)),
-                    items.len(),
+                    visible,
                     bounds,
                     &snapshot,
                 );
-                let active_item = items.iter().position(|it| it.enabled).unwrap_or(0);
-                self.interaction.context_menu = Some(ContextMenuState {
+                let active_row =
+                    Self::searcher_first_selectable_row(&rows).min(rows.len().saturating_sub(1));
+
+                self.interaction.context_menu = None;
+                self.interaction.searcher = Some(SearcherState {
                     origin,
                     invoked_at: Point::new(Px(ctx0.at.x), Px(ctx0.at.y)),
                     target: ContextMenuTarget::ConnectionConvertPicker {
@@ -2914,11 +3178,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         to: ctx0.to,
                         at: ctx0.at,
                     },
-                    items,
+                    query: String::new(),
                     candidates: ctx0.candidates,
-                    hovered_item: None,
-                    active_item,
-                    typeahead: String::new(),
+                    recent_kinds: self.interaction.recent_kinds.clone(),
+                    rows,
+                    hovered_row: None,
+                    active_row,
+                    scroll: 0,
                 });
 
                 cx.request_redraw();
@@ -3150,6 +3416,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 if *key == fret_core::KeyCode::Escape {
+                    if self.interaction.searcher.take().is_some() {
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+
                     if self.interaction.context_menu.take().is_some() {
                         cx.stop_propagation();
                         cx.request_redraw();
@@ -3191,6 +3464,101 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         cx.invalidate_self(Invalidation::Paint);
                     }
                     return;
+                }
+
+                if matches!(
+                    key,
+                    fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter
+                ) && self.interaction.searcher.is_some()
+                {
+                    let row_ix = self
+                        .interaction
+                        .searcher
+                        .as_ref()
+                        .map(|s| s.active_row)
+                        .unwrap_or(0);
+                    if self.try_activate_searcher_row(cx, row_ix) {
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+                }
+
+                if let Some(searcher) = self.interaction.searcher.as_mut() {
+                    match *key {
+                        fret_core::KeyCode::ArrowDown => {
+                            let n = searcher.rows.len();
+                            if n > 0 {
+                                let mut ix = (searcher.active_row + 1) % n;
+                                for _ in 0..n {
+                                    if searcher
+                                        .rows
+                                        .get(ix)
+                                        .is_some_and(Self::searcher_is_selectable_row)
+                                    {
+                                        searcher.active_row = ix;
+                                        break;
+                                    }
+                                    ix = (ix + 1) % n;
+                                }
+                                Self::ensure_searcher_active_visible(searcher);
+                            }
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                        fret_core::KeyCode::ArrowUp => {
+                            let n = searcher.rows.len();
+                            if n > 0 {
+                                let mut ix = if searcher.active_row == 0 {
+                                    n - 1
+                                } else {
+                                    searcher.active_row - 1
+                                };
+                                for _ in 0..n {
+                                    if searcher
+                                        .rows
+                                        .get(ix)
+                                        .is_some_and(Self::searcher_is_selectable_row)
+                                    {
+                                        searcher.active_row = ix;
+                                        break;
+                                    }
+                                    ix = if ix == 0 { n - 1 } else { ix - 1 };
+                                }
+                                Self::ensure_searcher_active_visible(searcher);
+                            }
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                        fret_core::KeyCode::Backspace => {
+                            if !searcher.query.is_empty() {
+                                searcher.query.pop();
+                                Self::rebuild_searcher_rows(searcher);
+                                cx.stop_propagation();
+                                cx.request_redraw();
+                                cx.invalidate_self(Invalidation::Paint);
+                                return;
+                            }
+                        }
+                        _ => {}
+                    }
+
+                    if !modifiers.ctrl
+                        && !modifiers.meta
+                        && let Some(ch) = fret_core::keycode_to_ascii_lowercase(*key)
+                    {
+                        searcher.query.push(ch);
+                        Self::rebuild_searcher_rows(searcher);
+                        cx.stop_propagation();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
                 }
 
                 if let Some(menu) = self.interaction.context_menu.as_mut() {
@@ -3331,6 +3699,48 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     snapshot.pan,
                     zoom,
                 ));
+
+                if self.interaction.searcher.is_some() {
+                    let (inside, hit_row) = if let Some(searcher) =
+                        self.interaction.searcher.as_ref()
+                    {
+                        let visible = searcher_visible_rows(searcher);
+                        let rect = searcher_rect_at(&self.style, searcher.origin, visible, zoom);
+                        let inside = rect.contains(*position);
+                        let hit_row = hit_searcher_row(&self.style, searcher, *position, zoom);
+                        (inside, hit_row)
+                    } else {
+                        (false, None)
+                    };
+
+                    match button {
+                        MouseButton::Left => {
+                            if let Some(row_ix) = hit_row {
+                                let _ = self.try_activate_searcher_row(cx, row_ix);
+                            } else if !inside {
+                                self.interaction.searcher = None;
+                            }
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                        MouseButton::Right => {
+                            self.interaction.searcher = None;
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                        _ => {
+                            self.interaction.searcher = None;
+                            cx.stop_propagation();
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                    }
+                }
 
                 if *button == MouseButton::Left {
                     if let Some(command) = self.close_command.clone() {
@@ -4169,6 +4579,25 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
                 }
 
+                if let Some(searcher) = self.interaction.searcher.as_mut() {
+                    let new_hover = hit_searcher_row(&self.style, searcher, *position, zoom);
+                    if searcher.hovered_row != new_hover {
+                        searcher.hovered_row = new_hover;
+                        if let Some(ix) = new_hover
+                            && searcher
+                                .rows
+                                .get(ix)
+                                .is_some_and(Self::searcher_is_selectable_row)
+                        {
+                            searcher.active_row = ix;
+                            Self::ensure_searcher_active_visible(searcher);
+                        }
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                    }
+                    return;
+                }
+
                 if let Some(menu) = self.interaction.context_menu.as_mut() {
                     let new_hover = hit_context_menu_item(&self.style, menu, *position, zoom);
                     if menu.hovered_item != new_hover {
@@ -4445,43 +4874,41 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                                                     at: convert_at,
                                                     candidates: candidates.clone(),
                                                 });
-                                            let mut items: Vec<NodeGraphContextMenuItem> =
-                                                Vec::new();
-                                            for (ix, c) in candidates.iter().enumerate() {
-                                                items.push(NodeGraphContextMenuItem {
-                                                    label: c.label.clone(),
-                                                    enabled: c.enabled,
-                                                    action: NodeGraphContextMenuAction::InsertNodeCandidate(ix),
-                                                });
-                                            }
 
-                                            let origin = self.clamp_context_menu_origin(
+                                            let rows =
+                                                super::searcher::build_rows_flat(&candidates, "");
+                                            let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
+                                            let origin = self.clamp_searcher_origin(
                                                 Point::new(Px(convert_at.x), Px(convert_at.y)),
-                                                items.len(),
+                                                visible,
                                                 cx.bounds,
                                                 &snapshot,
                                             );
-                                            let active_item =
-                                                items.iter().position(|it| it.enabled).unwrap_or(0);
-                                            self.interaction.context_menu =
-                                                Some(ContextMenuState {
-                                                    origin,
-                                                    invoked_at: Point::new(
-                                                        Px(convert_at.x),
-                                                        Px(convert_at.y),
-                                                    ),
-                                                    target:
-                                                        ContextMenuTarget::ConnectionConvertPicker {
-                                                            from,
-                                                            to: target,
-                                                            at: convert_at,
-                                                        },
-                                                    items,
-                                                    candidates,
-                                                    hovered_item: None,
-                                                    active_item,
-                                                    typeahead: String::new(),
-                                                });
+                                            let active_row =
+                                                Self::searcher_first_selectable_row(&rows)
+                                                    .min(rows.len().saturating_sub(1));
+
+                                            self.interaction.context_menu = None;
+                                            self.interaction.searcher = Some(SearcherState {
+                                                origin,
+                                                invoked_at: Point::new(
+                                                    Px(convert_at.x),
+                                                    Px(convert_at.y),
+                                                ),
+                                                target:
+                                                    ContextMenuTarget::ConnectionConvertPicker {
+                                                        from,
+                                                        to: target,
+                                                        at: convert_at,
+                                                    },
+                                                query: String::new(),
+                                                candidates,
+                                                recent_kinds: self.interaction.recent_kinds.clone(),
+                                                rows,
+                                                hovered_row: None,
+                                                active_row,
+                                                scroll: 0,
+                                            });
                                         }
                                         Outcome::Reject(sev, msg) => {
                                             self.show_toast(cx.app, cx.window, sev, msg);
@@ -4609,6 +5036,26 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             Event::Pointer(fret_core::PointerEvent::Wheel {
                 delta, modifiers, ..
             }) => {
+                if !modifiers.ctrl
+                    && !modifiers.meta
+                    && let Some(searcher) = self.interaction.searcher.as_mut()
+                {
+                    let n = searcher.rows.len();
+                    if n > 0 {
+                        let visible = SEARCHER_MAX_VISIBLE_ROWS.min(n);
+                        let max_scroll = n.saturating_sub(visible);
+                        if delta.y.0 > 0.0 {
+                            searcher.scroll = searcher.scroll.saturating_sub(1);
+                        } else if delta.y.0 < 0.0 {
+                            searcher.scroll = (searcher.scroll + 1).min(max_scroll);
+                        }
+                        Self::ensure_searcher_active_visible(searcher);
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                    }
+                    return;
+                }
+
                 if modifiers.ctrl || modifiers.meta {
                     let delta_screen_y = delta.y.0 * zoom;
                     self.zoom_about_center(cx.bounds, delta_screen_y);
@@ -5204,6 +5651,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             self.paint_wire_drag_hint(cx, &snapshot, &wire_drag, zoom);
         }
 
+        if let Some(searcher) = self.interaction.searcher.clone() {
+            self.paint_searcher(cx, &searcher, zoom);
+        }
+
         if let Some(menu) = self.interaction.context_menu.clone() {
             self.paint_context_menu(cx, &menu, zoom);
         }
@@ -5234,6 +5685,58 @@ fn context_menu_rect_at(
     let pad = style.context_menu_padding / zoom;
     let h = (2.0 * pad + item_h * item_count.max(1) as f32).max(item_h + 2.0 * pad);
     Rect::new(origin, Size::new(Px(w), Px(h)))
+}
+
+fn searcher_visible_rows(searcher: &SearcherState) -> usize {
+    searcher
+        .rows
+        .len()
+        .saturating_sub(searcher.scroll)
+        .min(SEARCHER_MAX_VISIBLE_ROWS)
+}
+
+fn searcher_rect_at(style: &NodeGraphStyle, origin: Point, row_count: usize, zoom: f32) -> Rect {
+    let w = style.context_menu_width / zoom;
+    let item_h = style.context_menu_item_height / zoom;
+    let pad = style.context_menu_padding / zoom;
+
+    let list_rows = row_count.max(1) as f32;
+    let h = 3.0 * pad + item_h * (1.0 + list_rows);
+    Rect::new(origin, Size::new(Px(w), Px(h)))
+}
+
+fn hit_searcher_row(
+    style: &NodeGraphStyle,
+    searcher: &SearcherState,
+    pos: Point,
+    zoom: f32,
+) -> Option<usize> {
+    let visible = searcher_visible_rows(searcher);
+    let rect = searcher_rect_at(style, searcher.origin, visible, zoom);
+    if !rect.contains(pos) {
+        return None;
+    }
+
+    let pad = style.context_menu_padding / zoom;
+    let item_h = style.context_menu_item_height / zoom;
+
+    let list_top = rect.origin.y.0 + pad + item_h + pad;
+    let y = pos.y.0 - list_top;
+    if y < 0.0 {
+        return None;
+    }
+
+    let slot = (y / item_h).floor() as isize;
+    if slot < 0 {
+        return None;
+    }
+    let slot = slot as usize;
+    if slot >= visible {
+        return None;
+    }
+
+    let row_ix = searcher.scroll + slot;
+    (row_ix < searcher.rows.len()).then_some(row_ix)
 }
 
 fn hit_context_menu_item(
