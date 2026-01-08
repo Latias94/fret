@@ -1665,7 +1665,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let hit = axis_pointer.hit;
 
             if hit.x_value.is_finite() && hit.y_value.is_finite() {
-                let label = axis_pointer.tooltip_text.as_str();
+                let tooltip_lines = &axis_pointer.tooltip.lines;
+                if tooltip_lines.is_empty() {
+                    self.draw_axes(cx);
+                    return;
+                }
 
                 let text_style = TextStyle {
                     size: Px(12.0),
@@ -1678,11 +1682,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     overflow: TextOverflow::Clip,
                     scale_factor: cx.scale_factor,
                 };
-                let (blob, metrics) = cx.services.text().prepare(label, &text_style, constraints);
+                let mut line_blobs = Vec::with_capacity(tooltip_lines.len());
+                let mut line_metrics = Vec::with_capacity(tooltip_lines.len());
+                for line in tooltip_lines {
+                    let text = format!("{}: {}", line.label, line.value);
+                    let (blob, metrics) =
+                        cx.services.text().prepare(&text, &text_style, constraints);
+                    line_blobs.push(blob);
+                    line_metrics.push(metrics);
+                }
 
                 let pad = self.style.tooltip_padding;
-                let w = (metrics.size.width.0 + pad.left.0 + pad.right.0).max(1.0);
-                let h = (metrics.size.height.0 + pad.top.0 + pad.bottom.0).max(1.0);
+                let mut w = 1.0f32;
+                let mut h = 0.0f32;
+                for metrics in &line_metrics {
+                    w = w.max(metrics.size.width.0);
+                    h += metrics.size.height.0.max(1.0);
+                }
+                w = (w + pad.left.0 + pad.right.0).max(1.0);
+                h = (h + pad.top.0 + pad.bottom.0).max(1.0);
 
                 let bounds = self.last_layout.bounds;
                 let x0 = bounds.origin.x.0;
@@ -1722,14 +1740,18 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     corner_radii: Corners::all(self.style.tooltip_corner_radius),
                 });
 
-                cx.scene.push(SceneOp::Text {
-                    order: DrawOrder(tooltip_order.0.saturating_add(1)),
-                    origin: Point::new(Px(tip_x + pad.left.0), Px(tip_y + pad.top.0)),
-                    text: blob,
-                    color: self.style.tooltip_text_color,
-                });
-
-                self.tooltip_text.push(blob);
+                let mut y = tip_y + pad.top.0;
+                for (i, (blob, metrics)) in line_blobs.into_iter().zip(line_metrics).enumerate() {
+                    let order = DrawOrder(tooltip_order.0.saturating_add(1 + i as u32));
+                    cx.scene.push(SceneOp::Text {
+                        order,
+                        origin: Point::new(Px(tip_x + pad.left.0), Px(y)),
+                        text: blob,
+                        color: self.style.tooltip_text_color,
+                    });
+                    y += metrics.size.height.0.max(1.0);
+                    self.tooltip_text.push(blob);
+                }
             }
         }
 

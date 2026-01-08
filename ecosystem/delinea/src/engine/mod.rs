@@ -11,6 +11,7 @@ use crate::marks::MarkTree;
 use crate::scheduler::{StepResult, WorkBudget};
 use crate::stats::EngineStats;
 use crate::text::TextMeasurer;
+use crate::tooltip::{TooltipLine, TooltipOutput};
 use crate::view::ViewState;
 use fret_core::Point;
 use std::collections::BTreeMap;
@@ -63,7 +64,7 @@ pub struct ChartOutput {
 pub struct AxisPointerOutput {
     pub crosshair_px: Point,
     pub hit: HoverHit,
-    pub tooltip_text: String,
+    pub tooltip: TooltipOutput,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -447,12 +448,24 @@ impl ChartEngine {
                     .unwrap_or_default();
                 let x_label = crate::format::format_tick_value(x_window, hit.x_value);
                 let y_label = crate::format::format_tick_value(y_window, hit.y_value);
-                let tooltip_text =
-                    format!("series: {}  x: {}  y: {}", hit.series.0, x_label, y_label);
+                let mut tooltip = TooltipOutput::default();
+                tooltip.lines.reserve(3);
+                tooltip.lines.push(TooltipLine {
+                    label: "series".to_string(),
+                    value: hit.series.0.to_string(),
+                });
+                tooltip.lines.push(TooltipLine {
+                    label: "x".to_string(),
+                    value: x_label,
+                });
+                tooltip.lines.push(TooltipLine {
+                    label: "y".to_string(),
+                    value: y_label,
+                });
                 self.output.axis_pointer = Some(AxisPointerOutput {
                     crosshair_px,
                     hit,
-                    tooltip_text,
+                    tooltip,
                 });
             }
             (_, None) => {
