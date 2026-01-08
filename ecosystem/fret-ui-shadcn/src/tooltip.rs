@@ -322,9 +322,9 @@ impl Tooltip {
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
 
-        let trigger = radix_tooltip::apply_tooltip_trigger_a11y(self.trigger, self.content.id);
+        let base_trigger = self.trigger;
         let content = self.content;
-        let trigger_id = trigger.id;
+        let trigger_id = base_trigger.id;
         let content_id = content.id;
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
 
@@ -468,6 +468,12 @@ impl Tooltip {
             if was_open && !update.open {
                 tooltip_provider::note_closed(cx, now);
             }
+
+            let trigger = radix_tooltip::apply_tooltip_trigger_a11y(
+                base_trigger.clone(),
+                update.open,
+                content_id,
+            );
 
             let opening = update.open;
             let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
