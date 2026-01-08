@@ -47,6 +47,7 @@ a small `controllable_state` helper because it is a common contract shared by ma
 - `popper` -> `ecosystem/fret-ui-kit/src/primitives/popper.rs` (+ `popper_content.rs`)
 - `presence` -> `ecosystem/fret-ui-kit/src/primitives/presence.rs`
 - `progress` -> `ecosystem/fret-ui-kit/src/primitives/progress.rs`
+- `portal` -> `ecosystem/fret-ui-kit/src/primitives/portal.rs` (facade over overlay root naming/scoping)
 - `radio-group` -> `ecosystem/fret-ui-kit/src/primitives/radio_group.rs`
 - `roving-focus` -> `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs`
 - `scroll-area` -> `ecosystem/fret-ui-kit/src/primitives/scroll_area.rs`
