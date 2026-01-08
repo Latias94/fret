@@ -170,7 +170,21 @@ impl ChartEngine {
                 self.state.revision.bump();
             }
             Action::SetDataWindowX { axis, window } => {
-                let entry = self.state.data_zoom_x.entry(axis).or_default();
+                let default_mode = self
+                    .model
+                    .data_zoom_x_by_axis
+                    .get(&axis)
+                    .and_then(|id| self.model.data_zoom_x.get(id))
+                    .map(|z| z.filter_mode)
+                    .unwrap_or_default();
+                let entry = self
+                    .state
+                    .data_zoom_x
+                    .entry(axis)
+                    .or_insert(DataZoomXState {
+                        window: None,
+                        filter_mode: default_mode,
+                    });
                 if let Some(mut window) = window {
                     window.clamp_non_degenerate();
                     entry.window = Some(window);
@@ -191,7 +205,6 @@ impl ChartEngine {
                 self.marks_stage.mark_dirty();
             }
             Action::SetDataWindowXFilterMode { axis, mode } => {
-                let entry = self.state.data_zoom_x.entry(axis).or_default();
                 let default_mode = self
                     .model
                     .data_zoom_x_by_axis
@@ -199,6 +212,14 @@ impl ChartEngine {
                     .and_then(|id| self.model.data_zoom_x.get(id))
                     .map(|z| z.filter_mode)
                     .unwrap_or_default();
+                let entry = self
+                    .state
+                    .data_zoom_x
+                    .entry(axis)
+                    .or_insert(DataZoomXState {
+                        window: None,
+                        filter_mode: default_mode,
+                    });
                 entry.filter_mode = mode.unwrap_or(default_mode);
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
@@ -209,11 +230,26 @@ impl ChartEngine {
                 x,
                 y,
             } => {
+                let default_mode = self
+                    .model
+                    .data_zoom_x_by_axis
+                    .get(&x_axis)
+                    .and_then(|id| self.model.data_zoom_x.get(id))
+                    .map(|z| z.filter_mode)
+                    .unwrap_or_default();
+                let entry = self
+                    .state
+                    .data_zoom_x
+                    .entry(x_axis)
+                    .or_insert(DataZoomXState {
+                        window: None,
+                        filter_mode: default_mode,
+                    });
                 if let Some(mut x) = x {
                     x.clamp_non_degenerate();
-                    self.state.data_zoom_x.entry(x_axis).or_default().window = Some(x);
+                    entry.window = Some(x);
                 } else {
-                    self.state.data_zoom_x.entry(x_axis).or_default().window = None;
+                    entry.window = None;
                 }
 
                 if let Some(mut y) = y {

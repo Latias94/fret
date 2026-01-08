@@ -982,6 +982,89 @@ fn data_window_filter_mode_resets_to_spec_default() {
     assert_eq!(actual, FilterMode::None);
 }
 
+#[test]
+fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let zoom_id = crate::ids::DataZoomId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: None,
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                kind: AxisKind::X,
+                grid: grid_id,
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![DataZoomXSpec {
+            id: zoom_id,
+            axis: x_axis,
+            filter_mode: FilterMode::None,
+        }],
+        series: vec![SeriesSpec {
+            id: series_id,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    engine.state_mut().data_zoom_x.remove(&x_axis);
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow {
+            min: 10.0,
+            max: 20.0,
+        }),
+    });
+
+    let actual = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default()
+        .filter_mode;
+    assert_eq!(actual, FilterMode::None);
+}
+
 fn span_px_y(points: &[fret_core::Point]) -> f32 {
     if points.is_empty() {
         return 0.0;

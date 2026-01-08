@@ -2,7 +2,7 @@ use crate::data::{DataTable, DatasetStore};
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
 use crate::ids::{AxisId, DatasetId, Revision, SeriesId};
-use crate::transform::{RowRange, RowSelection, SeriesXPolicy, apply_x_window_transform};
+use crate::transform::{RowRange, RowSelection, SeriesXPolicy, data_zoom_x_node};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -124,15 +124,8 @@ impl ViewState {
                 .get(&series.x_axis)
                 .map(|a| a.range)
                 .unwrap_or_default();
-            let zoom = state
-                .data_zoom_x
-                .get(&series.x_axis)
-                .copied()
-                .unwrap_or_default();
-            let state_window = zoom.window;
-            let filter_mode = zoom.filter_mode;
             let x_window =
-                apply_x_window_transform(x, base_range, x_axis_range, state_window, filter_mode);
+                data_zoom_x_node(model, state, series.x_axis, x_axis_range).apply(x, base_range);
 
             self.series.push(SeriesView {
                 series: *series_id,

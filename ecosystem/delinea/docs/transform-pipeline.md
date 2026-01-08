@@ -82,6 +82,7 @@ However, many ECharts transforms are not representable as a single range:
    - `SliceRows` (current behavior)
    - `FilterRange` (explicit min/max filters per channel)
    - `Downsample` (min/max per pixel, decimation policies)
-3. Move `dataZoom` / `filterMode` into a transform node rather than hard-coding it into view logic.
+3. Represent `dataZoom` / `filterMode` as a transform node rather than ad-hoc view logic.
+   - Current internal node: `transform/data_zoom_x.rs` (`DataZoomXNode`), consumed by `ViewState`.
 
 The intent is to keep the engine deterministic and testable while staying performant on large datasets.
