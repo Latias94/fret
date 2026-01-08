@@ -31,20 +31,39 @@ Notes:
   - `ui-assets`: drives `fret-ui-assets` caches from the event pipeline (recommended if you load images/SVGs).
   - `preload-icon-svgs`: enables `preload_icon_svgs_on_gpu_ready`.
 
+## Minimal `Cargo.toml`
+
+This repo is not published to crates.io yet, so the examples below use workspace `path` dependencies.
+
+```toml
+[package]
+name = "todo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+fret-app = { path = "../../crates/fret-app" }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs"] }
+fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
+fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
+```
+
+If you want images/SVG caches out-of-the-box, enable `fret-bootstrap/ui-assets`:
+
+```toml
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver", "preload-icon-svgs", "ui-assets"] }
+fret-ui-assets = { path = "../../ecosystem/fret-ui-assets" }
+```
+
 ## Minimal startup
 
 ```rust,ignore
 use fret_app::App;
-use fret_bootstrap::BootstrapBuilder;
-use fret_bootstrap::ui_app_driver::UiAppDriver;
 use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme};
 
 fn main() -> anyhow::Result<()> {
-    let driver = UiAppDriver::new("todo", init_window, view)
-        .on_command(on_command)
-        .into_fn_driver();
-
-    BootstrapBuilder::new(App::new(), driver)
+    fret_bootstrap::ui_app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))
         .with_default_settings_json()?
         .init_app(|app| {
             // Optional: apply a built-in shadcn theme preset for a “new-york-v4” look.
@@ -64,7 +83,8 @@ fn main() -> anyhow::Result<()> {
 
 Notes:
 
-- `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0107).
+- `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0107). `ui_app_with_hooks` wraps the
+  boilerplate while keeping the underlying driver hotpatch-friendly.
 - Icons are data-only (`IconRegistry`); rendering remains in the renderer layer.
 - `UiAppDriver` closes the window by default on `Event::WindowCloseRequested` (clicking the window X).
   Disable this via `UiAppDriver::close_on_window_close_requested(false)` if you need an unsaved-changes prompt.
@@ -135,6 +155,9 @@ fn view(cx: &mut ElementContext<'_, fret_app::App>, st: &mut TodoWindowState) ->
     vec![todo_root(cx, st, add_icon, trash_icon)]
 }
 ```
+
+Note: `fret-ui-shadcn` re-exports common declarative authoring helpers (stack/style/icon) from `fret-ui-kit` so app code
+can stay on `fret-bootstrap` + `fret-ui-shadcn` for the default story.
 
 ## Event pipeline (platform → UI)
 
