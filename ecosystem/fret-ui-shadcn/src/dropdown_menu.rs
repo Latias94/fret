@@ -886,6 +886,7 @@ impl DropdownMenu {
             let trigger_id = trigger.id;
             menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, self.open.clone());
             let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
+            let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
                 menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
             let trigger =
@@ -1535,6 +1536,22 @@ impl DropdownMenu {
                                                                     }
                                                                 }
 
+                                                                let mut a11y =
+                                                                    menu::item::menu_item_a11y(
+                                                                        a11y_label,
+                                                                        has_submenu
+                                                                            .then_some(is_open_submenu),
+                                                                    );
+                                                                if has_submenu {
+                                                                    a11y.controls_element = Some(
+                                                                        menu::sub_content::submenu_content_semantics_id(
+                                                                            cx,
+                                                                            overlay_root_name_for_controls.as_ref(),
+                                                                            &value,
+                                                                        )
+                                                                        .0,
+                                                                    );
+                                                                }
                                                                 let props = PressableProps {
                                                                     layout: {
                                                                         let mut layout = LayoutStyle::default();
@@ -1545,12 +1562,7 @@ impl DropdownMenu {
                                                                     enabled: !disabled,
                                                                     focusable: !disabled,
                                                                     focus_ring: Some(ring),
-                                                                    a11y: menu::item::menu_item_a11y(
-                                                                        a11y_label,
-                                                                        has_submenu
-                                                                            .then_some(is_open_submenu),
-                                                                    )
-                                                                    .with_collection_position(
+                                                                    a11y: a11y.with_collection_position(
                                                                         collection_index,
                                                                         item_count,
                                                                     ),
@@ -1873,8 +1885,9 @@ impl DropdownMenu {
                                             };
 
                                             let submenu_models_for_panel = submenu_for_panel.clone();
-                                            let submenu_panel = menu::sub_content::submenu_panel_at(
+                                            let submenu_panel = menu::sub_content::submenu_panel_for_value_at(
                                                 cx,
+                                                open_value.clone(),
                                                 geometry.floating,
                                                 move |layout| ContainerProps {
                                                     layout,
@@ -3807,6 +3820,39 @@ mod tests {
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
             .expect("More menu item after open");
         assert!(more.flags.expanded, "expected More to be expanded");
+        let open_value = app
+            .models_mut()
+            .read(&submenu_models.open_value, |v| v.clone())
+            .ok()
+            .flatten()
+            .expect("expected submenu open_value to be set");
+        let expected_submenu_content_element = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            &overlay_root_name,
+            |cx| {
+                menu::sub_content::submenu_content_semantics_id(cx, &overlay_root_name, &open_value)
+            },
+        );
+        let expected_submenu_content_node = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            &overlay_root_name,
+            |cx| cx.node_for_element(expected_submenu_content_element),
+        );
+        let Some(expected_submenu_content_node) = expected_submenu_content_node else {
+            panic!(
+                "expected submenu content element to be mounted; open_value={open_value:?} element={expected_submenu_content_element:?}",
+            );
+        };
+        assert!(
+            more.controls.contains(&expected_submenu_content_node),
+            "expected submenu trigger to advertise a controls relationship to its submenu content; controls={:?} expected={:?}",
+            more.controls,
+            expected_submenu_content_node
+        );
 
         let other = snap
             .nodes

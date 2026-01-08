@@ -1114,21 +1114,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fret-app-kit"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "fret-app",
- "fret-core",
- "fret-runtime",
- "fret-ui",
- "fret-ui-app",
- "fret-ui-assets",
- "fret-ui-kit",
- "tracing",
-]
-
-[[package]]
 name = "fret-asset-cache"
 version = "0.1.0"
 dependencies = [

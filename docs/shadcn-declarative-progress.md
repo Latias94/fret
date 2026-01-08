@@ -24,7 +24,7 @@ This repo intentionally splits responsibilities across three layers (similar to 
 - `fret-ui-kit` (**design-system + infra**, Tailwind-ish): token-driven styling (`Theme` keys + refinements), reusable declarative helpers (`scroll`, `text_field`, etc), and headless state machines (`roving_focus`, hover intent, menu navigation).
 - `fret-ui-shadcn` (**taxonomy + recipes**): shadcn/ui v4 naming surface and component composition; no retained widgets, no renderer/platform deps.
 
-App/editor-specific composition belongs in `fret-editor` and ecosystem app layers (`fret-bootstrap` / `fret-app-kit`) (e.g. app toolbars, menu bars, command palette wiring).
+App/editor-specific composition belongs in `fret-editor` and ecosystem app layers (e.g. `fret-bootstrap`) (app toolbars, menu bars, command palette wiring).
 
 ### Interaction Policy (Action Hooks)
 

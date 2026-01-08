@@ -82,14 +82,12 @@ We adopt the Dioxus lesson: dev UX matters, but it must be kept out of core libr
   - enabling dev-only hotpatch/hotreload wiring by setting environment variables and feature flags.
 - `fret-bootstrap` may expose small helpers for dev env wiring (feature-gated), but must not become a toolchain manager.
 
-### 5) `fret-app-kit` is transitional and must not be required for the golden path
+### 5) No mixed "app kit" crate in the recommended story
 
-`fret-app-kit` historically mixed concerns (app defaults + UI asset conveniences).
-To reduce cognition and dependency ambiguity:
+To reduce cognition and dependency ambiguity, we avoid a mixed "kit" crate entirely:
 
 - UI render-asset conveniences live in `fret-ui-assets`.
-- App defaults / “starter semantics” (settings load, icon packs, budgets, dev toggles) live in `fret-bootstrap`.
-- `fret-app-kit` may remain temporarily as a compatibility shim with re-exports, but new examples and docs must not depend on it.
+- App defaults / "starter semantics" (settings load, icon packs, budgets, dev toggles) live in `fret-bootstrap`.
 
 ## Recommended “User Story” (What we want people to do)
 
@@ -134,17 +132,15 @@ It conflicts with ADR 0026’s explicit scope separation and would pull non-UI c
 
 ### Costs
 
-- We must maintain a clear migration path away from `fret-app-kit` (re-exports/deprecations).
 - Documentation must be kept current as crates move between “recommended” and “advanced” buckets.
 
 ## Migration Plan
 
 1. Ensure all examples/demos use `fret-bootstrap` as the default startup path.
-2. Move remaining UI render-asset convenience APIs out of `fret-app-kit` into `fret-ui-assets` (keep a shim temporarily).
-3. Update docs to present:
+2. Update docs to present:
    - “Golden path” (recommended),
    - “Manual assembly” (advanced).
-4. Expand `fretboard` to support stable “dev native/web” workflows (without moving toolchain concerns into libraries).
+3. Expand `fretboard` to support stable “dev native/web” workflows (without moving toolchain concerns into libraries).
 
 ## References
 

@@ -19,8 +19,6 @@ Today there is a mild cognition issue in the ecosystem area:
 - `ecosystem/fret-asset-cache` provides `use_asset`-style caching for render resources (Image/SVG) and budgeting/eviction.
   The name can be misread as "editor asset pipeline", which is explicitly out-of-scope for the framework kernel
   (ADR 0027 / `docs/architecture.md`).
-- `ecosystem/fret-app-kit` mixes "app-level defaults" and "resource convenience" in a way that makes dependency selection
-  ambiguous for new users.
 - Demo apps often re-implement the same startup steps: settings load, theme selection, icon pack registration, optional
   SVG preload, resource budget tuning, and dev toggles.
 
@@ -105,21 +103,13 @@ Migration path:
 - Medium term: add `fret-ui-assets` as a new crate that re-exports `fret-asset-cache` modules, then migrate call sites.
 - Long term: deprecate `fret-asset-cache` name if desired, keeping API paths stable where possible.
 
-### 3) Narrow `fret-app-kit` to "app defaults and app semantics"
+### 3) Remove `fret-app-kit` and keep responsibilities split
 
-`ecosystem/fret-app-kit` should focus on app-level defaults and semantics adapters:
+`ecosystem/fret-app-kit` historically mixed "app-level defaults" and "UI render-asset convenience". Since this repository
+is still pre-OSS and has no external users yet, we remove it entirely and keep the story crisp:
 
-- components-to-app bridges (e.g. status mapping, default model wiring),
-- default renderers/helpers that are opinionated at the application layer.
-
-It should avoid being the primary home of "UI render assets" caching logic, which belongs in `fret-ui-assets`.
-
-In particular:
-
-- `fret-app-kit` may *re-export* `fret-ui-assets` temporarily for migration convenience, but should not be the "canonical"
-  API surface for asset caches long-term.
-- Components and design-system crates should depend on `fret-ui-assets` directly (or higher-level helpers), not via
-  `fret-app-kit`.
+- App defaults / startup glue live in `ecosystem/fret-bootstrap`.
+- UI render-asset caches and helpers live in `ecosystem/fret-ui-assets` (re-export surface over `fret-asset-cache`).
 
 ### 4) Introduce a dev-tools layer as a separate distribution: `fretboard` (CLI)
 
@@ -149,8 +139,7 @@ Implemented:
 In progress / next:
 
 - Migrate remaining demos to the bootstrap "golden path" (optional but recommended).
-- Continue splitting `ecosystem/fret-app-kit` so that UI asset conveniences live in `fret-ui-assets` and the remaining
-  pieces are clearly "app defaults" (or are absorbed by `fret-bootstrap`).
+- Keep `fret-bootstrap` and `fret-ui-assets` small and composable; avoid re-introducing a mixed "app kit" crate.
 
 ### 5) Layering rules (hard)
 
@@ -225,9 +214,8 @@ breaking stable contracts.
 
 1) Add `ecosystem/fret-bootstrap` and update demos to use it (optional but recommended).
 2) Introduce `fret-ui-assets` as a re-export wrapper around `fret-asset-cache` (or rename directly if early enough).
-3) Refactor `fret-app-kit` to keep "app semantics" and move/alias render-asset conveniences into `fret-ui-assets`.
-4) Add `fretboard` CLI once the bootstrap patterns stabilize.
-5) (Optional) Add a starter template command (`fretboard init`) only after the crate boundaries prove stable.
+3) Add `fretboard` CLI once the bootstrap patterns stabilize.
+4) (Optional) Add a starter template command (`fretboard init`) only after the crate boundaries prove stable.
 
 ## References
 

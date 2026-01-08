@@ -107,15 +107,23 @@ fn read_timeline(file_stem: &str) -> TimelineGolden {
             path.display()
         )
     });
-    serde_json::from_str(&text)
-        .unwrap_or_else(|err| panic!("failed to parse radix web golden: {}\nerror: {err}", path.display()))
+    serde_json::from_str(&text).unwrap_or_else(|err| {
+        panic!(
+            "failed to parse radix web golden: {}\nerror: {err}",
+            path.display()
+        )
+    })
 }
 
 #[test]
 fn radix_web_goldens_smoke() {
     let dir = radix_web_dir();
-    let entries = std::fs::read_dir(&dir)
-        .unwrap_or_else(|err| panic!("missing radix web golden dir: {}\nerror: {err}", dir.display()));
+    let entries = std::fs::read_dir(&dir).unwrap_or_else(|err| {
+        panic!(
+            "missing radix web golden dir: {}\nerror: {err}",
+            dir.display()
+        )
+    });
 
     let mut count = 0usize;
     for entry in entries {
@@ -127,8 +135,8 @@ fn radix_web_goldens_smoke() {
         count += 1;
 
         let text = std::fs::read_to_string(&path).expect("read golden file");
-        let golden: TimelineGolden =
-            serde_json::from_str(&text).unwrap_or_else(|err| panic!("parse {}: {err}", path.display()));
+        let golden: TimelineGolden = serde_json::from_str(&text)
+            .unwrap_or_else(|err| panic!("parse {}: {err}", path.display()));
 
         assert!(golden.version >= 1, "version");
         assert_eq!(golden.base, "radix");

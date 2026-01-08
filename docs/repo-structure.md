@@ -64,7 +64,6 @@ Common examples:
   - `fret-ui-docking` (was `fret-ui-docking`)
   - `fret-ui-shadcn` (was `fret-ui-shadcn`)
 - "App kit" / default app policies:
-  - `fret-app-kit` (was `fret-app-kit`)
   - `fret-bootstrap` (opinionated startup glue over `fret-launch`)
   - `fret-ui-assets` (UI render asset caches; re-export surface over `fret-asset-cache`)
 - Icons:

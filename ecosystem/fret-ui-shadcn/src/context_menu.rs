@@ -678,6 +678,7 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
 fn context_menu_submenu_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    open_value: Arc<str>,
     placed: Rect,
     entries: Vec<ContextMenuEntry>,
     open: Model<bool>,
@@ -756,8 +757,9 @@ fn context_menu_submenu_panel<H: UiHost>(
     let destructive_bg = alpha_mul(destructive_fg, 0.12);
     let panel_bg = theme.color_required("popover");
 
-    menu::sub_content::submenu_panel_at(
+    menu::sub_content::submenu_panel_for_value_at(
         cx,
+        open_value,
         placed,
         move |layout| ContainerProps {
             layout,
@@ -1285,6 +1287,7 @@ impl ContextMenu {
 
             let id = cx.root_id();
             let overlay_root_name = menu::context_menu_root_name(id);
+            let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
             let content_id_for_trigger =
                 menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
             let trigger = trigger(cx);
@@ -1616,6 +1619,8 @@ impl ContextMenu {
                                                         let open = open_for_overlay.clone();
                                                         let text_style = text_style.clone();
                                                         let submenu_for_item = submenu_for_content.clone();
+                                                        let overlay_root_name_for_controls =
+                                                            overlay_root_name_for_controls.clone();
 
                                                         out.push(cx.keyed(value.clone(), |cx| {
                                                             cx.pressable_with_id_props(
@@ -1657,6 +1662,25 @@ impl ContextMenu {
                                                                         }
                                                                     }
 
+                                                                    let mut a11y =
+                                                                        menu::item::menu_item_a11y(
+                                                                            a11y_label,
+                                                                            has_submenu.then_some(
+                                                                                is_open_submenu,
+                                                                            ),
+                                                                        );
+                                                                    if has_submenu {
+                                                                        a11y.controls_element =
+                                                                            Some(
+                                                                                menu::sub_content::submenu_content_semantics_id(
+                                                                                    cx,
+                                                                                    overlay_root_name_for_controls
+                                                                                        .as_ref(),
+                                                                                    &value,
+                                                                                )
+                                                                                .0,
+                                                                            );
+                                                                    }
                                                                     let props = PressableProps {
                                                                         layout: {
                                                                             let mut layout =
@@ -1670,13 +1694,7 @@ impl ContextMenu {
                                                                         enabled: !disabled,
                                                                         focusable: !disabled,
                                                                         focus_ring: Some(ring),
-                                                                        a11y: menu::item::menu_item_a11y(
-                                                                            a11y_label,
-                                                                            has_submenu.then_some(
-                                                                                is_open_submenu,
-                                                                            ),
-                                                                        )
-                                                                        .with_collection_position(
+                                                                        a11y: a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
                                                                         ),
@@ -2050,6 +2068,7 @@ impl ContextMenu {
                         {
                             let submenu_panel = context_menu_submenu_panel(
                                 cx,
+                                open_value.clone(),
                                 geometry.floating,
                                 submenu_entries,
                                 open_for_submenu.clone(),

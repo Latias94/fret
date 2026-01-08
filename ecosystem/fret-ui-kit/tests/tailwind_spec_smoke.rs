@@ -67,10 +67,7 @@ fn repo_root() -> PathBuf {
 }
 
 fn spec_dir() -> PathBuf {
-    repo_root()
-        .join("goldens")
-        .join("tailwind-spec")
-        .join("v1")
+    repo_root().join("goldens").join("tailwind-spec").join("v1")
 }
 
 fn parse_space(s: &str) -> Option<Space> {
@@ -246,8 +243,8 @@ fn tailwind_spec_v1_smoke() {
         count += 1;
 
         let text = std::fs::read_to_string(&path).expect("read spec file");
-        let case: SpecCase =
-            serde_json::from_str(&text).unwrap_or_else(|err| panic!("parse {}: {err}", path.display()));
+        let case: SpecCase = serde_json::from_str(&text)
+            .unwrap_or_else(|err| panic!("parse {}: {err}", path.display()));
 
         assert!(case.version >= 1);
         assert!(!case.name.is_empty());

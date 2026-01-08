@@ -21,6 +21,21 @@
 //! builder.run()?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
+//!
+//! UI app “golden path” example (native, requires the `ui-app-driver` feature):
+//!
+//! ```no_run
+//! use fret_bootstrap::BootstrapBuilder;
+//!
+//! # #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+//! # fn demo() -> Result<(), fret_launch::RunnerError> {
+//! let builder = fret_bootstrap::ui_app("todo", |_app, _window| (), |_cx, _state| vec![])
+//!     .with_default_settings_json()?
+//!     .register_icon_pack(|_icons| {});
+//! builder.run()?;
+//! # Ok(())
+//! # }
+//! ```
 
 use std::path::Path;
 
@@ -275,3 +290,39 @@ impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub mod ui_app_driver;
+
+/// Concrete `BootstrapBuilder` type returned by `ui_app` / `ui_app_with_app`.
+#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+pub type UiAppBootstrapBuilder<S> = BootstrapBuilder<
+    fret_launch::FnDriver<ui_app_driver::UiAppDriver<S>, ui_app_driver::UiAppWindowState<S>>,
+>;
+
+/// Create a “golden path” native UI app builder, using `App::new()` by default.
+///
+/// This hides the `FnDriver` boilerplate and keeps example code short.
+#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+pub fn ui_app<S: 'static>(
+    root_name: &'static str,
+    init_window: fn(&mut App, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(
+        &mut fret_ui::ElementContext<'a, App>,
+        &mut S,
+    ) -> Vec<fret_ui::element::AnyElement>,
+) -> UiAppBootstrapBuilder<S> {
+    ui_app_with_app(App::new(), root_name, init_window, view)
+}
+
+/// Same as `ui_app`, but allows providing a pre-configured `App`.
+#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+pub fn ui_app_with_app<S: 'static>(
+    app: App,
+    root_name: &'static str,
+    init_window: fn(&mut App, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(
+        &mut fret_ui::ElementContext<'a, App>,
+        &mut S,
+    ) -> Vec<fret_ui::element::AnyElement>,
+) -> UiAppBootstrapBuilder<S> {
+    let driver = ui_app_driver::UiAppDriver::new(root_name, init_window, view).into_fn_driver();
+    BootstrapBuilder::new(app, driver)
+}

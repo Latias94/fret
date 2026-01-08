@@ -1019,6 +1019,7 @@ impl MenubarMenuEntries {
                 let opacity = motion.opacity;
                 let scale = motion.scale;
                 let overlay_root_name = menu::menubar_root_name(trigger_id);
+                let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
                 let content_id_for_trigger =
                     menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
                 let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
@@ -1599,11 +1600,13 @@ impl MenubarMenuEntries {
                                                               let trigger_registry =
                                                                   trigger_registry_for_overlay_for_content.clone();
                                                              let value = item.value.clone();
-                                                             let pad_left =
-                                                                 if item.inset { pad_x_inset } else { pad_x };
-                                                             let theme = theme.clone();
-                                                             out.push(cx.keyed(value.clone(), move |cx| {
-                                                                 cx.pressable_with_id_props(move |cx, st, item_id| {
+                                                              let pad_left =
+                                                                  if item.inset { pad_x_inset } else { pad_x };
+                                                              let theme = theme.clone();
+                                                              let overlay_root_name_for_controls =
+                                                                  overlay_root_name_for_controls.clone();
+                                                              out.push(cx.keyed(value.clone(), move |cx| {
+                                                                  cx.pressable_with_id_props(move |cx, st, item_id| {
                                                                     let geometry_hint = has_submenu.then_some(
                                                                         menu::sub_trigger::MenuSubTriggerGeometryHint {
                                                                             outer,
@@ -1690,16 +1693,30 @@ impl MenubarMenuEntries {
                                                                         enabled: item_enabled,
                                                                         focusable,
                                                                         focus_ring: Some(item_ring),
-                                                                        a11y: menu::item::menu_item_a11y(
-                                                                            a11y_label.or_else(|| {
-                                                                                Some(label.clone())
-                                                                            }),
-                                                                            expanded,
-                                                                        )
-                                                                        .with_collection_position(
-                                                                            collection_index,
-                                                                            item_count,
-                                                                        ),
+                                                                        a11y: {
+                                                                            let mut a11y =
+                                                                                menu::item::menu_item_a11y(
+                                                                                    a11y_label.or_else(|| {
+                                                                                        Some(label.clone())
+                                                                                    }),
+                                                                                    expanded,
+                                                                                );
+                                                                            if has_submenu {
+                                                                                a11y.controls_element = Some(
+                                                                                    menu::sub_content::submenu_content_semantics_id(
+                                                                                        cx,
+                                                                                        overlay_root_name_for_controls
+                                                                                            .as_ref(),
+                                                                                        &value,
+                                                                                    )
+                                                                                    .0,
+                                                                                );
+                                                                            }
+                                                                            a11y.with_collection_position(
+                                                                                collection_index,
+                                                                                item_count,
+                                                                            )
+                                                                        },
                                                                         ..Default::default()
                                                                     };
 
@@ -2047,8 +2064,9 @@ impl MenubarMenuEntries {
                                     let submenu_models_for_panel = submenu_for_panel.clone();
                                     let item_ring = item_ring;
 
-                                    let submenu_panel = menu::sub_content::submenu_panel_at(
+                                    let submenu_panel = menu::sub_content::submenu_panel_for_value_at(
                                         cx,
+                                        open_value.clone(),
                                         placed,
                                         move |layout| ContainerProps {
                                             layout,
