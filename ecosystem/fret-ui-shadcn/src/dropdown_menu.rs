@@ -3,15 +3,15 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle,
-    TextWrap, Transform2D,
+    Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap,
+    Transform2D,
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     OpacityProps, Overflow, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
-    ScrollProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    ScrollProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
@@ -886,6 +886,10 @@ impl DropdownMenu {
             let trigger_id = trigger.id;
             menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, self.open.clone());
             let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+            let content_id_for_trigger =
+                menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
+            let trigger =
+                menu::trigger::apply_menu_trigger_a11y(trigger, is_open, Some(content_id_for_trigger));
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
             let submenu =
                 cx.with_root_name(&overlay_root_name, |cx| {
@@ -1034,35 +1038,39 @@ impl DropdownMenu {
 
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
-                    let arrow_el = popper_arrow::diamond_arrow_element(
-                        cx,
-                        &layout,
-                        wrapper_insets,
-                        arrow_size,
-                        DiamondArrowStyle {
-                            bg,
-                            border: Some(border),
-                            border_width: Px(1.0),
-                        },
-                    );
 
-                    let content = cx.semantics(
-                        SemanticsProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
-                            },
-                            role: SemanticsRole::Menu,
-                            ..Default::default()
-                        },
+                    let content_layout = {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    };
+
+                    let (_content_id, content) = menu::content_panel::menu_content_semantics_with_id(
+                        cx,
+                        content_layout,
                         move |cx| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
                                 placed,
                                 wrapper_insets,
                                 move |cx| {
+                                    let arrow_el = arrow
+                                        .then(|| {
+                                            popper_arrow::diamond_arrow_element(
+                                                cx,
+                                                &layout,
+                                                wrapper_insets,
+                                                arrow_size,
+                                                DiamondArrowStyle {
+                                                    bg,
+                                                    border: Some(border),
+                                                    border_width: Px(1.0),
+                                                },
+                                            )
+                                        })
+                                        .flatten();
+
                                     let panel = menu::content_panel::menu_panel_container_at(
                                         cx,
                                         Rect::new(Point::new(extra_left, extra_top), placed.size),

@@ -1019,6 +1019,8 @@ impl MenubarMenuEntries {
                 let opacity = motion.opacity;
                 let scale = motion.scale;
                 let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+                let content_id_for_trigger =
+                    menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
                 let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
                 let submenu = cx.with_root_name(&overlay_root_name, |cx| {
                     menu::root::sync_root_open_and_ensure_submenu(cx, is_open, cx.root_id(), submenu_cfg)
@@ -1040,6 +1042,7 @@ impl MenubarMenuEntries {
                         role: Some(SemanticsRole::MenuItem),
                         label: Some(label.clone()),
                         expanded: Some(is_open),
+                        controls_element: Some(content_id_for_trigger.0),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -1177,52 +1180,50 @@ impl MenubarMenuEntries {
                             trigger_registry_for_overlay.clone();
 
                         let theme_for_content = theme.clone();
-                        let content = cx.semantics(
-                            SemanticsProps {
-                                layout: LayoutStyle::default(),
-                                role: SemanticsRole::Menu,
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let theme = theme_for_content.clone();
-                                vec![menu::content_panel::menu_panel_container_at(
-                                    cx,
-                                    placed,
-                                    move |layout| ContainerProps {
-                                        layout,
-                                        padding: Edges::all(Px(6.0)),
-                                        background: Some(panel_bg),
-                                        shadow: Some(shadow),
-                                        border: Edges::all(Px(1.0)),
-                                        border_color: Some(border),
-                                        corner_radii: Corners::all(radius_sm),
-                                    },
-                                    move |cx| {
-                                        let content_focus_id_for_panel =
-                                            content_focus_id_for_children_for_content.clone();
-                                        let group_active_for_switch =
-                                            group_active_for_content.clone();
-                                        let trigger_registry_for_switch =
-                                            trigger_registry_for_overlay_for_content.clone();
-                                        let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
-                                            cx,
-                                            RovingFlexProps {
-                                                flex: FlexProps {
-                                                    layout: LayoutStyle::default(),
-                                                    direction: fret_core::Axis::Vertical,
-                                                    gap: Px(0.0),
-                                                    padding: Edges::all(Px(0.0)),
-                                                    justify: MainAlign::Start,
-                                                    align: CrossAlign::Stretch,
-                                                    wrap: false,
+                        let (_content_id, content) =
+                            menu::content_panel::menu_content_semantics_with_id(
+                                cx,
+                                LayoutStyle::default(),
+                                move |cx| {
+                                    let theme = theme_for_content.clone();
+                                    vec![menu::content_panel::menu_panel_container_at(
+                                        cx,
+                                        placed,
+                                        move |layout| ContainerProps {
+                                            layout,
+                                            padding: Edges::all(Px(6.0)),
+                                            background: Some(panel_bg),
+                                            shadow: Some(shadow),
+                                            border: Edges::all(Px(1.0)),
+                                            border_color: Some(border),
+                                            corner_radii: Corners::all(radius_sm),
+                                        },
+                                        move |cx| {
+                                            let content_focus_id_for_panel =
+                                                content_focus_id_for_children_for_content.clone();
+                                            let group_active_for_switch =
+                                                group_active_for_content.clone();
+                                            let trigger_registry_for_switch =
+                                                trigger_registry_for_overlay_for_content.clone();
+                                            let roving = menu::sub_content::submenu_roving_group_apg_prefix_typeahead(
+                                                cx,
+                                                RovingFlexProps {
+                                                    flex: FlexProps {
+                                                        layout: LayoutStyle::default(),
+                                                        direction: fret_core::Axis::Vertical,
+                                                        gap: Px(0.0),
+                                                        padding: Edges::all(Px(0.0)),
+                                                        justify: MainAlign::Start,
+                                                        align: CrossAlign::Stretch,
+                                                        wrap: false,
+                                                    },
+                                                    roving,
                                                 },
-                                                roving,
-                                            },
-                                            labels_arc.clone(),
-                                            typeahead_timeout_ticks,
-                                            move |cx| {
-                                                let mut out: Vec<AnyElement> =
-                                                    Vec::with_capacity(entries_for_content.len());
+                                                labels_arc.clone(),
+                                                typeahead_timeout_ticks,
+                                                move |cx| {
+                                                    let mut out: Vec<AnyElement> =
+                                                        Vec::with_capacity(entries_for_content.len());
 
                                                 let mut item_ix: usize = 0;
 
