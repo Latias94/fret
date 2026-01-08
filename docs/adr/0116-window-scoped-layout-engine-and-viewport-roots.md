@@ -233,28 +233,18 @@ Debug surfaces:
 3. Adopt a full CSS engine
    - Rejected: violates typed semantics and increases surface area significantly.
 
-## Open Questions
+## Defaults (v1)
 
-- Should viewport roots be registered during docking layout (barrier) and consumed by the engine
-  later in the same frame, or should the build/request phase explicitly produce the root list?
-  - Proposed: register during the docking barrier (definite rect known), consume from a stable
-    per-frame root list owned by the window/tree during compute/apply.
-- What is the minimal “wrapper node set” that must be represented in the engine Taffy tree to make
-  per-viewport independent solves meaningful for real shadcn/Radix compositions (Stack/Container,
-  Pressable, padding wrappers, etc.)?
-  - Proposed: include any wrapper that can carry layout-affecting properties (size/min/max/margin,
-    padding, flex/grid item props, position). For “geometry-transparent” wrappers, default to
-    representing them as pass-through nodes and only skip via an explicit validated contents-like
-    opt-in.
-- How should overlay roots that are anchored to viewport content be handled:
-  - always window-scoped overlay roots that query window-space bounds after apply (ADR 0011), or
-  - optional per-viewport overlay roots that solve in viewport-local space?
-  - Proposed default: window-scoped overlay roots anchored via post-apply bounds queries; add
-    per-viewport overlay roots only if a concrete performance/correctness need arises.
-- What is the engine’s default pixel rounding policy (if any) and where is it applied
-  (solver output vs renderer snap rules in ADR 0035)?
-  - Proposed: keep rounding policy explicit and testable; prefer applying it once at the
-    layout-engine boundary so hit-testing and paint share identical snapped bounds.
+- Viewport roots are registered by docking barriers once their definite rects are known, stored in
+  a per-frame root list, and consumed during compute/apply.
+- Wrapper nodes: any node with layout-affecting properties is represented in the engine tree;
+  skipping boxes requires an explicit validated contents-like opt-in (see ADR 0117).
+- Overlays: default to window-scoped overlay roots that position via post-apply bounds queries (ADR
+  0011); add per-viewport overlay roots only for concrete perf/correctness needs.
+- Root solve order: solve roots in window root z-order, but viewport roots never participate in a
+  shared solve; each viewport root is solved independently against its own definite available space.
+- Pixel rounding: keep an explicit engine-level rounding policy (off by default); when enabled,
+  apply it once at the layout-engine boundary so hit-testing and paint share snapped bounds.
 
 ## References
 
