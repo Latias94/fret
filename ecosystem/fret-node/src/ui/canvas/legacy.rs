@@ -41,6 +41,7 @@ use crate::ui::{
     NodeGraphEditQueue, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
 };
 
+mod edge_drag;
 mod marquee;
 mod node_drag;
 mod wire_drag;
@@ -4277,44 +4278,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if let Some(drag) = self.interaction.edge_drag.clone() {
-                    let threshold = (3.0 / zoom).max(0.5 / zoom);
-                    let dx = position.x.0 - drag.start_pos.x.0;
-                    let dy = position.y.0 - drag.start_pos.y.0;
-                    if dx * dx + dy * dy >= threshold * threshold {
-                        let reconnect = {
-                            let this = &*self;
-                            this.graph
-                                .read_ref(cx.app, |graph| {
-                                    this.pick_reconnect_endpoint(
-                                        graph,
-                                        drag.edge,
-                                        drag.start_pos,
-                                        snapshot.interaction.reconnect_radius,
-                                        zoom,
-                                    )
-                                })
-                                .ok()
-                                .flatten()
-                        };
-
-                        if let Some((endpoint, fixed)) = reconnect {
-                            self.interaction.edge_drag = None;
-                            self.interaction.hover_edge = None;
-                            self.interaction.wire_drag = Some(WireDrag {
-                                kind: WireDragKind::Reconnect {
-                                    edge: drag.edge,
-                                    endpoint,
-                                    fixed,
-                                },
-                                pos: *position,
-                            });
-
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
-                            return;
-                        }
-                    }
+                if edge_drag::handle_edge_drag_move(self, cx, &snapshot, *position, zoom) {
+                    return;
                 }
 
                 if let Some(searcher) = self.interaction.searcher.as_mut() {
@@ -4462,10 +4427,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         return;
                     }
 
-                    if self.interaction.edge_drag.take().is_some() {
-                        cx.release_pointer_capture();
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
+                    if edge_drag::handle_edge_left_up(self, cx) {
+                        return;
                     }
                 }
             }
