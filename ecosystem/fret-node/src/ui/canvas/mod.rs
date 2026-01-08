@@ -12,6 +12,7 @@ mod paint;
 mod searcher;
 mod snaplines;
 mod spatial;
+mod state;
 mod workflow;
 
 pub use legacy::NodeGraphCanvas;

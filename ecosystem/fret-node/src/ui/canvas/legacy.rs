@@ -4,11 +4,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret_core::{
-    AppWindowId, ClipboardToken, Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand,
+    AppWindowId, Color, Corners, DrawOrder, Edges, Event, MouseButton, PathCommand,
     PathConstraints, PathStyle, Point, Px, Rect, SceneOp, Size, StrokeStyle, TextBlobId,
     TextConstraints, TextOverflow, TextWrap, Transform2D,
 };
-use fret_runtime::{CommandId, Effect, Model, TimerToken};
+use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::REROUTE_KIND;
@@ -46,205 +46,13 @@ use super::geometry::{CanvasGeometry, node_ports};
 use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
+use super::state::{
+    ContextMenuState, ContextMenuTarget, EdgeDrag, GeometryCache, GeometryCacheKey,
+    InteractionState, InternalsCacheKey, LastConversionContext, MarqueeDrag, MarqueeMode, NodeDrag,
+    PendingMarqueeDrag, PendingNodeDrag, PendingPaste, SearcherState, ToastState, ViewSnapshot,
+    WireDrag, WireDragKind,
+};
 use super::workflow;
-
-#[derive(Debug, Clone)]
-struct ViewSnapshot {
-    pan: CanvasPoint,
-    zoom: f32,
-    selected_nodes: Vec<GraphNodeId>,
-    selected_edges: Vec<EdgeId>,
-    draw_order: Vec<GraphNodeId>,
-    interaction: NodeGraphInteractionState,
-}
-
-#[derive(Debug, Default, Clone)]
-struct InteractionState {
-    last_pos: Option<Point>,
-    last_canvas_pos: Option<CanvasPoint>,
-    last_bounds: Option<Rect>,
-    last_conversion: Option<LastConversionContext>,
-    panning: bool,
-    pending_marquee: Option<PendingMarqueeDrag>,
-    marquee: Option<MarqueeDrag>,
-    pending_node_drag: Option<PendingNodeDrag>,
-    node_drag: Option<NodeDrag>,
-    wire_drag: Option<WireDrag>,
-    edge_drag: Option<EdgeDrag>,
-    hover_edge: Option<EdgeId>,
-    hover_port: Option<PortId>,
-    hover_port_valid: bool,
-    hover_port_convertible: bool,
-    context_menu: Option<ContextMenuState>,
-    searcher: Option<SearcherState>,
-    toast: Option<ToastState>,
-    pending_paste: Option<PendingPaste>,
-    snap_guides: Option<SnapGuides>,
-
-    sticky_wire: bool,
-    sticky_wire_ignore_next_up: bool,
-
-    recent_kinds: Vec<NodeKindKey>,
-}
-
-#[derive(Debug, Clone)]
-struct SearcherState {
-    origin: Point,
-    invoked_at: Point,
-    target: ContextMenuTarget,
-    query: String,
-    candidates: Vec<InsertNodeCandidate>,
-    recent_kinds: Vec<NodeKindKey>,
-    rows: Vec<SearcherRow>,
-    hovered_row: Option<usize>,
-    active_row: usize,
-    scroll: usize,
-}
-
-#[derive(Debug, Clone)]
-struct PendingNodeDrag {
-    primary: GraphNodeId,
-    nodes: Vec<GraphNodeId>,
-    grab_offset: Point,
-    start_pos: Point,
-}
-
-#[derive(Debug, Clone)]
-struct NodeDrag {
-    primary: GraphNodeId,
-    nodes: Vec<(GraphNodeId, CanvasPoint)>,
-    grab_offset: Point,
-    start_pos: Point,
-}
-
-#[derive(Debug, Clone, Copy)]
-enum MarqueeMode {
-    Replace,
-    Add,
-    Toggle,
-}
-
-#[derive(Debug, Clone)]
-struct PendingMarqueeDrag {
-    start_pos: Point,
-    base_nodes: Vec<GraphNodeId>,
-    mode: MarqueeMode,
-}
-
-#[derive(Debug, Clone)]
-struct MarqueeDrag {
-    start_pos: Point,
-    pos: Point,
-    base_nodes: Vec<GraphNodeId>,
-    mode: MarqueeMode,
-}
-
-#[derive(Debug, Clone)]
-enum WireDragKind {
-    New {
-        from: PortId,
-        bundle: Vec<PortId>,
-    },
-    Reconnect {
-        edge: EdgeId,
-        endpoint: EdgeEndpoint,
-        fixed: PortId,
-    },
-    ReconnectMany {
-        edges: Vec<(EdgeId, EdgeEndpoint, PortId)>,
-    },
-}
-
-#[derive(Debug, Clone)]
-struct WireDrag {
-    kind: WireDragKind,
-    pos: Point,
-}
-
-#[derive(Debug, Clone)]
-struct EdgeDrag {
-    edge: EdgeId,
-    start_pos: Point,
-}
-
-#[derive(Debug, Clone)]
-enum ContextMenuTarget {
-    Background,
-    BackgroundInsertNodePicker {
-        at: CanvasPoint,
-    },
-    ConnectionInsertNodePicker {
-        from: PortId,
-        at: CanvasPoint,
-    },
-    Edge(EdgeId),
-    EdgeInsertNodePicker(EdgeId),
-    ConnectionConvertPicker {
-        from: PortId,
-        to: PortId,
-        at: CanvasPoint,
-    },
-}
-
-#[derive(Debug, Clone)]
-struct ContextMenuState {
-    origin: Point,
-    invoked_at: Point,
-    target: ContextMenuTarget,
-    items: Vec<NodeGraphContextMenuItem>,
-    candidates: Vec<InsertNodeCandidate>,
-    hovered_item: Option<usize>,
-    active_item: usize,
-    typeahead: String,
-}
-
-#[derive(Debug, Clone)]
-struct ToastState {
-    timer: TimerToken,
-    severity: DiagnosticSeverity,
-    message: Arc<str>,
-}
-
-#[derive(Debug, Clone)]
-struct PendingPaste {
-    token: ClipboardToken,
-    at: CanvasPoint,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct GeometryCacheKey {
-    graph_rev: u64,
-    zoom_bits: u32,
-    draw_order_hash: u64,
-    presenter_rev: u64,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct InternalsCacheKey {
-    graph_rev: u64,
-    zoom_bits: u32,
-    draw_order_hash: u64,
-    presenter_rev: u64,
-    pan_x_bits: u32,
-    pan_y_bits: u32,
-    bounds_x_bits: u32,
-    bounds_y_bits: u32,
-}
-
-#[derive(Debug, Clone, Default)]
-struct GeometryCache {
-    key: Option<GeometryCacheKey>,
-    geom: Arc<CanvasGeometry>,
-    index: Arc<CanvasSpatialIndex>,
-}
-
-#[derive(Debug, Clone)]
-struct LastConversionContext {
-    from: PortId,
-    to: PortId,
-    at: CanvasPoint,
-    candidates: Vec<InsertNodeCandidate>,
-}
 
 /// Retained node-graph canvas widget (MVP).
 ///
