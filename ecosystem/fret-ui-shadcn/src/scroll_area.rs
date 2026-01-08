@@ -1,11 +1,380 @@
+use fret_core::{Color, Px};
 use fret_ui::element::AnyElement;
+use fret_ui::element::ContainerProps;
 use fret_ui::element::HoverRegionProps;
+use fret_ui::element::InsetStyle;
+use fret_ui::element::LayoutStyle;
+use fret_ui::element::Length;
+use fret_ui::element::Overflow;
+use fret_ui::element::PositionStyle;
+use fret_ui::element::ScrollAxis;
+use fret_ui::element::ScrollProps;
+use fret_ui::element::ScrollbarAxis;
+use fret_ui::element::ScrollbarProps;
+use fret_ui::element::ScrollbarStyle;
+use fret_ui::element::SizeStyle;
+use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::LayoutRefinement;
-use fret_ui_kit::declarative::scroll;
+use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::DEFAULT_SCROLL_HIDE_DELAY_TICKS;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
+
+fn shadcn_scrollbar_thumb(theme: &Theme) -> Color {
+    theme.color_required("border")
+}
+
+fn shadcn_scrollbar_thumb_hover(theme: &Theme) -> Color {
+    theme.color_required("border")
+}
+
+fn shadcn_scrollbar_corner_bg(theme: &Theme) -> Color {
+    theme.color_by_key("border").unwrap_or(Color::TRANSPARENT)
+}
+
+/// shadcn/ui `ScrollArea` primitives (v4).
+///
+/// Upstream (`new-york-v4`) composes:
+/// - `ScrollArea.Root` (relative container)
+/// - `ScrollArea.Viewport` (scrollable viewport)
+/// - `ScrollArea.Scrollbar` + `ScrollArea.Thumb`
+/// - `ScrollArea.Corner`
+///
+/// In Fret, scrollbars are explicit runtime primitives (`Scroll` + `Scrollbar`). This module
+/// exposes a composable, Radix-shaped surface while keeping the existing compact builder API.
+#[derive(Debug, Clone)]
+pub struct ScrollAreaViewport {
+    children: Vec<AnyElement>,
+    axis: ScrollAxis,
+    probe_unbounded: bool,
+}
+
+impl ScrollAreaViewport {
+    pub fn new(children: Vec<AnyElement>) -> Self {
+        Self {
+            children,
+            axis: ScrollAxis::Both,
+            probe_unbounded: true,
+        }
+    }
+
+    pub fn axis(mut self, axis: ScrollAxis) -> Self {
+        self.axis = axis;
+        self
+    }
+
+    pub fn probe_unbounded(mut self, probe_unbounded: bool) -> Self {
+        self.probe_unbounded = probe_unbounded;
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollAreaScrollbarOrientation {
+    Vertical,
+    Horizontal,
+}
+
+impl Default for ScrollAreaScrollbarOrientation {
+    fn default() -> Self {
+        Self::Vertical
+    }
+}
+
+/// shadcn/ui `ScrollBar` / Radix `ScrollAreaScrollbar` (v4).
+#[derive(Debug, Clone)]
+pub struct ScrollAreaScrollbar {
+    orientation: ScrollAreaScrollbarOrientation,
+    track_padding: Px,
+    thumb_idle_alpha: f32,
+}
+
+impl Default for ScrollAreaScrollbar {
+    fn default() -> Self {
+        Self {
+            orientation: ScrollAreaScrollbarOrientation::default(),
+            track_padding: ScrollbarStyle::default().track_padding,
+            thumb_idle_alpha: ScrollbarStyle::default().thumb_idle_alpha,
+        }
+    }
+}
+
+impl ScrollAreaScrollbar {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn orientation(mut self, orientation: ScrollAreaScrollbarOrientation) -> Self {
+        self.orientation = orientation;
+        self
+    }
+
+    /// Mirrors the upstream wrapper's `p-px` track padding.
+    pub fn track_padding(mut self, padding: Px) -> Self {
+        self.track_padding = padding;
+        self
+    }
+
+    pub fn thumb_idle_alpha(mut self, alpha: f32) -> Self {
+        self.thumb_idle_alpha = alpha;
+        self
+    }
+}
+
+/// shadcn/ui `ScrollArea.Corner` (v4).
+#[derive(Debug, Clone, Default)]
+pub struct ScrollAreaCorner;
+
+/// A composable, Radix/shadcn-shaped scroll-area surface (`Root` / `Viewport` / `Scrollbar` /
+/// `Corner`).
+#[derive(Clone)]
+pub struct ScrollAreaRoot {
+    viewport: ScrollAreaViewport,
+    scrollbars: Vec<ScrollAreaScrollbar>,
+    corner: bool,
+    scrollbar_type: ScrollAreaType,
+    scroll_hide_delay_ticks: u64,
+    layout: LayoutRefinement,
+    scroll_handle: Option<ScrollHandle>,
+    show_scrollbar: bool,
+}
+
+impl std::fmt::Debug for ScrollAreaRoot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ScrollAreaRoot")
+            .field("scrollbars_len", &self.scrollbars.len())
+            .field("corner", &self.corner)
+            .field("scrollbar_type", &self.scrollbar_type)
+            .field("scroll_hide_delay_ticks", &self.scroll_hide_delay_ticks)
+            .field("layout", &self.layout)
+            .field("show_scrollbar", &self.show_scrollbar)
+            .finish()
+    }
+}
+
+impl ScrollAreaRoot {
+    pub fn new(viewport: ScrollAreaViewport) -> Self {
+        Self {
+            viewport,
+            scrollbars: Vec::new(),
+            corner: false,
+            scrollbar_type: ScrollAreaType::default(),
+            scroll_hide_delay_ticks: DEFAULT_SCROLL_HIDE_DELAY_TICKS,
+            layout: LayoutRefinement::default(),
+            scroll_handle: None,
+            show_scrollbar: true,
+        }
+    }
+
+    pub fn show_scrollbar(mut self, show: bool) -> Self {
+        self.show_scrollbar = show;
+        self
+    }
+
+    /// Matches Radix ScrollArea `type` outcome.
+    pub fn type_(mut self, scrollbar_type: ScrollAreaType) -> Self {
+        self.scrollbar_type = scrollbar_type;
+        self
+    }
+
+    /// Mirrors Radix `scrollHideDelay` (default 600ms).
+    ///
+    /// Fret currently expresses this value in frame-ish ticks (assuming ~60fps).
+    pub fn scroll_hide_delay_ticks(mut self, ticks: u64) -> Self {
+        self.scroll_hide_delay_ticks = ticks;
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn scroll_handle(mut self, handle: ScrollHandle) -> Self {
+        self.scroll_handle = Some(handle);
+        self
+    }
+
+    pub fn scrollbar(mut self, scrollbar: ScrollAreaScrollbar) -> Self {
+        self.scrollbars.push(scrollbar);
+        self
+    }
+
+    pub fn corner(mut self, corner: bool) -> Self {
+        self.corner = corner;
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let viewport = self.viewport;
+        let scrollbars = self.scrollbars;
+        let corner = self.corner;
+        let scrollbar_type = self.scrollbar_type;
+        let scroll_hide_delay_ticks = self.scroll_hide_delay_ticks;
+        let layout = self.layout;
+        let scroll_handle = self.scroll_handle;
+        let show_scrollbar = self.show_scrollbar;
+
+        cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
+            let handle = scroll_handle
+                .unwrap_or_else(|| cx.with_state(ScrollHandle::default, |h| h.clone()));
+
+            let visible = show_scrollbar
+                && fret_ui_kit::primitives::scroll_area::scrollbar_visibility(
+                    cx,
+                    scrollbar_type,
+                    hovered,
+                    handle.clone(),
+                    scroll_hide_delay_ticks,
+                )
+                .visible;
+
+            let max_offset = handle.max_offset();
+            let wants_x = scrollbars
+                .iter()
+                .any(|s| s.orientation == ScrollAreaScrollbarOrientation::Horizontal);
+            let wants_y = scrollbars
+                .iter()
+                .any(|s| s.orientation == ScrollAreaScrollbarOrientation::Vertical);
+
+            let show_scrollbar_x = wants_x && visible && max_offset.x.0 > 0.01;
+            let show_scrollbar_y = wants_y && visible && max_offset.y.0 > 0.01;
+
+            let layout = decl_style::layout_style(&theme, layout);
+            vec![cx.stack_props(StackProps { layout }, move |cx| {
+                let mut scroll_layout = LayoutStyle::default();
+                scroll_layout.size.width = Length::Fill;
+                scroll_layout.size.height = Length::Fill;
+                scroll_layout.overflow = Overflow::Clip;
+
+                let scroll = cx.scroll(
+                    ScrollProps {
+                        layout: scroll_layout,
+                        axis: viewport.axis,
+                        scroll_handle: Some(handle.clone()),
+                        probe_unbounded: viewport.probe_unbounded,
+                    },
+                    move |_cx| viewport.children,
+                );
+
+                let scroll_id = scroll.id;
+                let mut children = vec![scroll];
+
+                let thumb = shadcn_scrollbar_thumb(&theme);
+                let thumb_hover = shadcn_scrollbar_thumb_hover(&theme);
+
+                if show_scrollbar_y {
+                    if let Some(spec) = scrollbars
+                        .iter()
+                        .find(|s| s.orientation == ScrollAreaScrollbarOrientation::Vertical)
+                    {
+                        let scrollbar_layout = LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                top: Some(Px(0.0)),
+                                right: Some(Px(0.0)),
+                                bottom: Some(if show_scrollbar_x {
+                                    theme.metric_required("metric.scrollbar.width")
+                                } else {
+                                    Px(0.0)
+                                }),
+                                left: None,
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(theme.metric_required("metric.scrollbar.width")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
+
+                        children.push(cx.scrollbar(ScrollbarProps {
+                            layout: scrollbar_layout,
+                            axis: ScrollbarAxis::Vertical,
+                            scroll_target: Some(scroll_id),
+                            scroll_handle: handle.clone(),
+                            style: ScrollbarStyle {
+                                thumb,
+                                thumb_hover,
+                                thumb_idle_alpha: spec.thumb_idle_alpha,
+                                track_padding: spec.track_padding,
+                            },
+                        }));
+                    }
+                }
+
+                if show_scrollbar_x {
+                    if let Some(spec) = scrollbars
+                        .iter()
+                        .find(|s| s.orientation == ScrollAreaScrollbarOrientation::Horizontal)
+                    {
+                        let scrollbar_layout = LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                top: None,
+                                right: Some(if show_scrollbar_y {
+                                    theme.metric_required("metric.scrollbar.width")
+                                } else {
+                                    Px(0.0)
+                                }),
+                                bottom: Some(Px(0.0)),
+                                left: Some(Px(0.0)),
+                            },
+                            size: SizeStyle {
+                                height: Length::Px(theme.metric_required("metric.scrollbar.width")),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
+
+                        children.push(cx.scrollbar(ScrollbarProps {
+                            layout: scrollbar_layout,
+                            axis: ScrollbarAxis::Horizontal,
+                            scroll_target: Some(scroll_id),
+                            scroll_handle: handle.clone(),
+                            style: ScrollbarStyle {
+                                thumb,
+                                thumb_hover,
+                                thumb_idle_alpha: spec.thumb_idle_alpha,
+                                track_padding: spec.track_padding,
+                            },
+                        }));
+                    }
+                }
+
+                if corner && show_scrollbar_x && show_scrollbar_y {
+                    let corner_layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            right: Some(Px(0.0)),
+                            bottom: Some(Px(0.0)),
+                            ..Default::default()
+                        },
+                        size: SizeStyle {
+                            width: Length::Px(theme.metric_required("metric.scrollbar.width")),
+                            height: Length::Px(theme.metric_required("metric.scrollbar.width")),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+
+                    children.push(cx.container(
+                        ContainerProps {
+                            layout: corner_layout,
+                            background: Some(shadcn_scrollbar_corner_bg(&theme)),
+                            ..Default::default()
+                        },
+                        |_cx| vec![],
+                    ));
+                }
+
+                children
+            })]
+        })
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ScrollArea {
@@ -59,40 +428,24 @@ impl ScrollArea {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let children = self.children;
-        let layout = self.layout;
-        let show_scrollbar = self.show_scrollbar;
-        let scrollbar_type = self.scrollbar_type;
-        let scroll_hide_delay_ticks = self.scroll_hide_delay_ticks;
-        let scroll_handle = self.scroll_handle;
+        let mut root = ScrollAreaRoot::new(ScrollAreaViewport::new(self.children))
+            .show_scrollbar(self.show_scrollbar)
+            .type_(self.scrollbar_type)
+            .scroll_hide_delay_ticks(self.scroll_hide_delay_ticks)
+            .refine_layout(self.layout)
+            .corner(true)
+            .scrollbar(
+                ScrollAreaScrollbar::new().orientation(ScrollAreaScrollbarOrientation::Vertical),
+            )
+            .scrollbar(
+                ScrollAreaScrollbar::new().orientation(ScrollAreaScrollbarOrientation::Horizontal),
+            );
 
-        cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
-            let handle = scroll_handle
-                .unwrap_or_else(|| cx.with_state(ScrollHandle::default, |h| h.clone()));
+        if let Some(handle) = self.scroll_handle {
+            root = root.scroll_handle(handle);
+        }
 
-            let visible = show_scrollbar
-                && fret_ui_kit::primitives::scroll_area::scrollbar_visibility(
-                    cx,
-                    scrollbar_type,
-                    hovered,
-                    handle.clone(),
-                    scroll_hide_delay_ticks,
-                )
-                .visible;
-
-            let max_offset = handle.max_offset();
-            let show_scrollbar_x = visible && max_offset.x.0 > 0.01;
-            let show_scrollbar_y = visible && max_offset.y.0 > 0.01;
-
-            vec![scroll::overflow_scroll_with_handle_xy(
-                cx,
-                layout,
-                show_scrollbar_x,
-                show_scrollbar_y,
-                handle,
-                move |_cx| children,
-            )]
-        })
+        root.into_element(cx)
     }
 }
 

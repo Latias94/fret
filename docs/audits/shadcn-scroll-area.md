@@ -20,8 +20,9 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ### Composition surface
 
-- Partial: Fret exposes a compact builder (`ScrollArea::new(children)`) rather than the full
-  `Root/Viewport/Scrollbar/Thumb/Corner` primitive split.
+- Pass: Exposes a composable `ScrollAreaRoot` / `ScrollAreaViewport` / `ScrollAreaScrollbar` /
+  `ScrollAreaCorner` surface (Radix-shaped), while keeping the compact `ScrollArea::new(children)`
+  builder for convenience.
 - Pass: Supports passing a `ScrollHandle` when consumers need programmatic scrolling.
 
 ### Scrollbar visibility (Radix `type`)
@@ -33,8 +34,8 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ### Visual parity (new-york)
 
-- Partial: Uses theme `scrollbar.*` tokens for thumb colors; does not currently match the exact
-  `bg-border` + `rounded-full` thumb skin from the registry wrapper.
+- Pass: Scrollbar thumb styling matches the registry wrapper defaults (`bg-border` + `rounded-full`)
+  via the runtime's rounded thumb paint and shadcn token mapping.
 
 ## Validation
 

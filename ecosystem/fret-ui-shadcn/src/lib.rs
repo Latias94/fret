@@ -161,7 +161,10 @@ pub use radio_group::{RadioGroup, RadioGroupItem, radio_group, radio_group_uncon
 pub use resizable::{
     ResizableEntry, ResizableHandle, ResizablePanel, ResizablePanelGroup, resizable_panel_group,
 };
-pub use scroll_area::{ScrollArea, scroll_area};
+pub use scroll_area::{
+    ScrollArea, ScrollAreaCorner, ScrollAreaRoot, ScrollAreaScrollbar,
+    ScrollAreaScrollbarOrientation, ScrollAreaViewport, scroll_area,
+};
 pub use select::{
     Select, SelectAlign, SelectEntry, SelectGroup, SelectItem, SelectLabel, SelectSeparator,
     SelectSide, select,
