@@ -3,6 +3,7 @@ use crate::declarative::frame::{ElementInstance, element_record_for_node, layout
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 use crate::declarative::taffy_layout::*;
+use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutConstraints, LayoutSize};
 
 impl ElementHostWidget {
     pub(super) fn layout_flex_impl<H: UiHost>(
@@ -171,23 +172,27 @@ impl ElementHostWidget {
                         return *size;
                     }
 
-                    let max_w = match avail.width {
-                        TaffyAvailableSpace::Definite(w) => Px(w),
-                        _ => Px(1.0e9),
-                    };
-                    let max_h = match avail.height {
-                        TaffyAvailableSpace::Definite(h) => Px(h),
-                        _ => Px(1.0e9),
-                    };
+                    let constraints = LayoutConstraints::new(
+                        LayoutSize::new(known.width.map(Px), known.height.map(Px)),
+                        LayoutSize::new(
+                            match avail.width {
+                                TaffyAvailableSpace::Definite(w) => {
+                                    RuntimeAvailableSpace::Definite(Px(w))
+                                }
+                                TaffyAvailableSpace::MinContent => RuntimeAvailableSpace::MinContent,
+                                TaffyAvailableSpace::MaxContent => RuntimeAvailableSpace::MaxContent,
+                            },
+                            match avail.height {
+                                TaffyAvailableSpace::Definite(h) => {
+                                    RuntimeAvailableSpace::Definite(Px(h))
+                                }
+                                TaffyAvailableSpace::MinContent => RuntimeAvailableSpace::MinContent,
+                                TaffyAvailableSpace::MaxContent => RuntimeAvailableSpace::MaxContent,
+                            },
+                        ),
+                    );
 
-                    let known_w = known.width.map(Px);
-                    let known_h = known.height.map(Px);
-
-                    let w = known_w.unwrap_or(max_w);
-                    let h = known_h.unwrap_or(max_h);
-
-                    let probe = Rect::new(inner_origin, Size::new(w, h));
-                    let s = cx.layout_in(child, probe);
+                    let s = cx.measure_in(child, constraints);
                     let out = taffy::geometry::Size {
                         width: s.width.0,
                         height: s.height.0,
