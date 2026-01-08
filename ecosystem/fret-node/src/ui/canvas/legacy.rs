@@ -38,7 +38,7 @@ use crate::ui::presenter::{
 use crate::ui::style::NodeGraphStyle;
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, NodeGraphCanvasTransform,
-    NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
+    NodeGraphEditQueue, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
 };
 
 use super::conversion;
@@ -209,6 +209,9 @@ pub struct NodeGraphCanvas {
     auto_measured: Arc<MeasuredGeometryStore>,
     auto_measured_key: Option<(u64, u32)>,
 
+    edit_queue: Option<Model<NodeGraphEditQueue>>,
+    edit_queue_key: Option<u64>,
+
     measured_output: Option<Arc<MeasuredGeometryStore>>,
     measured_output_key: Option<GeometryCacheKey>,
 
@@ -336,6 +339,8 @@ impl NodeGraphCanvas {
             close_command: None,
             auto_measured,
             auto_measured_key: None,
+            edit_queue: None,
+            edit_queue_key: None,
             measured_output: None,
             measured_output_key: None,
             internals: None,
@@ -390,6 +395,16 @@ impl NodeGraphCanvas {
         self
     }
 
+    /// Attaches a UI-side edit queue (`Model<NodeGraphEditQueue>`).
+    ///
+    /// The canvas drains queued transactions during layout and commits them through its normal
+    /// apply + history pipeline (undo/redo).
+    pub fn with_edit_queue(mut self, queue: Model<NodeGraphEditQueue>) -> Self {
+        self.edit_queue = Some(queue);
+        self.edit_queue_key = None;
+        self
+    }
+
     fn close_button_rect(pan: CanvasPoint, zoom: f32) -> Rect {
         let margin = 12.0 / zoom;
         let w = 64.0 / zoom;
@@ -437,6 +452,26 @@ impl NodeGraphCanvas {
         snapshot.pan = self.cached_pan;
 
         snapshot
+    }
+
+    fn drain_edit_queue<H: UiHost>(&mut self, host: &mut H, window: Option<AppWindowId>) {
+        let Some(queue) = self.edit_queue.as_ref() else {
+            return;
+        };
+        let Some(rev) = queue.revision(host) else {
+            return;
+        };
+        if self.edit_queue_key == Some(rev) {
+            return;
+        }
+        self.edit_queue_key = Some(rev);
+
+        let Ok(txs) = queue.update(host, |q, _cx| q.drain()) else {
+            return;
+        };
+        for tx in txs {
+            let _ = self.commit_transaction(host, window, &tx);
+        }
     }
 
     fn update_auto_measured_node_sizes<H: UiHost>(&mut self, cx: &mut LayoutCx<'_, H>) {
@@ -2863,7 +2898,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         cx.observe_model(&self.graph, Invalidation::Layout);
         cx.observe_model(&self.view_state, Invalidation::Layout);
+        if let Some(queue) = self.edit_queue.as_ref() {
+            cx.observe_model(queue, Invalidation::Layout);
+        }
         self.sync_view_state(cx.app);
+        self.drain_edit_queue(cx.app, cx.window);
         self.update_auto_measured_node_sizes(cx);
         cx.available
     }
@@ -4392,7 +4431,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         #[derive(Debug, Default)]
         struct RenderData {
             edges: Vec<(EdgeId, Point, Point, Color, bool, bool)>,
-            nodes: Vec<(GraphNodeId, Rect, bool, Arc<str>)>,
+            nodes: Vec<(GraphNodeId, Rect, bool, Arc<str>, Option<Arc<str>>, usize)>,
             pins: Vec<(PortId, Rect, Color)>,
             port_labels: HashMap<PortId, PortLabelRender>,
             port_centers: HashMap<PortId, Point>,
@@ -4446,7 +4485,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         };
                         let is_selected = selected.contains(&node);
                         let title = presenter.node_title(graph, node);
-                        out.nodes.push((node, node_geom.rect, is_selected, title));
+                        let (inputs, outputs) = node_ports(graph, node);
+                        let pin_rows = inputs.len().max(outputs.len());
+                        let body = presenter.node_body_label(graph, node);
+                        out.nodes
+                            .push((node, node_geom.rect, is_selected, title, body, pin_rows));
                     }
 
                     for (&port_id, handle) in &geom.ports {
@@ -4629,7 +4672,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
         let title_pad = self.style.node_padding / zoom;
         let title_h = self.style.node_header_height / zoom;
 
-        for (_node, rect, is_selected, title) in &render.nodes {
+        for (_node, rect, is_selected, title, body, pin_rows) in &render.nodes {
             let rect = *rect;
             let border_color = if *is_selected {
                 self.style.node_border_selected
@@ -4665,6 +4708,40 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 cx.scene.push(SceneOp::Text {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, text_y),
+                    text: blob,
+                    color: self.style.context_menu_text,
+                });
+            }
+
+            if let Some(body) = body
+                && !body.is_empty()
+            {
+                let pin_rows = (*pin_rows).max(0) as f32;
+                let body_top = rect.origin.y.0
+                    + (self.style.node_header_height
+                        + self.style.node_padding
+                        + pin_rows * self.style.pin_row_height
+                        + self.style.node_padding)
+                        / zoom;
+
+                let max_w = (rect.size.width.0 - 2.0 * title_pad).max(0.0);
+                let constraints = TextConstraints {
+                    max_width: Some(Px(max_w)),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    scale_factor: cx.scale_factor * zoom,
+                };
+                let (blob, metrics) =
+                    cx.services
+                        .text()
+                        .prepare(body.as_ref(), &node_text_style, constraints);
+                self.text_blobs.push(blob);
+
+                let text_x = Px(rect.origin.x.0 + title_pad);
+                let inner_y = body_top + metrics.baseline.0;
+                cx.scene.push(SceneOp::Text {
+                    order: DrawOrder(4),
+                    origin: Point::new(text_x, Px(inner_y)),
                     text: blob,
                     color: self.style.context_menu_text,
                 });

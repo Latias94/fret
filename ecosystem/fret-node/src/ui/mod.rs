@@ -6,6 +6,7 @@
 
 pub mod canvas;
 pub mod commands;
+pub mod edit_queue;
 pub mod internals;
 pub mod measured;
 pub mod presenter;
@@ -13,6 +14,7 @@ pub mod style;
 
 pub use canvas::NodeGraphCanvas;
 pub use commands::register_node_graph_commands;
+pub use edit_queue::NodeGraphEditQueue;
 pub use internals::{
     NodeGraphCanvasTransform, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
 };

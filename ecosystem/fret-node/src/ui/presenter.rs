@@ -79,6 +79,17 @@ pub trait NodeGraphPresenter {
     fn node_title(&self, graph: &Graph, node: NodeId) -> Arc<str>;
     fn port_label(&self, graph: &Graph, port: PortId) -> Arc<str>;
 
+    /// Optional node body label.
+    ///
+    /// This is a low-friction extensibility point for MVP editor UIs that want to show simple,
+    /// domain-derived content (e.g. constant values) without embedding an entire UI subtree.
+    ///
+    /// More advanced node content should eventually be modeled as a dedicated "node view" layer
+    /// (see ADR 0106), but this hook is useful for early demos and diagnostics.
+    fn node_body_label(&self, _graph: &Graph, _node: NodeId) -> Option<Arc<str>> {
+        None
+    }
+
     fn port_color(&self, graph: &Graph, port: PortId, style: &NodeGraphStyle) -> Color {
         let Some(p) = graph.ports.get(&port) else {
             return style.node_border;
