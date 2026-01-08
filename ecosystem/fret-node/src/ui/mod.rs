@@ -2,8 +2,6 @@
 //!
 //! This module is behind the default `fret-ui` feature.
 
-#![cfg(feature = "fret-ui")]
-
 pub mod canvas;
 pub mod commands;
 pub mod edit_queue;

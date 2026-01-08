@@ -9,16 +9,16 @@
 //! This module is intentionally headless (no `fret-ui` dependency).
 
 mod pipeline;
-mod simple;
 
 use crate::core::{EdgeKind, Graph, PortId};
 use crate::rules::{ConnectPlan, Diagnostic};
 use crate::types::TypeDesc;
 
+#[cfg(feature = "kit")]
+pub use crate::kit::profiles::DataflowProfile;
 pub use pipeline::{
     ApplyPipelineError, apply_connect_plan_with_profile, apply_transaction_with_profile,
 };
-pub use simple::DataflowProfile;
 
 /// Profile hooks for typed graphs and domain specialization.
 pub trait GraphProfile {
@@ -55,6 +55,3 @@ pub trait GraphProfile {
         Vec::new()
     }
 }
-
-#[cfg(test)]
-mod tests;

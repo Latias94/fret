@@ -12,6 +12,8 @@ pub const REROUTE_KIND: &str = "fret.reroute";
 
 pub mod core;
 pub mod io;
+#[cfg(feature = "kit")]
+pub mod kit;
 pub mod ops;
 pub mod profile;
 pub mod rules;

@@ -15,10 +15,15 @@ uuid.workspace = true
 tracing.workspace = true
 
 [features]
-default = ["fret-ui"]
+default = ["fret-ui", "kit"]
 
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
 fret-ui = ["dep:fret-ui", "dep:fret-runtime"]
+
+# Convenience surfaces (profiles + common recipes) built on top of the substrate.
+#
+# This is headless-safe: it must not depend on `fret-ui`.
+kit = []
 
 # Builds only the headless graph model + schema + rules (no `fret-ui` dependency).
 headless = []

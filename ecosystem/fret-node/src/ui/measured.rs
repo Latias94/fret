@@ -235,7 +235,7 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for MeasuredNodeGraphPresenter<P>
             .plan_reconnect_edge(graph, edge, endpoint, new_port)
     }
 
-    fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
+    fn profile_mut(&mut self) -> Option<&mut (dyn GraphProfile + 'static)> {
         self.inner.profile_mut()
     }
 
@@ -430,7 +430,7 @@ impl<P: NodeGraphPresenter> NodeGraphPresenter for FallbackMeasuredNodeGraphPres
             .plan_reconnect_edge(graph, edge, endpoint, new_port)
     }
 
-    fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
+    fn profile_mut(&mut self) -> Option<&mut (dyn GraphProfile + 'static)> {
         self.inner.profile_mut()
     }
 

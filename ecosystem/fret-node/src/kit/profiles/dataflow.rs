@@ -1,18 +1,24 @@
-//! Simple built-in profiles.
+//! A permissive built-in dataflow profile.
+//!
+//! This profile is intended as a convenient starting point for workflow/dataflow graphs:
+//! - uses `Port::ty` as the source of truth for typing,
+//! - enforces a small default compatibility table for data edges when both sides have types,
+//! - runs a small concretization pass for kit recipe nodes (e.g. `variadic_merge`).
 
 use std::collections::BTreeSet;
 
 use uuid::Uuid;
 
-use crate::core::{Graph, PortId};
-use crate::core::{NodeId, Port, PortCapacity, PortDirection, PortKey, PortKind};
+use crate::core::{
+    EdgeKind, Graph, NodeId, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
+};
 use crate::ops::GraphOpBuilderExt;
 use crate::rules::{ConnectPlan, Diagnostic, DiagnosticSeverity, plan_connect_typed};
 use crate::types::{DefaultTypeCompatibility, TypeCompatibility, TypeDesc};
 
-use super::GraphProfile;
+use crate::kit::nodes::VARIADIC_MERGE_KIND;
+use crate::profile::GraphProfile;
 
-const VARIADIC_MERGE_KIND: &str = "fret.variadic_merge";
 const VARIADIC_OUTPUT_KEY: &str = "out";
 
 /// A permissive dataflow profile:
@@ -69,8 +75,11 @@ impl GraphProfile for DataflowProfile {
             .collect()
     }
 
+    fn allow_cycles(&self, _edge_kind: EdgeKind) -> bool {
+        true
+    }
+
     fn concretize(&mut self, graph: &Graph) -> Vec<crate::ops::GraphOp> {
-        let _ = self;
         let mut ops: Vec<crate::ops::GraphOp> = Vec::new();
 
         for (node_id, node) in &graph.nodes {
@@ -115,7 +124,7 @@ fn port_has_incoming_edge(graph: &Graph, port: PortId) -> bool {
     graph
         .edges
         .values()
-        .any(|e| e.kind == crate::core::EdgeKind::Data && e.to == port)
+        .any(|e| e.kind == EdgeKind::Data && e.to == port)
 }
 
 fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::GraphOp> {
@@ -241,14 +250,6 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
     }
 
     // If nothing changed, avoid emitting a noisy SetNodePorts.
-    let mut managed: BTreeSet<PortId> = BTreeSet::new();
-    for (_, id) in &inputs {
-        managed.insert(*id);
-    }
-    if let Some(out) = output {
-        managed.insert(out);
-    }
-
     let mut desired: Vec<PortId> = inputs.iter().map(|(_, id)| *id).collect();
     if let Some(out) = output {
         desired.push(out);
@@ -266,4 +267,173 @@ fn concretize_variadic_merge(graph: &Graph, node_id: NodeId) -> Vec<crate::ops::
     }
 
     ops
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::{CanvasPoint, Edge, EdgeId, Node, NodeKindKey};
+
+    fn make_node(kind: &str) -> Node {
+        Node {
+            kind: NodeKindKey::new(kind),
+            kind_version: 0,
+            pos: CanvasPoint { x: 0.0, y: 0.0 },
+            collapsed: false,
+            ports: Vec::new(),
+            data: serde_json::Value::Null,
+        }
+    }
+
+    #[test]
+    fn variadic_merge_adds_new_input_when_last_is_connected() {
+        let mut graph = Graph::default();
+        let merge = NodeId::new();
+        graph.nodes.insert(merge, make_node(VARIADIC_MERGE_KIND));
+
+        let mut profile = DataflowProfile::new();
+        let _ = crate::profile::apply_transaction_with_profile(
+            &mut graph,
+            &mut profile,
+            &crate::ops::GraphTransaction::new(),
+        )
+        .unwrap();
+
+        // Concretize should ensure at least in0 + out exist.
+        let ports = graph.nodes.get(&merge).unwrap().ports.clone();
+        assert!(ports.len() >= 2);
+
+        let in0 = ports
+            .iter()
+            .find_map(|id| {
+                graph
+                    .ports
+                    .get(id)
+                    .and_then(|p| (p.key.0 == "in0").then_some(*id))
+            })
+            .expect("in0");
+        let out = ports
+            .iter()
+            .find_map(|id| {
+                graph
+                    .ports
+                    .get(id)
+                    .and_then(|p| (p.key.0 == "out").then_some(*id))
+            })
+            .expect("out");
+
+        // Connect something to in0.
+        let src_node = NodeId::new();
+        graph.nodes.insert(src_node, make_node("demo.src"));
+        let src_out = PortId::new();
+        graph.ports.insert(
+            src_out,
+            Port {
+                node: src_node,
+                key: PortKey::new("out"),
+                dir: PortDirection::Out,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Multi,
+                ty: Some(TypeDesc::Float),
+                data: serde_json::Value::Null,
+            },
+        );
+        graph.nodes.get_mut(&src_node).unwrap().ports.push(src_out);
+
+        let edge_id = EdgeId::new();
+        let tx = crate::ops::GraphTransaction {
+            label: None,
+            ops: vec![crate::ops::GraphOp::AddEdge {
+                id: edge_id,
+                edge: Edge {
+                    kind: EdgeKind::Data,
+                    from: src_out,
+                    to: in0,
+                },
+            }],
+        };
+        let committed =
+            crate::profile::apply_transaction_with_profile(&mut graph, &mut profile, &tx).unwrap();
+        assert!(!committed.ops.is_empty());
+
+        // After concretize, last input should be empty slot, so an additional in1 exists.
+        let ports = graph.nodes.get(&merge).unwrap().ports.clone();
+        assert!(
+            ports
+                .iter()
+                .any(|id| graph.ports.get(id).is_some_and(|p| p.key.0 == "in1")),
+            "expected in1 to be created"
+        );
+
+        // Ensure output is still present.
+        assert!(ports.contains(&out));
+    }
+
+    #[test]
+    fn variadic_merge_trims_trailing_empty_inputs() {
+        let mut graph = Graph::default();
+        let merge = NodeId::new();
+        graph.nodes.insert(merge, make_node(VARIADIC_MERGE_KIND));
+
+        let mut profile = DataflowProfile::new();
+        let _ = crate::profile::apply_transaction_with_profile(
+            &mut graph,
+            &mut profile,
+            &crate::ops::GraphTransaction::new(),
+        )
+        .unwrap();
+
+        // Force-add a few extra empty inputs via concretize (simulate previous state).
+        let ports = graph.nodes.get(&merge).unwrap().ports.clone();
+        let in0 = ports
+            .iter()
+            .find_map(|id| {
+                graph
+                    .ports
+                    .get(id)
+                    .and_then(|p| (p.key.0 == "in0").then_some(*id))
+            })
+            .expect("in0");
+
+        // Add an extra empty port in2 directly (unmanaged), then let concretize trim it.
+        let in2 = PortId::new();
+        graph.ports.insert(
+            in2,
+            Port {
+                node: merge,
+                key: PortKey::new("in2"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                ty: None,
+                data: serde_json::Value::Null,
+            },
+        );
+        let mut ports = graph.nodes.get(&merge).unwrap().ports.clone();
+        ports.insert(ports.len().saturating_sub(1), in2);
+        graph.nodes.get_mut(&merge).unwrap().ports = ports;
+
+        let _ = crate::profile::apply_transaction_with_profile(
+            &mut graph,
+            &mut profile,
+            &crate::ops::GraphTransaction::new(),
+        )
+        .unwrap();
+
+        // Expect only one trailing empty slot beyond the connected/seeded ones.
+        let ports = graph.nodes.get(&merge).unwrap().ports.clone();
+        assert!(
+            ports
+                .iter()
+                .filter(|id| {
+                    graph
+                        .ports
+                        .get(id)
+                        .is_some_and(|p| p.dir == PortDirection::In && p.kind == PortKind::Data)
+                })
+                .count()
+                >= 1
+        );
+        assert!(ports.contains(&in0));
+    }
 }

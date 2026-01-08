@@ -1,37 +1,37 @@
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use fret_app::App;
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Point, Px, Rect, Size};
 use fret_launch::{
-    run_app, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    WinitWindowContext, run_app,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_runtime::{
-    keymap::Binding, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord,
-    KeymapService, PlatformFilter, WhenExpr,
+    CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, KeymapService,
+    PlatformFilter, WhenExpr, keymap::Binding,
 };
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::{UiFrameCx, UiTree};
 
+use fret_node::Graph;
+use fret_node::TypeDesc;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
 use fret_node::ops::{GraphOp, GraphTransaction};
-use fret_node::profile::{apply_transaction_with_profile, DataflowProfile};
+use fret_node::profile::{DataflowProfile, apply_transaction_with_profile};
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
 use fret_node::ui::presenter::{
     InsertNodeCandidate, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
 };
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
-    register_node_graph_commands, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
-    NodeGraphCanvas, NodeGraphEditQueue, NodeGraphInternalsStore, RegistryNodeGraphPresenter,
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphEditQueue,
+    NodeGraphInternalsStore, RegistryNodeGraphPresenter, register_node_graph_commands,
 };
-use fret_node::Graph;
-use fret_node::TypeDesc;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
@@ -181,7 +181,7 @@ impl NodeGraphPresenter for DemoPresenter {
         self.inner.on_edge_context_menu_action(graph, edge, action)
     }
 
-    fn profile_mut(&mut self) -> Option<&mut dyn fret_node::profile::GraphProfile> {
+    fn profile_mut(&mut self) -> Option<&mut (dyn fret_node::profile::GraphProfile + 'static)> {
         self.inner.profile_mut()
     }
 
@@ -632,14 +632,6 @@ fn build_demo_graph() -> Graph {
             kind: EdgeKind::Data,
             from: port_value_a_out,
             to: port_merge_in0,
-        },
-    );
-    graph.edges.insert(
-        EdgeId::new(),
-        Edge {
-            kind: EdgeKind::Data,
-            from: port_value_b_out,
-            to: port_merge_in1,
         },
     );
     graph.edges.insert(

@@ -7,14 +7,16 @@ use crate::core::{
     CanvasPoint, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
     PortDirection, PortId, PortKey, PortKind,
 };
+#[cfg(feature = "kit")]
+use crate::kit::profiles::DataflowProfile;
 use crate::ops::GraphOp;
+use crate::profile::GraphProfile;
 use crate::rules::{
     ConnectPlan, EdgeEndpoint, InsertNodeSpec, InsertNodeTemplate, plan_connect,
     plan_reconnect_edge, plan_split_edge_by_inserting_node,
 };
 use crate::schema::NodeRegistry;
 use crate::types::TypeDesc;
-use crate::{profile::DataflowProfile, profile::GraphProfile};
 use fret_runtime::CommandId;
 
 use super::style::NodeGraphStyle;
@@ -323,7 +325,7 @@ pub trait NodeGraphPresenter {
     /// Returning a profile enables:
     /// - typed `plan_connect` by default,
     /// - profile-driven concretization/validation when applying transactions.
-    fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
+    fn profile_mut(&mut self) -> Option<&mut (dyn GraphProfile + 'static)> {
         None
     }
 
@@ -400,6 +402,7 @@ pub trait NodeGraphPresenter {
 /// Default presenter used by the canvas widget when no domain presenter is provided.
 #[derive(Debug, Default, Clone)]
 pub struct DefaultNodeGraphPresenter {
+    #[cfg(feature = "kit")]
     profile: DataflowProfile,
 }
 
@@ -420,8 +423,15 @@ impl NodeGraphPresenter for DefaultNodeGraphPresenter {
             .unwrap_or_else(|| Arc::<str>::from("<missing port>"))
     }
 
-    fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
-        Some(&mut self.profile)
+    fn profile_mut(&mut self) -> Option<&mut (dyn GraphProfile + 'static)> {
+        #[cfg(feature = "kit")]
+        {
+            Some(&mut self.profile)
+        }
+        #[cfg(not(feature = "kit"))]
+        {
+            None
+        }
     }
 }
 
@@ -430,22 +440,30 @@ impl NodeGraphPresenter for DefaultNodeGraphPresenter {
 /// - `node_title` comes from `NodeSchema.title` (falls back to `Node.kind`).
 /// - `port_label` comes from `PortDecl.label` when available; dynamic ports fall back to `Port.key`.
 /// - `plan_connect` is profile-driven by default (typed connect + concretize/validate pipeline).
-
 pub struct RegistryNodeGraphPresenter {
     registry: NodeRegistry,
-    profile: Box<dyn GraphProfile>,
+    profile: Option<Box<dyn GraphProfile>>,
 }
 
 impl RegistryNodeGraphPresenter {
     pub fn new(registry: NodeRegistry) -> Self {
         Self {
             registry,
-            profile: Box::new(DataflowProfile::new()),
+            profile: {
+                #[cfg(feature = "kit")]
+                {
+                    Some(Box::new(DataflowProfile::new()))
+                }
+                #[cfg(not(feature = "kit"))]
+                {
+                    None
+                }
+            },
         }
     }
 
     pub fn with_profile(mut self, profile: impl GraphProfile + 'static) -> Self {
-        self.profile = Box::new(profile);
+        self.profile = Some(Box::new(profile));
         self
     }
 
@@ -488,8 +506,10 @@ impl NodeGraphPresenter for RegistryNodeGraphPresenter {
             .unwrap_or_else(|| Arc::<str>::from(p.key.0.clone()))
     }
 
-    fn profile_mut(&mut self) -> Option<&mut dyn GraphProfile> {
-        Some(&mut *self.profile)
+    fn profile_mut(&mut self) -> Option<&mut (dyn GraphProfile + 'static)> {
+        self.profile
+            .as_mut()
+            .map(|p| &mut **p as &mut (dyn GraphProfile + 'static))
     }
 
     fn list_insertable_nodes(&mut self, _graph: &Graph) -> Vec<InsertNodeCandidate> {
