@@ -113,6 +113,5 @@ P1:
 ## References
 
 - ECharts axis config concepts: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\coord\\cartesian\\AxisModel.ts`
-- ADR 0111: `docs/adr/0111-delinea-headless-chart-engine.md`
-- ADR 0116: `docs/adr/0116-delinea-interaction-and-hit-testing-contract.md`
-
+- ADR 0111: `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
+- ADR 0116: `docs/archive/delinea-adr-bootstrap/0116-delinea-interaction-and-hit-testing-contract.md`

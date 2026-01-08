@@ -104,6 +104,5 @@ P1:
 ## References
 
 - ECharts scheduler/progressive pipeline: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\core\\Scheduler.ts`
-- ADR 0111: `docs/adr/0111-delinea-headless-chart-engine.md`
-- ADR 0112: `docs/adr/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
-
+- ADR 0111: `docs/archive/delinea-adr-bootstrap/0111-delinea-headless-chart-engine.md`
+- ADR 0112: `docs/archive/delinea-adr-bootstrap/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
