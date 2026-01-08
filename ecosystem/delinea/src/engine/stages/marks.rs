@@ -8,7 +8,6 @@ use crate::engine::lod::{
 };
 use crate::engine::model::ChartModel;
 use crate::engine::window::{DataWindowX, DataWindowY};
-use crate::engine::window_policy::{axis_filter_1d, axis_mapping_window_1d};
 use crate::ids::MarkId;
 use crate::marks::{MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkTree};
 use crate::paint::StrokeStyleV2;
@@ -120,14 +119,20 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            let row_range =
-                view.series_view(series.id)
-                    .map(|v| v.row_range)
-                    .unwrap_or(crate::view::RowRange {
-                        start: 0,
-                        end: table.row_count,
-                    });
-            let row_range = row_range.start..row_range.end;
+            let (row_range, view_x_filter, view_x_mapping_window) =
+                if let Some(v) = view.series_view(series.id) {
+                    (
+                        v.selection.as_range(table.row_count),
+                        v.x_policy.filter,
+                        v.x_policy.mapping_window,
+                    )
+                } else {
+                    (
+                        0..table.row_count,
+                        crate::engine::window_policy::AxisFilter1D::default(),
+                        None,
+                    )
+                };
 
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 self.series_index += 1;
@@ -185,14 +190,8 @@ impl MarksStage {
                     return false;
                 }
 
-                let x_axis_range = model
-                    .axes
-                    .get(&series.x_axis)
-                    .map(|a| a.range)
-                    .unwrap_or_default();
-                let state_x_window = state.data_window_x.get(&series.x_axis).copied();
-                let x_filter = axis_filter_1d(x_axis_range, state_x_window);
-                let x_mapping_window = axis_mapping_window_1d(x_axis_range, state_x_window);
+                let x_filter = view_x_filter;
+                let x_mapping_window = view_x_mapping_window;
 
                 let y_axis_range = model
                     .axes

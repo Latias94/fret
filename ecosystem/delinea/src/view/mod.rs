@@ -1,13 +1,13 @@
 use crate::data::{DataTable, DatasetStore};
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
-use crate::engine::window_policy::axis_filter_1d;
 use crate::ids::{AxisId, DatasetId, Revision, SeriesId};
+use crate::transform::{RowSelection, SeriesXPolicy, series_x_policy};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RowRange {
     pub start: usize,
@@ -45,7 +45,8 @@ pub struct SeriesView {
     pub x_axis: AxisId,
     pub revision: Revision,
     pub data_revision: Revision,
-    pub row_range: RowRange,
+    pub selection: RowSelection,
+    pub x_policy: SeriesXPolicy,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -150,8 +151,9 @@ impl ViewState {
                 .map(|a| a.range)
                 .unwrap_or_default();
             let state_window = state.data_window_x.get(&series.x_axis).copied();
-            let x_filter = axis_filter_1d(x_axis_range, state_window);
-            let row_range = crate::transform::row_range_for_x_filter(x, base_range, x_filter);
+            let x_policy = series_x_policy(x_axis_range, state_window);
+            let row_range =
+                crate::transform::row_range_for_x_filter(x, base_range, x_policy.filter);
 
             self.series.push(SeriesView {
                 series: *series_id,
@@ -159,7 +161,8 @@ impl ViewState {
                 x_axis: series.x_axis,
                 revision: self.revision,
                 data_revision: table.revision,
-                row_range,
+                selection: RowSelection::Range(row_range),
+                x_policy,
             });
         }
     }
