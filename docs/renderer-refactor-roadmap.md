@@ -203,7 +203,7 @@ This checklist is a suggested decomposition for implementation. Items may move a
 
 - Add a minimal fullscreen pipeline helper (triangle, bind source + uniforms, write destination).
 - Add ping-pong helpers (A/B swap) and downsample chain helpers (2x/4x).
-- Add a “noop copy” or “identity” postprocess pass to validate plumbing.
+- Add a "noop copy" or "identity" postprocess pass to validate plumbing.
 
 ### M2: Reference effect (validation)
 
