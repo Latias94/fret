@@ -43,11 +43,13 @@ use crate::ui::{
 
 mod cancel;
 mod context_menu;
+mod cursor;
 mod edge_drag;
 mod hover;
 mod left_click;
 mod marquee;
 mod node_drag;
+mod pan_zoom;
 mod pending_drag;
 mod pointer_up;
 mod right_click;
@@ -3448,25 +3450,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     zoom,
                 ));
 
-                if self.close_command.is_some()
-                    && self.interaction.node_drag.is_none()
-                    && self.interaction.wire_drag.is_none()
-                    && self.interaction.edge_drag.is_none()
-                    && !self.interaction.panning
-                {
-                    let rect = Self::close_button_rect(snapshot.pan, zoom);
-                    if Self::rect_contains(rect, *position) {
-                        cx.set_cursor_icon(fret_core::CursorIcon::Pointer);
-                    }
-                }
+                cursor::update_close_button_cursor(self, cx, &snapshot, *position, zoom);
 
-                if self.interaction.panning {
-                    self.update_view_state(cx.app, |s| {
-                        s.pan.x += delta.x.0;
-                        s.pan.y += delta.y.0;
-                    });
-                    cx.request_redraw();
-                    cx.invalidate_self(Invalidation::Paint);
+                if pan_zoom::handle_panning_move(self, cx, delta) {
                     return;
                 }
 
