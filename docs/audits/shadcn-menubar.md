@@ -36,7 +36,9 @@ Key upstream behaviors/surfaces:
 ### Placement & sizing
 
 - Pass: Anchored placement to the trigger bounds (`Side::Bottom`, `Align::Start`).
-- Partial: Estimated sizing only; width/height parity with upstream examples is not exact.
+- Pass: Panel sizing is derived from the entry list (row padding + line height) and is clamped by
+  the available window bounds; overflow scrolls on Y, matching shadcn's `max-h-(--available-height)`
+  + `overflow-y-auto` outcome (best-effort, renderer-driven).
 
 ### Keyboard navigation
 
