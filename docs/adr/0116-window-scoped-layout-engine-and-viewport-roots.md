@@ -87,6 +87,8 @@ This ADR is intended to refine and extend existing accepted contracts, not contr
    - An explicit “contents-like” opt-in mode may be introduced to avoid additional boxes for
      Radix-aligned `asChild` composition, subject to strict validation (single-child, no geometry-
      affecting layout properties).
+     - Note: this is strictly about layout box introduction/removal. It must not imply a general
+       Slot/`asChild` prop-merging mechanism; see ADR 0117.
 7. Measurement cycle policy:
    - Debug/test builds treat re-entrancy/cycles as a bug (panic/assert with diagnostic data).
    - Release builds must not crash; they use a safe fallback policy (exact fallback defined in ADR
@@ -235,14 +237,24 @@ Debug surfaces:
 
 - Should viewport roots be registered during docking layout (barrier) and consumed by the engine
   later in the same frame, or should the build/request phase explicitly produce the root list?
+  - Proposed: register during the docking barrier (definite rect known), consume from a stable
+    per-frame root list owned by the window/tree during compute/apply.
 - What is the minimal “wrapper node set” that must be represented in the engine Taffy tree to make
   per-viewport independent solves meaningful for real shadcn/Radix compositions (Stack/Container,
   Pressable, padding wrappers, etc.)?
+  - Proposed: include any wrapper that can carry layout-affecting properties (size/min/max/margin,
+    padding, flex/grid item props, position). For “geometry-transparent” wrappers, default to
+    representing them as pass-through nodes and only skip via an explicit validated contents-like
+    opt-in.
 - How should overlay roots that are anchored to viewport content be handled:
   - always window-scoped overlay roots that query window-space bounds after apply (ADR 0011), or
   - optional per-viewport overlay roots that solve in viewport-local space?
+  - Proposed default: window-scoped overlay roots anchored via post-apply bounds queries; add
+    per-viewport overlay roots only if a concrete performance/correctness need arises.
 - What is the engine’s default pixel rounding policy (if any) and where is it applied
   (solver output vs renderer snap rules in ADR 0035)?
+  - Proposed: keep rounding policy explicit and testable; prefer applying it once at the
+    layout-engine boundary so hit-testing and paint share identical snapped bounds.
 
 ## References
 
@@ -250,6 +262,7 @@ Debug surfaces:
 - Taffy integration boundaries: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative Flex semantics: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
 - Container-owned Taffy performance hardening (near-term): `docs/adr/0076-declarative-layout-performance-hardening.md`
+- Trigger composition without Slot/`asChild`: `docs/adr/0117-trigger-composition-and-no-slot-aschild.md`
 - Virtualization boundaries: `docs/adr/0042-virtualization-and-large-lists.md`
 - Docking viewports: `docs/adr/0013-docking-ops-and-persistence.md`
 - Engine viewport surfaces: `docs/adr/0007-viewport-surfaces.md`

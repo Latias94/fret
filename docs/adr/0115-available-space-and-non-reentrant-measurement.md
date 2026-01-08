@@ -35,6 +35,7 @@ References:
 - Hybrid layout + Taffy as an internal algorithm: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative layout semantics + Flex: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
 - Performance hardening for persistent Taffy trees: `docs/adr/0076-declarative-layout-performance-hardening.md`
+- Trigger composition without Slot/`asChild`: `docs/adr/0117-trigger-composition-and-no-slot-aschild.md`
 - Tailwind semantics mapping: `docs/tailwind-semantics-alignment.md`
 - Regression tracker for the observed stack overflow: `docs/todo-tracker.md` (P0 shadcn Components / Layout Correctness)
 - Refactor progress tracker: `docs/layout-engine-refactor-roadmap.md`
@@ -318,17 +319,30 @@ Component layer (follow-up, not required for the mechanism refactor):
 
 - What is the minimal set of leaf primitives that must implement `measure_in` to avoid regressions
   (text, images, svg, intrinsic controls)?
+  - Proposed: `Text`/`StyledText`/`SelectableText`, `TextInput`/`TextArea`, `Image`, `Svg`, and any
+    custom primitives that have true intrinsic sizing.
 - Do we need a runtime-side “layout validation” pass for obviously invalid compositions (e.g.
   `fill remaining space` under a non-definite parent), or is it sufficient to converge to a safe
   semantic fallback?
+  - Proposed: rely on semantic fallback + debug assertions, not a separate full validation pass.
+    Example fallback: treat `Length::Fill` as `auto` under `AvailableSpace::{MinContent,MaxContent}`.
 - How should intrinsic measurement interact with caching keys (font stack keys, DPI scale, model
   revisions) to avoid performance regressions?
+  - Proposed: bake `scale_factor` + theme revision + font stack key into text measurement caches;
+    prefer small “stable key” globals over depending on backend internals.
 - For geometry-transparent wrappers (opacity, transform, focus scopes, semantics wrappers), should
   we:
   - represent them in the Taffy tree as pass-through nodes, or
   - skip them in layout and only keep them in the retained UI tree for paint/input/semantics?
+  - Proposed: represent them as nodes by default to keep a single flow island; later introduce an
+    explicit validated “contents-like” opt-in to skip boxes when needed.
 - What is the precise release-mode policy for measurement cycles if they occur (return zero, return
   min constraints, clamp, or hard error)?
+  - Proposed: debug/test builds hard-error with diagnostics; release builds return
+    `constraints.min` (clamped to non-negative) and surface a one-shot diagnostic counter.
 - Should we introduce an explicit “contents-like” mode (CSS `display: contents`) for wrappers to
-  avoid additional layout boxes when doing Radix-aligned `asChild` composition, and if so what
-  validation restrictions apply (e.g. single-child, no padding/margin/overflow/position)?
+  avoid additional layout boxes for some Radix-aligned compositions (often expressed as `asChild`
+  in DOM land), and if so what validation restrictions apply (e.g. single-child, no
+  padding/margin/overflow/position)?
+  - Note: this is strictly about layout box introduction/removal. It must not imply a general
+    Slot/`asChild` prop-merging mechanism; see ADR 0117.
