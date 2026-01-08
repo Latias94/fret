@@ -25,6 +25,7 @@
 pub mod accordion;
 pub mod active_descendant;
 pub mod alert_dialog;
+pub mod arrow;
 pub mod aspect_ratio;
 pub mod avatar;
 pub mod checkbox;
@@ -58,9 +59,9 @@ pub mod separator;
 pub mod slider;
 pub mod switch;
 pub mod tabs;
+pub mod toast;
 pub mod toggle;
 pub mod toggle_group;
-pub mod toast;
 pub mod toolbar;
 pub mod tooltip;
 pub mod tooltip_delay_group;

@@ -28,6 +28,7 @@ a small `controllable_state` helper because it is a common contract shared by ma
 - `avatar` -> `ecosystem/fret-ui-kit/src/primitives/avatar.rs`
 - `aspect-ratio` -> `ecosystem/fret-ui-kit/src/primitives/aspect_ratio.rs`
 - `alert-dialog` -> `ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs`
+- `arrow` -> `ecosystem/fret-ui-kit/src/primitives/arrow.rs` (facade over `popper_arrow`)
 - `checkbox` -> `ecosystem/fret-ui-kit/src/primitives/checkbox.rs`
 - `collapsible` -> `ecosystem/fret-ui-kit/src/primitives/collapsible.rs`
 - `collection` -> `ecosystem/fret-ui-kit/src/primitives/collection.rs`
