@@ -330,6 +330,37 @@ async function waitForFonts(page: puppeteer.Page, timeoutMs: number) {
   }
 }
 
+async function ensureGoldenTarget(page: puppeteer.Page) {
+  const expr = `(() => {
+    const existing = document.querySelector("[data-fret-golden-target]");
+    if (existing) return true;
+
+    // The /view/[style]/[name] route wraps the rendered registry component in a `bg-background` div.
+    // If upstream changes and this selector breaks, regenerate goldens after updating this heuristic.
+    const root = document.querySelector(".bg-background");
+    if (!root) return false;
+
+    root.setAttribute("data-fret-golden-root", "true");
+
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-fret-golden-target", "true");
+
+    // Move *all* child nodes (including text nodes) into the wrapper.
+    while (root.firstChild) {
+      wrapper.appendChild(root.firstChild);
+    }
+    root.appendChild(wrapper);
+    return true;
+  })()`
+
+  const ok = await page.evaluate(expr)
+  if (!ok) {
+    throw new Error(
+      "failed to locate shadcn view wrapper (.bg-background) to attach data-fret-golden-target"
+    )
+  }
+}
+
 async function injectCssLinks(page: puppeteer.Page, urls: string[]) {
   if (urls.length === 0) return
 
@@ -570,6 +601,8 @@ async function run(options: GoldenOptions): Promise<string[]> {
       await setThemeBeforeLoad(page, options.themes[0] ?? "light")
       const url = `${options.baseUrl}/view/${options.style}/button-default`
       await page.goto(url, { waitUntil: "networkidle2" })
+      await page.waitForSelector("body", { timeout: 30000 })
+      await ensureGoldenTarget(page)
       await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
       await injectCssLinks(page, cssInjectionUrls)
       await waitForShadcnStyles(page, Math.min(30000, options.timeoutMs))
@@ -620,6 +653,8 @@ async function run(options: GoldenOptions): Promise<string[]> {
           const page = pagesByTheme[theme]
 
           await page.goto(url, { waitUntil: "networkidle2" })
+          await page.waitForSelector("body", { timeout: 30000 })
+          await ensureGoldenTarget(page)
           await page.waitForSelector("[data-fret-golden-target]", { timeout: 30000 })
           await injectCssLinks(page, cssInjectionUrls)
 
