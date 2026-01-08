@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, OpacityProps, PressableProps, StackProps,
+    AnyElement, ContainerProps, ElementKind, LayoutStyle, OpacityProps, PressableProps, StackProps,
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::LayoutRefinement;
@@ -131,38 +131,54 @@ impl Collapsible {
                 },
                 move |cx| {
                     let mut children = Vec::new();
-                    children.push(trigger);
-                    if let Some(content) = content {
-                        let theme = fret_ui::Theme::global(&*cx.app);
+                    let motion_for_wrapper = motion.clone();
+                    let motion_for_update = motion.clone();
 
-                        let wrapper_refinement = motion.wrapper_refinement.clone();
-                        let wrapper_layout = fret_ui_kit::declarative::style::layout_style(
-                            theme,
-                            wrapper_refinement,
-                        );
+                    let (content_id, wrapper_el) = cx.keyed("collapsible-content", move |cx| {
+                        cx.scope(|cx| {
+                            let content_id = cx.root_id();
+                            let Some(content) = content else {
+                                return (content_id, None);
+                            };
 
-                        let wrapper_el = cx.keyed("collapsible-content", |cx| {
-                            cx.container(
-                                ContainerProps {
+                            let theme = fret_ui::Theme::global(&*cx.app);
+                            let wrapper_refinement = motion_for_wrapper.wrapper_refinement.clone();
+                            let wrapper_layout = fret_ui_kit::declarative::style::layout_style(
+                                theme,
+                                wrapper_refinement,
+                            );
+
+                            let children = vec![cx.opacity_props(
+                                OpacityProps {
+                                    layout: LayoutStyle::default(),
+                                    opacity: motion_for_wrapper.wrapper_opacity,
+                                },
+                                move |_cx| vec![content],
+                            )];
+
+                            let wrapper_el = AnyElement::new(
+                                content_id,
+                                ElementKind::Container(ContainerProps {
                                     layout: wrapper_layout,
                                     ..Default::default()
-                                },
-                                move |cx| {
-                                    vec![cx.opacity_props(
-                                        OpacityProps {
-                                            layout: LayoutStyle::default(),
-                                            opacity: motion.wrapper_opacity,
-                                        },
-                                        move |_cx| vec![content],
-                                    )]
-                                },
-                            )
-                        });
-                        let wrapper_id = wrapper_el.id;
+                                }),
+                                children,
+                            );
 
-                        let _ =
-                            radix_collapsible::update_measured_for_motion(cx, motion, wrapper_id);
+                            (content_id, Some(wrapper_el))
+                        })
+                    });
 
+                    let trigger =
+                        radix_collapsible::apply_collapsible_trigger_controls(trigger, content_id);
+                    children.push(trigger);
+
+                    if let Some(wrapper_el) = wrapper_el {
+                        let _ = radix_collapsible::update_measured_for_motion(
+                            cx,
+                            motion_for_update,
+                            wrapper_el.id,
+                        );
                         children.push(wrapper_el);
                     }
                     children
@@ -596,5 +612,46 @@ mod tests {
             let _ = render(&mut ui, &mut app, &mut services, window, bounds, None, true);
         }
         assert!(!snapshot_has_label(&ui, "Content"));
+    }
+
+    #[test]
+    fn collapsible_trigger_controls_resolves_to_content_when_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        // Render enough frames for measurement/presence to settle.
+        for _ in 0..4 {
+            let _ = render(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                Some(open.clone()),
+                false,
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Button)
+            .expect("trigger node");
+
+        assert!(
+            !trigger_node.controls.is_empty(),
+            "expected trigger controls relationship to resolve when content is mounted"
+        );
     }
 }
