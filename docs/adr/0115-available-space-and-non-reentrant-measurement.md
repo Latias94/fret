@@ -35,6 +35,7 @@ References:
 - Hybrid layout + Taffy as an internal algorithm: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative layout semantics + Flex: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
 - Performance hardening for persistent Taffy trees: `docs/adr/0076-declarative-layout-performance-hardening.md`
+- Trigger composition without Slot/`asChild`: `docs/adr/0117-trigger-composition-and-no-slot-aschild.md`
 - Tailwind semantics mapping: `docs/tailwind-semantics-alignment.md`
 - Regression tracker for the observed stack overflow: `docs/todo-tracker.md` (P0 shadcn Components / Layout Correctness)
 - GPUI Taffy engine reference: `repo-ref/zed/crates/gpui/src/taffy.rs`
@@ -242,8 +243,9 @@ across a viewport edge.
 
 To avoid regressions and make invalid compositions diagnosable:
 
-- Add a re-entrancy/cycle guard to `measure_in` keyed by `(node, constraints, scale_factor)` and
-  treat re-entry as a bug (debug assert) or return a safe fallback size (release policy TBD).
+- Add a re-entrancy/cycle guard to `measure_in` keyed by `(node, constraints, scale_factor)`:
+  - debug/test builds: panic with diagnostics (treat as a bug),
+  - release builds: return `Size::default()` and emit a rate-limited diagnostic counter.
 - Use stacksafe execution for the top-level layout solve and measure callbacks (GPUI reference).
 - Prefer rounding in the Taffy engine to reduce subpixel drift where applicable.
 
@@ -327,28 +329,18 @@ Component layer (follow-up, not required for the mechanism refactor):
    - Note: a "taffy-by-default for declarative flow subtrees" approach may still be an end-state
      for general UI composition, while preserving explicit barriers for docking/scroll/virtualization.
 
-## Open Questions
+## Defaults (v1)
 
-- What is the minimal set of leaf primitives that must implement `measure_in` to avoid regressions
-  (text, images, svg, intrinsic controls)?
-- Do we need a runtime-side "layout validation" pass for obviously invalid compositions (e.g.
-  `fill remaining space` under a non-definite parent), or is it sufficient to converge to a safe
-  semantic fallback?
-- How should intrinsic measurement interact with caching keys (font stack keys, DPI scale, model
-  revisions) to avoid performance regressions?
-- For geometry-transparent wrappers (opacity, transform, focus scopes, semantics wrappers), should
-  we:
-  - represent them in the Taffy tree as pass-through nodes, or
-  - skip them in layout and only keep them in the retained UI tree for paint/input/semantics?
-- What is the precise release-mode policy for measurement cycles if they occur (return zero, return
-  min constraints, clamp, or hard error)?
-- Should we introduce an explicit “contents-like” mode (CSS `display: contents`) for wrappers to
-  avoid additional layout boxes for some Radix-aligned compositions (often expressed as `asChild`
-  in DOM land), and if so what validation restrictions apply (e.g. single-child, no
-  padding/margin/overflow/position)?
-  - Note: this is strictly about layout box introduction/removal. It must not imply a general
-    Slot/`asChild` prop-merging mechanism; see ADR 0117.
-
-## References
-
-- Trigger composition without Slot/`asChild`: `docs/adr/0117-trigger-composition-and-no-slot-aschild.md`
+- Required `measure_in` leaves: `Text`/`StyledText`/`SelectableText`, `TextInput`/`TextArea`,
+  `Image`, `Svg`, and any custom primitives that have true intrinsic sizing.
+- Invalid compositions: rely on semantic fallbacks + debug assertions, not a separate validation
+  pass (e.g. treat `Length::Fill` as `auto` under `AvailableSpace::{MinContent,MaxContent}`).
+- Cache keys: bake `scale_factor` + theme revision + `TextFontStackKey` into text measurement
+  caches; prefer small stable globals over backend-specific internals.
+- Wrapper representation: represent wrappers as pass-through nodes by default to keep a single flow
+  island; skipping boxes requires an explicit validated “contents-like” opt-in.
+- Cycle policy: debug/test builds panic; release builds return `Size::default()` and emit a
+  rate-limited diagnostic counter.
+- Contents-like mode (optional, future): validate single-child and forbid geometry-affecting
+  properties (padding/margin/overflow/position); this is strictly about box introduction/removal
+  and does not imply any Slot/prop-merging mechanism (see ADR 0117).

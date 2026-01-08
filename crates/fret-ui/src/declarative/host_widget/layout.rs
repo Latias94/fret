@@ -147,6 +147,18 @@ impl ElementHostWidget {
 
         match instance {
             ElementInstance::Container(props) => {
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
+
                 let pad_left = props.padding.left.0.max(0.0);
                 let pad_right = props.padding.right.0.max(0.0);
                 let pad_top = props.padding.top.0.max(0.0);
@@ -209,6 +221,18 @@ impl ElementHostWidget {
                 desired
             }
             ElementInstance::Pressable(props) => {
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
+
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
@@ -243,6 +267,18 @@ impl ElementHostWidget {
                 desired
             }
             ElementInstance::Semantics(props) => {
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
+
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
@@ -277,6 +313,18 @@ impl ElementHostWidget {
                 desired
             }
             ElementInstance::FocusScope(props) => {
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
+
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
@@ -311,6 +359,18 @@ impl ElementHostWidget {
                 desired
             }
             ElementInstance::Opacity(props) => {
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
+
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
@@ -383,6 +443,18 @@ impl ElementHostWidget {
                 desired
             }
             ElementInstance::VisualTransform(props) => {
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
+
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
@@ -488,6 +560,18 @@ impl ElementHostWidget {
                 desired
             }
             ElementInstance::Stack(props) => {
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
+
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_available =

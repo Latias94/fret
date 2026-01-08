@@ -1759,7 +1759,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         .unwrap_or(Size::new(Px(0.0), Px(0.0))),
                 ),
             };
-            let _ = cx.layout_in(*node, bounds);
+            let _ = cx.layout_viewport_root(*node, bounds);
             laid_out.insert(*node);
         }
 

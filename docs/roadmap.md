@@ -14,6 +14,9 @@ Workstream notes live under `docs/workstreams/` (not a roadmap; do not treat as 
 
 For the “foundation-first, component-validated” execution loop (Plan C), see `docs/foundation-first-workflow.md`.
 
+For the declarative layout refactor phases (P0–P5) toward a window-scoped Taffy engine + viewport roots, see:
+`docs/layout-engine-refactor-roadmap.md`.
+
 ## Toolchain Baseline
 
 - `wgpu 28.x` currently requires Rust `1.92+` (enforced via `rust-toolchain.toml` and `workspace.package.rust-version`).

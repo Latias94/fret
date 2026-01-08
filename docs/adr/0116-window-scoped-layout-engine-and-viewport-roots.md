@@ -87,6 +87,8 @@ This ADR is intended to refine and extend existing accepted contracts, not contr
    - An explicit "contents-like" opt-in mode may be introduced to avoid additional boxes for
      Radix-aligned `asChild` composition, subject to strict validation (single-child, no geometry-
      affecting layout properties).
+     - Note: this is strictly about layout box introduction/removal. It must not imply a general
+       Slot/`asChild` prop-merging mechanism; see ADR 0117.
 7. Measurement cycle policy:
    - Debug/test builds treat re-entrancy/cycles as a bug (panic/assert with diagnostic data).
    - Release builds must not crash; they use a safe fallback policy (exact fallback defined in ADR
@@ -139,6 +141,14 @@ bounds into the retained UI tree.
 
 This keeps multi-viewport layouts independent while preserving a single window-local coordinate
 space for paint, hit-testing, and overlays.
+
+Implementation note (barrier ordering):
+
+- Docking/splits register viewport roots (node + definite rect) during their own layout pass.
+- The runtime must ensure viewport root subtrees are laid out **after** the docking barrier has
+  produced rects, but **before** overlay roots that may query those bounds for anchored placement
+  (ADR 0011). In practice, this means viewport roots are flushed as independent layout passes
+  between “base root” layout and subsequent overlay root layout.
 
 ### 4) Barriers and interop contracts
 
@@ -223,15 +233,31 @@ Debug surfaces:
 3. Adopt a full CSS engine
    - Rejected: violates typed semantics and increases surface area significantly.
 
+## Defaults (v1)
+
+- Viewport roots are registered by docking barriers once their definite rects are known, stored in
+  a per-frame root list, and consumed during compute/apply.
+- Wrapper nodes: any node with layout-affecting properties is represented in the engine tree;
+  skipping boxes requires an explicit validated contents-like opt-in (see ADR 0117).
+- Overlays: default to window-scoped overlay roots that position via post-apply bounds queries (ADR
+  0011); add per-viewport overlay roots only for concrete perf/correctness needs.
+- Root solve order: solve roots in window root z-order, but viewport roots never participate in a
+  shared solve; each viewport root is solved independently against its own definite available space.
+- Pixel rounding: keep an explicit engine-level rounding policy (off by default); when enabled,
+  apply it once at the layout-engine boundary so hit-testing and paint share snapped bounds.
+
 ## References
 
 - Non-reentrant measurement + `AvailableSpace`: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
 - Refactor roadmap (living doc): `docs/layout-engine-refactor-roadmap.md`
 - Taffy integration boundaries: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative Flex semantics: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
+- Container-owned Taffy performance hardening (near-term): `docs/adr/0076-declarative-layout-performance-hardening.md`
+- Trigger composition without Slot/`asChild`: `docs/adr/0117-trigger-composition-and-no-slot-aschild.md`
 - Virtualization boundaries: `docs/adr/0042-virtualization-and-large-lists.md`
 - Docking viewports: `docs/adr/0013-docking-ops-and-persistence.md`
 - Engine viewport surfaces: `docs/adr/0007-viewport-surfaces.md`
 - Multi-root layering: `docs/adr/0011-overlays-and-multi-root.md`
 - Frame lifecycle: `docs/adr/0015-frame-lifecycle-and-submission-order.md`
+- Refactor progress tracker: `docs/layout-engine-refactor-roadmap.md`
 - GPUI reference: `repo-ref/zed/crates/gpui/src/window.rs`, `repo-ref/zed/crates/gpui/src/taffy.rs`

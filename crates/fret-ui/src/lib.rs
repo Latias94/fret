@@ -10,6 +10,8 @@ mod frame_cx;
 pub mod host;
 pub mod input_modality;
 pub mod layout_constraints;
+#[cfg(feature = "layout-engine-v2")]
+pub mod layout_engine;
 pub mod overlay_placement;
 pub mod paint;
 #[cfg(feature = "unstable-retained-bridge")]

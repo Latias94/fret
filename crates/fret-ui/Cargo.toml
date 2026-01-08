@@ -13,6 +13,7 @@ documentation.workspace = true
 default = []
 compat-policy-shortcuts = []
 unstable-retained-bridge = []
+layout-engine-v2 = []
 
 [dependencies]
 fret-core = { path = "../fret-core" }

@@ -1,7 +1,7 @@
-# Layout Engine Refactor Roadmap (Taffy Islands -> Window-Scoped Engine)
+# Layout Engine Refactor Roadmap (P1–P3)
 
 This document tracks the incremental refactor from container-owned "Taffy islands" to a
-window-scoped layout engine with multiple viewport roots (multi-viewport docking).
+window-scoped layout engine with multiple independent viewport roots (multi-viewport docking).
 
 This is a living roadmap (not an ADR). Contracts are defined by ADRs; this file tracks staged
 deliverables and acceptance checks.
@@ -11,13 +11,17 @@ Primary ADRs:
 - AvailableSpace + non-reentrant intrinsic measurement: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`
 - Window-scoped engine + viewport roots: `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
 
-Related constraints:
+Related constraints and boundaries:
 
 - Hybrid layout boundary + explicit barriers: `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`
 - Declarative Flex semantics and defaults: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`
-- Current perf hardening shape (container-owned persistent Taffy trees): `docs/adr/0076-declarative-layout-performance-hardening.md`
+- Container-owned persistent Taffy trees (current perf hardening): `docs/adr/0076-declarative-layout-performance-hardening.md`
 - Virtualization boundary: `docs/adr/0042-virtualization-and-large-lists.md`
 - Viewport surfaces (RenderTargetId): `docs/adr/0007-viewport-surfaces.md`
+
+GPUI reference (implementation, not contract):
+
+- `repo-ref/zed/crates/gpui/src/taffy.rs`
 
 ## End-State Target ("C")
 
@@ -29,13 +33,28 @@ Related constraints:
 
 ## Invariants (Must Hold Throughout the Refactor)
 
-1. `measure_in` is non-reentrant (must not call `layout_in`, directly or indirectly).
-2. Percent/fill and `flex-grow` semantics only resolve against definite available space.
-3. Barriers own their internal layout policy and never require solver-time re-entry into descendants.
-4. Stable identity is `NodeId`; all engine node IDs are derived/cacheable from `NodeId`.
-5. Debug builds fail fast on cycles; release builds degrade safely with rate-limited diagnostics.
+1. `AvailableSpace::{Definite, MinContent, MaxContent}` is preserved end-to-end (no `1e9` probes).
+2. Taffy measure callbacks must not re-enter subtree layout (`measure_in` only; no `layout_in`).
+3. Percent/fill and `flex-grow` semantics only resolve against definite available space.
+4. Barriers own their internal layout policy and never require solver-time re-entry into descendants.
+5. Stable identity is `NodeId`; engine node IDs are derived/cacheable from `NodeId`.
+6. Debug builds fail fast on cycles; release builds degrade safely with rate-limited diagnostics.
 
-## P1 - Constraint-Correct Intrinsic Measurement (ADR 0115)
+## Status Legend
+
+- **Done**: merged and relied upon by production code paths.
+- **In progress**: implemented in a worktree/branch; subject to iteration.
+- **Planned**: agreed direction, not implemented yet.
+
+## Current Progress Snapshot
+
+- P1: `AvailableSpace` + non-reentrant `measure_in`. (**In progress**; implemented in `wt-layout-engine2`, pending merge.)
+- P2: window-scoped engine skeleton behind `fret-ui/layout-engine-v2`. (**In progress**; implemented in `wt-layout-engine2`.)
+- P3: multi-viewport roots + engine-backed flow migration. (**Planned**; partially prototyped in `wt-layout-engine2`.)
+
+Update this section by editing this file (avoid scattering progress notes across ADRs).
+
+## P1 — Constraint-Correct Intrinsic Measurement (ADR 0115)
 
 Goal: stop semantic drift and recursion hazards by making `AvailableSpace` explicit and making
 measurement leaf-only.
@@ -49,58 +68,48 @@ Deliverables:
 
 Acceptance:
 
-- `shadcn::Tabs` stack-overflow regression stays fixed without component-level "defensive defaults".
-- Min/MaxContent no longer behaves like an enormous definite bound in measured layout.
-- A minimal "invalid" composition does not crash; it produces a stable fallback size and diagnostic.
+- `cargo test -p fret-ui` passes.
+- A minimal regression composition for "Auto main axis + flex-1/fill" does not stack overflow.
 
-## P2 - Window-Scoped Engine Skeleton (ADR 0116, Single Root)
+## P2 — Window-Scoped Layout Engine Skeleton + Two-Phase Protocol (ADR 0116)
 
-Goal: centralize the Taffy tree and incremental updates behind a window-scoped engine while keeping
-behavior consistent.
-
-Deliverables:
-
-- Introduce `TaffyLayoutEngine` behind a feature flag (or internal switch).
-- Provide request/build APIs (create/update nodes, styles, children, measured leaf hooks).
-- Compute + apply protocol: build/update during frame build; compute once per root; write bounds back.
-- Migrate Flex/Grid to request nodes into the engine (one root) while preserving existing writeback.
-
-Acceptance:
-
-- `cargo test` passes with and without the feature flag.
-- Flex/Grid do not own per-container Taffy trees on the feature path.
-- Measurement remains leaf-only and non-reentrant under the engine path.
-
-## P3 - Multi-Viewport Roots + Docking Integration (Target "C")
-
-Goal: treat docking-driven viewports as independent layout roots and prove non-coupling.
+Goal: introduce a per-window `TaffyLayoutEngine` without changing behavior by default, and enforce
+the separation between "build/request" and "compute/apply".
 
 Deliverables:
 
-- Define and plumb `ViewportRoot` descriptors (viewport id + origin + size + mounted root node).
-- Compute each viewport root independently against its own definite available space.
-- Apply results in window-local coordinates (viewport-local rect + origin composition).
-- Add conformance tests ensuring no cross-viewport coupling (percent/fill/free-space).
+- Feature flag: `fret-ui/layout-engine-v2` (default off).
+- One engine instance per window, persistent across frames.
+- Stable `NodeId -> LayoutId` mapping and incremental updates (`mark_dirty` on invalidation).
+- APIs:
+  - `request_layout(style, children) -> LayoutId`
+  - `request_measured_layout(style, measure_fn) -> LayoutId` (leaf intrinsic measurement only)
+- Frame protocol:
+  - `engine.begin_frame(frame_id)`
+  - request/build during declarative build (no bounds writes)
+  - `compute_root_with_measure(root, available, measure_cb)` per root
+  - apply results back into retained `UiTree` bounds
 
 Acceptance:
 
-- Layout changes inside one viewport do not affect sibling viewport layout results.
-- Viewport boundaries behave as layout barriers for percent/fill and free-space distribution.
-- Performance: solve cost scales with per-viewport subtree size, not with total mounted roots.
+- With feature off: no behavior change; tests pass.
+- With feature on: empty graphs and small trees solve; tests pass.
 
-## P4 - Widen the "Taffy Island" (Optional, Post-C)
+## P3 — Multi-Viewport Roots + Flow Migration (End-State Convergence)
 
-Goal: reduce cross-boundary intrinsic measurement costs by turning more "pure layout" descendants
-into real Taffy nodes.
+Goal: evolve "taffy islands" so that layout-style-only descendants become nodes in the same Taffy
+tree, while docking-defined viewports are independent roots and explicit barriers remain outside.
 
-Candidate migrations:
+Deliverables:
 
-- `Stack`, nested `Flex`/`Grid`, and other "LayoutStyle-only" containers.
-- Opt-in "contents-like" wrapper mode (validated, single-child, no geometry-affecting style).
+- Docking provides definite viewport rects and registers viewport roots.
+- Engine computes each viewport root independently (no cross-viewport percent/free-space coupling).
+- Apply composes viewport-local rects into window-local bounds.
+- Flex/Grid/Stack/Container wrappers become nodes in the same Taffy tree when possible; `measure_in`
+  is reserved for true leaves.
+- Add stacksafe execution around solves + measure callbacks; enable optional rounding to reduce drift.
 
-## P5 - Diagnostics and Perf Tooling (Ongoing)
+Acceptance:
 
-- Layout tree dump and per-root stats (node count, max depth, measure calls, solve time).
-- Cycle detection counters and rate-limited warnings in release.
-- Optional rounding / stack-safe guardrails aligned with GPUI.
-
+- Conformance test: no cross-viewport coupling for percent/flex distribution.
+- Docking demos behave consistently across DPI scales (bounds stable within rounding policy).

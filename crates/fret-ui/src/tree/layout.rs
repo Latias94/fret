@@ -1,6 +1,8 @@
 use super::*;
 use std::any::TypeId;
 
+#[cfg(feature = "layout-engine-v2")]
+use crate::layout_constraints::LayoutSize;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints};
 
 impl<H: UiHost> UiTree<H> {
@@ -24,8 +26,32 @@ impl<H: UiHost> UiTree<H> {
             .visible_layers_in_paint_order()
             .map(|layer| self.layers[layer].root)
             .collect();
+
+        #[cfg(feature = "layout-engine-v2")]
+        {
+            self.layout_engine.begin_frame(app.frame_id());
+            self.viewport_roots.clear();
+        }
+
+        #[cfg(feature = "layout-engine-v2")]
+        let mut viewport_cursor: usize = 0;
+
         for root in roots {
             let _ = self.layout_in(app, services, root, bounds, scale_factor);
+
+            #[cfg(feature = "layout-engine-v2")]
+            while viewport_cursor < self.viewport_roots.len() {
+                let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
+                viewport_cursor += 1;
+                self.precompute_viewport_root_flow_island(
+                    app,
+                    services,
+                    viewport_root,
+                    viewport_bounds,
+                    scale_factor,
+                );
+                let _ = self.layout_in(app, services, viewport_root, viewport_bounds, scale_factor);
+            }
         }
 
         if self.semantics_requested {
@@ -36,6 +62,9 @@ impl<H: UiHost> UiTree<H> {
         if let Some(started) = started {
             self.debug_stats.layout_time = started.elapsed();
         }
+
+        #[cfg(feature = "layout-engine-v2")]
+        self.layout_engine.end_frame();
     }
 
     pub fn layout(
@@ -50,7 +79,35 @@ impl<H: UiHost> UiTree<H> {
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             available,
         );
-        self.layout_in(app, services, root, bounds, scale_factor)
+
+        #[cfg(feature = "layout-engine-v2")]
+        {
+            self.layout_engine.begin_frame(app.frame_id());
+            self.viewport_roots.clear();
+
+            let mut viewport_cursor: usize = 0;
+            let size = self.layout_in(app, services, root, bounds, scale_factor);
+            while viewport_cursor < self.viewport_roots.len() {
+                let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
+                viewport_cursor += 1;
+                self.precompute_viewport_root_flow_island(
+                    app,
+                    services,
+                    viewport_root,
+                    viewport_bounds,
+                    scale_factor,
+                );
+                let _ = self.layout_in(app, services, viewport_root, viewport_bounds, scale_factor);
+            }
+
+            self.layout_engine.end_frame();
+            size
+        }
+
+        #[cfg(not(feature = "layout-engine-v2"))]
+        {
+            self.layout_in(app, services, root, bounds, scale_factor)
+        }
     }
 
     pub fn layout_in(
@@ -75,6 +132,45 @@ impl<H: UiHost> UiTree<H> {
         self.measure_node(app, services, node, constraints, scale_factor)
     }
 
+    #[cfg(feature = "layout-engine-v2")]
+    fn precompute_viewport_root_flow_island(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        viewport_root: NodeId,
+        viewport_bounds: Rect,
+        scale_factor: f32,
+    ) {
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let mut engine = self.take_layout_engine();
+        crate::layout_engine::build_viewport_flow_subtree(
+            &mut engine,
+            app,
+            &*self,
+            window,
+            viewport_root,
+            viewport_bounds.size,
+        );
+        let Some(root_id) = engine.layout_id_for_node(viewport_root) else {
+            self.put_layout_engine(engine);
+            return;
+        };
+
+        let available = LayoutSize::new(
+            AvailableSpace::Definite(viewport_bounds.size.width),
+            AvailableSpace::Definite(viewport_bounds.size.height),
+        );
+
+        let sf = scale_factor;
+        engine.compute_root_with_measure(root_id, available, |node, constraints| {
+            self.measure_in(app, services, node, constraints, sf)
+        });
+
+        self.put_layout_engine(engine);
+    }
     fn layout_node(
         &mut self,
         app: &mut H,
