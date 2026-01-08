@@ -9,10 +9,10 @@ use fret_launch::WinitRunnerConfig;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, HoverRegionProps, TextProps};
 use fret_ui::{ElementContext, Invalidation, Theme};
-use fret_ui_kit::declarative::stack;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_shadcn as shadcn;
+use shadcn::decl_style;
+use shadcn::stack;
+use shadcn::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 const CMD_ADD: &str = "todo.add";
 const CMD_CLEAR_DONE: &str = "todo.clear_done";
@@ -137,16 +137,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
         .count();
     let active = todos.len().saturating_sub(completed);
 
-    let header = shadcn::CardHeader::new(vec![stack::hstack(
+    let header = shadcn::CardHeader::new(vec![shadcn::stack::hstack(
         cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
+        shadcn::stack::HStackProps::default()
+            .layout(shadcn::LayoutRefinement::default().w_full())
             .justify_between()
             .items_start(),
         |cx| {
-            let left = stack::vstack(
+            let left = shadcn::stack::vstack(
                 cx,
-                stack::VStackProps::default().gap(Space::N1).items_start(),
+                shadcn::stack::VStackProps::default()
+                    .gap(shadcn::Space::N1)
+                    .items_start(),
                 |cx| {
                     vec![
                         shadcn::CardTitle::new("待办事项").into_element(cx),
@@ -156,28 +158,30 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
             );
 
             let icon_bg = {
-                let props = decl_style::container_props(
+                let props = shadcn::decl_style::container_props(
                     &theme,
-                    ChromeRefinement::default()
-                        .bg(ColorRef::Color(theme.color_required("muted")))
-                        .rounded(Radius::Full),
-                    LayoutRefinement::default()
-                        .w_px(MetricRef::Px(fret_core::Px(32.0)))
-                        .h_px(MetricRef::Px(fret_core::Px(32.0))),
+                    shadcn::ChromeRefinement::default()
+                        .bg(shadcn::ColorRef::Color(theme.color_required("muted")))
+                        .rounded(shadcn::Radius::Full),
+                    shadcn::LayoutRefinement::default()
+                        .w_px(shadcn::MetricRef::Px(fret_core::Px(32.0)))
+                        .h_px(shadcn::MetricRef::Px(fret_core::Px(32.0))),
                 );
                 cx.container(props, |cx| {
-                    vec![stack::hstack(
+                    vec![shadcn::stack::hstack(
                         cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().h_full())
+                        shadcn::stack::HStackProps::default()
+                            .layout(shadcn::LayoutRefinement::default().w_full().h_full())
                             .justify_center()
                             .items_center(),
                         |cx| {
-                            vec![fret_ui_kit::declarative::icon::icon_with(
+                            vec![shadcn::icon::icon_with(
                                 cx,
                                 IconId::new("lucide.calendar"),
                                 Some(fret_core::Px(16.0)),
-                                Some(ColorRef::Color(theme.color_required("muted-foreground"))),
+                                Some(shadcn::ColorRef::Color(
+                                    theme.color_required("muted-foreground"),
+                                )),
                             )]
                         },
                     )]
@@ -189,19 +193,19 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
     )])
     .into_element(cx);
 
-    let input_row = stack::hstack(
+    let input_row = shadcn::stack::hstack(
         cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2)
+        shadcn::stack::HStackProps::default()
+            .layout(shadcn::LayoutRefinement::default().w_full())
+            .gap(shadcn::Space::N2)
             .items_center(),
         |_cx| vec![input, add_btn],
     );
 
-    let list_max_h = MetricRef::Px(fret_core::Px(260.0));
+    let list_max_h = shadcn::MetricRef::Px(fret_core::Px(260.0));
 
     let tabs = shadcn::Tabs::new(st.filter.clone())
-        .refine_layout(LayoutRefinement::default().w_full())
+        .refine_layout(shadcn::LayoutRefinement::default().w_full())
         .list_full_width(true)
         .items([
             shadcn::TabsItem::new(
@@ -242,17 +246,17 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
 
     let content = shadcn::CardContent::new(vec![stack::vstack(
         cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N4),
+        shadcn::stack::VStackProps::default()
+            .layout(shadcn::LayoutRefinement::default().w_full())
+            .gap(shadcn::Space::N4),
         |_cx| vec![input_row, tabs],
     )])
     .into_element(cx);
 
-    let footer = shadcn::CardFooter::new(vec![stack::hstack(
+    let footer = shadcn::CardFooter::new(vec![shadcn::stack::hstack(
         cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
+        shadcn::stack::HStackProps::default()
+            .layout(shadcn::LayoutRefinement::default().w_full())
             .justify_between()
             .items_center(),
         |cx| {
@@ -276,7 +280,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
 
             let right = stack::hstack(
                 cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
+                shadcn::stack::HStackProps::default()
+                    .gap(shadcn::Space::N2)
+                    .items_center(),
                 |_cx| right,
             );
 
@@ -287,28 +293,28 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> Vec<AnyElement>
 
     let card = shadcn::Card::new(vec![header, content, footer])
         .refine_layout(
-            LayoutRefinement::default()
+            shadcn::LayoutRefinement::default()
                 .w_full()
-                .max_w(MetricRef::Px(fret_core::Px(460.0))),
+                .max_w(shadcn::MetricRef::Px(fret_core::Px(460.0))),
         )
         .into_element(cx);
 
     let page = {
-        let props = decl_style::container_props(
+        let props = shadcn::decl_style::container_props(
             &theme,
-            ChromeRefinement::default()
-                .bg(ColorRef::Color(theme.color_required("muted")))
-                .p(Space::N4),
-            LayoutRefinement::default().w_full().h_full(),
+            shadcn::ChromeRefinement::default()
+                .bg(shadcn::ColorRef::Color(theme.color_required("muted")))
+                .p(shadcn::Space::N4),
+            shadcn::LayoutRefinement::default().w_full().h_full(),
         );
         cx.container(props, |cx| {
-            vec![stack::vstack(
+            vec![shadcn::stack::vstack(
                 cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().h_full())
+                shadcn::stack::VStackProps::default()
+                    .layout(shadcn::LayoutRefinement::default().w_full().h_full())
                     .justify_center()
                     .items_center()
-                    .gap(Space::N6),
+                    .gap(shadcn::Space::N6),
                 |cx| {
                     vec![
                         card,

@@ -202,4 +202,13 @@ pub use tooltip::{
     TooltipTrigger,
 };
 
-pub use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Radius, Size, Space, StyledExt};
+pub use fret_ui_kit::declarative::style as decl_style;
+/// Re-exported “authoring glue” for app/component code.
+///
+/// shadcn/ui recipes assume a lightweight layout/styling vocabulary (Tailwind on the web).
+/// In Fret, the closest analogue lives in `fret-ui-kit::declarative`. Re-exporting these keeps
+/// the common “app + components” story down to `fret-ui-shadcn` + `fret-bootstrap`.
+pub use fret_ui_kit::declarative::{icon, stack};
+pub use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Size, Space, StyledExt,
+};
