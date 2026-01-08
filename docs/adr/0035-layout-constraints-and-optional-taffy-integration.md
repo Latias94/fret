@@ -74,6 +74,13 @@ Recommended implementation strategy (P0):
 
 This avoids needing to “synchronize two global trees”: only the container doing Flex/Grid participates in `taffy`.
 
+Future evolution (compatible with this boundary):
+
+- A window-scoped layout engine may own a canonical Taffy tree for declarative flow layout and treat
+  docking-defined viewports as independent layout roots (ADR 0116). This generalizes the same
+  “taffy as an internal algorithm” principle, while enabling incremental updates and multi-viewport
+  integration without per-container islands.
+
 Dependency rule (P0):
 
 - Layout engine crates (including `taffy`) must not be required by `fret-core`.
@@ -88,6 +95,9 @@ Any engine-driven layout algorithm needs a way to measure leaves:
 - viewports: explicit preferred size and/or “fill available” semantics.
 
 The UI runtime must expose a measurement hook that is independent from a specific layout engine.
+
+Note: ADR 0115 refines this measurement surface by introducing an explicit `AvailableSpace`
+(Definite/MinContent/MaxContent) model and a non-reentrant intrinsic measurement path.
 
 Baseline default (P0):
 

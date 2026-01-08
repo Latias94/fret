@@ -134,6 +134,8 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md` (event-driven scheduling + continuous mode)
 - `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md` (hybrid layout, editor-friendly)
 - `docs/adr/0057-declarative-layout-style-and-flex-semantics.md` (Tailwind-friendly sizing + Flex semantics)
+- `docs/adr/0115-available-space-and-non-reentrant-measurement.md` (constraint-correct measurement, avoid layout re-entry)
+- `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md` (multi-viewport end-state for declarative flow layout)
 - `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md` (profiling and inspector hooks)
 - `docs/adr/0055-frame-recording-and-subtree-replay-caching.md` (recording/replay caching for editor-scale UI)
 - `docs/adr/0037-workspace-boundaries-and-components-repository.md` (workspace boundaries + external components repo)
@@ -249,6 +251,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0025-viewport-input-forwarding.md`
 - `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - `docs/adr/0040-color-management-and-compositing-contracts.md`
+- `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
 
 ## Example Editor App Notes (Out of Scope for Fret Framework)
 
@@ -266,6 +269,10 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0098-plot3d-rendering-strategy.md`
 - `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 - `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
+- `docs/adr/0111-user-facing-crate-surfaces-and-golden-path.md`
+- `docs/adr/0112-golden-path-ui-app-driver-and-pipelines.md`
+- `docs/adr/0113-ecosystem-integration-contracts.md`
+- `docs/adr/0114-ui-assets-facade-and-golden-path-wiring.md`
 - `docs/adr/0093-crate-structure-core-backends-apps.md`
 - `docs/adr/0090-radix-aligned-headless-primitives-in-fret-ui-kit.md`
 - `docs/adr/0101-headless-table-engine.md`
