@@ -233,4 +233,5 @@ Debug surfaces:
 - Engine viewport surfaces: `docs/adr/0007-viewport-surfaces.md`
 - Multi-root layering: `docs/adr/0011-overlays-and-multi-root.md`
 - Frame lifecycle: `docs/adr/0015-frame-lifecycle-and-submission-order.md`
+- Refactor progress tracker: `docs/layout-engine-refactor-roadmap.md`
 - GPUI reference: `repo-ref/zed/crates/gpui/src/window.rs`, `repo-ref/zed/crates/gpui/src/taffy.rs`

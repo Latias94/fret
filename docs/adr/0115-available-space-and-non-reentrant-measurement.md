@@ -37,6 +37,7 @@ References:
 - Performance hardening for persistent Taffy trees: `docs/adr/0076-declarative-layout-performance-hardening.md`
 - Tailwind semantics mapping: `docs/tailwind-semantics-alignment.md`
 - Regression tracker for the observed stack overflow: `docs/todo-tracker.md` (P0 shadcn Components / Layout Correctness)
+- Refactor progress tracker: `docs/layout-engine-refactor-roadmap.md`
 - GPUI Taffy engine reference: `repo-ref/zed/crates/gpui/src/taffy.rs`
 
 ## Goals
