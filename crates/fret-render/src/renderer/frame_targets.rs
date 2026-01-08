@@ -53,6 +53,22 @@ impl FrameTargets {
         slot.as_ref().unwrap().view.clone()
     }
 
+    pub(super) fn require_target(&self, target: PlanTarget, size: (u32, u32)) -> wgpu::TextureView {
+        let size = (size.0.max(1), size.1.max(1));
+        let slot = match target {
+            PlanTarget::Intermediate0 => self.intermediate0.as_ref(),
+            PlanTarget::Intermediate1 => self.intermediate1.as_ref(),
+            PlanTarget::Intermediate2 => self.intermediate2.as_ref(),
+            PlanTarget::Output => unreachable!("Output is not an intermediate target"),
+        };
+        let existing = slot.expect("required intermediate target must exist");
+        assert_eq!(
+            existing.size, size,
+            "required intermediate target size mismatch"
+        );
+        existing.view.clone()
+    }
+
     pub(super) fn release_all(&mut self, pool: &mut IntermediatePool) {
         if let Some(t) = self.intermediate0.take() {
             pool.release(t.texture);

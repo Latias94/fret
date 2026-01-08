@@ -1,4 +1,4 @@
-use super::super::frame_targets::{FrameTargets, downsampled_size};
+use super::super::frame_targets::FrameTargets;
 use super::super::*;
 use fret_core::time::Instant;
 
@@ -92,7 +92,13 @@ impl Renderer {
         if matches!(postprocess, DebugPostprocess::Pixelate { .. }) {
             self.ensure_scale_nearest_pipelines(device, format);
         }
-        let plan = RenderPlan::compile_for_scene(&encoding, clear.0, path_samples, postprocess);
+        let plan = RenderPlan::compile_for_scene(
+            &encoding,
+            viewport_size,
+            clear.0,
+            path_samples,
+            postprocess,
+        );
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
@@ -731,15 +737,6 @@ impl Renderer {
                 }
                 RenderPlanPass::ScaleNearest(pass) => {
                     let scale = pass.scale.max(1);
-                    let full_size = viewport_size;
-                    let down_size = downsampled_size(full_size, scale);
-
-                    let target_size = |target: PlanTarget| match target {
-                        PlanTarget::Output => full_size,
-                        PlanTarget::Intermediate2 => down_size,
-                        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 => full_size,
-                    };
-
                     queue.write_buffer(
                         &self.scale_param_buffer,
                         0,
@@ -764,77 +761,41 @@ impl Renderer {
                         .scale_bind_group_layout
                         .as_ref()
                         .expect("scale bind group layout must exist");
-                    let bind_group = {
-                        let src_view = match pass.src {
-                            PlanTarget::Output => {
-                                debug_assert!(false, "ScaleNearest src cannot be Output");
-                                continue;
-                            }
-                            PlanTarget::Intermediate0 => frame_targets.ensure_target(
-                                &mut self.intermediate_pool,
-                                device,
-                                PlanTarget::Intermediate0,
-                                target_size(PlanTarget::Intermediate0),
-                                format,
-                                usage,
-                            ),
-                            PlanTarget::Intermediate1 => frame_targets.ensure_target(
-                                &mut self.intermediate_pool,
-                                device,
-                                PlanTarget::Intermediate1,
-                                target_size(PlanTarget::Intermediate1),
-                                format,
-                                usage,
-                            ),
-                            PlanTarget::Intermediate2 => frame_targets.ensure_target(
-                                &mut self.intermediate_pool,
-                                device,
-                                PlanTarget::Intermediate2,
-                                target_size(PlanTarget::Intermediate2),
-                                format,
-                                usage,
-                            ),
-                        };
-
-                        device.create_bind_group(&wgpu::BindGroupDescriptor {
-                            label: Some("fret scale-nearest bind group"),
-                            layout,
-                            entries: &[
-                                wgpu::BindGroupEntry {
-                                    binding: 0,
-                                    resource: wgpu::BindingResource::TextureView(&src_view),
-                                },
-                                wgpu::BindGroupEntry {
-                                    binding: 1,
-                                    resource: self.scale_param_buffer.as_entire_binding(),
-                                },
-                            ],
-                        })
+                    let src_view = match pass.src {
+                        PlanTarget::Output => {
+                            debug_assert!(false, "ScaleNearest src cannot be Output");
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
                     };
+                    let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("fret scale-nearest bind group"),
+                        layout,
+                        entries: &[
+                            wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::TextureView(&src_view),
+                            },
+                            wgpu::BindGroupEntry {
+                                binding: 1,
+                                resource: self.scale_param_buffer.as_entire_binding(),
+                            },
+                        ],
+                    });
 
                     let dst_view_owned = match pass.dst {
                         PlanTarget::Output => None,
-                        PlanTarget::Intermediate0 => Some(frame_targets.ensure_target(
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
                             device,
-                            PlanTarget::Intermediate0,
-                            target_size(PlanTarget::Intermediate0),
-                            format,
-                            usage,
-                        )),
-                        PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
-                            &mut self.intermediate_pool,
-                            device,
-                            PlanTarget::Intermediate1,
-                            target_size(PlanTarget::Intermediate1),
-                            format,
-                            usage,
-                        )),
-                        PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
-                            &mut self.intermediate_pool,
-                            device,
-                            PlanTarget::Intermediate2,
-                            target_size(PlanTarget::Intermediate2),
+                            pass.dst,
+                            pass.dst_size,
                             format,
                             usage,
                         )),
@@ -871,71 +832,35 @@ impl Renderer {
                         .blit_bind_group_layout
                         .as_ref()
                         .expect("blit bind group layout must exist");
-                    let blit_bind_group = {
-                        let src_view = match pass.src {
-                            PlanTarget::Output => {
-                                debug_assert!(false, "FullscreenBlit src cannot be Output");
-                                continue;
-                            }
-                            PlanTarget::Intermediate0 => frame_targets.ensure_target(
-                                &mut self.intermediate_pool,
-                                device,
-                                PlanTarget::Intermediate0,
-                                viewport_size,
-                                format,
-                                usage,
-                            ),
-                            PlanTarget::Intermediate1 => frame_targets.ensure_target(
-                                &mut self.intermediate_pool,
-                                device,
-                                PlanTarget::Intermediate1,
-                                viewport_size,
-                                format,
-                                usage,
-                            ),
-                            PlanTarget::Intermediate2 => frame_targets.ensure_target(
-                                &mut self.intermediate_pool,
-                                device,
-                                PlanTarget::Intermediate2,
-                                viewport_size,
-                                format,
-                                usage,
-                            ),
-                        };
-
-                        device.create_bind_group(&wgpu::BindGroupDescriptor {
-                            label: Some("fret blit bind group"),
-                            layout,
-                            entries: &[wgpu::BindGroupEntry {
-                                binding: 0,
-                                resource: wgpu::BindingResource::TextureView(&src_view),
-                            }],
-                        })
+                    let src_view = match pass.src {
+                        PlanTarget::Output => {
+                            debug_assert!(false, "FullscreenBlit src cannot be Output");
+                            continue;
+                        }
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => {
+                            frame_targets.require_target(pass.src, pass.src_size)
+                        }
                     };
+                    let blit_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("fret blit bind group"),
+                        layout,
+                        entries: &[wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(&src_view),
+                        }],
+                    });
 
                     let dst_view_owned = match pass.dst {
                         PlanTarget::Output => None,
-                        PlanTarget::Intermediate0 => Some(frame_targets.ensure_target(
+                        PlanTarget::Intermediate0
+                        | PlanTarget::Intermediate1
+                        | PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
                             device,
-                            PlanTarget::Intermediate0,
-                            viewport_size,
-                            format,
-                            usage,
-                        )),
-                        PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
-                            &mut self.intermediate_pool,
-                            device,
-                            PlanTarget::Intermediate1,
-                            viewport_size,
-                            format,
-                            usage,
-                        )),
-                        PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
-                            &mut self.intermediate_pool,
-                            device,
-                            PlanTarget::Intermediate2,
-                            viewport_size,
+                            pass.dst,
+                            pass.dst_size,
                             format,
                             usage,
                         )),

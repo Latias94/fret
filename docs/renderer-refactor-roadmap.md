@@ -206,7 +206,7 @@ This section is intentionally lightweight and should be updated as work lands.
     - A renderer-only offscreen target + identity fullscreen blit pass can run end-to-end (debug-gated).
     - Intermediate targets are managed via a reusable per-frame `FrameTargets` helper.
   - M2: In progress:
-    - A debug-gated "pixelate" reference postprocess is compiled into the plan (downsample -> upscale -> blit).
+    - A debug-gated "pixelate" reference postprocess is compiled into the plan (downsample chain -> upscale chain -> blit).
   - M3: Not started.
   - M4: Deferred.
 
