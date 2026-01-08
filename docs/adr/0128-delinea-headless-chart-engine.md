@@ -1,4 +1,4 @@
-# ADR 0111: `delinea` Headless Chart Engine (ECharts-Inspired, Fret-Native)
+# ADR 0128: `delinea` Headless Chart Engine (ECharts-Inspired, Fret-Native)
 
 Status: Accepted
 
@@ -213,7 +213,7 @@ P0 (bootstrap):
 P1 (ECharts-inspired expansion):
 
 - Extend the transform pipeline beyond continuous row ranges (sparse selection, aggregate, stack) with
-  revision-based caching (see ADR 0112).
+  revision-based caching (see ADR 0129).
 - Expand first-class components: legend, axis pointer, richer dataZoom (min/max span, zoom lock, slider UI),
   tooltip configuration, and component linking.
 - Define a typed “theme mapping” layer: map Fret token keys to chart paints/metrics without hard-coding
