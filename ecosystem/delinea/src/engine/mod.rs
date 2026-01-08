@@ -193,6 +193,16 @@ impl ChartEngine {
                 self.state.link.group = group;
                 self.state.revision.bump();
             }
+            Action::SetSeriesVisible { series, visible } => {
+                if let Some(existing) = self.model.series.get_mut(&series)
+                    && existing.visible != visible
+                {
+                    existing.visible = visible;
+                    self.model.revs.bump_visual();
+                    self.marks_stage.mark_dirty();
+                }
+                self.state.revision.bump();
+            }
             Action::SetDatasetRowRange { dataset, range } => {
                 if let Some(mut range) = range {
                     range.clamp_to_len(usize::MAX);
@@ -202,9 +212,6 @@ impl ChartEngine {
                 }
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
-            }
-            _ => {
-                self.state.revision.bump();
             }
         }
     }
