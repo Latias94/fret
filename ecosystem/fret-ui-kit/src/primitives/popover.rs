@@ -293,13 +293,10 @@ pub fn popover_modal_layer_children<H: UiHost>(
     barrier_children: Vec<AnyElement>,
     content: AnyElement,
 ) -> Vec<AnyElement> {
-    dialog_prim::modal_dialog_layer_children(
-        cx,
-        open,
-        dialog_prim::DialogOptions::default(),
-        barrier_children,
+    vec![
+        popover_modal_barrier(cx, open, true, barrier_children),
         content,
-    )
+    ]
 }
 
 /// Builds an overlay request for a Radix-style non-modal popover.
