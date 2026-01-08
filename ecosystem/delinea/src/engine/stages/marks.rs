@@ -119,7 +119,14 @@ impl MarksStage {
                 self.series_index += 1;
                 continue;
             };
-            let row_range = crate::view::table_row_range(table, view.dataset_view(series.dataset));
+            let row_range =
+                view.series_view(series.id)
+                    .map(|v| v.row_range)
+                    .unwrap_or(crate::view::RowRange {
+                        start: 0,
+                        end: table.row_count,
+                    });
+            let row_range = row_range.start..row_range.end;
 
             let Some(dataset) = model.datasets.get(&series.dataset) else {
                 self.series_index += 1;
