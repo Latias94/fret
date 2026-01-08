@@ -297,6 +297,23 @@ pub type UiAppBootstrapBuilder<S> = BootstrapBuilder<
     fret_launch::FnDriver<ui_app_driver::UiAppDriver<S>, ui_app_driver::UiAppWindowState<S>>,
 >;
 
+/// Create a “golden path” native UI app builder, using `App::new()` by default and allowing a
+/// hook to configure the driver before it is wrapped into `FnDriver`.
+///
+/// Prefer passing a non-capturing closure so it can coerce to a `fn` pointer (hotpatch-friendly).
+#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+pub fn ui_app_with_hooks<S: 'static>(
+    root_name: &'static str,
+    init_window: fn(&mut App, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(
+        &mut fret_ui::ElementContext<'a, App>,
+        &mut S,
+    ) -> Vec<fret_ui::element::AnyElement>,
+    configure: fn(ui_app_driver::UiAppDriver<S>) -> ui_app_driver::UiAppDriver<S>,
+) -> UiAppBootstrapBuilder<S> {
+    ui_app_with_app_and_hooks(App::new(), root_name, init_window, view, configure)
+}
+
 /// Create a “golden path” native UI app builder, using `App::new()` by default.
 ///
 /// This hides the `FnDriver` boilerplate and keeps example code short.
@@ -323,6 +340,27 @@ pub fn ui_app_with_app<S: 'static>(
         &mut S,
     ) -> Vec<fret_ui::element::AnyElement>,
 ) -> UiAppBootstrapBuilder<S> {
-    let driver = ui_app_driver::UiAppDriver::new(root_name, init_window, view).into_fn_driver();
+    ui_app_with_app_and_hooks(app, root_name, init_window, view, |d| d)
+}
+
+/// Same as `ui_app_with_app`, but allows a hook to configure the driver before it is wrapped into
+/// `FnDriver`.
+#[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
+pub fn ui_app_with_app_and_hooks<S: 'static>(
+    app: App,
+    root_name: &'static str,
+    init_window: fn(&mut App, fret_core::AppWindowId) -> S,
+    view: for<'a> fn(
+        &mut fret_ui::ElementContext<'a, App>,
+        &mut S,
+    ) -> Vec<fret_ui::element::AnyElement>,
+    configure: fn(ui_app_driver::UiAppDriver<S>) -> ui_app_driver::UiAppDriver<S>,
+) -> UiAppBootstrapBuilder<S> {
+    let driver = configure(ui_app_driver::UiAppDriver::new(
+        root_name,
+        init_window,
+        view,
+    ))
+    .into_fn_driver();
     BootstrapBuilder::new(app, driver)
 }

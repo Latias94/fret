@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use fret_app::{App, CommandId, Effect};
-use fret_bootstrap::BootstrapBuilder;
-use fret_bootstrap::ui_app_driver::UiAppDriver;
+use fret_bootstrap::ui_app_with_hooks;
 use fret_core::{AppWindowId, UiServices};
 use fret_core::{TextOverflow, TextWrap};
 use fret_icons::IconId;
@@ -41,16 +40,12 @@ enum TodoFilter {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    let driver = UiAppDriver::new("todo-demo", init_window, view)
-        .on_command(on_command)
-        .into_fn_driver();
-
     let mut config = WinitRunnerConfig::default();
     config.main_window_title = "todo_demo".to_string();
     config.main_window_size = winit::dpi::LogicalSize::new(560.0, 520.0);
 
-    BootstrapBuilder::new(App::new(), driver)
-        .configure(|c| *c = config)
+    ui_app_with_hooks("todo-demo", init_window, view, |d| d.on_command(on_command))
+        .configure(move |c| *c = config)
         .with_default_settings_json()?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .init_app(|app| {

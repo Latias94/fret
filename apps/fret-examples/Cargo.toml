@@ -14,6 +14,7 @@ publish = false
 alloc-profile = []
 mathjax-svg = ["fret-markdown/mathjax-svg"]
 hotpatch = ["fret-launch/hotpatch-subsecond", "fret-bootstrap/hotpatch-subsecond"]
+node-graph-demos = []
 
 [dependencies]
 anyhow.workspace = true
