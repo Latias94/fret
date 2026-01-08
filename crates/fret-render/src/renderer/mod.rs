@@ -101,6 +101,12 @@ pub struct Renderer {
     blit_pipeline: Option<wgpu::RenderPipeline>,
     blit_bind_group_layout: Option<wgpu::BindGroupLayout>,
 
+    scale_pipeline_format: Option<wgpu::TextureFormat>,
+    downsample_pipeline: Option<wgpu::RenderPipeline>,
+    upscale_pipeline: Option<wgpu::RenderPipeline>,
+    scale_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    scale_param_buffer: wgpu::Buffer,
+
     path_vertex_buffers: Vec<wgpu::Buffer>,
     path_vertex_buffer_index: usize,
     path_vertex_capacity: usize,
@@ -132,6 +138,7 @@ pub struct Renderer {
 
     path_msaa_samples: u32,
     debug_offscreen_blit_enabled: bool,
+    debug_pixelate_scale: u32,
     intermediate_pool: IntermediatePool,
 
     render_targets: RenderTargetRegistry,

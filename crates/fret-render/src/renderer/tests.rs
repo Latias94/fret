@@ -1,6 +1,6 @@
 use super::shaders::{
-    BLIT_SHADER, COMPOSITE_PREMUL_SHADER, MASK_SHADER, PATH_SHADER, QUAD_SHADER, TEXT_COLOR_SHADER,
-    TEXT_SHADER, VIEWPORT_SHADER,
+    BLIT_SHADER, COMPOSITE_PREMUL_SHADER, DOWNSAMPLE_NEAREST_SHADER, MASK_SHADER, PATH_SHADER,
+    QUAD_SHADER, TEXT_COLOR_SHADER, TEXT_SHADER, UPSCALE_NEAREST_SHADER, VIEWPORT_SHADER,
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
 use fret_core::geometry::{Point, Px, Transform2D};
@@ -11,6 +11,8 @@ fn shaders_parse_as_wgsl() {
         ("viewport", VIEWPORT_SHADER),
         ("quad", QUAD_SHADER),
         ("blit", BLIT_SHADER),
+        ("downsample_nearest", DOWNSAMPLE_NEAREST_SHADER),
+        ("upscale_nearest", UPSCALE_NEAREST_SHADER),
         ("composite_premul", COMPOSITE_PREMUL_SHADER),
         ("path", PATH_SHADER),
         ("text", TEXT_SHADER),
@@ -30,6 +32,8 @@ fn shaders_validate_for_webgpu() {
         ("viewport", VIEWPORT_SHADER),
         ("quad", QUAD_SHADER),
         ("blit", BLIT_SHADER),
+        ("downsample_nearest", DOWNSAMPLE_NEAREST_SHADER),
+        ("upscale_nearest", UPSCALE_NEAREST_SHADER),
         ("composite_premul", COMPOSITE_PREMUL_SHADER),
         ("path", PATH_SHADER),
         ("text", TEXT_SHADER),

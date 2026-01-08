@@ -146,6 +146,15 @@ impl Renderer {
         self.debug_offscreen_blit_enabled = enabled;
     }
 
+    pub fn debug_pixelate_scale(&self) -> u32 {
+        self.debug_pixelate_scale
+    }
+
+    pub fn set_debug_pixelate_scale(&mut self, scale: u32) {
+        // 0 disables the debug pixelate path; otherwise clamp to a sane upper bound.
+        self.debug_pixelate_scale = scale.min(128);
+    }
+
     pub fn set_text_font_families(&mut self, config: &TextFontFamilyConfig) -> bool {
         self.text_system.set_font_families(config)
     }

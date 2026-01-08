@@ -4,5 +4,6 @@ mod mask;
 mod path;
 mod path_intermediate;
 mod quad;
+mod scale_nearest;
 mod text;
 mod viewport;

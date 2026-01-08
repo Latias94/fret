@@ -8,7 +8,16 @@ pub(super) struct SceneSegmentId(pub(super) usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum PlanTarget {
     Output,
-    Offscreen0,
+    Intermediate0,
+    Intermediate1,
+    Intermediate2,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum DebugPostprocess {
+    None,
+    OffscreenBlit,
+    Pixelate { scale: u32 },
 }
 
 #[derive(Debug)]
@@ -24,12 +33,28 @@ pub(super) enum RenderPlanPass {
     SceneDrawRange(SceneDrawRangePass),
     PathMsaaBatch(PathMsaaBatchPass),
     FullscreenBlit(FullscreenBlitPass),
+    ScaleNearest(ScaleNearestPass),
 }
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct FullscreenBlitPass {
     pub(super) src: PlanTarget,
     pub(super) dst: PlanTarget,
+    pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ScaleMode {
+    Downsample,
+    Upscale,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ScaleNearestPass {
+    pub(super) src: PlanTarget,
+    pub(super) dst: PlanTarget,
+    pub(super) mode: ScaleMode,
+    pub(super) scale: u32,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
@@ -52,8 +77,14 @@ impl RenderPlan {
         encoding: &SceneEncoding,
         clear: wgpu::Color,
         path_samples: u32,
-        scene_target: PlanTarget,
+        postprocess: DebugPostprocess,
     ) -> Self {
+        let scene_target = match postprocess {
+            DebugPostprocess::None => PlanTarget::Output,
+            DebugPostprocess::OffscreenBlit | DebugPostprocess::Pixelate { .. } => {
+                PlanTarget::Intermediate0
+            }
+        };
         let draws = &encoding.ordered_draws;
 
         if path_samples <= 1 {
@@ -65,14 +96,7 @@ impl RenderPlan {
                     draw_range: 0..draws.len(),
                 })],
             };
-            if scene_target == PlanTarget::Offscreen0 {
-                plan.passes
-                    .push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                        src: PlanTarget::Offscreen0,
-                        dst: PlanTarget::Output,
-                        load: wgpu::LoadOp::Clear(clear),
-                    }));
-            }
+            append_postprocess(&mut plan, postprocess, clear);
             return plan;
         }
 
@@ -146,14 +170,129 @@ impl RenderPlan {
         }
 
         let mut plan = Self { passes };
-        if scene_target == PlanTarget::Offscreen0 {
+        append_postprocess(&mut plan, postprocess, clear);
+        plan
+    }
+}
+
+fn append_postprocess(plan: &mut RenderPlan, postprocess: DebugPostprocess, clear: wgpu::Color) {
+    match postprocess {
+        DebugPostprocess::None => {}
+        DebugPostprocess::OffscreenBlit => {
             plan.passes
                 .push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                    src: PlanTarget::Offscreen0,
+                    src: PlanTarget::Intermediate0,
                     dst: PlanTarget::Output,
                     load: wgpu::LoadOp::Clear(clear),
                 }));
         }
-        plan
+        DebugPostprocess::Pixelate { scale } => {
+            let scale = scale.max(1);
+            plan.passes
+                .push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
+                    src: PlanTarget::Intermediate0,
+                    dst: PlanTarget::Intermediate2,
+                    mode: ScaleMode::Downsample,
+                    scale,
+                    load: wgpu::LoadOp::Clear(clear),
+                }));
+            plan.passes
+                .push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
+                    src: PlanTarget::Intermediate2,
+                    dst: PlanTarget::Intermediate1,
+                    mode: ScaleMode::Upscale,
+                    scale,
+                    load: wgpu::LoadOp::Clear(clear),
+                }));
+            plan.passes
+                .push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
+                    src: PlanTarget::Intermediate1,
+                    dst: PlanTarget::Output,
+                    load: wgpu::LoadOp::Clear(clear),
+                }));
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compile_for_scene_none_targets_output() {
+        let encoding = SceneEncoding::default();
+        let plan = RenderPlan::compile_for_scene(
+            &encoding,
+            wgpu::Color::TRANSPARENT,
+            1,
+            DebugPostprocess::None,
+        );
+
+        assert_eq!(plan.passes.len(), 1);
+        let RenderPlanPass::SceneDrawRange(pass) = &plan.passes[0] else {
+            panic!("expected SceneDrawRange pass");
+        };
+        assert_eq!(pass.target, PlanTarget::Output);
+    }
+
+    #[test]
+    fn compile_for_scene_offscreen_blit_adds_fullscreen_blit() {
+        let encoding = SceneEncoding::default();
+        let plan = RenderPlan::compile_for_scene(
+            &encoding,
+            wgpu::Color::TRANSPARENT,
+            1,
+            DebugPostprocess::OffscreenBlit,
+        );
+
+        assert_eq!(plan.passes.len(), 2);
+        let RenderPlanPass::SceneDrawRange(scene) = &plan.passes[0] else {
+            panic!("expected SceneDrawRange pass");
+        };
+        assert_eq!(scene.target, PlanTarget::Intermediate0);
+        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[1] else {
+            panic!("expected FullscreenBlit pass");
+        };
+        assert_eq!(blit.src, PlanTarget::Intermediate0);
+        assert_eq!(blit.dst, PlanTarget::Output);
+    }
+
+    #[test]
+    fn compile_for_scene_pixelate_adds_scale_chain_then_blit() {
+        let encoding = SceneEncoding::default();
+        let plan = RenderPlan::compile_for_scene(
+            &encoding,
+            wgpu::Color::TRANSPARENT,
+            1,
+            DebugPostprocess::Pixelate { scale: 4 },
+        );
+
+        assert_eq!(plan.passes.len(), 4);
+        let RenderPlanPass::SceneDrawRange(scene) = &plan.passes[0] else {
+            panic!("expected SceneDrawRange pass");
+        };
+        assert_eq!(scene.target, PlanTarget::Intermediate0);
+
+        let RenderPlanPass::ScaleNearest(down) = &plan.passes[1] else {
+            panic!("expected ScaleNearest downsample pass");
+        };
+        assert_eq!(down.src, PlanTarget::Intermediate0);
+        assert_eq!(down.dst, PlanTarget::Intermediate2);
+        assert_eq!(down.mode, ScaleMode::Downsample);
+        assert_eq!(down.scale, 4);
+
+        let RenderPlanPass::ScaleNearest(up) = &plan.passes[2] else {
+            panic!("expected ScaleNearest upscale pass");
+        };
+        assert_eq!(up.src, PlanTarget::Intermediate2);
+        assert_eq!(up.dst, PlanTarget::Intermediate1);
+        assert_eq!(up.mode, ScaleMode::Upscale);
+        assert_eq!(up.scale, 4);
+
+        let RenderPlanPass::FullscreenBlit(blit) = &plan.passes[3] else {
+            panic!("expected FullscreenBlit pass");
+        };
+        assert_eq!(blit.src, PlanTarget::Intermediate1);
+        assert_eq!(blit.dst, PlanTarget::Output);
     }
 }

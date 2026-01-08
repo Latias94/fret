@@ -76,21 +76,22 @@ impl Renderer {
             encoding
         };
 
-        if self.debug_offscreen_blit_enabled {
+        let postprocess = if self.debug_pixelate_scale > 0 {
+            DebugPostprocess::Pixelate {
+                scale: self.debug_pixelate_scale,
+            }
+        } else if self.debug_offscreen_blit_enabled {
+            DebugPostprocess::OffscreenBlit
+        } else {
+            DebugPostprocess::None
+        };
+        if !matches!(postprocess, DebugPostprocess::None) {
             self.ensure_blit_pipeline(device, format);
         }
-        let scene_target = if self.debug_offscreen_blit_enabled {
-            PlanTarget::Offscreen0
-        } else {
-            PlanTarget::Output
-        };
-        let plan = RenderPlan::compile_for_scene(&encoding, clear.0, path_samples, scene_target);
-
-        let mut offscreen = if self.debug_offscreen_blit_enabled {
-            Some(self.acquire_offscreen_target(device, viewport_size, format))
-        } else {
-            None
-        };
+        if matches!(postprocess, DebugPostprocess::Pixelate { .. }) {
+            self.ensure_scale_nearest_pipelines(device, format);
+        }
+        let plan = RenderPlan::compile_for_scene(&encoding, clear.0, path_samples, postprocess);
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
@@ -160,20 +161,42 @@ impl Renderer {
             label: Some("fret renderer encoder"),
         });
 
+        let usage = wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING;
+        let mut frame_targets = FrameTargets::default();
+
         for planned_pass in &plan.passes {
             match planned_pass {
                 RenderPlanPass::SceneDrawRange(scene_pass) => {
                     debug_assert_eq!(scene_pass.segment.0, 0);
                     let load = scene_pass.load;
-                    let pass_target_view = match scene_pass.target {
-                        PlanTarget::Output => target_view,
-                        PlanTarget::Offscreen0 => {
-                            &offscreen
-                                .as_ref()
-                                .expect("offscreen target must exist")
-                                .view
-                        }
+                    let pass_target_view_owned = match scene_pass.target {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate0,
+                            viewport_size,
+                            format,
+                            usage,
+                        )),
+                        PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate1,
+                            viewport_size,
+                            format,
+                            usage,
+                        )),
+                        PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate2,
+                            viewport_size,
+                            format,
+                            usage,
+                        )),
                     };
+                    let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
 
                     {
                         enum ActivePipeline {
@@ -509,15 +532,34 @@ impl Renderer {
                 }
                 RenderPlanPass::PathMsaaBatch(path_pass) => {
                     debug_assert_eq!(path_pass.segment.0, 0);
-                    let pass_target_view = match path_pass.target {
-                        PlanTarget::Output => target_view,
-                        PlanTarget::Offscreen0 => {
-                            &offscreen
-                                .as_ref()
-                                .expect("offscreen target must exist")
-                                .view
-                        }
+                    let pass_target_view_owned = match path_pass.target {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate0,
+                            viewport_size,
+                            format,
+                            usage,
+                        )),
+                        PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate1,
+                            viewport_size,
+                            format,
+                            usage,
+                        )),
+                        PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate2,
+                            viewport_size,
+                            format,
+                            usage,
+                        )),
                     };
+                    let pass_target_view = pass_target_view_owned.as_ref().unwrap_or(target_view);
 
                     let start = path_pass.draw_range.start;
                     let end = path_pass.draw_range.end;
@@ -686,20 +728,125 @@ impl Renderer {
                     pass.set_scissor_rect(union.x, union.y, union.w, union.h);
                     pass.draw(0..6, 0..1);
                 }
-                RenderPlanPass::FullscreenBlit(pass) => {
-                    debug_assert!(matches!(pass.src, PlanTarget::Offscreen0));
-                    debug_assert!(matches!(pass.dst, PlanTarget::Output));
+                RenderPlanPass::ScaleNearest(pass) => {
+                    let scale = pass.scale.max(1);
+                    let full_size = viewport_size;
+                    let down_size = (
+                        full_size.0.max(1).div_ceil(scale),
+                        full_size.1.max(1).div_ceil(scale),
+                    );
 
-                    let blit_pipeline = self
-                        .blit_pipeline
+                    let target_size = |target: PlanTarget| match target {
+                        PlanTarget::Output => full_size,
+                        PlanTarget::Intermediate2 => down_size,
+                        PlanTarget::Intermediate0 | PlanTarget::Intermediate1 => full_size,
+                    };
+
+                    queue.write_buffer(
+                        &self.scale_param_buffer,
+                        0,
+                        bytemuck::cast_slice(&[scale, 0, 0, 0]),
+                    );
+
+                    let (pipeline, label) = match pass.mode {
+                        ScaleMode::Downsample => (
+                            self.downsample_pipeline
+                                .as_ref()
+                                .expect("downsample pipeline must exist"),
+                            "fret downsample-nearest pass",
+                        ),
+                        ScaleMode::Upscale => (
+                            self.upscale_pipeline
+                                .as_ref()
+                                .expect("upscale pipeline must exist"),
+                            "fret upscale-nearest pass",
+                        ),
+                    };
+                    let layout = self
+                        .scale_bind_group_layout
                         .as_ref()
-                        .expect("blit pipeline must exist");
-                    let offscreen = offscreen.as_ref().expect("offscreen target must exist");
+                        .expect("scale bind group layout must exist");
+                    let bind_group = {
+                        let src_view = match pass.src {
+                            PlanTarget::Output => {
+                                debug_assert!(false, "ScaleNearest src cannot be Output");
+                                continue;
+                            }
+                            PlanTarget::Intermediate0 => frame_targets.ensure_target(
+                                &mut self.intermediate_pool,
+                                device,
+                                PlanTarget::Intermediate0,
+                                target_size(PlanTarget::Intermediate0),
+                                format,
+                                usage,
+                            ),
+                            PlanTarget::Intermediate1 => frame_targets.ensure_target(
+                                &mut self.intermediate_pool,
+                                device,
+                                PlanTarget::Intermediate1,
+                                target_size(PlanTarget::Intermediate1),
+                                format,
+                                usage,
+                            ),
+                            PlanTarget::Intermediate2 => frame_targets.ensure_target(
+                                &mut self.intermediate_pool,
+                                device,
+                                PlanTarget::Intermediate2,
+                                target_size(PlanTarget::Intermediate2),
+                                format,
+                                usage,
+                            ),
+                        };
 
-                    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                        label: Some("fret blit pass"),
+                        device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret scale-nearest bind group"),
+                            layout,
+                            entries: &[
+                                wgpu::BindGroupEntry {
+                                    binding: 0,
+                                    resource: wgpu::BindingResource::TextureView(&src_view),
+                                },
+                                wgpu::BindGroupEntry {
+                                    binding: 1,
+                                    resource: self.scale_param_buffer.as_entire_binding(),
+                                },
+                            ],
+                        })
+                    };
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate0,
+                            target_size(PlanTarget::Intermediate0),
+                            format,
+                            usage,
+                        )),
+                        PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate1,
+                            target_size(PlanTarget::Intermediate1),
+                            format,
+                            usage,
+                        )),
+                        PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate2,
+                            target_size(PlanTarget::Intermediate2),
+                            format,
+                            usage,
+                        )),
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some(label),
                         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                            view: target_view,
+                            view: dst_view,
                             depth_slice: None,
                             resolve_target: None,
                             ops: wgpu::Operations {
@@ -712,18 +859,117 @@ impl Renderer {
                         occlusion_query_set: None,
                         multiview_mask: None,
                     });
-                    pass.set_pipeline(blit_pipeline);
-                    pass.set_bind_group(0, &offscreen.blit_bind_group, &[]);
-                    pass.draw(0..3, 0..1);
+                    rp.set_pipeline(pipeline);
+                    rp.set_bind_group(0, &bind_group, &[]);
+                    rp.draw(0..3, 0..1);
+                }
+                RenderPlanPass::FullscreenBlit(pass) => {
+                    let blit_pipeline = self
+                        .blit_pipeline
+                        .as_ref()
+                        .expect("blit pipeline must exist");
+
+                    let layout = self
+                        .blit_bind_group_layout
+                        .as_ref()
+                        .expect("blit bind group layout must exist");
+                    let blit_bind_group = {
+                        let src_view = match pass.src {
+                            PlanTarget::Output => {
+                                debug_assert!(false, "FullscreenBlit src cannot be Output");
+                                continue;
+                            }
+                            PlanTarget::Intermediate0 => frame_targets.ensure_target(
+                                &mut self.intermediate_pool,
+                                device,
+                                PlanTarget::Intermediate0,
+                                viewport_size,
+                                format,
+                                usage,
+                            ),
+                            PlanTarget::Intermediate1 => frame_targets.ensure_target(
+                                &mut self.intermediate_pool,
+                                device,
+                                PlanTarget::Intermediate1,
+                                viewport_size,
+                                format,
+                                usage,
+                            ),
+                            PlanTarget::Intermediate2 => frame_targets.ensure_target(
+                                &mut self.intermediate_pool,
+                                device,
+                                PlanTarget::Intermediate2,
+                                viewport_size,
+                                format,
+                                usage,
+                            ),
+                        };
+
+                        device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("fret blit bind group"),
+                            layout,
+                            entries: &[wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: wgpu::BindingResource::TextureView(&src_view),
+                            }],
+                        })
+                    };
+
+                    let dst_view_owned = match pass.dst {
+                        PlanTarget::Output => None,
+                        PlanTarget::Intermediate0 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate0,
+                            viewport_size,
+                            format,
+                            usage,
+                        )),
+                        PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate1,
+                            viewport_size,
+                            format,
+                            usage,
+                        )),
+                        PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
+                            &mut self.intermediate_pool,
+                            device,
+                            PlanTarget::Intermediate2,
+                            viewport_size,
+                            format,
+                            usage,
+                        )),
+                    };
+                    let dst_view = dst_view_owned.as_ref().unwrap_or(target_view);
+
+                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("fret blit pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: dst_view,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: pass.load,
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+                    rp.set_pipeline(blit_pipeline);
+                    rp.set_bind_group(0, &blit_bind_group, &[]);
+                    rp.draw(0..3, 0..1);
                 }
             }
         }
 
         let cmd = encoder.finish();
 
-        if let Some(offscreen) = offscreen.take() {
-            self.intermediate_pool.release(offscreen.texture);
-        }
+        frame_targets.release_all(&mut self.intermediate_pool);
 
         // Keep the most recent encoding for potential reuse on the next frame.
         if cache_hit {
@@ -732,49 +978,69 @@ impl Renderer {
         self.scene_encoding_cache = encoding;
         cmd
     }
+}
 
-    fn acquire_offscreen_target(
+#[derive(Default)]
+struct FrameTargets {
+    intermediate0: Option<FrameTarget>,
+    intermediate1: Option<FrameTarget>,
+    intermediate2: Option<FrameTarget>,
+}
+
+struct FrameTarget {
+    size: (u32, u32),
+    texture: PooledTexture,
+    view: wgpu::TextureView,
+}
+
+impl FrameTargets {
+    fn ensure_target(
         &mut self,
+        pool: &mut IntermediatePool,
         device: &wgpu::Device,
-        viewport_size: (u32, u32),
+        target: PlanTarget,
+        size: (u32, u32),
         format: wgpu::TextureFormat,
-    ) -> OffscreenTarget {
-        let usage = wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING;
-        let texture = self.intermediate_pool.acquire_texture(
-            device,
-            "fret offscreen target",
-            viewport_size,
-            format,
-            usage,
-            1,
-        );
+        usage: wgpu::TextureUsages,
+    ) -> wgpu::TextureView {
+        let size = (size.0.max(1), size.1.max(1));
+        let slot = match target {
+            PlanTarget::Intermediate0 => &mut self.intermediate0,
+            PlanTarget::Intermediate1 => &mut self.intermediate1,
+            PlanTarget::Intermediate2 => &mut self.intermediate2,
+            PlanTarget::Output => unreachable!("Output is not an intermediate target"),
+        };
+
+        if slot.as_ref().is_some_and(|existing| existing.size == size) {
+            return slot.as_ref().unwrap().view.clone();
+        }
+
+        if let Some(existing) = slot.take() {
+            pool.release(existing.texture);
+        }
+
+        let texture =
+            pool.acquire_texture(device, "fret intermediate target", size, format, usage, 1);
         let view = texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
-
-        let layout = self
-            .blit_bind_group_layout
-            .as_ref()
-            .expect("blit bind group layout must exist");
-        let blit_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("fret offscreen blit bind group"),
-            layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::TextureView(&view),
-            }],
-        });
-
-        OffscreenTarget {
+        slot.replace(FrameTarget {
+            size,
             texture,
             view,
-            blit_bind_group,
+        });
+        slot.as_ref().unwrap().view.clone()
+    }
+
+    fn release_all(&mut self, pool: &mut IntermediatePool) {
+        if let Some(t) = self.intermediate0.take() {
+            pool.release(t.texture);
+        }
+        if let Some(t) = self.intermediate1.take() {
+            pool.release(t.texture);
+        }
+        if let Some(t) = self.intermediate2.take() {
+            pool.release(t.texture);
         }
     }
-}
-
-struct OffscreenTarget {
-    texture: PooledTexture,
-    view: wgpu::TextureView,
-    blit_bind_group: wgpu::BindGroup,
 }

@@ -171,6 +171,13 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let scale_param_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fret scale params buffer"),
+            size: 256,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
         Self {
             adapter: adapter.clone(),
             uniform_buffer,
@@ -211,6 +218,11 @@ impl Renderer {
             blit_pipeline_format: None,
             blit_pipeline: None,
             blit_bind_group_layout: None,
+            scale_pipeline_format: None,
+            downsample_pipeline: None,
+            upscale_pipeline: None,
+            scale_bind_group_layout: None,
+            scale_param_buffer,
             path_vertex_buffers,
             path_vertex_buffer_index: 0,
             path_vertex_capacity,
@@ -235,6 +247,7 @@ impl Renderer {
             svg_perf: SvgPerfStats::default(),
             path_msaa_samples: 4,
             debug_offscreen_blit_enabled: false,
+            debug_pixelate_scale: 0,
             intermediate_pool: IntermediatePool::default(),
             render_targets: RenderTargetRegistry::default(),
             images: ImageRegistry::default(),
