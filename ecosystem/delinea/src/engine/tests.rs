@@ -210,6 +210,144 @@ fn set_view_window_2d_updates_both_axes() {
     assert_eq!(engine.state().data_window_y, expected_y);
 }
 
+#[test]
+fn pan_lock_prevents_pan_window_update() {
+    let x_axis = crate::ids::AxisId::new(1);
+    let mut engine = ChartEngine::new(basic_spec()).unwrap();
+
+    let base = DataWindow {
+        min: 0.0,
+        max: 10.0,
+    };
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::ToggleAxisPanLock { axis: x_axis });
+    let rev = engine.state().revision;
+
+    engine.apply_action(Action::PanDataWindowXFromBase {
+        axis: x_axis,
+        base,
+        delta_px: 10.0,
+        viewport_span_px: 100.0,
+    });
+
+    let actual = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default()
+        .window;
+    assert_eq!(actual, Some(base));
+    assert_eq!(engine.state().revision, rev);
+}
+
+#[test]
+fn zoom_lock_prevents_zoom_window_update() {
+    let x_axis = crate::ids::AxisId::new(1);
+    let mut engine = ChartEngine::new(basic_spec()).unwrap();
+
+    let base = DataWindow {
+        min: 0.0,
+        max: 10.0,
+    };
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(base),
+    });
+
+    engine.apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
+    let rev = engine.state().revision;
+
+    engine.apply_action(Action::ZoomDataWindowXFromBase {
+        axis: x_axis,
+        base,
+        center_px: 50.0,
+        log2_scale: 1.0,
+        viewport_span_px: 100.0,
+    });
+
+    let actual = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default()
+        .window;
+    assert_eq!(actual, Some(base));
+    assert_eq!(engine.state().revision, rev);
+}
+
+#[test]
+fn fixed_axis_prevents_pan_and_zoom_actions() {
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+
+    let mut spec = basic_spec();
+    spec.axes[0].range = Some(AxisRange::Fixed {
+        min: 0.0,
+        max: 10.0,
+    });
+    spec.axes[1].range = Some(AxisRange::Fixed {
+        min: -5.0,
+        max: 5.0,
+    });
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let rev = engine.state().revision;
+
+    let base_x = DataWindow {
+        min: 0.0,
+        max: 10.0,
+    };
+    engine.apply_action(Action::PanDataWindowXFromBase {
+        axis: x_axis,
+        base: base_x,
+        delta_px: 10.0,
+        viewport_span_px: 100.0,
+    });
+    engine.apply_action(Action::ZoomDataWindowXFromBase {
+        axis: x_axis,
+        base: base_x,
+        center_px: 50.0,
+        log2_scale: 1.0,
+        viewport_span_px: 100.0,
+    });
+
+    let actual_x = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default()
+        .window;
+    assert_eq!(actual_x, None);
+
+    let base_y = DataWindow {
+        min: -5.0,
+        max: 5.0,
+    };
+    engine.apply_action(Action::PanDataWindowYFromBase {
+        axis: y_axis,
+        base: base_y,
+        delta_px: 10.0,
+        viewport_span_px: 100.0,
+    });
+    engine.apply_action(Action::ZoomDataWindowYFromBase {
+        axis: y_axis,
+        base: base_y,
+        center_px: 50.0,
+        log2_scale: 1.0,
+        viewport_span_px: 100.0,
+    });
+
+    assert!(engine.state().data_window_y.get(&y_axis).is_none());
+    assert_eq!(engine.state().revision, rev);
+}
+
 #[derive(Debug, Default)]
 struct NullTextMeasurer;
 

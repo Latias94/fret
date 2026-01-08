@@ -76,6 +76,31 @@ To avoid ad hoc behavior drift, each axis may define:
 This is required to implement “axis lock” and “zoom lock” parity features without scattering
 conditionals across UI code.
 
+#### Contract surface (v1)
+
+Headless state:
+
+- `ChartState.axis_locks: BTreeMap<AxisId, AxisInteractionLocks>`
+- `AxisInteractionLocks { pan_locked: bool, zoom_locked: bool }`
+
+Headless actions:
+
+- `Action::ToggleAxisPanLock { axis }`
+- `Action::ToggleAxisZoomLock { axis }`
+- `Action::PanDataWindowXFromBase { axis, base, delta_px, viewport_span_px }`
+- `Action::PanDataWindowYFromBase { axis, base, delta_px, viewport_span_px }`
+- `Action::ZoomDataWindowXFromBase { axis, base, center_px, log2_scale, viewport_span_px }`
+- `Action::ZoomDataWindowYFromBase { axis, base, center_px, log2_scale, viewport_span_px }`
+- `Action::SetDataWindowXFromZoom { axis, window }`
+- `Action::SetDataWindowYFromZoom { axis, window }`
+
+Semantics:
+
+1. If the axis is `AxisRange::Fixed`, the corresponding pan/zoom actions are no-ops.
+2. If `pan_locked` is true, pan actions are no-ops.
+3. If `zoom_locked` is true, zoom actions are no-ops.
+4. Otherwise, resulting windows are clamped with `AxisRange::LockMin/LockMax` constraints.
+
 ## Consequences
 
 - Interaction becomes more consistent across desktop and wasm.
@@ -99,4 +124,3 @@ P1:
 - ADR 0111: `docs/adr/0111-delinea-headless-chart-engine.md`
 - ADR 0112: `docs/adr/0112-delinea-transform-pipeline-and-datazoom-semantics.md`
 - ECharts axisPointer/tooltip concepts: `F:\\SourceCodes\\Rust\\fret\\repo-ref\\echarts\\src\\echarts.all.ts`
-

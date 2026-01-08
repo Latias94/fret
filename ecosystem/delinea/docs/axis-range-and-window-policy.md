@@ -1,7 +1,12 @@
 # Axis Range and View Window Policy (v1)
 
-This note defines the minimum, renderer-agnostic semantics needed to support
-axis locking / zoom locking in `delinea` without coupling to any specific UI.
+This note defines the minimum, renderer-agnostic semantics needed to support:
+
+- durable axis constraints (`AxisRange`),
+- interactive view windows (`DataWindowX` / `DataWindowY`),
+- interaction gating (pan/zoom locks) via `AxisInteractionLocks`,
+
+in `delinea`, without coupling to any specific UI.
 
 ## Goals
 
@@ -22,6 +27,18 @@ data-space range of an axis:
 
 In v1, `Fixed` fully overrides view windows for that axis. Partial locks override
 only the locked bound.
+
+### `AxisInteractionLocks` (pan/zoom locks)
+
+`AxisInteractionLocks` lives in `ChartState` (view-state), keyed per axis:
+
+- `pan_locked`: ignore pan actions for that axis.
+- `zoom_locked`: ignore zoom actions for that axis.
+
+This is intentionally separate from `AxisRange`:
+
+- `AxisRange` is a data-space constraint and affects the **effective window** used for layout/LOD.
+- `AxisInteractionLocks` is an interaction policy and only affects whether certain actions are applied.
 
 ### `DataWindowX` / `DataWindowY`
 
@@ -81,7 +98,24 @@ The headless layer exposes helpers to compute pan/zoom in data space without bin
 - Zoom: `DataWindow::zoom_by_px(center_px, log2_scale, viewport_span_px)`
 
 These helpers are intended to be used by UI adapters to produce
-`SetDataWindowX/Y` or `SetViewWindow2D` actions.
+`SetDataWindowX/Y`, `SetViewWindow2D`, or higher-level interaction actions (see below).
+
+## Interaction actions (headless, recommended)
+
+To keep input semantics consistent across UIs, the headless engine defines action meanings.
+
+Pan/zoom actions:
+
+- `Action::PanDataWindowXFromBase` / `Action::PanDataWindowYFromBase`
+- `Action::ZoomDataWindowXFromBase` / `Action::ZoomDataWindowYFromBase`
+- `Action::SetDataWindowXFromZoom` / `Action::SetDataWindowYFromZoom` (box zoom)
+
+Guard rules:
+
+1. If `AxisRange` is `Fixed`, pan/zoom actions are no-ops for that axis.
+2. If `AxisInteractionLocks.pan_locked` is true, pan actions are no-ops.
+3. If `AxisInteractionLocks.zoom_locked` is true, zoom actions are no-ops.
+4. Otherwise, the resulting window is clamped via `AxisRange::LockMin/LockMax` constraints.
 
 ## UI integration (recommended, not required)
 
@@ -92,9 +126,11 @@ The engine only defines semantics. A UI adapter (e.g. `fret-chart`) may map:
   - Drag: pan X (update `data_zoom_x[axis].window`).
 - Box zoom:
   - Drag a rectangle: compute data windows and apply `SetViewWindow2D` for the target X/Y axes.
-- Shortcuts:
-  - `L`: toggle X axis lock (set `AxisRange::Fixed` to current visible range, or back to `Auto`).
-  - `R`: reset view (clear `data_zoom_x[axis].window`, set axis ranges to `Auto`).
+- Shortcuts (suggested defaults, UI policy):
+  - `L`: toggle pan+zoom lock for the hovered axis region (X/Y/plot = both axes).
+  - `Shift+L`: toggle pan lock only.
+  - `Ctrl+L`: toggle zoom lock only.
+  - `R`: reset view (clear `data_zoom_x[axis].window` / `data_window_y[axis]`, keep axis ranges at `Auto`).
 
 The exact mapping is intentionally left to the UI layer.
 

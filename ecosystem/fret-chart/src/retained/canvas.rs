@@ -103,10 +103,6 @@ pub struct ChartCanvas {
     legend_hover: Option<delinea::SeriesId>,
     pan_drag: Option<PanDrag>,
     box_zoom_drag: Option<BoxZoomDrag>,
-    lock_x_pan: bool,
-    lock_y_pan: bool,
-    lock_x_zoom: bool,
-    lock_y_zoom: bool,
 }
 
 impl ChartCanvas {
@@ -131,10 +127,6 @@ impl ChartCanvas {
             legend_hover: None,
             pan_drag: None,
             box_zoom_drag: None,
-            lock_x_pan: false,
-            lock_y_pan: false,
-            lock_x_zoom: false,
-            lock_y_zoom: false,
         })
     }
 
@@ -1129,6 +1121,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     let Some(pos) = self.last_pointer_pos else {
                         return;
                     };
+                    let Some((x_axis, y_axis)) = self.primary_axes() else {
+                        return;
+                    };
 
                     let toggle_pan = modifiers.shift && !modifiers.ctrl;
                     let toggle_zoom = modifiers.ctrl && !modifiers.shift;
@@ -1138,28 +1133,36 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     match Self::axis_region(layout, pos) {
                         AxisRegion::XAxis => {
                             if toggle_both || toggle_pan {
-                                self.lock_x_pan = !self.lock_x_pan;
+                                self.engine
+                                    .apply_action(Action::ToggleAxisPanLock { axis: x_axis });
                             }
                             if toggle_both || toggle_zoom {
-                                self.lock_x_zoom = !self.lock_x_zoom;
+                                self.engine
+                                    .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
                             }
                         }
                         AxisRegion::YAxis => {
                             if toggle_both || toggle_pan {
-                                self.lock_y_pan = !self.lock_y_pan;
+                                self.engine
+                                    .apply_action(Action::ToggleAxisPanLock { axis: y_axis });
                             }
                             if toggle_both || toggle_zoom {
-                                self.lock_y_zoom = !self.lock_y_zoom;
+                                self.engine
+                                    .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
                             }
                         }
                         AxisRegion::Plot => {
                             if toggle_both || toggle_pan {
-                                self.lock_x_pan = !self.lock_x_pan;
-                                self.lock_y_pan = !self.lock_y_pan;
+                                self.engine
+                                    .apply_action(Action::ToggleAxisPanLock { axis: x_axis });
+                                self.engine
+                                    .apply_action(Action::ToggleAxisPanLock { axis: y_axis });
                             }
                             if toggle_both || toggle_zoom {
-                                self.lock_x_zoom = !self.lock_x_zoom;
-                                self.lock_y_zoom = !self.lock_y_zoom;
+                                self.engine
+                                    .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
+                                self.engine
+                                    .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
                             }
                         }
                     }
@@ -1255,27 +1258,21 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         let dx = position.x.0 - drag.start_pos.x.0;
                         let dy = position.y.0 - drag.start_pos.y.0;
 
-                        let mut next_x = if self.lock_x_pan {
-                            drag.start_x
-                        } else {
-                            drag.start_x.pan_by_px(dx, width)
-                        };
-                        let mut next_y = if self.lock_y_pan {
-                            drag.start_y
-                        } else {
-                            drag.start_y.pan_by_px(-dy, height)
-                        };
-
-                        let (x_locked_min, x_locked_max) = self.axis_constraints(drag.x_axis);
-                        let (y_locked_min, y_locked_max) = self.axis_constraints(drag.y_axis);
-                        next_x = next_x.apply_constraints(x_locked_min, x_locked_max);
-                        next_y = next_y.apply_constraints(y_locked_min, y_locked_max);
-
-                        if !self.lock_x_pan {
-                            self.set_data_window_x(drag.x_axis, Some(next_x));
+                        if self.axis_is_fixed(drag.x_axis).is_none() {
+                            self.engine.apply_action(Action::PanDataWindowXFromBase {
+                                axis: drag.x_axis,
+                                base: drag.start_x,
+                                delta_px: dx,
+                                viewport_span_px: width,
+                            });
                         }
-                        if !self.lock_y_pan {
-                            self.set_data_window_y(drag.y_axis, Some(next_y));
+                        if self.axis_is_fixed(drag.y_axis).is_none() {
+                            self.engine.apply_action(Action::PanDataWindowYFromBase {
+                                axis: drag.y_axis,
+                                base: drag.start_y,
+                                delta_px: -dy,
+                                viewport_span_px: height,
+                            });
                         }
 
                         cx.invalidate_self(Invalidation::Paint);
@@ -1377,20 +1374,31 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                 if self.input_map.axis_lock_toggle.matches(*button, *modifiers) {
                     let layout = self.compute_layout(cx.bounds);
+                    let Some((x_axis, y_axis)) = self.primary_axes() else {
+                        return;
+                    };
                     match Self::axis_region(layout, *position) {
                         AxisRegion::XAxis => {
-                            self.lock_x_pan = !self.lock_x_pan;
-                            self.lock_x_zoom = !self.lock_x_zoom;
+                            self.engine
+                                .apply_action(Action::ToggleAxisPanLock { axis: x_axis });
+                            self.engine
+                                .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
                         }
                         AxisRegion::YAxis => {
-                            self.lock_y_pan = !self.lock_y_pan;
-                            self.lock_y_zoom = !self.lock_y_zoom;
+                            self.engine
+                                .apply_action(Action::ToggleAxisPanLock { axis: y_axis });
+                            self.engine
+                                .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
                         }
                         AxisRegion::Plot => {
-                            self.lock_x_pan = !self.lock_x_pan;
-                            self.lock_x_zoom = !self.lock_x_zoom;
-                            self.lock_y_pan = !self.lock_y_pan;
-                            self.lock_y_zoom = !self.lock_y_zoom;
+                            self.engine
+                                .apply_action(Action::ToggleAxisPanLock { axis: x_axis });
+                            self.engine
+                                .apply_action(Action::ToggleAxisZoomLock { axis: x_axis });
+                            self.engine
+                                .apply_action(Action::ToggleAxisPanLock { axis: y_axis });
+                            self.engine
+                                .apply_action(Action::ToggleAxisZoomLock { axis: y_axis });
                         }
                     }
 
@@ -1471,7 +1479,24 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 if self.axis_is_fixed(x_axis).is_some() || self.axis_is_fixed(y_axis).is_some() {
                     return;
                 }
-                if self.lock_x_pan && self.lock_y_pan {
+
+                let x_pan_locked = self
+                    .engine
+                    .state()
+                    .axis_locks
+                    .get(&x_axis)
+                    .copied()
+                    .unwrap_or_default()
+                    .pan_locked;
+                let y_pan_locked = self
+                    .engine
+                    .state()
+                    .axis_locks
+                    .get(&y_axis)
+                    .copied()
+                    .unwrap_or_default()
+                    .pan_locked;
+                if x_pan_locked && y_pan_locked {
                     return;
                 }
 
@@ -1532,68 +1557,44 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         let w = (start_local.x.0 - end_local.x.0).abs();
                         let h = (start_local.y.0 - end_local.y.0).abs();
                         if w >= 4.0 && h >= 4.0 {
-                            let mut x = None;
-                            let mut y = None;
-
                             if self.axis_is_fixed(drag.x_axis).is_none() {
-                                if self.lock_x_zoom {
-                                    // no-op: keep existing X window
-                                } else {
-                                    let x0 = start_local.x.0.min(end_local.x.0).clamp(0.0, width);
-                                    let x1 = start_local.x.0.max(end_local.x.0).clamp(0.0, width);
-                                    let min = delinea::engine::axis::data_at_px(
-                                        drag.start_x,
-                                        x0,
-                                        0.0,
-                                        width,
-                                    );
-                                    let max = delinea::engine::axis::data_at_px(
-                                        drag.start_x,
-                                        x1,
-                                        0.0,
-                                        width,
-                                    );
-                                    let mut window = DataWindow { min, max };
-                                    window.clamp_non_degenerate();
-                                    let (locked_min, locked_max) =
-                                        self.axis_constraints(drag.x_axis);
-                                    x = Some(window.apply_constraints(locked_min, locked_max));
-                                }
+                                let x0 = start_local.x.0.min(end_local.x.0).clamp(0.0, width);
+                                let x1 = start_local.x.0.max(end_local.x.0).clamp(0.0, width);
+                                let min =
+                                    delinea::engine::axis::data_at_px(drag.start_x, x0, 0.0, width);
+                                let max =
+                                    delinea::engine::axis::data_at_px(drag.start_x, x1, 0.0, width);
+                                let mut window = DataWindow { min, max };
+                                window.clamp_non_degenerate();
+                                self.engine.apply_action(Action::SetDataWindowXFromZoom {
+                                    axis: drag.x_axis,
+                                    window,
+                                });
                             }
 
                             if self.axis_is_fixed(drag.y_axis).is_none() {
-                                if self.lock_y_zoom {
-                                    // no-op: keep existing Y window
-                                } else {
-                                    let y0 = start_local.y.0.min(end_local.y.0).clamp(0.0, height);
-                                    let y1 = start_local.y.0.max(end_local.y.0).clamp(0.0, height);
-                                    let y0_from_bottom = height - y1;
-                                    let y1_from_bottom = height - y0;
-                                    let min = delinea::engine::axis::data_at_px(
-                                        drag.start_y,
-                                        y0_from_bottom,
-                                        0.0,
-                                        height,
-                                    );
-                                    let max = delinea::engine::axis::data_at_px(
-                                        drag.start_y,
-                                        y1_from_bottom,
-                                        0.0,
-                                        height,
-                                    );
-                                    let mut window = DataWindow { min, max };
-                                    window.clamp_non_degenerate();
-                                    let (locked_min, locked_max) =
-                                        self.axis_constraints(drag.y_axis);
-                                    y = Some(window.apply_constraints(locked_min, locked_max));
-                                }
-                            }
-
-                            if let Some(x) = x {
-                                self.set_data_window_x(drag.x_axis, Some(x));
-                            }
-                            if let Some(y) = y {
-                                self.set_data_window_y(drag.y_axis, Some(y));
+                                let y0 = start_local.y.0.min(end_local.y.0).clamp(0.0, height);
+                                let y1 = start_local.y.0.max(end_local.y.0).clamp(0.0, height);
+                                let y0_from_bottom = height - y1;
+                                let y1_from_bottom = height - y0;
+                                let min = delinea::engine::axis::data_at_px(
+                                    drag.start_y,
+                                    y0_from_bottom,
+                                    0.0,
+                                    height,
+                                );
+                                let max = delinea::engine::axis::data_at_px(
+                                    drag.start_y,
+                                    y1_from_bottom,
+                                    0.0,
+                                    height,
+                                );
+                                let mut window = DataWindow { min, max };
+                                window.clamp_non_degenerate();
+                                self.engine.apply_action(Action::SetDataWindowYFromZoom {
+                                    axis: drag.y_axis,
+                                    window,
+                                });
                             }
                         }
                     }
@@ -1674,48 +1675,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     !modifiers.shift
                 };
 
-                let next_x = zoom_x.then(|| {
-                    if self.lock_x_zoom {
-                        return None;
-                    }
+                if zoom_x && self.axis_is_fixed(x_axis).is_none() {
                     let w = self.current_window_x(x_axis);
-                    let (locked_min, locked_max) = self.axis_constraints(x_axis);
-                    Some(
-                        w.zoom_by_px(center_x, log2_scale, width)
-                            .apply_constraints(locked_min, locked_max),
-                    )
-                });
-                let mut next_x = next_x.flatten();
-
-                let next_y = zoom_y.then(|| {
-                    if self.lock_y_zoom {
-                        return None;
-                    }
+                    self.engine.apply_action(Action::ZoomDataWindowXFromBase {
+                        axis: x_axis,
+                        base: w,
+                        center_px: center_x,
+                        log2_scale,
+                        viewport_span_px: width,
+                    });
+                }
+                if zoom_y && self.axis_is_fixed(y_axis).is_none() {
                     let w = self.current_window_y(y_axis);
-                    let (locked_min, locked_max) = self.axis_constraints(y_axis);
-                    Some(
-                        w.zoom_by_px(center_y_from_bottom, log2_scale, height)
-                            .apply_constraints(locked_min, locked_max),
-                    )
-                });
-                let mut next_y = next_y.flatten();
-
-                if self.axis_is_fixed(x_axis).is_some() {
-                    next_x = None;
-                }
-                if self.axis_is_fixed(y_axis).is_some() {
-                    next_y = None;
-                }
-
-                if next_x.is_none() && next_y.is_none() {
-                    return;
-                }
-
-                if let Some(x) = next_x {
-                    self.set_data_window_x(x_axis, Some(x));
-                }
-                if let Some(y) = next_y {
-                    self.set_data_window_y(y_axis, Some(y));
+                    self.engine.apply_action(Action::ZoomDataWindowYFromBase {
+                        axis: y_axis,
+                        base: w,
+                        center_px: center_y_from_bottom,
+                        log2_scale,
+                        viewport_span_px: height,
+                    });
                 }
 
                 cx.invalidate_self(Invalidation::Paint);

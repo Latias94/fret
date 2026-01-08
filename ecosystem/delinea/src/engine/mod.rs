@@ -2,6 +2,7 @@ use fret_core::Rect;
 
 use crate::action::Action;
 use crate::data::DatasetStore;
+use crate::engine::interaction::AxisInteractionLocks;
 use crate::engine::lod::LodScratch;
 use crate::engine::model::{ChartModel, ModelError};
 use crate::engine::stages::MarksStage;
@@ -19,6 +20,7 @@ use std::collections::BTreeMap;
 
 pub mod axis;
 pub mod hit_test;
+pub mod interaction;
 pub mod lod;
 pub mod model;
 pub mod stages;
@@ -38,6 +40,7 @@ pub struct ChartState {
     pub link: LinkConfig,
     pub data_zoom_x: BTreeMap<crate::ids::AxisId, DataZoomXState>,
     pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
+    pub axis_locks: BTreeMap<crate::ids::AxisId, AxisInteractionLocks>,
     pub hover_px: Option<Point>,
     pub dataset_row_ranges: BTreeMap<crate::ids::DatasetId, crate::transform::RowRange>,
 }
@@ -191,6 +194,58 @@ impl ChartEngine {
             Action::HoverAt { point } => {
                 self.state.hover_px = Some(point);
             }
+            Action::ToggleAxisPanLock { axis } => {
+                let entry =
+                    crate::engine::interaction::lock_entry(&mut self.state.axis_locks, axis);
+                entry.toggle_pan();
+                self.state.revision.bump();
+            }
+            Action::ToggleAxisZoomLock { axis } => {
+                let entry =
+                    crate::engine::interaction::lock_entry(&mut self.state.axis_locks, axis);
+                entry.toggle_zoom();
+                self.state.revision.bump();
+            }
+            Action::PanDataWindowXFromBase {
+                axis,
+                base,
+                delta_px,
+                viewport_span_px,
+            } => {
+                self.apply_pan_from_base(axis, base, delta_px, viewport_span_px);
+            }
+            Action::PanDataWindowYFromBase {
+                axis,
+                base,
+                delta_px,
+                viewport_span_px,
+            } => {
+                self.apply_pan_from_base(axis, base, delta_px, viewport_span_px);
+            }
+            Action::ZoomDataWindowXFromBase {
+                axis,
+                base,
+                center_px,
+                log2_scale,
+                viewport_span_px,
+            } => {
+                self.apply_zoom_from_base(axis, base, center_px, log2_scale, viewport_span_px);
+            }
+            Action::ZoomDataWindowYFromBase {
+                axis,
+                base,
+                center_px,
+                log2_scale,
+                viewport_span_px,
+            } => {
+                self.apply_zoom_from_base(axis, base, center_px, log2_scale, viewport_span_px);
+            }
+            Action::SetDataWindowXFromZoom { axis, window } => {
+                self.apply_zoom_set_window(axis, window);
+            }
+            Action::SetDataWindowYFromZoom { axis, window } => {
+                self.apply_zoom_set_window(axis, window);
+            }
             Action::SetDataWindowX { axis, window } => {
                 let default_mode = self
                     .model
@@ -309,6 +364,169 @@ impl ChartEngine {
                 self.marks_stage.mark_dirty();
             }
         }
+    }
+
+    fn axis_locks(&self, axis: crate::ids::AxisId) -> AxisInteractionLocks {
+        self.state
+            .axis_locks
+            .get(&axis)
+            .copied()
+            .unwrap_or_default()
+    }
+
+    fn axis_range(&self, axis: crate::ids::AxisId) -> crate::spec::AxisRange {
+        self.model
+            .axes
+            .get(&axis)
+            .map(|a| a.range)
+            .unwrap_or_default()
+    }
+
+    fn axis_is_fixed(&self, axis: crate::ids::AxisId) -> bool {
+        self.axis_range(axis).is_fixed()
+    }
+
+    fn apply_pan_from_base(
+        &mut self,
+        axis: crate::ids::AxisId,
+        mut base: window::DataWindow,
+        delta_px: f32,
+        viewport_span_px: f32,
+    ) {
+        let Some(axis_model) = self.model.axes.get(&axis) else {
+            return;
+        };
+        if self.axis_is_fixed(axis) {
+            return;
+        }
+        if self.axis_locks(axis).pan_locked {
+            return;
+        }
+
+        base.clamp_non_degenerate();
+        let mut window = base.pan_by_px(delta_px, viewport_span_px);
+
+        let range = self.axis_range(axis);
+        window = window.apply_constraints(range.locked_min(), range.locked_max());
+
+        match axis_model.kind {
+            crate::spec::AxisKind::X => {
+                let default_mode = self
+                    .model
+                    .data_zoom_x_by_axis
+                    .get(&axis)
+                    .and_then(|id| self.model.data_zoom_x.get(id))
+                    .map(|z| z.filter_mode)
+                    .unwrap_or_default();
+                self.state
+                    .data_zoom_x
+                    .entry(axis)
+                    .or_insert(DataZoomXState {
+                        window: None,
+                        filter_mode: default_mode,
+                    })
+                    .window = Some(window);
+            }
+            crate::spec::AxisKind::Y => {
+                self.state.data_window_y.insert(axis, window);
+            }
+        }
+
+        self.state.revision.bump();
+        self.marks_stage.mark_dirty();
+    }
+
+    fn apply_zoom_from_base(
+        &mut self,
+        axis: crate::ids::AxisId,
+        mut base: window::DataWindow,
+        center_px: f32,
+        log2_scale: f32,
+        viewport_span_px: f32,
+    ) {
+        let Some(axis_model) = self.model.axes.get(&axis) else {
+            return;
+        };
+        if self.axis_is_fixed(axis) {
+            return;
+        }
+        if self.axis_locks(axis).zoom_locked {
+            return;
+        }
+
+        base.clamp_non_degenerate();
+        let mut window = base.zoom_by_px(center_px, log2_scale, viewport_span_px);
+
+        let range = self.axis_range(axis);
+        window = window.apply_constraints(range.locked_min(), range.locked_max());
+
+        match axis_model.kind {
+            crate::spec::AxisKind::X => {
+                let default_mode = self
+                    .model
+                    .data_zoom_x_by_axis
+                    .get(&axis)
+                    .and_then(|id| self.model.data_zoom_x.get(id))
+                    .map(|z| z.filter_mode)
+                    .unwrap_or_default();
+                self.state
+                    .data_zoom_x
+                    .entry(axis)
+                    .or_insert(DataZoomXState {
+                        window: None,
+                        filter_mode: default_mode,
+                    })
+                    .window = Some(window);
+            }
+            crate::spec::AxisKind::Y => {
+                self.state.data_window_y.insert(axis, window);
+            }
+        }
+
+        self.state.revision.bump();
+        self.marks_stage.mark_dirty();
+    }
+
+    fn apply_zoom_set_window(&mut self, axis: crate::ids::AxisId, mut window: window::DataWindow) {
+        let Some(axis_model) = self.model.axes.get(&axis) else {
+            return;
+        };
+        if self.axis_is_fixed(axis) {
+            return;
+        }
+        if self.axis_locks(axis).zoom_locked {
+            return;
+        }
+
+        window.clamp_non_degenerate();
+        let range = self.axis_range(axis);
+        window = window.apply_constraints(range.locked_min(), range.locked_max());
+
+        match axis_model.kind {
+            crate::spec::AxisKind::X => {
+                let default_mode = self
+                    .model
+                    .data_zoom_x_by_axis
+                    .get(&axis)
+                    .and_then(|id| self.model.data_zoom_x.get(id))
+                    .map(|z| z.filter_mode)
+                    .unwrap_or_default();
+                self.state
+                    .data_zoom_x
+                    .entry(axis)
+                    .or_insert(DataZoomXState {
+                        window: None,
+                        filter_mode: default_mode,
+                    })
+                    .window = Some(window);
+            }
+            crate::spec::AxisKind::Y => {
+                self.state.data_window_y.insert(axis, window);
+            }
+        }
+
+        self.state.revision.bump();
+        self.marks_stage.mark_dirty();
     }
 
     pub fn apply_patch(
