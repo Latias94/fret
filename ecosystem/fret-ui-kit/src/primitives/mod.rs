@@ -60,6 +60,7 @@ pub mod switch;
 pub mod tabs;
 pub mod toggle;
 pub mod toggle_group;
+pub mod toast;
 pub mod tooltip;
 pub mod tooltip_delay_group;
 pub mod tooltip_provider;

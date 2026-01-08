@@ -53,6 +53,7 @@ a small `controllable_state` helper because it is a common contract shared by ma
 - `select` -> `ecosystem/fret-ui-kit/src/primitives/select.rs`
 - `switch` -> `ecosystem/fret-ui-kit/src/primitives/switch.rs`
 - `tabs` -> `ecosystem/fret-ui-kit/src/primitives/tabs.rs`
+- `toast` -> `ecosystem/fret-ui-kit/src/primitives/toast.rs` (facade over `window_overlays::toast`)
 - `toggle` -> `ecosystem/fret-ui-kit/src/primitives/toggle.rs`
 - `toggle-group` -> `ecosystem/fret-ui-kit/src/primitives/toggle_group.rs`
 - `tooltip` -> `ecosystem/fret-ui-kit/src/primitives/tooltip.rs` (facade over provider + delay-group + popper)
