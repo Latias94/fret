@@ -187,8 +187,8 @@ impl HoverCard {
         let arrow_bg = theme.color_required("popover");
         let arrow_border = theme.color_required("border");
 
+        let trigger = self.trigger;
         let content = self.content;
-        let trigger = radix_hover_card::apply_hover_card_trigger_a11y(self.trigger, content.id);
         let trigger_id = trigger.id;
         let content_id = content.id;
         let anchor_id = self.anchor_override.unwrap_or(trigger_id);
