@@ -424,53 +424,70 @@ impl ChartEngine {
             None
         };
 
-        match (self.output.axis_pointer.as_ref(), next_axis_pointer) {
-            (Some(prev), Some((crosshair_px, hit)))
-                if prev.crosshair_px == crosshair_px && prev.hit == hit => {}
-            (_, Some((crosshair_px, hit))) => {
-                let (x_axis, y_axis) = self
-                    .model
-                    .series
-                    .get(&hit.series)
-                    .map(|s| (s.x_axis, s.y_axis))
-                    .unwrap_or_default();
-                let x_window = self
-                    .output
-                    .axis_windows
-                    .get(&x_axis)
-                    .copied()
-                    .unwrap_or_default();
-                let y_window = self
-                    .output
-                    .axis_windows
-                    .get(&y_axis)
-                    .copied()
-                    .unwrap_or_default();
-                let x_label = crate::format::format_tick_value(x_window, hit.x_value);
-                let y_label = crate::format::format_tick_value(y_window, hit.y_value);
-                let mut tooltip = TooltipOutput::default();
-                tooltip.lines.reserve(3);
-                tooltip.lines.push(TooltipLine {
-                    label: "series".to_string(),
-                    value: hit.series.0.to_string(),
-                });
-                tooltip.lines.push(TooltipLine {
-                    label: "x".to_string(),
-                    value: x_label,
-                });
-                tooltip.lines.push(TooltipLine {
-                    label: "y".to_string(),
-                    value: y_label,
-                });
-                self.output.axis_pointer = Some(AxisPointerOutput {
-                    crosshair_px,
-                    hit,
-                    tooltip,
-                });
+        if let Some((crosshair_px, hit)) = next_axis_pointer {
+            let series = self.model.series.get(&hit.series);
+            let (x_axis, y_axis) = series.map(|s| (s.x_axis, s.y_axis)).unwrap_or_default();
+
+            let series_value = series
+                .and_then(|s| s.name.as_deref())
+                .map(|n| n.to_string())
+                .unwrap_or_else(|| hit.series.0.to_string());
+
+            let x_axis_label = self
+                .model
+                .axes
+                .get(&x_axis)
+                .and_then(|a| a.name.as_deref())
+                .map(|n| format!("x ({n})"))
+                .unwrap_or_else(|| "x".to_string());
+            let y_axis_label = self
+                .model
+                .axes
+                .get(&y_axis)
+                .and_then(|a| a.name.as_deref())
+                .map(|n| format!("y ({n})"))
+                .unwrap_or_else(|| "y".to_string());
+
+            let x_window = self
+                .output
+                .axis_windows
+                .get(&x_axis)
+                .copied()
+                .unwrap_or_default();
+            let y_window = self
+                .output
+                .axis_windows
+                .get(&y_axis)
+                .copied()
+                .unwrap_or_default();
+            let x_value = crate::format::format_tick_value(x_window, hit.x_value);
+            let y_value = crate::format::format_tick_value(y_window, hit.y_value);
+
+            let mut tooltip = TooltipOutput::default();
+            tooltip.lines.reserve(3);
+            tooltip.lines.push(TooltipLine {
+                label: "series".to_string(),
+                value: series_value,
+            });
+            tooltip.lines.push(TooltipLine {
+                label: x_axis_label,
+                value: x_value,
+            });
+            tooltip.lines.push(TooltipLine {
+                label: y_axis_label,
+                value: y_value,
+            });
+
+            let next = AxisPointerOutput {
+                crosshair_px,
+                hit,
+                tooltip,
+            };
+            if self.output.axis_pointer.as_ref() != Some(&next) {
+                self.output.axis_pointer = Some(next);
             }
-            (_, None) => {
-                self.output.axis_pointer = None;
-            }
+        } else {
+            self.output.axis_pointer = None;
         }
 
         self.output.revision.bump();

@@ -39,12 +39,14 @@ fn basic_spec() -> ChartSpec {
         axes: vec![
             AxisSpec {
                 id: crate::ids::AxisId::new(1),
+                name: None,
                 kind: AxisKind::X,
                 grid: crate::ids::GridId::new(1),
                 range: None,
             },
             AxisSpec {
                 id: crate::ids::AxisId::new(2),
+                name: None,
                 kind: AxisKind::Y,
                 grid: crate::ids::GridId::new(1),
                 range: None,
@@ -54,6 +56,7 @@ fn basic_spec() -> ChartSpec {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -164,12 +167,14 @@ fn band_emits_two_polylines() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: Some("Time".to_string()),
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: None,
             },
             AxisSpec {
                 id: y_axis,
+                name: Some("Value".to_string()),
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -179,6 +184,7 @@ fn band_emits_two_polylines() {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
+            name: None,
             kind: SeriesKind::Band,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -269,12 +275,14 @@ fn row_range_limits_mark_indices() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: Some("Time".to_string()),
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: None,
             },
             AxisSpec {
                 id: y_axis,
+                name: Some("Value".to_string()),
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -284,6 +292,7 @@ fn row_range_limits_mark_indices() {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -364,12 +373,14 @@ fn x_window_limits_mark_indices() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: Some("Time".to_string()),
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: None,
             },
             AxisSpec {
                 id: y_axis,
+                name: Some("Value".to_string()),
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -379,6 +390,7 @@ fn x_window_limits_mark_indices() {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -462,6 +474,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: None,
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: Some(AxisRange::Fixed {
@@ -471,6 +484,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
             },
             AxisSpec {
                 id: y_axis,
+                name: None,
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -480,6 +494,7 @@ fn axis_fixed_overrides_data_window_for_marks() {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -563,12 +578,14 @@ fn set_series_visible_hides_marks() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: None,
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: None,
             },
             AxisSpec {
                 id: y_axis,
+                name: None,
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -578,6 +595,7 @@ fn set_series_visible_hides_marks() {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -674,12 +692,14 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: None,
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: Some(AxisRange::LockMin { min: 200.0 }),
             },
             AxisSpec {
                 id: y_axis,
+                name: None,
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -689,6 +709,7 @@ fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -788,12 +809,14 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: None,
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: None,
             },
             AxisSpec {
                 id: y_axis,
+                name: None,
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -803,6 +826,7 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -921,12 +945,14 @@ fn data_window_filter_mode_resets_to_spec_default() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: None,
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: None,
             },
             AxisSpec {
                 id: y_axis,
+                name: None,
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -940,6 +966,7 @@ fn data_window_filter_mode_resets_to_spec_default() {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -1022,12 +1049,14 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: None,
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: None,
             },
             AxisSpec {
                 id: y_axis,
+                name: None,
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -1041,6 +1070,7 @@ fn set_data_window_x_inserts_state_with_spec_default_filter_mode() {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: series_id,
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -1125,12 +1155,14 @@ fn hover_does_not_rebuild_marks() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: None,
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: None,
             },
             AxisSpec {
                 id: y_axis,
+                name: None,
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -1140,6 +1172,7 @@ fn hover_does_not_rebuild_marks() {
         axis_pointer: Some(AxisPointerSpec::default()),
         series: vec![SeriesSpec {
             id: series_id,
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -1210,12 +1243,14 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
         axes: vec![
             AxisSpec {
                 id: x_axis,
+                name: Some("Time".to_string()),
                 kind: AxisKind::X,
                 grid: grid_id,
                 range: None,
             },
             AxisSpec {
                 id: y_axis,
+                name: Some("Value".to_string()),
                 kind: AxisKind::Y,
                 grid: grid_id,
                 range: None,
@@ -1230,6 +1265,7 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
         }),
         series: vec![SeriesSpec {
             id: series_id,
+            name: Some("MySeries".to_string()),
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -1269,4 +1305,7 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
     let axis_pointer = axis_pointer.unwrap();
     assert_eq!(axis_pointer.crosshair_px, Point::new(Px(0.0), Px(100.0)));
     assert!(!axis_pointer.tooltip.lines.is_empty());
+    assert_eq!(axis_pointer.tooltip.lines[0].value, "MySeries");
+    let x_label = axis_pointer.tooltip.lines[1].label.as_str();
+    assert!(x_label.contains("Time"), "unexpected x label: {x_label}");
 }

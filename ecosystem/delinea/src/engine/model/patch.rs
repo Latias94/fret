@@ -248,6 +248,12 @@ impl ChartPatch {
                         continue;
                     };
 
+                    if let Some(name) = axis.name.and_then(sanitize_name)
+                        && existing.name.as_deref() != Some(name.as_str())
+                    {
+                        existing.name = Some(name);
+                    }
+
                     if existing.kind != axis.kind || existing.grid != axis.grid {
                         existing.kind = axis.kind;
                         existing.grid = axis.grid;
@@ -322,6 +328,12 @@ impl ChartPatch {
                         report.structure_changed = true;
                         continue;
                     };
+
+                    if let Some(name) = series.name.and_then(sanitize_name)
+                        && existing.name.as_deref() != Some(name.as_str())
+                    {
+                        existing.name = Some(name);
+                    }
 
                     if existing.kind != series.kind
                         || existing.dataset != series.dataset
@@ -543,6 +555,7 @@ pub enum AxisOp {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisPatch {
     pub id: AxisId,
+    pub name: Option<String>,
     pub kind: AxisKind,
     pub grid: GridId,
     pub range: Option<AxisRange>,
@@ -554,6 +567,7 @@ impl From<AxisPatch> for AxisModel {
         range.clamp_non_degenerate();
         Self {
             id: p.id,
+            name: p.name.and_then(sanitize_name),
             kind: p.kind,
             grid: p.grid,
             range,
@@ -572,6 +586,7 @@ pub enum SeriesOp {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SeriesPatch {
     pub id: SeriesId,
+    pub name: Option<String>,
     pub kind: SeriesKind,
     pub dataset: DatasetId,
     pub encode: SeriesEncode,
@@ -585,6 +600,7 @@ impl From<SeriesPatch> for SeriesModel {
     fn from(p: SeriesPatch) -> Self {
         Self {
             id: p.id,
+            name: p.name.and_then(sanitize_name),
             kind: p.kind,
             dataset: p.dataset,
             encode: p.encode,
@@ -593,5 +609,16 @@ impl From<SeriesPatch> for SeriesModel {
             visible: p.visible.unwrap_or(true),
             area_baseline: p.area_baseline.unwrap_or_default(),
         }
+    }
+}
+
+fn sanitize_name(name: String) -> Option<String> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        None
+    } else if trimmed.len() == name.len() {
+        Some(name)
+    } else {
+        Some(trimmed.to_string())
     }
 }

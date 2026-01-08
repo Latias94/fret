@@ -228,12 +228,14 @@ mod tests {
             axes: vec![
                 AxisSpec {
                     id: x_axis,
+                    name: None,
                     kind: AxisKind::X,
                     grid: grid_id,
                     range: None,
                 },
                 AxisSpec {
                     id: y_axis,
+                    name: None,
                     kind: AxisKind::Y,
                     grid: grid_id,
                     range: None,
@@ -243,6 +245,7 @@ mod tests {
             axis_pointer: None,
             series: vec![SeriesSpec {
                 id: series_id,
+                name: None,
                 kind: SeriesKind::Line,
                 dataset: dataset_id,
                 encode: SeriesEncode {

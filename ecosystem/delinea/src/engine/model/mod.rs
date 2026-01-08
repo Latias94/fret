@@ -129,6 +129,7 @@ impl ChartModel {
                 axis.id,
                 AxisModel {
                     id: axis.id,
+                    name: sanitize_name(axis.name),
                     kind: axis.kind,
                     grid: axis.grid,
                     range: {
@@ -237,6 +238,7 @@ impl ChartModel {
                 series.id,
                 SeriesModel {
                     id: series.id,
+                    name: sanitize_name(series.name),
                     kind: series.kind,
                     dataset: series.dataset,
                     encode: series.encode,
@@ -281,6 +283,7 @@ pub struct GridModel {
 #[derive(Debug, Clone)]
 pub struct AxisModel {
     pub id: AxisId,
+    pub name: Option<String>,
     pub kind: AxisKind,
     pub grid: GridId,
     pub range: AxisRange,
@@ -304,6 +307,7 @@ pub struct AxisPointerModel {
 #[derive(Debug, Clone)]
 pub struct SeriesModel {
     pub id: SeriesId,
+    pub name: Option<String>,
     pub kind: SeriesKind,
     pub dataset: DatasetId,
     pub encode: SeriesEncode,
@@ -318,5 +322,17 @@ fn sanitize_px(v: f32, default: f32) -> f32 {
         v
     } else {
         default
+    }
+}
+
+fn sanitize_name(name: Option<String>) -> Option<String> {
+    let name = name?;
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        None
+    } else if trimmed.len() == name.len() {
+        Some(name)
+    } else {
+        Some(trimmed.to_string())
     }
 }

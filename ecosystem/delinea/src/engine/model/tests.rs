@@ -34,12 +34,14 @@ fn basic_spec() -> ChartSpec {
         axes: vec![
             AxisSpec {
                 id: crate::ids::AxisId::new(1),
+                name: None,
                 kind: AxisKind::X,
                 grid: crate::ids::GridId::new(1),
                 range: None,
             },
             AxisSpec {
                 id: crate::ids::AxisId::new(2),
+                name: None,
                 kind: AxisKind::Y,
                 grid: crate::ids::GridId::new(1),
                 range: None,
@@ -49,6 +51,7 @@ fn basic_spec() -> ChartSpec {
         axis_pointer: None,
         series: vec![SeriesSpec {
             id: crate::ids::SeriesId::new(1),
+            name: None,
             kind: SeriesKind::Line,
             dataset: dataset_id,
             encode: SeriesEncode {
@@ -128,6 +131,7 @@ fn replace_merge_can_replace_series_only() {
                 replace_families,
                 series: vec![SeriesOp::Upsert(SeriesPatch {
                     id: crate::ids::SeriesId::new(2),
+                    name: None,
                     kind: SeriesKind::Line,
                     dataset: crate::ids::DatasetId::new(1),
                     encode: SeriesEncode {
@@ -167,6 +171,7 @@ fn replace_merge_keeps_and_merges_matching_ids() {
                 replace_families,
                 series: vec![SeriesOp::Upsert(SeriesPatch {
                     id: crate::ids::SeriesId::new(1),
+                    name: None,
                     kind: SeriesKind::Line,
                     dataset: crate::ids::DatasetId::new(1),
                     encode: SeriesEncode {
@@ -210,6 +215,7 @@ fn replace_merge_rejects_dangling_references() {
                 replace_families,
                 axes: vec![AxisOp::Upsert(AxisPatch {
                     id: crate::ids::AxisId::new(1),
+                    name: None,
                     kind: AxisKind::X,
                     grid: crate::ids::GridId::new(1),
                     range: None,
@@ -241,6 +247,7 @@ fn replace_validates_references() {
                 }],
                 axes: vec![AxisOp::Upsert(AxisPatch {
                     id: crate::ids::AxisId::new(1),
+                    name: None,
                     kind: AxisKind::X,
                     grid: crate::ids::GridId::new(999),
                     range: None,
@@ -265,6 +272,7 @@ fn merge_axis_range_updates_layout_without_structure() {
             ChartPatch {
                 axes: vec![AxisOp::Upsert(AxisPatch {
                     id: crate::ids::AxisId::new(1),
+                    name: None,
                     kind: AxisKind::X,
                     grid: crate::ids::GridId::new(1),
                     range: Some(crate::spec::AxisRange::LockMin { min: 10.0 }),
@@ -298,6 +306,7 @@ fn merge_series_visibility_updates_visual_without_structure() {
             ChartPatch {
                 series: vec![SeriesOp::Upsert(SeriesPatch {
                     id: crate::ids::SeriesId::new(1),
+                    name: None,
                     kind: SeriesKind::Line,
                     dataset: crate::ids::DatasetId::new(1),
                     encode: SeriesEncode {

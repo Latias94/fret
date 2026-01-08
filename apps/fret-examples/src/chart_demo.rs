@@ -66,12 +66,14 @@ impl ChartDemoDriver {
             axes: vec![
                 delinea::AxisSpec {
                     id: x_axis,
+                    name: Some("Time".to_string()),
                     kind: AxisKind::X,
                     grid: grid_id,
                     range: Some(AxisRange::Auto),
                 },
                 delinea::AxisSpec {
                     id: y_axis,
+                    name: Some("Value".to_string()),
                     kind: AxisKind::Y,
                     grid: grid_id,
                     range: Some(AxisRange::Auto),
@@ -81,6 +83,7 @@ impl ChartDemoDriver {
             axis_pointer: None,
             series: vec![SeriesSpec {
                 id: series_id,
+                name: Some("Band".to_string()),
                 kind: SeriesKind::Band,
                 dataset: dataset_id,
                 encode: SeriesEncode {

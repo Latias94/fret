@@ -121,6 +121,8 @@ impl AxisRange {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisSpec {
     pub id: AxisId,
+    /// Optional display name (used by tooltips and legends).
+    pub name: Option<String>,
     pub kind: AxisKind,
     pub grid: GridId,
     /// When set, the axis is constrained in data space.
@@ -202,6 +204,8 @@ pub enum AreaBaseline {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SeriesSpec {
     pub id: SeriesId,
+    /// Optional display name (used by tooltips and legends).
+    pub name: Option<String>,
     pub kind: SeriesKind,
     pub dataset: DatasetId,
     pub encode: SeriesEncode,
