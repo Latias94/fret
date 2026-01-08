@@ -41,9 +41,11 @@ use crate::ui::{
     NodeGraphEditQueue, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
 };
 
+mod context_menu;
 mod edge_drag;
 mod marquee;
 mod node_drag;
+mod searcher;
 mod wire_drag;
 
 use super::conversion;
@@ -3610,46 +3612,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     zoom,
                 ));
 
-                if self.interaction.searcher.is_some() {
-                    let (inside, hit_row) = if let Some(searcher) =
-                        self.interaction.searcher.as_ref()
-                    {
-                        let visible = searcher_visible_rows(searcher);
-                        let rect = searcher_rect_at(&self.style, searcher.origin, visible, zoom);
-                        let inside = rect.contains(*position);
-                        let hit_row = hit_searcher_row(&self.style, searcher, *position, zoom);
-                        (inside, hit_row)
-                    } else {
-                        (false, None)
-                    };
-
-                    match button {
-                        MouseButton::Left => {
-                            if let Some(row_ix) = hit_row {
-                                let _ = self.try_activate_searcher_row(cx, row_ix);
-                            } else if !inside {
-                                self.interaction.searcher = None;
-                            }
-                            cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
-                            return;
-                        }
-                        MouseButton::Right => {
-                            self.interaction.searcher = None;
-                            cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
-                            return;
-                        }
-                        _ => {
-                            self.interaction.searcher = None;
-                            cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
-                            return;
-                        }
-                    }
+                if searcher::handle_searcher_pointer_down(self, cx, *position, *button, zoom) {
+                    return;
                 }
 
                 if *button == MouseButton::Left {
@@ -3663,47 +3627,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     }
                 }
 
-                if let Some(menu) = self.interaction.context_menu.as_mut() {
-                    match button {
-                        MouseButton::Left => {
-                            if let Some(ix) =
-                                hit_context_menu_item(&self.style, menu, *position, zoom)
-                            {
-                                let item = menu.items.get(ix).cloned();
-                                let target = menu.target.clone();
-                                let invoked_at = menu.invoked_at;
-                                let candidates = menu.candidates.clone();
-                                self.interaction.context_menu = None;
-                                if let Some(item) = item
-                                    && item.enabled
-                                {
-                                    self.activate_context_menu_item(
-                                        cx,
-                                        &target,
-                                        invoked_at,
-                                        item,
-                                        &candidates,
-                                    );
-                                }
-                            } else {
-                                self.interaction.context_menu = None;
-                            }
-                            cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
-                            return;
-                        }
-                        MouseButton::Right => {
-                            self.interaction.context_menu = None;
-                        }
-                        _ => {
-                            self.interaction.context_menu = None;
-                            cx.stop_propagation();
-                            cx.request_redraw();
-                            cx.invalidate_self(Invalidation::Paint);
-                            return;
-                        }
-                    }
+                if self.interaction.context_menu.is_some()
+                    && context_menu::handle_context_menu_pointer_down(
+                        self, cx, *position, *button, zoom,
+                    )
+                {
+                    return;
                 }
 
                 if *button == MouseButton::Left
@@ -4282,38 +4211,11 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                if let Some(searcher) = self.interaction.searcher.as_mut() {
-                    let new_hover = hit_searcher_row(&self.style, searcher, *position, zoom);
-                    if searcher.hovered_row != new_hover {
-                        searcher.hovered_row = new_hover;
-                        if let Some(ix) = new_hover
-                            && searcher
-                                .rows
-                                .get(ix)
-                                .is_some_and(Self::searcher_is_selectable_row)
-                        {
-                            searcher.active_row = ix;
-                            Self::ensure_searcher_active_visible(searcher);
-                        }
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
+                if searcher::handle_searcher_pointer_move(self, cx, *position, zoom) {
                     return;
                 }
 
-                if let Some(menu) = self.interaction.context_menu.as_mut() {
-                    let new_hover = hit_context_menu_item(&self.style, menu, *position, zoom);
-                    if menu.hovered_item != new_hover {
-                        menu.hovered_item = new_hover;
-                        if let Some(ix) = new_hover {
-                            if menu.items.get(ix).is_some_and(|it| it.enabled) {
-                                menu.active_item = ix.min(menu.items.len().saturating_sub(1));
-                                menu.typeahead.clear();
-                            }
-                        }
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
+                if context_menu::handle_context_menu_pointer_move(self, cx, *position, zoom) {
                     return;
                 }
 
@@ -4435,23 +4337,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             Event::Pointer(fret_core::PointerEvent::Wheel {
                 delta, modifiers, ..
             }) => {
-                if !modifiers.ctrl
-                    && !modifiers.meta
-                    && let Some(searcher) = self.interaction.searcher.as_mut()
-                {
-                    let n = searcher.rows.len();
-                    if n > 0 {
-                        let visible = SEARCHER_MAX_VISIBLE_ROWS.min(n);
-                        let max_scroll = n.saturating_sub(visible);
-                        if delta.y.0 > 0.0 {
-                            searcher.scroll = searcher.scroll.saturating_sub(1);
-                        } else if delta.y.0 < 0.0 {
-                            searcher.scroll = (searcher.scroll + 1).min(max_scroll);
-                        }
-                        Self::ensure_searcher_active_visible(searcher);
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
+                if searcher::handle_searcher_wheel(self, cx, *delta, *modifiers, zoom) {
                     return;
                 }
 
