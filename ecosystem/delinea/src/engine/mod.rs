@@ -782,12 +782,27 @@ fn compute_axis_axis_pointer_output(
     let x_axis = primary.x_axis;
 
     let x_window = axis_windows.get(&x_axis).copied().unwrap_or_default();
-    let x_value = crate::engine::axis::data_at_x_in_rect(x_window, hover_px.x.0, viewport);
+    let trigger2 = spec.trigger_distance_px.max(0.0) * spec.trigger_distance_px.max(0.0);
+    let hit_for_marker = hit.filter(|h| h.dist2_px <= trigger2);
+
+    let x_value = if spec.snap
+        && let Some(hit) = hit_for_marker
+    {
+        hit.x_value
+    } else {
+        crate::engine::axis::data_at_x_in_rect(x_window, hover_px.x.0, viewport)
+    };
     if !x_value.is_finite() {
         return None;
     }
 
-    let crosshair_px = hover_px;
+    let crosshair_px = if spec.snap
+        && let Some(hit) = hit_for_marker
+    {
+        hit.point_px
+    } else {
+        hover_px
+    };
 
     let mut tooltip = TooltipOutput::default();
 
@@ -874,14 +889,6 @@ fn compute_axis_axis_pointer_output(
         };
 
         tooltip.lines.push(TooltipLine { label, value });
-    }
-
-    let mut hit_for_marker = None;
-    if let Some(hit) = hit {
-        let trigger2 = spec.trigger_distance_px.max(0.0) * spec.trigger_distance_px.max(0.0);
-        if hit.dist2_px <= trigger2 {
-            hit_for_marker = Some(hit);
-        }
     }
 
     Some(AxisPointerOutput {

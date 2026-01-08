@@ -185,7 +185,8 @@ pub struct AxisPointerSpec {
     pub trigger: AxisPointerTrigger,
     /// When true, crosshair snaps to the nearest hit point (P0: single series hit).
     pub snap: bool,
-    /// Maximum distance (in pixels) to activate the pointer/tooltip.
+    /// For `trigger=Item`, this is the maximum distance (in pixels) to activate the pointer/tooltip.
+    /// For `trigger=Axis`, this only gates whether `AxisPointerOutput.hit` is populated (marker dot, snap anchor).
     pub trigger_distance_px: f32,
     /// Minimum pointer movement (in pixels) to recompute hit testing.
     pub throttle_px: f32,
@@ -195,9 +196,9 @@ pub struct AxisPointerSpec {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum AxisPointerTrigger {
     /// Similar to ECharts tooltip trigger="item": show details for a single series hit.
-    #[default]
     Item,
     /// Similar to ECharts tooltip trigger="axis": show values for all visible series at the same X.
+    #[default]
     Axis,
 }
 
@@ -205,7 +206,7 @@ impl Default for AxisPointerSpec {
     fn default() -> Self {
         Self {
             enabled: true,
-            trigger: AxisPointerTrigger::Item,
+            trigger: AxisPointerTrigger::Axis,
             snap: false,
             trigger_distance_px: 12.0,
             throttle_px: 0.75,
