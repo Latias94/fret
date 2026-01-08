@@ -1536,22 +1536,20 @@ impl DropdownMenu {
                                                                     }
                                                                 }
 
-                                                                let mut a11y =
-                                                                    menu::item::menu_item_a11y(
+                                                                let controls = has_submenu.then(|| {
+                                                                    menu::sub_content::submenu_content_semantics_id(
+                                                                        cx,
+                                                                        overlay_root_name_for_controls.as_ref(),
+                                                                        &value,
+                                                                    )
+                                                                });
+                                                                let a11y =
+                                                                    menu::item::menu_item_a11y_with_controls(
                                                                         a11y_label,
                                                                         has_submenu
                                                                             .then_some(is_open_submenu),
+                                                                        controls,
                                                                     );
-                                                                if has_submenu {
-                                                                    a11y.controls_element = Some(
-                                                                        menu::sub_content::submenu_content_semantics_id(
-                                                                            cx,
-                                                                            overlay_root_name_for_controls.as_ref(),
-                                                                            &value,
-                                                                        )
-                                                                        .0,
-                                                                    );
-                                                                }
                                                                 let props = PressableProps {
                                                                     layout: {
                                                                         let mut layout = LayoutStyle::default();
