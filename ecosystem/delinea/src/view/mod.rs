@@ -151,12 +151,13 @@ impl ViewState {
                 .get(&series.x_axis)
                 .map(|a| a.range)
                 .unwrap_or_default();
-            let state_window = state.data_window_x.get(&series.x_axis).copied();
-            let filter_mode = state
-                .data_window_x_filter_mode
+            let zoom = state
+                .data_zoom_x
                 .get(&series.x_axis)
                 .copied()
                 .unwrap_or_default();
+            let state_window = zoom.window;
+            let filter_mode = zoom.filter_mode;
             let x_policy = series_x_policy(x_axis_range, state_window, filter_mode);
 
             let row_range = if filter_mode == FilterMode::Filter

@@ -90,7 +90,15 @@ fn set_view_window_2d_updates_both_axes() {
             max: 20.0,
         },
     );
-    assert_eq!(engine.state().data_window_x, expected_x);
+    let x_axis = crate::ids::AxisId::new(1);
+    let actual = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default()
+        .window;
+    assert_eq!(actual, expected_x.get(&x_axis).copied());
 
     let mut expected_y = BTreeMap::new();
     expected_y.insert(

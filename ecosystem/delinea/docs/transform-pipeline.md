@@ -13,7 +13,7 @@ The effective row slice for a series is derived from:
 - Dataset-local row constraints: `ChartState.dataset_row_ranges[dataset]` (optional).
 - Axis constraints and view windows:
   - Model constraints: `AxisRange::{Fixed, LockMin, LockMax}` (durable).
-  - View state: `ChartState.data_window_x[axis]` (ephemeral zoom/pan window).
+  - View state: `ChartState.data_zoom_x[axis].window` (ephemeral zoom/pan window).
 
 ### Policy and precedence
 
@@ -24,8 +24,8 @@ We use a single policy function to derive “what X values are allowed”:
 
 Semantics:
 
-- `AxisRange::Fixed` overrides view windows (`data_window_x` is ignored).
-- `LockMin/LockMax` constrain the allowed region but do not fully override `data_window_x`.
+- `AxisRange::Fixed` overrides view windows (`ChartState.data_zoom_x[axis].window` is ignored).
+- `LockMin/LockMax` constrain the allowed region but do not fully override `data_zoom_x[axis].window`.
 - If both min and max are present, the filter behaves like a window.
 - If only one side is present, it behaves like a half-space constraint (e.g. `x >= min`).
 
@@ -34,7 +34,7 @@ Semantics:
 Given:
 
 - `base_range`: the dataset-local row range (or full dataset),
-- `mapping window`: the X window used for coordinate mapping (`AxisRange::Fixed` or `data_window_x`),
+- `mapping window`: the X window used for coordinate mapping (`AxisRange::Fixed` or `ChartState.data_zoom_x[axis].window`),
 - `x_filter`: the X constraint used for bounds filtering,
 
 we derive a continuous `RowRange` (stored as `RowSelection::Range`) for the series:
@@ -47,7 +47,7 @@ slicing. Otherwise we fall back to a linear scan to find the first/last matching
 
 ### Filter mode (P0)
 
-We also support a minimal filter mode toggle for `data_window_x`:
+We also support a minimal filter mode toggle for `ChartState.data_zoom_x[axis].window`:
 
 - `FilterMode::Filter` (default): row slicing uses the mapping window, and bounds/LOD are filtered to the window.
 - `FilterMode::None`: row slicing does not apply the window (only dataset row constraints do), and bounds are global.

@@ -228,7 +228,9 @@ impl ChartCanvas {
             return fixed;
         }
 
-        if let Some(window) = self.engine.state().data_window_x.get(&axis).copied() {
+        if let Some(zoom) = self.engine.state().data_zoom_x.get(&axis).copied()
+            && let Some(window) = zoom.window
+        {
             return window;
         }
 
@@ -329,10 +331,11 @@ impl ChartCanvas {
         let current = self
             .engine
             .state()
-            .data_window_x_filter_mode
+            .data_zoom_x
             .get(&axis)
             .copied()
-            .unwrap_or_default();
+            .unwrap_or_default()
+            .filter_mode;
 
         match current {
             FilterMode::Filter => self.set_data_window_x_filter_mode(axis, Some(FilterMode::None)),
@@ -1530,14 +1533,23 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         }
 
         if let Some((x_axis, _y_axis)) = self.primary_axes()
-            && self.engine.state().data_window_x.get(&x_axis).is_some()
             && self
                 .engine
                 .state()
-                .data_window_x_filter_mode
+                .data_zoom_x
                 .get(&x_axis)
                 .copied()
                 .unwrap_or_default()
+                .window
+                .is_some()
+            && self
+                .engine
+                .state()
+                .data_zoom_x
+                .get(&x_axis)
+                .copied()
+                .unwrap_or_default()
+                .filter_mode
                 == FilterMode::None
         {
             let label = "Y bounds: global (M)";

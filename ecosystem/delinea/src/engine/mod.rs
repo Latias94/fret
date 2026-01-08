@@ -33,12 +33,17 @@ mod tests;
 pub struct ChartState {
     pub revision: Revision,
     pub link: LinkConfig,
-    pub data_window_x: BTreeMap<crate::ids::AxisId, window::DataWindowX>,
+    pub data_zoom_x: BTreeMap<crate::ids::AxisId, DataZoomXState>,
     pub data_window_y: BTreeMap<crate::ids::AxisId, window::DataWindowY>,
-    pub data_window_x_filter_mode:
-        BTreeMap<crate::ids::AxisId, crate::engine::window_policy::FilterMode>,
     pub hover_px: Option<Point>,
     pub dataset_row_ranges: BTreeMap<crate::ids::DatasetId, crate::view::RowRange>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct DataZoomXState {
+    pub window: Option<window::DataWindowX>,
+    pub filter_mode: crate::engine::window_policy::FilterMode,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -150,11 +155,12 @@ impl ChartEngine {
                 self.state.revision.bump();
             }
             Action::SetDataWindowX { axis, window } => {
+                let entry = self.state.data_zoom_x.entry(axis).or_default();
                 if let Some(mut window) = window {
                     window.clamp_non_degenerate();
-                    self.state.data_window_x.insert(axis, window);
+                    entry.window = Some(window);
                 } else {
-                    self.state.data_window_x.remove(&axis);
+                    entry.window = None;
                 }
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
@@ -170,11 +176,8 @@ impl ChartEngine {
                 self.marks_stage.mark_dirty();
             }
             Action::SetDataWindowXFilterMode { axis, mode } => {
-                if let Some(mode) = mode {
-                    self.state.data_window_x_filter_mode.insert(axis, mode);
-                } else {
-                    self.state.data_window_x_filter_mode.remove(&axis);
-                }
+                let entry = self.state.data_zoom_x.entry(axis).or_default();
+                entry.filter_mode = mode.unwrap_or_default();
                 self.state.revision.bump();
                 self.marks_stage.mark_dirty();
             }
@@ -186,9 +189,9 @@ impl ChartEngine {
             } => {
                 if let Some(mut x) = x {
                     x.clamp_non_degenerate();
-                    self.state.data_window_x.insert(x_axis, x);
+                    self.state.data_zoom_x.entry(x_axis).or_default().window = Some(x);
                 } else {
-                    self.state.data_window_x.remove(&x_axis);
+                    self.state.data_zoom_x.entry(x_axis).or_default().window = None;
                 }
 
                 if let Some(mut y) = y {

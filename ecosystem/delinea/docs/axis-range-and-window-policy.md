@@ -41,8 +41,8 @@ When producing marks (bounds + LOD + projection):
 
 1. If the X axis range is `Fixed`, the engine uses it as the effective X window.
    - Bounds scanning is restricted to the fixed X range.
-   - `ChartState.data_window_x[axis]` is ignored for that axis.
-2. Otherwise, if `ChartState.data_window_x[axis]` is present, it becomes the effective X window.
+   - `ChartState.data_zoom_x[axis].window` is ignored for that axis.
+2. Otherwise, if `ChartState.data_zoom_x[axis].window` is present, it becomes the effective X window.
 3. Otherwise, the engine uses the full dataset range.
 
 For Y:
@@ -64,8 +64,8 @@ to the visible output (important for large datasets).
 
 Row slicing uses the same precedence rules as marks:
 
-- If the X axis range is `Fixed`, the fixed window is used for slicing and `ChartState.data_window_x[axis]` is ignored.
-- Otherwise, `ChartState.data_window_x[axis]` (when present) is used for slicing.
+- If the X axis range is `Fixed`, the fixed window is used for slicing and `ChartState.data_zoom_x[axis].window` is ignored.
+- Otherwise, `ChartState.data_zoom_x[axis].window` (when present) is used for slicing.
 
 ## Patch/merge semantics
 
@@ -88,13 +88,13 @@ These helpers are intended to be used by UI adapters to produce
 The engine only defines semantics. A UI adapter (e.g. `fret-chart`) may map:
 
 - Gestures:
-  - Wheel: zoom X (update `data_window_x[axis]`).
-  - Drag: pan X (update `data_window_x[axis]`).
+  - Wheel: zoom X (update `data_zoom_x[axis].window`).
+  - Drag: pan X (update `data_zoom_x[axis].window`).
 - Box zoom:
   - Drag a rectangle: compute data windows and apply `SetViewWindow2D` for the target X/Y axes.
 - Shortcuts:
   - `L`: toggle X axis lock (set `AxisRange::Fixed` to current visible range, or back to `Auto`).
-  - `R`: reset view (clear `data_window_x[axis]`, set axis ranges to `Auto`).
+  - `R`: reset view (clear `data_zoom_x[axis].window`, set axis ranges to `Auto`).
 
 The exact mapping is intentionally left to the UI layer.
 
