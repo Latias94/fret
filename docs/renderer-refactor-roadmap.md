@@ -204,6 +204,7 @@ This section is intentionally lightweight and should be updated as work lands.
     - Path MSAA multi-pass is represented as explicit plan passes (no ad-hoc drop/re-begin main pass).
   - M1: In progress (landed in `refactor/renderer-v3`):
     - A renderer-only offscreen target + identity fullscreen blit pass can run end-to-end (debug-gated).
+    - Intermediate targets are managed via a reusable per-frame `FrameTargets` helper.
   - M2: In progress:
     - A debug-gated "pixelate" reference postprocess is compiled into the plan (downsample -> upscale -> blit).
   - M3: Not started.

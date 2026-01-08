@@ -17,6 +17,7 @@ mod util;
 
 mod buffers;
 mod config;
+mod frame_targets;
 mod intermediate_pool;
 mod pipelines;
 mod render_plan;

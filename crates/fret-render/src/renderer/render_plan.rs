@@ -187,26 +187,47 @@ fn append_postprocess(plan: &mut RenderPlan, postprocess: DebugPostprocess, clea
                 }));
         }
         DebugPostprocess::Pixelate { scale } => {
+            #[derive(Clone, Copy)]
+            struct PingPong {
+                read: PlanTarget,
+                write: PlanTarget,
+            }
+
+            impl PingPong {
+                fn new() -> Self {
+                    Self {
+                        read: PlanTarget::Intermediate0,
+                        write: PlanTarget::Intermediate1,
+                    }
+                }
+
+                fn swap(&mut self) {
+                    std::mem::swap(&mut self.read, &mut self.write);
+                }
+            }
+
             let scale = scale.max(1);
+            let mut ping_pong = PingPong::new();
             plan.passes
                 .push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
-                    src: PlanTarget::Intermediate0,
+                    src: ping_pong.read,
                     dst: PlanTarget::Intermediate2,
                     mode: ScaleMode::Downsample,
                     scale,
                     load: wgpu::LoadOp::Clear(clear),
                 }));
+            ping_pong.swap();
             plan.passes
                 .push(RenderPlanPass::ScaleNearest(ScaleNearestPass {
                     src: PlanTarget::Intermediate2,
-                    dst: PlanTarget::Intermediate1,
+                    dst: ping_pong.read,
                     mode: ScaleMode::Upscale,
                     scale,
                     load: wgpu::LoadOp::Clear(clear),
                 }));
             plan.passes
                 .push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
-                    src: PlanTarget::Intermediate1,
+                    src: ping_pong.read,
                     dst: PlanTarget::Output,
                     load: wgpu::LoadOp::Clear(clear),
                 }));
