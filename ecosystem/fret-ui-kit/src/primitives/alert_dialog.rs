@@ -13,14 +13,20 @@ use std::collections::HashMap;
 
 use fret_runtime::Model;
 use fret_runtime::ModelId;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::primitives::dialog as dialog_prim;
 use crate::primitives::dialog::DialogOptions;
+use crate::primitives::trigger_a11y;
 use crate::{OverlayPresence, OverlayRequest};
+
+/// Stable per-overlay root naming convention for alert dialogs.
+pub fn alert_dialog_root_name(id: GlobalElementId) -> String {
+    dialog_prim::dialog_root_name(id)
+}
 
 /// Returns a `Model<bool>` that behaves like Radix `useControllableState` for `open`.
 ///
@@ -202,6 +208,13 @@ pub fn dialog_options_for_alert_dialog<H: UiHost>(
         .initial_focus(initial_focus)
 }
 
+/// Layout used for a Radix-like alert dialog modal barrier element.
+///
+/// This is a re-export of the shared modal barrier layout from `primitives::dialog`.
+pub fn alert_dialog_modal_barrier_layout() -> LayoutStyle {
+    dialog_prim::modal_barrier_layout()
+}
+
 /// Builds a Radix-style alert-dialog modal barrier (non-dismissable by outside press).
 pub fn alert_dialog_modal_barrier<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -209,6 +222,48 @@ pub fn alert_dialog_modal_barrier<H: UiHost>(
     children: Vec<AnyElement>,
 ) -> AnyElement {
     dialog_prim::modal_barrier(cx, open, false, children)
+}
+
+/// Convenience helper to assemble alert dialog overlay children in a Radix-like order: barrier then
+/// content.
+pub fn alert_dialog_modal_layer_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    barrier_children: Vec<AnyElement>,
+    content: AnyElement,
+) -> Vec<AnyElement> {
+    vec![
+        alert_dialog_modal_barrier(cx, open, barrier_children),
+        content,
+    ]
+}
+
+/// Stamps Radix-like trigger relationships:
+/// - `expanded` mirrors `aria-expanded`
+/// - `controls_element` mirrors `aria-controls` (by element id).
+pub fn apply_alert_dialog_trigger_a11y(
+    trigger: AnyElement,
+    expanded: bool,
+    content_element: Option<GlobalElementId>,
+) -> AnyElement {
+    trigger_a11y::apply_trigger_controls_expanded(trigger, Some(expanded), content_element)
+}
+
+/// Builds an overlay request for a Radix-style modal alert dialog.
+pub fn alert_dialog_modal_request_with_options(
+    id: GlobalElementId,
+    trigger: GlobalElementId,
+    open: Model<bool>,
+    presence: OverlayPresence,
+    options: DialogOptions,
+    children: Vec<AnyElement>,
+) -> OverlayRequest {
+    dialog_prim::modal_dialog_request_with_options(id, trigger, open, presence, options, children)
+}
+
+/// Requests a Radix-style modal alert dialog overlay for the current window.
+pub fn request_alert_dialog<H: UiHost>(cx: &mut ElementContext<'_, H>, request: OverlayRequest) {
+    dialog_prim::request_modal_dialog(cx, request);
 }
 
 #[cfg(test)]

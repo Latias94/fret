@@ -13,7 +13,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
-use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
     Radius, Space,
@@ -108,7 +107,7 @@ impl AlertDialog {
 
             let trigger = trigger(cx);
             let id = trigger.id;
-            let overlay_root_name = radix_dialog::dialog_root_name(id);
+            let overlay_root_name = radix_alert_dialog::alert_dialog_root_name(id);
             let prev_content_element =
                 cx.with_state(AlertDialogA11yState::default, |st| st.content_element);
 
@@ -136,9 +135,6 @@ impl AlertDialog {
                 let overlay_color = self.overlay_color.unwrap_or_else(default_overlay_color);
                 let window_padding_px = MetricRef::space(self.window_padding).resolve(&theme);
                 let opacity = motion.progress;
-                let barrier_options = radix_dialog::DialogOptions::default()
-                    .dismiss_on_overlay_press(false)
-                    .initial_focus(None);
 
                 let overlay_children = cx.with_root_name(&overlay_root_name, |cx| {
                     let barrier_fill = cx.container(
@@ -240,10 +236,9 @@ impl AlertDialog {
                                 },
                                 move |_cx| vec![wrapper],
                             );
-                            radix_dialog::modal_dialog_layer_children(
+                            radix_alert_dialog::alert_dialog_modal_layer_children(
                                 cx,
                                 open_for_children.clone(),
-                                barrier_options,
                                 barrier_children,
                                 content,
                             )
@@ -265,7 +260,7 @@ impl AlertDialog {
                 let initial_focus = is_open.then_some(options.initial_focus).flatten();
                 let options = options.initial_focus(initial_focus);
 
-                let request = radix_dialog::modal_dialog_request_with_options(
+                let request = radix_alert_dialog::alert_dialog_modal_request_with_options(
                     id,
                     id,
                     self.open.clone(),
@@ -273,13 +268,13 @@ impl AlertDialog {
                     options,
                     overlay_children,
                 );
-                radix_dialog::request_modal_dialog(cx, request);
+                radix_alert_dialog::request_alert_dialog(cx, request);
             } else {
                 radix_alert_dialog::clear_cancel_for_open_model(cx, open_id);
             }
 
             let content_element = content_element_for_trigger.get().or(prev_content_element);
-            radix_dialog::apply_dialog_trigger_a11y(trigger, is_open, content_element)
+            radix_alert_dialog::apply_alert_dialog_trigger_a11y(trigger, is_open, content_element)
         })
     }
 }
