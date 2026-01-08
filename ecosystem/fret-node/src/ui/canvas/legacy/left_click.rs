@@ -1,0 +1,203 @@
+use fret_core::{Modifiers, Point, Px, Rect};
+use fret_ui::UiHost;
+
+use crate::core::{EdgeId, NodeId as GraphNodeId, PortId};
+
+use super::super::state::{EdgeDrag, PendingNodeDrag, ViewSnapshot, WireDrag, WireDragKind};
+use super::NodeGraphCanvas;
+
+pub(super) fn handle_left_click_pointer_down<H: UiHost>(
+    canvas: &mut NodeGraphCanvas,
+    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    snapshot: &ViewSnapshot,
+    position: Point,
+    modifiers: Modifiers,
+    zoom: f32,
+) -> bool {
+    canvas.interaction.hover_edge = None;
+
+    #[derive(Debug, Clone, Copy)]
+    enum Hit {
+        Port(PortId),
+        Node(GraphNodeId, Rect),
+        Edge(EdgeId),
+        Background,
+    }
+
+    let hit = {
+        let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+        let this = &*canvas;
+        this.graph
+            .read_ref(cx.app, |graph| {
+                let mut scratch_ports: Vec<PortId> = Vec::new();
+                let mut scratch_edges: Vec<EdgeId> = Vec::new();
+                if let Some(port) = this.hit_port(
+                    geom.as_ref(),
+                    index.as_ref(),
+                    position,
+                    zoom,
+                    &mut scratch_ports,
+                ) {
+                    return Hit::Port(port);
+                }
+                let order = this.node_order(graph, snapshot);
+                let Some(node) = this.hit_node(graph, position, &order, zoom) else {
+                    if let Some(edge) = this.hit_edge(
+                        graph,
+                        snapshot,
+                        geom.as_ref(),
+                        index.as_ref(),
+                        position,
+                        zoom,
+                        &mut scratch_edges,
+                    ) {
+                        return Hit::Edge(edge);
+                    }
+                    return Hit::Background;
+                };
+                let Some(rect) = this.node_rect(graph, node, zoom) else {
+                    return Hit::Background;
+                };
+                Hit::Node(node, rect)
+            })
+            .unwrap_or(Hit::Background)
+    };
+
+    match hit {
+        Hit::Port(port) => {
+            canvas.interaction.pending_node_drag = None;
+            canvas.interaction.node_drag = None;
+            canvas.interaction.edge_drag = None;
+            canvas.interaction.pending_marquee = None;
+            canvas.interaction.marquee = None;
+            canvas.interaction.hover_port = None;
+            canvas.interaction.hover_port_valid = false;
+            canvas.interaction.hover_port_convertible = false;
+            let yank = (modifiers.ctrl || modifiers.meta).then(|| {
+                let this = &*canvas;
+                this.graph
+                    .read_ref(cx.app, |graph| {
+                        NodeGraphCanvas::yank_edges_from_port(graph, port)
+                    })
+                    .ok()
+                    .unwrap_or_default()
+            });
+
+            let kind = match yank {
+                Some(edges) if edges.len() > 1 => WireDragKind::ReconnectMany { edges },
+                Some(mut edges) if edges.len() == 1 => {
+                    let (edge, endpoint, fixed) = edges.remove(0);
+                    WireDragKind::Reconnect {
+                        edge,
+                        endpoint,
+                        fixed,
+                    }
+                }
+                _ => WireDragKind::New {
+                    from: port,
+                    bundle: vec![port],
+                },
+            };
+
+            canvas.interaction.wire_drag = Some(WireDrag {
+                kind,
+                pos: position,
+            });
+            cx.capture_pointer(cx.node);
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        }
+        Hit::Node(node, rect) => {
+            canvas.interaction.pending_node_drag = None;
+            canvas.interaction.node_drag = None;
+            canvas.interaction.wire_drag = None;
+            canvas.interaction.edge_drag = None;
+            canvas.interaction.pending_marquee = None;
+            canvas.interaction.marquee = None;
+            canvas.interaction.hover_port = None;
+            canvas.interaction.hover_port_valid = false;
+            canvas.interaction.hover_port_convertible = false;
+            let offset = Point::new(
+                Px(position.x.0 - rect.origin.x.0),
+                Px(position.y.0 - rect.origin.y.0),
+            );
+            let already_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
+            let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
+
+            canvas.update_view_state(cx.app, |s| {
+                s.selected_edges.clear();
+                if multi_mod {
+                    if let Some(ix) = s.selected_nodes.iter().position(|id| *id == node) {
+                        s.selected_nodes.remove(ix);
+                    } else {
+                        s.selected_nodes.push(node);
+                    }
+                } else if !s.selected_nodes.iter().any(|id| *id == node) {
+                    s.selected_nodes.clear();
+                    s.selected_nodes.push(node);
+                }
+                s.draw_order.retain(|id| *id != node);
+                s.draw_order.push(node);
+            });
+
+            if !multi_mod {
+                let nodes_for_drag = (already_selected && snapshot.selected_nodes.len() > 1)
+                    .then(|| snapshot.selected_nodes.clone())
+                    .unwrap_or_else(|| vec![node]);
+                canvas.interaction.pending_node_drag = Some(PendingNodeDrag {
+                    primary: node,
+                    nodes: nodes_for_drag,
+                    grab_offset: offset,
+                    start_pos: position,
+                });
+                cx.capture_pointer(cx.node);
+            }
+
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        }
+        Hit::Edge(edge) => {
+            canvas.interaction.pending_node_drag = None;
+            canvas.interaction.node_drag = None;
+            canvas.interaction.wire_drag = None;
+            canvas.interaction.hover_port = None;
+            canvas.interaction.hover_port_valid = false;
+            canvas.interaction.hover_port_convertible = false;
+            let multi = modifiers.ctrl || modifiers.meta;
+            canvas.update_view_state(cx.app, |s| {
+                s.selected_nodes.clear();
+                if multi {
+                    if let Some(ix) = s.selected_edges.iter().position(|id| *id == edge) {
+                        s.selected_edges.remove(ix);
+                    } else {
+                        s.selected_edges.push(edge);
+                    }
+                } else {
+                    s.selected_edges.clear();
+                    s.selected_edges.push(edge);
+                }
+            });
+            canvas.interaction.edge_drag = Some(EdgeDrag {
+                edge,
+                start_pos: position,
+            });
+            cx.capture_pointer(cx.node);
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        }
+        Hit::Background => {
+            canvas.interaction.edge_drag = None;
+            canvas.interaction.pending_node_drag = None;
+            canvas.interaction.node_drag = None;
+            canvas.interaction.wire_drag = None;
+            canvas.interaction.pending_marquee = None;
+            canvas.interaction.marquee = None;
+            canvas.interaction.hover_port = None;
+            canvas.interaction.hover_port_valid = false;
+            canvas.interaction.hover_port_convertible = false;
+            super::marquee::begin_background_marquee(canvas, cx, snapshot, position, modifiers);
+        }
+    }
+
+    true
+}

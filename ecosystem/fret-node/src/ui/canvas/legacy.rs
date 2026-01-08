@@ -44,6 +44,7 @@ use crate::ui::{
 mod cancel;
 mod context_menu;
 mod edge_drag;
+mod left_click;
 mod marquee;
 mod node_drag;
 mod pointer_up;
@@ -58,9 +59,9 @@ use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::state::{
-    ContextMenuState, ContextMenuTarget, EdgeDrag, GeometryCache, GeometryCacheKey,
-    InteractionState, InternalsCacheKey, MarqueeDrag, NodeDrag, PendingNodeDrag, PendingPaste,
-    SearcherState, ToastState, ViewSnapshot, WireDrag, WireDragKind,
+    ContextMenuState, ContextMenuTarget, GeometryCache, GeometryCacheKey, InteractionState,
+    InternalsCacheKey, MarqueeDrag, NodeDrag, PendingPaste, SearcherState, ToastState,
+    ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::workflow;
 
@@ -3417,193 +3418,9 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
-                self.interaction.hover_edge = None;
-
-                #[derive(Debug, Clone, Copy)]
-                enum Hit {
-                    Port(PortId),
-                    Node(GraphNodeId, Rect),
-                    Edge(EdgeId),
-                    Background,
-                }
-
-                let hit = {
-                    let (geom, index) = self.canvas_derived(&*cx.app, &snapshot);
-                    let this = &*self;
-                    this.graph
-                        .read_ref(cx.app, |graph| {
-                            let mut scratch_ports: Vec<PortId> = Vec::new();
-                            let mut scratch_edges: Vec<EdgeId> = Vec::new();
-                            if let Some(port) = this.hit_port(
-                                geom.as_ref(),
-                                index.as_ref(),
-                                *position,
-                                zoom,
-                                &mut scratch_ports,
-                            ) {
-                                return Hit::Port(port);
-                            }
-                            let order = this.node_order(graph, &snapshot);
-                            let Some(node) = this.hit_node(graph, *position, &order, zoom) else {
-                                if let Some(edge) = this.hit_edge(
-                                    graph,
-                                    &snapshot,
-                                    geom.as_ref(),
-                                    index.as_ref(),
-                                    *position,
-                                    zoom,
-                                    &mut scratch_edges,
-                                ) {
-                                    return Hit::Edge(edge);
-                                }
-                                return Hit::Background;
-                            };
-                            let Some(rect) = this.node_rect(graph, node, zoom) else {
-                                return Hit::Background;
-                            };
-                            Hit::Node(node, rect)
-                        })
-                        .unwrap_or(Hit::Background)
-                };
-
-                match hit {
-                    Hit::Port(port) => {
-                        self.interaction.pending_node_drag = None;
-                        self.interaction.node_drag = None;
-                        self.interaction.edge_drag = None;
-                        self.interaction.pending_marquee = None;
-                        self.interaction.marquee = None;
-                        self.interaction.hover_port = None;
-                        self.interaction.hover_port_valid = false;
-                        self.interaction.hover_port_convertible = false;
-                        let yank = (modifiers.ctrl || modifiers.meta).then(|| {
-                            let this = &*self;
-                            this.graph
-                                .read_ref(cx.app, |graph| Self::yank_edges_from_port(graph, port))
-                                .ok()
-                                .unwrap_or_default()
-                        });
-
-                        let kind = match yank {
-                            Some(edges) if edges.len() > 1 => WireDragKind::ReconnectMany { edges },
-                            Some(mut edges) if edges.len() == 1 => {
-                                let (edge, endpoint, fixed) = edges.remove(0);
-                                WireDragKind::Reconnect {
-                                    edge,
-                                    endpoint,
-                                    fixed,
-                                }
-                            }
-                            _ => WireDragKind::New {
-                                from: port,
-                                bundle: vec![port],
-                            },
-                        };
-
-                        self.interaction.wire_drag = Some(WireDrag {
-                            kind,
-                            pos: *position,
-                        });
-                        cx.capture_pointer(cx.node);
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
-                    Hit::Node(node, rect) => {
-                        self.interaction.pending_node_drag = None;
-                        self.interaction.node_drag = None;
-                        self.interaction.wire_drag = None;
-                        self.interaction.edge_drag = None;
-                        self.interaction.pending_marquee = None;
-                        self.interaction.marquee = None;
-                        self.interaction.hover_port = None;
-                        self.interaction.hover_port_valid = false;
-                        self.interaction.hover_port_convertible = false;
-                        let offset = Point::new(
-                            Px(position.x.0 - rect.origin.x.0),
-                            Px(position.y.0 - rect.origin.y.0),
-                        );
-                        let already_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
-                        let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
-
-                        self.update_view_state(cx.app, |s| {
-                            s.selected_edges.clear();
-                            if multi_mod {
-                                if let Some(ix) = s.selected_nodes.iter().position(|id| *id == node)
-                                {
-                                    s.selected_nodes.remove(ix);
-                                } else {
-                                    s.selected_nodes.push(node);
-                                }
-                            } else if !s.selected_nodes.iter().any(|id| *id == node) {
-                                s.selected_nodes.clear();
-                                s.selected_nodes.push(node);
-                            }
-                            s.draw_order.retain(|id| *id != node);
-                            s.draw_order.push(node);
-                        });
-
-                        if !multi_mod {
-                            let nodes_for_drag = (already_selected
-                                && snapshot.selected_nodes.len() > 1)
-                                .then(|| snapshot.selected_nodes.clone())
-                                .unwrap_or_else(|| vec![node]);
-                            self.interaction.pending_node_drag = Some(PendingNodeDrag {
-                                primary: node,
-                                nodes: nodes_for_drag,
-                                grab_offset: offset,
-                                start_pos: *position,
-                            });
-                            cx.capture_pointer(cx.node);
-                        }
-
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
-                    Hit::Edge(edge) => {
-                        self.interaction.pending_node_drag = None;
-                        self.interaction.node_drag = None;
-                        self.interaction.wire_drag = None;
-                        self.interaction.hover_port = None;
-                        self.interaction.hover_port_valid = false;
-                        self.interaction.hover_port_convertible = false;
-                        let multi = modifiers.ctrl || modifiers.meta;
-                        self.update_view_state(cx.app, |s| {
-                            s.selected_nodes.clear();
-                            if multi {
-                                if let Some(ix) = s.selected_edges.iter().position(|id| *id == edge)
-                                {
-                                    s.selected_edges.remove(ix);
-                                } else {
-                                    s.selected_edges.push(edge);
-                                }
-                            } else {
-                                s.selected_edges.clear();
-                                s.selected_edges.push(edge);
-                            }
-                        });
-                        self.interaction.edge_drag = Some(EdgeDrag {
-                            edge,
-                            start_pos: *position,
-                        });
-                        cx.capture_pointer(cx.node);
-                        cx.request_redraw();
-                        cx.invalidate_self(Invalidation::Paint);
-                    }
-                    Hit::Background => {
-                        self.interaction.edge_drag = None;
-                        self.interaction.pending_node_drag = None;
-                        self.interaction.node_drag = None;
-                        self.interaction.wire_drag = None;
-                        self.interaction.pending_marquee = None;
-                        self.interaction.marquee = None;
-                        self.interaction.hover_port = None;
-                        self.interaction.hover_port_valid = false;
-                        self.interaction.hover_port_convertible = false;
-                        marquee::begin_background_marquee(
-                            self, cx, &snapshot, *position, *modifiers,
-                        );
-                    }
-                }
+                let _ = left_click::handle_left_click_pointer_down(
+                    self, cx, &snapshot, *position, *modifiers, zoom,
+                );
             }
             Event::Pointer(fret_core::PointerEvent::Move {
                 position,
