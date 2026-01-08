@@ -1,12 +1,12 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use fret_app::App;
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Point, Px, Rect, Size};
 use fret_launch::{
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext, run_app,
+    run_app, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_runtime::{
@@ -16,8 +16,6 @@ use fret_runtime::{
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::{UiFrameCx, UiTree};
 
-use fret_node::Graph;
-use fret_node::TypeDesc;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
@@ -27,9 +25,11 @@ use fret_node::ui::presenter::{
 };
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphInternalsStore,
-    RegistryNodeGraphPresenter, register_node_graph_commands,
+    register_node_graph_commands, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
+    NodeGraphCanvas, NodeGraphInternalsStore, RegistryNodeGraphPresenter,
 };
+use fret_node::Graph;
+use fret_node::TypeDesc;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
@@ -39,7 +39,14 @@ struct NodeGraphDemoModels {
 
 const CMD_TOGGLE_WEIRD_LAYOUT: &str = "node_graph_demo.toggle_weird_layout";
 const CMD_LOG_INTERNALS: &str = "node_graph_demo.log_internals";
+const CMD_LOG_MEASURED: &str = "node_graph_demo.log_measured";
 const WEIRD_KIND: &str = "demo.weird_layout";
+
+#[derive(Clone)]
+struct NodeGraphDemoMeasuredStores {
+    manual: Arc<MeasuredGeometryStore>,
+    derived: Arc<MeasuredGeometryStore>,
+}
 
 #[derive(Debug)]
 struct DemoWeirdLayoutMeasuredState {
@@ -671,8 +678,8 @@ impl NodeGraphDemoDriver {
             .expect("NodeRegistry global must exist")
             .clone();
         let measured = app
-            .global::<Arc<MeasuredGeometryStore>>()
-            .expect("MeasuredGeometryStore global must exist")
+            .global::<NodeGraphDemoMeasuredStores>()
+            .expect("NodeGraphDemoMeasuredStores global must exist")
             .clone();
         let internals = app
             .global::<Arc<NodeGraphInternalsStore>>()
@@ -683,10 +690,11 @@ impl NodeGraphDemoDriver {
         ui.set_window(window);
 
         let presenter =
-            MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.clone());
+            MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.manual.clone());
         let canvas = NodeGraphCanvas::new(models.graph, models.view)
             .with_presenter(presenter)
             .with_internals_store(internals)
+            .with_measured_output_store(measured.derived.clone())
             .with_close_command(CommandId::new("node_graph_demo.close"));
         let root = ui.create_node_retained(canvas);
         ui.set_root(root);
@@ -772,7 +780,7 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             let Some(toggle) = app.global::<Arc<DemoWeirdLayoutMeasuredState>>().cloned() else {
                 return;
             };
-            let Some(measured) = app.global::<Arc<MeasuredGeometryStore>>().cloned() else {
+            let Some(measured) = app.global::<NodeGraphDemoMeasuredStores>().cloned() else {
                 return;
             };
             let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
@@ -813,7 +821,7 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 } else {
                     (280.0, 240.0)
                 };
-                measured.update(|node_sizes, anchors| {
+                measured.manual.update(|node_sizes, anchors| {
                     for (node_id, ports) in targets {
                         if enabled {
                             node_sizes.insert(node_id, weird_size_px);
@@ -851,6 +859,17 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 nodes = snap.nodes_window.len(),
                 ports = snap.ports_window.len(),
                 "node graph internals snapshot"
+            );
+        }
+
+        if command.as_str() == CMD_LOG_MEASURED {
+            let Some(measured) = app.global::<NodeGraphDemoMeasuredStores>().cloned() else {
+                return;
+            };
+            tracing::info!(
+                manual_rev = measured.manual.revision(),
+                derived_rev = measured.derived.revision(),
+                "node graph measured stores (manual vs derived)"
             );
         }
     }
@@ -911,7 +930,10 @@ pub fn run() -> anyhow::Result<()> {
     let view = app.models_mut().insert(NodeGraphViewState::default());
     app.set_global(NodeGraphDemoModels { graph, view });
     app.set_global(build_demo_registry());
-    app.set_global(Arc::new(MeasuredGeometryStore::new()));
+    app.set_global(NodeGraphDemoMeasuredStores {
+        manual: Arc::new(MeasuredGeometryStore::new()),
+        derived: Arc::new(MeasuredGeometryStore::new()),
+    });
     app.set_global(Arc::new(NodeGraphInternalsStore::new()));
     app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
 
@@ -1001,6 +1023,21 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
                 win_ctrl(KeyCode::KeyI),
                 linux_ctrl(KeyCode::KeyI),
                 web_ctrl(KeyCode::KeyI),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_LOG_MEASURED),
+        CommandMeta::new("Log NodeGraph Measured Stores")
+            .with_category("Demo")
+            .with_keywords(["measured", "handleBounds", "sizes"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd(KeyCode::KeyM),
+                win_ctrl(KeyCode::KeyM),
+                linux_ctrl(KeyCode::KeyM),
+                web_ctrl(KeyCode::KeyM),
             ]),
     );
 }
