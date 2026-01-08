@@ -33,6 +33,9 @@ The defaults are intentionally aligned with ImPlot:
 
 - Fit view to data: `F` (focused canvas)
 - Reset view to auto: `R` (focused canvas)
+- Toggle X filter mode: `M` (focused canvas)
+  - `Filter` (default): X window filters bounds/LOD and slices rows (best performance, auto-scales Y to visible X).
+  - `None`: X window does not filter bounds/LOD and does not slice rows (keeps global Y scale, more expensive).
 
 Box zoom selection modifiers (ImPlot style):
 

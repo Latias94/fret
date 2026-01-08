@@ -5,6 +5,7 @@ use std::time::{Duration, Instant};
 use delinea::engine::EngineError;
 use delinea::engine::model::{ChartPatch, ModelError, PatchMode};
 use delinea::engine::window::DataWindow;
+use delinea::engine::window_policy::FilterMode;
 use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, ChartEngine, WorkBudget};
@@ -317,6 +318,26 @@ impl ChartCanvas {
     fn set_data_window_x(&mut self, axis: delinea::AxisId, window: Option<DataWindow>) {
         self.engine
             .apply_action(Action::SetDataWindowX { axis, window });
+    }
+
+    fn set_data_window_x_filter_mode(&mut self, axis: delinea::AxisId, mode: Option<FilterMode>) {
+        self.engine
+            .apply_action(Action::SetDataWindowXFilterMode { axis, mode });
+    }
+
+    fn toggle_data_window_x_filter_mode(&mut self, axis: delinea::AxisId) {
+        let current = self
+            .engine
+            .state()
+            .data_window_x_filter_mode
+            .get(&axis)
+            .copied()
+            .unwrap_or_default();
+
+        match current {
+            FilterMode::Filter => self.set_data_window_x_filter_mode(axis, Some(FilterMode::None)),
+            FilterMode::None => self.set_data_window_x_filter_mode(axis, None),
+        }
     }
 
     fn set_data_window_y(&mut self, axis: delinea::AxisId, window: Option<DataWindow>) {
@@ -927,6 +948,23 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                 if plain && *key == KeyCode::KeyF {
                     self.fit_view_to_data();
+                    self.pan_drag = None;
+                    self.box_zoom_drag = None;
+                    if cx.captured == Some(cx.node) {
+                        cx.release_pointer_capture();
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                    cx.stop_propagation();
+                    return;
+                }
+
+                if plain && *key == KeyCode::KeyM {
+                    let Some((x_axis, _y_axis)) = self.primary_axes() else {
+                        return;
+                    };
+
+                    self.toggle_data_window_x_filter_mode(x_axis);
                     self.pan_drag = None;
                     self.box_zoom_drag = None;
                     if cx.captured == Some(cx.node) {
