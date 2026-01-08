@@ -274,6 +274,16 @@ impl ChartCanvas {
 
         let mut series_cols: Vec<(delinea::DatasetId, usize)> = Vec::new();
         let model = self.engine.model();
+        if let Some(axis_model) = model.axes.get(&axis) {
+            if let delinea::AxisScale::Category(scale) = &axis_model.scale
+                && !scale.categories.is_empty()
+            {
+                return DataWindow {
+                    min: -0.5,
+                    max: scale.categories.len() as f64 - 0.5,
+                };
+            }
+        }
         for series in model.series.values() {
             let axis_id = if is_x { series.x_axis } else { series.y_axis };
             if axis_id != axis {
@@ -464,12 +474,22 @@ impl ChartCanvas {
         window.min + t * window.span()
     }
 
-    fn axis_ticks(window: DataWindow, count: usize) -> Vec<f64> {
-        delinea::format::nice_ticks(window, count)
+    fn axis_ticks(
+        model: &delinea::engine::model::ChartModel,
+        axis: delinea::AxisId,
+        window: DataWindow,
+        count: usize,
+    ) -> Vec<f64> {
+        delinea::engine::axis::axis_ticks_for(model, axis, window, count)
     }
 
-    fn format_tick(window: DataWindow, value: f64) -> String {
-        delinea::format::format_tick_value(window, value)
+    fn format_tick(
+        model: &delinea::engine::model::ChartModel,
+        axis: delinea::AxisId,
+        window: DataWindow,
+        value: f64,
+    ) -> String {
+        delinea::engine::axis::format_value_for(model, axis, window, value)
     }
 
     fn y_local_for_data_value(window: DataWindow, value: f64, plot_height_px: f32) -> f32 {
@@ -758,8 +778,9 @@ impl ChartCanvas {
         let y_tick_count = (layout.plot.size.height.0 / 56.0).round().clamp(2.0, 12.0) as usize;
 
         // X ticks + labels.
+        let model = self.engine.model();
         let mut last_right = f32::NEG_INFINITY;
-        for value in Self::axis_ticks(x_window, x_tick_count) {
+        for value in Self::axis_ticks(model, x_axis, x_window, x_tick_count) {
             let t = ((value - x_window.min) / x_window.span()).clamp(0.0, 1.0) as f32;
             let x_px = layout.plot.origin.x.0 + t * layout.plot.size.width.0;
             let y0 = layout.plot.origin.y.0 + layout.plot.size.height.0;
@@ -776,7 +797,7 @@ impl ChartCanvas {
                 corner_radii: Corners::all(Px(0.0)),
             });
 
-            let label = Self::format_tick(x_window, value);
+            let label = Self::format_tick(model, x_axis, x_window, value);
             let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
 
             let label_x = x_px - metrics.size.width.0 * 0.5;
@@ -801,7 +822,7 @@ impl ChartCanvas {
 
         // Y ticks + labels.
         let mut last_bottom = f32::NEG_INFINITY;
-        for value in Self::axis_ticks(y_window, y_tick_count) {
+        for value in Self::axis_ticks(model, y_axis, y_window, y_tick_count) {
             let t = ((value - y_window.min) / y_window.span()).clamp(0.0, 1.0) as f32;
             let y_px = layout.plot.origin.y.0 + (1.0 - t) * layout.plot.size.height.0;
             let x0 = layout.plot.origin.x.0;
@@ -818,7 +839,7 @@ impl ChartCanvas {
                 corner_radii: Corners::all(Px(0.0)),
             });
 
-            let label = Self::format_tick(y_window, value);
+            let label = Self::format_tick(model, y_axis, y_window, value);
             let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
 
             let label_x = layout.y_axis.origin.x.0

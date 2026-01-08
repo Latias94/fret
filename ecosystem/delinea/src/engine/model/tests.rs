@@ -37,6 +37,7 @@ fn basic_spec() -> ChartSpec {
                 name: None,
                 kind: AxisKind::X,
                 grid: crate::ids::GridId::new(1),
+                scale: Default::default(),
                 range: None,
             },
             AxisSpec {
@@ -44,6 +45,7 @@ fn basic_spec() -> ChartSpec {
                 name: None,
                 kind: AxisKind::Y,
                 grid: crate::ids::GridId::new(1),
+                scale: Default::default(),
                 range: None,
             },
         ],
@@ -218,6 +220,7 @@ fn replace_merge_rejects_dangling_references() {
                     name: None,
                     kind: AxisKind::X,
                     grid: crate::ids::GridId::new(1),
+                    scale: None,
                     range: None,
                 })],
                 ..ChartPatch::default()
@@ -250,6 +253,7 @@ fn replace_validates_references() {
                     name: None,
                     kind: AxisKind::X,
                     grid: crate::ids::GridId::new(999),
+                    scale: None,
                     range: None,
                 })],
                 ..ChartPatch::default()
@@ -275,6 +279,7 @@ fn merge_axis_range_updates_layout_without_structure() {
                     name: None,
                     kind: AxisKind::X,
                     grid: crate::ids::GridId::new(1),
+                    scale: None,
                     range: Some(crate::spec::AxisRange::LockMin { min: 10.0 }),
                 })],
                 ..ChartPatch::default()

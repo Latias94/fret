@@ -17,6 +17,7 @@ use crate::view::ViewState;
 use fret_core::Point;
 use std::collections::BTreeMap;
 
+pub mod axis;
 pub mod hit_test;
 pub mod lod;
 pub mod model;
@@ -370,6 +371,19 @@ impl ChartEngine {
         self.output
             .axis_windows
             .clone_from(self.marks_stage.axis_windows());
+        for axis in self.model.axes.values() {
+            if let crate::scale::AxisScale::Category(scale) = &axis.scale
+                && !scale.categories.is_empty()
+            {
+                self.output.axis_windows.insert(
+                    axis.id,
+                    window::DataWindow {
+                        min: -0.5,
+                        max: scale.categories.len() as f64 - 0.5,
+                    },
+                );
+            }
+        }
 
         let unfinished = !done;
 
@@ -511,8 +525,8 @@ fn compute_item_axis_pointer_output(
 
     let x_window = axis_windows.get(&x_axis).copied().unwrap_or_default();
     let y_window = axis_windows.get(&y_axis).copied().unwrap_or_default();
-    let x_value = crate::format::format_tick_value(x_window, hit.x_value);
-    let y_value = crate::format::format_tick_value(y_window, hit.y_value);
+    let x_value = crate::engine::axis::format_value_for(model, x_axis, x_window, hit.x_value);
+    let y_value = crate::engine::axis::format_value_for(model, y_axis, y_window, hit.y_value);
 
     let mut tooltip = TooltipOutput::default();
     tooltip.lines.reserve(3);
@@ -567,7 +581,7 @@ fn compute_axis_axis_pointer_output(
         .unwrap_or_else(|| "x".to_string());
     tooltip.lines.push(TooltipLine {
         label: x_label,
-        value: crate::format::format_tick_value(x_window, x_value),
+        value: crate::engine::axis::format_value_for(model, x_axis, x_window, x_value),
     });
 
     for series in model.series_in_order() {
@@ -633,11 +647,12 @@ fn compute_axis_axis_pointer_output(
             .copied()
             .unwrap_or_default();
         let value = if let Some(y1) = sample.y1 {
-            let a = crate::format::format_tick_value(y_window, sample.y0);
-            let b = crate::format::format_tick_value(y_window, y1);
+            let a =
+                crate::engine::axis::format_value_for(model, series.y_axis, y_window, sample.y0);
+            let b = crate::engine::axis::format_value_for(model, series.y_axis, y_window, y1);
             format!("{a} .. {b}")
         } else {
-            crate::format::format_tick_value(y_window, sample.y0)
+            crate::engine::axis::format_value_for(model, series.y_axis, y_window, sample.y0)
         };
 
         tooltip.lines.push(TooltipLine { label, value });

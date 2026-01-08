@@ -6,6 +6,7 @@ use crate::engine::model::{
     AxisModel, ChartModel, DatasetModel, GridModel, ModelError, SeriesModel,
 };
 use crate::ids::{AxisId, DatasetId, FieldId, GridId, SeriesId};
+use crate::scale::AxisScale;
 use crate::spec::{AreaBaseline, AxisKind, AxisRange, FieldSpec, SeriesEncode, SeriesKind};
 
 #[cfg(feature = "serde")]
@@ -258,6 +259,15 @@ impl ChartPatch {
                         existing.kind = axis.kind;
                         existing.grid = axis.grid;
                         report.structure_changed = true;
+                    }
+
+                    if let Some(scale) = axis.scale
+                        && existing.scale != scale
+                    {
+                        existing.scale = scale;
+                        model.revs.bump_layout();
+                        report.structure_changed = true;
+                        report.marks_changed = true;
                     }
 
                     if let Some(mut range) = axis.range {
@@ -558,6 +568,7 @@ pub struct AxisPatch {
     pub name: Option<String>,
     pub kind: AxisKind,
     pub grid: GridId,
+    pub scale: Option<AxisScale>,
     pub range: Option<AxisRange>,
 }
 
@@ -570,6 +581,7 @@ impl From<AxisPatch> for AxisModel {
             name: p.name.and_then(sanitize_name),
             kind: p.kind,
             grid: p.grid,
+            scale: p.scale.unwrap_or_default(),
             range,
         }
     }

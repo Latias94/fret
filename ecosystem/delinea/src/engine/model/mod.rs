@@ -8,6 +8,7 @@ use fret_core::Rect;
 use thiserror::Error;
 
 use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, Revision, SeriesId};
+use crate::scale::AxisScale;
 use crate::spec::{
     AreaBaseline, AxisKind, AxisPointerTrigger, AxisRange, FilterMode, SeriesEncode, SeriesKind,
 };
@@ -134,6 +135,7 @@ impl ChartModel {
                     name: sanitize_name(axis.name),
                     kind: axis.kind,
                     grid: axis.grid,
+                    scale: axis.scale,
                     range: {
                         let mut range = axis.range.unwrap_or_default();
                         range.clamp_non_degenerate();
@@ -289,6 +291,7 @@ pub struct AxisModel {
     pub name: Option<String>,
     pub kind: AxisKind,
     pub grid: GridId,
+    pub scale: AxisScale,
     pub range: AxisRange,
 }
 

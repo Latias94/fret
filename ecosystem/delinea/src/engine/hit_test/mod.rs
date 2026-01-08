@@ -231,6 +231,7 @@ mod tests {
                     name: None,
                     kind: AxisKind::X,
                     grid: grid_id,
+                    scale: Default::default(),
                     range: None,
                 },
                 AxisSpec {
@@ -238,6 +239,7 @@ mod tests {
                     name: None,
                     kind: AxisKind::Y,
                     grid: grid_id,
+                    scale: Default::default(),
                     range: None,
                 },
             ],

@@ -1,6 +1,7 @@
 use fret_core::Rect;
 
 use crate::ids::{AxisId, ChartId, DataZoomId, DatasetId, FieldId, GridId, SeriesId};
+use crate::scale::AxisScale;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -125,6 +126,7 @@ pub struct AxisSpec {
     pub name: Option<String>,
     pub kind: AxisKind,
     pub grid: GridId,
+    pub scale: AxisScale,
     /// When set, the axis is constrained in data space.
     /// In v1, `Fixed` fully overrides view windows; partial locks override only one bound.
     pub range: Option<AxisRange>,

@@ -69,6 +69,7 @@ impl ChartDemoDriver {
                     name: Some("Time".to_string()),
                     kind: AxisKind::X,
                     grid: grid_id,
+                    scale: Default::default(),
                     range: Some(AxisRange::Auto),
                 },
                 delinea::AxisSpec {
@@ -76,6 +77,7 @@ impl ChartDemoDriver {
                     name: Some("Value".to_string()),
                     kind: AxisKind::Y,
                     grid: grid_id,
+                    scale: Default::default(),
                     range: Some(AxisRange::Auto),
                 },
             ],
