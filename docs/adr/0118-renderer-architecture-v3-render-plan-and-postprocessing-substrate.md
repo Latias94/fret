@@ -183,6 +183,12 @@ Deferred:
 - a DAG is likely necessary long-term, but it is a large semantic and implementation surface.
 - a linear plan covers most UI postprocessing needs early and keeps risk manageable.
 
+## Non-goals (v1)
+
+- This ADR does not standardize a public shader authoring model (see ADR 0125).
+- This ADR does not require a DAG scheduler in v1; it only requires the plan representation to be DAG-ready.
+- This ADR does not define new `SceneOp` semantics; those are owned by ADR 0119 and follow-ups.
+
 ## Follow-up ADRs (expected)
 
 Recommended order:
@@ -192,6 +198,17 @@ Recommended order:
    - `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 3) Paint/Brush primitives (gradients, procedural patterns).
 4) Material/effect registries and sandboxing for plugin-provided shaders.
+
+## Validation / Acceptance Criteria
+
+Implementation is considered conformant when:
+
+- The degenerate “no effects” path produces identical ordering and output as renderer v2 for representative scenes.
+- `RenderPlan` execution does not introduce visible reordering across `Scene.ops` (ADR 0002 / ADR 0009).
+- Intermediate textures are pooled and reused across frames (no per-frame create/destroy churn under steady-state).
+- A renderer harness scene can exercise at least one multi-pass sequence (scene draw + fullscreen pass + composite)
+  while keeping clip/transform correctness intact at boundaries.
+- Debug/perf snapshots can report: pass list, allocation/reuse counts, and approximate peak intermediate bytes.
 
 ## References
 

@@ -141,6 +141,14 @@ The contract remains:
 - Capture becomes a stable foundation for tests, thumbnails, and screenshot/recording features.
 - Deterministic goldens become feasible without hard-coding platform quirks into tests.
 
+## Validation / Acceptance Criteria
+
+Implementation is considered conformant when:
+
+- Coalescing by `(window, token)` is latest-wins and deterministic (Section 3.1).
+- In-flight captures are bounded per window; overload produces deterministic delay/failure (ADR 0122).
+- Deterministic capture mode can produce stable results under fixed budgets and scale settings (suitable for goldens).
+
 ## References
 
 - Capture base contract: `docs/adr/0122-offscreen-rendering-frame-capture-and-readback.md`

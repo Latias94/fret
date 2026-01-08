@@ -84,6 +84,20 @@ The framework must be able to report:
 - Users can build extremely “GPU-heavy” panels via `RenderTargetId` without destabilizing UI contracts.
 - Common UI effects can be standardized, portable, and debuggable via controlled registries.
 
+## Non-goals (v1)
+
+- This ADR does not standardize a full plugin ABI for distributing shaders/effects; it only defines the extension
+  tiers and trust boundary.
+- This ADR does not require supporting arbitrary user-provided WGSL in v1.
+
+## Validation / Acceptance Criteria
+
+Implementation is considered conformant when:
+
+- Component-level APIs remain `wgpu`-free (ADR 0093) and do not expose device/queue/texture handles.
+- Tier A (`RenderTargetId`) integrations remain compatible with submission coordination (ADR 0038).
+- Tier B materials/effects have bounded resource usage and participate in budgets/telemetry (ADR 0120 / ADR 0123).
+
 ## References
 
 - Engine/viewport integration: `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`

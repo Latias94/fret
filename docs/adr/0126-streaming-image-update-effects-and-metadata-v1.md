@@ -162,6 +162,14 @@ This must be capability-gated to avoid flooding the event loop in normal playbac
 - Future efficient paths (YUV + zero-copy imports) can be added without breaking the API.
 - Backpressure behavior is consistent across platforms and workloads.
 
+## Validation / Acceptance Criteria
+
+Implementation is considered conformant when:
+
+- Updates are latest-wins coalescible by `(ImageId, stream_generation)` and behavior is deterministic.
+- `bytes_per_row` and `update_rect_px` are supported (or rejected with a clear error) without undefined behavior.
+- The renderer composites streamed pixels correctly with the declared `ImageColorInfo` and `AlphaMode` (ADR 0040).
+
 ## References
 
 - Streaming surfaces overview: `docs/adr/0121-streaming-images-and-video-surfaces.md`

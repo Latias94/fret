@@ -154,9 +154,24 @@ Rejected for v1:
 - How do we best represent budgets for HDR targets or non-8-bit formats when they are introduced?
 - Do we need separate budgets per effect class (blur vs pixelate) vs a unified intermediate pool budget?
 
+## Non-goals (v1)
+
+- This ADR does not attempt to budget engine-owned targets (`RenderTargetId`) or long-lived atlases.
+- This ADR does not promise a particular “quality” at a given budget value; it only constrains boundedness and
+  determinism of degradation.
+
+## Validation / Acceptance Criteria
+
+Implementation is considered conformant when:
+
+- For a fixed window size and config, the set/order of degradations applied is deterministic across runs.
+- Peak intermediate byte accounting remains bounded by the configured per-window budget (within the chosen
+  accounting model).
+- When degradation disables an effect, layout and hit-testing remain unchanged (visual-only behavior).
+- Debug/perf snapshots expose budgets, peak intermediate bytes, allocation/reuse counts, and applied degradations.
+
 ## References
 
 - Bevy view target ping-pong patterns (conceptual reference): `repo-ref/bevy`
 - ADR 0118 and ADR 0119: `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`,
   `docs/adr/0119-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
-

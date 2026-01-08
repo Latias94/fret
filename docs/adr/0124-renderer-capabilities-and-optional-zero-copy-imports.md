@@ -76,6 +76,14 @@ Fallback selection must be deterministic for a given platform/backend configurat
 - wasm and desktop can share the same UI/component code while using different ingestion paths.
 - Optional fast paths do not cause silent drift: missing capabilities are explicit and handled.
 
+## Validation / Acceptance Criteria
+
+Implementation is considered conformant when:
+
+- Capability snapshots are stable for a renderer session and observable in debug/perf dumps.
+- For missing capabilities, the system deterministically falls back to the portable path (or explicit error).
+- UI code does not require backend handles to use capability-gated paths (only `ImageId`/`RenderTargetId`).
+
 ## References
 
 - Streaming image ingestion: `docs/adr/0121-streaming-images-and-video-surfaces.md`

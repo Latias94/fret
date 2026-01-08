@@ -86,6 +86,15 @@ The budget/backpressure contract remains the same:
 - Streaming surfaces become safe to use broadly (video, remote, camera) without risking unbounded memory growth.
 - Behavior remains deterministic and debuggable under load.
 
+## Validation / Acceptance Criteria
+
+Implementation is considered conformant when:
+
+- Pending update queues remain bounded by the staging budget under adversarial producers (no unbounded growth).
+- Coalescing is latest-wins per `(ImageId, stream_generation)` (ADR 0126), and behavior is deterministic.
+- Upload byte accounting reflects actual uploaded bytes (including repacking/alignment overhead).
+- Debug/perf snapshots expose: bytes uploaded per frame/window, dropped update counts, and peak staging bytes.
+
 ## References
 
 - Streaming image semantics: `docs/adr/0121-streaming-images-and-video-surfaces.md`

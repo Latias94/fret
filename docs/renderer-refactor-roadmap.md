@@ -223,11 +223,20 @@ This checklist is a suggested decomposition for implementation. Items may move a
   - peak intermediate bytes (approximate).
 - Add at least one renderer-only test/harness that ensures ordering invariants across plan execution.
 
+Exit criteria:
+
+- No-regression harness scene renders identically when no effects are present (ADR 0118).
+- Pass list + intermediate allocation/reuse + peak bytes are observable in debug/perf snapshots.
+
 ### M1: Fullscreen pass runner
 
 - Add a minimal fullscreen pipeline helper (triangle, bind source + uniforms, write destination).
 - Add ping-pong helpers (A/B swap) and downsample chain helpers (2x/4x).
 - Add a "noop copy" or "identity" postprocess pass to validate plumbing.
+
+Exit criteria:
+
+- A renderer-only “identity” fullscreen pass runs through the same plan execution machinery end-to-end.
 
 ### M2: Reference effect (validation)
 
@@ -241,6 +250,10 @@ This checklist is a suggested decomposition for implementation. Items may move a
   - nested clips/transforms,
   - a forced budget-degradation case (ADR 0120).
 
+Exit criteria:
+
+- At least one effect group (`FilterContent` or `Backdrop`) works end-to-end with correct ordering/clip/transform (ADR 0119).
+
 ### M3: Budgets + observability hardening
 
 - Implement per-window budgets and deterministic degradation order (ADR 0120).
@@ -248,3 +261,7 @@ This checklist is a suggested decomposition for implementation. Items may move a
 - Add stress harnesses that validate:
   - peak intermediate bytes remain bounded,
   - degradations are deterministic across runs.
+
+Exit criteria:
+
+- For fixed inputs, degradation decisions are deterministic across runs and observable (ADR 0120).

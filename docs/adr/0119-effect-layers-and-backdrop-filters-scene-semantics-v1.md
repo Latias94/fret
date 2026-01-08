@@ -161,6 +161,23 @@ Budgets themselves (scope, accounting, and deterministic degradation order) are 
 - Whether to add an explicit “effect blend mode” beyond premul over (recommendation: defer; keep premul over v1).
 - Whether `bounds` should be optional for `FilterContent` (recommendation: keep required to enforce predictability).
 
+## Non-goals (v1)
+
+- This ADR does not guarantee a specific visual match to any external design system (e.g. iOS “liquid glass”).
+  It defines portable semantics that can *enable* such looks.
+- This ADR does not introduce implicit clipping; clip remains explicit via existing clip ops (ADR 0078).
+- This ADR does not define plugin-provided arbitrary shader execution (see ADR 0125).
+
+## Validation / Acceptance Criteria
+
+Implementations are considered conformant when:
+
+- `PushEffect/PopEffect` behave as explicit sequence points: no reordering across boundaries (ADR 0009).
+- `Backdrop` samples only prior ops in `Scene.ops` order (no “peeking” ahead).
+- `bounds` is treated as a computation bound, not an implicit clip (clip behavior remains solely stack-driven).
+- Nested clips/transforms inside and around effect groups render correctly in a harness scene.
+- When budgets are exceeded (ADR 0120), degradation behavior is deterministic and layout-invariant.
+
 ## References
 
 - ADR 0118 (RenderPlan substrate): `docs/adr/0118-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`
