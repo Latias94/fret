@@ -168,7 +168,7 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
     pub fn layout_engine_child_bounds(&mut self, child: NodeId) -> Option<Rect> {
         #[cfg(feature = "layout-engine-v2")]
         {
-            let local = self.tree.layout_engine_local_rect(child)?;
+            let local = self.tree.layout_engine_child_local_rect(self.node, child)?;
             Some(Rect::new(
                 Point::new(
                     fret_core::Px(self.bounds.origin.x.0 + local.origin.x.0),

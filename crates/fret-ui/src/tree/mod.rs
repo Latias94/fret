@@ -597,10 +597,13 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[cfg(feature = "layout-engine-v2")]
-    pub(crate) fn layout_engine_local_rect(&self, node: NodeId) -> Option<Rect> {
+    pub(crate) fn layout_engine_child_local_rect(
+        &self,
+        parent: NodeId,
+        child: NodeId,
+    ) -> Option<Rect> {
         self.layout_engine
-            .layout_id_for_node(node)
-            .map(|id| self.layout_engine.layout_rect(id))
+            .child_layout_rect_if_solved(parent, child)
     }
 
     pub fn debug_node_path(&self, node: NodeId) -> Vec<NodeId> {
