@@ -367,12 +367,39 @@ Rendering model (locked):
 
 - The node graph editor is a single canvas widget embedded in panels/tabs (docking/multi-view), not a
   collection of native floating windows.
-- Node UIs are rendered as regular retained widget subtrees (header/body/ports) authored by the
-  presenter/viewer surface; the editor owns only interaction and layout framing.
+- The long-term target is that node content (header/body/ports) is authored as regular retained
+  `fret-ui` subtrees provided by the presenter/viewer surface, and hosted by the canvas via a
+  dedicated **Canvas Portal** (see below). The editor owns interaction and layout framing.
+- MVP implementations may paint simple labels/diagnostics directly in the canvas without embedding
+  a full subtree, but must not lock the API surface such that later portal-based composition
+  requires a breaking refactor.
 - Wires, background patterns, selection rectangles, and other canvas-level visuals are drawn by the
   editor widget using Fret’s renderer primitives (paths, strokes, fills) under the canvas transform.
 - Screen-space popups/menus (including conversion pickers) use overlays rendered outside the canvas
   transform (see above), avoiding the need for a separate “floating window” UI subsystem.
+
+Embedded node content: Canvas Portal (locked boundary, staged implementation):
+
+- Motivation: editor graphs frequently need real widgets inside nodes (text input, sliders, toggles,
+  images, previews). Re-implementing a parallel widget toolkit inside the node graph is not an
+  acceptable long-term strategy.
+- Requirement: node-embedded widgets must use the same focus, IME, and accessibility contracts as
+  the rest of Fret UI (see ADR 0012, ADR 0067, ADR 0069).
+- The canvas hosts embedded content using a portal mechanism, conceptually similar to “absolute
+  layout + transform”:
+  - the presenter provides an element subtree per node (and optionally per port row),
+  - the canvas positions the subtree in screen-space, anchored to the node’s canvas geometry,
+  - input events are routed through the normal UI tree, not via custom per-node event code.
+- Measurement/geometry flow:
+  - the portal host measures subtrees and emits **derived geometry hints** (node bounds, handle
+    bounds, anchor bounds) into the internals store, keyed by stable IDs (`NodeId`, `PortId`),
+  - the canvas uses those hints for wire routing and hit-testing without depending on a specific
+    layout engine (taffy or otherwise).
+- Staging:
+  - Stage 1 (MVP): text-only labels/hints via `NodeGraphPresenter::node_body_label` and optional size
+    hints; no embedded widgets.
+  - Stage 2: portal host for node header/body subtrees (enables IME-backed renames and constants).
+  - Stage 3: optional per-port-row subtrees and richer semantics (inline controls in pin rows).
 
 Interaction protocol target (inspired by `imgui-node-editor`):
 
@@ -403,7 +430,7 @@ Baseline UI capabilities (MVP parity targets):
 - pan/zoom + “frame selection” navigation,
 - link creation/deletion with accept/reject feedback,
 - node moving with transaction coalescing,
-- context menus (background/node/port/edge),
+- context menus (background/node/port/edge/group),
 - copy/paste of subgraphs (ADR 0041 alignment).
 
 Planned advanced interaction features (parity with `egui-snarl` / editor expectations):
@@ -1007,3 +1034,7 @@ Unity ShaderGraph concept map:
   injection surface without introducing frame-order hazards or accidental coupling to a specific layout engine.
 - Whether edge hit-testing should be strictly "interaction-width only", or additionally allow a
   per-edge override (XyFlow allows per-edge `interactionWidth`).
+- Whether to standardize a portal-based “node view” presenter API now (element subtrees + measured
+  geometry), or to keep MVP text-only rendering longer and accept a larger later migration.
+- How the portal host composes with semantic zoom and “UI scaling” modes (text remains readable at
+  extreme zoom) without breaking input hit-testing and cursor positions.
