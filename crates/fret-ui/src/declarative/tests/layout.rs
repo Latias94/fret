@@ -281,7 +281,7 @@ impl TwoViewportRects {
 
 impl<H: UiHost> Widget<H> for TwoViewportRects {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-        if let Some(&a) = cx.children.get(0) {
+        if let Some(&a) = cx.children.first() {
             let _ = cx.layout_viewport_root(a, self.a);
         }
         if let Some(&b) = cx.children.get(1) {
@@ -413,6 +413,76 @@ fn viewport_root_registration_is_recorded_in_layout_all() {
     assert_eq!(ui.viewport_roots().len(), 2);
     assert!(ui.viewport_roots().contains(&(root_a, viewport_a)));
     assert!(ui.viewport_roots().contains(&(root_b, viewport_b)));
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn layout_viewport_root_defers_child_layout_until_after_parent() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    struct ParentWithDeferredViewport {
+        viewport: Rect,
+        child: NodeId,
+        saw_default_bounds: Arc<AtomicBool>,
+    }
+
+    impl<H: UiHost> Widget<H> for ParentWithDeferredViewport {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            let bounds = cx
+                .tree
+                .debug_node_bounds(self.child)
+                .unwrap_or_else(|| Rect::new(Point::new(Px(0.0), Px(0.0)), Size::default()));
+            self.saw_default_bounds
+                .store(bounds.size == Size::default(), Ordering::Relaxed);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-child",
+        |cx| vec![cx.text("child")],
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let saw_default_bounds = Arc::new(AtomicBool::new(false));
+    let parent = ui.create_node(ParentWithDeferredViewport {
+        viewport,
+        child,
+        saw_default_bounds: saw_default_bounds.clone(),
+    });
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert!(
+        saw_default_bounds.load(Ordering::Relaxed),
+        "expected viewport child to be laid out after parent, not during Parent.layout()"
+    );
+
+    let child_bounds = ui.debug_node_bounds(child).expect("child bounds");
+    assert!((child_bounds.origin.x.0 - viewport.origin.x.0).abs() < 0.01);
+    assert!((child_bounds.size.width.0 - viewport.size.width.0).abs() < 0.01);
 }
 
 #[test]

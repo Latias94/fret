@@ -167,8 +167,15 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
 
     pub fn layout_viewport_root(&mut self, child: NodeId, bounds: Rect) -> Size {
         #[cfg(feature = "layout-engine-v2")]
-        self.tree.register_viewport_root(child, bounds);
-        self.layout_in(child, bounds)
+        {
+            self.tree.register_viewport_root(child, bounds);
+            bounds.size
+        }
+
+        #[cfg(not(feature = "layout-engine-v2"))]
+        {
+            self.layout_in(child, bounds)
+        }
     }
 
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
@@ -375,7 +382,7 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
     }
 
     pub fn push_labelled_by(&mut self, node: NodeId) {
-        if self.labelled_by.iter().any(|id| *id == node) {
+        if self.labelled_by.contains(&node) {
             return;
         }
         self.labelled_by.push(node);
@@ -386,7 +393,7 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
     }
 
     pub fn push_described_by(&mut self, node: NodeId) {
-        if self.described_by.iter().any(|id| *id == node) {
+        if self.described_by.contains(&node) {
             return;
         }
         self.described_by.push(node);
@@ -397,7 +404,7 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
     }
 
     pub fn push_controlled(&mut self, node: NodeId) {
-        if self.controls.iter().any(|id| *id == node) {
+        if self.controls.contains(&node) {
             return;
         }
         self.controls.push(node);

@@ -30,8 +30,19 @@ impl<H: UiHost> UiTree<H> {
             self.layout_engine.begin_frame(app.frame_id());
             self.viewport_roots.clear();
         }
+
+        #[cfg(feature = "layout-engine-v2")]
+        let mut viewport_cursor: usize = 0;
+
         for root in roots {
             let _ = self.layout_in(app, services, root, bounds, scale_factor);
+
+            #[cfg(feature = "layout-engine-v2")]
+            while viewport_cursor < self.viewport_roots.len() {
+                let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
+                viewport_cursor += 1;
+                let _ = self.layout_in(app, services, viewport_root, viewport_bounds, scale_factor);
+            }
         }
 
         if self.semantics_requested {
@@ -59,7 +70,28 @@ impl<H: UiHost> UiTree<H> {
             Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             available,
         );
-        self.layout_in(app, services, root, bounds, scale_factor)
+
+        #[cfg(feature = "layout-engine-v2")]
+        {
+            self.layout_engine.begin_frame(app.frame_id());
+            self.viewport_roots.clear();
+
+            let mut viewport_cursor: usize = 0;
+            let size = self.layout_in(app, services, root, bounds, scale_factor);
+            while viewport_cursor < self.viewport_roots.len() {
+                let (viewport_root, viewport_bounds) = self.viewport_roots[viewport_cursor];
+                viewport_cursor += 1;
+                let _ = self.layout_in(app, services, viewport_root, viewport_bounds, scale_factor);
+            }
+
+            self.layout_engine.end_frame();
+            size
+        }
+
+        #[cfg(not(feature = "layout-engine-v2"))]
+        {
+            self.layout_in(app, services, root, bounds, scale_factor)
+        }
     }
 
     pub fn layout_in(
