@@ -32,6 +32,10 @@ pub struct NodeGraphStyle {
     pub wire_width_selected_mul: f32,
     pub wire_width_hover_mul: f32,
 
+    pub marquee_fill: Color,
+    pub marquee_border: Color,
+    pub marquee_border_width: f32,
+
     pub context_menu_width: f32,
     pub context_menu_padding: f32,
     pub context_menu_item_height: f32,
@@ -133,6 +137,20 @@ impl Default for NodeGraphStyle {
 
             wire_width_selected_mul: 1.6,
             wire_width_hover_mul: 1.25,
+
+            marquee_fill: Color {
+                r: 0.20,
+                g: 0.55,
+                b: 0.95,
+                a: 0.18,
+            },
+            marquee_border: Color {
+                r: 0.20,
+                g: 0.55,
+                b: 0.95,
+                a: 0.90,
+            },
+            marquee_border_width: 1.0,
 
             context_menu_width: 200.0,
             context_menu_padding: 10.0,

@@ -64,6 +64,8 @@ struct InteractionState {
     last_bounds: Option<Rect>,
     last_conversion: Option<LastConversionContext>,
     panning: bool,
+    pending_marquee: Option<PendingMarqueeDrag>,
+    marquee: Option<MarqueeDrag>,
     pending_node_drag: Option<PendingNodeDrag>,
     node_drag: Option<NodeDrag>,
     wire_drag: Option<WireDrag>,
@@ -99,16 +101,40 @@ struct SearcherState {
 
 #[derive(Debug, Clone)]
 struct PendingNodeDrag {
-    node: GraphNodeId,
+    primary: GraphNodeId,
+    nodes: Vec<GraphNodeId>,
     grab_offset: Point,
     start_pos: Point,
 }
 
 #[derive(Debug, Clone)]
 struct NodeDrag {
-    node: GraphNodeId,
+    primary: GraphNodeId,
+    nodes: Vec<(GraphNodeId, CanvasPoint)>,
     grab_offset: Point,
-    start_node_pos: CanvasPoint,
+    start_pos: Point,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum MarqueeMode {
+    Replace,
+    Add,
+    Toggle,
+}
+
+#[derive(Debug, Clone)]
+struct PendingMarqueeDrag {
+    start_pos: Point,
+    base_nodes: Vec<GraphNodeId>,
+    mode: MarqueeMode,
+}
+
+#[derive(Debug, Clone)]
+struct MarqueeDrag {
+    start_pos: Point,
+    pos: Point,
+    base_nodes: Vec<GraphNodeId>,
+    mode: MarqueeMode,
 }
 
 #[derive(Debug, Clone)]
@@ -1827,6 +1853,42 @@ impl NodeGraphCanvas {
         }
     }
 
+    fn nodes_in_marquee(
+        graph: &Graph,
+        geom: &CanvasGeometry,
+        a: Point,
+        b: Point,
+    ) -> Vec<GraphNodeId> {
+        let rect = rect_from_points(a, b);
+        geom.nodes
+            .iter()
+            .filter_map(|(id, ng)| {
+                graph
+                    .nodes
+                    .contains_key(id)
+                    .then_some(*id)
+                    .filter(|_| rects_intersect(rect, ng.rect))
+            })
+            .collect()
+    }
+
+    fn union_nodes(a: &[GraphNodeId], b: &[GraphNodeId]) -> Vec<GraphNodeId> {
+        let mut out: Vec<GraphNodeId> = Vec::with_capacity(a.len() + b.len());
+        out.extend_from_slice(a);
+        out.extend_from_slice(b);
+        out
+    }
+
+    fn toggle_nodes(base: &[GraphNodeId], delta: &[GraphNodeId]) -> Vec<GraphNodeId> {
+        let mut set: std::collections::HashSet<GraphNodeId> = base.iter().copied().collect();
+        for id in delta.iter().copied() {
+            if !set.insert(id) {
+                set.remove(&id);
+            }
+        }
+        set.into_iter().collect()
+    }
+
     fn searcher_is_selectable_row(row: &SearcherRow) -> bool {
         matches!(row.kind, SearcherRowKind::Candidate { .. }) && row.enabled
     }
@@ -2570,6 +2632,25 @@ impl NodeGraphCanvas {
                 color,
             });
         }
+    }
+
+    fn paint_marquee<H: UiHost>(
+        &mut self,
+        cx: &mut PaintCx<'_, H>,
+        marquee: &MarqueeDrag,
+        zoom: f32,
+    ) {
+        let rect = rect_from_points(marquee.start_pos, marquee.pos);
+        let border_w = Px(self.style.marquee_border_width / zoom);
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(49),
+            rect,
+            background: self.style.marquee_fill,
+            border: Edges::all(border_w),
+            border_color: self.style.marquee_border,
+            corner_radii: Corners::all(Px(0.0)),
+        });
     }
 
     fn paint_searcher<H: UiHost>(
@@ -3443,6 +3524,12 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     if self.interaction.pending_node_drag.take().is_some() {
                         canceled = true;
                     }
+                    if self.interaction.marquee.take().is_some() {
+                        canceled = true;
+                    }
+                    if self.interaction.pending_marquee.take().is_some() {
+                        canceled = true;
+                    }
                     if self.interaction.panning {
                         self.interaction.panning = false;
                         canceled = true;
@@ -4138,6 +4225,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.pending_node_drag = None;
                         self.interaction.node_drag = None;
                         self.interaction.edge_drag = None;
+                        self.interaction.pending_marquee = None;
+                        self.interaction.marquee = None;
                         self.interaction.hover_port = None;
                         self.interaction.hover_port_valid = false;
                         self.interaction.hover_port_convertible = false;
@@ -4178,6 +4267,8 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.node_drag = None;
                         self.interaction.wire_drag = None;
                         self.interaction.edge_drag = None;
+                        self.interaction.pending_marquee = None;
+                        self.interaction.marquee = None;
                         self.interaction.hover_port = None;
                         self.interaction.hover_port_valid = false;
                         self.interaction.hover_port_convertible = false;
@@ -4185,20 +4276,39 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             Px(position.x.0 - rect.origin.x.0),
                             Px(position.y.0 - rect.origin.y.0),
                         );
-                        self.interaction.pending_node_drag = Some(PendingNodeDrag {
-                            node,
-                            grab_offset: offset,
-                            start_pos: *position,
-                        });
-                        cx.capture_pointer(cx.node);
+                        let already_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
+                        let multi_mod = modifiers.shift || modifiers.ctrl || modifiers.meta;
 
                         self.update_view_state(cx.app, |s| {
-                            s.selected_nodes.clear();
                             s.selected_edges.clear();
-                            s.selected_nodes.push(node);
+                            if multi_mod {
+                                if let Some(ix) = s.selected_nodes.iter().position(|id| *id == node)
+                                {
+                                    s.selected_nodes.remove(ix);
+                                } else {
+                                    s.selected_nodes.push(node);
+                                }
+                            } else if !s.selected_nodes.iter().any(|id| *id == node) {
+                                s.selected_nodes.clear();
+                                s.selected_nodes.push(node);
+                            }
                             s.draw_order.retain(|id| *id != node);
                             s.draw_order.push(node);
                         });
+
+                        if !multi_mod {
+                            let nodes_for_drag = (already_selected
+                                && snapshot.selected_nodes.len() > 1)
+                                .then(|| snapshot.selected_nodes.clone())
+                                .unwrap_or_else(|| vec![node]);
+                            self.interaction.pending_node_drag = Some(PendingNodeDrag {
+                                primary: node,
+                                nodes: nodes_for_drag,
+                                grab_offset: offset,
+                                start_pos: *position,
+                            });
+                            cx.capture_pointer(cx.node);
+                        }
 
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
@@ -4238,13 +4348,24 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                         self.interaction.pending_node_drag = None;
                         self.interaction.node_drag = None;
                         self.interaction.wire_drag = None;
+                        self.interaction.pending_marquee = None;
+                        self.interaction.marquee = None;
                         self.interaction.hover_port = None;
                         self.interaction.hover_port_valid = false;
                         self.interaction.hover_port_convertible = false;
-                        self.update_view_state(cx.app, |s| {
-                            s.selected_nodes.clear();
-                            s.selected_edges.clear();
+                        let mode = if modifiers.shift {
+                            MarqueeMode::Add
+                        } else if modifiers.ctrl || modifiers.meta {
+                            MarqueeMode::Toggle
+                        } else {
+                            MarqueeMode::Replace
+                        };
+                        self.interaction.pending_marquee = Some(PendingMarqueeDrag {
+                            start_pos: *position,
+                            base_nodes: snapshot.selected_nodes.clone(),
+                            mode,
                         });
+                        cx.capture_pointer(cx.node);
                         cx.request_redraw();
                         cx.invalidate_self(Invalidation::Paint);
                     }
@@ -4296,6 +4417,96 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     return;
                 }
 
+                if let Some(mut marquee) = self.interaction.marquee.take() {
+                    marquee.pos = *position;
+                    let (geom, _index) = self.canvas_derived(&*cx.app, &snapshot);
+                    let selection = self
+                        .graph
+                        .read_ref(cx.app, |graph| {
+                            Self::nodes_in_marquee(
+                                graph,
+                                geom.as_ref(),
+                                marquee.start_pos,
+                                marquee.pos,
+                            )
+                        })
+                        .ok()
+                        .unwrap_or_default();
+
+                    let mut selected: Vec<GraphNodeId> = match marquee.mode {
+                        MarqueeMode::Replace => selection,
+                        MarqueeMode::Add => Self::union_nodes(&marquee.base_nodes, &selection),
+                        MarqueeMode::Toggle => Self::toggle_nodes(&marquee.base_nodes, &selection),
+                    };
+                    selected.sort();
+                    selected.dedup();
+
+                    self.interaction.marquee = Some(marquee);
+                    self.update_view_state(cx.app, |s| {
+                        s.selected_edges.clear();
+                        s.selected_nodes = selected;
+                    });
+
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                    return;
+                }
+
+                if self.interaction.node_drag.is_none() {
+                    if let Some(pending) = self.interaction.pending_marquee.clone() {
+                        let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
+                        let threshold_graph = threshold_screen / zoom;
+                        let dx = position.x.0 - pending.start_pos.x.0;
+                        let dy = position.y.0 - pending.start_pos.y.0;
+                        if threshold_graph <= 0.0
+                            || dx * dx + dy * dy >= threshold_graph * threshold_graph
+                        {
+                            self.interaction.pending_marquee = None;
+                            let marquee = MarqueeDrag {
+                                start_pos: pending.start_pos,
+                                pos: *position,
+                                base_nodes: pending.base_nodes.clone(),
+                                mode: pending.mode,
+                            };
+                            self.interaction.marquee = Some(marquee.clone());
+
+                            let (geom, _index) = self.canvas_derived(&*cx.app, &snapshot);
+                            let selection = self
+                                .graph
+                                .read_ref(cx.app, |graph| {
+                                    Self::nodes_in_marquee(
+                                        graph,
+                                        geom.as_ref(),
+                                        marquee.start_pos,
+                                        marquee.pos,
+                                    )
+                                })
+                                .ok()
+                                .unwrap_or_default();
+
+                            let mut selected: Vec<GraphNodeId> = match marquee.mode {
+                                MarqueeMode::Replace => selection,
+                                MarqueeMode::Add => {
+                                    Self::union_nodes(&marquee.base_nodes, &selection)
+                                }
+                                MarqueeMode::Toggle => {
+                                    Self::toggle_nodes(&marquee.base_nodes, &selection)
+                                }
+                            };
+                            selected.sort();
+                            selected.dedup();
+
+                            self.update_view_state(cx.app, |s| {
+                                s.selected_edges.clear();
+                                s.selected_nodes = selected;
+                            });
+                            cx.request_redraw();
+                            cx.invalidate_self(Invalidation::Paint);
+                            return;
+                        }
+                    }
+                }
+
                 if self.interaction.node_drag.is_none() {
                     if let Some(pending) = self.interaction.pending_node_drag.clone() {
                         let threshold_screen = snapshot.interaction.node_drag_threshold.max(0.0);
@@ -4306,16 +4517,23 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                             || dx * dx + dy * dy >= threshold_graph * threshold_graph
                         {
                             self.interaction.pending_node_drag = None;
-                            let start_node_pos = self
+                            let start_nodes = self
                                 .graph
-                                .read_ref(cx.app, |g| g.nodes.get(&pending.node).map(|n| n.pos))
+                                .read_ref(cx.app, |g| {
+                                    pending
+                                        .nodes
+                                        .iter()
+                                        .copied()
+                                        .filter_map(|id| g.nodes.get(&id).map(|n| (id, n.pos)))
+                                        .collect::<Vec<_>>()
+                                })
                                 .ok()
-                                .flatten()
                                 .unwrap_or_default();
                             self.interaction.node_drag = Some(NodeDrag {
-                                node: pending.node,
+                                primary: pending.primary,
+                                nodes: start_nodes,
                                 grab_offset: pending.grab_offset,
-                                start_node_pos,
+                                start_pos: pending.start_pos,
                             });
                         } else {
                             return;
@@ -4327,28 +4545,54 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     let auto_pan_delta = (snapshot.interaction.auto_pan.on_node_drag)
                         .then(|| Self::auto_pan_delta(&snapshot, *position, cx.bounds))
                         .unwrap_or_default();
-                    let new_pos = Point::new(
+                    let snap_to_grid = snapshot.interaction.snap_to_grid;
+                    let snap_grid = snapshot.interaction.snap_grid;
+
+                    let start_anchor = Point::new(
+                        Px(drag.start_pos.x.0 - drag.grab_offset.x.0),
+                        Px(drag.start_pos.y.0 - drag.grab_offset.y.0),
+                    );
+                    let new_anchor = Point::new(
                         Px(position.x.0 - drag.grab_offset.x.0 - auto_pan_delta.x),
                         Px(position.y.0 - drag.grab_offset.y.0 - auto_pan_delta.y),
                     );
-                    let id = drag.node;
-                    let snap_to_grid = snapshot.interaction.snap_to_grid;
-                    let snap_grid = snapshot.interaction.snap_grid;
+                    let mut delta = CanvasPoint {
+                        x: new_anchor.x.0 - start_anchor.x.0,
+                        y: new_anchor.y.0 - start_anchor.y.0,
+                    };
+
+                    if snap_to_grid {
+                        let primary_start = drag
+                            .nodes
+                            .iter()
+                            .find(|(id, _)| *id == drag.primary)
+                            .map(|(_, p)| *p)
+                            .unwrap_or_default();
+                        let primary_target = CanvasPoint {
+                            x: primary_start.x + delta.x,
+                            y: primary_start.y + delta.y,
+                        };
+                        let snapped = Self::snap_canvas_point(primary_target, snap_grid);
+                        delta = CanvasPoint {
+                            x: snapped.x - primary_start.x,
+                            y: snapped.y - primary_start.y,
+                        };
+                    }
+
                     let _ = self.graph.update(cx.app, |g, _cx| {
-                        let Some(node) = g.nodes.get(&id) else {
-                            return;
-                        };
-                        let from = node.pos;
-                        let mut to = CanvasPoint {
-                            x: new_pos.x.0,
-                            y: new_pos.y.0,
-                        };
-                        if snap_to_grid {
-                            to = Self::snap_canvas_point(to, snap_grid);
-                        }
-                        if from != to {
-                            if let Some(node) = g.nodes.get_mut(&id) {
-                                node.pos = to;
+                        for (id, start) in &drag.nodes {
+                            let Some(node) = g.nodes.get(id) else {
+                                continue;
+                            };
+                            let from = node.pos;
+                            let to = CanvasPoint {
+                                x: start.x + delta.x,
+                                y: start.y + delta.y,
+                            };
+                            if from != to {
+                                if let Some(node) = g.nodes.get_mut(id) {
+                                    node.pos = to;
+                                }
                             }
                         }
                     });
@@ -4671,22 +4915,54 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 }
 
                 if *button == MouseButton::Left {
+                    if self.interaction.marquee.take().is_some() {
+                        self.interaction.pending_marquee = None;
+                        cx.release_pointer_capture();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+
+                    if let Some(pending) = self.interaction.pending_marquee.take() {
+                        if matches!(pending.mode, MarqueeMode::Replace) {
+                            self.update_view_state(cx.app, |s| {
+                                s.selected_nodes.clear();
+                                s.selected_edges.clear();
+                            });
+                        }
+                        cx.release_pointer_capture();
+                        cx.request_redraw();
+                        cx.invalidate_self(Invalidation::Paint);
+                        return;
+                    }
+
                     if let Some(drag) = self.interaction.node_drag.take() {
-                        let end = self
+                        let ops = self
                             .graph
-                            .read_ref(cx.app, |g| g.nodes.get(&drag.node).map(|n| n.pos))
+                            .read_ref(cx.app, |g| {
+                                drag.nodes
+                                    .iter()
+                                    .filter_map(|(id, start)| {
+                                        let end = g.nodes.get(id).map(|n| n.pos)?;
+                                        (end != *start).then_some(GraphOp::SetNodePos {
+                                            id: *id,
+                                            from: *start,
+                                            to: end,
+                                        })
+                                    })
+                                    .collect::<Vec<_>>()
+                            })
                             .ok()
-                            .flatten();
-                        if let Some(end) = end
-                            && drag.start_node_pos != end
-                        {
+                            .unwrap_or_default();
+                        if !ops.is_empty() {
+                            let label = if ops.len() == 1 {
+                                "Move Node"
+                            } else {
+                                "Move Nodes"
+                            };
                             self.history.record(GraphTransaction {
-                                label: Some("Move Node".to_string()),
-                                ops: vec![GraphOp::SetNodePos {
-                                    id: drag.node,
-                                    from: drag.start_node_pos,
-                                    to: end,
-                                }],
+                                label: Some(label.to_string()),
+                                ops,
                             });
                         }
                         self.interaction.pending_node_drag = None;
@@ -5651,6 +5927,10 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
             self.paint_wire_drag_hint(cx, &snapshot, &wire_drag, zoom);
         }
 
+        if let Some(marquee) = self.interaction.marquee.clone() {
+            self.paint_marquee(cx, &marquee, zoom);
+        }
+
         if let Some(searcher) = self.interaction.searcher.clone() {
             self.paint_searcher(cx, &searcher, zoom);
         }
@@ -5737,6 +6017,31 @@ fn hit_searcher_row(
 
     let row_ix = searcher.scroll + slot;
     (row_ix < searcher.rows.len()).then_some(row_ix)
+}
+
+fn rect_from_points(a: Point, b: Point) -> Rect {
+    let min_x = a.x.0.min(b.x.0);
+    let min_y = a.y.0.min(b.y.0);
+    let max_x = a.x.0.max(b.x.0);
+    let max_y = a.y.0.max(b.y.0);
+    Rect::new(
+        Point::new(Px(min_x), Px(min_y)),
+        Size::new(Px(max_x - min_x), Px(max_y - min_y)),
+    )
+}
+
+fn rects_intersect(a: Rect, b: Rect) -> bool {
+    let ax0 = a.origin.x.0;
+    let ay0 = a.origin.y.0;
+    let ax1 = a.origin.x.0 + a.size.width.0;
+    let ay1 = a.origin.y.0 + a.size.height.0;
+
+    let bx0 = b.origin.x.0;
+    let by0 = b.origin.y.0;
+    let bx1 = b.origin.x.0 + b.size.width.0;
+    let by1 = b.origin.y.0 + b.size.height.0;
+
+    ax0 <= bx1 && ax1 >= bx0 && ay0 <= by1 && ay1 >= by0
 }
 
 fn hit_context_menu_item(
