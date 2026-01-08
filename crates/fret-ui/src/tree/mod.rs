@@ -401,6 +401,9 @@ pub struct UiTree<H: UiHost> {
     observed_globals_in_paint: GlobalObservationIndex,
     measure_stack: Vec<MeasureStackKey>,
 
+    #[cfg(feature = "layout-engine-v2")]
+    layout_engine: crate::layout_engine::TaffyLayoutEngine,
+
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
 
@@ -434,6 +437,8 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_globals_in_layout: GlobalObservationIndex::default(),
             observed_globals_in_paint: GlobalObservationIndex::default(),
             measure_stack: Vec::new(),
+            #[cfg(feature = "layout-engine-v2")]
+            layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
             paint_cache_policy: PaintCachePolicy::Auto,

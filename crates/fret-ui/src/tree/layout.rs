@@ -11,6 +11,9 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) {
+        #[cfg(feature = "layout-engine-v2")]
+        self.layout_engine.begin_frame();
+
         let started = self.debug_enabled.then(Instant::now);
         if self.debug_enabled {
             self.debug_stats.frame_id = app.frame_id();
@@ -36,6 +39,9 @@ impl<H: UiHost> UiTree<H> {
         if let Some(started) = started {
             self.debug_stats.layout_time = started.elapsed();
         }
+
+        #[cfg(feature = "layout-engine-v2")]
+        self.layout_engine.end_frame();
     }
 
     pub fn layout(
