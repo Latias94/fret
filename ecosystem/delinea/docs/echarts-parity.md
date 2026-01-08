@@ -44,7 +44,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 | `area` (line with areaStyle) | ✅ | `SeriesKind::Area` + `AreaBaseline` |
 | `band` (custom, common in finance) | ✅ | `SeriesKind::Band` (`encode.y` + `encode.y2`) |
 | `line` + `stack` | ❌ | Needs stacking transform + baseline rules. |
-| `scatter` | ❌ | Needs point marks + hit test + style. |
+| `scatter` | 🟨 | `SeriesKind::Scatter` + point marks + hit test + pixel-bounded large mode; missing symbol/size options. |
 | `bar` | ✅ | `SeriesKind::Bar` (requires Category X axis in v1). |
 | `candlestick` | ❌ | Needs OHLC encode + mark layout. |
 | `heatmap` | ❌ | Needs 2D binning + texture/mesh strategy. |
@@ -100,7 +100,7 @@ It is intentionally scoped to the `delinea` headless engine and the `fret-chart`
 
 1. Multi-axis / multiple y-axes (layout + mapping + label policy).
 2. Stacking transforms (stacked bars/areas) and derived columns.
-3. Scatter/point marks and richer hit testing.
+3. Scatter parity: symbol/size options, large/progressive thresholds, and richer hit testing policies.
 4. Time/log scales + tick formatting policies.
 5. Styling/theming surface (colors, line styles, per-series overrides, legends/tooltip formatters).
 6. `dataZoom` slider UI + Y-axis zoom (and 2D brush/selection).
