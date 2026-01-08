@@ -25,8 +25,8 @@ use crate::declarative::ModelWatchExt;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::primitives::dialog as dialog_prim;
-use crate::primitives::trigger_a11y;
 pub use crate::primitives::popper::{Align, LayoutDirection, Side};
+use crate::primitives::trigger_a11y;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PopoverVariant {
@@ -168,7 +168,6 @@ pub fn popover_use_open_model<H: UiHost>(
 }
 
 /// A minimal semantics wrapper matching Radix `PopoverContent` (`role="dialog"`).
-#[track_caller]
 pub fn popover_dialog_wrapper<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Option<Arc<str>>,
@@ -188,7 +187,6 @@ pub fn popover_dialog_wrapper<H: UiHost>(
 ///
 /// This is intended for `aria-controls` / `controls_element` style relationships:
 /// the trigger can reference this element to indicate which dialog/panel it controls.
-#[track_caller]
 pub fn popover_dialog_wrapper_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     overlay_root_name: &str,
@@ -384,6 +382,22 @@ mod tests {
             };
             assert_eq!(a11y.expanded, Some(true));
             assert_eq!(a11y.controls_element, Some(dialog_id.0));
+        });
+    }
+
+    #[test]
+    fn popover_dialog_wrapper_id_matches_rendered_wrapper_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let root_name = "popover-dialog-wrapper-id-test";
+            let computed = popover_dialog_wrapper_id::<App>(cx, root_name);
+            let rendered = cx.with_root_name(root_name, |cx| {
+                popover_dialog_wrapper::<App>(cx, None, |_cx| Vec::new())
+            });
+            assert_eq!(computed, rendered.id);
         });
     }
 

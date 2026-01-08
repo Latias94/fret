@@ -7,6 +7,8 @@
 //! In Fret, roving focus + selection policy is composed by wrappers (recipe layer) using
 //! `RovingFlex` + action hooks; this module provides stable, Radix-named building blocks for
 //! semantics/a11y and a composable configuration surface for recipes.
+//!
+//! This file is part of the stable primitives surface (do not move without an ADR update).
 
 use std::sync::Arc;
 

@@ -197,7 +197,6 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
             self.layout_in(child, bounds)
         }
     }
-
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
         self.tree.measure_in(
             self.app,

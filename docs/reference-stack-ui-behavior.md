@@ -79,11 +79,11 @@ cmdk is a mature behavioral reference for:
 - scroll-into-view behavior for active items,
 - grouping / separators / shortcuts display patterns.
 
-### 5) TanStack Virtual
+### 5) virtualizer (Rust)
 
 Role: **virtualization vocabulary** (variable measurement, stable keys, scroll-to strategies).
 
-Use TanStack Virtual as the primary reference for:
+Use `virtualizer` as the primary reference for:
 
 - `VirtualItem` shape (index/key/start/end/size),
 - `getItemKey` stable key requirement,
@@ -135,6 +135,6 @@ Owns shadcn v4 naming + variants + composition recipes:
 - shadcn/ui v4: `repo-ref/ui`
 - cmdk: `repo-ref/cmdk`
 - Floating UI: `repo-ref/floating-ui`
-- TanStack Virtual: `repo-ref/virtual`
+- virtualizer (Rust): `repo-ref/virtualizer`
 - gpui-component (Rust ergonomics + structure): `repo-ref/gpui-component`
 - Tailwind CSS (layout vocabulary source): `repo-ref/tailwindcss`

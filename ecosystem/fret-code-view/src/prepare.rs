@@ -72,7 +72,11 @@ pub(crate) struct PreparedSegment {
     pub(crate) highlight: Option<&'static str>,
 }
 
-fn prepare_code_block(code: &str, language: Option<&str>, show_line_numbers: bool) -> PreparedCodeBlock {
+fn prepare_code_block(
+    code: &str,
+    language: Option<&str>,
+    show_line_numbers: bool,
+) -> PreparedCodeBlock {
     let spans = match language {
         Some(language) => fret_syntax::highlight(code, language).unwrap_or_default(),
         None => Vec::new(),
@@ -141,7 +145,9 @@ fn prepare_code_block(code: &str, language: Option<&str>, show_line_numbers: boo
     }
 }
 
-fn coalesce_segments(segments: Vec<(String, Option<&'static str>)>) -> Vec<(String, Option<&'static str>)> {
+fn coalesce_segments(
+    segments: Vec<(String, Option<&'static str>)>,
+) -> Vec<(String, Option<&'static str>)> {
     let mut out: Vec<(String, Option<&'static str>)> = Vec::with_capacity(segments.len());
     for (text, highlight) in segments {
         if text.is_empty() {
@@ -254,4 +260,3 @@ mod tests {
         assert_eq!(lines[2].text, "");
     }
 }
-

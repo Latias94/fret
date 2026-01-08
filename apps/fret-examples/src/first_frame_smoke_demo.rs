@@ -1,7 +1,7 @@
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Px, Rect, SceneOp, Size};
 use fret_launch::{
-    WindowCreateSpec, WinitAppBuilder, WinitAppDriver, WinitEventContext, WinitRenderContext,
+    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
 
 #[derive(Default)]
@@ -90,11 +90,13 @@ impl WinitAppDriver for FirstFrameSmokeDriver {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    WinitAppBuilder::new(App::new(), FirstFrameSmokeDriver::default())
-        .configure(|config| {
-            config.main_window_title = "first_frame_smoke_demo".to_string();
-            config.main_window_size = winit::dpi::LogicalSize::new(520.0, 200.0);
-        })
-        .run()
-        .map_err(anyhow::Error::from)
+    crate::run_native_demo(
+        WinitRunnerConfig {
+            main_window_title: "first_frame_smoke_demo".to_string(),
+            main_window_size: winit::dpi::LogicalSize::new(520.0, 200.0),
+            ..Default::default()
+        },
+        App::new(),
+        FirstFrameSmokeDriver::default(),
+    )
 }

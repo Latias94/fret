@@ -48,4 +48,3 @@ pub fn with_portal_root_name<H: UiHost, R>(
     let root_name = portal_root_name(kind, id);
     cx.with_root_name(&root_name, f)
 }
-

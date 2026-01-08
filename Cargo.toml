@@ -6,6 +6,7 @@ exclude = [
     "crates/fret-platform-desktop",
     # Incomplete / incubating.
     "apps/fret-editor",
+    "ecosystem/fret-node",
 ]
 resolver = "2"
 

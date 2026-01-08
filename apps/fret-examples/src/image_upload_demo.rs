@@ -1,10 +1,10 @@
 use fret_app::{App, Effect, WindowRequest};
-use fret_app_kit::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_bootstrap::BootstrapBuilder;
 use fret_core::{
     AppWindowId, Color, Corners, DrawOrder, Edges, Event, ImageColorSpace, Px, Rect, SceneOp, Size,
 };
 use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext};
+use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 
 struct ImageUploadDemoWindowState {
     image_bytes: Vec<u8>,

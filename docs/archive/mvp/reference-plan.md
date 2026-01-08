@@ -1053,8 +1053,8 @@ Status:
     - `ContextMenu`, `Popover`, `DialogOverlay`, `CommandPaletteOverlay`, `AppMenuBar`, `ToastOverlay`, `TooltipOverlay`.
     - The runtime still owns the overlay-layer mechanism (`UiTree` layers) and the menu request store (`ContextMenuService`).
   - `ecosystem/fret-icons`: renderer-agnostic icon registry + small builtin glyph fallback set.
-  - `fret-demo`: adds a `shadcn_gallery` panel (`PanelKey` `core.shadcn_gallery`) to validate composition and theme-driven styling.
-  - `fret-demo --bin shadcn_gallery`: standalone shadcn gallery window (no docking/editor shell) to validate component ergonomics and overlays in isolation.
+  - `fret-demo`: adds a `components_gallery` panel (`PanelKey` `core.components_gallery`) to validate composition and theme-driven styling.
+  - `fret-demo --bin components_gallery`: standalone shadcn gallery window (no docking/editor shell) to validate component ergonomics and overlays in isolation.
 
 References:
 
@@ -1160,7 +1160,7 @@ Status:
   - Core UI kit components adopt `.with_size(...)` and derive control metrics from `Size`.
   - `fret-ui::VirtualList` exposes `set_style` / `set_row_height` for size-aware list wrappers.
   - List-like components share a single list style mapping to avoid “per-widget spacing patching”.
-  - `fret-demo --bin shadcn_gallery` includes a small size matrix surface.
+  - `fret-demo --bin components_gallery` includes a small size matrix surface.
 
 References:
 
@@ -1197,7 +1197,7 @@ This is a deliberate, “no fear” refactor MVP to prevent slow drift and perpe
 
 **Definition of Done**
 
-- `fret-demo` and `fret-demo --bin shadcn_gallery` no longer depend on `fret_ui::WindowOverlays` or runtime overlay widgets directly;
+- `fret-demo` and `fret-demo --bin components_gallery` no longer depend on `fret_ui::WindowOverlays` or runtime overlay widgets directly;
   they use `ecosystem/fret-ui-kit` surfaces instead.
 - Runtime primitives have no “opinionated” shadcn sizing baked in (notably `TextInput` height).
 - `cargo test --workspace` passes and the UI kit still works.

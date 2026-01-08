@@ -2,8 +2,6 @@
 use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
-#[cfg(not(target_arch = "wasm32"))]
-use fret_launch::run_app;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
@@ -293,9 +291,7 @@ pub fn run() -> anyhow::Result<()> {
     let config = build_runner_config();
     let driver = build_driver();
 
-    run_app(config, app, driver)
-        .context("run plot_demo app")
-        .map_err(anyhow::Error::from)
+    crate::run_native_demo(config, app, driver).context("run plot_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -289,7 +289,7 @@ mod tests {
     use fret_core::{Point, Px, Rect, Size};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService, TextStyle};
     use fret_ui::UiTree;
-    use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps};
+    use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, PressableProps};
     use fret_ui::elements::GlobalElementId;
 
     #[derive(Default)]

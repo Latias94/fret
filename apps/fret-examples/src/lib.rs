@@ -3,7 +3,29 @@ pub mod alloc_profile;
 
 pub(crate) mod hotpatch;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
+    config: fret_launch::WinitRunnerConfig,
+    app: fret_app::App,
+    driver: D,
+) -> anyhow::Result<()> {
+    use anyhow::Context as _;
+    use fret_bootstrap::BootstrapBuilder;
+
+    BootstrapBuilder::new(app, driver)
+        .configure(move |c| {
+            *c = config;
+        })
+        .with_default_settings_json()
+        .context("load .fret/settings.json")?
+        .register_icon_pack(fret_icons_lucide::register_icons)
+        .run()
+        .map_err(anyhow::Error::from)
+}
+
 pub mod area_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod assets_demo;
 pub mod bars_demo;
 pub mod candlestick_demo;
 pub mod components_gallery;
@@ -42,5 +64,7 @@ pub mod table_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_stress_demo;
 pub mod tags_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;

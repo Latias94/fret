@@ -12,4 +12,3 @@
 pub use crate::primitives::popper_arrow::{
     DiamondArrowStyle, diamond_arrow_element, diamond_arrow_element_refined, wrapper_insets,
 };
-

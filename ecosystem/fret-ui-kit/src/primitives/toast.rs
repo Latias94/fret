@@ -166,4 +166,3 @@ impl ToastController {
         OverlayController::dismiss_toast_action(host, self.store.clone(), window, id)
     }
 }
-

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "name": "button-default",
+  "classes": ["px-4", "py-2", "gap-2", "rounded-md"],
+  "expected": {
+    "padding": { "top": "2", "right": "4", "bottom": "2", "left": "4" },
+    "gap": "2",
+    "radius": "md"
+  }
+}
+

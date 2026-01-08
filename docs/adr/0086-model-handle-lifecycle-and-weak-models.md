@@ -131,7 +131,7 @@ As an optional convenience layer for component code, `fret-ui-kit` provides a sm
 API that lets you choose invalidation once and then read:
 
 ```rust
-use fret_components_ui::declarative::model_watch::ModelWatchExt;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt;
 
 let is_open = cx.watch_model(&open).copied().unwrap_or(false);
 let label = cx.watch_model(&label).layout().cloned().unwrap_or_default();

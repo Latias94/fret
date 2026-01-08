@@ -171,7 +171,6 @@ impl<H: UiHost> UiTree<H> {
 
         self.put_layout_engine(engine);
     }
-
     fn layout_node(
         &mut self,
         app: &mut H,

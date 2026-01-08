@@ -6,6 +6,7 @@ contracts early to avoid large rewrites later.
 ## Sources of Truth
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
+- Renderer refactor: `docs/renderer-refactor-roadmap.md`
 - Contracts: `docs/adr/`
 - Workstream notes (non-authoritative): `docs/workstreams/`
 - Historical planning docs: `docs/archive/`

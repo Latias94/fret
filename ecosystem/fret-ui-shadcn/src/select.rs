@@ -25,7 +25,6 @@ use fret_ui_kit::headless::roving_focus;
 use fret_ui_kit::headless::select_item_aligned as item_aligned;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
-use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::select as radix_select;
@@ -741,7 +740,7 @@ fn select_impl<H: UiHost>(
             content: radix_select::SelectContentKeyState,
             /// When the select is opened via mouse `pointerdown`, Radix installs a one-shot
             /// `pointerup` guard to avoid accidental selection and to enable drag-to-select.
-            mouse_open_down_pos: Option<Point>,
+            mouse_open_guard: radix_select::SelectMouseOpenGuardState,
             was_open: bool,
             value_node: Option<GlobalElementId>,
             viewport: Option<GlobalElementId>,
@@ -759,7 +758,7 @@ fn select_impl<H: UiHost>(
                     trigger: radix_select::SelectTriggerKeyState::default(),
                     pointer: radix_select::SelectTriggerPointerState::default(),
                     content: radix_select::SelectContentKeyState::default(),
-                    mouse_open_down_pos: None,
+                    mouse_open_guard: radix_select::SelectMouseOpenGuardState::default(),
                     was_open: false,
                     value_node: None,
                     viewport: None,
@@ -844,7 +843,7 @@ fn select_impl<H: UiHost>(
                     let mut state = state_for_key
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
-                    state.mouse_open_down_pos = None;
+                    state.mouse_open_guard.clear();
                     state.trigger.handle_key_down_when_closed(
                         host,
                         action_cx.window,
@@ -895,11 +894,9 @@ fn select_impl<H: UiHost>(
                     .models_mut()
                     .get_copied(&open_for_pointer_down)
                     .unwrap_or(false);
-                if !was_open && now_open {
-                    state.mouse_open_down_pos = Some(down.position);
-                } else {
-                    state.mouse_open_down_pos = None;
-                }
+                state
+                    .mouse_open_guard
+                    .record_if_opened(was_open, now_open, down.position);
                 state.trigger.clear_typeahead(host);
 
                 fret_ui::action::PressablePointerDownResult::SkipDefaultAndStopPropagation
@@ -916,7 +913,7 @@ fn select_impl<H: UiHost>(
                     return;
                 }
 
-                state.mouse_open_down_pos = None;
+                state.mouse_open_guard.clear();
                 state.trigger.clear_typeahead(host);
 
                 let _ = host.models_mut().update(&open_for_activate, |v| *v = true);
@@ -958,9 +955,7 @@ fn select_impl<H: UiHost>(
                 // missing for a frame. We still install the modal barrier layer to preserve Radix
                 // Select's "disable outside pointer events" outcome.
                 if let Some(anchor) = overlay::anchor_bounds_for_element(cx, trigger_id) {
-                    let barrier_options = radix_dialog::DialogOptions::default()
-                        .dismiss_on_overlay_press(true)
-                        .initial_focus(None);
+                    let dismiss_on_overlay_press = true;
                     let window_margin = theme
                         .metric_by_key("component.select.window_margin")
                         .unwrap_or(Px(8.0));
@@ -1159,7 +1154,7 @@ fn select_impl<H: UiHost>(
                         let state_for_barrier = trigger_state_for_overlay.clone();
                         let barrier_pointer_guard = cx.pointer_region(
                             PointerRegionProps {
-                                layout: radix_dialog::modal_barrier_layout(),
+                                layout: radix_select::select_modal_barrier_layout(),
                                 enabled: true,
                             },
                             move |cx| {
@@ -1180,15 +1175,14 @@ fn select_impl<H: UiHost>(
                                         let mut state = state_for_guard
                                             .lock()
                                             .unwrap_or_else(|e| e.into_inner());
-                                        let Some(down) = state.mouse_open_down_pos.take() else {
+                                        let Some(down) = state.mouse_open_guard.take() else {
                                             return false;
                                         };
 
-                                        let dx = (down.x.0 - up.position.x.0).abs();
-                                        let dy = (down.y.0 - up.position.y.0).abs();
-                                        if dx <= radix_select::SELECT_TRIGGER_CLICK_SLOP_PX
-                                            && dy <= radix_select::SELECT_TRIGGER_CLICK_SLOP_PX
-                                        {
+                                        if radix_select::select_mouse_open_is_within_click_slop(
+                                            down,
+                                            up.position,
+                                        ) {
                                             return true;
                                         }
 
@@ -1635,19 +1629,12 @@ fn select_impl<H: UiHost>(
                                                                                                                 .lock()
                                                                                                                 .unwrap_or_else(|e| e.into_inner());
                                                                                                         if let Some(down) =
-                                                                                                            state.mouse_open_down_pos
+                                                                                                            state.mouse_open_guard.take()
                                                                                                         {
-                                                                                                            let dx = (down.x.0
-                                                                                                                - up.position.x.0)
-                                                                                                                .abs();
-                                                                                                            let dy = (down.y.0
-                                                                                                                - up.position.y.0)
-                                                                                                                .abs();
-                                                                                                            state.mouse_open_down_pos =
-                                                                                                                None;
-                                                                                                            if dx <= radix_select::SELECT_TRIGGER_CLICK_SLOP_PX
-                                                                                                                && dy <= radix_select::SELECT_TRIGGER_CLICK_SLOP_PX
-                                                                                                            {
+                                                                                                            if radix_select::select_mouse_open_is_within_click_slop(
+                                                                                                                down,
+                                                                                                                up.position,
+                                                                                                            ) {
                                                                                                                 return true;
                                                                                                             }
                                                                                                         }
@@ -1894,10 +1881,10 @@ fn select_impl<H: UiHost>(
                             }
                         }
 
-                        radix_dialog::modal_dialog_layer_children(
+                        radix_select::select_modal_layer_children(
                             cx,
                             open_for_barrier_children.clone(),
-                            barrier_options,
+                            dismiss_on_overlay_press,
                             vec![barrier_pointer_guard],
                             animated,
                         )
@@ -1915,7 +1902,7 @@ fn select_impl<H: UiHost>(
                 } else {
                     let open_for_overlay = open_for_trigger.clone();
                     let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-                        vec![radix_dialog::modal_barrier(
+                        vec![radix_select::select_modal_barrier(
                             cx,
                             open_for_overlay.clone(),
                             true,

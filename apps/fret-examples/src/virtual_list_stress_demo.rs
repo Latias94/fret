@@ -1,10 +1,9 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
-use fret_icons::IconRegistry;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext, run_app,
+    WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -354,23 +353,13 @@ pub fn run() -> anyhow::Result<()> {
 
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    app.with_global_mut(IconRegistry::default, |icons, _app| {
-        fret_icons_lucide::register_icons(icons);
-    });
 
-    let mut config = WinitRunnerConfig {
+    let config = WinitRunnerConfig {
         main_window_title: "fret-demo virtual_list_stress_demo".to_string(),
         main_window_size: winit::dpi::LogicalSize::new(980.0, 720.0),
         ..Default::default()
     };
 
-    if let Some(settings) = fret_app::SettingsFileV1::load_json_if_exists(".fret/settings.json")
-        .context("load .fret/settings.json")?
-    {
-        config.text_font_families.ui_sans = settings.fonts.ui_sans;
-        config.text_font_families.ui_serif = settings.fonts.ui_serif;
-        config.text_font_families.ui_mono = settings.fonts.ui_mono;
-    }
-
-    run_app(config, app, VirtualListStressDriver::default()).map_err(anyhow::Error::from)
+    crate::run_native_demo(config, app, VirtualListStressDriver::default())
+        .context("run virtual_list_stress_demo app")
 }

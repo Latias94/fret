@@ -3,15 +3,15 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextStyle,
-    TextWrap, Transform2D,
+    Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle, TextWrap,
+    Transform2D,
 };
 use fret_icons::ids;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     OpacityProps, Overflow, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
-    ScrollProps, SemanticsProps, SizeStyle, TextProps, VisualTransformProps,
+    ScrollProps, SizeStyle, TextProps, VisualTransformProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, LayoutDirection, Side};
@@ -22,7 +22,7 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::menu;
+use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::presence as radix_presence;
@@ -885,7 +885,12 @@ impl DropdownMenu {
             let trigger = trigger(cx);
             let trigger_id = trigger.id;
             menu::trigger::wire_open_on_arrow_keys(cx, trigger_id, self.open.clone());
-            let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+            let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
+            let overlay_root_name_for_controls: Arc<str> = Arc::from(overlay_root_name.clone());
+            let content_id_for_trigger =
+                menu::content_panel::menu_content_semantics_id(cx, &overlay_root_name);
+            let trigger =
+                menu::trigger::apply_menu_trigger_a11y(trigger, is_open, Some(content_id_for_trigger));
             let submenu_cfg = menu::sub::MenuSubmenuConfig::default();
             let submenu =
                 cx.with_root_name(&overlay_root_name, |cx| {
@@ -1034,35 +1039,39 @@ impl DropdownMenu {
 
                     let submenu_for_content = submenu.clone();
                     let submenu_for_panel = submenu.clone();
-                    let arrow_el = popper_arrow::diamond_arrow_element(
-                        cx,
-                        &layout,
-                        wrapper_insets,
-                        arrow_size,
-                        DiamondArrowStyle {
-                            bg,
-                            border: Some(border),
-                            border_width: Px(1.0),
-                        },
-                    );
 
-                    let content = cx.semantics(
-                        SemanticsProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
-                            },
-                            role: SemanticsRole::Menu,
-                            ..Default::default()
-                        },
+                    let content_layout = {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    };
+
+                    let (_content_id, content) = menu::content_panel::menu_content_semantics_with_id(
+                        cx,
+                        content_layout,
                         move |cx| {
                             vec![popper_content::popper_wrapper_at(
                                 cx,
                                 placed,
                                 wrapper_insets,
                                 move |cx| {
+                                    let arrow_el = arrow
+                                        .then(|| {
+                                            popper_arrow::diamond_arrow_element(
+                                                cx,
+                                                &layout,
+                                                wrapper_insets,
+                                                arrow_size,
+                                                DiamondArrowStyle {
+                                                    bg,
+                                                    border: Some(border),
+                                                    border_width: Px(1.0),
+                                                },
+                                            )
+                                        })
+                                        .flatten();
+
                                     let panel = menu::content_panel::menu_panel_container_at(
                                         cx,
                                         Rect::new(Point::new(extra_left, extra_top), placed.size),
@@ -1527,6 +1536,22 @@ impl DropdownMenu {
                                                                     }
                                                                 }
 
+                                                                let mut a11y =
+                                                                    menu::item::menu_item_a11y(
+                                                                        a11y_label,
+                                                                        has_submenu
+                                                                            .then_some(is_open_submenu),
+                                                                    );
+                                                                if has_submenu {
+                                                                    a11y.controls_element = Some(
+                                                                        menu::sub_content::submenu_content_semantics_id(
+                                                                            cx,
+                                                                            overlay_root_name_for_controls.as_ref(),
+                                                                            &value,
+                                                                        )
+                                                                        .0,
+                                                                    );
+                                                                }
                                                                 let props = PressableProps {
                                                                     layout: {
                                                                         let mut layout = LayoutStyle::default();
@@ -1537,12 +1562,7 @@ impl DropdownMenu {
                                                                     enabled: !disabled,
                                                                     focusable: !disabled,
                                                                     focus_ring: Some(ring),
-                                                                    a11y: menu::item::menu_item_a11y(
-                                                                        a11y_label,
-                                                                        has_submenu
-                                                                            .then_some(is_open_submenu),
-                                                                    )
-                                                                    .with_collection_position(
+                                                                    a11y: a11y.with_collection_position(
                                                                         collection_index,
                                                                         item_count,
                                                                     ),
@@ -1865,8 +1885,9 @@ impl DropdownMenu {
                                             };
 
                                             let submenu_models_for_panel = submenu_for_panel.clone();
-                                            let submenu_panel = menu::sub_content::submenu_panel_at(
+                                            let submenu_panel = menu::sub_content::submenu_panel_for_value_at(
                                                 cx,
+                                                open_value.clone(),
                                                 geometry.floating,
                                                 move |layout| ContainerProps {
                                                     layout,
@@ -2644,6 +2665,72 @@ mod tests {
         root
     }
 
+    fn render_frame_focusable_trigger_capture_id(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: Model<bool>,
+        trigger_id_out: Model<Option<fret_ui::elements::GlobalElementId>>,
+        entries: Vec<DropdownMenuEntry>,
+    ) -> (fret_core::NodeId, fret_ui::elements::GlobalElementId) {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let trigger_id_out_for_render = trigger_id_out.clone();
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "dropdown-menu-trigger",
+            move |cx| {
+                let trigger_id_out = trigger_id_out_for_render.clone();
+                vec![DropdownMenu::new(open).into_element(
+                    cx,
+                    move |cx| {
+                        cx.pressable_with_id_props(move |cx, _st, id| {
+                            let _ = cx
+                                .app
+                                .models_mut()
+                                .update(&trigger_id_out, |v| *v = Some(id));
+                            let props = PressableProps {
+                                layout: {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size.width = Length::Px(Px(120.0));
+                                    layout.size.height = Length::Px(Px(40.0));
+                                    layout
+                                },
+                                enabled: true,
+                                focusable: true,
+                                ..Default::default()
+                            };
+                            let children =
+                                vec![cx.container(ContainerProps::default(), |_cx| Vec::new())];
+                            (props, children)
+                        })
+                    },
+                    move |_cx| entries,
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+
+        let trigger_id = app
+            .models_mut()
+            .read(&trigger_id_out, |v| *v)
+            .ok()
+            .flatten()
+            .expect("captured trigger element id");
+        (root, trigger_id)
+    }
+
     fn render_frame_clipped_surface(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -3004,6 +3091,85 @@ mod tests {
                 .iter()
                 .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")),
             "menu items should render after ArrowDown opens the menu"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_trigger_controls_menu_content_when_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out = app.models_mut().insert(None);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        // First frame: capture a stable trigger element id.
+        let (_, trigger_element) = render_frame_focusable_trigger_capture_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        // Second frame: menu content is mounted.
+        let _ = render_frame_focusable_trigger_capture_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            trigger_id_out,
+            entries,
+        );
+
+        let trigger_node = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "dropdown-menu-trigger",
+            |cx| cx.node_for_element(trigger_element),
+        )
+        .expect("expected trigger element node");
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_sem = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == trigger_node)
+            .expect("trigger semantics node");
+
+        assert!(
+            trigger_sem.flags.expanded,
+            "expected trigger to expose expanded=true while open"
+        );
+
+        let menu_content = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Menu)
+            .expect("menu content semantics node");
+
+        assert!(
+            trigger_sem.controls.contains(&menu_content.id),
+            "expected trigger to control menu content; controls={:?} content={:?}",
+            trigger_sem.controls,
+            menu_content.id
         );
     }
 
@@ -3783,7 +3949,7 @@ mod tests {
         );
         assert_eq!(trigger_id3, trigger_id, "expected trigger id to be stable");
 
-        let overlay_root_name = OverlayController::popover_root_name(trigger_id);
+        let overlay_root_name = menu::dropdown_menu_root_name(trigger_id);
         let submenu_models = fret_ui::elements::with_element_cx(
             &mut app,
             window,
@@ -3799,6 +3965,39 @@ mod tests {
             .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("More"))
             .expect("More menu item after open");
         assert!(more.flags.expanded, "expected More to be expanded");
+        let open_value = app
+            .models_mut()
+            .read(&submenu_models.open_value, |v| v.clone())
+            .ok()
+            .flatten()
+            .expect("expected submenu open_value to be set");
+        let expected_submenu_content_element = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            &overlay_root_name,
+            |cx| {
+                menu::sub_content::submenu_content_semantics_id(cx, &overlay_root_name, &open_value)
+            },
+        );
+        let expected_submenu_content_node = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            &overlay_root_name,
+            |cx| cx.node_for_element(expected_submenu_content_element),
+        );
+        let Some(expected_submenu_content_node) = expected_submenu_content_node else {
+            panic!(
+                "expected submenu content element to be mounted; open_value={open_value:?} element={expected_submenu_content_element:?}",
+            );
+        };
+        assert!(
+            more.controls.contains(&expected_submenu_content_node),
+            "expected submenu trigger to advertise a controls relationship to its submenu content; controls={:?} expected={:?}",
+            more.controls,
+            expected_submenu_content_node
+        );
 
         let other = snap
             .nodes

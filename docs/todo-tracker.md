@@ -12,13 +12,13 @@ It complements (but does not replace) ADRs:
 - When an item is resolved, either delete it or move it into `docs/known-issues.md` (if it becomes a long-lived limitation).
 - Deep-dive gap/backlog notes live under `docs/archive/backlog/` to keep `docs/` entrypoints small.
 
-## P0 — IME / Text Input
+## P0 - IME / Text Input
 
 - **Preedit-first key arbitration end-to-end (runner + routing)**
   - Problem: composing IME sessions must not lose `Tab/Space/Enter/NumpadEnter/Escape/Arrows/Backspace/...` to focus traversal or global shortcuts.
   - ADRs: `docs/adr/0012-keyboard-ime-and-text-input.md`, `docs/adr/0043-shortcut-arbitration-pending-bindings-and-altgr.md`
   - Code: `crates/fret-launch/src/runner/mod.rs`, `crates/fret-ui/src/tree/mod.rs`, `crates/fret-ui/src/text_input/mod.rs`, `crates/fret-ui/src/text_area/mod.rs`
-  - Current: `crates/fret-ui/src/tree/mod.rs` defers shortcut matching for reserved keys and only falls back if the widget does not `stop_propagation`. `crates/fret-ui/src/text_input/mod.rs` and `crates/fret-ui/src/text_area/mod.rs` stop propagation for these keys while IME is composing (treat “composing” as `preedit` non-empty **or** preedit cursor metadata present).
+  - Current: `crates/fret-ui/src/tree/mod.rs` defers shortcut matching for reserved keys and only falls back if the widget does not `stop_propagation`. `crates/fret-ui/src/text_input/mod.rs` and `crates/fret-ui/src/text_area/mod.rs` stop propagation for these keys while IME is composing (treat "composing" as `preedit` non-empty **or** preedit cursor metadata present).
   - Current: regression tests exist for:
     - composing: reserved keys suppress traversal/shortcuts (`tab_focus_next_is_suppressed_during_ime_composition`, `reserved_shortcuts_are_suppressed_during_ime_composition`);
     - not composing: `Tab` focus traversal works (`tab_focus_next_runs_when_text_input_not_composing`).
@@ -34,7 +34,7 @@ It complements (but does not replace) ADRs:
   - ADRs: `docs/adr/0071-text-input-multiline-composition-contract.md`, `docs/adr/0045-text-geometry-queries-hit-testing-and-caret-metrics.md`, `docs/adr/0046-multiline-text-layout-and-geometry-queries.md`
   - Code: `crates/fret-ui/src/text_area/mod.rs`, `crates/fret-render/src/text.rs`
 
-## P0 — Fonts / Fallbacks / Missing Glyphs
+## P0 - Fonts / Fallbacks / Missing Glyphs
 
 - **Make the default font semantic (system UI font alias)**
   - Problem: relying on `FontId::default()` without a defined font family causes platform-dependent tofu and IME provisional-state breakage.
@@ -65,7 +65,7 @@ It complements (but does not replace) ADRs:
   - Option: add an **opt-in** "optical centering" mode for single-line control labels (compute ink bounds per shaped run and apply a small offset at paint time; cache the bounds in the prepared text blob).
   - TODO: add a deterministic regression harness in `apps/fret-examples/src/components_gallery.rs` that toggles a known-problem font and captures a centered-label alignment snapshot (baseline centering regressions only).
 
-## P0 – Themes / Token Consistency / shadcn Alignment
+## P0 - Themes / Token Consistency / shadcn Alignment
 
 - **Finish the token-only migration across the ecosystem**
   - Problem: theme drift occurs when some components read typed fields (`theme.colors.*` / `theme.metrics.*`) while others read semantic tokens (`theme.color_by_key("border")`).
@@ -73,7 +73,31 @@ It complements (but does not replace) ADRs:
   - Current: `ecosystem/fret-ui-shadcn` is now token-only and fails fast when required tokens are missing.
   - TODO: migrate `ecosystem/fret-ui-kit` primitives and demos to token-only; add a CI guard (e.g. grep-based test) that rejects new `theme.colors.*` / `theme.metrics.*` reads in shadcn-aligned crates.
 
-## P0 – Docking / Overlays / Viewport Capture
+- **Apply shadcn theme presets in shadcn demos by default**
+  - Problem: shadcn-aligned components look "off" if the global theme does not provide the expected semantic tokens (or is tuned for a different palette).
+  - Current: `apps/fret-examples/src/todo_demo.rs` applies `shadcn/new-york-v4/slate/light` on startup.
+  - TODO: decide whether this remains a per-demo choice or becomes a small helper in the bootstrap layer (without making `fret-bootstrap` depend on `fret-ui-shadcn`).
+
+## P0 - shadcn Components / Layout Correctness
+
+- **Tabs can trigger layout recursion / stack overflow**
+  - Symptom: `shadcn::Tabs` can crash the app at startup with `thread 'main' has overflowed its stack` (observed on Windows).
+  - Hypothesis: a `TabsContent` sizing recipe (`flex: 1` / "fill remaining space") can cause deep layout recursion when composed under parents without a definite main-axis size.
+  - ADRs: `docs/adr/0115-available-space-and-non-reentrant-measurement.md`, `docs/adr/0116-window-scoped-layout-engine-and-viewport-roots.md`
+  - Roadmap: `docs/layout-engine-refactor-roadmap.md`
+  - Code: `ecosystem/fret-ui-shadcn/src/tabs.rs`, `crates/fret-ui/src/declarative/host_widget/layout.rs`
+  - Current: `TabsContent` no longer uses a default `flex: 1` sizing recipe (to avoid runaway recursion in invalid compositions).
+  - Current: regression test added in `ecosystem/fret-ui-shadcn/src/tabs.rs` (`tabs_layout_regression_does_not_stack_overflow_in_auto_sized_column`).
+  - TODO: decide and document the sizing contract for `TabsContent` (when is "fill remaining space" valid, and how do we express it safely in the declarative layout engine?).
+
+- **Golden-path window close behavior**
+  - Symptom: clicking the window close button (X) does nothing in minimal `UiAppDriver` apps unless the app explicitly handles `Event::WindowCloseRequested`.
+  - ADRs: `docs/adr/0020-focus-and-command-routing.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`
+  - Code: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+  - Current: `UiAppDriver` closes windows by default on `Event::WindowCloseRequested`, with an opt-out for "unsaved changes" prompts.
+  - Current: documented in `docs/examples/todo-app-golden-path.md`.
+
+## P0 - Docking / Overlays / Viewport Capture
 
 - **Dock host keep-alive and early submission**
   - Goal: ensure dock hosts remain stable targets and do not "drop" docked content due to conditional submission.
@@ -98,7 +122,7 @@ It complements (but does not replace) ADRs:
   - ADRs: `docs/adr/0028-declarative-elements-and-element-state.md`, `docs/adr/0015-frame-lifecycle-and-submission-order.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
   - TODO: add a tiny regression harness in `fret-demo` and lock this down with a deterministic first-frame draw rule.
 
-## P1 — Accessibility (A11y) Conformance
+## P1 - Accessibility (A11y) Conformance
 
 - **Define minimum semantics for text fields (value/selection/composition)**
   - Goal: Narrator/AccessKit correctness for text editing and IME interaction.
@@ -109,7 +133,25 @@ It complements (but does not replace) ADRs:
   - Goal: decide viewport role/actions (focus, scroll, basic labeling) and validate reachability under modal barriers.
   - ADRs: `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`, `docs/adr/0007-viewport-surfaces.md`
 
-## P1 — Tooling / Regression Harness
+## P1 - Tooling / Regression Harness
+
+- **Hotpatch "golden path" validation loop (dx + smoke demo)**
+  - Goal: keep an always-working end-to-end Subsecond patch loop for native dev.
+  - ADRs: `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
+  - Tooling: `fretboard dev native --bin hotpatch_smoke_demo --hotpatch-dx`
+  - TODO: add a short checklist and expected log markers (devserver connect, patch applied, safe reload boundary).
+  - Bug: after `dx` reports `Hot-patching: ...`, the demo may crash with `thread 'main' has overflowed its stack`.
+  - Update: `subsecond::apply_patch` succeeds and the runner completes `hot_reload_all_windows`, but the next `ViewFn` call via `subsecond::HotFn` overflows the stack before returning.
+  - Diagnostics:
+    - `.fret/hotpatch_runner.log` confirms `apply_patch ok` + runner window reset.
+    - `.fret/hotpatch_bootstrap.log` confirms the `ViewFn` is mapped into the patch DLL (`mapped_module=...libhotpatch_smoke_demo-patch-*.dll`) and the crash happens during `hotfn.call(...)`.
+    - If `FRET_HOTPATCH_DIAG_BYTES=1` is set, the log captures the patched prologue:
+      - both old and new `view` start with a large stack frame (e.g. `mov eax, 0x30f0; call ...`), which implies stack probing (`__chkstk` / `__rust_probestack`-style) is involved;
+      - the patched call target is a ThinLink thunk in the patch DLL that jumps to an absolute address in the base EXE.
+  - Hypothesis: a Windows/ThinLink edge case around stack-probe thunks or other absolute-call stubs causes recursion inside patched code (manifesting as stack overflow).
+  - Workarounds:
+    - Set `FRET_HOTPATCH_VIEW_CALL_DIRECT=1` to bypass `HotFn` for the `ViewFn` call (prevents the crash but disables view-level hotpatching).
+    - Reduce stack usage in hotpatched functions (especially avoid large `vec![...]` literals of `AnyElement`/large value types that force stack probing) to see if the crash is tied to the probe thunk path.
 
 - **Add a repeatable IME regression checklist to the demo**
   - Goal: a short "manual test script" that can later be automated (Windows Japanese IME, caret placement, commit/cancel).
@@ -120,7 +162,7 @@ It complements (but does not replace) ADRs:
   - Goal: make it easy to run conformance tests consistently.
   - Docs: `docs/README.md`, `docs/adr/README.md`
 
-## P1 — Core Contract Drift
+## P1 - Core Contract Drift
 
 - **Formalize the vector path contract now that `SceneOp::Path` exists**
   - Problem: `fret-core::vector_path` and `SceneOp::Path` are implemented, but the contract is not yet locked at the ADR level (stroke joins/caps, AA expectations, transform interaction, caching keys).

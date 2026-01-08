@@ -1,52 +1,57 @@
 use fret_core::{AppWindowId, ImageColorSpace, ImageId};
 use fret_runtime::{EffectSink, GlobalsHost, TimeHost};
-use fret_ui_assets::image_asset_cache::{ImageAssetCache, ImageAssetKey};
-use fret_ui_kit::primitives::avatar::AvatarImageLoadingStatus;
 
-use crate::image_asset_state::{
-    ImageLoadingStatus, image_state_from_asset_cache, use_rgba8_image_state,
-};
+use crate::image_asset_cache::{ImageAssetCache, ImageAssetKey};
 
-/// Maps an `ImageAssetCache` entry to Radix-like avatar image loading outcomes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ImageLoadingStatus {
+    #[default]
+    Idle,
+    Loading,
+    Loaded,
+    Error,
+}
+
+/// Maps an `ImageAssetCache` entry to a generic image loading status.
 ///
 /// Mapping rules:
 /// - `Ready` => `Loaded` with `Some(ImageId)`
 /// - `Failed` => `Error` with `None`
 /// - `Pending` => `Loading` with `None`
 /// - unknown key => `Idle` with `None`
-pub fn avatar_image_state_from_asset_cache(
+pub fn image_state_from_asset_cache(
     cache: &ImageAssetCache,
     key: ImageAssetKey,
-) -> (Option<ImageId>, AvatarImageLoadingStatus) {
-    let (image, status) = image_state_from_asset_cache(cache, key);
-    let status = match status {
-        ImageLoadingStatus::Idle => AvatarImageLoadingStatus::Idle,
-        ImageLoadingStatus::Loading => AvatarImageLoadingStatus::Loading,
-        ImageLoadingStatus::Loaded => AvatarImageLoadingStatus::Loaded,
-        ImageLoadingStatus::Error => AvatarImageLoadingStatus::Error,
-    };
-    (image, status)
+) -> (Option<ImageId>, ImageLoadingStatus) {
+    if let Some(image) = cache.image(key) {
+        return (Some(image), ImageLoadingStatus::Loaded);
+    }
+    if cache.error(key).is_some() {
+        return (None, ImageLoadingStatus::Error);
+    }
+    if cache.image_meta(key).is_some() {
+        return (None, ImageLoadingStatus::Loading);
+    }
+    (None, ImageLoadingStatus::Idle)
 }
 
-/// Convenience wrapper around `ImageAssetCache::use_rgba8` that also reports a Radix-like
-/// avatar `imageLoadingStatus`.
-pub fn use_rgba8_avatar_image<H: GlobalsHost + TimeHost + EffectSink>(
+/// Convenience wrapper around `ImageAssetCache::use_rgba8` that also reports a generic
+/// `ImageLoadingStatus`.
+pub fn use_rgba8_image_state<H: GlobalsHost + TimeHost + EffectSink>(
     host: &mut H,
     window: AppWindowId,
     width: u32,
     height: u32,
     rgba: &[u8],
     color_space: ImageColorSpace,
-) -> (ImageAssetKey, Option<ImageId>, AvatarImageLoadingStatus) {
-    let (key, image, status) =
-        use_rgba8_image_state(host, window, width, height, rgba, color_space);
-    let status = match status {
-        ImageLoadingStatus::Idle => AvatarImageLoadingStatus::Idle,
-        ImageLoadingStatus::Loading => AvatarImageLoadingStatus::Loading,
-        ImageLoadingStatus::Loaded => AvatarImageLoadingStatus::Loaded,
-        ImageLoadingStatus::Error => AvatarImageLoadingStatus::Error,
-    };
-    (key, image, status)
+) -> (ImageAssetKey, Option<ImageId>, ImageLoadingStatus) {
+    use crate::image_asset_cache::ImageAssetCacheHostExt as _;
+
+    host.with_image_asset_cache(|cache, host| {
+        let (key, image) = cache.use_rgba8(host, window, width, height, rgba, color_space);
+        let (_, status) = image_state_from_asset_cache(cache, key);
+        (key, image, status)
+    })
 }
 
 #[cfg(test)]
@@ -161,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn avatar_image_state_maps_pending_ready_failed_and_missing() {
+    fn image_state_maps_pending_ready_failed_and_missing() {
         let mut host = TestHost::default();
         host.set_frame(1);
         let window = AppWindowId::default();
@@ -169,15 +174,15 @@ mod tests {
 
         let unknown = ImageAssetKey::from_rgba8(1, 1, ImageColorSpace::Srgb, &[0, 0, 0, 0]);
         assert_eq!(
-            avatar_image_state_from_asset_cache(&cache, unknown),
-            (None, AvatarImageLoadingStatus::Idle)
+            image_state_from_asset_cache(&cache, unknown),
+            (None, ImageLoadingStatus::Idle)
         );
 
         let rgba = [0u8; 4];
         let (key, _image) = cache.use_rgba8(&mut host, window, 1, 1, &rgba, ImageColorSpace::Srgb);
         assert_eq!(
-            avatar_image_state_from_asset_cache(&cache, key),
-            (None, AvatarImageLoadingStatus::Loading)
+            image_state_from_asset_cache(&cache, key),
+            (None, ImageLoadingStatus::Loading)
         );
 
         let token = extract_upload_token(&host.take_effects());
@@ -190,29 +195,29 @@ mod tests {
         };
         assert!(cache.handle_event(&mut host, window, &event));
         assert_eq!(
-            avatar_image_state_from_asset_cache(&cache, key),
-            (Some(image), AvatarImageLoadingStatus::Loaded)
+            image_state_from_asset_cache(&cache, key),
+            (Some(image), ImageLoadingStatus::Loaded)
         );
 
         let bad_rgba = [0u8; 3];
         let (bad_key, _bad_image) =
             cache.use_rgba8(&mut host, window, 1, 1, &bad_rgba, ImageColorSpace::Srgb);
         assert_eq!(
-            avatar_image_state_from_asset_cache(&cache, bad_key),
-            (None, AvatarImageLoadingStatus::Error)
+            image_state_from_asset_cache(&cache, bad_key),
+            (None, ImageLoadingStatus::Error)
         );
     }
 
     #[test]
-    fn use_rgba8_avatar_image_reports_loading_status() {
+    fn use_rgba8_image_state_reports_loading_status() {
         let mut host = TestHost::default();
         host.set_frame(1);
         let window = AppWindowId::default();
 
         let rgba = [0u8; 4];
         let (_key, image, status) =
-            use_rgba8_avatar_image(&mut host, window, 1, 1, &rgba, ImageColorSpace::Srgb);
+            use_rgba8_image_state(&mut host, window, 1, 1, &rgba, ImageColorSpace::Srgb);
         assert_eq!(image, None);
-        assert_eq!(status, AvatarImageLoadingStatus::Loading);
+        assert_eq!(status, ImageLoadingStatus::Loading);
     }
 }

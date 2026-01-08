@@ -16,7 +16,7 @@ Status legend:
   - APG: `docs/reference-stack-ui-behavior.md`
   - Radix/shadcn outcomes: Radix UI Primitives (upstream: <https://github.com/radix-ui/primitives>; pinned locally, see `docs/repo-ref.md`), `repo-ref/ui`
   - Placement: `repo-ref/floating-ui`
-  - Virtualization: `repo-ref/virtual` (TanStack Virtual)
+  - Virtualization: `repo-ref/virtualizer` (Rust engine; primary)
   - Ergonomics reference: `repo-ref/gpui-component`
 
 ## Contract coverage (current)
@@ -39,7 +39,7 @@ Status legend:
 
 These are the highest-leverage follow-ups before scaling component work.
 
-1) **TanStack Virtual alignment (virtualization contract)**
+1) **virtualizer alignment (virtualization contract)**
    - Done in runtime substrate (`VirtualItem`, `scrollMargin`, `gap`, `rangeExtractor`, stable-key size cache).
    - Remaining P1: lanes/masonry + more scroll strategies if needed.
 
@@ -53,4 +53,4 @@ This is how the tasks above map into the existing MVP queue:
 - MVP 63: unify scroll ergonomics (GPUI-like)
   - `ScrollHandle` contract completion and shared scroll-to vocabulary
 - MVP 56 / 50: unify virtualization around composable declarative rows
-  - TanStack Virtual alignment + stable keys (ADR 0070) + shared selection/scroll-to patterns
+  - virtualizer alignment + stable keys (ADR 0070) + shared selection/scroll-to patterns
