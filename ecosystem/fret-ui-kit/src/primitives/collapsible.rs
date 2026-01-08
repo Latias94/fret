@@ -167,6 +167,46 @@ pub fn collapsible_height_wrapper_refinement(
     )
 }
 
+pub use crate::declarative::collapsible_motion::MeasuredHeightMotionOutput;
+
+/// Computes a measured-height motion plan for the current element root.
+///
+/// This is a Radix-aligned outcome for components that animate open/close using measured content
+/// height (Collapsible, Accordion items, etc.).
+#[allow(clippy::too_many_arguments)]
+pub fn measured_height_motion_for_root<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    force_mount: bool,
+    require_measurement_for_close: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    ease: fn(f32) -> f32,
+) -> MeasuredHeightMotionOutput {
+    crate::declarative::collapsible_motion::measured_height_motion_for_root(
+        cx,
+        open,
+        force_mount,
+        require_measurement_for_close,
+        open_ticks,
+        close_ticks,
+        ease,
+    )
+}
+
+/// Updates cached measured size/height for a motion plan based on the wrapper element id.
+pub fn update_measured_for_motion<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    motion: MeasuredHeightMotionOutput,
+    wrapper_element_id: GlobalElementId,
+) -> Size {
+    crate::declarative::collapsible_motion::update_measured_for_motion(
+        cx,
+        motion,
+        wrapper_element_id,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

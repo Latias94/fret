@@ -37,8 +37,8 @@ while the shadcn wrapper keeps a builder-style ergonomic API.
 - Pass: Arrow-key roving navigation is implemented via `RovingFlex` + `cx.roving_nav_apg()`.
 - Partial: Hover underline styling is intentionally simplified compared to the upstream Tailwind
   implementation.
-- Partial: Content open/close animations use a presence-driven cached-height clip (best-effort; no
-  CSS variables yet).
+- Pass: Content open/close animations are driven by a cached measured height + presence timeline,
+  matching Radix/shadcn's outcomes (without CSS variables).
   - Shared helper: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs` (delegates to `declarative/collapsible_motion.rs`)
 
 ### Visual defaults (shadcn parity)

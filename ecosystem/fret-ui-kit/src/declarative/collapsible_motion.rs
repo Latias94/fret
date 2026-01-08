@@ -13,6 +13,34 @@ use fret_ui::{ElementContext, UiHost};
 use crate::headless::transition::TransitionOutput;
 use crate::{LayoutRefinement, MetricRef, Space};
 
+/// Output describing how to render a collapsible-style measured-height wrapper for the current
+/// element root.
+///
+/// This helper is usable by any "open/close with height animation" component (Collapsible,
+/// Accordion items, etc.). It does not build elements; it only describes the wrapper/refinement and
+/// how to update cached measurements once an element id is known.
+#[derive(Debug, Clone)]
+pub struct MeasuredHeightMotionOutput {
+    pub state_id: GlobalElementId,
+    /// The requested open state (source of truth).
+    pub open: bool,
+    /// Whether the transition should be driven as open this frame.
+    ///
+    /// When there is no cached measurement, this is `false` even if `open=true` so that the first
+    /// open can mount an off-flow measurement wrapper before animating.
+    pub open_for_motion: bool,
+    /// Whether an off-flow measurement pass is required this frame.
+    pub wants_measurement: bool,
+    /// Transition timeline output for `open_for_motion`.
+    pub transition: TransitionOutput,
+    /// Whether the content wrapper should be present in the element tree.
+    pub should_render: bool,
+    /// Layout refinement for the wrapper (either a clipped-height wrapper or a measurement wrapper).
+    pub wrapper_refinement: LayoutRefinement,
+    /// Opacity to apply to the wrapper subtree (0.0 for measurement; 1.0 for visible content).
+    pub wrapper_opacity: f32,
+}
+
 #[derive(Debug, Clone, Copy)]
 struct MeasuredSizeState {
     last: Size,
@@ -157,6 +185,97 @@ pub fn collapsible_height_wrapper_refinement(
     }
 
     (should_render, wrapper)
+}
+
+/// Computes a measured-height motion plan for the current element root.
+///
+/// Call sites should:
+/// 1. Call this during rendering to obtain the wrapper refinement.
+/// 2. Render a wrapper element with a stable id (e.g. using `cx.keyed(...)`).
+/// 3. Call `update_measured_for_motion(...)` with the wrapper element id to update cached size.
+#[allow(clippy::too_many_arguments)]
+pub fn measured_height_motion_for_root<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: bool,
+    force_mount: bool,
+    require_measurement_for_close: bool,
+    open_ticks: u64,
+    close_ticks: u64,
+    ease: fn(f32) -> f32,
+) -> MeasuredHeightMotionOutput {
+    let state_id = cx.root_id();
+    let last_height = last_measured_height_for(cx, state_id);
+    let has_measurement = last_height.0 > 0.0;
+    let wants_measurement = open && !has_measurement;
+    let open_for_motion = open && has_measurement;
+
+    let transition = crate::declarative::transition::drive_transition_with_durations_and_easing(
+        cx,
+        open_for_motion,
+        open_ticks,
+        close_ticks,
+        ease,
+    );
+
+    if wants_measurement {
+        return MeasuredHeightMotionOutput {
+            state_id,
+            open,
+            open_for_motion,
+            wants_measurement,
+            transition,
+            should_render: true,
+            wrapper_refinement: collapsible_measurement_wrapper_refinement(),
+            wrapper_opacity: 0.0,
+        };
+    }
+
+    let (should_render, wrapper_refinement) = collapsible_height_wrapper_refinement(
+        open_for_motion,
+        force_mount,
+        require_measurement_for_close,
+        transition,
+        last_height,
+    );
+
+    MeasuredHeightMotionOutput {
+        state_id,
+        open,
+        open_for_motion,
+        wants_measurement,
+        transition,
+        should_render,
+        wrapper_refinement,
+        wrapper_opacity: 1.0,
+    }
+}
+
+/// Updates the cached measured size/height based on the wrapper element id.
+///
+/// When `motion.wants_measurement=true`, the wrapper is expected to be an off-flow measurement
+/// wrapper.
+pub fn update_measured_for_motion<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    motion: MeasuredHeightMotionOutput,
+    wrapper_element_id: GlobalElementId,
+) -> Size {
+    if motion.wants_measurement {
+        return update_measured_size_from_element_if_open_for(
+            cx,
+            motion.state_id,
+            wrapper_element_id,
+            motion.open,
+        );
+    }
+
+    let _ = update_measured_height_if_open_for(
+        cx,
+        motion.state_id,
+        wrapper_element_id,
+        motion.open,
+        motion.transition.animating,
+    );
+    last_measured_size_for(cx, motion.state_id)
 }
 
 #[cfg(test)]

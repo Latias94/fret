@@ -6,13 +6,13 @@ use fret_core::{
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, PressableProps,
-    RovingFlexProps, RovingFocusProps, RowProps, StackProps, TextProps, VisualTransformProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, MainAlign, OpacityProps,
+    PressableProps, RovingFlexProps, RovingFocusProps, RowProps, TextProps,
+    VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::transition;
 use fret_ui_kit::primitives::accordion as radix_accordion;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
@@ -606,45 +606,43 @@ impl Accordion {
                                 let mut children = Vec::new();
                                 children.push(trigger);
 
-                                let motion = transition::drive_transition_with_durations_and_easing(
+                                let motion = radix_collapsible::measured_height_motion_for_root(
                                     cx,
                                     is_open,
+                                    false,
+                                    true,
                                     8,
                                     8,
                                     overlay_motion::shadcn_ease,
                                 );
-                                let state_id = cx.root_id();
-                                let last_height =
-                                    radix_collapsible::last_measured_height_for(cx, state_id);
-                                let (should_render, wrapper) =
-                                    radix_collapsible::collapsible_height_wrapper_refinement(
-                                        is_open,
-                                        false,
-                                        true,
-                                        motion,
-                                        last_height,
-                                    );
 
-                                if should_render {
-                                    let wrapper_layout = decl_style::layout_style(&theme, wrapper);
+                                if motion.should_render {
+                                    let wrapper_refinement = motion.wrapper_refinement.clone();
+                                    let wrapper_layout =
+                                        decl_style::layout_style(&theme, wrapper_refinement);
+                                    let opacity = motion.wrapper_opacity;
 
                                     let content_el = content.clone().into_element(cx);
                                     let wrapper_el = cx.keyed("accordion-content", |cx| {
-                                        cx.stack_props(
-                                            StackProps {
+                                        cx.container(
+                                            ContainerProps {
                                                 layout: wrapper_layout,
+                                                ..Default::default()
                                             },
-                                            move |_cx| vec![content_el],
+                                            move |cx| {
+                                                vec![cx.opacity_props(
+                                                    OpacityProps {
+                                                        layout: LayoutStyle::default(),
+                                                        opacity,
+                                                    },
+                                                    move |_cx| vec![content_el],
+                                                )]
+                                            },
                                         )
                                     });
                                     let wrapper_id = wrapper_el.id;
-
-                                    let _ = radix_collapsible::update_measured_height_if_open_for(
-                                        cx,
-                                        state_id,
-                                        wrapper_id,
-                                        is_open,
-                                        motion.animating,
+                                    let _ = radix_collapsible::update_measured_for_motion(
+                                        cx, motion, wrapper_id,
                                     );
 
                                     children.push(wrapper_el);
