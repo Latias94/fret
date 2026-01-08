@@ -471,6 +471,16 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn take_layout_engine(&mut self) -> crate::layout_engine::TaffyLayoutEngine {
+        std::mem::take(&mut self.layout_engine)
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn put_layout_engine(&mut self, engine: crate::layout_engine::TaffyLayoutEngine) {
+        self.layout_engine = engine;
+    }
+
     fn set_ime_allowed(&mut self, app: &mut H, enabled: bool) {
         if self.ime_allowed == enabled {
             return;

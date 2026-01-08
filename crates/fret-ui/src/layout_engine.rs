@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use fret_core::{FrameId, NodeId, Point, Px, Rect, Size};
 use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
 
-use crate::layout_constraints::{AvailableSpace, LayoutSize};
+use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct NodeContext {
@@ -19,6 +19,7 @@ pub struct TaffyLayoutEngine {
     tree: TaffyTree<NodeContext>,
     node_to_layout: HashMap<NodeId, LayoutId>,
     layout_to_node: HashMap<LayoutId, NodeId>,
+    styles: HashMap<NodeId, taffy::Style>,
     children: HashMap<NodeId, Vec<NodeId>>,
     seen: HashSet<NodeId>,
     frame_id: Option<FrameId>,
@@ -31,6 +32,7 @@ impl Default for TaffyLayoutEngine {
             tree: TaffyTree::new(),
             node_to_layout: HashMap::new(),
             layout_to_node: HashMap::new(),
+            styles: HashMap::new(),
             children: HashMap::new(),
             seen: HashSet::new(),
             frame_id: None,
@@ -61,6 +63,7 @@ impl TaffyLayoutEngine {
                 continue;
             };
             self.layout_to_node.remove(&layout_id);
+            self.styles.remove(&node);
             self.children.remove(&node);
             let _ = self.tree.remove(layout_id.0);
         }
@@ -97,6 +100,33 @@ impl TaffyLayoutEngine {
         id
     }
 
+    pub fn set_measured(&mut self, node: NodeId, measured: bool) {
+        let id = self.request_layout_node(node).0;
+        let ctx = self
+            .tree
+            .get_node_context(id)
+            .copied()
+            .unwrap_or(NodeContext { node, measured });
+        if ctx.node == node && ctx.measured == measured {
+            return;
+        }
+        let _ = self
+            .tree
+            .set_node_context(id, Some(NodeContext { node, measured }));
+        let _ = self.tree.mark_dirty(id);
+    }
+
+    pub fn set_style(&mut self, node: NodeId, style: taffy::Style) {
+        let id = self.request_layout_node(node).0;
+        if self.styles.get(&node) == Some(&style) {
+            return;
+        }
+        if self.tree.set_style(id, style.clone()).is_ok() {
+            self.styles.insert(node, style);
+            let _ = self.tree.mark_dirty(id);
+        }
+    }
+
     pub fn set_children(&mut self, node: NodeId, children: &[NodeId]) {
         let parent = self.request_layout_node(node).0;
 
@@ -121,7 +151,29 @@ impl TaffyLayoutEngine {
         }
     }
 
-    pub fn compute_root(&mut self, root: LayoutId, available: LayoutSize<AvailableSpace>) {
+    pub fn compute_root_with_measure(
+        &mut self,
+        root: LayoutId,
+        available: LayoutSize<AvailableSpace>,
+        mut measure: impl FnMut(NodeId, LayoutConstraints) -> Size,
+    ) {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+        struct MeasureKey {
+            node: NodeId,
+            known_w: Option<u32>,
+            known_h: Option<u32>,
+            avail_w: (u8, u32),
+            avail_h: (u8, u32),
+        }
+
+        fn avail_key(avail: taffy::style::AvailableSpace) -> (u8, u32) {
+            match avail {
+                taffy::style::AvailableSpace::Definite(v) => (0, v.to_bits()),
+                taffy::style::AvailableSpace::MinContent => (1, 0),
+                taffy::style::AvailableSpace::MaxContent => (2, 0),
+            }
+        }
+
         let started = Instant::now();
 
         let available = taffy::geometry::Size {
@@ -137,16 +189,62 @@ impl TaffyLayoutEngine {
             },
         };
 
+        let mut measure_cache: HashMap<MeasureKey, taffy::geometry::Size<f32>> = HashMap::new();
         self.tree
-            .compute_layout_with_measure(root.0, available, |_known, _avail, _id, ctx, _style| {
-                if ctx.is_some_and(|ctx| ctx.measured) {
-                    // P2: measurement wiring lands after the two-phase protocol is in place.
+            .compute_layout_with_measure(root.0, available, |known, avail, _id, ctx, _style| {
+                let Some(ctx) = ctx else {
+                    return taffy::geometry::Size::default();
+                };
+                if !ctx.measured {
+                    return taffy::geometry::Size::default();
                 }
-                taffy::geometry::Size::default()
+
+                let key = MeasureKey {
+                    node: ctx.node,
+                    known_w: known.width.map(|v| v.to_bits()),
+                    known_h: known.height.map(|v| v.to_bits()),
+                    avail_w: avail_key(avail.width),
+                    avail_h: avail_key(avail.height),
+                };
+                if let Some(size) = measure_cache.get(&key) {
+                    return *size;
+                }
+
+                let constraints = LayoutConstraints::new(
+                    LayoutSize::new(known.width.map(Px), known.height.map(Px)),
+                    LayoutSize::new(
+                        match avail.width {
+                            taffy::style::AvailableSpace::Definite(w) => {
+                                AvailableSpace::Definite(Px(w))
+                            }
+                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
+                            taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
+                        },
+                        match avail.height {
+                            taffy::style::AvailableSpace::Definite(h) => {
+                                AvailableSpace::Definite(Px(h))
+                            }
+                            taffy::style::AvailableSpace::MinContent => AvailableSpace::MinContent,
+                            taffy::style::AvailableSpace::MaxContent => AvailableSpace::MaxContent,
+                        },
+                    ),
+                );
+
+                let s = measure(ctx.node, constraints);
+                let out = taffy::geometry::Size {
+                    width: s.width.0,
+                    height: s.height.0,
+                };
+                measure_cache.insert(key, out);
+                out
             })
             .ok();
 
         self.last_solve_time += started.elapsed();
+    }
+
+    pub fn compute_root(&mut self, root: LayoutId, available: LayoutSize<AvailableSpace>) {
+        self.compute_root_with_measure(root, available, |_node, _constraints| Size::default());
     }
 
     pub fn layout_rect(&self, id: LayoutId) -> Rect {
