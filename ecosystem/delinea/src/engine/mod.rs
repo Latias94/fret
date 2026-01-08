@@ -20,6 +20,7 @@ pub mod lod;
 pub mod model;
 pub mod stages;
 pub mod window;
+pub mod window_policy;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,3 @@
-use crate::engine::window::DataWindowX;
-
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct DataBounds {
     pub x_min: f64,
@@ -38,18 +36,27 @@ pub struct BoundsCursor {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct BoundsAccum {
+    pub x_min: f64,
+    pub x_max: f64,
     pub y_min: f64,
     pub y_max: f64,
 }
 
 impl BoundsAccum {
     pub fn reset(&mut self) {
+        self.x_min = f64::INFINITY;
+        self.x_max = f64::NEG_INFINITY;
         self.y_min = f64::INFINITY;
         self.y_max = f64::NEG_INFINITY;
     }
 
     pub fn is_valid(&self) -> bool {
-        self.y_min.is_finite() && self.y_max.is_finite() && self.y_max > self.y_min
+        self.x_min.is_finite()
+            && self.x_max.is_finite()
+            && self.y_min.is_finite()
+            && self.y_max.is_finite()
+            && self.x_max > self.x_min
+            && self.y_max > self.y_min
     }
 }
 
@@ -59,7 +66,7 @@ pub fn compute_bounds_step(
     x: &[f64],
     y: &[f64],
     row_range: core::ops::Range<usize>,
-    window_x: Option<DataWindowX>,
+    x_filter: crate::engine::window_policy::AxisFilter1D,
     max_points_to_process: usize,
 ) -> Option<bool> {
     let len = x.len().min(y.len());
@@ -81,13 +88,13 @@ pub fn compute_bounds_step(
             continue;
         }
 
-        if let Some(w) = window_x
-            && (xi < w.min || xi > w.max)
-        {
+        if !x_filter.contains(xi) {
             continue;
         }
 
         cursor.saw_any = true;
+        accum.x_min = accum.x_min.min(xi);
+        accum.x_max = accum.x_max.max(xi);
         accum.y_min = accum.y_min.min(yi);
         accum.y_max = accum.y_max.max(yi);
     }
@@ -96,22 +103,13 @@ pub fn compute_bounds_step(
     Some(cursor.next_index >= end_limit)
 }
 
-pub fn finalize_bounds(accum: &BoundsAccum, window_x: Option<DataWindowX>) -> Option<DataBounds> {
-    if !accum.y_min.is_finite() || !accum.y_max.is_finite() {
+pub fn finalize_bounds(accum: &BoundsAccum) -> Option<DataBounds> {
+    if !accum.is_valid() {
         return None;
     }
-
-    let (x_min, x_max) = if let Some(mut w) = window_x {
-        w.clamp_non_degenerate();
-        (w.min, w.max)
-    } else {
-        // Caller should set x bounds from a separate pass if needed.
-        (0.0, 1.0)
-    };
-
     Some(DataBounds {
-        x_min,
-        x_max,
+        x_min: accum.x_min,
+        x_max: accum.x_max,
         y_min: accum.y_min,
         y_max: accum.y_max,
     })

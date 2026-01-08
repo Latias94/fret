@@ -620,3 +620,115 @@ fn set_series_visible_hides_marks() {
         "expected no mark indices after hiding the series"
     );
 }
+
+#[test]
+fn axis_lock_min_filters_bounds_to_prevent_y_compression() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                kind: AxisKind::X,
+                grid: grid_id,
+                range: Some(AxisRange::LockMin { min: 200.0 }),
+            },
+            AxisSpec {
+                id: y_axis,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                range: None,
+            },
+        ],
+        series: vec![SeriesSpec {
+            id: series_id,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let n = 512usize;
+    let x: Vec<f64> = (0..n).map(|i| i as f64).collect();
+    let y: Vec<f64> = (0..n)
+        .map(|i| {
+            if i < 200 {
+                1000.0
+            } else if i % 2 == 0 {
+                1.0
+            } else {
+                -1.0
+            }
+        })
+        .collect();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(x));
+    table.push_column(Column::F64(y));
+    engine.datasets_mut().datasets.push((dataset_id, table));
+
+    let mut measurer = NullTextMeasurer::default();
+    for _ in 0..16 {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+
+    let points = &engine.output().marks.arena.points;
+    assert!(!points.is_empty(), "expected marks to contain points");
+
+    let min_y = points
+        .iter()
+        .map(|p| p.y.0)
+        .fold(f32::INFINITY, |a, b| a.min(b));
+    let max_y = points
+        .iter()
+        .map(|p| p.y.0)
+        .fold(f32::NEG_INFINITY, |a, b| a.max(b));
+
+    assert!(
+        min_y < 40.0,
+        "expected some points to reach near the top when y-bounds are filtered by the x lock"
+    );
+    assert!(
+        max_y > 200.0,
+        "expected some points to reach near the bottom when y-bounds are filtered by the x lock"
+    );
+}

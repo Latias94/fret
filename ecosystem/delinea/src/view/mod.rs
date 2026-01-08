@@ -2,8 +2,8 @@ use crate::data::{DataTable, DatasetStore};
 use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
 use crate::engine::window::DataWindowX;
+use crate::engine::window_policy::axis_filter_1d;
 use crate::ids::{AxisId, DatasetId, Revision, SeriesId};
-use crate::spec::AxisRange;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -142,14 +142,9 @@ impl ViewState {
                 .get(&series.x_axis)
                 .map(|a| a.range)
                 .unwrap_or_default();
-            let window = axis_fixed_window_x(x_axis_range)
-                .or(state.data_window_x.get(&series.x_axis).copied())
-                .map(|w| w.apply_constraints(x_axis_range.locked_min(), x_axis_range.locked_max()));
-            let row_range = if let Some(window) = window {
-                row_range_for_x_window(x, base_range, window)
-            } else {
-                base_range
-            };
+            let state_window = state.data_window_x.get(&series.x_axis).copied();
+            let x_filter = axis_filter_1d(x_axis_range, state_window);
+            let row_range = row_range_for_x_filter(x, base_range, x_filter);
 
             self.series.push(SeriesView {
                 series: *series_id,
@@ -186,15 +181,21 @@ pub fn table_row_range<'a>(
     range.start..range.end
 }
 
-fn axis_fixed_window_x(range: AxisRange) -> Option<DataWindowX> {
-    match range {
-        AxisRange::Fixed { min, max } => {
-            let mut w = DataWindowX { min, max };
-            w.clamp_non_degenerate();
-            Some(w)
-        }
-        _ => None,
+fn row_range_for_x_filter(
+    values: &[f64],
+    base: RowRange,
+    filter: crate::engine::window_policy::AxisFilter1D,
+) -> RowRange {
+    if let Some(window) = filter.as_window() {
+        return row_range_for_x_window(values, base, window);
     }
+    if let Some(min) = filter.min {
+        return row_range_for_x_min(values, base, min);
+    }
+    if let Some(max) = filter.max {
+        return row_range_for_x_max(values, base, max);
+    }
+    base
 }
 
 fn row_range_for_x_window(values: &[f64], base: RowRange, window: DataWindowX) -> RowRange {
@@ -267,6 +268,146 @@ fn is_probably_monotonic(values: &[f64], ascending: bool) -> bool {
         prev = cur;
     }
     true
+}
+
+fn row_range_for_x_min(values: &[f64], base: RowRange, min: f64) -> RowRange {
+    let mut base = base;
+    base.clamp_to_len(values.len());
+    if base.is_empty() || !min.is_finite() {
+        return base;
+    }
+
+    let slice = &values[base.start..base.end];
+    let Some(first) = slice.first().copied() else {
+        return base;
+    };
+    let Some(last) = slice.last().copied() else {
+        return base;
+    };
+    if !first.is_finite() || !last.is_finite() {
+        return row_range_for_x_min_linear(values, base, min);
+    }
+
+    let ascending = first <= last;
+    if !is_probably_monotonic(slice, ascending) {
+        return row_range_for_x_min_linear(values, base, min);
+    }
+
+    if ascending {
+        let lo = slice.partition_point(|&v| v < min);
+        RowRange {
+            start: base.start + lo,
+            end: base.end,
+        }
+    } else {
+        let hi = slice.partition_point(|&v| v >= min);
+        RowRange {
+            start: base.start,
+            end: base.start + hi,
+        }
+    }
+}
+
+fn row_range_for_x_max(values: &[f64], base: RowRange, max: f64) -> RowRange {
+    let mut base = base;
+    base.clamp_to_len(values.len());
+    if base.is_empty() || !max.is_finite() {
+        return base;
+    }
+
+    let slice = &values[base.start..base.end];
+    let Some(first) = slice.first().copied() else {
+        return base;
+    };
+    let Some(last) = slice.last().copied() else {
+        return base;
+    };
+    if !first.is_finite() || !last.is_finite() {
+        return row_range_for_x_max_linear(values, base, max);
+    }
+
+    let ascending = first <= last;
+    if !is_probably_monotonic(slice, ascending) {
+        return row_range_for_x_max_linear(values, base, max);
+    }
+
+    if ascending {
+        let hi = slice.partition_point(|&v| v <= max);
+        RowRange {
+            start: base.start,
+            end: base.start + hi,
+        }
+    } else {
+        let lo = slice.partition_point(|&v| v > max);
+        RowRange {
+            start: base.start + lo,
+            end: base.end,
+        }
+    }
+}
+
+fn row_range_for_x_min_linear(values: &[f64], base: RowRange, min: f64) -> RowRange {
+    let mut base = base;
+    base.clamp_to_len(values.len());
+    if base.is_empty() || !min.is_finite() {
+        return base;
+    }
+
+    let mut first: Option<usize> = None;
+    let mut last: Option<usize> = None;
+    for i in base.start..base.end {
+        let v = values.get(i).copied().unwrap_or(f64::NAN);
+        if !v.is_finite() {
+            continue;
+        }
+        if v >= min {
+            first.get_or_insert(i);
+            last = Some(i);
+        }
+    }
+
+    match (first, last) {
+        (Some(a), Some(b)) if b >= a => RowRange {
+            start: a,
+            end: b + 1,
+        },
+        _ => RowRange {
+            start: base.start,
+            end: base.start,
+        },
+    }
+}
+
+fn row_range_for_x_max_linear(values: &[f64], base: RowRange, max: f64) -> RowRange {
+    let mut base = base;
+    base.clamp_to_len(values.len());
+    if base.is_empty() || !max.is_finite() {
+        return base;
+    }
+
+    let mut first: Option<usize> = None;
+    let mut last: Option<usize> = None;
+    for i in base.start..base.end {
+        let v = values.get(i).copied().unwrap_or(f64::NAN);
+        if !v.is_finite() {
+            continue;
+        }
+        if v <= max {
+            first.get_or_insert(i);
+            last = Some(i);
+        }
+    }
+
+    match (first, last) {
+        (Some(a), Some(b)) if b >= a => RowRange {
+            start: a,
+            end: b + 1,
+        },
+        _ => RowRange {
+            start: base.start,
+            end: base.start,
+        },
+    }
 }
 
 fn row_range_for_x_window_linear(values: &[f64], base: RowRange, window: DataWindowX) -> RowRange {
