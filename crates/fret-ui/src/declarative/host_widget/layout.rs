@@ -907,9 +907,31 @@ impl ElementHostWidget {
                 clamp_to_constraints(Size::new(Px(16.0), Px(16.0)), props.layout, cx.available)
             }
             ElementInstance::PointerRegion(props) => {
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
                 self.layout_positioned_container_impl(cx, window, props.layout)
             }
             ElementInstance::HoverRegion(props) => {
+                #[cfg(feature = "layout-engine-v2")]
+                if cx.children.len() == 1 {
+                    let child = cx.children[0];
+                    let child_style = layout_style_for_node(cx.app, window, child);
+                    if child_style.position == crate::element::PositionStyle::Static
+                        && let Some(bounds) = cx.layout_engine_child_bounds(child)
+                    {
+                        let _ = cx.layout_in(child, bounds);
+                        return cx.available;
+                    }
+                }
                 self.layout_hover_region_impl(cx, window, props.layout)
             }
             ElementInstance::WheelRegion(props) => {
