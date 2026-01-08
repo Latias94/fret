@@ -75,6 +75,7 @@ impl Renderer {
             self.scene_encoding_cache_key = Some(key);
             encoding
         };
+        let plan = RenderPlan::single_scene(wgpu::LoadOp::Clear(clear.0));
 
         self.ensure_uniform_capacity(device, encoding.uniforms.len());
         let uniform_size = std::mem::size_of::<ViewportUniform>() as u64;
@@ -144,469 +145,550 @@ impl Renderer {
             label: Some("fret renderer encoder"),
         });
 
-        {
-            enum ActivePipeline {
-                None,
-                Quad,
-                Viewport,
-                TextMask,
-                TextColor,
-                Mask,
-                Composite,
-                Path,
-            }
-
-            let quad_pipeline = self
-                .quad_pipeline
-                .as_ref()
-                .expect("quad pipeline must exist");
-            let viewport_pipeline = self
-                .viewport_pipeline
-                .as_ref()
-                .expect("viewport pipeline must exist");
-            let text_pipeline = self
-                .text_pipeline
-                .as_ref()
-                .expect("text pipeline must exist");
-            let text_color_pipeline = self
-                .text_color_pipeline
-                .as_ref()
-                .expect("text color pipeline must exist");
-            let mask_pipeline = self
-                .mask_pipeline
-                .as_ref()
-                .expect("mask pipeline must exist");
-            let composite_pipeline = self
-                .composite_pipeline
-                .as_ref()
-                .expect("composite pipeline must exist");
-            let path_pipeline = self
-                .path_pipeline
-                .as_ref()
-                .expect("path pipeline must exist");
-            let path_msaa_pipeline = self.path_msaa_pipeline.as_ref();
-
-            let mut active_pipeline = ActivePipeline::None;
-
-            fn begin_main_pass<'a>(
-                encoder: &'a mut wgpu::CommandEncoder,
-                target_view: &'a wgpu::TextureView,
-                load: wgpu::LoadOp<wgpu::Color>,
-            ) -> wgpu::RenderPass<'a> {
-                encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("fret renderer pass"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: target_view,
-                        depth_slice: None,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load,
-                            store: wgpu::StoreOp::Store,
-                        },
-                    })],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    multiview_mask: None,
-                })
-            }
-
-            let mut pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Clear(clear.0));
-            let mut active_uniform_offset: Option<u32> = None;
-
-            let mut i = 0usize;
-            while i < encoding.ordered_draws.len() {
-                let item = &encoding.ordered_draws[i];
-
-                if let OrderedDraw::Path(first) = item
-                    && path_samples > 1
-                {
-                    let mut union = first.scissor;
-                    let batch_uniform_index = first.uniform_index;
-                    let mut end = i + 1;
-                    while end < encoding.ordered_draws.len() {
-                        match &encoding.ordered_draws[end] {
-                            OrderedDraw::Path(d) if d.uniform_index == batch_uniform_index => {
-                                union = union_scissor(union, d.scissor);
-                                end += 1;
-                            }
-                            _ => break,
-                        }
-                    }
-
-                    // Render the path batch to an intermediate MSAA target, then composite into the
-                    // main pass to preserve strict op ordering.
-                    drop(pass);
-
-                    let Some(intermediate) = &self.path_intermediate else {
-                        pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Load);
-                        i = end;
-                        continue;
-                    };
+        for planned_pass in &plan.passes {
+            match planned_pass {
+                RenderPlanPass::Scene(scene_pass) => {
+                    debug_assert_eq!(scene_pass.segment.0, 0);
+                    debug_assert!(matches!(scene_pass.target, PlanTarget::Output));
+                    let load = scene_pass.load;
 
                     {
-                        let Some(path_msaa_pipeline) = path_msaa_pipeline else {
-                            pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Load);
-                            i = end;
-                            continue;
-                        };
+                        enum ActivePipeline {
+                            None,
+                            Quad,
+                            Viewport,
+                            TextMask,
+                            TextColor,
+                            Mask,
+                            Composite,
+                            Path,
+                        }
 
-                        let mut path_pass =
+                        let quad_pipeline = self
+                            .quad_pipeline
+                            .as_ref()
+                            .expect("quad pipeline must exist");
+                        let viewport_pipeline = self
+                            .viewport_pipeline
+                            .as_ref()
+                            .expect("viewport pipeline must exist");
+                        let text_pipeline = self
+                            .text_pipeline
+                            .as_ref()
+                            .expect("text pipeline must exist");
+                        let text_color_pipeline = self
+                            .text_color_pipeline
+                            .as_ref()
+                            .expect("text color pipeline must exist");
+                        let mask_pipeline = self
+                            .mask_pipeline
+                            .as_ref()
+                            .expect("mask pipeline must exist");
+                        let composite_pipeline = self
+                            .composite_pipeline
+                            .as_ref()
+                            .expect("composite pipeline must exist");
+                        let path_pipeline = self
+                            .path_pipeline
+                            .as_ref()
+                            .expect("path pipeline must exist");
+                        let path_msaa_pipeline = self.path_msaa_pipeline.as_ref();
+
+                        let mut active_pipeline = ActivePipeline::None;
+
+                        fn begin_main_pass<'a>(
+                            encoder: &'a mut wgpu::CommandEncoder,
+                            target_view: &'a wgpu::TextureView,
+                            load: wgpu::LoadOp<wgpu::Color>,
+                        ) -> wgpu::RenderPass<'a> {
                             encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                label: Some("fret path intermediate pass"),
+                                label: Some("fret renderer pass"),
                                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                    view: intermediate
-                                        .msaa_view
-                                        .as_ref()
-                                        .unwrap_or(&intermediate.resolved_view),
+                                    view: target_view,
                                     depth_slice: None,
-                                    resolve_target: if intermediate.sample_count > 1 {
-                                        Some(&intermediate.resolved_view)
-                                    } else {
-                                        None
-                                    },
+                                    resolve_target: None,
                                     ops: wgpu::Operations {
-                                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                                        store: if intermediate.sample_count > 1 {
-                                            wgpu::StoreOp::Discard
-                                        } else {
-                                            wgpu::StoreOp::Store
-                                        },
+                                        load,
+                                        store: wgpu::StoreOp::Store,
                                     },
                                 })],
                                 depth_stencil_attachment: None,
                                 timestamp_writes: None,
                                 occlusion_query_set: None,
                                 multiview_mask: None,
-                            });
+                            })
+                        }
 
-                        path_pass.set_pipeline(path_msaa_pipeline);
-                        path_pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
-
+                        let mut pass = begin_main_pass(&mut encoder, target_view, load);
                         let mut active_uniform_offset: Option<u32> = None;
-                        for j in i..end {
-                            let OrderedDraw::Path(draw) = &encoding.ordered_draws[j] else {
-                                unreachable!();
-                            };
-                            if draw.scissor.w == 0 || draw.scissor.h == 0 {
+
+                        let mut i = 0usize;
+                        while i < encoding.ordered_draws.len() {
+                            let item = &encoding.ordered_draws[i];
+
+                            if let OrderedDraw::Path(first) = item
+                                && path_samples > 1
+                            {
+                                let mut union = first.scissor;
+                                let batch_uniform_index = first.uniform_index;
+                                let mut end = i + 1;
+                                while end < encoding.ordered_draws.len() {
+                                    match &encoding.ordered_draws[end] {
+                                        OrderedDraw::Path(d)
+                                            if d.uniform_index == batch_uniform_index =>
+                                        {
+                                            union = union_scissor(union, d.scissor);
+                                            end += 1;
+                                        }
+                                        _ => break,
+                                    }
+                                }
+
+                                // Render the path batch to an intermediate MSAA target, then composite into the
+                                // main pass to preserve strict op ordering.
+                                drop(pass);
+
+                                let Some(intermediate) = &self.path_intermediate else {
+                                    pass = begin_main_pass(
+                                        &mut encoder,
+                                        target_view,
+                                        wgpu::LoadOp::Load,
+                                    );
+                                    i = end;
+                                    continue;
+                                };
+
+                                {
+                                    let Some(path_msaa_pipeline) = path_msaa_pipeline else {
+                                        pass = begin_main_pass(
+                                            &mut encoder,
+                                            target_view,
+                                            wgpu::LoadOp::Load,
+                                        );
+                                        i = end;
+                                        continue;
+                                    };
+
+                                    let mut path_pass =
+                                        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                            label: Some("fret path intermediate pass"),
+                                            color_attachments: &[Some(
+                                                wgpu::RenderPassColorAttachment {
+                                                    view: intermediate
+                                                        .msaa_view
+                                                        .as_ref()
+                                                        .unwrap_or(&intermediate.resolved_view),
+                                                    depth_slice: None,
+                                                    resolve_target: if intermediate.sample_count > 1
+                                                    {
+                                                        Some(&intermediate.resolved_view)
+                                                    } else {
+                                                        None
+                                                    },
+                                                    ops: wgpu::Operations {
+                                                        load: wgpu::LoadOp::Clear(
+                                                            wgpu::Color::TRANSPARENT,
+                                                        ),
+                                                        store: if intermediate.sample_count > 1 {
+                                                            wgpu::StoreOp::Discard
+                                                        } else {
+                                                            wgpu::StoreOp::Store
+                                                        },
+                                                    },
+                                                },
+                                            )],
+                                            depth_stencil_attachment: None,
+                                            timestamp_writes: None,
+                                            occlusion_query_set: None,
+                                            multiview_mask: None,
+                                        });
+
+                                    path_pass.set_pipeline(path_msaa_pipeline);
+                                    path_pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
+
+                                    let mut active_uniform_offset: Option<u32> = None;
+                                    for j in i..end {
+                                        let OrderedDraw::Path(draw) = &encoding.ordered_draws[j]
+                                        else {
+                                            unreachable!();
+                                        };
+                                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                            continue;
+                                        }
+                                        path_pass.set_scissor_rect(
+                                            draw.scissor.x,
+                                            draw.scissor.y,
+                                            draw.scissor.w,
+                                            draw.scissor.h,
+                                        );
+                                        let uniform_offset = (u64::from(draw.uniform_index)
+                                            * self.uniform_stride)
+                                            as u32;
+                                        if active_uniform_offset != Some(uniform_offset) {
+                                            path_pass.set_bind_group(
+                                                0,
+                                                &self.uniform_bind_group,
+                                                &[uniform_offset],
+                                            );
+                                            active_uniform_offset = Some(uniform_offset);
+                                        }
+                                        path_pass.draw(
+                                            draw.first_vertex
+                                                ..(draw.first_vertex + draw.vertex_count),
+                                            0..1,
+                                        );
+                                    }
+                                }
+
+                                pass =
+                                    begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Load);
+                                active_pipeline = ActivePipeline::None;
+                                active_uniform_offset = None;
+
+                                if union.w > 0 && union.h > 0 {
+                                    let x0 = union.x as f32;
+                                    let y0 = union.y as f32;
+                                    let x1 = (union.x + union.w) as f32;
+                                    let y1 = (union.y + union.h) as f32;
+
+                                    let vw = viewport_size.0.max(1) as f32;
+                                    let vh = viewport_size.1.max(1) as f32;
+                                    let u0 = x0 / vw;
+                                    let v0 = y0 / vh;
+                                    let u1 = x1 / vw;
+                                    let v1 = y1 / vh;
+
+                                    let vertices: [ViewportVertex; 6] = [
+                                        ViewportVertex {
+                                            pos_px: [x0, y0],
+                                            uv: [u0, v0],
+                                            opacity: 1.0,
+                                            _pad: [0.0; 3],
+                                        },
+                                        ViewportVertex {
+                                            pos_px: [x1, y0],
+                                            uv: [u1, v0],
+                                            opacity: 1.0,
+                                            _pad: [0.0; 3],
+                                        },
+                                        ViewportVertex {
+                                            pos_px: [x1, y1],
+                                            uv: [u1, v1],
+                                            opacity: 1.0,
+                                            _pad: [0.0; 3],
+                                        },
+                                        ViewportVertex {
+                                            pos_px: [x0, y0],
+                                            uv: [u0, v0],
+                                            opacity: 1.0,
+                                            _pad: [0.0; 3],
+                                        },
+                                        ViewportVertex {
+                                            pos_px: [x1, y1],
+                                            uv: [u1, v1],
+                                            opacity: 1.0,
+                                            _pad: [0.0; 3],
+                                        },
+                                        ViewportVertex {
+                                            pos_px: [x0, y1],
+                                            uv: [u0, v1],
+                                            opacity: 1.0,
+                                            _pad: [0.0; 3],
+                                        },
+                                    ];
+                                    queue.write_buffer(
+                                        &self.path_composite_vertices,
+                                        0,
+                                        bytemuck::cast_slice(&vertices),
+                                    );
+
+                                    pass.set_pipeline(composite_pipeline);
+                                    let uniform_offset = (u64::from(batch_uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    pass.set_bind_group(
+                                        0,
+                                        &self.uniform_bind_group,
+                                        &[uniform_offset],
+                                    );
+                                    pass.set_bind_group(1, &intermediate.bind_group, &[]);
+                                    pass.set_vertex_buffer(
+                                        0,
+                                        self.path_composite_vertices.slice(..),
+                                    );
+                                    pass.set_scissor_rect(union.x, union.y, union.w, union.h);
+                                    pass.draw(0..6, 0..1);
+                                    active_pipeline = ActivePipeline::Composite;
+                                }
+
+                                i = end;
                                 continue;
                             }
-                            path_pass.set_scissor_rect(
-                                draw.scissor.x,
-                                draw.scissor.y,
-                                draw.scissor.w,
-                                draw.scissor.h,
-                            );
-                            let uniform_offset =
-                                (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                            if active_uniform_offset != Some(uniform_offset) {
-                                path_pass.set_bind_group(
-                                    0,
-                                    &self.uniform_bind_group,
-                                    &[uniform_offset],
-                                );
-                                active_uniform_offset = Some(uniform_offset);
-                            }
-                            path_pass.draw(
-                                draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                                0..1,
-                            );
-                        }
-                    }
 
-                    pass = begin_main_pass(&mut encoder, target_view, wgpu::LoadOp::Load);
-                    active_pipeline = ActivePipeline::None;
-                    active_uniform_offset = None;
+                            match item {
+                                OrderedDraw::Quad(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
 
-                    if union.w > 0 && union.h > 0 {
-                        let x0 = union.x as f32;
-                        let y0 = union.y as f32;
-                        let x1 = (union.x + union.w) as f32;
-                        let y1 = (union.y + union.h) as f32;
+                                    if !matches!(active_pipeline, ActivePipeline::Quad) {
+                                        pass.set_pipeline(quad_pipeline);
+                                        pass.set_vertex_buffer(0, instance_buffer.slice(..));
+                                        active_pipeline = ActivePipeline::Quad;
+                                    }
 
-                        let vw = viewport_size.0.max(1) as f32;
-                        let vh = viewport_size.1.max(1) as f32;
-                        let u0 = x0 / vw;
-                        let v0 = y0 / vh;
-                        let u1 = x1 / vw;
-                        let v1 = y1 / vh;
-
-                        let vertices: [ViewportVertex; 6] = [
-                            ViewportVertex {
-                                pos_px: [x0, y0],
-                                uv: [u0, v0],
-                                opacity: 1.0,
-                                _pad: [0.0; 3],
-                            },
-                            ViewportVertex {
-                                pos_px: [x1, y0],
-                                uv: [u1, v0],
-                                opacity: 1.0,
-                                _pad: [0.0; 3],
-                            },
-                            ViewportVertex {
-                                pos_px: [x1, y1],
-                                uv: [u1, v1],
-                                opacity: 1.0,
-                                _pad: [0.0; 3],
-                            },
-                            ViewportVertex {
-                                pos_px: [x0, y0],
-                                uv: [u0, v0],
-                                opacity: 1.0,
-                                _pad: [0.0; 3],
-                            },
-                            ViewportVertex {
-                                pos_px: [x1, y1],
-                                uv: [u1, v1],
-                                opacity: 1.0,
-                                _pad: [0.0; 3],
-                            },
-                            ViewportVertex {
-                                pos_px: [x0, y1],
-                                uv: [u0, v1],
-                                opacity: 1.0,
-                                _pad: [0.0; 3],
-                            },
-                        ];
-                        queue.write_buffer(
-                            &self.path_composite_vertices,
-                            0,
-                            bytemuck::cast_slice(&vertices),
-                        );
-
-                        pass.set_pipeline(composite_pipeline);
-                        let uniform_offset =
-                            (u64::from(batch_uniform_index) * self.uniform_stride) as u32;
-                        pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                        pass.set_bind_group(1, &intermediate.bind_group, &[]);
-                        pass.set_vertex_buffer(0, self.path_composite_vertices.slice(..));
-                        pass.set_scissor_rect(union.x, union.y, union.w, union.h);
-                        pass.draw(0..6, 0..1);
-                        active_pipeline = ActivePipeline::Composite;
-                    }
-
-                    i = end;
-                    continue;
-                }
-
-                match item {
-                    OrderedDraw::Quad(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
-                        }
-
-                        if !matches!(active_pipeline, ActivePipeline::Quad) {
-                            pass.set_pipeline(quad_pipeline);
-                            pass.set_vertex_buffer(0, instance_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Quad;
-                        }
-
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            0..6,
-                            draw.first_instance..(draw.first_instance + draw.instance_count),
-                        );
-                    }
-                    OrderedDraw::Viewport(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
-                        }
-
-                        if !matches!(active_pipeline, ActivePipeline::Viewport) {
-                            pass.set_pipeline(viewport_pipeline);
-                            pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Viewport;
-                        }
-
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        let Some((_, bind_group)) = self.viewport_bind_groups.get(&draw.target)
-                        else {
-                            // Missing bind group should only happen if the target vanished
-                            // between encoding and rendering.
-                            i += 1;
-                            continue;
-                        };
-                        pass.set_bind_group(1, bind_group, &[]);
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
-                    }
-                    OrderedDraw::Image(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
-                        }
-
-                        if !matches!(active_pipeline, ActivePipeline::Viewport) {
-                            pass.set_pipeline(viewport_pipeline);
-                            pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Viewport;
-                        }
-
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
-                            i += 1;
-                            continue;
-                        };
-                        pass.set_bind_group(1, bind_group, &[]);
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
-                    }
-                    OrderedDraw::Mask(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
-                        }
-
-                        if !matches!(active_pipeline, ActivePipeline::Mask) {
-                            pass.set_pipeline(mask_pipeline);
-                            pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Mask;
-                        }
-
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        let Some((_, bind_group)) = self.image_bind_groups.get(&draw.image) else {
-                            i += 1;
-                            continue;
-                        };
-                        pass.set_bind_group(1, bind_group, &[]);
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
-                    }
-                    OrderedDraw::Text(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
-                            i += 1;
-                            continue;
-                        }
-
-                        match draw.kind {
-                            TextDrawKind::Mask => {
-                                if !matches!(active_pipeline, ActivePipeline::TextMask) {
-                                    pass.set_pipeline(text_pipeline);
-                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
-                                    pass.set_bind_group(
-                                        1,
-                                        self.text_system.mask_atlas_bind_group(),
-                                        &[],
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
                                     );
-                                    active_pipeline = ActivePipeline::TextMask;
+                                    pass.draw(
+                                        0..6,
+                                        draw.first_instance
+                                            ..(draw.first_instance + draw.instance_count),
+                                    );
+                                }
+                                OrderedDraw::Viewport(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
+
+                                    if !matches!(active_pipeline, ActivePipeline::Viewport) {
+                                        pass.set_pipeline(viewport_pipeline);
+                                        pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
+                                        active_pipeline = ActivePipeline::Viewport;
+                                    }
+
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    let Some((_, bind_group)) =
+                                        self.viewport_bind_groups.get(&draw.target)
+                                    else {
+                                        // Missing bind group should only happen if the target vanished
+                                        // between encoding and rendering.
+                                        i += 1;
+                                        continue;
+                                    };
+                                    pass.set_bind_group(1, bind_group, &[]);
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
+                                    );
+                                    pass.draw(
+                                        draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                        0..1,
+                                    );
+                                }
+                                OrderedDraw::Image(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
+
+                                    if !matches!(active_pipeline, ActivePipeline::Viewport) {
+                                        pass.set_pipeline(viewport_pipeline);
+                                        pass.set_vertex_buffer(0, viewport_vertex_buffer.slice(..));
+                                        active_pipeline = ActivePipeline::Viewport;
+                                    }
+
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    let Some((_, bind_group)) =
+                                        self.image_bind_groups.get(&draw.image)
+                                    else {
+                                        i += 1;
+                                        continue;
+                                    };
+                                    pass.set_bind_group(1, bind_group, &[]);
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
+                                    );
+                                    pass.draw(
+                                        draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                        0..1,
+                                    );
+                                }
+                                OrderedDraw::Mask(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
+
+                                    if !matches!(active_pipeline, ActivePipeline::Mask) {
+                                        pass.set_pipeline(mask_pipeline);
+                                        pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
+                                        active_pipeline = ActivePipeline::Mask;
+                                    }
+
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    let Some((_, bind_group)) =
+                                        self.image_bind_groups.get(&draw.image)
+                                    else {
+                                        i += 1;
+                                        continue;
+                                    };
+                                    pass.set_bind_group(1, bind_group, &[]);
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
+                                    );
+                                    pass.draw(
+                                        draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                        0..1,
+                                    );
+                                }
+                                OrderedDraw::Text(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
+
+                                    match draw.kind {
+                                        TextDrawKind::Mask => {
+                                            if !matches!(active_pipeline, ActivePipeline::TextMask)
+                                            {
+                                                pass.set_pipeline(text_pipeline);
+                                                pass.set_vertex_buffer(
+                                                    0,
+                                                    text_vertex_buffer.slice(..),
+                                                );
+                                                pass.set_bind_group(
+                                                    1,
+                                                    self.text_system.mask_atlas_bind_group(),
+                                                    &[],
+                                                );
+                                                active_pipeline = ActivePipeline::TextMask;
+                                            }
+                                        }
+                                        TextDrawKind::Color => {
+                                            if !matches!(active_pipeline, ActivePipeline::TextColor)
+                                            {
+                                                pass.set_pipeline(text_color_pipeline);
+                                                pass.set_vertex_buffer(
+                                                    0,
+                                                    text_vertex_buffer.slice(..),
+                                                );
+                                                pass.set_bind_group(
+                                                    1,
+                                                    self.text_system.color_atlas_bind_group(),
+                                                    &[],
+                                                );
+                                                active_pipeline = ActivePipeline::TextColor;
+                                            }
+                                        }
+                                    }
+
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
+                                    );
+                                    pass.draw(
+                                        draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                        0..1,
+                                    );
+                                }
+                                OrderedDraw::Path(draw) => {
+                                    if draw.scissor.w == 0 || draw.scissor.h == 0 {
+                                        i += 1;
+                                        continue;
+                                    }
+
+                                    if !matches!(active_pipeline, ActivePipeline::Path) {
+                                        pass.set_pipeline(path_pipeline);
+                                        pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
+                                        active_pipeline = ActivePipeline::Path;
+                                    }
+
+                                    let uniform_offset = (u64::from(draw.uniform_index)
+                                        * self.uniform_stride)
+                                        as u32;
+                                    if active_uniform_offset != Some(uniform_offset) {
+                                        pass.set_bind_group(
+                                            0,
+                                            &self.uniform_bind_group,
+                                            &[uniform_offset],
+                                        );
+                                        active_uniform_offset = Some(uniform_offset);
+                                    }
+                                    pass.set_scissor_rect(
+                                        draw.scissor.x,
+                                        draw.scissor.y,
+                                        draw.scissor.w,
+                                        draw.scissor.h,
+                                    );
+                                    pass.draw(
+                                        draw.first_vertex..(draw.first_vertex + draw.vertex_count),
+                                        0..1,
+                                    );
                                 }
                             }
-                            TextDrawKind::Color => {
-                                if !matches!(active_pipeline, ActivePipeline::TextColor) {
-                                    pass.set_pipeline(text_color_pipeline);
-                                    pass.set_vertex_buffer(0, text_vertex_buffer.slice(..));
-                                    pass.set_bind_group(
-                                        1,
-                                        self.text_system.color_atlas_bind_group(),
-                                        &[],
-                                    );
-                                    active_pipeline = ActivePipeline::TextColor;
-                                }
-                            }
-                        }
 
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
-                    }
-                    OrderedDraw::Path(draw) => {
-                        if draw.scissor.w == 0 || draw.scissor.h == 0 {
                             i += 1;
-                            continue;
                         }
-
-                        if !matches!(active_pipeline, ActivePipeline::Path) {
-                            pass.set_pipeline(path_pipeline);
-                            pass.set_vertex_buffer(0, path_vertex_buffer.slice(..));
-                            active_pipeline = ActivePipeline::Path;
-                        }
-
-                        let uniform_offset =
-                            (u64::from(draw.uniform_index) * self.uniform_stride) as u32;
-                        if active_uniform_offset != Some(uniform_offset) {
-                            pass.set_bind_group(0, &self.uniform_bind_group, &[uniform_offset]);
-                            active_uniform_offset = Some(uniform_offset);
-                        }
-                        pass.set_scissor_rect(
-                            draw.scissor.x,
-                            draw.scissor.y,
-                            draw.scissor.w,
-                            draw.scissor.h,
-                        );
-                        pass.draw(
-                            draw.first_vertex..(draw.first_vertex + draw.vertex_count),
-                            0..1,
-                        );
                     }
                 }
-
-                i += 1;
             }
         }
 

@@ -18,6 +18,7 @@ mod util;
 mod buffers;
 mod config;
 mod pipelines;
+mod render_plan;
 mod render_scene;
 mod resources;
 mod services;
@@ -27,6 +28,7 @@ mod svg;
 mod tests;
 
 use path::*;
+use render_plan::*;
 use types::*;
 use util::*;
 
