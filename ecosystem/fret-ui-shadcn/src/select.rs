@@ -940,8 +940,9 @@ fn select_impl<H: UiHost>(
             // layer (blocks underlay input + gates accessibility roots) even though the content
             // itself remains `role=listbox` (not a dialog).
             let overlay_root_name = radix_select::select_root_name(trigger_id);
-            let listbox_controls_element: Cell<Option<u64>> = Cell::new(None);
-            let listbox_controls_element = &listbox_controls_element;
+            let listbox_id_for_trigger =
+                radix_select::select_listbox_semantics_id(cx, overlay_root_name.as_str());
+            props.a11y.controls_element = Some(listbox_id_for_trigger.0);
 
             if motion.present && enabled {
                 // Anchor bounds are derived from the previous layout pass. When `open=true` before
@@ -1335,9 +1336,8 @@ fn select_impl<H: UiHost>(
                                             let model_for_key = model.clone();
                                             let loop_navigation_for_key = loop_navigation;
 
-                                            vec![cx.pressable_with_id_props(move |cx, _st, listbox_id| {
+                                            vec![radix_select::select_listbox_pressable_with_id_props(cx, move |cx, _st, listbox_id| {
                                                 list_focus_id_out.set(Some(listbox_id));
-                                                listbox_controls_element.set(Some(listbox_id.0));
 
                                                 cx.key_on_key_down_for(
                                                     listbox_id,
@@ -1915,7 +1915,6 @@ fn select_impl<H: UiHost>(
                 }
             }
 
-            props.a11y.controls_element = listbox_controls_element.get();
             let chrome_width = props.layout.size.width;
             let content_width = if matches!(chrome_width, Length::Auto) {
                 Length::Auto
