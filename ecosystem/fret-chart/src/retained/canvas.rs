@@ -50,6 +50,13 @@ struct CachedRect {
 }
 
 #[derive(Debug, Clone, Copy)]
+struct CachedPoint {
+    point: Point,
+    order: u32,
+    source_series: Option<delinea::SeriesId>,
+}
+
+#[derive(Debug, Clone, Copy)]
 struct PanDrag {
     x_axis: delinea::AxisId,
     y_axis: delinea::AxisId,
@@ -103,6 +110,7 @@ pub struct ChartCanvas {
     last_scale_factor_bits: u32,
     cached_paths: BTreeMap<delinea::ids::MarkId, CachedPath>,
     cached_rects: Vec<CachedRect>,
+    cached_points: Vec<CachedPoint>,
     axis_text: Vec<TextBlobId>,
     tooltip_text: Vec<TextBlobId>,
     legend_text: Vec<TextBlobId>,
@@ -127,6 +135,7 @@ impl ChartCanvas {
             last_scale_factor_bits: 0,
             cached_paths: BTreeMap::default(),
             cached_rects: Vec::default(),
+            cached_points: Vec::default(),
             axis_text: Vec::default(),
             tooltip_text: Vec::default(),
             legend_text: Vec::default(),
@@ -984,6 +993,7 @@ impl ChartCanvas {
         }
         self.cached_paths.clear();
         self.cached_rects.clear();
+        self.cached_points.clear();
 
         let plot_h = self.last_layout.plot.size.height.0;
         let area_series: Vec<(delinea::SeriesId, delinea::AxisId, delinea::AreaBaseline)> = self
@@ -1222,6 +1232,28 @@ impl ChartCanvas {
             for rect in &marks.arena.rects[start..end] {
                 self.cached_rects.push(CachedRect {
                     rect: *rect,
+                    order: node.order.0,
+                    source_series: node.source_series,
+                });
+            }
+        }
+
+        for node in &marks.nodes {
+            if node.kind != MarkKind::Points {
+                continue;
+            }
+            let MarkPayloadRef::Points(points) = &node.payload else {
+                continue;
+            };
+            let start = points.points.start;
+            let end = points.points.end;
+            if end <= start || end > marks.arena.points.len() {
+                continue;
+            }
+            self.cached_points.reserve(end - start);
+            for p in &marks.arena.points[start..end] {
+                self.cached_points.push(CachedPoint {
+                    point: *p,
                     order: node.order.0,
                     source_series: node.source_series,
                 });
@@ -1953,6 +1985,44 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 origin: self.last_layout.plot.origin,
                 path: cached.stroke,
                 color: stroke_color,
+            });
+        }
+
+        let point_r = self.style.scatter_point_radius.0.max(1.0);
+        let point_order_bias = 2u32;
+        for cached in &self.cached_points {
+            let base_order = self
+                .style
+                .draw_order
+                .0
+                .saturating_add(cached.order.saturating_mul(4))
+                .saturating_add(point_order_bias);
+
+            let mut fill_color = self.style.stroke_color;
+            if let Some(series) = cached.source_series {
+                fill_color = Self::series_color(series);
+                fill_color.a *= self.style.scatter_fill_alpha;
+            }
+            if let Some(hover) = self.legend_hover
+                && cached.source_series.is_some()
+                && cached.source_series != Some(hover)
+            {
+                fill_color.a *= 0.25;
+            }
+
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(base_order),
+                rect: Rect::new(
+                    Point::new(
+                        Px(cached.point.x.0 - point_r),
+                        Px(cached.point.y.0 - point_r),
+                    ),
+                    Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
+                ),
+                background: fill_color,
+                border: Edges::all(Px(0.0)),
+                border_color: Color::TRANSPARENT,
+                corner_radii: Corners::all(Px(point_r)),
             });
         }
 

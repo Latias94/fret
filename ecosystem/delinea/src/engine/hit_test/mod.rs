@@ -18,7 +18,7 @@ pub fn hover_hit_test(
     let hover_y = hover_px.y.0;
 
     for node in &marks.nodes {
-        if node.kind != MarkKind::Polyline {
+        if node.kind != MarkKind::Polyline && node.kind != MarkKind::Points {
             continue;
         }
         let Some(series_id) = node.source_series else {
@@ -71,57 +71,99 @@ pub fn hover_hit_test(
             continue;
         };
 
-        let MarkPayloadRef::Polyline(poly) = &node.payload else {
-            continue;
-        };
+        match &node.payload {
+            MarkPayloadRef::Polyline(poly) => {
+                let points = &marks.arena.points;
+                let indices = &marks.arena.data_indices;
 
-        let points = &marks.arena.points;
-        let indices = &marks.arena.data_indices;
+                let start = poly.points.start;
+                let end = poly.points.end;
+                if end > points.len() || end > indices.len() {
+                    continue;
+                }
 
-        let start = poly.points.start;
-        let end = poly.points.end;
-        if end > points.len() || end > indices.len() {
-            continue;
-        }
+                if end.saturating_sub(start) < 2 {
+                    continue;
+                }
 
-        if end.saturating_sub(start) < 2 {
-            continue;
-        }
+                for global_i in start..(end - 1) {
+                    let a = points[global_i];
+                    let b = points[global_i + 1];
+                    let idx_a = indices[global_i];
+                    let idx_b = indices[global_i + 1];
 
-        for global_i in start..(end - 1) {
-            let a = points[global_i];
-            let b = points[global_i + 1];
-            let idx_a = indices[global_i];
-            let idx_b = indices[global_i + 1];
+                    let (point_px, t, dist2_px) = closest_point_on_segment(hover_x, hover_y, a, b);
 
-            let (point_px, t, dist2_px) = closest_point_on_segment(hover_x, hover_y, a, b);
+                    let ia = idx_a as usize;
+                    let ib = idx_b as usize;
+                    if ia >= x.len() || ib >= x.len() || ia >= y.len() || ib >= y.len() {
+                        continue;
+                    }
 
-            let ia = idx_a as usize;
-            let ib = idx_b as usize;
-            if ia >= x.len() || ib >= x.len() || ia >= y.len() || ib >= y.len() {
-                continue;
+                    let t64 = t as f64;
+                    let x_value = x[ia] + t64 * (x[ib] - x[ia]);
+                    let y_value = y[ia] + t64 * (y[ib] - y[ia]);
+                    if !x_value.is_finite() || !y_value.is_finite() {
+                        continue;
+                    }
+
+                    let data_index = if t < 0.5 { idx_a } else { idx_b };
+                    let hit = HoverHit {
+                        series: series_id,
+                        data_index,
+                        point_px,
+                        dist2_px,
+                        x_value,
+                        y_value,
+                    };
+
+                    if best.is_none_or(|b| hit.dist2_px < b.dist2_px) {
+                        best = Some(hit);
+                    }
+                }
             }
+            MarkPayloadRef::Points(points_ref) => {
+                let points = &marks.arena.points;
+                let indices = &marks.arena.data_indices;
 
-            let t64 = t as f64;
-            let x_value = x[ia] + t64 * (x[ib] - x[ia]);
-            let y_value = y[ia] + t64 * (y[ib] - y[ia]);
-            if !x_value.is_finite() || !y_value.is_finite() {
-                continue;
+                let start = points_ref.points.start;
+                let end = points_ref.points.end;
+                if end <= start || end > points.len() || end > indices.len() {
+                    continue;
+                }
+
+                for global_i in start..end {
+                    let p = points[global_i];
+                    let idx = indices[global_i] as usize;
+                    if idx >= x.len() || idx >= y.len() {
+                        continue;
+                    }
+
+                    let dx = p.x.0 - hover_x;
+                    let dy = p.y.0 - hover_y;
+                    let dist2_px = dx * dx + dy * dy;
+
+                    let x_value = x[idx];
+                    let y_value = y[idx];
+                    if !x_value.is_finite() || !y_value.is_finite() {
+                        continue;
+                    }
+
+                    let hit = HoverHit {
+                        series: series_id,
+                        data_index: indices[global_i],
+                        point_px: p,
+                        dist2_px,
+                        x_value,
+                        y_value,
+                    };
+
+                    if best.is_none_or(|b| hit.dist2_px < b.dist2_px) {
+                        best = Some(hit);
+                    }
+                }
             }
-
-            let data_index = if t < 0.5 { idx_a } else { idx_b };
-            let hit = HoverHit {
-                series: series_id,
-                data_index,
-                point_px,
-                dist2_px,
-                x_value,
-                y_value,
-            };
-
-            if best.is_none_or(|b| hit.dist2_px < b.dist2_px) {
-                best = Some(hit);
-            }
+            _ => {}
         }
     }
 

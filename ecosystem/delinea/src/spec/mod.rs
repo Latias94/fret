@@ -222,6 +222,12 @@ pub enum SeriesKind {
     /// A filled band between `encode.y` (low) and `encode.y2` (high).
     Band,
     Bar,
+    /// A point series (ECharts `series.scatter`-like).
+    ///
+    /// v1 semantics:
+    /// - rendering uses point marks (not connected by segments),
+    /// - large-data mode may downsample to a pixel-driven budget.
+    Scatter,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -865,7 +865,11 @@ fn compute_axis_axis_pointer_output(
             .unwrap_or_default();
         let row_range = selection.as_range(table.row_count);
 
-        let Some(sample) = sample_series_at_x(x_value, x, y0, y1, row_range) else {
+        let Some(sample) = (if series.kind == crate::spec::SeriesKind::Scatter {
+            sample_scatter_at_x(x_value, x, y0, row_range)
+        } else {
+            sample_series_at_x(x_value, x, y0, y1, row_range)
+        }) else {
             continue;
         };
 
@@ -902,6 +906,52 @@ fn compute_axis_axis_pointer_output(
 struct SampledSeriesValue {
     y0: f64,
     y1: Option<f64>,
+}
+
+fn sample_scatter_at_x(
+    x_value: f64,
+    x: &[f64],
+    y0: &[f64],
+    row_range: core::ops::Range<usize>,
+) -> Option<SampledSeriesValue> {
+    let len = x.len().min(y0.len());
+    if len == 0 {
+        return None;
+    }
+    let start = row_range.start.min(len);
+    let end = row_range.end.min(len);
+    if end <= start {
+        return None;
+    }
+
+    let xs = &x[start..end];
+    if xs.len() == 1 {
+        return Some(SampledSeriesValue {
+            y0: y0[start],
+            y1: None,
+        });
+    }
+
+    let idx = lower_bound(xs, x_value);
+    let i1 = (start + idx).min(end - 1);
+    let i0 = i1.saturating_sub(1).max(start);
+
+    let x0 = x.get(i0).copied().unwrap_or(f64::NAN);
+    let x1 = x.get(i1).copied().unwrap_or(f64::NAN);
+    if !x0.is_finite() || !x1.is_finite() {
+        return None;
+    }
+
+    let d0 = (x_value - x0).abs();
+    let d1 = (x_value - x1).abs();
+    let i = if d1 < d0 { i1 } else { i0 };
+
+    let y = y0.get(i).copied()?;
+    if !y.is_finite() {
+        return None;
+    }
+
+    Some(SampledSeriesValue { y0: y, y1: None })
 }
 
 fn sample_series_at_x(

@@ -4,6 +4,7 @@ use crate::action::Action;
 use crate::data::{Column, DataTable};
 use crate::engine::ChartEngine;
 use crate::engine::window::DataWindow;
+use crate::marks::MarkPayloadRef;
 use crate::scheduler::WorkBudget;
 use crate::spec::{
     AxisKind, AxisPointerSpec, AxisRange, AxisSpec, ChartSpec, DataZoomXSpec, DatasetSpec,
@@ -1814,4 +1815,222 @@ fn axis_pointer_axis_trigger_snaps_to_hit_point_when_enabled() {
     let axis_pointer = engine.output().axis_pointer.as_ref().unwrap();
     let hit = axis_pointer.hit.expect("expected a hit for snapping");
     assert_eq!(axis_pointer.crosshair_px, hit.point_px);
+}
+
+#[test]
+fn scatter_emits_point_marks() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: Some("X".to_string()),
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: Some("Y".to_string()),
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        axis_pointer: None,
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: Some("S".to_string()),
+            kind: SeriesKind::Scatter,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+    let n = 256usize;
+    let x: Vec<f64> = (0..n).map(|i| i as f64).collect();
+    let y: Vec<f64> = (0..n).map(|i| (i as f64 * 0.5).sin()).collect();
+    table.push_column(Column::F64(x));
+    table.push_column(Column::F64(y));
+    engine.datasets_mut().datasets.push((dataset_id, table));
+
+    let mut measurer = NullTextMeasurer::default();
+    let mut steps = 0;
+    loop {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .unwrap();
+        steps += 1;
+        if !step.unfinished || steps > 64 {
+            break;
+        }
+    }
+    assert!(steps <= 64);
+
+    let marks = &engine.output().marks;
+    let node = marks
+        .nodes
+        .iter()
+        .find(|n| n.kind == crate::marks::MarkKind::Points && n.source_series == Some(series_id))
+        .expect("expected a points mark node");
+    let MarkPayloadRef::Points(points) = &node.payload else {
+        panic!("expected points payload");
+    };
+    assert_eq!(points.points.end - points.points.start, n);
+}
+
+#[test]
+fn scatter_large_mode_is_pixel_bounded() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(viewport),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                name: None,
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                name: None,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![],
+        axis_pointer: None,
+        series: vec![SeriesSpec {
+            id: series_id,
+            name: None,
+            kind: SeriesKind::Scatter,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+    let mut table = DataTable::default();
+
+    let n = 50_000usize;
+    let mut xs = Vec::with_capacity(n);
+    let mut ys = Vec::with_capacity(n);
+    for i in 0..n {
+        xs.push(i as f64 / (n as f64 - 1.0));
+        ys.push(((i as f64) * 0.01).sin());
+    }
+    table.push_column(Column::F64(xs));
+    table.push_column(Column::F64(ys));
+    engine.datasets_mut().datasets.push((dataset_id, table));
+
+    let mut measurer = NullTextMeasurer::default();
+    let mut steps = 0;
+    loop {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 64))
+            .unwrap();
+        steps += 1;
+        if !step.unfinished || steps > 256 {
+            break;
+        }
+    }
+    assert!(steps <= 256);
+
+    let marks = &engine.output().marks;
+    let node = marks
+        .nodes
+        .iter()
+        .find(|n| n.kind == crate::marks::MarkKind::Points && n.source_series == Some(series_id))
+        .expect("expected a points mark node");
+    let MarkPayloadRef::Points(points) = &node.payload else {
+        panic!("expected points payload");
+    };
+    let emitted = points.points.end - points.points.start;
+
+    let width_px = viewport.size.width.0.max(1.0).ceil() as usize;
+    assert!(
+        emitted <= width_px * 4,
+        "emitted={emitted} width={width_px}"
+    );
+    assert!(emitted > 0);
 }

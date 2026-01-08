@@ -10,7 +10,8 @@ use crate::engine::model::ChartModel;
 use crate::engine::window::{DataWindow, DataWindowX, DataWindowY};
 use crate::ids::MarkId;
 use crate::marks::{
-    MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkRectRef, MarkTree,
+    MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPointsRef, MarkPolylineRef, MarkRectRef,
+    MarkTree,
 };
 use crate::paint::StrokeStyleV2;
 use crate::scheduler::WorkBudget;
@@ -26,6 +27,9 @@ pub struct MarksStage {
     cursor: MinMaxPerPixelCursor,
     bounds_cursor: BoundsCursor,
     bounds_accum: BoundsAccum,
+    scatter_next_index: usize,
+    scatter_points_start: usize,
+    scatter_node_index: Option<usize>,
     bar_next_index: usize,
     bar_rects_start: usize,
     bar_node_index: Option<usize>,
@@ -77,6 +81,9 @@ impl MarksStage {
         self.cursor = MinMaxPerPixelCursor::default();
         self.bounds_cursor = BoundsCursor::default();
         self.bounds_accum.reset();
+        self.scatter_next_index = 0;
+        self.scatter_points_start = 0;
+        self.scatter_node_index = None;
         self.bar_next_index = 0;
         self.bar_rects_start = 0;
         self.bar_node_index = None;
@@ -178,6 +185,7 @@ impl MarksStage {
             if self.cursor.next_index == 0
                 && self.bounds.is_none()
                 && self.bounds_cursor.next_index == 0
+                && self.scatter_next_index == 0
                 && self.bar_next_index == 0
             {
                 scratch.reset_buckets();
@@ -185,6 +193,8 @@ impl MarksStage {
                 self.bounds = None;
                 self.bounds_cursor = BoundsCursor::default();
                 self.bounds_accum.reset();
+                self.scatter_points_start = 0;
+                self.scatter_node_index = None;
                 self.bar_rects_start = 0;
                 self.bar_node_index = None;
             }
@@ -242,6 +252,194 @@ impl MarksStage {
                 continue;
             };
             bounds.clamp_non_degenerate();
+
+            if series.kind == crate::spec::SeriesKind::Scatter {
+                let x_window = view_x_mapping_window.unwrap_or(DataWindow {
+                    min: bounds.x_min,
+                    max: bounds.x_max,
+                });
+                let mut x_window = x_window;
+                x_window.clamp_non_degenerate();
+
+                let y_window = DataWindow {
+                    min: bounds.y_min,
+                    max: bounds.y_max,
+                };
+                let mut y_window = y_window;
+                y_window.clamp_non_degenerate();
+
+                let visible_len = row_range.end.saturating_sub(row_range.start);
+                let use_lod = visible_len > 20_000;
+
+                if use_lod {
+                    let mut finished_scan = false;
+                    while !finished_scan {
+                        let points_budget = budget.take_points(4096) as usize;
+                        if points_budget == 0 {
+                            return false;
+                        }
+
+                        finished_scan = minmax_per_pixel_step(
+                            &mut self.cursor,
+                            scratch,
+                            x,
+                            y0,
+                            &bounds,
+                            viewport,
+                            row_range.clone(),
+                            points_budget,
+                        );
+                    }
+
+                    if !self.finalized {
+                        if budget.take_marks(1) == 0 {
+                            return false;
+                        }
+
+                        let range = minmax_per_pixel_finalize(
+                            scratch,
+                            x,
+                            y0,
+                            &bounds,
+                            viewport,
+                            &mut marks.arena.points,
+                            &mut marks.arena.data_indices,
+                        );
+                        let base_order = self.series_index as u32;
+
+                        marks.nodes.push(MarkNode {
+                            id: series_mark_id(series.id, 0),
+                            parent: None,
+                            layer: crate::ids::LayerId(1),
+                            order: MarkOrderKey(base_order.saturating_mul(2)),
+                            kind: MarkKind::Points,
+                            source_series: Some(series.id),
+                            payload: MarkPayloadRef::Points(MarkPointsRef {
+                                points: range.clone(),
+                                fill: Some(crate::ids::PaintId(0)),
+                                stroke: None,
+                            }),
+                        });
+
+                        stats.points_emitted += (range.end - range.start) as u64;
+                        stats.marks_emitted += 1;
+                        marks.revision.bump();
+                        self.finalized = true;
+                    }
+
+                    self.series_index += 1;
+                    self.cursor.next_index = 0;
+                    self.scatter_next_index = 0;
+                    self.scatter_points_start = 0;
+                    self.scatter_node_index = None;
+                    self.bar_next_index = 0;
+                    self.bar_rects_start = 0;
+                    self.bar_node_index = None;
+                    self.bounds = None;
+                    scratch.clear();
+                    continue;
+                }
+
+                if self.scatter_node_index.is_none() {
+                    if budget.take_marks(1) == 0 {
+                        return false;
+                    }
+
+                    self.scatter_next_index = row_range.start;
+                    self.scatter_points_start = marks.arena.points.len();
+                    let range = self.scatter_points_start..self.scatter_points_start;
+                    let base_order = self.series_index as u32;
+
+                    marks.nodes.push(MarkNode {
+                        id: series_mark_id(series.id, 0),
+                        parent: None,
+                        layer: crate::ids::LayerId(1),
+                        order: MarkOrderKey(base_order.saturating_mul(2)),
+                        kind: MarkKind::Points,
+                        source_series: Some(series.id),
+                        payload: MarkPayloadRef::Points(MarkPointsRef {
+                            points: range,
+                            fill: Some(crate::ids::PaintId(0)),
+                            stroke: None,
+                        }),
+                    });
+                    self.scatter_node_index = Some(marks.nodes.len() - 1);
+                    marks.revision.bump();
+                    stats.marks_emitted += 1;
+                }
+
+                let row_end = row_range.end;
+                while self.scatter_next_index < row_end {
+                    let points_budget = budget.take_points(4096) as usize;
+                    if points_budget == 0 {
+                        return false;
+                    }
+
+                    let chunk_end = (self.scatter_next_index + points_budget).min(row_end);
+                    let start_len = marks.arena.points.len();
+
+                    let x_span = x_window.span();
+                    let y_span = y_window.span();
+                    let x_span = if x_span.is_finite() && x_span > 0.0 {
+                        x_span
+                    } else {
+                        1.0
+                    };
+                    let y_span = if y_span.is_finite() && y_span > 0.0 {
+                        y_span
+                    } else {
+                        1.0
+                    };
+
+                    for i in self.scatter_next_index..chunk_end {
+                        let xi = x.get(i).copied().unwrap_or(f64::NAN);
+                        let yi = y0.get(i).copied().unwrap_or(f64::NAN);
+                        if !xi.is_finite() || !yi.is_finite() {
+                            continue;
+                        }
+                        if !view_x_filter.contains(xi) {
+                            continue;
+                        }
+
+                        let yi = yi.clamp(y_window.min, y_window.max);
+                        let tx = ((xi - x_window.min) / x_span).clamp(0.0, 1.0);
+                        let ty = ((yi - y_window.min) / y_span).clamp(0.0, 1.0);
+
+                        let px_x = viewport.origin.x.0 + (tx as f32) * viewport.size.width.0;
+                        let px_y =
+                            viewport.origin.y.0 + (1.0 - (ty as f32)) * viewport.size.height.0;
+
+                        marks.arena.points.push(Point::new(Px(px_x), Px(px_y)));
+                        marks.arena.data_indices.push(i as u32);
+                    }
+
+                    if let Some(node_index) = self.scatter_node_index
+                        && let Some(node) = marks.nodes.get_mut(node_index)
+                    {
+                        let MarkPayloadRef::Points(p) = &mut node.payload else {
+                            return false;
+                        };
+                        p.points.end = marks.arena.points.len();
+                    }
+
+                    marks.revision.bump();
+                    stats.points_emitted +=
+                        marks.arena.points.len().saturating_sub(start_len) as u64;
+                    self.scatter_next_index = chunk_end;
+                }
+
+                self.series_index += 1;
+                self.cursor.next_index = 0;
+                self.scatter_next_index = 0;
+                self.scatter_points_start = 0;
+                self.scatter_node_index = None;
+                self.bar_next_index = 0;
+                self.bar_rects_start = 0;
+                self.bar_node_index = None;
+                self.bounds = None;
+                scratch.clear();
+                continue;
+            }
 
             if series.kind == crate::spec::SeriesKind::Bar {
                 let x_axis = model.axes.get(&series.x_axis);
@@ -357,6 +555,9 @@ impl MarksStage {
 
                 self.series_index += 1;
                 self.cursor.next_index = 0;
+                self.scatter_next_index = 0;
+                self.scatter_points_start = 0;
+                self.scatter_node_index = None;
                 self.bar_next_index = 0;
                 self.bar_rects_start = 0;
                 self.bar_node_index = None;
@@ -506,6 +707,9 @@ impl MarksStage {
 
             self.series_index += 1;
             self.cursor.next_index = 0;
+            self.scatter_next_index = 0;
+            self.scatter_points_start = 0;
+            self.scatter_node_index = None;
             self.bar_next_index = 0;
             self.bar_rects_start = 0;
             self.bar_node_index = None;
@@ -581,6 +785,15 @@ fn compute_series_bounds(
     bounds_accum: &mut BoundsAccum,
     budget: &mut WorkBudget,
 ) -> Option<DataBounds> {
+    let x_domain_window = model
+        .axes
+        .get(&x_axis)
+        .and_then(crate::engine::axis::category_domain_window);
+    let y_domain_window = model
+        .axes
+        .get(&y_axis)
+        .and_then(crate::engine::axis::category_domain_window);
+
     let y_axis_range = model.axes.get(&y_axis).map(|a| a.range).unwrap_or_default();
     let y_window_for_bounds =
         axis_locked_window_y(y_axis_range).or(state.data_window_y.get(&y_axis).copied());
@@ -588,7 +801,7 @@ fn compute_series_bounds(
     if let Some(mut y_window) = y_window_for_bounds {
         y_window.clamp_non_degenerate();
 
-        let (x_min, x_max) = if let Some(mut w) = x_mapping_window {
+        let (x_min, x_max) = if let Some(mut w) = x_mapping_window.or(x_domain_window) {
             w.clamp_non_degenerate();
             (w.min, w.max)
         } else {
@@ -626,10 +839,15 @@ fn compute_series_bounds(
             y_max: bounds0.y_max.max(bounds1.y_max),
         };
 
-        if let Some(mut w) = x_mapping_window {
+        if let Some(mut w) = x_mapping_window.or(x_domain_window) {
             w.clamp_non_degenerate();
             combined.x_min = w.min;
             combined.x_max = w.max;
+        }
+        if let Some(mut w) = y_domain_window {
+            w.clamp_non_degenerate();
+            combined.y_min = w.min;
+            combined.y_max = w.max;
         }
 
         apply_axis_constraints(model, x_axis, y_axis, &mut combined);
@@ -666,10 +884,15 @@ fn compute_series_bounds(
     }
 
     let mut bounds = finalize_bounds(bounds_accum).unwrap_or_default();
-    if let Some(mut w) = x_mapping_window {
+    if let Some(mut w) = x_mapping_window.or(x_domain_window) {
         w.clamp_non_degenerate();
         bounds.x_min = w.min;
         bounds.x_max = w.max;
+    }
+    if let Some(mut w) = y_domain_window {
+        w.clamp_non_degenerate();
+        bounds.y_min = w.min;
+        bounds.y_max = w.max;
     }
     apply_axis_constraints(model, x_axis, y_axis, &mut bounds);
     bounds.clamp_non_degenerate();
