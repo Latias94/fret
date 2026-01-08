@@ -1,36 +1,37 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use fret_app::App;
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Point, Px, Rect, Size};
 use fret_launch::{
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext, run_app,
+    run_app, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_runtime::{
-    CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, KeymapService,
-    PlatformFilter, WhenExpr, keymap::Binding,
+    keymap::Binding, CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord,
+    KeymapService, PlatformFilter, WhenExpr,
 };
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::{UiFrameCx, UiTree};
 
-use fret_node::Graph;
-use fret_node::TypeDesc;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
 use fret_node::ops::{GraphOp, GraphTransaction};
+use fret_node::profile::{apply_transaction_with_profile, DataflowProfile};
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
 use fret_node::ui::presenter::{
     InsertNodeCandidate, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
 };
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphEditQueue,
-    NodeGraphInternalsStore, RegistryNodeGraphPresenter, register_node_graph_commands,
+    register_node_graph_commands, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
+    NodeGraphCanvas, NodeGraphEditQueue, NodeGraphInternalsStore, RegistryNodeGraphPresenter,
 };
+use fret_node::Graph;
+use fret_node::TypeDesc;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
@@ -910,21 +911,10 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 .view
                 .read_ref(app, |s| s.selected_nodes.clone())
                 .unwrap_or_default();
-            let selected = if selected.is_empty() {
-                models
-                    .graph
-                    .read_ref(app, |g| {
-                        g.nodes
-                            .iter()
-                            .filter_map(|(id, n)| {
-                                (n.kind.0.as_str() == "demo.float").then_some(*id)
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .unwrap_or_default()
-            } else {
-                selected
-            };
+            if selected.is_empty() {
+                tracing::info!("select a Float node first (demo.float)");
+                return;
+            }
 
             let ops = models
                 .graph
@@ -1023,7 +1013,16 @@ pub fn run() -> anyhow::Result<()> {
     register_demo_commands(app.commands_mut());
     install_default_keybindings_into_keymap(&mut app);
 
-    let graph = app.models_mut().insert(build_demo_graph());
+    let mut graph_value = build_demo_graph();
+    // Concretize once at startup so dynamic ports (e.g. `fret.variadic_merge`) don't "surprise"
+    // the user on the first unrelated edit.
+    let _ = apply_transaction_with_profile(
+        &mut graph_value,
+        &mut DataflowProfile::new(),
+        &GraphTransaction::new(),
+    );
+
+    let graph = app.models_mut().insert(graph_value);
     let view = app.models_mut().insert(NodeGraphViewState::default());
     let edits = app.models_mut().insert(NodeGraphEditQueue::default());
     app.set_global(NodeGraphDemoModels { graph, view, edits });
