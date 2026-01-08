@@ -206,6 +206,8 @@ impl InsertNodeTemplate {
                 kind: self.kind.clone(),
                 kind_version: self.kind_version,
                 pos: at,
+                parent: None,
+                size: None,
                 collapsed: self.collapsed,
                 ports: Vec::new(),
                 data: self.data.clone(),

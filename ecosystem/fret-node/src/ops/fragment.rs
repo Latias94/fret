@@ -59,7 +59,11 @@ impl GraphFragment {
         let selected: BTreeSet<NodeId> = nodes.into_iter().collect();
         for node_id in &selected {
             if let Some(node) = graph.nodes.get(node_id) {
-                out.nodes.insert(*node_id, node.clone());
+                let mut node = node.clone();
+                // Groups are currently not inferred when building fragments, so detach copied nodes
+                // from their container by default.
+                node.parent = None;
+                out.nodes.insert(*node_id, node);
             }
         }
 
@@ -163,6 +167,11 @@ impl GraphFragment {
     ) -> GraphTransaction {
         let mut tx = GraphTransaction::new();
 
+        let mut group_map: BTreeMap<GroupId, GroupId> = BTreeMap::new();
+        for group_id in self.groups.keys() {
+            group_map.insert(*group_id, remapper.remap_group(*group_id));
+        }
+
         let mut node_map: BTreeMap<NodeId, NodeId> = BTreeMap::new();
         for node_id in self.nodes.keys() {
             node_map.insert(*node_id, remapper.remap_node(*node_id));
@@ -186,6 +195,13 @@ impl GraphFragment {
             });
         }
 
+        for (old_id, group) in &self.groups {
+            tx.push(GraphOp::AddGroup {
+                id: group_map[old_id],
+                group: group.clone(),
+            });
+        }
+
         for (old_id, old_node) in &self.nodes {
             let new_id = node_map[old_id];
             let mut node = old_node.clone();
@@ -193,6 +209,9 @@ impl GraphFragment {
                 x: node.pos.x + tuning.offset.x,
                 y: node.pos.y + tuning.offset.y,
             };
+            node.parent = node
+                .parent
+                .and_then(|old_parent| group_map.get(&old_parent).copied());
             // Port ordering is remapped after ports are added.
             node.ports = Vec::new();
             tx.push(GraphOp::AddNode { id: new_id, node });
@@ -236,13 +255,6 @@ impl GraphFragment {
             tx.push(GraphOp::AddEdge {
                 id: new_edge_id,
                 edge,
-            });
-        }
-
-        for (old_id, group) in &self.groups {
-            tx.push(GraphOp::AddGroup {
-                id: remapper.remap_group(*old_id),
-                group: group.clone(),
             });
         }
 

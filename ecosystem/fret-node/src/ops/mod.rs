@@ -8,8 +8,8 @@ mod history;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
-    CanvasPoint, Edge, EdgeId, EdgeKind, Group, GroupId, Node, NodeId, Port, PortId, StickyNote,
-    StickyNoteId, Symbol, SymbolId,
+    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Group, GroupId, Node, NodeId,
+    Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
 };
 
 pub use apply::{ApplyError, apply_op, apply_transaction};
@@ -49,6 +49,18 @@ pub enum GraphOp {
         id: NodeId,
         from: CanvasPoint,
         to: CanvasPoint,
+    },
+    /// Sets a node parent container (group frame).
+    SetNodeParent {
+        id: NodeId,
+        from: Option<GroupId>,
+        to: Option<GroupId>,
+    },
+    /// Sets a node explicit size.
+    SetNodeSize {
+        id: NodeId,
+        from: Option<CanvasSize>,
+        to: Option<CanvasSize>,
     },
     /// Sets a node collapsed state.
     SetNodeCollapsed { id: NodeId, from: bool, to: bool },
@@ -111,7 +123,20 @@ pub enum GraphOp {
     /// Adds a group.
     AddGroup { id: GroupId, group: Group },
     /// Removes a group.
-    RemoveGroup { id: GroupId, group: Group },
+    ///
+    /// This operation is expected to detach nodes that were parented to the group.
+    RemoveGroup {
+        id: GroupId,
+        group: Group,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        detached: Vec<(NodeId, Option<GroupId>)>,
+    },
+    /// Sets a group's bounds.
+    SetGroupRect {
+        id: GroupId,
+        from: CanvasRect,
+        to: CanvasRect,
+    },
 
     /// Adds a sticky note.
     AddStickyNote { id: StickyNoteId, note: StickyNote },

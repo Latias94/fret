@@ -66,7 +66,7 @@ pub(super) fn handle_node_drag_move<H: UiHost>(
                 0.0
             };
 
-        let (geom, _index) = canvas.canvas_derived(&*cx.app, snapshot);
+        let geom = canvas.canvas_geometry(&*cx.app, snapshot);
         let drag_nodes: HashSet<GraphNodeId> = drag.nodes.iter().map(|(id, _)| *id).collect();
 
         let mut group: Option<Rect> = None;
@@ -118,16 +118,32 @@ pub(super) fn handle_node_drag_move<H: UiHost>(
         canvas.interaction.snap_guides = None;
     }
 
+    let geom_for_extent = canvas.canvas_geometry(&*cx.app, snapshot);
     let _ = canvas.graph.update(cx.app, |g, _cx| {
         for (id, start) in &drag.nodes {
             let Some(node) = g.nodes.get(id) else {
                 continue;
             };
             let from = node.pos;
-            let to = CanvasPoint {
+            let mut to = CanvasPoint {
                 x: start.x + delta.x,
                 y: start.y + delta.y,
             };
+
+            if let Some(parent) = node.parent
+                && let Some(group) = g.groups.get(&parent)
+                && let Some(node_geom) = geom_for_extent.nodes.get(id)
+            {
+                let node_w = node_geom.rect.size.width.0;
+                let node_h = node_geom.rect.size.height.0;
+                let min_x = group.rect.origin.x;
+                let min_y = group.rect.origin.y;
+                let max_x = group.rect.origin.x + (group.rect.size.width - node_w).max(0.0);
+                let max_y = group.rect.origin.y + (group.rect.size.height - node_h).max(0.0);
+
+                to.x = to.x.clamp(min_x, max_x);
+                to.y = to.y.clamp(min_y, max_y);
+            }
             if from != to {
                 if let Some(node) = g.nodes.get_mut(id) {
                     node.pos = to;

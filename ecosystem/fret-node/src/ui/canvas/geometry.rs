@@ -64,8 +64,10 @@ impl CanvasGeometry {
             };
 
             let (inputs, outputs) = node_ports(graph, node_id);
-            let (w_px, h_px) = presenter
-                .node_size_hint_px(graph, node_id, style)
+            let (w_px, h_px) = node
+                .size
+                .map(|s| (s.width, s.height))
+                .or_else(|| presenter.node_size_hint_px(graph, node_id, style))
                 .unwrap_or_else(|| node_size_default_px(inputs.len(), outputs.len(), style));
 
             let w = w_px / zoom;

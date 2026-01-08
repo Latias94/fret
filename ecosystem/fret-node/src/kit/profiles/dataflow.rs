@@ -279,6 +279,8 @@ mod tests {
             kind: NodeKindKey::new(kind),
             kind_version: 0,
             pos: CanvasPoint { x: 0.0, y: 0.0 },
+            parent: None,
+            size: None,
             collapsed: false,
             ports: Vec::new(),
             data: serde_json::Value::Null,

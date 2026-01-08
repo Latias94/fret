@@ -910,6 +910,29 @@ Notes:
 - Features like "conversion node insertion" and "domain-specific auto nodes" remain profile-level
   policy and must not leak into the substrate.
 
+### 21) Groups (container frames) and explicit node size are graph semantics
+
+We standardize the "subflow / parent container" concept early (XyFlow `parentId` mental model):
+
+- `Graph.groups` stores group frames as `Group { rect: CanvasRect, ... }` in **canvas space**.
+- `Node.parent: Option<GroupId>` assigns a node to a container frame.
+- Node positions remain **absolute canvas positions** (`Node.pos` is not made relative to the parent).
+  - Moving a group in UI should translate its child nodes explicitly (policy), rather than relying on
+    a relative-position encoding in the core model.
+
+Group removal semantics (locked):
+
+- Removing a group must detach its child nodes (`Node.parent = None`) as part of the same reversible
+  edit transaction.
+- `GraphOp::RemoveGroup` carries a `detached` list so undo/redo can restore the original parents.
+
+Node explicit size semantics (locked):
+
+- `Node.size: Option<CanvasSize>` is stored in the graph asset (not view-state).
+- `Node.size` is interpreted as a **semantic size in logical px at zoom=1**.
+  - Geometry conversion divides by `zoom` so the node remains readable under semantic zoom.
+  - When `None`, the editor derives size from measured geometry or style defaults.
+
 ## Consequences
 
 Pros:

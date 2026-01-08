@@ -99,6 +99,23 @@ pub struct Node {
     pub kind_version: u32,
     /// Top-left position in canvas space.
     pub pos: CanvasPoint,
+
+    /// Optional group container id (subflow / parent frame).
+    ///
+    /// This is an editor-structure concept (XyFlow `parentId` mental model) and is intentionally
+    /// orthogonal to semantic subgraphs (see ADR 0106).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent: Option<GroupId>,
+
+    /// Optional explicit node size in logical px at zoom=1 (semantic sizing).
+    ///
+    /// The editor converts this into canvas space by dividing by the current zoom so node content
+    /// remains readable under semantic zoom.
+    ///
+    /// When `None`, the editor derives the size from measured geometry or style defaults.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<CanvasSize>,
+
     /// Whether the node is collapsed.
     #[serde(default)]
     pub collapsed: bool,

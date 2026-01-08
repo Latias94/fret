@@ -161,6 +161,16 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
             from: *to,
             to: *from,
         }],
+        GraphOp::SetNodeParent { id, from, to } => vec![GraphOp::SetNodeParent {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
+        GraphOp::SetNodeSize { id, from, to } => vec![GraphOp::SetNodeSize {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
         GraphOp::SetNodeCollapsed { id, from, to } => vec![GraphOp::SetNodeCollapsed {
             id: *id,
             from: *to,
@@ -233,10 +243,31 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
         GraphOp::AddGroup { id, group } => vec![GraphOp::RemoveGroup {
             id: *id,
             group: group.clone(),
+            detached: Vec::new(),
         }],
-        GraphOp::RemoveGroup { id, group } => vec![GraphOp::AddGroup {
+        GraphOp::RemoveGroup {
+            id,
+            group,
+            detached,
+        } => {
+            let mut out: Vec<GraphOp> = Vec::new();
+            out.push(GraphOp::AddGroup {
+                id: *id,
+                group: group.clone(),
+            });
+            for (node_id, parent) in detached {
+                out.push(GraphOp::SetNodeParent {
+                    id: *node_id,
+                    from: None,
+                    to: *parent,
+                });
+            }
+            out
+        }
+        GraphOp::SetGroupRect { id, from, to } => vec![GraphOp::SetGroupRect {
             id: *id,
-            group: group.clone(),
+            from: *to,
+            to: *from,
         }],
 
         GraphOp::AddStickyNote { id, note } => vec![GraphOp::RemoveStickyNote {

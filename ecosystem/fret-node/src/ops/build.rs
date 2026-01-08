@@ -1,4 +1,4 @@
-use crate::core::{Edge, EdgeId, Graph, NodeId, Port, PortId};
+use crate::core::{Edge, EdgeId, Graph, GroupId, NodeId, Port, PortId};
 use crate::ops::{GraphOp, GraphTransaction};
 
 /// Builder helpers for constructing safe, reversible edit operations.
@@ -33,6 +33,16 @@ pub trait GraphOpBuilderExt {
     fn build_remove_node_tx(
         &self,
         id: NodeId,
+        label: impl Into<String>,
+    ) -> Option<GraphTransaction>;
+
+    /// Builds a `RemoveGroup` op for an existing group, including nodes detached from it.
+    fn build_remove_group_op(&self, id: GroupId) -> Option<GraphOp>;
+
+    /// Builds a transaction that removes a group (and detaches any child nodes).
+    fn build_remove_group_tx(
+        &self,
+        id: GroupId,
         label: impl Into<String>,
     ) -> Option<GraphTransaction>;
 }
@@ -147,6 +157,37 @@ impl GraphOpBuilderExt for Graph {
         label: impl Into<String>,
     ) -> Option<GraphTransaction> {
         let op = self.build_remove_node_op(id)?;
+        Some(GraphTransaction {
+            label: Some(label.into()),
+            ops: vec![op],
+        })
+    }
+
+    fn build_remove_group_op(&self, id: GroupId) -> Option<GraphOp> {
+        let group = self.groups.get(&id)?.clone();
+
+        let mut detached: Vec<(NodeId, Option<GroupId>)> = self
+            .nodes
+            .iter()
+            .filter_map(|(node_id, node)| {
+                (node.parent == Some(id)).then_some((*node_id, node.parent))
+            })
+            .collect();
+        detached.sort_by_key(|(node_id, _)| *node_id);
+
+        Some(GraphOp::RemoveGroup {
+            id,
+            group,
+            detached,
+        })
+    }
+
+    fn build_remove_group_tx(
+        &self,
+        id: GroupId,
+        label: impl Into<String>,
+    ) -> Option<GraphTransaction> {
+        let op = self.build_remove_group_op(id)?;
         Some(GraphTransaction {
             label: Some(label.into()),
             ops: vec![op],

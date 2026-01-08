@@ -25,11 +25,11 @@ use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
 
 use crate::ui::commands::{
-    CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CUT, CMD_NODE_GRAPH_DELETE_SELECTION,
-    CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FRAME_SELECTION, CMD_NODE_GRAPH_INSERT_REROUTE,
-    CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER, CMD_NODE_GRAPH_OPEN_INSERT_NODE,
-    CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE, CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO,
-    CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
+    CMD_NODE_GRAPH_COPY, CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_CUT,
+    CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DUPLICATE, CMD_NODE_GRAPH_FRAME_SELECTION,
+    CMD_NODE_GRAPH_INSERT_REROUTE, CMD_NODE_GRAPH_OPEN_CONVERSION_PICKER,
+    CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
+    CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_REDO, CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_UNDO,
 };
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, InsertNodeCandidate, NodeGraphContextMenuAction,
@@ -1625,6 +1625,8 @@ impl NodeGraphCanvas {
             kind: NodeKindKey::new(REROUTE_KIND),
             kind_version: 1,
             pos: at,
+            parent: None,
+            size: None,
             collapsed: false,
             ports: Vec::new(),
             data: serde_json::Value::Null,
@@ -1666,6 +1668,32 @@ impl NodeGraphCanvas {
                 to: vec![in_port_id, out_port_id],
             },
         ]
+    }
+
+    fn create_group_at<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        at: CanvasPoint,
+    ) {
+        let size = crate::core::CanvasSize {
+            width: 480.0,
+            height: 320.0,
+        };
+        let origin = crate::core::CanvasPoint {
+            x: at.x - 0.5 * size.width,
+            y: at.y - 0.5 * size.height,
+        };
+        let group = crate::core::Group {
+            title: "Group".to_string(),
+            rect: crate::core::CanvasRect { origin, size },
+            color: None,
+        };
+        let ops = vec![GraphOp::AddGroup {
+            id: crate::core::GroupId::new(),
+            group,
+        }];
+        let _ = self.commit_ops(host, window, Some("Create Group"), ops);
     }
 
     fn record_recent_kind(&mut self, kind: &NodeKindKey) {
@@ -2988,6 +3016,13 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 cx.invalidate_self(Invalidation::Paint);
                 true
             }
+            CMD_NODE_GRAPH_CREATE_GROUP => {
+                let at = self.interaction.last_canvas_pos.unwrap_or_default();
+                self.create_group_at(cx.app, cx.window, at);
+                cx.request_redraw();
+                cx.invalidate_self(Invalidation::Paint);
+                true
+            }
             CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE => {
                 if snapshot.selected_edges.len() != 1 {
                     return true;
@@ -3620,6 +3655,7 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
 
         #[derive(Debug, Default)]
         struct RenderData {
+            groups: Vec<(Rect, Arc<str>)>,
             edges: Vec<(EdgeId, Point, Point, Color, bool, bool)>,
             nodes: Vec<(GraphNodeId, Rect, bool, Arc<str>, Option<Arc<str>>, usize)>,
             pins: Vec<(PortId, Rect, Color)>,
@@ -3668,6 +3704,15 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                     let pin_gap = 8.0;
                     let pin_r = this.style.pin_radius;
                     let label_overhead = 2.0 * node_pad + 2.0 * (pin_r + pin_gap);
+
+                    for (_group_id, group) in &graph.groups {
+                        let rect = Rect::new(
+                            Point::new(Px(group.rect.origin.x), Px(group.rect.origin.y)),
+                            Size::new(Px(group.rect.size.width), Px(group.rect.size.height)),
+                        );
+                        out.groups
+                            .push((rect, Arc::<str>::from(group.title.clone())));
+                    }
 
                     for node in geom.order.iter().copied() {
                         let Some(node_geom) = geom.nodes.get(&node) else {
@@ -3739,6 +3784,52 @@ impl<H: UiHost> Widget<H> for NodeGraphCanvas {
                 })
                 .unwrap_or_default()
         };
+
+        // Groups render under edges and nodes (container frames).
+        if !render.groups.is_empty() {
+            let mut group_text_style = self.style.context_menu_text_style.clone();
+            group_text_style.size = Px(group_text_style.size.0 / zoom);
+            if let Some(lh) = group_text_style.line_height.as_mut() {
+                lh.0 /= zoom;
+            }
+
+            let group_pad = 10.0 / zoom;
+            let group_corner = Px(10.0 / zoom);
+            for (rect, title) in &render.groups {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(1),
+                    rect: *rect,
+                    background: self.style.group_background,
+                    border: Edges::all(Px(1.0 / zoom)),
+                    border_color: self.style.group_border,
+                    corner_radii: Corners::all(group_corner),
+                });
+
+                if !title.is_empty() {
+                    let max_w = (rect.size.width.0 - 2.0 * group_pad).max(0.0);
+                    let constraints = TextConstraints {
+                        max_width: Some(Px(max_w)),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                        scale_factor: cx.scale_factor * zoom,
+                    };
+                    let (blob, metrics) =
+                        cx.services
+                            .text()
+                            .prepare(title.as_ref(), &group_text_style, constraints);
+                    self.text_blobs.push(blob);
+
+                    let text_x = Px(rect.origin.x.0 + group_pad);
+                    let text_y = Px(rect.origin.y.0 + group_pad + metrics.baseline.0);
+                    cx.scene.push(SceneOp::Text {
+                        order: DrawOrder(1),
+                        origin: Point::new(text_x, text_y),
+                        text: blob,
+                        color: self.style.context_menu_text,
+                    });
+                }
+            }
+        }
 
         let mut edges_normal: Vec<(Point, Point, Color, f32)> = Vec::new();
         let mut edges_selected: Vec<(Point, Point, Color, f32)> = Vec::new();
@@ -4365,6 +4456,8 @@ mod tests {
                 kind: kind.clone(),
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                parent: None,
+                size: None,
                 collapsed: false,
                 ports: vec![p_out],
                 data: Value::Null,
@@ -4392,6 +4485,8 @@ mod tests {
                 kind: kind.clone(),
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                parent: None,
+                size: None,
                 collapsed: false,
                 ports: vec![p_in1, p_in2],
                 data: Value::Null,
@@ -4456,6 +4551,8 @@ mod tests {
                 kind,
                 kind_version: 1,
                 pos: CanvasPoint { x: 0.0, y: 0.0 },
+                parent: None,
+                size: None,
                 collapsed: false,
                 ports: vec![p_out1, p_out2, p_in],
                 data: Value::Null,

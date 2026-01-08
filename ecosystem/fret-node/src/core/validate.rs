@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::core::{EdgeId, Graph, NodeId, PortCapacity, PortDirection, PortId, PortKind};
+use crate::core::{EdgeId, Graph, GroupId, NodeId, PortCapacity, PortDirection, PortId, PortKind};
 
 #[derive(Debug, thiserror::Error)]
 pub enum GraphValidationError {
@@ -9,6 +9,16 @@ pub enum GraphValidationError {
 
     #[error("port references missing node: port={port:?} node={node:?}")]
     PortMissingNode { port: PortId, node: NodeId },
+
+    #[error("node parent references missing group: node={node:?} group={group:?}")]
+    NodeParentMissingGroup { node: NodeId, group: GroupId },
+
+    #[error("node has invalid size: node={node:?} width={width} height={height}")]
+    NodeInvalidSize {
+        node: NodeId,
+        width: f32,
+        height: f32,
+    },
 
     #[error("node ports list references missing port: node={node:?} port={port:?}")]
     NodePortsMissingPort { node: NodeId, port: PortId },
@@ -94,6 +104,31 @@ pub fn validate_graph(graph: &Graph) -> GraphValidationReport {
     }
 
     for (node_id, node) in &graph.nodes {
+        if let Some(group) = node.parent
+            && !graph.groups.contains_key(&group)
+        {
+            report
+                .errors
+                .push(GraphValidationError::NodeParentMissingGroup {
+                    node: *node_id,
+                    group,
+                });
+        }
+
+        if let Some(size) = node.size {
+            if !size.width.is_finite()
+                || !size.height.is_finite()
+                || size.width <= 0.0
+                || size.height <= 0.0
+            {
+                report.errors.push(GraphValidationError::NodeInvalidSize {
+                    node: *node_id,
+                    width: size.width,
+                    height: size.height,
+                });
+            }
+        }
+
         let mut seen: BTreeSet<PortId> = BTreeSet::new();
         for port_id in &node.ports {
             if !seen.insert(*port_id) {

@@ -20,6 +20,9 @@ pub struct NodeGraphStyle {
     pub node_border: Color,
     pub node_border_selected: Color,
 
+    pub group_background: Color,
+    pub group_border: Color,
+
     pub pin_color_data: Color,
     pub pin_color_exec: Color,
 
@@ -102,6 +105,19 @@ impl Default for NodeGraphStyle {
                 g: 0.55,
                 b: 0.95,
                 a: 1.0,
+            },
+
+            group_background: Color {
+                r: 0.10,
+                g: 0.11,
+                b: 0.12,
+                a: 0.25,
+            },
+            group_border: Color {
+                r: 0.24,
+                g: 0.25,
+                b: 0.26,
+                a: 0.90,
             },
 
             pin_color_data: Color {

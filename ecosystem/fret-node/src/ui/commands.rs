@@ -24,6 +24,7 @@ pub const CMD_NODE_GRAPH_DUPLICATE: &str = "node_graph.duplicate";
 pub const CMD_NODE_GRAPH_SELECT_ALL: &str = "node_graph.select_all";
 pub const CMD_NODE_GRAPH_DELETE_SELECTION: &str = "node_graph.delete_selection";
 pub const CMD_NODE_GRAPH_FRAME_SELECTION: &str = "node_graph.frame_selection";
+pub const CMD_NODE_GRAPH_CREATE_GROUP: &str = "node_graph.create_group";
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
     DefaultKeybinding {
@@ -131,6 +132,15 @@ pub fn register_node_graph_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Insert Node…")
             .with_category("Node Graph")
             .with_keywords(["insert", "node", "create", "add"])
+            .with_scope(widget)
+            .with_when(when_node_graph_editing()),
+    );
+
+    registry.register(
+        CommandId::from(CMD_NODE_GRAPH_CREATE_GROUP),
+        CommandMeta::new("Create Group")
+            .with_category("Node Graph")
+            .with_keywords(["group", "frame", "container"])
             .with_scope(widget)
             .with_when(when_node_graph_editing()),
     );

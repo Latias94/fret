@@ -1,6 +1,6 @@
 use crate::core::{
-    CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, Port, PortCapacity,
-    PortDirection, PortId, PortKey, PortKind,
+    CanvasPoint, Edge, EdgeId, EdgeKind, Graph, Group, GroupId, Node, NodeId, NodeKindKey, Port,
+    PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 use crate::ops::{
     EdgeEndpoints, GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction,
@@ -13,6 +13,8 @@ fn make_node(kind: &str) -> Node {
         kind: NodeKindKey::new(kind),
         kind_version: 0,
         pos: CanvasPoint { x: 0.0, y: 0.0 },
+        parent: None,
+        size: None,
         collapsed: false,
         ports: Vec::new(),
         data: serde_json::Value::Null,
@@ -107,6 +109,43 @@ fn build_disconnect_port_ops_removes_incident_edges() {
     let tx = crate::ops::GraphTransaction { label: None, ops };
     apply_transaction(&mut graph, &tx).expect("apply");
     assert!(graph.edges.is_empty());
+}
+
+#[test]
+fn remove_group_detaches_child_nodes_and_inverts() {
+    let mut graph = Graph::default();
+    let group_id = GroupId::new();
+    graph.groups.insert(
+        group_id,
+        Group {
+            title: "Group".to_string(),
+            rect: crate::core::CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: crate::core::CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            },
+            color: None,
+        },
+    );
+
+    let node_id = NodeId::new();
+    let mut node = make_node("core.a");
+    node.parent = Some(group_id);
+    graph.nodes.insert(node_id, node);
+
+    let tx = graph
+        .build_remove_group_tx(group_id, "Delete Group")
+        .expect("tx");
+    apply_transaction(&mut graph, &tx).expect("apply");
+    assert!(!graph.groups.contains_key(&group_id));
+    assert_eq!(graph.nodes.get(&node_id).unwrap().parent, None);
+
+    let undo = invert_transaction(&tx);
+    apply_transaction(&mut graph, &undo).expect("undo apply");
+    assert!(graph.groups.contains_key(&group_id));
+    assert_eq!(graph.nodes.get(&node_id).unwrap().parent, Some(group_id));
 }
 
 #[test]

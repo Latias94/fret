@@ -23,6 +23,8 @@ pub enum ApplyError {
     GroupAlreadyExists { id: GroupId },
     #[error("missing group: {id:?}")]
     MissingGroup { id: GroupId },
+    #[error("node parent references missing group: node={node:?} group={group:?}")]
+    NodeParentMissingGroup { node: NodeId, group: GroupId },
     #[error("sticky note already exists: {id:?}")]
     StickyNoteAlreadyExists { id: StickyNoteId },
     #[error("missing sticky note: {id:?}")]
@@ -41,6 +43,14 @@ pub enum ApplyError {
     RemoveSymbolMismatch { id: SymbolId },
     #[error("remove group op did not match current group: {id:?}")]
     RemoveGroupMismatch { id: GroupId },
+    #[error(
+        "remove group op expected node parent mismatch: group={group:?} node={node:?} expected={expected:?}"
+    )]
+    RemoveGroupDetachedMismatch {
+        group: GroupId,
+        node: NodeId,
+        expected: Option<GroupId>,
+    },
     #[error("remove sticky note op did not match current note: {id:?}")]
     RemoveStickyNoteMismatch { id: StickyNoteId },
 }
@@ -87,6 +97,26 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
                 return Err(ApplyError::MissingNode { id: *id });
             };
             node.pos = *to;
+        }
+        GraphOp::SetNodeParent { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            if let Some(group) = to
+                && !graph.groups.contains_key(group)
+            {
+                return Err(ApplyError::NodeParentMissingGroup {
+                    node: *id,
+                    group: *group,
+                });
+            }
+            node.parent = *to;
+        }
+        GraphOp::SetNodeSize { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.size = *to;
         }
         GraphOp::SetNodeCollapsed { id, to, .. } => {
             let Some(node) = graph.nodes.get_mut(id) else {
@@ -217,14 +247,39 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             }
             graph.groups.insert(*id, group.clone());
         }
-        GraphOp::RemoveGroup { id, group } => {
+        GraphOp::RemoveGroup {
+            id,
+            group,
+            detached,
+        } => {
             let Some(current) = graph.groups.get(id) else {
                 return Err(ApplyError::MissingGroup { id: *id });
             };
             if current.title != group.title {
                 return Err(ApplyError::RemoveGroupMismatch { id: *id });
             }
+
+            for (node_id, expected_parent) in detached {
+                let Some(node) = graph.nodes.get_mut(node_id) else {
+                    return Err(ApplyError::MissingNode { id: *node_id });
+                };
+                if node.parent != *expected_parent {
+                    return Err(ApplyError::RemoveGroupDetachedMismatch {
+                        group: *id,
+                        node: *node_id,
+                        expected: *expected_parent,
+                    });
+                }
+                node.parent = None;
+            }
+
             graph.groups.remove(id);
+        }
+        GraphOp::SetGroupRect { id, to, .. } => {
+            let Some(group) = graph.groups.get_mut(id) else {
+                return Err(ApplyError::MissingGroup { id: *id });
+            };
+            group.rect = *to;
         }
         GraphOp::AddStickyNote { id, note } => {
             if graph.sticky_notes.contains_key(id) {

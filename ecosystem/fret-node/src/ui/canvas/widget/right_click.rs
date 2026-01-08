@@ -5,7 +5,7 @@ use fret_ui::UiHost;
 
 use crate::core::EdgeId;
 use crate::ui::commands::{
-    CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_INSERT_REROUTE,
+    CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_INSERT_REROUTE,
     CMD_NODE_GRAPH_OPEN_INSERT_NODE, CMD_NODE_GRAPH_OPEN_SPLIT_EDGE_INSERT_NODE,
     CMD_NODE_GRAPH_PASTE, CMD_NODE_GRAPH_SELECT_ALL,
 };
@@ -21,6 +21,14 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost>(
     position: Point,
     zoom: f32,
 ) -> bool {
+    canvas.interaction.last_pos = Some(position);
+    canvas.interaction.last_canvas_pos = Some(NodeGraphCanvas::screen_to_canvas(
+        cx.bounds,
+        position,
+        snapshot.pan,
+        zoom,
+    ));
+
     let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
     let hit_edge = {
         let this = &*canvas;
@@ -52,6 +60,13 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost>(
                 enabled: true,
                 action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
                     CMD_NODE_GRAPH_OPEN_INSERT_NODE,
+                )),
+            },
+            NodeGraphContextMenuItem {
+                label: Arc::<str>::from("Create Group"),
+                enabled: true,
+                action: NodeGraphContextMenuAction::Command(fret_runtime::CommandId::from(
+                    CMD_NODE_GRAPH_CREATE_GROUP,
                 )),
             },
             NodeGraphContextMenuItem {
