@@ -69,15 +69,19 @@ We introduce a new workspace crate:
 
 Feature policy:
 
-- Default features include `fret-ui` integration (`default = ["fret-ui"]`).
+- Default features include `fret-ui` integration and a convenience kit (`default = ["fret-ui", "kit"]`).
 - A `headless` feature exists for non-UI usage (graph model + schema + rules only).
   `headless` must not depend on `crates/fret-ui`.
+- A `kit` feature provides common profiles and recipes on top of the substrate. It is headless-safe
+  and must not depend on `crates/fret-ui`.
 
 Rationale:
 
 - This is a policy-heavy editor component (ADR 0074), not a mechanism-only runtime feature.
 - Default-on UI integration optimizes for Fret’s primary use case while keeping an escape hatch for
   CLI tools, server-side validation, and alternative front-ends.
+- Keeping a kit inside the same crate avoids crate proliferation while still separating
+  **mechanism-only substrate contracts** (XyFlow-like) from **optional convenience policies**.
 
 ### 2) Hard boundary: Model vs Rules vs UI
 
@@ -91,6 +95,13 @@ Rationale:
 
 The UI layer must not encode domain semantics. All “can connect?” decisions and all automatic fixes
 flow through the rules layer.
+
+Additionally, within a single crate we distinguish:
+
+- **Substrate (mechanism)**: stable contracts for graph editing (similar to XyFlow’s philosophy).
+  This includes `core/`, `ops/`, `rules/`, `schema/`, and `profile/` *interfaces/pipeline*.
+- **Kit (convenience)**: optional reusable policies and recipes (e.g. a permissive `DataflowProfile`,
+  demo/utility node kinds). This lives under `kit/` and is feature-gated.
 
 ### 3) Graph primitives and stable IDs
 
@@ -448,6 +459,20 @@ Derived geometry and internals (locked):
 - API clarity constraint:
   - avoid overloading `Node.width/height` or other user-facing fields with measured values;
     measured geometry must have its own namespace in editor state to prevent "who owns size?" confusion.
+
+Minimap and overview navigation (locked):
+
+- The editor provides an optional minimap/overview surface (ReactFlow parity) that is:
+  - purely a view over derived geometry (node rects + viewport rect),
+  - not serialized into the graph asset (view state only),
+  - implemented as a separate widget/overlay that consumes `CanvasGeometry`/internals stores.
+- Minimap interactions (drag viewport, click-to-pan) must produce the same canonical navigation ops as
+  normal canvas navigation:
+  - set pan/zoom,
+  - frame a rect (selection / all nodes),
+  - fit view (optional command surface).
+- The minimap must not require a "floating window" subsystem:
+  it is rendered as an overlay outside the canvas transform using the coordinate escape hatch.
 
 Connection modes and handle resolution (locked):
 
@@ -855,6 +880,33 @@ Cons:
 
 3) Bake a single domain type system (shader slots) into core:
    rejected (we need cross-domain reuse).
+
+## Appendix: Upstream parity map (non-normative)
+
+This appendix is intentionally implementation-oriented: it helps keep naming and responsibilities
+aligned with upstream mental models while preserving Fret’s own layering.
+
+XyFlow (`@xyflow/system`) concept map:
+
+- Pan/zoom (`XYPanZoom`) → `NodeGraphCanvasTransform` + view-state stored pan/zoom.
+- Dragging (`XYDrag`) → node/selection drag interactions in the canvas state machine.
+- Handles/connections (`XYHandle`) → port anchor resolution + connection/reconnection flows.
+- Derived internals (`internals.handleBounds`, `positionAbsolute`, `measured`) → `CanvasGeometry` /
+  `MeasuredGeometryStore` / `NodeGraphInternalsStore` (output-only, never serialized into the graph asset).
+- Minimap (`XYMiniMap`) → optional overlay widget consuming derived geometry (see “Minimap and overview navigation”).
+- Change sets (`NodeChange` / `EdgeChange`) → `GraphOp` + `GraphTransaction` as the canonical reversible patch unit.
+
+ImGui Node Editor concept map:
+
+- “Draw your content, we do the rest” → presenter/viewer surface: the canvas owns interaction; the
+  caller owns node/pin/wire UI.
+- `Suspend/Resume` → canvas coordinate escape hatch for screen-space overlays (menus/searchers).
+
+Unity ShaderGraph concept map:
+
+- Graph validation pipeline → `GraphProfile::validate_graph` + `Diagnostic` reporting.
+- Concretization (dynamic slots) → `GraphProfile::concretize` executed in the apply pipeline.
+- Unknown node survival + migrations → schema versioning + explicit migrations (see earlier sections).
 
 ## Open Questions
 
