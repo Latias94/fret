@@ -141,6 +141,59 @@ pub fn navigation_menu_viewport_content_id<H: UiHost>(
     })
 }
 
+fn navigation_menu_viewport_content_semantics_id_in_scope<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    value: &str,
+) -> GlobalElementId {
+    navigation_menu_viewport_content_pressable_with_id_props::<H>(cx, value, |_cx, _st, _id| {
+        (
+            fret_ui::element::PressableProps {
+                layout: LayoutStyle::default(),
+                enabled: true,
+                focusable: false,
+                ..Default::default()
+            },
+            Vec::new(),
+        )
+    })
+    .id
+}
+
+/// Returns the stable semantics element id for a navigation-menu viewport content.
+///
+/// This mirrors Radix `NavigationMenuTrigger` / `NavigationMenuContent` behavior where the trigger
+/// advertises a `controls` relationship (`aria-controls`) to the content element derived from the
+/// root + `value`.
+///
+/// Callers should use this root-name-scoped helper rather than trying to capture the mounted
+/// content id from the overlay subtree: triggers need stable ids even while the viewport is not
+/// mounted yet.
+pub fn navigation_menu_viewport_content_semantics_id<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    overlay_root_name: &str,
+    value: &str,
+) -> GlobalElementId {
+    cx.with_root_name(overlay_root_name, |cx| {
+        navigation_menu_viewport_content_semantics_id_in_scope::<H>(cx, value)
+    })
+}
+
+/// Builds the viewport content wrapper using a stable call path keyed by `value`.
+///
+/// Use this instead of calling `ElementContext::pressable_with_id_props` directly when you need a
+/// deterministic content element id (e.g. for trigger `aria-controls` relationships).
+pub fn navigation_menu_viewport_content_pressable_with_id_props<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    value: &str,
+    f: impl FnOnce(
+        &mut ElementContext<'_, H>,
+        fret_ui::element::PressableState,
+        GlobalElementId,
+    ) -> (fret_ui::element::PressableProps, Vec<AnyElement>),
+) -> AnyElement {
+    cx.keyed(value, |cx| cx.pressable_with_id_props(f))
+}
+
 #[derive(Default)]
 struct ViewportPresentSelectionState {
     last_present_selected: Option<Arc<str>>,
@@ -654,6 +707,15 @@ impl NavigationMenuTrigger {
             pressable.a11y.label = self.label.clone();
         }
         pressable.a11y.expanded = Some(is_open);
+        if pressable.a11y.controls_element.is_none() {
+            let overlay_root_name = OverlayController::popover_root_name(root_id);
+            let content_id = navigation_menu_viewport_content_semantics_id::<H>(
+                cx,
+                overlay_root_name.as_str(),
+                item_value.as_ref(),
+            );
+            pressable.a11y.controls_element = Some(content_id.0);
+        }
 
         cx.pointer_region(pointer_region, move |cx| {
             if !disabled {
@@ -1851,5 +1913,37 @@ mod tests {
             ),
             "expected opt-in to allow dismiss on modified select"
         );
+    }
+
+    #[test]
+    fn viewport_content_semantics_id_matches_mounted_content_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let overlay_root_name = "nav-menu-overlay";
+            let value = "alpha";
+            let expected =
+                navigation_menu_viewport_content_semantics_id::<App>(cx, overlay_root_name, value);
+            let actual = cx.with_root_name(overlay_root_name, |cx| {
+                navigation_menu_viewport_content_pressable_with_id_props::<App>(
+                    cx,
+                    value,
+                    |_cx, _st, _id| {
+                        (
+                            fret_ui::element::PressableProps {
+                                layout: LayoutStyle::default(),
+                                enabled: true,
+                                focusable: false,
+                                ..Default::default()
+                            },
+                            Vec::new(),
+                        )
+                    },
+                )
+                .id
+            });
+            assert_eq!(expected, actual);
+        });
     }
 }
