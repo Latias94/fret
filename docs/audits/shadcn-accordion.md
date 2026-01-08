@@ -20,9 +20,11 @@ examples in `repo-ref/ui`.
 
 ### Composition surface
 
-- Partial: Fret exposes `Accordion::single(...)` / `Accordion::multiple(...)` builders with
-  `AccordionItem` entries, rather than a fully composable `AccordionItem` / `AccordionTrigger` /
-  `AccordionContent` surface mirroring Radix/shadcn.
+- Pass: A Radix-shaped, shadcn-skinned component family exists in
+  `fret_ui_shadcn::accordion::composable` (`AccordionRoot` / `AccordionItem` / `AccordionTrigger` /
+  `AccordionContent`).
+- Pass: The legacy builder-style API (`Accordion::single(...)` / `Accordion::multiple(...)`) remains
+  available for compact internal recipes.
 - Pass: Supports both single and multiple open models (`Model<Option<Arc<str>>>` and
   `Model<Vec<Arc<str>>>`), including `collapsible(true)` in the single-open mode.
 - Pass: Supports uncontrolled `defaultValue` (internal selection model).
