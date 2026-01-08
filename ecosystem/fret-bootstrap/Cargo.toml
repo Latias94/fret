@@ -7,6 +7,8 @@ edition.workspace = true
 default = []
 # Enable `preload_icon_svgs_on_gpu_ready`, which depends on `fret-ui-kit`.
 preload-icon-svgs = ["dep:fret-ui-kit"]
+# Marker feature used by app crates; kept to avoid workspace feature drift.
+ui-app-driver = []
 
 [dependencies]
 thiserror.workspace = true
