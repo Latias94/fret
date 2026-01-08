@@ -1,5 +1,7 @@
 use super::hit_test::hit_test_drop_target;
-use super::layout::{compute_layout_map, dock_hint_rects, dock_space_regions};
+use super::layout::{
+    active_panel_content_bounds, compute_layout_map, dock_hint_rects, dock_space_regions,
+};
 use super::prelude_core::*;
 use super::prelude_runtime::*;
 use super::prelude_ui::*;
@@ -291,6 +293,80 @@ fn render_and_bind_dock_panels_keeps_non_viewport_panel_alive() {
         Some(node),
         "expected bound panel node to be focusable and receive pointer events"
     );
+}
+
+#[test]
+fn dock_space_layout_assigns_active_panel_content_bounds_via_panel_nodes() {
+    let window = AppWindowId::default();
+    let panel = fret_core::PanelKey::new("demo.controls");
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    let dock_space = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(dock_space);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(DockManager::default());
+    app.with_global_mut(
+        DockPanelRegistryService::<TestHost>::default,
+        |svc, _app| {
+            svc.set(Arc::new(CachedRetainedPanelRegistry::new()));
+        },
+    );
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        dock.ensure_panel(&panel, || crate::DockPanel {
+            title: "Controls".to_string(),
+            color: fret_core::Color::TRANSPARENT,
+            viewport: None,
+        });
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![panel.clone()],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+    });
+
+    let mut services = FakeTextService;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(240.0)),
+    );
+
+    render_and_bind_dock_panels(&mut ui, &mut app, &mut services, window, bounds, dock_space);
+
+    let root = app
+        .global::<DockManager>()
+        .and_then(|dock| dock.graph.window_root(window))
+        .expect("expected dock window root");
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let dock_layout = compute_layout_map(
+        &app.global::<DockManager>().unwrap().graph,
+        root,
+        dock_bounds,
+    );
+    let active =
+        active_panel_content_bounds(&app.global::<DockManager>().unwrap().graph, &dock_layout);
+    let expected = active
+        .get(&panel)
+        .copied()
+        .expect("expected active panel bounds");
+
+    let _ = ui.layout(&mut app, &mut services, dock_space, bounds.size, 1.0);
+
+    let node = app
+        .global::<DockPanelContentService>()
+        .and_then(|svc| svc.get(window, &panel))
+        .expect("expected panel node to be bound");
+
+    let laid_out = ui
+        .debug_node_bounds(node)
+        .expect("expected panel node bounds");
+    assert!((laid_out.origin.x.0 - expected.origin.x.0).abs() < 0.01);
+    assert!((laid_out.origin.y.0 - expected.origin.y.0).abs() < 0.01);
+    assert!((laid_out.size.width.0 - expected.size.width.0).abs() < 0.01);
+    assert!((laid_out.size.height.0 - expected.size.height.0).abs() < 0.01);
 }
 
 #[test]
