@@ -1264,8 +1264,9 @@ fn axis_pointer_is_emitted_when_hit_is_close_enough() {
         .unwrap();
     assert!(!step.unfinished);
 
-    let axis_pointer = engine.output().axis_pointer;
+    let axis_pointer = engine.output().axis_pointer.as_ref();
     assert!(axis_pointer.is_some());
     let axis_pointer = axis_pointer.unwrap();
     assert_eq!(axis_pointer.crosshair_px, Point::new(Px(0.0), Px(100.0)));
+    assert!(!axis_pointer.tooltip_text.is_empty());
 }

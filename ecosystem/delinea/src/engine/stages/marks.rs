@@ -7,7 +7,7 @@ use crate::engine::lod::{
     finalize_bounds, minmax_per_pixel_finalize, minmax_per_pixel_step,
 };
 use crate::engine::model::ChartModel;
-use crate::engine::window::{DataWindowX, DataWindowY};
+use crate::engine::window::{DataWindow, DataWindowX, DataWindowY};
 use crate::ids::MarkId;
 use crate::marks::{MarkKind, MarkNode, MarkOrderKey, MarkPayloadRef, MarkPolylineRef, MarkTree};
 use crate::paint::StrokeStyleV2;
@@ -16,6 +16,7 @@ use crate::spec::AxisRange;
 use crate::stats::EngineStats;
 use crate::view::ViewState;
 use core::ops::Range;
+use std::collections::BTreeMap;
 
 #[derive(Debug, Default, Clone)]
 pub struct MarksStage {
@@ -30,6 +31,7 @@ pub struct MarksStage {
     last_data_sig: u64,
     last_view_rev: crate::ids::Revision,
     bounds: Option<DataBounds>,
+    axis_windows: BTreeMap<crate::ids::AxisId, DataWindow>,
 }
 
 impl MarksStage {
@@ -73,6 +75,11 @@ impl MarksStage {
         self.finalized = false;
         self.dirty = false;
         self.bounds = None;
+        self.axis_windows.clear();
+    }
+
+    pub fn axis_windows(&self) -> &BTreeMap<crate::ids::AxisId, DataWindow> {
+        &self.axis_windows
     }
 
     pub fn step(
@@ -196,6 +203,22 @@ impl MarksStage {
                 ) else {
                     return false;
                 };
+                merge_axis_window(
+                    &mut self.axis_windows,
+                    series.x_axis,
+                    DataWindow {
+                        min: bounds.x_min,
+                        max: bounds.x_max,
+                    },
+                );
+                merge_axis_window(
+                    &mut self.axis_windows,
+                    series.y_axis,
+                    DataWindow {
+                        min: bounds.y_min,
+                        max: bounds.y_max,
+                    },
+                );
                 self.bounds = Some(bounds);
             }
             let Some(mut bounds) = self.bounds else {
@@ -353,6 +376,23 @@ impl MarksStage {
 
         true
     }
+}
+
+fn merge_axis_window(
+    axis_windows: &mut BTreeMap<crate::ids::AxisId, DataWindow>,
+    axis: crate::ids::AxisId,
+    mut window: DataWindow,
+) {
+    window.clamp_non_degenerate();
+    axis_windows
+        .entry(axis)
+        .and_modify(|w| {
+            w.clamp_non_degenerate();
+            w.min = w.min.min(window.min);
+            w.max = w.max.max(window.max);
+            w.clamp_non_degenerate();
+        })
+        .or_insert(window);
 }
 
 fn series_mark_id(series: crate::ids::SeriesId, variant: u64) -> MarkId {

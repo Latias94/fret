@@ -11,6 +11,7 @@ pub mod action;
 pub mod coord;
 pub mod data;
 pub mod engine;
+pub mod format;
 pub mod ids;
 pub mod link;
 pub mod marks;

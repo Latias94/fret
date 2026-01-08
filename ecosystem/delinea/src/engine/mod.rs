@@ -52,16 +52,18 @@ pub struct ChartOutput {
     pub revision: Revision,
     pub viewport: Option<Rect>,
     pub marks: MarkTree,
+    pub axis_windows: BTreeMap<crate::ids::AxisId, window::DataWindow>,
     pub link_events: Vec<LinkEvent>,
     pub hover: Option<HoverHit>,
     pub axis_pointer: Option<AxisPointerOutput>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AxisPointerOutput {
     pub crosshair_px: Point,
     pub hit: HoverHit,
+    pub tooltip_text: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -328,8 +330,6 @@ impl ChartEngine {
         }
 
         self.output.link_events.clear();
-        self.output.hover = None;
-        self.output.axis_pointer = None;
 
         let view_changed = self
             .view
@@ -342,6 +342,7 @@ impl ChartEngine {
             .sync_inputs(&self.model, &self.datasets, &self.view);
         if self.marks_stage.is_dirty() {
             self.output.marks.clear();
+            self.output.axis_windows.clear();
             self.marks_stage.reset();
         }
 
@@ -362,6 +363,10 @@ impl ChartEngine {
             &mut self.output.marks,
             &mut self.stats,
         );
+
+        self.output
+            .axis_windows
+            .clone_from(self.marks_stage.axis_windows());
 
         let unfinished = !done;
 
@@ -399,14 +404,59 @@ impl ChartEngine {
 
         self.output.hover = self.axis_pointer_cache.hit;
 
-        if let (Some(p), Some(hover_px), Some(hit)) = (axis_pointer, hover_px, self.output.hover) {
+        let next_axis_pointer = if let (Some(p), Some(hover_px), Some(hit)) =
+            (axis_pointer, hover_px, self.output.hover)
+        {
             let viewport = self.output.viewport.unwrap_or_default();
             if rect_contains_point(viewport, hover_px) {
                 let trigger2 = p.trigger_distance_px.max(0.0) * p.trigger_distance_px.max(0.0);
                 if hit.dist2_px <= trigger2 {
                     let crosshair_px = if p.snap { hit.point_px } else { hover_px };
-                    self.output.axis_pointer = Some(AxisPointerOutput { crosshair_px, hit });
+                    Some((crosshair_px, hit))
+                } else {
+                    None
                 }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        match (self.output.axis_pointer.as_ref(), next_axis_pointer) {
+            (Some(prev), Some((crosshair_px, hit)))
+                if prev.crosshair_px == crosshair_px && prev.hit == hit => {}
+            (_, Some((crosshair_px, hit))) => {
+                let (x_axis, y_axis) = self
+                    .model
+                    .series
+                    .get(&hit.series)
+                    .map(|s| (s.x_axis, s.y_axis))
+                    .unwrap_or_default();
+                let x_window = self
+                    .output
+                    .axis_windows
+                    .get(&x_axis)
+                    .copied()
+                    .unwrap_or_default();
+                let y_window = self
+                    .output
+                    .axis_windows
+                    .get(&y_axis)
+                    .copied()
+                    .unwrap_or_default();
+                let x_label = crate::format::format_tick_value(x_window, hit.x_value);
+                let y_label = crate::format::format_tick_value(y_window, hit.y_value);
+                let tooltip_text =
+                    format!("series: {}  x: {}  y: {}", hit.series.0, x_label, y_label);
+                self.output.axis_pointer = Some(AxisPointerOutput {
+                    crosshair_px,
+                    hit,
+                    tooltip_text,
+                });
+            }
+            (_, None) => {
+                self.output.axis_pointer = None;
             }
         }
 

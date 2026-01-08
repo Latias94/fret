@@ -258,6 +258,10 @@ impl ChartCanvas {
     }
 
     fn compute_axis_extent(&mut self, axis: delinea::AxisId, is_x: bool) -> DataWindow {
+        if let Some(window) = self.engine.output().axis_windows.get(&axis).copied() {
+            return window;
+        }
+
         let mut min = f64::INFINITY;
         let mut max = f64::NEG_INFINITY;
 
@@ -454,11 +458,11 @@ impl ChartCanvas {
     }
 
     fn axis_ticks(window: DataWindow, count: usize) -> Vec<f64> {
-        nice_ticks(window, count)
+        delinea::format::nice_ticks(window, count)
     }
 
     fn format_tick(window: DataWindow, value: f64) -> String {
-        format_tick_value(window, value)
+        delinea::format::format_tick_value(window, value)
     }
 
     fn y_local_for_data_value(window: DataWindow, value: f64, plot_height_px: f32) -> f32 {
@@ -1582,7 +1586,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         let interaction_idle = self.pan_drag.is_none() && self.box_zoom_drag.is_none();
         let axis_pointer = interaction_idle
-            .then_some(self.engine.output().axis_pointer)
+            .then(|| self.engine.output().axis_pointer.as_ref())
             .flatten();
 
         if let Some(axis_pointer) = axis_pointer {
@@ -1657,17 +1661,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
         cx.scene.push(SceneOp::PopClip);
 
-        if let Some(axis_pointer) = axis_pointer
-            && let Some((x_axis, y_axis)) = self.primary_axes()
-        {
+        if let Some(axis_pointer) = axis_pointer {
             let hit = axis_pointer.hit;
-            let x_window = self.current_window_x(x_axis);
-            let y_window = self.current_window_y(y_axis);
 
             if hit.x_value.is_finite() && hit.y_value.is_finite() {
-                let x_label = format_tick_value(x_window, hit.x_value);
-                let y_label = format_tick_value(y_window, hit.y_value);
-                let label = format!("series: {}  x: {}  y: {}", hit.series.0, x_label, y_label);
+                let label = axis_pointer.tooltip_text.as_str();
 
                 let text_style = TextStyle {
                     size: Px(12.0),
@@ -1680,7 +1678,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     overflow: TextOverflow::Clip,
                     scale_factor: cx.scale_factor,
                 };
-                let (blob, metrics) = cx.services.text().prepare(&label, &text_style, constraints);
+                let (blob, metrics) = cx.services.text().prepare(label, &text_style, constraints);
 
                 let pad = self.style.tooltip_padding;
                 let w = (metrics.size.width.0 + pad.left.0 + pad.right.0).max(1.0);
@@ -1780,130 +1778,6 @@ fn rect_from_points_clamped(bounds: Rect, a: Point, b: Point) -> Rect {
     )
 }
 
-fn nice_ticks(window: DataWindow, target_count: usize) -> Vec<f64> {
-    let mut out = Vec::new();
-
-    let mut window = window;
-    window.clamp_non_degenerate();
-    let span = window.span();
-
-    if !span.is_finite() || span <= 0.0 || target_count == 0 {
-        out.push(window.min);
-        out.push(window.max);
-        return out;
-    }
-
-    if target_count == 1 {
-        out.push(0.5 * (window.min + window.max));
-        return out;
-    }
-
-    let step = nice_step(span / (target_count as f64 - 1.0));
-    if !step.is_finite() || step <= 0.0 {
-        out.push(window.min);
-        out.push(window.max);
-        return out;
-    }
-
-    let start = (window.min / step).floor() * step;
-    let end = (window.max / step).ceil() * step;
-    if !start.is_finite() || !end.is_finite() || end < start {
-        out.push(window.min);
-        out.push(window.max);
-        return out;
-    }
-
-    let mut v = start;
-    // Prevent pathological loops due to floating rounding.
-    let max_steps = 10_000usize;
-    for _ in 0..max_steps {
-        if v > end + step * 0.5 {
-            break;
-        }
-        let clamped = v.clamp(window.min, window.max);
-        if out
-            .last()
-            .is_none_or(|prev| (clamped - *prev).abs() > step * 0.1)
-        {
-            out.push(clamped);
-        }
-        v += step;
-    }
-
-    if out.is_empty() {
-        out.push(window.min);
-        out.push(window.max);
-    } else {
-        let first = *out.first().unwrap_or(&window.min);
-        let last = *out.last().unwrap_or(&window.max);
-        if (first - window.min).abs() > step * 0.1 {
-            out.insert(0, window.min);
-        }
-        if (last - window.max).abs() > step * 0.1 {
-            out.push(window.max);
-        }
-    }
-
-    out
-}
-
-fn nice_step(raw_step: f64) -> f64 {
-    if !raw_step.is_finite() || raw_step <= 0.0 {
-        return 0.0;
-    }
-
-    let exponent = raw_step.abs().log10().floor();
-    let base = 10f64.powf(exponent);
-    if !base.is_finite() || base <= 0.0 {
-        return raw_step;
-    }
-
-    let fraction = raw_step / base;
-    let nice_fraction = if fraction <= 1.0 {
-        1.0
-    } else if fraction <= 2.0 {
-        2.0
-    } else if fraction <= 5.0 {
-        5.0
-    } else {
-        10.0
-    };
-
-    nice_fraction * base
-}
-
-fn format_tick_value(window: DataWindow, value: f64) -> String {
-    let mut window = window;
-    window.clamp_non_degenerate();
-
-    let span = window.span().abs();
-    if !span.is_finite() || span <= 0.0 {
-        return format!("{value}");
-    }
-
-    let step = nice_step(span / 4.0);
-    let digits = if step.is_finite() && step > 0.0 {
-        let log10 = step.abs().log10();
-        (-log10).ceil().clamp(0.0, 8.0) as usize
-    } else {
-        3
-    };
-
-    let mut s = format!("{value:.digits$}");
-    if s.contains('.') {
-        while s.ends_with('0') {
-            s.pop();
-        }
-        if s.ends_with('.') {
-            s.pop();
-        }
-    }
-    if s == "-0" {
-        s = "0".to_string();
-    }
-    s
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1943,7 +1817,7 @@ mod tests {
     #[test]
     fn nice_ticks_include_endpoints() {
         let window = DataWindow { min: 0.2, max: 9.7 };
-        let ticks = nice_ticks(window, 5);
+        let ticks = delinea::format::nice_ticks(window, 5);
         assert!(!ticks.is_empty());
         assert_eq!(*ticks.first().unwrap(), window.min);
         assert_eq!(*ticks.last().unwrap(), window.max);
