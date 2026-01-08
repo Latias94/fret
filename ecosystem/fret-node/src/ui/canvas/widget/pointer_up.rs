@@ -75,6 +75,58 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         return true;
     }
 
+    if let Some(drag) = canvas.interaction.group_drag.take() {
+        canvas.interaction.pending_group_drag = None;
+
+        let end_rect = canvas
+            .graph
+            .read_ref(cx.app, |g| g.groups.get(&drag.group).map(|gr| gr.rect))
+            .ok()
+            .flatten();
+
+        let mut ops: Vec<GraphOp> = Vec::new();
+        if let Some(end_rect) = end_rect
+            && end_rect != drag.start_rect
+        {
+            ops.push(GraphOp::SetGroupRect {
+                id: drag.group,
+                from: drag.start_rect,
+                to: end_rect,
+            });
+        }
+
+        let mut node_ops = canvas
+            .graph
+            .read_ref(cx.app, |g| {
+                drag.nodes
+                    .iter()
+                    .filter_map(|(id, start)| {
+                        let end = g.nodes.get(id).map(|n| n.pos)?;
+                        (end != *start).then_some(GraphOp::SetNodePos {
+                            id: *id,
+                            from: *start,
+                            to: end,
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .ok()
+            .unwrap_or_default();
+        ops.append(&mut node_ops);
+
+        if !ops.is_empty() {
+            canvas.history.record(crate::ops::GraphTransaction {
+                label: Some("Move Group".to_string()),
+                ops,
+            });
+        }
+
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
     if let Some(drag) = canvas.interaction.node_drag.take() {
         let geom = canvas.canvas_geometry(&*cx.app, snapshot);
         let parent_changes: Vec<(crate::core::NodeId, Option<GroupId>, Option<GroupId>)> = canvas
@@ -185,6 +237,13 @@ pub(super) fn handle_pointer_up<H: UiHost>(
         }
         canvas.interaction.pending_node_drag = None;
         canvas.interaction.snap_guides = None;
+        cx.release_pointer_capture();
+        cx.request_redraw();
+        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        return true;
+    }
+
+    if canvas.interaction.pending_group_drag.take().is_some() {
         cx.release_pointer_capture();
         cx.request_redraw();
         cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);

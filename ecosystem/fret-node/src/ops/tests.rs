@@ -149,6 +149,87 @@ fn remove_group_detaches_child_nodes_and_inverts() {
 }
 
 #[test]
+fn set_group_rect_and_child_positions_roundtrip_through_invert_transaction() {
+    let mut graph = Graph::default();
+    let group_id = GroupId::new();
+    let rect0 = crate::core::CanvasRect {
+        origin: CanvasPoint { x: 10.0, y: 20.0 },
+        size: crate::core::CanvasSize {
+            width: 100.0,
+            height: 80.0,
+        },
+    };
+    graph.groups.insert(
+        group_id,
+        Group {
+            title: "Group".to_string(),
+            rect: rect0,
+            color: None,
+        },
+    );
+
+    let node_a = NodeId::new();
+    let node_b = NodeId::new();
+    let mut a = make_node("core.a");
+    a.parent = Some(group_id);
+    a.pos = CanvasPoint { x: 30.0, y: 40.0 };
+    let mut b = make_node("core.b");
+    b.parent = Some(group_id);
+    b.pos = CanvasPoint { x: 50.0, y: 60.0 };
+    graph.nodes.insert(node_a, a);
+    graph.nodes.insert(node_b, b);
+
+    let rect1 = crate::core::CanvasRect {
+        origin: CanvasPoint { x: 110.0, y: 120.0 },
+        size: rect0.size,
+    };
+
+    let tx = GraphTransaction {
+        label: Some("Move Group".to_string()),
+        ops: vec![
+            GraphOp::SetGroupRect {
+                id: group_id,
+                from: rect0,
+                to: rect1,
+            },
+            GraphOp::SetNodePos {
+                id: node_a,
+                from: CanvasPoint { x: 30.0, y: 40.0 },
+                to: CanvasPoint { x: 130.0, y: 140.0 },
+            },
+            GraphOp::SetNodePos {
+                id: node_b,
+                from: CanvasPoint { x: 50.0, y: 60.0 },
+                to: CanvasPoint { x: 150.0, y: 160.0 },
+            },
+        ],
+    };
+
+    apply_transaction(&mut graph, &tx).expect("apply");
+    assert_eq!(graph.groups.get(&group_id).unwrap().rect, rect1);
+    assert_eq!(
+        graph.nodes.get(&node_a).unwrap().pos,
+        CanvasPoint { x: 130.0, y: 140.0 }
+    );
+    assert_eq!(
+        graph.nodes.get(&node_b).unwrap().pos,
+        CanvasPoint { x: 150.0, y: 160.0 }
+    );
+
+    let undo = invert_transaction(&tx);
+    apply_transaction(&mut graph, &undo).expect("undo apply");
+    assert_eq!(graph.groups.get(&group_id).unwrap().rect, rect0);
+    assert_eq!(
+        graph.nodes.get(&node_a).unwrap().pos,
+        CanvasPoint { x: 30.0, y: 40.0 }
+    );
+    assert_eq!(
+        graph.nodes.get(&node_b).unwrap().pos,
+        CanvasPoint { x: 50.0, y: 60.0 }
+    );
+}
+
+#[test]
 fn set_node_size_roundtrips_through_invert_transaction() {
     let mut graph = Graph::default();
     let node_id = NodeId::new();

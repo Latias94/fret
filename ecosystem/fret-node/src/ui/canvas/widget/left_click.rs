@@ -1,10 +1,11 @@
 use fret_core::{Modifiers, Point, Px, Rect};
 use fret_ui::UiHost;
 
-use crate::core::{EdgeId, NodeId as GraphNodeId, PortId};
+use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
 
 use super::super::state::{
-    EdgeDrag, PendingNodeDrag, PendingNodeResize, ViewSnapshot, WireDrag, WireDragKind,
+    EdgeDrag, PendingGroupDrag, PendingNodeDrag, PendingNodeResize, ViewSnapshot, WireDrag,
+    WireDragKind,
 };
 use super::NodeGraphCanvas;
 
@@ -24,6 +25,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
         Resize(GraphNodeId, Rect),
         Node(GraphNodeId, Rect),
         Edge(EdgeId),
+        GroupHeader(GroupId, crate::core::CanvasRect),
         Background,
     }
 
@@ -61,6 +63,24 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
                     ) {
                         return Hit::Edge(edge);
                     }
+                    let header_h = this.style.node_header_height;
+                    let mut best: Option<(GroupId, f32, crate::core::CanvasRect)> = None;
+                    for (group_id, group) in &graph.groups {
+                        if !super::pending_group_drag::group_header_hit(
+                            group.rect, header_h, zoom, position,
+                        ) {
+                            continue;
+                        }
+                        let area =
+                            (group.rect.size.width.max(0.0)) * (group.rect.size.height.max(0.0));
+                        match best {
+                            Some((_id, best_area, _rect)) if best_area <= area => {}
+                            _ => best = Some((*group_id, area, group.rect)),
+                        }
+                    }
+                    if let Some((id, _area, rect)) = best {
+                        return Hit::GroupHeader(id, rect);
+                    }
                     return Hit::Background;
                 };
                 let Some(rect) = geom.nodes.get(&node).map(|ng| ng.rect) else {
@@ -79,6 +99,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
 
     match hit {
         Hit::Port(port) => {
+            canvas.interaction.pending_group_drag = None;
+            canvas.interaction.group_drag = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.edge_drag = None;
@@ -122,6 +144,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
         }
         Hit::Resize(node, rect) => {
+            canvas.interaction.pending_group_drag = None;
+            canvas.interaction.group_drag = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
@@ -165,6 +189,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
         }
         Hit::Node(node, rect) => {
+            canvas.interaction.pending_group_drag = None;
+            canvas.interaction.group_drag = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
@@ -216,6 +242,8 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
         }
         Hit::Edge(edge) => {
+            canvas.interaction.pending_group_drag = None;
+            canvas.interaction.group_drag = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;
@@ -246,8 +274,34 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost>(
             cx.request_redraw();
             cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
         }
+        Hit::GroupHeader(group, rect) => {
+            canvas.interaction.pending_node_drag = None;
+            canvas.interaction.node_drag = None;
+            canvas.interaction.pending_node_resize = None;
+            canvas.interaction.node_resize = None;
+            canvas.interaction.wire_drag = None;
+            canvas.interaction.edge_drag = None;
+            canvas.interaction.pending_marquee = None;
+            canvas.interaction.marquee = None;
+            canvas.interaction.hover_port = None;
+            canvas.interaction.hover_port_valid = false;
+            canvas.interaction.hover_port_convertible = false;
+
+            canvas.interaction.pending_group_drag = Some(PendingGroupDrag {
+                group,
+                start_pos: position,
+                start_rect: rect,
+            });
+            canvas.interaction.group_drag = None;
+
+            cx.capture_pointer(cx.node);
+            cx.request_redraw();
+            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        }
         Hit::Background => {
             canvas.interaction.edge_drag = None;
+            canvas.interaction.pending_group_drag = None;
+            canvas.interaction.group_drag = None;
             canvas.interaction.pending_node_drag = None;
             canvas.interaction.node_drag = None;
             canvas.interaction.pending_node_resize = None;

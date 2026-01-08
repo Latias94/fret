@@ -31,6 +31,8 @@ pub(crate) struct InteractionState {
     pub(crate) marquee: Option<MarqueeDrag>,
     pub(crate) pending_node_drag: Option<PendingNodeDrag>,
     pub(crate) node_drag: Option<NodeDrag>,
+    pub(crate) pending_group_drag: Option<PendingGroupDrag>,
+    pub(crate) group_drag: Option<GroupDrag>,
     pub(crate) pending_node_resize: Option<PendingNodeResize>,
     pub(crate) node_resize: Option<NodeResize>,
     pub(crate) wire_drag: Option<WireDrag>,
@@ -79,6 +81,21 @@ pub(crate) struct NodeDrag {
     pub(crate) nodes: Vec<(GraphNodeId, CanvasPoint)>,
     pub(crate) grab_offset: Point,
     pub(crate) start_pos: Point,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PendingGroupDrag {
+    pub(crate) group: crate::core::GroupId,
+    pub(crate) start_pos: Point,
+    pub(crate) start_rect: crate::core::CanvasRect,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct GroupDrag {
+    pub(crate) group: crate::core::GroupId,
+    pub(crate) start_pos: Point,
+    pub(crate) start_rect: crate::core::CanvasRect,
+    pub(crate) nodes: Vec<(GraphNodeId, CanvasPoint)>,
 }
 
 #[derive(Debug, Clone)]
