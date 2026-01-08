@@ -165,6 +165,12 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
             .layout_in(self.app, self.services, child, bounds, self.scale_factor)
     }
 
+    pub fn layout_viewport_root(&mut self, child: NodeId, bounds: Rect) -> Size {
+        #[cfg(feature = "layout-engine-v2")]
+        self.tree.register_viewport_root(child, bounds);
+        self.layout_in(child, bounds)
+    }
+
     pub fn measure_in(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
         self.tree.measure_in(
             self.app,

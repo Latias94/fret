@@ -403,6 +403,8 @@ pub struct UiTree<H: UiHost> {
 
     #[cfg(feature = "layout-engine-v2")]
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
+    #[cfg(feature = "layout-engine-v2")]
+    viewport_roots: Vec<(NodeId, Rect)>,
 
     debug_enabled: bool,
     debug_stats: UiDebugFrameStats,
@@ -439,6 +441,8 @@ impl<H: UiHost> Default for UiTree<H> {
             measure_stack: Vec::new(),
             #[cfg(feature = "layout-engine-v2")]
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
+            #[cfg(feature = "layout-engine-v2")]
+            viewport_roots: Vec::new(),
             debug_enabled: false,
             debug_stats: UiDebugFrameStats::default(),
             paint_cache_policy: PaintCachePolicy::Auto,
@@ -479,6 +483,17 @@ impl<H: UiHost> UiTree<H> {
     #[cfg(feature = "layout-engine-v2")]
     pub(crate) fn put_layout_engine(&mut self, engine: crate::layout_engine::TaffyLayoutEngine) {
         self.layout_engine = engine;
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    pub(crate) fn register_viewport_root(&mut self, root: NodeId, bounds: Rect) {
+        self.viewport_roots.push((root, bounds));
+    }
+
+    #[cfg(feature = "layout-engine-v2")]
+    #[allow(dead_code)]
+    pub(crate) fn viewport_roots(&self) -> &[(NodeId, Rect)] {
+        &self.viewport_roots
     }
 
     fn set_ime_allowed(&mut self, app: &mut H, enabled: bool) {

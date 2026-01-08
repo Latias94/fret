@@ -26,7 +26,10 @@ impl<H: UiHost> UiTree<H> {
             .collect();
 
         #[cfg(feature = "layout-engine-v2")]
-        self.layout_engine.begin_frame(app.frame_id());
+        {
+            self.layout_engine.begin_frame(app.frame_id());
+            self.viewport_roots.clear();
+        }
         for root in roots {
             let _ = self.layout_in(app, services, root, bounds, scale_factor);
         }

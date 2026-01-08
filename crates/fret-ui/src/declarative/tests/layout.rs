@@ -282,10 +282,10 @@ impl TwoViewportRects {
 impl<H: UiHost> Widget<H> for TwoViewportRects {
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
         if let Some(&a) = cx.children.get(0) {
-            let _ = cx.layout_in(a, self.a);
+            let _ = cx.layout_viewport_root(a, self.a);
         }
         if let Some(&b) = cx.children.get(1) {
-            let _ = cx.layout_in(b, self.b);
+            let _ = cx.layout_viewport_root(b, self.b);
         }
         cx.available
     }
@@ -363,6 +363,56 @@ fn viewport_rects_do_not_couple_fill_semantics_across_subtrees() {
         .expect("viewport b container bounds");
     assert!((b_b.origin.x.0 - viewport_b.origin.x.0).abs() < 0.01);
     assert!((b_b.size.width.0 - viewport_b.size.width.0).abs() < 0.01);
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
+fn viewport_root_registration_is_recorded_in_layout_all() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let root_a = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-a",
+        |cx| vec![cx.text("a")],
+    );
+    let root_b = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-b",
+        |cx| vec![cx.text("b")],
+    );
+
+    let viewport_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let viewport_b = Rect::new(
+        Point::new(Px(120.0), Px(0.0)),
+        Size::new(Px(200.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(TwoViewportRects::new(viewport_a, viewport_b));
+    ui.set_children(parent, vec![root_a, root_b]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert_eq!(ui.viewport_roots().len(), 2);
+    assert!(ui.viewport_roots().contains(&(root_a, viewport_a)));
+    assert!(ui.viewport_roots().contains(&(root_b, viewport_b)));
 }
 
 #[test]
