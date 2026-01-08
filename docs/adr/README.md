@@ -271,6 +271,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0114-delinea-marks-identity-and-renderer-contract.md`
 - `docs/adr/0115-delinea-large-data-and-progressive-rendering.md`
 - `docs/adr/0116-delinea-interaction-and-hit-testing-contract.md`
+- `docs/adr/0117-delinea-multi-axis-and-layout-contract.md`
 - `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 - `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
 - `docs/adr/0093-crate-structure-core-backends-apps.md`
