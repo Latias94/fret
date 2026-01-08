@@ -11,6 +11,8 @@ regression testing.
     - per-node layout (`getBoundingClientRect`, relative to the root),
     - a whitelist of `getComputedStyle` fields,
     - selected `aria-*` / `data-*` attributes.
+- `goldens/tailwind-spec/`: hand-authored conformance cases for Tailwind class parsing into typed tokens.
+  - `goldens/tailwind-spec/v1/*.json`: per-case `classes[]` + expected normalized layout tokens.
 
 ## Generate web goldens (shadcn/ui v4)
 

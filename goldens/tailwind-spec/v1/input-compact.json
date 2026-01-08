@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "name": "input-compact",
+  "classes": ["px-3", "py-1.5", "rounded-sm"],
+  "expected": {
+    "padding": { "top": "1.5", "right": "3", "bottom": "1.5", "left": "3" },
+    "radius": "sm"
+  }
+}
+
