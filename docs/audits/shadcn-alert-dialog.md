@@ -54,7 +54,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ### Visual parity (new-york)
 
-- Partial: Motion/animations are simplified; focus/overlay behavior is the primary goal.
+- Pass: Motion matches shadcn's `fade` + `zoom-in-95` / `zoom-out-95` outcomes (best-effort, tick
+  driven).
 
 ## Validation
 

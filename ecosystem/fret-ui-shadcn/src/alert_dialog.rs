@@ -29,7 +29,7 @@ fn default_overlay_color() -> Color {
         r: 0.0,
         g: 0.0,
         b: 0.0,
-        a: 0.8,
+        a: 0.5,
     }
 }
 
@@ -115,8 +115,8 @@ impl AlertDialog {
             let motion = OverlayController::transition_with_durations_and_easing(
                 cx,
                 is_open,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
-                overlay_motion::SHADCN_MOTION_TICKS_100,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
+                overlay_motion::SHADCN_MOTION_TICKS_200,
                 overlay_motion::shadcn_ease,
             );
             let overlay_presence = OverlayPresence {
