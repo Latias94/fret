@@ -487,6 +487,106 @@ fn layout_viewport_root_defers_child_layout_until_after_parent() {
 
 #[cfg(feature = "layout-engine-v2")]
 #[test]
+fn viewport_root_layout_is_applied_before_overlay_root_layout() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    struct BaseRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+        saw_default_bounds: Arc<AtomicBool>,
+    }
+
+    impl<H: UiHost> Widget<H> for BaseRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            let bounds = cx
+                .tree
+                .debug_node_bounds(self.child)
+                .unwrap_or_else(|| Rect::new(Point::new(Px(0.0), Px(0.0)), Size::default()));
+            self.saw_default_bounds
+                .store(bounds.size == Size::default(), Ordering::Relaxed);
+            cx.available
+        }
+    }
+
+    struct OverlayReadsViewportBounds {
+        viewport: Rect,
+        child: NodeId,
+        saw_expected_bounds: Arc<AtomicBool>,
+    }
+
+    impl<H: UiHost> Widget<H> for OverlayReadsViewportBounds {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let bounds = cx
+                .tree
+                .debug_node_bounds(self.child)
+                .unwrap_or_else(|| Rect::new(Point::new(Px(0.0), Px(0.0)), Size::default()));
+            let ok = (bounds.origin.x.0 - self.viewport.origin.x.0).abs() < 0.01
+                && (bounds.origin.y.0 - self.viewport.origin.y.0).abs() < 0.01
+                && (bounds.size.width.0 - self.viewport.size.width.0).abs() < 0.01
+                && (bounds.size.height.0 - self.viewport.size.height.0).abs() < 0.01;
+            self.saw_expected_bounds.store(ok, Ordering::Relaxed);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(400.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "viewport-overlay-order-child",
+        |cx| vec![cx.text("child")],
+    );
+
+    let viewport = Rect::new(
+        Point::new(Px(10.0), Px(5.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+
+    let saw_default_bounds = Arc::new(AtomicBool::new(false));
+    let base = ui.create_node(BaseRegistersViewportRoot {
+        viewport,
+        child,
+        saw_default_bounds: saw_default_bounds.clone(),
+    });
+    ui.set_root(base);
+
+    let saw_expected_bounds = Arc::new(AtomicBool::new(false));
+    let overlay = ui.create_node(OverlayReadsViewportBounds {
+        viewport,
+        child,
+        saw_expected_bounds: saw_expected_bounds.clone(),
+    });
+    ui.push_overlay_root(overlay, false);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert!(
+        saw_default_bounds.load(Ordering::Relaxed),
+        "expected viewport root to be laid out after base root, not during Base.layout()"
+    );
+    assert!(
+        saw_expected_bounds.load(Ordering::Relaxed),
+        "expected viewport root bounds to be available during overlay root layout"
+    );
+}
+
+#[cfg(feature = "layout-engine-v2")]
+#[test]
 fn viewport_roots_do_not_couple_fill_layout() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
