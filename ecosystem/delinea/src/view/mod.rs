@@ -59,7 +59,12 @@ pub struct ViewState {
 }
 
 impl ViewState {
-    pub fn sync_inputs(&mut self, model: &ChartModel, datasets: &DatasetStore, state: &ChartState) {
+    pub fn sync_inputs(
+        &mut self,
+        model: &ChartModel,
+        datasets: &DatasetStore,
+        state: &ChartState,
+    ) -> bool {
         let model_rev = model.revs.spec;
         let data_rev = datasets
             .datasets
@@ -78,7 +83,10 @@ impl ViewState {
             self.last_model_rev = model_rev;
             self.last_data_rev = data_rev;
             self.last_state_rev = state_rev;
+            return true;
         }
+
+        false
     }
 
     pub fn rebuild(&mut self, model: &ChartModel, datasets: &DatasetStore, state: &ChartState) {

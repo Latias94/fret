@@ -242,11 +242,12 @@ impl ChartEngine {
         self.output.link_events.clear();
         self.output.hover = None;
 
-        self.view
+        let view_changed = self
+            .view
             .sync_inputs(&self.model, &self.datasets, &self.state);
-        // P0: Always rebuild the view when inputs change. This will become incremental when we add
-        // transforms like dataZoom/filter/aggregate.
-        self.view.rebuild(&self.model, &self.datasets, &self.state);
+        if view_changed {
+            self.view.rebuild(&self.model, &self.datasets, &self.state);
+        }
 
         self.marks_stage
             .sync_inputs(&self.model, &self.datasets, &self.view);
