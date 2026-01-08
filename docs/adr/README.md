@@ -251,6 +251,8 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
 - `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
 - `docs/adr/0125-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
+- `docs/adr/0126-streaming-image-update-effects-and-metadata-v1.md`
+- `docs/adr/0127-frame-capture-options-and-determinism-v1.md`
 - `docs/adr/0096-renderer-perf-snapshot-and-stress-harness.md`
 
 ## Platform (`fret-platform`)

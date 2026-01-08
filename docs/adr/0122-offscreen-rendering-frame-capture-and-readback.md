@@ -125,6 +125,8 @@ existing composition.
 ## Follow-up Work
 
 - Define `FrameCaptureOptions` in detail (clip rects, scaling, alpha policy, color encoding).
+- Lock options and determinism vocabulary:
+  - `docs/adr/0127-frame-capture-options-and-determinism-v1.md`
 - Define capture budgets and diagnostics hooks.
   - Related: intermediate budgets (ADR 0120) and streaming upload backpressure (ADR 0123).
 - Add a headless/offscreen test harness that validates ordering and effect degradation interactions.

@@ -31,6 +31,7 @@ Related policies and follow-ups:
 - Postprocessing intermediate budgets and degradation: `docs/adr/0120-renderer-intermediate-budgets-and-effect-degradation-v1.md`
 - Streaming upload budgets/backpressure: `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
 - Renderer capability negotiation (optional zero-copy): `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
+- Streaming update effect/data model: `docs/adr/0126-streaming-image-update-effects-and-metadata-v1.md`
 
 We already support engine-rendered viewports via `RenderTargetId` + `SceneOp::ViewportSurface` (ADR 0007) and a
 submission coordinator model (ADR 0038). What is missing is a first-class contract for **streaming image updates**

@@ -16,6 +16,8 @@ Primary ADR:
 - Streaming upload budgets ADR: `docs/adr/0123-streaming-upload-budgets-and-backpressure-v1.md`
 - Renderer capabilities ADR: `docs/adr/0124-renderer-capabilities-and-optional-zero-copy-imports.md`
 - Extensibility ADR: `docs/adr/0125-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
+- Streaming update model ADR: `docs/adr/0126-streaming-image-update-effects-and-metadata-v1.md`
+- Capture options ADR: `docs/adr/0127-frame-capture-options-and-determinism-v1.md`
 
 ## Goals
 
