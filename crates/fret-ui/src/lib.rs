@@ -7,6 +7,8 @@ pub mod focus_visible;
 mod frame_cx;
 pub mod host;
 pub mod input_modality;
+#[cfg(feature = "layout-engine-v2")]
+pub mod layout_engine;
 pub mod layout_constraints;
 pub mod overlay_placement;
 pub mod paint;
