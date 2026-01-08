@@ -3,6 +3,7 @@ use crate::engine::ChartState;
 use crate::engine::model::ChartModel;
 use crate::engine::window::DataWindowX;
 use crate::ids::{AxisId, DatasetId, Revision, SeriesId};
+use crate::spec::AxisRange;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -136,7 +137,14 @@ impl ViewState {
                 });
             base_range.clamp_to_len(table.row_count);
 
-            let window = state.data_window_x.get(&series.x_axis).copied();
+            let x_axis_range = model
+                .axes
+                .get(&series.x_axis)
+                .map(|a| a.range)
+                .unwrap_or_default();
+            let window = axis_fixed_window_x(x_axis_range)
+                .or(state.data_window_x.get(&series.x_axis).copied())
+                .map(|w| w.apply_constraints(x_axis_range.locked_min(), x_axis_range.locked_max()));
             let row_range = if let Some(window) = window {
                 row_range_for_x_window(x, base_range, window)
             } else {
@@ -176,6 +184,17 @@ pub fn table_row_range<'a>(
     }
     range.clamp_to_len(table.row_count);
     range.start..range.end
+}
+
+fn axis_fixed_window_x(range: AxisRange) -> Option<DataWindowX> {
+    match range {
+        AxisRange::Fixed { min, max } => {
+            let mut w = DataWindowX { min, max };
+            w.clamp_non_degenerate();
+            Some(w)
+        }
+        _ => None,
+    }
 }
 
 fn row_range_for_x_window(values: &[f64], base: RowRange, window: DataWindowX) -> RowRange {

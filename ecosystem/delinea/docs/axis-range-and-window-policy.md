@@ -57,6 +57,16 @@ Partial locks (`LockMin`/`LockMax`) are applied as constraints after selecting t
 In v1 the LOD stage clamps Y values to the effective Y window to avoid out-of-range
 values dominating min/max selection.
 
+## View slicing (P0)
+
+The engine also derives `SeriesView.row_range` to avoid processing rows that cannot contribute
+to the visible output (important for large datasets).
+
+Row slicing uses the same precedence rules as marks:
+
+- If the X axis range is `Fixed`, the fixed window is used for slicing and `ChartState.data_window_x[axis]` is ignored.
+- Otherwise, `ChartState.data_window_x[axis]` (when present) is used for slicing.
+
 ## Patch/merge semantics
 
 - `ChartPatch.axes: AxisOp::Upsert(AxisPatch { range: Some(...) })` updates an axis range.

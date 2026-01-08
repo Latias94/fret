@@ -6,8 +6,8 @@ use crate::engine::ChartEngine;
 use crate::engine::window::DataWindow;
 use crate::scheduler::WorkBudget;
 use crate::spec::{
-    AxisKind, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
-    SeriesSpec,
+    AxisKind, AxisRange, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode,
+    SeriesKind, SeriesSpec,
 };
 use crate::text::{TextMeasurer, TextMetrics};
 use crate::view::RowRange;
@@ -410,5 +410,104 @@ fn x_window_limits_mark_indices() {
     assert!(
         indices.iter().all(|&i| (200..=400).contains(&(i as usize))),
         "expected all indices to be within the configured x window"
+    );
+}
+
+#[test]
+fn axis_fixed_overrides_data_window_for_marks() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                kind: AxisKind::X,
+                grid: grid_id,
+                range: Some(AxisRange::Fixed {
+                    min: 0.0,
+                    max: 100.0,
+                }),
+            },
+            AxisSpec {
+                id: y_axis,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                range: None,
+            },
+        ],
+        series: vec![SeriesSpec {
+            id: series_id,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let n = 1_024usize;
+    let x: Vec<f64> = (0..n).map(|i| i as f64).collect();
+    let y: Vec<f64> = (0..n).map(|i| (i as f64).cos()).collect();
+
+    let mut table = DataTable::default();
+    table.push_column(Column::F64(x));
+    table.push_column(Column::F64(y));
+    engine.datasets_mut().datasets.push((dataset_id, table));
+
+    engine.apply_action(Action::SetDataWindowX {
+        axis: x_axis,
+        window: Some(DataWindow {
+            min: 200.0,
+            max: 400.0,
+        }),
+    });
+
+    let mut measurer = NullTextMeasurer::default();
+    for _ in 0..16 {
+        let step = engine
+            .step(&mut measurer, WorkBudget::new(262_144, 0, 32))
+            .unwrap();
+        if !step.unfinished {
+            break;
+        }
+    }
+
+    let indices = &engine.output().marks.arena.data_indices;
+    assert!(!indices.is_empty(), "expected marks to contain indices");
+    assert!(
+        indices.iter().all(|&i| (0..=100).contains(&(i as usize))),
+        "expected all indices to be within the fixed axis window"
     );
 }
