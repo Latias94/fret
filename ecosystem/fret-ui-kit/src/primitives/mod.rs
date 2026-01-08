@@ -65,6 +65,7 @@ pub mod toast;
 pub mod toggle;
 pub mod toggle_group;
 pub mod toolbar;
+pub mod trigger_a11y;
 pub mod tooltip;
 pub mod tooltip_delay_group;
 pub mod tooltip_provider;

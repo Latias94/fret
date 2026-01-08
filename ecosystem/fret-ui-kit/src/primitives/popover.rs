@@ -17,7 +17,7 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ElementKind, PressableProps, SemanticsProps};
+use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
@@ -25,6 +25,7 @@ use crate::declarative::ModelWatchExt;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 use crate::primitives::dialog as dialog_prim;
+use crate::primitives::trigger_a11y;
 pub use crate::primitives::popper::{Align, LayoutDirection, Side};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -202,22 +203,11 @@ pub fn popover_dialog_wrapper_id<H: UiHost>(
 /// - `expanded` mirrors `aria-expanded`
 /// - `controls_element` mirrors `aria-controls` (by element id).
 pub fn apply_popover_trigger_a11y(
-    mut trigger: AnyElement,
+    trigger: AnyElement,
     expanded: bool,
-    dialog_element: GlobalElementId,
+    dialog_element: Option<GlobalElementId>,
 ) -> AnyElement {
-    match &mut trigger.kind {
-        ElementKind::Pressable(PressableProps { a11y, .. }) => {
-            a11y.expanded = Some(expanded);
-            a11y.controls_element = Some(dialog_element.0);
-        }
-        ElementKind::Semantics(props) => {
-            props.expanded = Some(expanded);
-            props.controls_element = Some(dialog_element.0);
-        }
-        _ => {}
-    }
-    trigger
+    trigger_a11y::apply_trigger_controls_expanded(trigger, Some(expanded), dialog_element)
 }
 
 /// Builds an overlay request for a Radix-style popover.
@@ -387,7 +377,7 @@ mod tests {
             );
 
             let dialog_id = popover_dialog_wrapper_id::<App>(cx, "popover-a11y-test");
-            let trigger = apply_popover_trigger_a11y(trigger, true, dialog_id);
+            let trigger = apply_popover_trigger_a11y(trigger, true, Some(dialog_id));
 
             let ElementKind::Pressable(PressableProps { a11y, .. }) = &trigger.kind else {
                 panic!("expected pressable trigger");
