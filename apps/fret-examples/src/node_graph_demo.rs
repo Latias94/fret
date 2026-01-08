@@ -1,12 +1,12 @@
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use fret_app::App;
 use fret_app::{CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, KeyCode, Modifiers, Point, Px, Rect, Size};
 use fret_launch::{
-    run_app, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    WinitWindowContext, run_app,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_runtime::{
@@ -16,30 +16,33 @@ use fret_runtime::{
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::{UiFrameCx, UiTree};
 
+use fret_node::Graph;
+use fret_node::TypeDesc;
 use fret_node::core::{CanvasPoint, Edge, EdgeId, EdgeKind, Node, NodeId, NodeKindKey, Port};
 use fret_node::core::{PortCapacity, PortDirection, PortId, PortKey, PortKind};
 use fret_node::io::NodeGraphViewState;
+use fret_node::ops::{GraphOp, GraphTransaction};
 use fret_node::schema::{NodeRegistry, NodeSchema, PortDecl};
 use fret_node::ui::presenter::{
     InsertNodeCandidate, NodeGraphContextMenuItem, NodeGraphPresenter, PortAnchorHint,
 };
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
-    register_node_graph_commands, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
-    NodeGraphCanvas, NodeGraphInternalsStore, RegistryNodeGraphPresenter,
+    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphCanvas, NodeGraphEditQueue,
+    NodeGraphInternalsStore, RegistryNodeGraphPresenter, register_node_graph_commands,
 };
-use fret_node::Graph;
-use fret_node::TypeDesc;
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
+    edits: fret_runtime::Model<NodeGraphEditQueue>,
 }
 
 const CMD_TOGGLE_WEIRD_LAYOUT: &str = "node_graph_demo.toggle_weird_layout";
 const CMD_LOG_INTERNALS: &str = "node_graph_demo.log_internals";
 const CMD_LOG_MEASURED: &str = "node_graph_demo.log_measured";
+const CMD_BUMP_FLOAT_VALUE: &str = "node_graph_demo.bump_float_value";
 const WEIRD_KIND: &str = "demo.weird_layout";
 
 #[derive(Clone)]
@@ -136,6 +139,15 @@ impl NodeGraphPresenter for DemoPresenter {
         self.inner.port_label(graph, port)
     }
 
+    fn node_body_label(&self, graph: &Graph, node: NodeId) -> Option<Arc<str>> {
+        let n = graph.nodes.get(&node)?;
+        if n.kind.0.as_str() != "demo.float" {
+            return None;
+        }
+        let value = n.data.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        Some(Arc::<str>::from(format!("Value: {:.3}", value)))
+    }
+
     fn list_insertable_nodes(&mut self, graph: &Graph) -> Vec<InsertNodeCandidate> {
         self.inner.list_insertable_nodes(graph)
     }
@@ -176,9 +188,23 @@ impl NodeGraphPresenter for DemoPresenter {
         &mut self,
         graph: &Graph,
         node: NodeId,
-        _style: &NodeGraphStyle,
+        style: &NodeGraphStyle,
     ) -> Option<(f32, f32)> {
-        Self::is_weird(graph, node).then(|| self.weird_size_px())
+        if Self::is_weird(graph, node) {
+            return Some(self.weird_size_px());
+        }
+
+        let Some(n) = graph.nodes.get(&node) else {
+            return None;
+        };
+        if n.kind.0.as_str() == "demo.float" {
+            let extra_body = 30.0;
+            let pins = style.pin_row_height;
+            let base = style.node_header_height + 2.0 * style.node_padding + pins;
+            return Some((style.node_width, base + extra_body));
+        }
+
+        None
     }
 
     fn port_anchor_hint(
@@ -376,7 +402,7 @@ fn build_demo_graph() -> Graph {
             pos: CanvasPoint { x: 40.0, y: 60.0 },
             collapsed: false,
             ports: vec![port_value_a_out],
-            data: serde_json::Value::Null,
+            data: serde_json::json!({ "value": 0.25 }),
         },
     );
     graph.nodes.insert(
@@ -387,7 +413,7 @@ fn build_demo_graph() -> Graph {
             pos: CanvasPoint { x: 40.0, y: 170.0 },
             collapsed: false,
             ports: vec![port_value_b_out],
-            data: serde_json::Value::Null,
+            data: serde_json::json!({ "value": 0.75 }),
         },
     );
     graph.nodes.insert(
@@ -693,6 +719,7 @@ impl NodeGraphDemoDriver {
             MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.manual.clone());
         let canvas = NodeGraphCanvas::new(models.graph, models.view)
             .with_presenter(presenter)
+            .with_edit_queue(models.edits)
             .with_internals_store(internals)
             .with_measured_output_store(measured.derived.clone())
             .with_close_command(CommandId::new("node_graph_demo.close"));
@@ -871,6 +898,63 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 derived_rev = measured.derived.revision(),
                 "node graph measured stores (manual vs derived)"
             );
+            return;
+        }
+
+        if command.as_str() == CMD_BUMP_FLOAT_VALUE {
+            let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
+                return;
+            };
+
+            let selected = models
+                .view
+                .read_ref(app, |s| s.selected_nodes.clone())
+                .unwrap_or_default();
+            if selected.is_empty() {
+                return;
+            }
+
+            let ops = models
+                .graph
+                .read_ref(app, |g| {
+                    let mut ops = Vec::new();
+                    for node_id in &selected {
+                        let Some(node) = g.nodes.get(node_id) else {
+                            continue;
+                        };
+                        if node.kind.0.as_str() != "demo.float" {
+                            continue;
+                        }
+
+                        let from = node.data.clone();
+                        let mut obj = from.as_object().cloned().unwrap_or_default();
+                        let cur = obj.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let next = cur + 0.1;
+                        let Some(num) = serde_json::Number::from_f64(next) else {
+                            continue;
+                        };
+                        obj.insert("value".to_string(), serde_json::Value::Number(num));
+                        let to = serde_json::Value::Object(obj);
+
+                        ops.push(GraphOp::SetNodeData {
+                            id: *node_id,
+                            from,
+                            to,
+                        });
+                    }
+                    ops
+                })
+                .unwrap_or_default();
+            if ops.is_empty() {
+                return;
+            }
+
+            let tx = GraphTransaction {
+                label: Some("Bump Float Value".to_string()),
+                ops,
+            };
+            let _ = models.edits.update(app, |q, _cx| q.push(tx));
+            return;
         }
     }
 
@@ -928,7 +1012,8 @@ pub fn run() -> anyhow::Result<()> {
 
     let graph = app.models_mut().insert(build_demo_graph());
     let view = app.models_mut().insert(NodeGraphViewState::default());
-    app.set_global(NodeGraphDemoModels { graph, view });
+    let edits = app.models_mut().insert(NodeGraphEditQueue::default());
+    app.set_global(NodeGraphDemoModels { graph, view, edits });
     app.set_global(build_demo_registry());
     app.set_global(NodeGraphDemoMeasuredStores {
         manual: Arc::new(MeasuredGeometryStore::new()),
@@ -1038,6 +1123,21 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
                 win_ctrl(KeyCode::KeyM),
                 linux_ctrl(KeyCode::KeyM),
                 web_ctrl(KeyCode::KeyM),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_BUMP_FLOAT_VALUE),
+        CommandMeta::new("Bump Float Node Value")
+            .with_category("Demo")
+            .with_keywords(["float", "value", "edit", "transaction"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd(KeyCode::ArrowUp),
+                win_ctrl(KeyCode::ArrowUp),
+                linux_ctrl(KeyCode::ArrowUp),
+                web_ctrl(KeyCode::ArrowUp),
             ]),
     );
 }
