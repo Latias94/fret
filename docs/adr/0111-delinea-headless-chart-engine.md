@@ -1,6 +1,6 @@
 # ADR 0111: `delinea` Headless Chart Engine (ECharts-Inspired, Fret-Native)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -91,11 +91,10 @@ If we add “real 3D”, it should follow the viewport surface route (ADR 0098) 
 - per-series references use stable IDs (`SeriesId`, `AxisId`, `DatasetId`) rather than `Vec` indices,
 - revisions (`Revision`) are used for deterministic invalidation (model vs data vs view state).
 
-The current P0 API uses column indices (`x_col`, `y_col`) to keep the bootstrap small.
-P1 should migrate to explicit field references (e.g. `FieldId`) to match ECharts’ `encode` semantics:
+The current P0 API already uses explicit field references (ECharts-like `encode` semantics):
 
-- a `DatasetSchema` maps `FieldId -> column`,
-- `SeriesEncode` maps channels (`x`, `y`, `y2`, `color`, `size`, `tooltip`, `label`, …) to fields.
+- each dataset declares a schema via `DatasetSpec.fields`, mapping `FieldId -> column`,
+- each series declares a `SeriesEncode` mapping channels (`x`, `y`, `y2`, …) to `FieldId`.
 
 ### B) Pipeline: staged computation with incremental budgets
 
@@ -213,9 +212,10 @@ P0 (bootstrap):
 
 P1 (ECharts-inspired expansion):
 
-- Introduce dataset schemas and `SeriesEncode` (field-based, not column-index-based).
-- Add transform pipeline primitives (filter, map, aggregate, stack) with revision-based caching.
-- Add first-class components: legend, axis pointer, data zoom, tooltip configuration.
+- Extend the transform pipeline beyond continuous row ranges (sparse selection, aggregate, stack) with
+  revision-based caching (see ADR 0112).
+- Expand first-class components: legend, axis pointer, richer dataZoom (min/max span, zoom lock, slider UI),
+  tooltip configuration, and component linking.
 - Define a typed “theme mapping” layer: map Fret token keys to chart paints/metrics without hard-coding
   colors in the engine.
 

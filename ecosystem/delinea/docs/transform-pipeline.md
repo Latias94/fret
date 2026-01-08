@@ -47,9 +47,16 @@ slicing. Otherwise we fall back to a linear scan to find the first/last matching
 
 ### Filter mode (P0)
 
-We also support a minimal filter mode toggle for `ChartState.data_zoom_x[axis].window`:
+We also support a minimal filter mode for X-windowing (ECharts-inspired `dataZoom.filterMode`):
 
-- `FilterMode::Filter` (default): row slicing uses the mapping window, and bounds/LOD are filtered to the window.
+- The durable default lives in `ChartSpec.data_zoom_x[*].filter_mode`.
+- The current effective mode lives in `ChartState.data_zoom_x[axis].filter_mode`.
+- UI can temporarily override it via `Action::SetDataWindowXFilterMode { mode: Some(..) }`.
+  Passing `mode: None` resets to the spec default for that axis.
+
+Semantics:
+
+- `FilterMode::Filter`: row slicing uses the mapping window, and bounds/LOD are filtered to the window.
 - `FilterMode::None`: row slicing does not apply the window (only dataset row constraints do), and bounds are global.
   This is more expensive, but can be useful when users want zoomed X without re-scaling Y.
 

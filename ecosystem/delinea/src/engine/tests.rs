@@ -6,8 +6,8 @@ use crate::engine::ChartEngine;
 use crate::engine::window::DataWindow;
 use crate::scheduler::WorkBudget;
 use crate::spec::{
-    AxisKind, AxisRange, AxisSpec, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode,
-    SeriesKind, SeriesSpec,
+    AxisKind, AxisRange, AxisSpec, ChartSpec, DataZoomXSpec, DatasetSpec, FieldSpec, FilterMode,
+    GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
 };
 use crate::text::{TextMeasurer, TextMetrics};
 use crate::view::RowRange;
@@ -877,6 +877,109 @@ fn data_window_filter_mode_none_keeps_y_bounds_global() {
         y_span_none < 30.0,
         "expected FilterMode::None to compress visible y variation due to global y bounds"
     );
+}
+
+#[test]
+fn data_window_filter_mode_resets_to_spec_default() {
+    let dataset_id = crate::ids::DatasetId::new(1);
+    let zoom_id = crate::ids::DataZoomId::new(1);
+    let grid_id = crate::ids::GridId::new(1);
+    let x_axis = crate::ids::AxisId::new(1);
+    let y_axis = crate::ids::AxisId::new(2);
+    let series_id = crate::ids::SeriesId::new(1);
+    let x_field = crate::ids::FieldId::new(1);
+    let y_field = crate::ids::FieldId::new(2);
+
+    let spec = ChartSpec {
+        id: crate::ids::ChartId::new(1),
+        viewport: Some(Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        )),
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: y_field,
+                    column: 1,
+                },
+            ],
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            AxisSpec {
+                id: x_axis,
+                kind: AxisKind::X,
+                grid: grid_id,
+                range: None,
+            },
+            AxisSpec {
+                id: y_axis,
+                kind: AxisKind::Y,
+                grid: grid_id,
+                range: None,
+            },
+        ],
+        data_zoom_x: vec![DataZoomXSpec {
+            id: zoom_id,
+            axis: x_axis,
+            filter_mode: FilterMode::None,
+        }],
+        series: vec![SeriesSpec {
+            id: series_id,
+            kind: SeriesKind::Line,
+            dataset: dataset_id,
+            encode: SeriesEncode {
+                x: x_field,
+                y: y_field,
+                y2: None,
+            },
+            x_axis,
+            y_axis,
+            area_baseline: None,
+        }],
+    };
+
+    let mut engine = ChartEngine::new(spec).unwrap();
+
+    let actual = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default()
+        .filter_mode;
+    assert_eq!(actual, FilterMode::None);
+
+    engine.apply_action(Action::SetDataWindowXFilterMode {
+        axis: x_axis,
+        mode: Some(FilterMode::Filter),
+    });
+    let actual = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default()
+        .filter_mode;
+    assert_eq!(actual, FilterMode::Filter);
+
+    engine.apply_action(Action::SetDataWindowXFilterMode {
+        axis: x_axis,
+        mode: None,
+    });
+    let actual = engine
+        .state()
+        .data_zoom_x
+        .get(&x_axis)
+        .copied()
+        .unwrap_or_default()
+        .filter_mode;
+    assert_eq!(actual, FilterMode::None);
 }
 
 fn span_px_y(points: &[fret_core::Point]) -> f32 {
