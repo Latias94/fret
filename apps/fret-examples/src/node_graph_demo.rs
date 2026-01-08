@@ -10,8 +10,8 @@ use fret_launch::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_runtime::{
-    CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, PlatformFilter,
-    WhenExpr,
+    CommandMeta, CommandRegistry, CommandScope, DefaultKeybinding, KeyChord, KeymapService,
+    PlatformFilter, WhenExpr, keymap::Binding,
 };
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::{UiFrameCx, UiTree};
@@ -910,9 +910,21 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 .view
                 .read_ref(app, |s| s.selected_nodes.clone())
                 .unwrap_or_default();
-            if selected.is_empty() {
-                return;
-            }
+            let selected = if selected.is_empty() {
+                models
+                    .graph
+                    .read_ref(app, |g| {
+                        g.nodes
+                            .iter()
+                            .filter_map(|(id, n)| {
+                                (n.kind.0.as_str() == "demo.float").then_some(*id)
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default()
+            } else {
+                selected
+            };
 
             let ops = models
                 .graph
@@ -1009,6 +1021,7 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(PlatformCapabilities::default());
     register_node_graph_commands(app.commands_mut());
     register_demo_commands(app.commands_mut());
+    install_default_keybindings_into_keymap(&mut app);
 
     let graph = app.models_mut().insert(build_demo_graph());
     let view = app.models_mut().insert(NodeGraphViewState::default());
@@ -1029,6 +1042,31 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     run_app(config, app, NodeGraphDemoDriver::default()).map_err(anyhow::Error::from)
+}
+
+fn install_default_keybindings_into_keymap(app: &mut App) {
+    let mut bindings: Vec<Binding> = Vec::new();
+
+    for (id, meta) in app.commands().iter() {
+        for kb in meta.default_keybindings.iter().cloned() {
+            bindings.push(Binding {
+                platform: kb.platform,
+                sequence: vec![kb.chord],
+                when: kb.when.clone().or_else(|| meta.when.clone()),
+                command: Some(id.clone()),
+            });
+        }
+    }
+
+    if bindings.is_empty() {
+        return;
+    }
+
+    app.with_global_mut(KeymapService::default, |svc, _app| {
+        for b in bindings {
+            svc.keymap.push_binding(b);
+        }
+    });
 }
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
