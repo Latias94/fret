@@ -1,0 +1,1322 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "dialog-example",
+  "primitive": "dialog",
+  "scenario": "open-close",
+  "url": "http://localhost:4020/preview/radix/dialog-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/dialog-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "form",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_f_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Edit Profile"
+                                    }
+                                  ],
+                                  "text": "Edit Profile"
+                                }
+                              ],
+                              "text": "Edit Profile"
+                            }
+                          ],
+                          "text": "With FormEdit Profile"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_i_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Scrollable Content"
+                                }
+                              ],
+                              "text": "Scrollable Content"
+                            }
+                          ],
+                          "text": "Scrollable ContentScrollable Content"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_l_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Sticky Footer"
+                                }
+                              ],
+                              "text": "Sticky Footer"
+                            }
+                          ],
+                          "text": "With Sticky FooterSticky Footer"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_o_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "No Close Button"
+                                }
+                              ],
+                              "text": "No Close Button"
+                            }
+                          ],
+                          "text": "No Close ButtonNo Close Button"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_r_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Chat Settings"
+                                }
+                              ],
+                              "text": "Chat Settings"
+                            }
+                          ],
+                          "text": "Chat SettingsChat Settings"
+                        }
+                      ],
+                      "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
+                    }
+                  ],
+                  "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "dialog-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "With Form"
+            },
+            {
+              "role": "button",
+              "name": "Edit Profile",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "Scrollable Content"
+            },
+            {
+              "role": "button",
+              "name": "Scrollable Content",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Sticky Footer"
+            },
+            {
+              "role": "button",
+              "name": "Sticky Footer",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "No Close Button"
+            },
+            {
+              "role": "button",
+              "name": "No Close Button",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "Chat Settings"
+            },
+            {
+              "role": "button",
+              "name": "Chat Settings",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "dialog-trigger"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "input",
+          "path": [
+            28,
+            1,
+            0,
+            1
+          ],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "span",
+              "path": [
+                0
+              ],
+              "attrs": {
+                "tabindex": "0",
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                1
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                3
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    3,
+                    3
+                  ],
+                  "attrs": {
+                    "aria-hidden": "true"
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        3,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "form",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "true",
+                                        "aria-controls": "radix-_r_f_",
+                                        "data-state": "open"
+                                      },
+                                      "children": [],
+                                      "text": "Edit Profile"
+                                    }
+                                  ],
+                                  "text": "Edit Profile"
+                                }
+                              ],
+                              "text": "Edit Profile"
+                            }
+                          ],
+                          "text": "With FormEdit Profile"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_i_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Scrollable Content"
+                                }
+                              ],
+                              "text": "Scrollable Content"
+                            }
+                          ],
+                          "text": "Scrollable ContentScrollable Content"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_l_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Sticky Footer"
+                                }
+                              ],
+                              "text": "Sticky Footer"
+                            }
+                          ],
+                          "text": "With Sticky FooterSticky Footer"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_o_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "No Close Button"
+                                }
+                              ],
+                              "text": "No Close Button"
+                            }
+                          ],
+                          "text": "No Close ButtonNo Close Button"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_r_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Chat Settings"
+                                }
+                              ],
+                              "text": "Chat Settings"
+                            }
+                          ],
+                          "text": "Chat SettingsChat Settings"
+                        }
+                      ],
+                      "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
+                    }
+                  ],
+                  "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                4
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            },
+            {
+              "tag": "next-route-announcer",
+              "path": [
+                26
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                27
+              ],
+              "attrs": {
+                "data-state": "open",
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                28
+              ],
+              "attrs": {
+                "role": "dialog",
+                "aria-describedby": "radix-_r_h_",
+                "aria-labelledby": "radix-_r_g_",
+                "data-state": "open",
+                "tabindex": "-1"
+              },
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    28,
+                    1
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        28,
+                        1,
+                        0
+                      ],
+                      "attrs": {
+                        "role": "group",
+                        "data-orientation": "vertical"
+                      },
+                      "children": [
+                        {
+                          "tag": "input",
+                          "path": [
+                            28,
+                            1,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": []
+                        }
+                      ],
+                      "text": "Name"
+                    },
+                    {
+                      "tag": "div",
+                      "path": [
+                        28,
+                        1,
+                        1
+                      ],
+                      "attrs": {
+                        "role": "group",
+                        "data-orientation": "vertical"
+                      },
+                      "children": [
+                        {
+                          "tag": "input",
+                          "path": [
+                            28,
+                            1,
+                            1,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": []
+                        }
+                      ],
+                      "text": "Username"
+                    }
+                  ],
+                  "text": "NameUsername"
+                },
+                {
+                  "tag": "div",
+                  "path": [
+                    28,
+                    2
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "button",
+                      "path": [
+                        28,
+                        2,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [],
+                      "text": "Cancel"
+                    },
+                    {
+                      "tag": "button",
+                      "path": [
+                        28,
+                        2,
+                        1
+                      ],
+                      "attrs": {},
+                      "children": [],
+                      "text": "Save changes"
+                    }
+                  ],
+                  "text": "CancelSave changes"
+                },
+                {
+                  "tag": "button",
+                  "path": [
+                    28,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [],
+                  "text": "Close"
+                }
+              ],
+              "text": "Edit profileMake changes to your profile here. Click save when you're done. Your profile will be updated immediately.Nam…"
+            },
+            {
+              "tag": "span",
+              "path": [
+                29
+              ],
+              "attrs": {
+                "tabindex": "0",
+                "aria-hidden": "true"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "dialog-example - shadcn/ui",
+          "children": [
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            },
+            {
+              "role": "dialog",
+              "name": "Edit profile",
+              "description": "Make changes to your profile here. Click save when you're done. Your profile will be updated immediately.",
+              "children": [
+                {
+                  "role": "heading",
+                  "name": "Edit profile",
+                  "level": 2
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Make changes to your profile here. Click save when you're done. Your profile will be updated immediately."
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Name"
+                },
+                {
+                  "role": "textbox",
+                  "name": "Name",
+                  "value": "Pedro Duarte",
+                  "focused": true
+                },
+                {
+                  "role": "StaticText",
+                  "name": "Username"
+                },
+                {
+                  "role": "textbox",
+                  "name": "Username",
+                  "value": "@peduarte"
+                },
+                {
+                  "role": "button",
+                  "name": "Cancel"
+                },
+                {
+                  "role": "button",
+                  "name": "Save changes"
+                },
+                {
+                  "role": "button",
+                  "name": "Close"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "press",
+        "key": "Escape"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0
+          ],
+          "attrs": {
+            "aria-haspopup": "dialog",
+            "aria-expanded": "false",
+            "aria-controls": "radix-_r_f_",
+            "data-state": "closed"
+          },
+          "text": "Edit Profile"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "form",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "button",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "aria-haspopup": "dialog",
+                                        "aria-expanded": "false",
+                                        "aria-controls": "radix-_r_f_",
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Edit Profile"
+                                    }
+                                  ],
+                                  "text": "Edit Profile"
+                                }
+                              ],
+                              "text": "Edit Profile"
+                            }
+                          ],
+                          "text": "With FormEdit Profile"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_i_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Scrollable Content"
+                                }
+                              ],
+                              "text": "Scrollable Content"
+                            }
+                          ],
+                          "text": "Scrollable ContentScrollable Content"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_l_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Sticky Footer"
+                                }
+                              ],
+                              "text": "Sticky Footer"
+                            }
+                          ],
+                          "text": "With Sticky FooterSticky Footer"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_o_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "No Close Button"
+                                }
+                              ],
+                              "text": "No Close Button"
+                            }
+                          ],
+                          "text": "No Close ButtonNo Close Button"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_r_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Chat Settings"
+                                }
+                              ],
+                              "text": "Chat Settings"
+                            }
+                          ],
+                          "text": "Chat SettingsChat Settings"
+                        }
+                      ],
+                      "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
+                    }
+                  ],
+                  "text": "With FormEdit ProfileScrollable ContentScrollable ContentWith Sticky FooterSticky FooterNo Close ButtonNo Close ButtonCh…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "dialog-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "With Form"
+            },
+            {
+              "role": "button",
+              "name": "Edit Profile",
+              "focused": true,
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "Scrollable Content"
+            },
+            {
+              "role": "button",
+              "name": "Scrollable Content",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Sticky Footer"
+            },
+            {
+              "role": "button",
+              "name": "Sticky Footer",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "No Close Button"
+            },
+            {
+              "role": "button",
+              "name": "No Close Button",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "StaticText",
+              "name": "Chat Settings"
+            },
+            {
+              "role": "button",
+              "name": "Chat Settings",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

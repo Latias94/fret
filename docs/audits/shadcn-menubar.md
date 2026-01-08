@@ -29,14 +29,17 @@ Key upstream behaviors/surfaces:
 
 - Pass: Click-to-open per menu trigger.
 - Pass: Hover switches the open menu when a menu is already active.
-- Pass: Outside press + Escape dismiss via menu policy (non-click-through).
+- Pass: Outside press + Escape dismiss via menu policy; outside-press dismissal is click-through and
+  underlay pointer interaction remains enabled (Radix Menubar uses `Menu.modal=false`).
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
 ### Placement & sizing
 
 - Pass: Anchored placement to the trigger bounds (`Side::Bottom`, `Align::Start`).
-- Partial: Estimated sizing only; width/height parity with upstream examples is not exact.
+- Pass: Panel sizing is derived from the entry list (row padding + line height) and is clamped by
+  the available window bounds; overflow scrolls on Y, matching shadcn's `max-h-(--available-height)`
+  + `overflow-y-auto` outcome (best-effort, renderer-driven).
 
 ### Keyboard navigation
 

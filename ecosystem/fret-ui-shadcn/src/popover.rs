@@ -36,27 +36,6 @@ fn shadcn_zoom_transform(origin: fret_core::Point, scale: f32) -> fret_core::Tra
         ))
 }
 
-fn apply_popover_trigger_a11y(
-    mut trigger: AnyElement,
-    expanded: bool,
-    controls: Option<fret_ui::elements::GlobalElementId>,
-) -> AnyElement {
-    match &mut trigger.kind {
-        fret_ui::element::ElementKind::Pressable(fret_ui::element::PressableProps {
-            a11y, ..
-        }) => {
-            a11y.expanded = Some(expanded);
-            a11y.controls_element = controls.map(|id| id.0);
-        }
-        fret_ui::element::ElementKind::Semantics(props) => {
-            props.expanded = Some(expanded);
-            props.controls_element = controls.map(|id| id.0);
-        }
-        _ => {}
-    }
-    trigger
-}
-
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum PopoverAlign {
     Start,
@@ -486,7 +465,7 @@ impl Popover {
             }
 
             let dialog_id_for_trigger = dialog_id_for_trigger.get();
-            apply_popover_trigger_a11y(trigger, is_open, dialog_id_for_trigger)
+            radix_popover::apply_popover_trigger_a11y(trigger, is_open, dialog_id_for_trigger)
         })
     }
 }

@@ -47,10 +47,14 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - Pass: Fret provides a shadcn-friendly `NavigationMenu` builder with `NavigationMenuItem`
   (value + label + content + optional trigger children).
-- Partial: Upstream exports a fully composable component family; Fret now shares the Radix-aligned
-  trigger wiring in `fret-ui-kit::primitives::navigation_menu`, but the shadcn surface still models
-  some pieces as "spec" structs rather than independent elements.
-- Pass: `viewport=false` behavior is supported via `NavigationMenu::viewport(false)`.
+- Pass: The shadcn surface exposes upstream-shaped parts:
+  `NavigationMenuRoot` (alias), `NavigationMenuList`, `NavigationMenuItem`, `NavigationMenuTrigger`,
+  `NavigationMenuContent`, `NavigationMenuLink`, plus `NavigationMenuViewport` and
+  `NavigationMenuIndicator` configuration outcomes.
+- Pass: `viewport=false` behavior is supported via `NavigationMenu::viewport(false)` /
+  `NavigationMenu::viewport_component(NavigationMenuViewport::enabled(false))`.
+- Pass: Indicator rendering can be disabled via `NavigationMenu::indicator(false)` /
+  `NavigationMenu::indicator_component(NavigationMenuIndicator::enabled(false))`.
 
 ### Open/close & hover behavior (Radix parity)
 
@@ -62,7 +66,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ### Motion parity (new-york)
 
-- Partial: Viewport overlay uses fade + zoom (shadcn taxonomy) with shadcn-aligned easing.
+- Pass: Viewport overlay uses fade + zoom with shadcn-aligned easing, matching upstream's
+  `zoom-in-90` on open and `zoom-out-95` on close (best-effort, tick driven).
 - Pass: Directional content switching matches shadcn's `data-motion` semantics via
   `navigation_menu_content_transition(...)` + `navigation_menu_content_switch(...)`.
 
@@ -81,4 +86,5 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ## Follow-ups (recommended)
 
-- Consider adding a `viewport` toggle to the shadcn wrapper if we want strict API parity.
+- Consider exposing an opt-in custom indicator renderer if parity-sensitive recipes need it (today
+  the indicator visuals are not user-supplied, only toggled on/off).

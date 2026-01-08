@@ -38,11 +38,11 @@ Quickstart (PowerShell):
 
 5) Extract JSON goldens (Terminal B):
 
-`pnpm -C repo-ref/ui/apps/v4 golden:extract button-default tabs-demo --update --baseUrl=http://localhost:4020`
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-default tabs-demo --update --baseUrl=http://localhost:4020`
 
 Extract *all* routable new-york-v4 pages (block+component+example):
 
-`pnpm -C repo-ref/ui/apps/v4 golden:extract --all --update --baseUrl=http://localhost:4020`
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts --all --update --baseUrl=http://localhost:4020`
 
 Default output dir:
 

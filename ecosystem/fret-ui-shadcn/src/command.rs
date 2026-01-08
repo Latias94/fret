@@ -1077,54 +1077,98 @@ fn command_palette_render_rows_for_query(
     };
 
     let mut pending_rows: Vec<PendingRow> = Vec::new();
-    for entry in entries {
-        match entry {
-            CommandEntry::Item(item) => {
-                let score = score_item(&item);
-                if score > 0.0 {
-                    pending_rows.push(PendingRow::Item(item));
+    if query.is_empty() {
+        for entry in entries {
+            match entry {
+                CommandEntry::Item(item) => {
+                    let score = score_item(&item);
+                    if score > 0.0 {
+                        pending_rows.push(PendingRow::Item(item));
+                    }
                 }
-            }
-            CommandEntry::Separator(_) => pending_rows.push(PendingRow::Separator),
-            CommandEntry::Group(group) => {
-                if group.items.is_empty() {
-                    continue;
-                }
+                CommandEntry::Separator(_) => pending_rows.push(PendingRow::Separator),
+                CommandEntry::Group(group) => {
+                    if group.items.is_empty() {
+                        continue;
+                    }
 
-                if query.is_empty() {
                     if let Some(heading) = group.heading {
                         pending_rows.push(PendingRow::Heading(heading));
                     }
                     pending_rows.extend(group.items.into_iter().map(PendingRow::Item));
-                    continue;
                 }
-
-                let mut scored: Vec<(usize, f32, CommandItem)> = group
-                    .items
-                    .into_iter()
-                    .enumerate()
-                    .filter_map(|(idx, item)| {
-                        let score = score_item(&item);
-                        (score > 0.0).then_some((idx, score, item))
-                    })
-                    .collect();
-
-                if scored.is_empty() {
-                    continue;
-                }
-
-                scored.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
-                    b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
-                });
-                if let Some(heading) = group.heading {
-                    pending_rows.push(PendingRow::Heading(heading));
-                }
-                pending_rows.extend(
-                    scored
-                        .into_iter()
-                        .map(|(_, _, item)| PendingRow::Item(item)),
-                );
             }
+        }
+    } else {
+        // cmdk sorts items globally by score and groups by highest item score. It also pushes
+        // grouped items below ungrouped items.
+        let mut root_items: Vec<(usize, f32, CommandItem)> = Vec::new();
+        let mut groups: Vec<(usize, f32, Option<Arc<str>>, Vec<(usize, f32, CommandItem)>)> =
+            Vec::new();
+
+        for (entry_idx, entry) in entries.into_iter().enumerate() {
+            match entry {
+                CommandEntry::Item(item) => {
+                    let score = score_item(&item);
+                    if score > 0.0 {
+                        root_items.push((entry_idx, score, item));
+                    }
+                }
+                CommandEntry::Separator(_) => {}
+                CommandEntry::Group(group) => {
+                    if group.items.is_empty() {
+                        continue;
+                    }
+
+                    let mut scored_items: Vec<(usize, f32, CommandItem)> = group
+                        .items
+                        .into_iter()
+                        .enumerate()
+                        .filter_map(|(idx, item)| {
+                            let score = score_item(&item);
+                            (score > 0.0).then_some((idx, score, item))
+                        })
+                        .collect();
+
+                    if scored_items.is_empty() {
+                        continue;
+                    }
+
+                    scored_items.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
+                        b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
+                    });
+
+                    let max_score = scored_items
+                        .iter()
+                        .map(|(_, score, _)| *score)
+                        .fold(0.0_f32, f32::max);
+
+                    groups.push((entry_idx, max_score, group.heading, scored_items));
+                }
+            }
+        }
+
+        root_items.sort_by(|(a_idx, a_score, _), (b_idx, b_score, _)| {
+            b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
+        });
+        groups.sort_by(|(a_idx, a_score, _, _), (b_idx, b_score, _, _)| {
+            b_score.total_cmp(a_score).then_with(|| a_idx.cmp(b_idx))
+        });
+
+        pending_rows.extend(
+            root_items
+                .into_iter()
+                .map(|(_, _, item)| PendingRow::Item(item)),
+        );
+        for (_, _, heading, scored_items) in groups {
+            if let Some(heading) = heading {
+                pending_rows.push(PendingRow::Heading(heading));
+            }
+            pending_rows.extend(
+                scored_items
+                    .into_iter()
+                    .map(|(_, _, item)| PendingRow::Item(item)),
+            );
         }
     }
 
@@ -2827,6 +2871,63 @@ mod tests {
         assert_eq!(
             row_signatures(&rows, &items),
             vec!["H:Advanced".to_string(), "I:Gamma".to_string()]
+        );
+    }
+
+    #[test]
+    fn command_palette_sort_orders_ungrouped_items_by_score() {
+        let entries = vec![
+            CommandItem::new("pal").into(),
+            CommandItem::new("alpha").into(),
+        ];
+
+        let (rows, items) = command_palette_render_rows_for_query(entries, "al");
+        assert_eq!(
+            row_signatures(&rows, &items),
+            vec!["I:alpha".to_string(), "I:pal".to_string()]
+        );
+    }
+
+    #[test]
+    fn command_palette_sort_orders_groups_by_best_item_score() {
+        let entries = vec![
+            CommandGroup::new(vec![CommandItem::new("pal")])
+                .heading("g1")
+                .into(),
+            CommandGroup::new(vec![CommandItem::new("alpha")])
+                .heading("g2")
+                .into(),
+        ];
+
+        let (rows, items) = command_palette_render_rows_for_query(entries, "al");
+        assert_eq!(
+            row_signatures(&rows, &items),
+            vec![
+                "H:g2".to_string(),
+                "I:alpha".to_string(),
+                "H:g1".to_string(),
+                "I:pal".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn command_palette_sort_pushes_groups_below_ungrouped_items() {
+        let entries = vec![
+            CommandGroup::new(vec![CommandItem::new("pal")])
+                .heading("g1")
+                .into(),
+            CommandItem::new("alpha").into(),
+        ];
+
+        let (rows, items) = command_palette_render_rows_for_query(entries, "al");
+        assert_eq!(
+            row_signatures(&rows, &items),
+            vec![
+                "I:alpha".to_string(),
+                "H:g1".to_string(),
+                "I:pal".to_string()
+            ]
         );
     }
 

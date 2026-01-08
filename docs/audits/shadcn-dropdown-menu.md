@@ -37,10 +37,12 @@ Key upstream behaviors/surfaces:
 
 ### Dismissal & focus
 
-- Pass: Non-modal dismissible popover (outside press + Escape) via `window_overlays`.
+- Pass: Dismissible popover (outside press + Escape) via `window_overlays`.
 - Pass: On open, focus moves to the first focusable descendant (driven by overlay policy), enabling
   keyboard navigation inside the menu.
-- Note: “modal=true vs modal=false” is not modeled; current menu is always non-modal.
+- Pass: `DropdownMenu::modal(bool)` is supported (default `true`).
+  - `modal=true`: blocks underlay pointer interaction while open (Radix `disableOutsidePointerEvents`).
+  - `modal=false`: outside-press dismissal becomes click-through.
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
@@ -63,17 +65,14 @@ Key upstream behaviors/surfaces:
 
 Still missing (relative to upstream shadcn/ui v4):
 
-- A first-class API for “leading icon + shortcut” ergonomics (icons are supported, but composition is still consumer-driven).
+_None tracked at this time._
 
 ### Submenus
 
-- Partial: Submenus are supported via `DropdownMenuItem::submenu(Vec<DropdownMenuEntry>)` and open on
-- hover/focus/activate (pointer click), and can be opened/closed with ArrowRight/ArrowLeft.
-- Partial: Pointer "safe hover" is implemented as a deterministic trapezoid corridor between the
-  submenu trigger bounds and the submenu panel bounds (inspired by Floating UI `safePolygon`).
-- Partial: A short close delay is applied when leaving the safe corridor to reduce accidental closes.
-- Known gap: No intent heuristics (velocity/angle-based) yet; fast diagonal travel can still close the submenu
-  in some edge cases.
+- Pass: Submenus are supported via `DropdownMenuItem::submenu(Vec<DropdownMenuEntry>)` and open on
+  hover/activate (pointer click), and can be opened/closed with ArrowRight/ArrowLeft.
+- Pass: Pointer grace intent is implemented using a Radix-style polygon corridor (tracked via
+  `fret-ui-kit::primitives::menu::pointer_grace_intent`), plus a short close delay on unsafe leave.
 - Note: Submenu rendering no longer depends on pointer movement; keyboard-opened submenus render even
   when the pointer hasn't moved since the menu opened.
 - Pass: Keyboard focus transfer is wired for submenus:

@@ -1140,7 +1140,7 @@ fn context_menu_submenu_panel<H: UiHost>(
 
 /// shadcn/ui `ContextMenu` root (v4).
 ///
-/// This is a dismissible popover (non-modal) opened by a component-owned pointer policy:
+/// This is a dismissible popover opened by a component-owned pointer policy:
 /// - right click
 /// - (macOS) ctrl + left click
 ///
@@ -1151,6 +1151,7 @@ fn context_menu_submenu_panel<H: UiHost>(
 #[derive(Clone)]
 pub struct ContextMenu {
     open: Model<bool>,
+    modal: bool,
     align: DropdownMenuAlign,
     side: DropdownMenuSide,
     side_offset: Px,
@@ -1179,6 +1180,7 @@ impl ContextMenu {
     pub fn new(open: Model<bool>) -> Self {
         Self {
             open,
+            modal: true,
             align: DropdownMenuAlign::Start,
             // Match Radix/shadcn defaults:
             // `ContextMenuPrimitive.Content` uses `side="right" sideOffset={2} align="start"`.
@@ -1195,6 +1197,12 @@ impl ContextMenu {
 
     pub fn align(mut self, align: DropdownMenuAlign) -> Self {
         self.align = align;
+        self
+    }
+
+    /// Controls whether outside-press dismissal should be click-through (Radix `modal={false}`).
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = modal;
         self
     }
 
@@ -1308,6 +1316,7 @@ impl ContextMenu {
                 let window_margin = self.window_margin;
                 let typeahead_timeout_ticks = self.typeahead_timeout_ticks;
                 let align_leading_icons = self.align_leading_icons;
+                let modal = self.modal;
                 let open_for_overlay = open.clone();
                 let content_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let content_focus_id_for_children = content_focus_id.clone();
@@ -2097,7 +2106,7 @@ impl ContextMenu {
                     (children, Some(dismissible_on_pointer_move))
                 });
 
-                let request = menu::root::dismissible_menu_request(
+                let request = menu::root::dismissible_menu_request_with_modal(
                     cx,
                     id,
                     trigger_id,
@@ -2107,6 +2116,7 @@ impl ContextMenu {
                     overlay_root_name,
                     content_focus_id.get(),
                     dismissible_on_pointer_move,
+                    modal,
                 );
                 OverlayController::request(cx, request);
             }

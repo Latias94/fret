@@ -16,14 +16,15 @@
 
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, InsetStyle, LayoutStyle, Length, PositionStyle,
-    PressableProps, SizeStyle,
+    AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
+    SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::declarative::action_hooks::ActionHooksExt as _;
+use crate::primitives::trigger_a11y;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 
 #[derive(Debug, Clone, Copy)]
@@ -161,25 +162,11 @@ impl DialogRoot {
 /// - `expanded` mirrors `aria-expanded`
 /// - `controls_element` mirrors `aria-controls` (by element id).
 pub fn apply_dialog_trigger_a11y(
-    mut trigger: AnyElement,
+    trigger: AnyElement,
     expanded: bool,
     content_element: Option<GlobalElementId>,
 ) -> AnyElement {
-    let Some(content_element) = content_element else {
-        return trigger;
-    };
-    match &mut trigger.kind {
-        ElementKind::Pressable(PressableProps { a11y, .. }) => {
-            a11y.expanded = Some(expanded);
-            a11y.controls_element = Some(content_element.0);
-        }
-        ElementKind::Semantics(props) => {
-            props.expanded = Some(expanded);
-            props.controls_element = Some(content_element.0);
-        }
-        _ => {}
-    }
-    trigger
+    trigger_a11y::apply_trigger_controls_expanded(trigger, Some(expanded), content_element)
 }
 
 /// Builds an overlay request for a Radix-style modal dialog.

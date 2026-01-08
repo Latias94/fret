@@ -35,11 +35,11 @@ For each component page, the exporter writes a JSON file with:
 
 4) Extract goldens (Terminal B):
 
-`pnpm -C repo-ref/ui/apps/v4 golden:extract button-default tabs-demo --baseUrl=http://localhost:4020`
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-default tabs-demo --baseUrl=http://localhost:4020`
 
 Extract *all* routable new-york-v4 pages (defaults match `/view/[style]/[name]`: block+component+example):
 
-`pnpm -C repo-ref/ui/apps/v4 golden:extract --all --update --baseUrl=http://localhost:4020`
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts --all --update --baseUrl=http://localhost:4020`
 
 On the current setup, `--all` generates `362` JSON files under `goldens/shadcn-web/v4/new-york-v4/`.
 
@@ -53,7 +53,7 @@ Note: the extractor intentionally refuses to run against a dev server (it detect
 because turbopack dev output does not expose stable asset URLs (and computed styles become unreliable).
 
 If you want to keep a dev server running on `:4000`, start production on a different port and pass
-`--baseUrl=...` to `golden:extract`.
+`--baseUrl=...` to the extractor script.
 
 
 Output directory (default):

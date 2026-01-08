@@ -15,6 +15,9 @@ pub struct DismissiblePopoverRequest {
     /// dismissal policy (Radix DismissableLayer branches).
     pub dismissable_branches: Vec<GlobalElementId>,
     pub consume_outside_pointer_events: bool,
+    /// When true and the popover is open, pointer events outside the overlay subtree should not
+    /// reach underlay widgets (Radix `disableOutsidePointerEvents` outcome).
+    pub disable_outside_pointer_events: bool,
     pub close_on_window_focus_lost: bool,
     pub close_on_window_resize: bool,
     pub open: Model<bool>,
@@ -34,6 +37,10 @@ impl std::fmt::Debug for DismissiblePopoverRequest {
             .field(
                 "consume_outside_pointer_events",
                 &self.consume_outside_pointer_events,
+            )
+            .field(
+                "disable_outside_pointer_events",
+                &self.disable_outside_pointer_events,
             )
             .field(
                 "close_on_window_focus_lost",

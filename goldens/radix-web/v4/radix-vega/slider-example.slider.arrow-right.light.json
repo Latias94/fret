@@ -1,0 +1,2452 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "slider-example",
+  "primitive": "slider",
+  "scenario": "arrow-right",
+  "url": "http://localhost:4020/preview/radix/slider-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/slider-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-orientation": "horizontal",
+                                    "aria-disabled": "false"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-valuenow": "50"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Basic"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-orientation": "horizontal",
+                                    "aria-disabled": "false"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-label": "Minimum",
+                                            "aria-valuenow": "25"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-label": "Maximum",
+                                            "aria-valuenow": "50"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Range"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-orientation": "horizontal",
+                                    "aria-disabled": "false"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-label": "Value 1 of 3",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-valuenow": "10"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-label": "Value 2 of 3",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-valuenow": "20"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            3,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-label": "Value 3 of 3",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-valuenow": "70"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Multiple Thumbs"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "vertical",
+                                        "aria-disabled": "false"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "vertical"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-orientation": "vertical"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "slider",
+                                                "aria-valuemin": "0",
+                                                "aria-valuemax": "100",
+                                                "aria-orientation": "vertical",
+                                                "data-orientation": "vertical",
+                                                "tabindex": "0",
+                                                "data-radix-collection-item": "",
+                                                "aria-valuenow": "50"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "vertical",
+                                        "aria-disabled": "false"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "vertical"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-orientation": "vertical"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                1,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "slider",
+                                                "aria-valuemin": "0",
+                                                "aria-valuemax": "100",
+                                                "aria-orientation": "vertical",
+                                                "data-orientation": "vertical",
+                                                "tabindex": "0",
+                                                "data-radix-collection-item": "",
+                                                "aria-valuenow": "25"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Vertical"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "horizontal",
+                                        "aria-disabled": "false"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-orientation": "horizontal"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                1,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "slider",
+                                                "aria-valuemin": "0",
+                                                "aria-valuemax": "1",
+                                                "aria-orientation": "horizontal",
+                                                "data-orientation": "horizontal",
+                                                "tabindex": "0",
+                                                "data-radix-collection-item": "",
+                                                "aria-label": "Minimum",
+                                                "aria-valuenow": "0.3"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            2
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                1,
+                                                2,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "slider",
+                                                "aria-valuemin": "0",
+                                                "aria-valuemax": "1",
+                                                "aria-orientation": "horizontal",
+                                                "data-orientation": "horizontal",
+                                                "tabindex": "0",
+                                                "data-radix-collection-item": "",
+                                                "aria-label": "Maximum",
+                                                "aria-valuenow": "0.7"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "text": "Temperature0.3, 0.7"
+                                }
+                              ],
+                              "text": "Temperature0.3, 0.7"
+                            }
+                          ],
+                          "text": "ControlledTemperature0.3, 0.7"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-orientation": "horizontal",
+                                    "aria-disabled": "true",
+                                    "data-disabled": ""
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-disabled": "",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal",
+                                            "data-disabled": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "data-disabled": "",
+                                            "data-radix-collection-item": "",
+                                            "aria-valuenow": "50"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Disabled"
+                        }
+                      ],
+                      "text": "BasicRangeMultiple ThumbsVerticalControlledTemperature0.3, 0.7Disabled"
+                    }
+                  ],
+                  "text": "BasicRangeMultiple ThumbsVerticalControlledTemperature0.3, 0.7Disabled"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "slider-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "slider",
+              "name": "",
+              "value": 50,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "StaticText",
+              "name": "Range"
+            },
+            {
+              "role": "slider",
+              "name": "Minimum",
+              "value": 25,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "slider",
+              "name": "Maximum",
+              "value": 50,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "StaticText",
+              "name": "Multiple Thumbs"
+            },
+            {
+              "role": "slider",
+              "name": "Value 1 of 3",
+              "value": 10,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "slider",
+              "name": "Value 2 of 3",
+              "value": 20,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "slider",
+              "name": "Value 3 of 3",
+              "value": 70,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "StaticText",
+              "name": "Vertical"
+            },
+            {
+              "role": "slider",
+              "name": "",
+              "value": 50,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "vertical"
+            },
+            {
+              "role": "slider",
+              "name": "",
+              "value": 25,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "vertical"
+            },
+            {
+              "role": "StaticText",
+              "name": "Controlled"
+            },
+            {
+              "role": "StaticText",
+              "name": "Temperature"
+            },
+            {
+              "role": "StaticText",
+              "name": "0.3, 0.7"
+            },
+            {
+              "role": "slider",
+              "name": "Minimum",
+              "value": 0.30000001192092896,
+              "valuetext": "",
+              "valuemax": 1,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "slider",
+              "name": "Maximum",
+              "value": 0.699999988079071,
+              "valuetext": "",
+              "valuemax": 1,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "slider",
+              "name": "",
+              "value": 50,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "press",
+        "key": "ArrowRight,ArrowRight"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "span",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0
+          ],
+          "attrs": {
+            "role": "slider",
+            "aria-valuemin": "0",
+            "aria-valuemax": "100",
+            "aria-orientation": "horizontal",
+            "data-orientation": "horizontal",
+            "tabindex": "0",
+            "data-radix-collection-item": "",
+            "aria-valuenow": "52"
+          }
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-orientation": "horizontal",
+                                    "aria-disabled": "false"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-valuenow": "52"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Basic"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-orientation": "horizontal",
+                                    "aria-disabled": "false"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-label": "Minimum",
+                                            "aria-valuenow": "25"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-label": "Maximum",
+                                            "aria-valuenow": "50"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Range"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-orientation": "horizontal",
+                                    "aria-disabled": "false"
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-label": "Value 1 of 3",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-valuenow": "10"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            2,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-label": "Value 2 of 3",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-valuenow": "20"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        2,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            2,
+                                            1,
+                                            0,
+                                            3,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-label": "Value 3 of 3",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "tabindex": "0",
+                                            "data-radix-collection-item": "",
+                                            "aria-valuenow": "70"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Multiple Thumbs"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "vertical",
+                                        "aria-disabled": "false"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "vertical"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-orientation": "vertical"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            0,
+                                            1
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                0,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "slider",
+                                                "aria-valuemin": "0",
+                                                "aria-valuemax": "100",
+                                                "aria-orientation": "vertical",
+                                                "data-orientation": "vertical",
+                                                "tabindex": "0",
+                                                "data-radix-collection-item": "",
+                                                "aria-valuenow": "50"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        3,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "vertical",
+                                        "aria-disabled": "false"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "vertical"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-orientation": "vertical"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            3,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                3,
+                                                1,
+                                                0,
+                                                1,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "slider",
+                                                "aria-valuemin": "0",
+                                                "aria-valuemax": "100",
+                                                "aria-orientation": "vertical",
+                                                "data-orientation": "vertical",
+                                                "tabindex": "0",
+                                                "data-radix-collection-item": "",
+                                                "aria-valuenow": "25"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Vertical"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        4,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-orientation": "horizontal",
+                                        "aria-disabled": "false"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-orientation": "horizontal"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            1
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                1,
+                                                1,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "slider",
+                                                "aria-valuemin": "0",
+                                                "aria-valuemax": "1",
+                                                "aria-orientation": "horizontal",
+                                                "data-orientation": "horizontal",
+                                                "tabindex": "0",
+                                                "data-radix-collection-item": "",
+                                                "aria-label": "Minimum",
+                                                "aria-valuenow": "0.3"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            4,
+                                            1,
+                                            0,
+                                            1,
+                                            2
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "span",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                4,
+                                                1,
+                                                0,
+                                                1,
+                                                2,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "slider",
+                                                "aria-valuemin": "0",
+                                                "aria-valuemax": "1",
+                                                "aria-orientation": "horizontal",
+                                                "data-orientation": "horizontal",
+                                                "tabindex": "0",
+                                                "data-radix-collection-item": "",
+                                                "aria-label": "Maximum",
+                                                "aria-valuenow": "0.7"
+                                              },
+                                              "children": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ],
+                                  "text": "Temperature0.3, 0.7"
+                                }
+                              ],
+                              "text": "Temperature0.3, 0.7"
+                            }
+                          ],
+                          "text": "ControlledTemperature0.3, 0.7"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-orientation": "horizontal",
+                                    "aria-disabled": "true",
+                                    "data-disabled": ""
+                                  },
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-disabled": "",
+                                        "data-orientation": "horizontal"
+                                      },
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal",
+                                            "data-disabled": ""
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        5,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "span",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            5,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "role": "slider",
+                                            "aria-valuemin": "0",
+                                            "aria-valuemax": "100",
+                                            "aria-orientation": "horizontal",
+                                            "data-orientation": "horizontal",
+                                            "data-disabled": "",
+                                            "data-radix-collection-item": "",
+                                            "aria-valuenow": "50"
+                                          },
+                                          "children": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "text": "Disabled"
+                        }
+                      ],
+                      "text": "BasicRangeMultiple ThumbsVerticalControlledTemperature0.3, 0.7Disabled"
+                    }
+                  ],
+                  "text": "BasicRangeMultiple ThumbsVerticalControlledTemperature0.3, 0.7Disabled"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "slider-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "slider",
+              "name": "",
+              "value": 52,
+              "valuetext": "",
+              "focused": true,
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "StaticText",
+              "name": "Range"
+            },
+            {
+              "role": "slider",
+              "name": "Minimum",
+              "value": 25,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "slider",
+              "name": "Maximum",
+              "value": 50,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "StaticText",
+              "name": "Multiple Thumbs"
+            },
+            {
+              "role": "slider",
+              "name": "Value 1 of 3",
+              "value": 10,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "slider",
+              "name": "Value 2 of 3",
+              "value": 20,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "slider",
+              "name": "Value 3 of 3",
+              "value": 70,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "StaticText",
+              "name": "Vertical"
+            },
+            {
+              "role": "slider",
+              "name": "",
+              "value": 50,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "vertical"
+            },
+            {
+              "role": "slider",
+              "name": "",
+              "value": 25,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "vertical"
+            },
+            {
+              "role": "StaticText",
+              "name": "Controlled"
+            },
+            {
+              "role": "StaticText",
+              "name": "Temperature"
+            },
+            {
+              "role": "StaticText",
+              "name": "0.3, 0.7"
+            },
+            {
+              "role": "slider",
+              "name": "Minimum",
+              "value": 0.30000001192092896,
+              "valuetext": "",
+              "valuemax": 1,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "slider",
+              "name": "Maximum",
+              "value": 0.699999988079071,
+              "valuetext": "",
+              "valuemax": 1,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "StaticText",
+              "name": "Disabled"
+            },
+            {
+              "role": "slider",
+              "name": "",
+              "value": 50,
+              "valuetext": "",
+              "valuemax": 100,
+              "valuemin": 0,
+              "orientation": "horizontal"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

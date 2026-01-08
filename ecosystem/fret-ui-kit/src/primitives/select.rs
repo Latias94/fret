@@ -22,12 +22,13 @@ use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{
     ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiActionHost, UiPointerActionHost,
 };
-use fret_ui::element::{AnyElement, ElementKind, PressableA11y, PressableProps};
+use fret_ui::element::AnyElement;
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::ModelWatchExt;
 use crate::headless::roving_focus;
+use crate::primitives::trigger_a11y;
 pub use crate::headless::select_item_aligned::{
     SELECT_ITEM_ALIGNED_CONTENT_MARGIN, SelectItemAlignedInputs, SelectItemAlignedOutputs,
     select_item_aligned_position,
@@ -133,30 +134,18 @@ impl SelectRoot {
 /// - `expanded` mirrors `aria-expanded`
 /// - `controls_element` mirrors `aria-controls` (by element id).
 pub fn apply_select_trigger_a11y(
-    mut trigger: AnyElement,
+    trigger: AnyElement,
     expanded: bool,
     label: Option<Arc<str>>,
     listbox_element: Option<GlobalElementId>,
 ) -> AnyElement {
-    match &mut trigger.kind {
-        ElementKind::Pressable(PressableProps { a11y, .. }) => {
-            *a11y = PressableA11y {
-                role: Some(fret_core::SemanticsRole::ComboBox),
-                label,
-                expanded: Some(expanded),
-                controls_element: listbox_element.map(|id| id.0),
-                ..a11y.clone()
-            };
-        }
-        ElementKind::Semantics(props) => {
-            props.role = fret_core::SemanticsRole::ComboBox;
-            props.label = label;
-            props.expanded = Some(expanded);
-            props.controls_element = listbox_element.map(|id| id.0);
-        }
-        _ => {}
-    }
-    trigger
+    trigger_a11y::apply_trigger_semantics(
+        trigger,
+        Some(fret_core::SemanticsRole::ComboBox),
+        label,
+        Some(expanded),
+        listbox_element,
+    )
 }
 
 /// Radix Select trigger "open keys" (`OPEN_KEYS`).
@@ -635,7 +624,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Modifiers, Point, Px, Rect, Size};
     use fret_ui::action::{UiActionHostAdapter, UiFocusActionHost, UiPointerActionHost};
-    use fret_ui::element::{LayoutStyle, PressableProps};
+    use fret_ui::element::{ElementKind, LayoutStyle, PressableProps};
     use std::time::Duration;
 
     fn bounds() -> Rect {

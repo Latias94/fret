@@ -1,0 +1,2109 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "context-menu-example",
+  "primitive": "context-menu",
+  "scenario": "context-open-close",
+  "url": "http://localhost:4020/preview/radix/context-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/context-menu-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "BasicRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (top)"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (right)"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (bottom)"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (left)"
+                                    }
+                                  ],
+                                  "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
+                                }
+                              ],
+                              "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
+                            }
+                          ],
+                          "text": "With SidesRight click (top)Right click (right)Right click (bottom)Right click (left)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With IconsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With ShortcutsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With SubmenuRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With Groups, Labels & SeparatorsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With CheckboxesRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With Radio GroupRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            8
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                8,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    8,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With Destructive ItemsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            9
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                9,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    9,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_3_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
+                    }
+                  ],
+                  "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "context-menu-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Sides"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click (top)"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click (right)"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click (bottom)"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click (left)"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icons"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Shortcuts"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Submenu"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Groups, Labels & Separators"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Checkboxes"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Radio Group"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Destructive Items"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "contextmenu:rightclick"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "div",
+          "path": [
+            27,
+            0
+          ],
+          "attrs": {
+            "data-side": "right",
+            "data-align": "start",
+            "role": "menu",
+            "aria-orientation": "vertical",
+            "data-state": "open",
+            "tabindex": "-1",
+            "data-orientation": "vertical"
+          },
+          "text": "BackForwardReload"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "span",
+              "path": [
+                0
+              ],
+              "attrs": {
+                "tabindex": "0",
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                1
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                3
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    3,
+                    3
+                  ],
+                  "attrs": {
+                    "aria-hidden": "true"
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        3,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "open"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "BasicRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (top)"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (right)"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (bottom)"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        3,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (left)"
+                                    }
+                                  ],
+                                  "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
+                                }
+                              ],
+                              "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
+                            }
+                          ],
+                          "text": "With SidesRight click (top)Right click (right)Right click (bottom)Right click (left)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With IconsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With ShortcutsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With SubmenuRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With Groups, Labels & SeparatorsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With CheckboxesRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With Radio GroupRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            8
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                8,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    8,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With Destructive ItemsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            3,
+                            3,
+                            0,
+                            9
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                3,
+                                3,
+                                0,
+                                9,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    3,
+                                    3,
+                                    0,
+                                    9,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_3_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
+                    }
+                  ],
+                  "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                4
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            },
+            {
+              "tag": "next-route-announcer",
+              "path": [
+                26
+              ],
+              "attrs": {
+                "aria-hidden": "true"
+              },
+              "children": []
+            },
+            {
+              "tag": "div",
+              "path": [
+                27
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    27,
+                    0
+                  ],
+                  "attrs": {
+                    "data-side": "right",
+                    "data-align": "start",
+                    "role": "menu",
+                    "aria-orientation": "vertical",
+                    "data-state": "open",
+                    "tabindex": "-1",
+                    "data-orientation": "vertical"
+                  },
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        27,
+                        0,
+                        0
+                      ],
+                      "attrs": {
+                        "role": "group"
+                      },
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            27,
+                            0,
+                            0,
+                            0
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "text": "Back"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            27,
+                            0,
+                            0,
+                            1
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "aria-disabled": "true",
+                            "data-disabled": "",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "text": "Forward"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            27,
+                            0,
+                            0,
+                            2
+                          ],
+                          "attrs": {
+                            "role": "menuitem",
+                            "tabindex": "-1",
+                            "data-orientation": "vertical",
+                            "data-radix-collection-item": ""
+                          },
+                          "children": [],
+                          "text": "Reload"
+                        }
+                      ],
+                      "text": "BackForwardReload"
+                    }
+                  ],
+                  "text": "BackForwardReload"
+                }
+              ],
+              "text": "BackForwardReload"
+            },
+            {
+              "tag": "span",
+              "path": [
+                28
+              ],
+              "attrs": {
+                "tabindex": "0",
+                "aria-hidden": "true"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "context-menu-example - shadcn/ui",
+          "children": [
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            },
+            {
+              "role": "menu",
+              "name": "",
+              "focused": true,
+              "orientation": "vertical",
+              "children": [
+                {
+                  "role": "menuitem",
+                  "name": "Back"
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Forward",
+                  "disabled": true
+                },
+                {
+                  "role": "menuitem",
+                  "name": "Reload"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "press",
+        "key": "Escape"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "BasicRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (top)"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (right)"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        2
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (bottom)"
+                                    },
+                                    {
+                                      "tag": "span",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        3
+                                      ],
+                                      "attrs": {
+                                        "data-state": "closed"
+                                      },
+                                      "children": [],
+                                      "text": "Right click (left)"
+                                    }
+                                  ],
+                                  "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
+                                }
+                              ],
+                              "text": "Right click (top)Right click (right)Right click (bottom)Right click (left)"
+                            }
+                          ],
+                          "text": "With SidesRight click (top)Right click (right)Right click (bottom)Right click (left)"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            2
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                2,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    2,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With IconsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            3
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                3,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    3,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With ShortcutsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            4
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                4,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    4,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With SubmenuRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            5
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                5,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    5,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With Groups, Labels & SeparatorsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            6
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                6,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    6,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With CheckboxesRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            7
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                7,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    7,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With Radio GroupRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            8
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                8,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "span",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    8,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Right click here"
+                                }
+                              ],
+                              "text": "Right click here"
+                            }
+                          ],
+                          "text": "With Destructive ItemsRight click here"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            9
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                9,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "button",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    9,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {
+                                    "aria-haspopup": "dialog",
+                                    "aria-expanded": "false",
+                                    "aria-controls": "radix-_r_3_",
+                                    "data-state": "closed"
+                                  },
+                                  "children": [],
+                                  "text": "Open Dialog"
+                                }
+                              ],
+                              "text": "Open Dialog"
+                            }
+                          ],
+                          "text": "In DialogOpen Dialog"
+                        }
+                      ],
+                      "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
+                    }
+                  ],
+                  "text": "BasicRight click hereWith SidesRight click (top)Right click (right)Right click (bottom)Right click (left)With IconsRight…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "context-menu-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "Basic"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Sides"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click (top)"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click (right)"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click (bottom)"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click (left)"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Icons"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Shortcuts"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Submenu"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Groups, Labels & Separators"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Checkboxes"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Radio Group"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "With Destructive Items"
+            },
+            {
+              "role": "StaticText",
+              "name": "Right click here"
+            },
+            {
+              "role": "StaticText",
+              "name": "In Dialog"
+            },
+            {
+              "role": "button",
+              "name": "Open Dialog",
+              "haspopup": "dialog"
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

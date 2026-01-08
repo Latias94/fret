@@ -53,8 +53,10 @@ examples in `repo-ref/ui`.
 
 ### Filtering semantics
 
-- Partial: Filtering/ranking is implemented in `CommandPalette` via the shared cmdk-style scoring
-  helper (`fret-ui-kit::headless::cmdk_score`). `CommandItem.value` participates as an alias.
+- Pass: Filtering and ranking are implemented in `CommandPalette` via the shared cmdk-style scoring
+  helper (`fret-ui-kit::headless::cmdk_score`). Ungrouped items are sorted by score and groups are
+  sorted by their highest item score (cmdk `sort()` semantics). `CommandItem.value` participates as
+  an alias.
 - Pass: `CommandItem.keywords([...])` is supported, aligning with cmdk’s `keywords` taxonomy.
 - Pass: Highlight selection tracks `CommandItem.value` (stable across list reorder/filtering).
 - Pass: Default rows can render cmdk-style match highlighting via `cmdk_score::command_match_ranges`.

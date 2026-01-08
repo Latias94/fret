@@ -55,7 +55,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ### Visual parity (new-york)
 
-- Partial: Motion/animations are simplified (Fret uses a small fade presence).
+- Pass: Motion matches shadcn's `fade` + `zoom-in-95` / `zoom-out-95` outcomes (best-effort, tick
+  driven).
 - Pass: Default sizing matches the upstream `w-full max-w-[calc(100%-2rem)] sm:max-w-lg` intent via
   a padded center layout + `DialogContent` max-width.
 
@@ -66,4 +67,4 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 ## Follow-ups (recommended)
 
-- Add side-based motion variants consistent with shadcn `data-[state=open]` animations.
+- Consider exposing optional per-surface motion variants if recipes need diverging durations/easing.

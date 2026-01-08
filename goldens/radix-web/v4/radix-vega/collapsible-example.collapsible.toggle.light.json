@@ -1,0 +1,2044 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:4020",
+  "base": "radix",
+  "style": "vega",
+  "baseColor": "neutral",
+  "theme": "light",
+  "radius": "default",
+  "font": "inter",
+  "iconLibrary": "lucide",
+  "menuAccent": "subtle",
+  "menuColor": "default",
+  "item": "collapsible-example",
+  "primitive": "collapsible",
+  "scenario": "toggle",
+  "url": "http://localhost:4020/preview/radix/collapsible-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default",
+  "steps": [
+    {
+      "action": {
+        "kind": "load",
+        "url": "http://localhost:4020/preview/radix/collapsible-example?base=radix&style=vega&baseColor=neutral&theme=neutral&radius=default&font=inter&iconLibrary=lucide&menuAccent=subtle&menuColor=default"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "body",
+          "path": [],
+          "attrs": {}
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "tablist",
+                                                "aria-orientation": "horizontal",
+                                                "tabindex": "0",
+                                                "data-orientation": "horizontal"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "role": "tab",
+                                                    "aria-selected": "true",
+                                                    "aria-controls": "radix-_r_r_-content-explorer",
+                                                    "data-state": "active",
+                                                    "tabindex": "-1",
+                                                    "data-orientation": "horizontal",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [],
+                                                  "text": "Explorer"
+                                                },
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "role": "tab",
+                                                    "aria-selected": "false",
+                                                    "aria-controls": "radix-_r_r_-content-settings",
+                                                    "data-state": "inactive",
+                                                    "tabindex": "-1",
+                                                    "data-orientation": "horizontal",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [],
+                                                  "text": "Outline"
+                                                }
+                                              ],
+                                              "text": "ExplorerOutline"
+                                            }
+                                          ],
+                                          "text": "ExplorerOutline"
+                                        }
+                                      ],
+                                      "text": "ExplorerOutline"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "closed"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-controls": "radix-_r_u_",
+                                                    "aria-expanded": "false",
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": [],
+                                                  "text": "components"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "components"
+                                            },
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-state": "closed"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-controls": "radix-_r_11_",
+                                                    "aria-expanded": "false",
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": [],
+                                                  "text": "lib"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "lib"
+                                            },
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {
+                                                "data-state": "closed"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    2,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-controls": "radix-_r_14_",
+                                                    "aria-expanded": "false",
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": [],
+                                                  "text": "hooks"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    2,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "hooks"
+                                            },
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                3
+                                              ],
+                                              "attrs": {
+                                                "data-state": "closed"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    3,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-controls": "radix-_r_17_",
+                                                    "aria-expanded": "false",
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": [],
+                                                  "text": "types"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    3,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "types"
+                                            },
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                4
+                                              ],
+                                              "attrs": {
+                                                "data-state": "closed"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    4,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-controls": "radix-_r_1a_",
+                                                    "aria-expanded": "false",
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": [],
+                                                  "text": "public"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    4,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "public"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                5
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "app.tsx"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                6
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "layout.tsx"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                7
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "globals.css"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                8
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "package.json"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                9
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "tsconfig.json"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                10
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "README.md"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                11
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": ".gitignore"
+                                            }
+                                          ],
+                                          "text": "componentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
+                                        }
+                                      ],
+                                      "text": "componentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
+                                    }
+                                  ],
+                                  "text": "ExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
+                                }
+                              ],
+                              "text": "ExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
+                            }
+                          ],
+                          "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-state": "closed"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "role": "group",
+                                                    "data-orientation": "vertical"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "input",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        1
+                                                      ],
+                                                      "attrs": {},
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Radius X"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "role": "group",
+                                                    "data-orientation": "vertical"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "input",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        1
+                                                      ],
+                                                      "attrs": {},
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Radius Y"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    2
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "Radius XRadius Y"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "aria-controls": "radix-_r_1k_",
+                                                "aria-expanded": "false",
+                                                "data-state": "closed"
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Radius XRadius Y"
+                                        }
+                                      ],
+                                      "text": "Radius XRadius Y"
+                                    }
+                                  ],
+                                  "text": "RadiusSet the corner radius of the element.Radius XRadius Y"
+                                }
+                              ],
+                              "text": "RadiusSet the corner radius of the element.Radius XRadius Y"
+                            }
+                          ],
+                          "text": "SettingsRadiusSet the corner radius of the element.Radius XRadius Y"
+                        }
+                      ],
+                      "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
+                    }
+                  ],
+                  "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "collapsible-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "File Tree"
+            },
+            {
+              "role": "tablist",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "tab",
+                  "name": "Explorer",
+                  "selected": true
+                },
+                {
+                  "role": "tab",
+                  "name": "Outline"
+                }
+              ]
+            },
+            {
+              "role": "button",
+              "name": "components"
+            },
+            {
+              "role": "button",
+              "name": "lib"
+            },
+            {
+              "role": "button",
+              "name": "hooks"
+            },
+            {
+              "role": "button",
+              "name": "types"
+            },
+            {
+              "role": "button",
+              "name": "public"
+            },
+            {
+              "role": "button",
+              "name": "app.tsx"
+            },
+            {
+              "role": "button",
+              "name": "layout.tsx"
+            },
+            {
+              "role": "button",
+              "name": "globals.css"
+            },
+            {
+              "role": "button",
+              "name": "package.json"
+            },
+            {
+              "role": "button",
+              "name": "tsconfig.json"
+            },
+            {
+              "role": "button",
+              "name": "README.md"
+            },
+            {
+              "role": "button",
+              "name": ".gitignore"
+            },
+            {
+              "role": "StaticText",
+              "name": "Settings"
+            },
+            {
+              "role": "StaticText",
+              "name": "Radius"
+            },
+            {
+              "role": "StaticText",
+              "name": "Set the corner radius of the element."
+            },
+            {
+              "role": "StaticText",
+              "name": "Radius X"
+            },
+            {
+              "role": "textbox",
+              "name": "0",
+              "value": "0"
+            },
+            {
+              "role": "StaticText",
+              "name": "Radius Y"
+            },
+            {
+              "role": "textbox",
+              "name": "0",
+              "value": "0"
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "action": {
+        "kind": "click",
+        "target": "collapsible-trigger"
+      },
+      "snapshot": {
+        "focus": {
+          "tag": "button",
+          "path": [
+            2,
+            3,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "attrs": {
+            "role": "tab",
+            "aria-selected": "true",
+            "aria-controls": "radix-_r_r_-content-explorer",
+            "data-state": "active",
+            "tabindex": "0",
+            "data-orientation": "horizontal",
+            "data-radix-collection-item": ""
+          },
+          "text": "Explorer"
+        },
+        "dom": {
+          "tag": "body",
+          "path": [],
+          "attrs": {},
+          "children": [
+            {
+              "tag": "div",
+              "path": [
+                2
+              ],
+              "attrs": {},
+              "children": [
+                {
+                  "tag": "div",
+                  "path": [
+                    2,
+                    3
+                  ],
+                  "attrs": {},
+                  "children": [
+                    {
+                      "tag": "div",
+                      "path": [
+                        2,
+                        3,
+                        0
+                      ],
+                      "attrs": {},
+                      "children": [
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            0
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                0,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    0,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        0
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-orientation": "horizontal"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                0,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "role": "tablist",
+                                                "aria-orientation": "horizontal",
+                                                "tabindex": "0",
+                                                "data-orientation": "horizontal"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "role": "tab",
+                                                    "aria-selected": "true",
+                                                    "aria-controls": "radix-_r_r_-content-explorer",
+                                                    "data-state": "active",
+                                                    "tabindex": "0",
+                                                    "data-orientation": "horizontal",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [],
+                                                  "text": "Explorer"
+                                                },
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "role": "tab",
+                                                    "aria-selected": "false",
+                                                    "aria-controls": "radix-_r_r_-content-settings",
+                                                    "data-state": "inactive",
+                                                    "tabindex": "-1",
+                                                    "data-orientation": "horizontal",
+                                                    "data-radix-collection-item": ""
+                                                  },
+                                                  "children": [],
+                                                  "text": "Outline"
+                                                }
+                                              ],
+                                              "text": "ExplorerOutline"
+                                            }
+                                          ],
+                                          "text": "ExplorerOutline"
+                                        }
+                                      ],
+                                      "text": "ExplorerOutline"
+                                    },
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        0,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            0,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {},
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {
+                                                "data-state": "closed"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-controls": "radix-_r_u_",
+                                                    "aria-expanded": "false",
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": [],
+                                                  "text": "components"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "components"
+                                            },
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "data-state": "closed"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-controls": "radix-_r_11_",
+                                                    "aria-expanded": "false",
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": [],
+                                                  "text": "lib"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "lib"
+                                            },
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                2
+                                              ],
+                                              "attrs": {
+                                                "data-state": "closed"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    2,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-controls": "radix-_r_14_",
+                                                    "aria-expanded": "false",
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": [],
+                                                  "text": "hooks"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    2,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "hooks"
+                                            },
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                3
+                                              ],
+                                              "attrs": {
+                                                "data-state": "closed"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    3,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-controls": "radix-_r_17_",
+                                                    "aria-expanded": "false",
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": [],
+                                                  "text": "types"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    3,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "types"
+                                            },
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                4
+                                              ],
+                                              "attrs": {
+                                                "data-state": "closed"
+                                              },
+                                              "children": [
+                                                {
+                                                  "tag": "button",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    4,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "aria-controls": "radix-_r_1a_",
+                                                    "aria-expanded": "false",
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": [],
+                                                  "text": "public"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    4,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "public"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                5
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "app.tsx"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                6
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "layout.tsx"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                7
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "globals.css"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                8
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "package.json"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                9
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "tsconfig.json"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                10
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": "README.md"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                0,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                11
+                                              ],
+                                              "attrs": {},
+                                              "children": [],
+                                              "text": ".gitignore"
+                                            }
+                                          ],
+                                          "text": "componentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
+                                        }
+                                      ],
+                                      "text": "componentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
+                                    }
+                                  ],
+                                  "text": "ExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
+                                }
+                              ],
+                              "text": "ExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.gitignore"
+                            }
+                          ],
+                          "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
+                        },
+                        {
+                          "tag": "div",
+                          "path": [
+                            2,
+                            3,
+                            0,
+                            1
+                          ],
+                          "attrs": {},
+                          "children": [
+                            {
+                              "tag": "div",
+                              "path": [
+                                2,
+                                3,
+                                0,
+                                1,
+                                1
+                              ],
+                              "attrs": {},
+                              "children": [
+                                {
+                                  "tag": "div",
+                                  "path": [
+                                    2,
+                                    3,
+                                    0,
+                                    1,
+                                    1,
+                                    0
+                                  ],
+                                  "attrs": {},
+                                  "children": [
+                                    {
+                                      "tag": "div",
+                                      "path": [
+                                        2,
+                                        3,
+                                        0,
+                                        1,
+                                        1,
+                                        0,
+                                        1
+                                      ],
+                                      "attrs": {},
+                                      "children": [
+                                        {
+                                          "tag": "div",
+                                          "path": [
+                                            2,
+                                            3,
+                                            0,
+                                            1,
+                                            1,
+                                            0,
+                                            1,
+                                            0
+                                          ],
+                                          "attrs": {
+                                            "data-state": "closed"
+                                          },
+                                          "children": [
+                                            {
+                                              "tag": "div",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                0
+                                              ],
+                                              "attrs": {},
+                                              "children": [
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    0
+                                                  ],
+                                                  "attrs": {
+                                                    "role": "group",
+                                                    "data-orientation": "vertical"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "input",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        0,
+                                                        1
+                                                      ],
+                                                      "attrs": {},
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Radius X"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    1
+                                                  ],
+                                                  "attrs": {
+                                                    "role": "group",
+                                                    "data-orientation": "vertical"
+                                                  },
+                                                  "children": [
+                                                    {
+                                                      "tag": "input",
+                                                      "path": [
+                                                        2,
+                                                        3,
+                                                        0,
+                                                        1,
+                                                        1,
+                                                        0,
+                                                        1,
+                                                        0,
+                                                        0,
+                                                        1,
+                                                        1
+                                                      ],
+                                                      "attrs": {},
+                                                      "children": []
+                                                    }
+                                                  ],
+                                                  "text": "Radius Y"
+                                                },
+                                                {
+                                                  "tag": "div",
+                                                  "path": [
+                                                    2,
+                                                    3,
+                                                    0,
+                                                    1,
+                                                    1,
+                                                    0,
+                                                    1,
+                                                    0,
+                                                    0,
+                                                    2
+                                                  ],
+                                                  "attrs": {
+                                                    "data-state": "closed"
+                                                  },
+                                                  "children": []
+                                                }
+                                              ],
+                                              "text": "Radius XRadius Y"
+                                            },
+                                            {
+                                              "tag": "button",
+                                              "path": [
+                                                2,
+                                                3,
+                                                0,
+                                                1,
+                                                1,
+                                                0,
+                                                1,
+                                                0,
+                                                1
+                                              ],
+                                              "attrs": {
+                                                "aria-controls": "radix-_r_1k_",
+                                                "aria-expanded": "false",
+                                                "data-state": "closed"
+                                              },
+                                              "children": []
+                                            }
+                                          ],
+                                          "text": "Radius XRadius Y"
+                                        }
+                                      ],
+                                      "text": "Radius XRadius Y"
+                                    }
+                                  ],
+                                  "text": "RadiusSet the corner radius of the element.Radius XRadius Y"
+                                }
+                              ],
+                              "text": "RadiusSet the corner radius of the element.Radius XRadius Y"
+                            }
+                          ],
+                          "text": "SettingsRadiusSet the corner radius of the element.Radius XRadius Y"
+                        }
+                      ],
+                      "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
+                    }
+                  ],
+                  "text": "File TreeExplorerOutlinecomponentslibhookstypespublicapp.tsxlayout.tsxglobals.csspackage.jsontsconfig.jsonREADME.md.giti…"
+                }
+              ],
+              "text": "(self.__next_s=self.__next_s||[]).push([0,{\"children\":\"\\n            (function() {\\n              // Forward Cmd/Ctrl + …"
+            },
+            {
+              "tag": "section",
+              "path": [
+                3
+              ],
+              "attrs": {
+                "aria-label": "Notifications alt+T",
+                "tabindex": "-1",
+                "aria-live": "polite",
+                "aria-relevant": "additions text",
+                "aria-atomic": "false"
+              },
+              "children": []
+            }
+          ]
+        },
+        "ax": {
+          "role": "RootWebArea",
+          "name": "collapsible-example - shadcn/ui",
+          "children": [
+            {
+              "role": "StaticText",
+              "name": "File Tree"
+            },
+            {
+              "role": "tablist",
+              "name": "",
+              "orientation": "horizontal",
+              "children": [
+                {
+                  "role": "tab",
+                  "name": "Explorer",
+                  "focused": true,
+                  "selected": true
+                },
+                {
+                  "role": "tab",
+                  "name": "Outline"
+                }
+              ]
+            },
+            {
+              "role": "button",
+              "name": "components"
+            },
+            {
+              "role": "button",
+              "name": "lib"
+            },
+            {
+              "role": "button",
+              "name": "hooks"
+            },
+            {
+              "role": "button",
+              "name": "types"
+            },
+            {
+              "role": "button",
+              "name": "public"
+            },
+            {
+              "role": "button",
+              "name": "app.tsx"
+            },
+            {
+              "role": "button",
+              "name": "layout.tsx"
+            },
+            {
+              "role": "button",
+              "name": "globals.css"
+            },
+            {
+              "role": "button",
+              "name": "package.json"
+            },
+            {
+              "role": "button",
+              "name": "tsconfig.json"
+            },
+            {
+              "role": "button",
+              "name": "README.md"
+            },
+            {
+              "role": "button",
+              "name": ".gitignore"
+            },
+            {
+              "role": "StaticText",
+              "name": "Settings"
+            },
+            {
+              "role": "StaticText",
+              "name": "Radius"
+            },
+            {
+              "role": "StaticText",
+              "name": "Set the corner radius of the element."
+            },
+            {
+              "role": "StaticText",
+              "name": "Radius X"
+            },
+            {
+              "role": "textbox",
+              "name": "0",
+              "value": "0"
+            },
+            {
+              "role": "StaticText",
+              "name": "Radius Y"
+            },
+            {
+              "role": "textbox",
+              "name": "0",
+              "value": "0"
+            },
+            {
+              "role": "button",
+              "name": ""
+            },
+            {
+              "role": "region",
+              "name": "Notifications alt+T"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

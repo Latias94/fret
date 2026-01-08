@@ -13,9 +13,11 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
-use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::primitives::{popper, popper_content};
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, OverlayPresence, Radius, Space};
+use fret_ui_kit::{
+    ChromeRefinement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius,
+    Space,
+};
 
 use crate::overlay_motion;
 
@@ -105,6 +107,57 @@ fn nav_menu_indicator_size(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.indicator.size")
         .unwrap_or(Px(14.0))
+}
+
+/// shadcn/ui `NavigationMenuViewport` (v4).
+///
+/// In upstream shadcn, the root optionally mounts a viewport element as a sibling of the list.
+/// In Fret, the viewport is currently rendered via an overlay root, but the enable/disable outcome
+/// is the same.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NavigationMenuViewport {
+    enabled: bool,
+}
+
+impl Default for NavigationMenuViewport {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
+}
+
+impl NavigationMenuViewport {
+    pub fn enabled(enabled: bool) -> Self {
+        Self { enabled }
+    }
+
+    pub fn is_enabled(self) -> bool {
+        self.enabled
+    }
+}
+
+/// shadcn/ui `NavigationMenuIndicator` (v4).
+///
+/// Upstream renders this as an opt-in child. Fret currently renders an indicator by default to
+/// match the new-york look, but exposes an opt-out switch for parity-sensitive recipes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NavigationMenuIndicator {
+    enabled: bool,
+}
+
+impl Default for NavigationMenuIndicator {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
+}
+
+impl NavigationMenuIndicator {
+    pub fn enabled(enabled: bool) -> Self {
+        Self { enabled }
+    }
+
+    pub fn is_enabled(self) -> bool {
+        self.enabled
+    }
 }
 
 /// shadcn/ui `NavigationMenuTrigger` (v4).
@@ -362,6 +415,7 @@ pub struct NavigationMenu {
     items: Vec<NavigationMenuItem>,
     disabled: bool,
     viewport: bool,
+    indicator: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     config: radix_navigation_menu::NavigationMenuConfig,
@@ -389,6 +443,7 @@ impl NavigationMenu {
             items: Vec::new(),
             disabled: false,
             viewport: true,
+            indicator: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
@@ -402,6 +457,7 @@ impl NavigationMenu {
             items: Vec::new(),
             disabled: false,
             viewport: true,
+            indicator: true,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             config: radix_navigation_menu::NavigationMenuConfig::default(),
@@ -433,6 +489,22 @@ impl NavigationMenu {
         self
     }
 
+    pub fn viewport_component(mut self, viewport: NavigationMenuViewport) -> Self {
+        self.viewport = viewport.is_enabled();
+        self
+    }
+
+    /// When `false`, the indicator is not rendered.
+    pub fn indicator(mut self, indicator: bool) -> Self {
+        self.indicator = indicator;
+        self
+    }
+
+    pub fn indicator_component(mut self, indicator: NavigationMenuIndicator) -> Self {
+        self.indicator = indicator.is_enabled();
+        self
+    }
+
     pub fn refine_chrome(mut self, chrome: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(chrome);
         self
@@ -454,6 +526,7 @@ impl NavigationMenu {
         let items = self.items;
         let menu_disabled = self.disabled;
         let viewport_enabled = self.viewport;
+        let indicator_enabled = self.indicator;
         let chrome = self.chrome;
         let layout = self.layout;
         let cfg = self.config;
@@ -541,15 +614,27 @@ impl NavigationMenu {
                 .copied()
                 .unwrap_or(false);
             let open_for_motion = open && selected.is_some();
-            let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
+            let motion = OverlayController::transition_with_durations_and_easing(
                 cx,
                 open_for_motion,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
                 overlay_motion::SHADCN_MOTION_TICKS_100,
-                0.95,
-                1.0,
                 overlay_motion::shadcn_ease,
             );
+            let opacity = motion.progress;
+            let scale = if viewport_enabled {
+                // shadcn new-york:
+                // - Viewport: `zoom-in-90` on open, `zoom-out-95` on close.
+                if open_for_motion {
+                    0.9 + 0.1 * opacity
+                } else {
+                    0.95 + 0.05 * opacity
+                }
+            } else {
+                // When `viewport=false`, content behaves like a popover-ish surface with
+                // `zoom-in-95` / `zoom-out-95`.
+                0.95 + 0.05 * opacity
+            };
 
             let mut selected_local = radix_navigation_menu::navigation_menu_viewport_selected_value(
                 cx,
@@ -712,7 +797,11 @@ impl NavigationMenu {
             if overlay_presence.present {
                 let side_offset = nav_menu_viewport_side_offset(&theme);
                 let window_margin = nav_menu_viewport_window_margin(&theme);
-                let indicator_size = nav_menu_indicator_size(&theme);
+                let indicator_size = if indicator_enabled {
+                    nav_menu_indicator_size(&theme)
+                } else {
+                    Px(0.0)
+                };
 
                 let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
                 let measured = selected_local
@@ -797,8 +886,8 @@ impl NavigationMenu {
                     indicator_size,
                 };
 
-                let opacity = motion.opacity;
-                let scale = motion.scale;
+                let opacity = opacity;
+                let scale = scale;
                 let selected_value_for_content_id = selected_local.clone();
                 let selected_for_overlay = selected_local.clone();
                 radix_navigation_menu::navigation_menu_request_viewport_overlay(
@@ -949,58 +1038,63 @@ impl NavigationMenu {
                             move |_cx| vec![content],
                         );
 
-                        let indicator = popper_content::popper_wrapper_panel_at(
-                            cx,
-                            layout.indicator_rect,
-                            Edges::all(Px(0.0)),
-                            fret_ui::element::Overflow::Visible,
-                            move |cx| {
-                                let mut layout = LayoutStyle::default();
-                                layout.size = SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Fill,
-                                    ..Default::default()
-                                };
+                        let mut children = Vec::new();
+                        if indicator_enabled && indicator_size.0 > 0.0 {
+                            let indicator = popper_content::popper_wrapper_panel_at(
+                                cx,
+                                layout.indicator_rect,
+                                Edges::all(Px(0.0)),
+                                fret_ui::element::Overflow::Visible,
+                                move |cx| {
+                                    let mut layout = LayoutStyle::default();
+                                    layout.size = SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    };
 
-                                let center = Point::new(
-                                    Px(indicator_size.0 * 0.5),
-                                    Px(indicator_size.0 * 0.5),
-                                );
-                                let rotate = Transform2D::rotation_about_degrees(45.0, center);
+                                    let center = Point::new(
+                                        Px(indicator_size.0 * 0.5),
+                                        Px(indicator_size.0 * 0.5),
+                                    );
+                                    let rotate = Transform2D::rotation_about_degrees(45.0, center);
 
-                                vec![cx.visual_transform_props(
-                                    VisualTransformProps {
-                                        layout,
-                                        transform: rotate,
-                                    },
-                                    move |cx| {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size = SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        };
-                                        vec![cx.container(
-                                            ContainerProps {
-                                                layout,
-                                                padding: Edges::all(Px(0.0)),
-                                                background: Some(viewport_bg),
-                                                shadow: None,
-                                                border: Edges::all(Px(1.0)),
-                                                border_color: Some(viewport_border),
-                                                corner_radii: Corners::all(Px(2.0)),
-                                            },
-                                            |_cx| Vec::new(),
-                                        )]
-                                    },
-                                )]
-                            },
-                        );
+                                    vec![cx.visual_transform_props(
+                                        VisualTransformProps {
+                                            layout,
+                                            transform: rotate,
+                                        },
+                                        move |cx| {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size = SizeStyle {
+                                                width: Length::Fill,
+                                                height: Length::Fill,
+                                                ..Default::default()
+                                            };
+                                            vec![cx.container(
+                                                ContainerProps {
+                                                    layout,
+                                                    padding: Edges::all(Px(0.0)),
+                                                    background: Some(viewport_bg),
+                                                    shadow: None,
+                                                    border: Edges::all(Px(1.0)),
+                                                    border_color: Some(viewport_border),
+                                                    corner_radii: Corners::all(Px(2.0)),
+                                                },
+                                                |_cx| Vec::new(),
+                                            )]
+                                        },
+                                    )]
+                                },
+                            );
+                            children.push(indicator);
+                        }
+                        children.push(panel);
 
                         radix_navigation_menu::NavigationMenuViewportOverlayRenderOutput {
                             opacity,
                             transform,
-                            children: vec![indicator, panel],
+                            children,
                         }
                     },
                 );
@@ -1051,6 +1145,9 @@ pub fn navigation_menu_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
         .items(f(cx))
         .into_element(cx)
 }
+
+/// Alias for `NavigationMenu` that reads closer to Radix naming (`Root`).
+pub type NavigationMenuRoot = NavigationMenu;
 
 #[cfg(test)]
 mod tests {
@@ -1497,5 +1594,83 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected, None);
+    }
+
+    #[test]
+    fn navigation_menu_indicator_can_be_disabled() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert::<Option<Arc<str>>>(None);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        bump_frame(&mut app);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-indicator-off",
+            |cx| {
+                let items = vec![
+                    NavigationMenuItem::new("alpha", "Alpha", vec![cx.text("A")]),
+                    NavigationMenuItem::new("beta", "Beta", vec![cx.text("B")]),
+                ];
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .indicator(false)
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha_btn = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha button semantics");
+        let pos = Point::new(
+            Px(alpha_btn.bounds.origin.x.0 + alpha_btn.bounds.size.width.0 * 0.5),
+            Px(alpha_btn.bounds.origin.y.0 + alpha_btn.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Up {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
     }
 }

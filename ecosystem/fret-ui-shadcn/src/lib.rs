@@ -144,9 +144,9 @@ pub use menubar::{
     MenubarShortcut, menubar,
 };
 pub use navigation_menu::{
-    NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink,
-    NavigationMenuList, NavigationMenuTrigger, navigation_menu, navigation_menu_list,
-    navigation_menu_uncontrolled,
+    NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
+    NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
+    NavigationMenuViewport, navigation_menu, navigation_menu_list, navigation_menu_uncontrolled,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
